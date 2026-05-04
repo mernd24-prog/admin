@@ -1,0 +1,163 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { apiRequest } from "./apiConfig";
+
+export const DEFAULT_PLATFORM_MODULES = [
+  "users",
+  "products",
+  "carts",
+  "orders",
+  "payments",
+  "platform",
+  "sellers",
+  "notifications",
+  "analytics",
+  "pricing",
+  "wallets",
+  "tax",
+  "subscriptions",
+  "rbac",
+  "warranty",
+  "loyalty",
+  "recommendations",
+  "returns",
+  "fraud",
+  "dynamic-pricing",
+  "delivery",
+  "admin",
+];
+
+export const DEFAULT_SELLER_MODULES = [
+  "products",
+  "orders",
+  "pricing",
+  "notifications",
+  "analytics",
+  "sellers",
+  "sellers/commissions",
+  "returns",
+  "delivery",
+];
+
+export const getApiErrorMessage = (error) =>
+  error?.error?.message ||
+  error?.message ||
+  (typeof error === "string" ? error : null) ||
+  "Something went wrong!";
+
+export const toIdList = (payload = {}) => {
+  const value = payload.ids || payload._id || payload.userId || payload.sellerId || payload.id;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+};
+
+export const firstId = (payload = {}) => toIdList(payload)[0];
+
+export const splitName = (fullName = "") => {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() || "User",
+    lastName: parts.join(" "),
+  };
+};
+
+export const toProfile = (payload = {}, requireLastName = false) => {
+  if (payload.profile?.firstName) {
+    return {
+      firstName: payload.profile.firstName,
+      lastName: payload.profile.lastName || (requireLastName ? "User" : ""),
+    };
+  }
+
+  const name = splitName(payload.full_name || payload.fullName || payload.name || payload.userName || payload.email);
+  return {
+    firstName: name.firstName,
+    lastName: name.lastName || (requireLastName ? "User" : ""),
+  };
+};
+
+export const normalizeAllowedModules = (modules, fallback = DEFAULT_PLATFORM_MODULES) => {
+  const source = Array.isArray(modules) && modules.length ? modules : fallback;
+  return Array.from(new Set(source.map((moduleName) => String(moduleName || "").trim().toLowerCase()).filter(Boolean)));
+};
+
+export const toAccountStatus = (payload = {}) => {
+  if (payload.accountStatus) return payload.accountStatus;
+  if (payload.status) return payload.status;
+  return payload.isDisable ? "suspended" : "active";
+};
+
+export const toListParams = (params = {}, defaults = {}) => ({
+  ...defaults,
+  ...(params.q || params.keyWord || params.search ? { q: params.q || params.keyWord || params.search } : {}),
+  ...(params.page ? { page: Number(params.page) } : {}),
+  ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+  ...(params.accountStatus ? { accountStatus: params.accountStatus } : {}),
+  ...(params.status ? { status: params.status } : {}),
+});
+
+export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
+  email: String(payload.email || "").trim(),
+  phone: payload.phone || null,
+  password: payload.password,
+  profile: toProfile(payload, options.requireLastName),
+  ...(options.allowedModules
+    ? { allowedModules: normalizeAllowedModules(payload.allowedModules, options.allowedModules) }
+    : {}),
+});
+
+export const toSubAdminCreateBody = (payload = {}, fallbackModules = DEFAULT_PLATFORM_MODULES) =>
+  toManagedUserCreateBody(payload, { allowedModules: fallbackModules });
+
+export const toSellerRegisterBody = (payload = {}) => ({
+  email: String(payload.email || "").trim(),
+  phone: String(payload.phone || "").trim(),
+  password: payload.password,
+  role: "seller",
+  profile: toProfile(payload, true),
+});
+
+export const toUserUpdateBody = (payload = {}) => {
+  const body = { accountStatus: toAccountStatus(payload) };
+  const hasProfile = payload.profile || payload.full_name || payload.fullName || payload.name || payload.userName;
+  if (hasProfile) {
+    body.profile = toProfile(payload);
+  }
+  return body;
+};
+
+export const toVendorStatusBody = (payload = {}) => ({
+  accountStatus: toAccountStatus(payload),
+});
+
+export const toKycReviewBody = (payload = {}) => ({
+  verificationStatus: payload.verificationStatus || payload.status,
+  rejectionReason: payload.rejectionReason || null,
+});
+
+export const unsupportedThunk = (name, message) =>
+  createAsyncThunk(name, async (_payload, { rejectWithValue }) => rejectWithValue(message));
+
+export const patchMany = (name, endpointBuilder, bodyBuilder, successMessage) =>
+  createAsyncThunk(name, async (payload, { rejectWithValue }) => {
+    try {
+      const ids = toIdList(payload);
+      if (!ids.length) {
+        return rejectWithValue("Missing record id");
+      }
+
+      const results = [];
+      for (const id of ids) {
+        results.push(await apiRequest("PATCH", endpointBuilder(id), bodyBuilder(payload)));
+      }
+
+      return {
+        success: true,
+        message: results[0]?.message || successMessage,
+        data: ids.length === 1 ? (results[0]?.data ?? results[0]) : results.map((item) => item?.data ?? item),
+        meta: { total: ids.length },
+        raw: results,
+      };
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error));
+    }
+  });

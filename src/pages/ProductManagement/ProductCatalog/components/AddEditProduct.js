@@ -1,0 +1,732 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import BasicDetailsTab from './BasicDetailsTab';
+import MediaTab from './MediaTab';
+import ProductSettingsPanel from './ProductSettingsPanel';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  createProducts, getAllBrandList, getAllStoreList, getAllStoreShippingDurationList, getAllTaxRulesList, getList,
+  updateProducts, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList, productOptionList,
+  getAllHsn,
+} from '../../../../Redux/productSlice';
+import { transformArray } from '../../../../_helpers/globalFunctions';
+import Loader from '../../../../components/Loader/Loader';
+import { getAllCountryList } from '../../../../Redux/CountrySlice';
+import { GrDocument } from 'react-icons/gr';
+import { IoImage } from 'react-icons/io5';
+import { toast } from 'sonner';
+import { useNavigate, useParams } from 'react-router-dom';
+import TabNavigation from './TabNavigation';
+import Breadcrumb from './Breadcrumb';
+import ProductDetails from './ProductDetails';
+import selectJson from '../../../../_helpers/SelectJson.json'
+import { BsMenuApp } from 'react-icons/bs';
+import VariantsOptionsTab from './VariantsOptionsTab';
+
+const API_CALLS = [{ action: getAllBrandList, name: 'Brand List' },
+{ action: getList, name: 'Category List' },
+{ action: getAllStoreList, name: 'Store List' },
+{ action: getAllCountryList, name: 'Country List' },
+{ action: getAllBatchList, name: 'Batch List' },
+{ action: getAllWarrantyList, name: 'Warranty List' },
+{ action: getAllQtyHeadList, name: 'Qty Head List' },
+{ action: getAllHsn, name: 'Hsn code List' },
+{ action: productOptionList, name: 'Product Option List' },
+
+];
+
+const API_CALL_OBJECT = {
+  "Brand List": { action: getAllBrandList, name: "Brand List" },
+  "Category List": { action: getList, name: "Category List" },
+  "Store List": { action: getAllStoreList, name: "Store List" },
+  "Country List": { action: getAllCountryList, name: "Country List" },
+  "Batch List": { action: getAllBatchList, name: "Batch List" },
+  "Warranty List": { action: getAllWarrantyList, name: "Warranty List" },
+  "Qty Head List": { action: getAllQtyHeadList, name: "Qty Head List" },
+  "Hsn code list": { action: getAllHsn, name: "Hsn code List" },
+
+}
+
+export default function ProductManagementUI() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate()
+  const selector = useSelector(state => state.product);
+  const mainContainerRef = useRef(null);
+  const { id } = useParams();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  let { INITIALS_DATA } = selectJson
+  const [formData, setFormData] = useState(INITIALS_DATA);
+  const [options, setVariantRows] = useState([{
+    "type": null,
+    "remark": "",
+    "packaging": "",
+    "mrp": "",
+    "discount": "",
+    "salePrice": ""
+  }]);
+  const [activeTab, setActiveTab] = useState('basic-details');
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [images, setImages] = useState([])
+  const isEditMode = id ? true : false;
+  const [taxData, setTaxData] = useState(null)
+  const [userData, setUserData] = useState({})
+
+  const calculatePriceWithTax = (product, basePrice) => {
+    const igst = product?.IGST ?? 0;
+    const additionalTax = product?.additionalTax ?? 0;
+    const sgst = product?.SGST ?? 0;
+    const cgst = product?.CGST ?? 0;
+    const totalTaxRate = igst + additionalTax + sgst + cgst;
+    const taxAmount = (basePrice * totalTaxRate / 100);
+    const priceWithTax = Number(basePrice) + Number(taxAmount);
+    return priceWithTax;
+  };
+
+  const refs = {
+    'basic-details': useRef(null),
+    'variants-options': useRef(null),
+    'media': useRef(null),
+  };
+
+  const formattedBatchData = useMemo(() =>
+    selector?.getAllBatchListData?.data?.data?.list?.map((e) => ({
+      value: e?.id,
+      label: e?.batchCode
+    })) || [],
+    [selector?.getAllBatchListData]
+  );
+
+  const fetchProductById = async (productId) => {
+    try {
+      dispatch(updateProducts({ _id: productId })).unwrap()
+        .then((res) => {
+          const productData = res?.data;
+          setFormData({
+            ...INITIALS_DATA,
+            ...productData,
+            options: productData?.options || [{
+              "type": null,
+              "remark": "",
+              "packaging": "",
+              "mrp": "",
+              "discount": "",
+              "salePrice": ""
+            }]
+          });
+
+          if (productData?.options && Array.isArray(productData.options)) {
+            const formattedOptions = productData.options.map((option, index) => ({
+              id: option._id || Date.now() + index,
+              type: option.type,
+              remark: option.remark || '',
+              packaging: option.packaging || '',
+              mrp: option.mrp || '',
+              discount: option.discount || '',
+              salePrice: option.salePrice || ''
+            }));
+            setVariantRows(formattedOptions);
+          }
+
+          setImages(res?.data?.imageUrls || []);
+
+
+
+          if (res?.data?.store_id) {
+            Promise.all([
+              dispatch(getAllStoreShippingDurationList({ query: JSON.stringify({ store_id: res?.data.store_id }) }))
+            ]);
+          }
+
+          if (res?.data?.hsn_code) {
+            const hsnCodeData = selector?.getAllHsnData?.data?.data?.list?.find(item => item?._id === res?.data?.hsn_code);
+            if (hsnCodeData) {
+              setTaxData(hsnCodeData);
+            }
+          }
+        })
+        .catch((err) => {
+          toast.error("Error fetching collections:" || err);
+        });
+    } catch (err) {
+      toast.error("Failed to fetch product:" || err);
+    }
+  };
+
+  const fetchAllData = useCallback(async (callsArray = API_CALLS) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(
+        callsArray.map(({ action }) => dispatch(action()).unwrap?.() || dispatch(action()))
+      );
+
+      const failedCalls = results
+        .filter(({ status }) => status === 'rejected')
+        .map((_, index) => callsArray[index].name);
+
+      if (failedCalls.length > 0) {
+        setError(`Some data failed to load: ${failedCalls.join(', ')}. Please refresh to try again.`);
+      } else {
+        // setApiCallsCompleted(true);
+      }
+    } catch (err) {
+      toast.error(err || 'Failed to load product data. Please refresh the page and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const userDataString = sessionStorage.getItem('EcomAdmin');
+    if (userDataString) {
+      try {
+        const parsedData = JSON.parse(userDataString);
+        setUserData(parsedData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+
+    fetchAllData();
+  }, [fetchAllData]);
+
+  useEffect(() => {
+    if (isEditMode && !loading) {
+      fetchProductById(id);
+    }
+  }, [isEditMode, id, loading]);
+
+  useEffect(() => {
+    const container = mainContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const sideScrollOffset = Math.min(scrollTop * 0.2, 200);
+
+      [container.previousElementSibling, container.nextElementSibling].forEach(panel => {
+        if (panel) panel.style.transform = `translateY(-${sideScrollOffset}px)`;
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const formattedData = useMemo(() => ({
+    brandList: transformArray(selector?.getAllBrandListData?.data?.data?.list || []),
+    storeList: transformArray(selector?.getAllStoreListData?.data?.data?.list || []),
+    taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
+    batchList: transformArray(selector?.getAllBatchListData?.data?.data?.list || []),
+    warrantyList: transformArray(selector?.getAllWarrantyListData?.data?.data?.list || []),
+    qtyHeadList: transformArray(selector?.getAllQtyHeadListData?.data?.data?.list || []),
+    hsnCodeList: transformArray(selector?.getAllHsnData?.data?.data?.list || []),
+
+  }), [selector]);
+
+  const createSelectOptions = useMemo(() => {
+    const options = [];
+    const addOptions = (categories, prefix = '') => {
+      if (!Array.isArray(categories)) return;
+      categories.forEach(category => {
+        const label = prefix ? `${prefix} > ${category.name}` : category.name;
+        options.push({
+          value: `${category._id}`,
+          label,
+        });
+        if (Array.isArray(category.subcategories) && category.subcategories.length > 0) {
+          addOptions(category.subcategories, label);
+        }
+      });
+    };
+    addOptions(selector?.getListData?.data?.data);
+    return options;
+  }, [selector?.getListData]);
+
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
+    if (!formData?.description?.trim()) newErrors.description = "Description is required.";
+    if (userData?.roleId !== 9 && !formData?.store_id) {
+      newErrors.store_id = "Store is required.";
+      if (!formData?.rack_no) newErrors.rack_no = "Rack No is required.";
+    }
+    if (!formData?.brand_id) newErrors.brand_id = "Brand is required.";
+    if (!formData?.category_id) newErrors.category_id = "Category is required.";
+    if (!formData?.hsn_code) newErrors.hsn_code = "HSN Code is required.";
+    // if (!formData?.batch_id) newErrors.batch_id = "Batch is required.";
+    if (!formData?.salt_composition) newErrors.salt_composition = "salt composition  is required.";
+    if (!formData?.primary_use) newErrors.primary_use = "Primary use   is required.";
+    if (!formData?.salt_synonyms) newErrors.salt_synonyms = "Salt synonyms is required.";
+    if (!formData?.storage) newErrors.storage = "storage is required.";
+    if (!formData?.introduction) newErrors.introduction = "introduction is required.";
+    if (!formData?.use_of) newErrors.use_of = "Use of is required.";
+    if (!formData?.benefits) newErrors.benefits = "benefits  is required.";
+    if (!formData?.side_effect) newErrors.side_effect = "Side effect is required.";
+    if (!formData?.how_to_use) newErrors.how_to_use = "How to use is required.";
+    if (!formData?.how_works) newErrors.how_works = "How works is required.";
+    if (!formData?.safety_advise) newErrors.safety_advise = "How works is required.";
+    if (!formData?.if_miss) newErrors.if_miss = "How works is required.";
+
+    if (options.length === 0) {
+      newErrors.options = toast.info("At least one variant option is required.");
+    } else {
+      options.forEach((option, index) => {
+        if (!option.type) {
+          newErrors[`options[${index}].type`] = toast.info("Option type is required.");
+        }
+        if (!option.mrp || isNaN(option.mrp)) {
+          newErrors[`options[${index}].mrp`] = toast.info("MRP must be a valid number.");
+        }
+        if (option.discount && isNaN(option.discount)) {
+          newErrors[`options[${index}].discount`] = toast.info("Discount must be a valid number.");
+        }
+        if (!option.salePrice || isNaN(option.salePrice)) {
+          newErrors[`options[${index}].salePrice`] = toast.info("Sale price must be a valid number.");
+        }
+        if (option.mrp && option.salePrice && parseFloat(option.salePrice) > parseFloat(option.mrp)) {
+          newErrors[`options[${index}].salePrice`] = toast.info("Sale price cannot be greater than MRP.");
+        }
+      });
+    }
+
+
+    if (!images || images.length === 0) {
+      newErrors.images = "At least one image is required.";
+    }
+    setError(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+
+  useEffect(() => {
+    if (isScrolling) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let mostVisibleEntry = null;
+        let maxRatio = 0;
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio;
+            mostVisibleEntry = entry;
+          }
+        });
+
+        if (mostVisibleEntry) {
+          const targetId = mostVisibleEntry.target.id;
+          if (targetId && targetId !== activeTab) {
+            setActiveTab(targetId);
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '-20% 0px -20% 0px',
+        threshold: [0.1, 0.5, 0.9],
+      }
+    );
+
+    Object.values(refs).forEach((ref) => {
+      if (ref.current) observer.observe(ref.current);
+    });
+
+    const handleManualScroll = () => {
+      if (isScrolling) return;
+
+      if (window.scrollY <= 100 && activeTab !== 'basic-details') {
+        setActiveTab('basic-details');
+      }
+    };
+
+    window.addEventListener('scroll', handleManualScroll);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleManualScroll);
+    };
+  }, [isScrolling, refs, activeTab]);
+
+  const scrollToSection = useCallback((id) => {
+    setIsScrolling(true);
+
+    refs[id]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const handleScrollStop = () => {
+      setIsScrolling(false);
+      window.removeEventListener('scroll', handleScrollStop);
+    };
+
+    window.addEventListener('scroll', handleScrollStop);
+
+    setTimeout(() => {
+      setIsScrolling(false);
+      window.removeEventListener('scroll', handleScrollStop);
+    }, 1200);
+  }, [refs]);
+
+
+  function calculateDiscount(price, discountPercent = 0) {
+    const validPrice = parseFloat(price) || 0;
+    const validDiscount = parseFloat(discountPercent) || 0;
+
+    if (validPrice < 0 || validDiscount < 0) {
+      return {
+        discountedPrice: 0,
+        discountAmount: 0
+      };
+    }
+
+    const discountAmount = (validPrice * validDiscount) / 100;
+    const discountedPrice = validPrice - discountAmount;
+
+    return {
+      discountedPrice: parseFloat(discountedPrice.toFixed(2)),
+      discountAmount: parseFloat(discountAmount.toFixed(2))
+    };
+  }
+
+  useEffect(() => {
+    if (!formData.basePrice || !taxData) return;
+
+    const priceWithTax = calculatePriceWithTax(taxData, formData.basePrice);
+    const { discountedPrice } = calculateDiscount(priceWithTax, formData.discount);
+
+    setFormData((prev) => ({
+      ...prev,
+      salePrice: discountedPrice.toString()
+    }));
+  }, [formData.basePrice, formData.discount, taxData]);
+
+
+
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev, [name]: value
+    }))
+  }, []);
+
+
+
+
+  const handleSelectChange = (selectedOption, action) => {
+    console.log("selectedOption", selectedOption)
+    setError(prevErrors => {
+      const newErrors = { ...prevErrors };
+      switch (action) {
+        case 'COUNTRY':
+          delete newErrors.mfd_country;
+          delete newErrors.mfd_state;
+          delete newErrors.mfd_city;
+          delete newErrors.mfd_zip_code;
+          break;
+
+        case 'STORE_ID':
+          delete newErrors.store_id;
+          break;
+        case 'BRAND_ID':
+          delete newErrors.brand_id;
+          break;
+        case 'CATEGORY_ID':
+          delete newErrors.category_id;
+          break;
+        case 'REPLACE_ID':
+          delete newErrors.replace_id;
+          break;
+        case 'STORE_TAX_ID':
+          delete newErrors.store_tax_id;
+          break;
+        case 'STORE_BATCH_ID':
+          delete newErrors.store_batch_id;
+          break;
+        case 'STORE_qtyHead_ID':
+          delete newErrors.store_qtyHead_id;
+          break;
+        case 'STORE_WARRANTY_ID':
+          delete newErrors.store_warranty_id;
+          break;
+        case 'OPTION_ID':
+          delete newErrors.option_id;
+          break;
+        case 'OPTION_VALUE_IDS':
+          delete newErrors.option_value_ids;
+          break;
+        case 'STORE_SHIPPING_DURATION_ID':
+          delete newErrors.store_shipping_duration_id;
+          break;
+        default:
+          break;
+      }
+      return newErrors;
+    });
+    switch (action) {
+
+      case 'STORE_ID':
+        setFormData(prev => ({ ...prev, store_id: selectedOption?.value || "" }));
+        setError({})
+        if (selectedOption?.value) {
+          dispatch(getAllStoreShippingDurationList({ query: JSON.stringify({ store_id: selectedOption.value }) }))
+        }
+        break;
+
+      case 'BRAND_ID':
+        setFormData(prev => ({ ...prev, brand_id: selectedOption?.value || "" }));
+        break;
+
+      case 'CATEGORY_ID':
+        setFormData(prev => ({ ...prev, category_id: selectedOption?.value || "" }));
+        if (selectedOption?.value) {
+          dispatch(getAllTaxRulesList({ query: JSON.stringify({ category_id: selectedOption.value }) }))
+        }
+        break;
+      case 'STORE_BATCH_ID':
+        setFormData(prev => ({ ...prev, batch_id: selectedOption?.value || "" }));
+        break;
+      case 'STORE_qtyHead_ID':
+        setFormData(prev => ({ ...prev, qty_head_id: selectedOption?.value || "" }));
+        break;
+      case 'STORE_WARRANTY_ID':
+        setFormData(prev => ({ ...prev, warranty_id: selectedOption?.value || "" }));
+        break;
+      case 'hsn_code':
+        setFormData(prev => ({ ...prev, hsn_code: selectedOption?.value || "" }));
+        const hsnCodeData = selector?.getAllHsnData?.data?.data?.list.find(item => item?._id === selectedOption?.value)
+
+        setTaxData(hsnCodeData)
+
+
+        break;
+      default:
+        console.warn(`Unhandled select change action: ${action}`);
+        break;
+    }
+  };
+  const handleToggleProductSetting = (key) => {
+    const fieldMap = {
+      DISABLE: 'isDisable',
+      APPROVE: 'isApproved',
+      FEATURED: 'markAsFeatured',
+      COD: 'cod',
+      prescription_required: 'prescription_required'
+    };
+
+    const fieldName = fieldMap[key];
+
+    if (fieldName) {
+      setFormData((prev) => ({
+        ...prev,
+        [fieldName]: !prev[fieldName],
+      }));
+    }
+  };
+
+
+
+
+  const handleSaveSubmit = useCallback(async () => {
+    const catalogsUrlsArray = typeof formData.catalogsUrls === 'string'
+      ? [formData.catalogsUrls]
+      : formData.catalogsUrls;
+
+    const updatedFormData = { ...formData };
+
+    if (userData?.roleId === 9 && userData?.storeId) {
+      updatedFormData.store_id = userData.storeId;
+    }
+
+    const formattedOptions = options.map(option => ({
+      type: option.type,
+      remark: option.remark || '',
+      packaging: option.packaging || '',
+      mrp: parseFloat(option.mrp) || 0,
+      discount: parseFloat(option.discount) || 0,
+      salePrice: parseFloat(option.salePrice) || 0,
+      ...(option._id && { _id: option._id })
+    }));
+
+    const primaryOption = formattedOptions[0] || {};
+    const productPayload = {
+      title: updatedFormData.name || updatedFormData.title,
+      description: updatedFormData.description,
+      price: Number(primaryOption.salePrice || updatedFormData.price || 0),
+      mrp: Number(primaryOption.mrp || updatedFormData.mrp || 0),
+      category: updatedFormData.category_id || updatedFormData.category,
+      productFamilyCode: updatedFormData.productFamilyCode || updatedFormData.brand_id || "DEFAULT",
+      sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
+      color: updatedFormData.color || "default",
+      attributes: {
+        brand: updatedFormData.brand_id,
+        warranty: updatedFormData.warranty_id,
+        saltComposition: updatedFormData.salt_composition,
+        primaryUse: updatedFormData.primary_use,
+        saltSynonyms: updatedFormData.salt_synonyms,
+        storage: updatedFormData.storage,
+        introduction: updatedFormData.introduction,
+        benefits: updatedFormData.benefits,
+        sideEffect: updatedFormData.side_effect,
+        howToUse: updatedFormData.how_to_use,
+        howWorks: updatedFormData.how_works,
+        safetyAdvise: updatedFormData.safety_advise,
+        ifMiss: updatedFormData.if_miss,
+        options: formattedOptions,
+      },
+      hsnCode: updatedFormData.hsn_code,
+      origin: updatedFormData.origin || {},
+      stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
+      images: images?.length ? images : catalogsUrlsArray,
+      status: updatedFormData.isDisable ? "draft" : "active",
+    };
+
+    try {
+      const response = isEditMode
+        ? await dispatch(updateProductsById({ id, body: productPayload })).unwrap()
+        : await dispatch(createProducts(productPayload)).unwrap();
+
+      if (response) {
+        if (!isEditMode) {
+          setFormData({});
+          setImages([]);
+          setVariantRows([{
+            "type": null,
+            "remark": "",
+            "packaging": "",
+            "mrp": "",
+            "discount": "",
+            "salePrice": ""
+          }]);
+        }
+        toast.success(response?.message || "Product saved successfully!");
+        navigate(`/app/product-catalog`);
+      }
+    } catch (err) {
+      toast.error(err || "Failed to save product.");
+    }
+  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, userData, id, navigate]);
+
+
+  const handleProductDetailChange = (field, content) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: content,
+    }));
+    setError({})
+  };
+
+
+
+  const tabs = useMemo(() => [
+    {
+      id: 'basic-details',
+      title: 'Basic details',
+      description: 'Manage the product\'s basic information.',
+      icon: <GrDocument />,
+      component: (
+        <BasicDetailsTab
+          formData={formData}
+          errors={error}
+          handleChange={handleChange}
+          formattedCategoryList={createSelectOptions}
+          formattedBrandList={formattedData.brandList}
+          formattedWarrantyList={formattedData.warrantyList}
+          formattedQtyHeadList={formattedData.qtyHeadList}
+          storeList={formattedData.storeList}
+          handleSelectChange={handleSelectChange}
+          batchData={formattedData?.batchList}
+          fetchAllData={fetchAllData}
+          allCategories={selector?.getListData?.data?.data || []}
+          hsnCodeList={formattedData?.hsnCodeList}
+          API_CALL_OBJECT={API_CALL_OBJECT}
+          handleInputReactQuillChange={handleProductDetailChange}
+          userData={userData}
+
+        />
+      )
+    },
+    {
+      id: 'product-details',
+      title: 'Product details',
+      description: 'Manage the product\'s details information.',
+      icon: <GrDocument />,
+      component: (
+        <ProductDetails formData={formData} onChange={handleProductDetailChange} error={error} />
+      )
+    },
+    {
+      id: 'variants-options',
+      title: 'Variants & options',
+      description: 'Customize the product variants, including size, color, etc.',
+      icon: <BsMenuApp />,
+      component: (
+        <VariantsOptionsTab
+          optionsData={selector?.productOptionListData?.data?.data}
+          setVariantRows={setVariantRows}
+          options={options} // Make sure this is passed
+          formData={formData}
+          handleChange={handleChange}
+          selectJson={selectJson}
+          setFormData={setFormData}
+        />
+      )
+    },
+    {
+      id: 'media',
+      title: 'Media',
+      description: 'Manage your product\'s image gallery.',
+      icon: <IoImage />,
+      component: (
+        <MediaTab
+          setFormData={setFormData}
+          formData={formData}
+          images={images} setImages={setImages}
+          error={error}
+        />
+      )
+    },
+
+  ], [
+    formData, formattedData, createSelectOptions, formattedBatchData,
+    handleChange, handleSelectChange,
+    selector, options
+  ]);
+
+
+  return (
+    <div className='relative min-h-screen p-2 mx-auto max-w-7xl'>
+      <Loader loading={loading} />
+      <Breadcrumb isEditMode={isEditMode} />
+      <div className="flex flex-col gap-4 pb-8 lg:flex-row ">
+        <div className='h-full lg:sticky lg:top-24 '>
+          <TabNavigation
+            tabs={tabs}
+            activeTab={activeTab}
+            scrollToSection={scrollToSection}
+          />
+        </div>
+        <div className='w-10/12 mt-8'>
+          <div className='space-y-1 pb-7'>
+            <h3 className='text-2xl font-semibold'>{isEditMode ? "Edit" : "Add"} Product</h3>
+            <p className='text-xs text-gray-500'>Fields with (<span className='text-red-500'>*</span>) are mandatory</p>
+          </div>
+          <main
+            ref={mainContainerRef}
+            className="flex-1 overflow-hidden bg-white border border-gray-100 "
+          >
+            {tabs.map(tab => (
+              <section key={tab.id} ref={refs[tab.id]} id={tab.id} className="p-2 pb-10 md:p-6 scroll-mt-24"  >
+                {tab.component}
+              </section>
+            ))}
+          </main>
+        </div>
+        <div className="lg:w-5/12 lg:sticky lg:top-24 h-fit ">
+          <ProductSettingsPanel handleSaveSubmit={() => { validateForm() && handleSaveSubmit() }} formData={formData} handleToggleProductSetting={handleToggleProductSetting}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
