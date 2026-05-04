@@ -8,7 +8,7 @@ const DashboardCard = ({ color, label, value }) => {
                     <div className={`w-3 h-3 rounded-sm ${color}-`}></div>
                     <span className="text-gray-800">{label}</span>
                 </div>
-                <span className="font-semibold text-gray-900">{value}</span>
+                <span className="font-semibold text-gray-900">{typeof value === 'object' ? 'Invalid Data' : value}</span>
             </div></div>
     )
 }

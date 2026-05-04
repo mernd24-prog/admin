@@ -181,9 +181,12 @@ const createApiThunk = (axiosInstance) => {
           url: resolveEndpoint(url, endpointPayload),
         };
 
-        if (lowerMethod === "get" || lowerMethod === "delete") {
+        if (lowerMethod === "get" || (lowerMethod === "delete" && !options.sendBodyForDelete)) {
           config.params = requestParams;
         } else {
+          if (options.includeParamsWithBody && Object.keys(requestParams || {}).length) {
+            config.params = requestParams;
+          }
           config.data = requestBody;
         }
 

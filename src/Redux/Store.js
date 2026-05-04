@@ -18,6 +18,7 @@ import orderReducer from './orderSlice'
 import sellerReducer from './seller-slice'
 import adminCoreReducer from './adminCoreSlice'
 import sellerDashboardReducer from './sellerDashboardSlice'
+import sellerTrackingReducer from './sellerTrackingSlice'
 import sellerOnboardingReducer from './sellerOnboardingSlice'
 import sellerProfileReducer from './sellerProfileSlice'
 import sellerSubAdminsReducer from './sellerSubAdminsSlice'
@@ -50,6 +51,7 @@ export const store = configureStore({
     seller: sellerReducer,
     adminCore: adminCoreReducer,
     sellerDashboard: sellerDashboardReducer,
+    sellerTracking: sellerTrackingReducer,
     sellerOnboarding: sellerOnboardingReducer,
     sellerProfile: sellerProfileReducer,
     sellerSubAdmins: sellerSubAdminsReducer,

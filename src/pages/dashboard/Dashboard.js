@@ -115,11 +115,20 @@ export default function Dashboard() {
 
   const dashboardStats = useMemo(() => {
     const totals = overview?.totals || overview || {};
+    const getCurrencyValue = (val) => {
+      if (typeof val === 'number') return `$${val.toFixed(2)}`;
+      if (typeof val === 'string') return val;
+      return "$0.00";
+    };
+    const getNumberValue = (val) => {
+      if (typeof val === 'number') return val;
+      return 0;
+    };
     return {
-      sales: totals.totalSales ?? totals.sales ?? "$0.00",
-      earnings: totals.salesEarnings ?? totals.earnings ?? "$0.00",
-      users: totals.newUsers ?? totals.users ?? 0,
-      shops: totals.newShops ?? totals.shops ?? totals.vendors ?? 0,
+      sales: getCurrencyValue(totals.totalSales ?? totals.sales),
+      earnings: getCurrencyValue(totals.salesEarnings ?? totals.earnings),
+      users: getNumberValue(totals.newUsers ?? totals.users ?? totals.totalUsers),
+      shops: getNumberValue(totals.newShops ?? totals.shops ?? totals.vendors ?? totals.totalSellers),
     };
   }, [overview]);
 
@@ -135,7 +144,7 @@ export default function Dashboard() {
         </div>
       </div>,
       <span>{order.createdAt ? new Date(order.createdAt).toLocaleString() : order.date || "-"}</span>,
-      <span>{order.totalAmount ?? order.total ?? "-"}</span>,
+      <span>{typeof order.totalAmount === 'object' ? 'Invalid Data' : order.totalAmount ?? order.total ?? "-"}</span>,
       <span className='p-1 text-teal-800 bg-[#def8f4]'>{order.paymentStatus || order.status || "Pending"}</span>,
     ]);
   }, [overview]);

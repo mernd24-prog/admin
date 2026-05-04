@@ -11,13 +11,13 @@ const initialState = {
 
 export const listSellerSubAdmins = createApiThunkPrivate(
   "sellerSubAdmins/listSellerSubAdmins",
-  ENDPOINTS.adminAccess.subAdmins,
+  ENDPOINTS.sellers.subAdmins,
   "GET"
 );
 
 export const createSellerSubAdmin = createApiThunkPrivate(
   "sellerSubAdmins/createSellerSubAdmin",
-  ENDPOINTS.adminAccess.subAdmins,
+  ENDPOINTS.sellers.subAdmins,
   "POST",
   false,
   { transformBody: (payload = {}) => toSubAdminCreateBody(payload, DEFAULT_SELLER_MODULES) }
@@ -25,7 +25,7 @@ export const createSellerSubAdmin = createApiThunkPrivate(
 
 export const updateSellerSubAdminModules = createApiThunkPrivate(
   "sellerSubAdmins/updateSellerSubAdminModules",
-  (payload) => ENDPOINTS.adminAccess.subAdminModules(firstId(payload)),
+  (payload) => ENDPOINTS.sellers.subAdminModules(firstId(payload)),
   "PATCH",
   false,
   {

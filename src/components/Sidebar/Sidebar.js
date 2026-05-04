@@ -16,6 +16,34 @@ import { CiSettings } from 'react-icons/ci';
 import { HiOutlineReceiptTax } from "react-icons/hi";
 import { isSellerPanel } from '../../_helpers/panelConfig';
 
+const getTabName = (slug) => {
+  const tabMap = {
+    'admin': 'Home',
+    'users': 'Users',
+    'products': 'Product Management',
+    'orders': 'Orders',
+    'sellers': 'Seller Management',
+    'analytics': 'Analytics',
+    'pricing': 'Promotions',
+    'tax': 'Tax',
+    'rbac': 'Settings',
+    'carts': 'Orders',
+    'payments': 'Orders',
+    'platform': 'Settings',
+    'notifications': 'Settings',
+    'wallets': 'Orders',
+    'subscriptions': 'Settings',
+    'warranty': 'Product Management',
+    'loyalty': 'Promotions',
+    'recommendations': 'Product Management',
+    'returns': 'Orders',
+    'fraud': 'Settings',
+    'dynamic-pricing': 'Promotions',
+    'delivery': 'Shipping/Pickup',
+  };
+  return tabMap[slug] || 'Settings';
+};
+
 const SELLER_SIDEBAR_SECTIONS = [
   { module: "dashboard", tab: "Home", label: "Dashboard", route: "home" },
   { module: "products", tab: "Product Management", label: "Products", route: "product-catalog" },
@@ -32,7 +60,7 @@ const SELLER_SIDEBAR_SECTIONS = [
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {
   const dispatch = useDispatch();
   const selector = useSelector(state => state.user);
-  const permissions = selector?.getAllModulePermissionData?.data?.data;
+  const permissions = selector?.getAllModulePermissionData?.data?.data?.modules;
   const sellerPanel = isSellerPanel();
   const [activeTab, setActiveTab] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -59,7 +87,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
 
   useEffect(() => {
     if (!sellerPanel && userData?.userId) {
-      dispatch(getAllModulePermission({ _id: userData.userId }));
+      dispatch(getAllModulePermission({ _id: userData.userId, role: userData.role }));
     }
   }, [userData, dispatch, isRefreshConfig, sellerPanel]);
 
@@ -176,21 +204,17 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
 
     if (!permissions) return [];
 
-    const groupedByTab = permissions.reduce((acc, curr) => {
-      if (!curr.view || !curr.module_code || !curr.module_code.tab || !curr.module_code.name) return acc;
-      const moduleCode =
-        curr?.module_code?.module_code ||
-        curr?.module_code?.name.replace(/\s+/g, '-').toLowerCase();
-      if (!hasModuleAccess(moduleCode)) return acc;
-
-      const tabName = curr.module_code.tab;
+    const groupedByTab = permissions?.reduce((acc, curr) => {
+      if (!curr.permissions.some(p => p.assigned)) return acc;
+      const moduleCode = curr.slug;
+      const tabName = getTabName(curr.slug);
       if (!acc[tabName]) {
         acc[tabName] = [];
       }
 
       acc[tabName].push({
-        name: curr.module_code.name,
-        label: curr.module_code.name,
+        name: curr.name,
+        label: curr.name,
         module_code: moduleCode,
       });
       return acc;

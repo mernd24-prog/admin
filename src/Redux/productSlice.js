@@ -108,9 +108,22 @@ export const updateProducts = createApiThunkPrivate('updateProducts', (payload) 
 export const enableDisableProductCatalogs = createApiThunkPrivate('enableDisableProductCatalogs', '/product/enableDisable', 'PUT')
 export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(payload?.productId || payload?._id || payload?.id), 'PATCH')
 export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(payload?.productId || payload?._id || payload?.id), 'DELETE')
-export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH')
+export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.status ? { status: payload.status } : {}),
+        ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
+        ...(payload.checklist ? { checklist: payload.checklist } : {}),
+    }),
+})
 export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.products.listForPanel, 'GET')
-export const getProductModerationQueue = createApiThunkPrivate('getProductModerationQueue', ENDPOINTS.products.moderationQueue, 'GET')
+export const getProductModerationQueue = createApiThunkPrivate('getProductModerationQueue', ENDPOINTS.products.moderationQueue, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.category ? { category: params.category } : {}),
+        ...(params.page ? { page: Number(params.page) } : {}),
+        ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+    }),
+})
 export const getAllBrandList = createApiThunkPrivate('getAllBrandList', '/brands/getAllDocuments', 'GET')
 export const getProductsForPurchase = createApiThunkPrivate('getProductsForPurchase', '/erp/product/get-products-for-purchase-order', 'GET', true)
 

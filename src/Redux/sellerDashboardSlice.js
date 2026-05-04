@@ -8,9 +8,15 @@ const initialState = {
 
 export const getSellerDashboard = createApiThunkPrivate(
   "sellerDashboard/getSellerDashboard",
-  ENDPOINTS.dashboard.overview,
+  ENDPOINTS.sellers.dashboard,
   "GET",
-  true
+  true,
+  {
+    transformParams: (params = {}) => ({
+      ...(params.fromDate ? { fromDate: params.fromDate } : {}),
+      ...(params.toDate ? { toDate: params.toDate } : {}),
+    }),
+  }
 );
 
 const sellerDashboardSlice = createSlice({

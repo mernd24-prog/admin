@@ -87,6 +87,18 @@ export const fetchAuthStatus = createAsyncThunk(
   }
 );
 
+export const fetchSellerWebStatus = createAsyncThunk(
+  "seller/fetchSellerWebStatus",
+  async (_payload = {}, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest("GET", ENDPOINTS.sellers.status);
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Unable to fetch seller status"));
+    }
+  }
+);
+
 const sellerSlice = createSlice({
   name: "seller",
   initialState: {
@@ -100,6 +112,7 @@ const sellerSlice = createSlice({
     authMode: localStorage.getItem(AUTH_MODE_KEY) || null,
     kycSubmitted: false,
     profileSubmitted: false,
+    statusData: null,
   },
   reducers: {
     startSellerOnboarding(state, action) {
@@ -222,6 +235,18 @@ const sellerSlice = createSlice({
         localStorage.setItem(AUTH_FLOW_STATE_KEY, JSON.stringify(action.payload));
       })
       .addCase(fetchAuthStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.message || action.payload || action.error.message;
+      })
+      .addCase(fetchSellerWebStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSellerWebStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        state.statusData = action.payload?.data || action.payload;
+      })
+      .addCase(fetchSellerWebStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || action.payload || action.error.message;
       });

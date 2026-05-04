@@ -336,7 +336,7 @@ const authSlice = createSlice({
   initialState: {
     loading: false,
     user: null,
-    token: null,
+    token: localStorage.getItem("accessToken") || null,
     error: null,
     success: null,
     profileData: [],
@@ -523,6 +523,34 @@ const authSlice = createSlice({
 
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      //
+      // ================================
+      // REFRESH TOKEN
+      // ================================
+      //
+
+      .addCase(refreshToken.pending, (state) => {
+        state.error = null;
+      })
+
+      .addCase(refreshToken.fulfilled, (state, action) => {
+        const auth = normalizeAuthPayload(action.payload);
+        state.token = auth.accessToken || state.token;
+        if (auth.accessToken) {
+          setStoredAuth({
+            accessToken: auth.accessToken,
+            refreshToken: auth.refreshToken,
+            user: auth.user || state.user,
+            role: auth.role,
+            allowedModules: auth.allowedModules,
+          });
+        }
+      })
+
+      .addCase(refreshToken.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
       });
   },

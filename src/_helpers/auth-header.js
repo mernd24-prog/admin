@@ -1,4 +1,5 @@
 import axios from "axios";
+import { forceLogout, getStoredAccessToken } from "./authSession";
 
 
 // let backendUrl = `https://Sam Global.jamsara.com/api/v1/`
@@ -10,9 +11,9 @@ let backendUrl = `http://localhost:7004/api/v1`
 
 
 export function authHeader() {
-    let user = JSON.parse(window.sessionStorage.getItem('accessToken'));
-    if (user && user.token) {
-        return { 'Authorization': 'Bearer ' + user.token }; // returning an object
+    const token = getStoredAccessToken();
+    if (token) {
+        return { 'Authorization': 'Bearer ' + token }; // returning an object
     } else {
         return {}; // returning an empty object if no user or token
     }
@@ -20,10 +21,7 @@ export function authHeader() {
 
 
 export function logoutFunction() {
-    localStorage.removeItem('accessToken');
-
-    window.location.replace('/login');
-    window.location.reload()
+    forceLogout("Logged out");
 }
 
 export const headerForPublicAPI = new Headers({

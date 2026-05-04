@@ -89,10 +89,14 @@ export const toAccountStatus = (payload = {}) => {
 export const toListParams = (params = {}, defaults = {}) => ({
   ...defaults,
   ...(params.q || params.keyWord || params.search ? { q: params.q || params.keyWord || params.search } : {}),
-  ...(params.page ? { page: Number(params.page) } : {}),
+  ...(params.page !== undefined && params.page !== null ? { page: Number(params.page) } : {}),
   ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+  ...(params.offset !== undefined && params.offset !== null ? { offset: Number(params.offset) } : {}),
+  ...(params.role ? { role: params.role } : {}),
   ...(params.accountStatus ? { accountStatus: params.accountStatus } : {}),
   ...(params.status ? { status: params.status } : {}),
+  ...(params.onboardingStatus ? { onboardingStatus: params.onboardingStatus } : {}),
+  ...(params.active !== undefined ? { active: params.active } : {}),
 });
 
 export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
@@ -117,7 +121,17 @@ export const toSellerRegisterBody = (payload = {}) => ({
 });
 
 export const toUserUpdateBody = (payload = {}) => {
-  const body = { accountStatus: toAccountStatus(payload) };
+  const body = {};
+  if (
+    payload.accountStatus ||
+    payload.status ||
+    typeof payload.isDisable === "boolean"
+  ) {
+    body.accountStatus = toAccountStatus(payload);
+  }
+  if (payload.role) {
+    body.role = payload.role;
+  }
   const hasProfile = payload.profile || payload.full_name || payload.fullName || payload.name || payload.userName;
   if (hasProfile) {
     body.profile = toProfile(payload);

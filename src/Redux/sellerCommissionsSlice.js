@@ -34,7 +34,9 @@ export const getSellerSettlements = createApiThunkPrivate(
 export const calculateSellerCommission = createApiThunkPrivate(
   "sellerCommissions/calculateSellerCommission",
   (payload) => ENDPOINTS.payouts.calculate(payload?.orderId || payload?.id),
-  "POST"
+  "POST",
+  false,
+  { transformBody: () => undefined }
 );
 
 export const processSellerPayouts = createApiThunkPrivate(

@@ -1,5 +1,6 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { createApiThunkPrivate, createExtraReducersForThunk } from "../_helpers/ApiThunk";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createExtraReducersForThunk } from "../_helpers/ApiThunk";
+import { apiRequest } from "../_helpers/apiConfig";
 import { ENDPOINTS } from "../_helpers/endpoints";
 
 const initialState = {
@@ -7,16 +8,48 @@ const initialState = {
   updateOnboardingProfileData: {},
 };
 
-export const submitSellerKycDetails = createApiThunkPrivate(
+const getOnboardingToken = (payload = {}, state = {}) =>
+  payload?.onboardingToken ||
+  state?.seller?.onboardingToken ||
+  localStorage.getItem("sellerOnboardingToken");
+
+const withoutToken = (payload = {}) => {
+  const { onboardingToken, ...body } = payload || {};
+  return body;
+};
+
+export const submitSellerKycDetails = createAsyncThunk(
   "sellerOnboarding/submitSellerKycDetails",
-  ENDPOINTS.sellers.onboardingKyc,
-  "POST"
+  async (payload = {}, { rejectWithValue, getState }) => {
+    try {
+      return await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.onboardingKyc,
+        withoutToken(payload),
+        "json",
+        getOnboardingToken(payload, getState())
+      );
+    } catch (error) {
+      return rejectWithValue(error?.message || error);
+    }
+  }
 );
 
-export const updateSellerOnboardingDetails = createApiThunkPrivate(
+export const updateSellerOnboardingDetails = createAsyncThunk(
   "sellerOnboarding/updateSellerOnboardingDetails",
-  ENDPOINTS.sellers.onboardingProfile,
-  "PATCH"
+  async (payload = {}, { rejectWithValue, getState }) => {
+    try {
+      return await apiRequest(
+        "PATCH",
+        ENDPOINTS.sellers.onboardingProfile,
+        withoutToken(payload),
+        "json",
+        getOnboardingToken(payload, getState())
+      );
+    } catch (error) {
+      return rejectWithValue(error?.message || error);
+    }
+  }
 );
 
 const sellerOnboardingSlice = createSlice({

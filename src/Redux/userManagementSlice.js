@@ -91,12 +91,21 @@ export const getAllModulePermission = createApiThunkPrivate(
     'GET',
     true,
     {
-        transformParams: (params = {}) => ({
-            role: params.role || 'sub-admin',
-            includePermissions: params.includePermissions !== false,
-            ...(params.roleId ? { roleId: params.roleId } : {}),
-            ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
-        }),
+        transformParams: (params = {}) => {
+            const result = {
+                includePermissions: params.includePermissions !== false,
+                ...(params.roleId ? { roleId: params.roleId } : {}),
+                ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
+                ...(params._id ? { userId: params._id } : {}),
+            };
+            
+            // Only add role parameter if explicitly provided and not 'admin'
+            if (params.role && params.role !== 'admin') {
+                result.role = params.role;
+            }
+            
+            return result;
+        },
     }
 );
 

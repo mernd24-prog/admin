@@ -300,16 +300,16 @@ const Users = () => {
     </div>,
     <span key={`actions-${user._id}`}>
       <ActionButtons
-        // onEdit={() => {
-        //   setForm({
-        //     _id: user._id,
-        //     full_name: user.full_name,
-        //     userName: user.userName,
-        //     email: user.email,
-        //     isDisable: user.isDisable
-        //   });
-        //   setIsEditModal(true);
-        // }}
+        onEdit={() => {
+          setForm({
+            _id: user._id,
+            full_name: user.full_name,
+            userName: user.userName,
+            email: user.email,
+            isDisable: user.isDisable
+          });
+          setIsEditModal(true);
+        }}
         onPasswordChange={() => {
           setForm({
             _id: user._id,
