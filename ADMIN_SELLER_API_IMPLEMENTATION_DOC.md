@@ -4,6 +4,8 @@ Use this document as the frontend source of truth for the admin panel and seller
 
 Source files used:
 
+<!--  -->
+
 - `src/api/register-routes.js`
 - `src/modules/admin/routes/admin.routes.js`
 - `src/modules/admin/validation/admin.validation.js`
@@ -68,11 +70,7 @@ export const USER_ROLES = [
   "super-admin",
 ];
 
-export const ACCOUNT_STATUSES = [
-  "active",
-  "suspended",
-  "pending_approval",
-];
+export const ACCOUNT_STATUSES = ["active", "suspended", "pending_approval"];
 
 export const SELLER_ONBOARDING_STATUSES = [
   "initiated",
@@ -123,11 +121,7 @@ export const DELIVERY_STATUSES = [
   "cancelled",
 ];
 
-export const KYC_REVIEW_STATUSES = [
-  "under_review",
-  "verified",
-  "rejected",
-];
+export const KYC_REVIEW_STATUSES = ["under_review", "verified", "rejected"];
 
 export const PLATFORM_MODULES = [
   "users",
@@ -217,93 +211,99 @@ Base path:
 
 All routes require `authenticate` and admin authorization. `/access/admins` also requires `super-admin`.
 
-| Feature | Method | Path | Slice | Query | Body |
-| --- | --- | --- | --- | --- | --- |
-| Access modules | GET | `/access/modules` | `adminAccessSlice` | `ListAccessModulesQuery` | none |
-| Create admin | POST | `/access/admins` | `adminAccessSlice` | none | `CreateAdminPayload` |
-| List admins | GET | `/access/admins` | `adminAccessSlice` | `ListAdminsQuery` | none |
-| Create platform sub-admin | POST | `/access/sub-admins` | `adminAccessSlice` | none | `CreatePlatformSubAdminPayload` |
-| List platform sub-admins | GET | `/access/sub-admins` | `adminAccessSlice` | `ListPlatformSubAdminsQuery` | none |
-| Update platform sub-admin modules | PATCH | `/access/sub-admins/:userId/modules` | `adminAccessSlice` | none | `UpdateAllowedModulesPayload` |
-| Dashboard overview | GET | `/dashboard/overview` | `adminDashboardSlice` | none | none |
-| List users | GET | `/users` | `adminUsersSlice` | `ListUsersQuery` | none |
-| Get user detail | GET | `/users/:userId` | `adminUsersSlice` | none | none |
-| Update user | PATCH | `/users/:userId` | `adminUsersSlice` | none | `UpdateUserPayload` |
-| Deactivate user | DELETE | `/users/:userId` | `adminUsersSlice` | none | `DeactivateUserPayload` |
-| List vendors/sellers | GET | `/vendors` | `adminVendorsSlice` | `ListVendorsQuery` | none |
-| Update vendor status | PATCH | `/vendors/:sellerId/status` | `adminVendorsSlice` | none | `UpdateVendorStatusPayload` |
-| Product moderation queue | GET | `/products/moderation-queue` | `adminProductsSlice` | `ModerationQueueQuery` | none |
-| Moderate product | PATCH | `/products/:productId/moderate` | `adminProductsSlice` | none | `ModerateProductPayload` |
-| List orders | GET | `/orders` | `adminOrdersSlice` | `ListOrdersQuery` | none |
-| List payments | GET | `/payments` | `adminPaymentsSlice` | `ListPaymentsQuery` | none |
-| Create payout | POST | `/payouts` | `adminPayoutsSlice` | none | `CreatePayoutPayload` |
-| List payouts | GET | `/payouts` | `adminPayoutsSlice` | `ListPayoutsQuery` | none |
-| Tax reports | GET | `/tax/reports` | `adminTaxSlice` | `TaxReportQuery` | none |
-| Generate invoice | POST | `/tax/orders/:orderId/invoice` | `adminTaxSlice` | none | none |
-| Create API key | POST | `/platform/api-keys` | `adminPlatformSlice` | none | `CreateApiKeyPayload` |
-| List API keys | GET | `/platform/api-keys` | `adminPlatformSlice` | `ListApiKeysQuery` | none |
-| Create webhook | POST | `/platform/webhooks` | `adminPlatformSlice` | none | `CreateWebhookSubscriptionPayload` |
-| List webhooks | GET | `/platform/webhooks` | `adminPlatformSlice` | `ListWebhookSubscriptionsQuery` | none |
-| Upsert feature flag | PUT | `/platform/feature-flags` | `adminPlatformSlice` | none | `UpsertFeatureFlagPayload` |
-| List feature flags | GET | `/platform/feature-flags` | `adminPlatformSlice` | `ListFeatureFlagsQuery` | none |
-| Realtime analytics | GET | `/analytics/realtime` | `adminAnalyticsSlice` | `RealtimeAnalyticsQuery` | none |
-| Returns analytics | GET | `/returns/analytics` | `adminAnalyticsSlice` | `ReturnsAnalyticsQuery` | none |
-| List chargebacks | GET | `/chargebacks` | `adminPaymentsSlice` | `ListChargebacksQuery` | none |
-| System health | GET | `/system/health` | `adminSystemSlice` | none | none |
-| Queue status | GET | `/system/queues` | `adminSystemSlice` | none | none |
-| Pause queue | POST | `/system/queues/:queueName/pause` | `adminSystemSlice` | none | none |
-| Resume queue | POST | `/system/queues/:queueName/resume` | `adminSystemSlice` | none | none |
-| List dead-letter events | GET | `/system/dead-letter` | `adminSystemSlice` | `ListDeadLetterQuery` | none |
-| Retry dead-letter event | POST | `/system/dead-letter/:eventId/retry` | `adminSystemSlice` | none | `DeadLetterActionPayload` |
-| Discard dead-letter event | POST | `/system/dead-letter/:eventId/discard` | `adminSystemSlice` | none | `DeadLetterActionPayload` |
-| Create subscription plan | POST | `/platform/subscription-plans` | `adminSubscriptionsSlice` | none | `CreateSubscriptionPlanPayload` |
-| List subscription plans | GET | `/platform/subscription-plans` | `adminSubscriptionsSlice` | `ListSubscriptionPlanQuery` | none |
-| Get subscription plan | GET | `/platform/subscription-plans/:planId` | `adminSubscriptionsSlice` | none | none |
-| Update subscription plan | PATCH | `/platform/subscription-plans/:planId` | `adminSubscriptionsSlice` | none | `UpdateSubscriptionPlanPayload` |
-| Delete subscription plan | DELETE | `/platform/subscription-plans/:planId` | `adminSubscriptionsSlice` | none | none |
-| List platform subscriptions | GET | `/platform/subscriptions` | `adminSubscriptionsSlice` | `ListPlatformSubscriptionsQuery` | none |
-| Update platform subscription status | PATCH | `/platform/subscriptions/:subscriptionId/status` | `adminSubscriptionsSlice` | none | `UpdatePlatformSubscriptionStatusPayload` |
-| Create platform fee config | POST | `/platform/fee-config` | `adminSubscriptionsSlice` | none | `CreatePlatformFeeConfigPayload` |
-| List platform fee configs | GET | `/platform/fee-config` | `adminSubscriptionsSlice` | `ListPlatformFeeConfigQuery` | none |
-| Get platform fee config | GET | `/platform/fee-config/:configId` | `adminSubscriptionsSlice` | none | none |
-| Update platform fee config | PATCH | `/platform/fee-config/:configId` | `adminSubscriptionsSlice` | none | `UpdatePlatformFeeConfigPayload` |
-| Delete platform fee config | DELETE | `/platform/fee-config/:configId` | `adminSubscriptionsSlice` | none | none |
-| Create category | POST | `/platform/categories` | `adminPlatformSlice` | none | `CreateCategoryPayload` |
-| List categories | GET | `/platform/categories` | `adminPlatformSlice` | `ListCategoriesQuery` | none |
-| Get category | GET | `/platform/categories/:categoryKey` | `adminPlatformSlice` | none | none |
-| Update category | PATCH | `/platform/categories/:categoryKey` | `adminPlatformSlice` | none | `UpdateCategoryPayload` |
-| Delete category | DELETE | `/platform/categories/:categoryKey` | `adminPlatformSlice` | none | none |
-| Create product family | POST | `/platform/product-families` | `adminPlatformSlice` | none | `CreateProductFamilyPayload` |
-| List product families | GET | `/platform/product-families` | `adminPlatformSlice` | `ListProductFamiliesQuery` | none |
-| Get product family | GET | `/platform/product-families/:familyCode` | `adminPlatformSlice` | none | none |
-| Update product family | PATCH | `/platform/product-families/:familyCode` | `adminPlatformSlice` | none | `UpdateProductFamilyPayload` |
-| Delete product family | DELETE | `/platform/product-families/:familyCode` | `adminPlatformSlice` | none | none |
-| Create product variant | POST | `/platform/product-variants` | `adminPlatformSlice` | none | `CreateProductVariantPayload` |
-| List product variants | GET | `/platform/product-variants` | `adminPlatformSlice` | `ListProductVariantsQuery` | none |
-| Get product variant | GET | `/platform/product-variants/:variantId` | `adminPlatformSlice` | none | none |
-| Update product variant | PATCH | `/platform/product-variants/:variantId` | `adminPlatformSlice` | none | `UpdateProductVariantPayload` |
-| Delete product variant | DELETE | `/platform/product-variants/:variantId` | `adminPlatformSlice` | none | none |
-| Create HSN code | POST | `/platform/hsn-codes` | `adminPlatformSlice` | none | `CreateHsnCodePayload` |
-| List HSN codes | GET | `/platform/hsn-codes` | `adminPlatformSlice` | `ListHsnCodesQuery` | none |
-| Get HSN code | GET | `/platform/hsn-codes/:hsnCode` | `adminPlatformSlice` | none | none |
-| Update HSN code | PATCH | `/platform/hsn-codes/:hsnCode` | `adminPlatformSlice` | none | `UpdateHsnCodePayload` |
-| Delete HSN code | DELETE | `/platform/hsn-codes/:hsnCode` | `adminPlatformSlice` | none | none |
-| Create geography | POST | `/platform/geography` | `adminPlatformSlice` | none | `CreateGeographyPayload` |
-| List geography | GET | `/platform/geography` | `adminPlatformSlice` | `ListGeographiesQuery` | none |
-| Get geography | GET | `/platform/geography/:countryCode` | `adminPlatformSlice` | none | none |
-| Update geography | PATCH | `/platform/geography/:countryCode` | `adminPlatformSlice` | none | `UpdateGeographyPayload` |
-| Delete geography | DELETE | `/platform/geography/:countryCode` | `adminPlatformSlice` | none | none |
-| Create content page | POST | `/platform/content-pages` | `adminPlatformSlice` | none | `CreateContentPagePayload` |
-| List content pages | GET | `/platform/content-pages` | `adminPlatformSlice` | `ListContentPagesQuery` | none |
-| Get content page | GET | `/platform/content-pages/:slug` | `adminPlatformSlice` | none | none |
-| Update content page | PATCH | `/platform/content-pages/:slug` | `adminPlatformSlice` | none | `UpdateContentPagePayload` |
-| Delete content page | DELETE | `/platform/content-pages/:slug` | `adminPlatformSlice` | none | none |
+| Feature                             | Method | Path                                             | Slice                     | Query                            | Body                                      |
+| ----------------------------------- | ------ | ------------------------------------------------ | ------------------------- | -------------------------------- | ----------------------------------------- |
+| Access modules                      | GET    | `/access/modules`                                | `adminAccessSlice`        | `ListAccessModulesQuery`         | none                                      |
+| Create admin                        | POST   | `/access/admins`                                 | `adminAccessSlice`        | none                             | `CreateAdminPayload`                      |
+| List admins                         | GET    | `/access/admins`                                 | `adminAccessSlice`        | `ListAdminsQuery`                | none                                      |
+| Create platform sub-admin           | POST   | `/access/sub-admins`                             | `adminAccessSlice`        | none                             | `CreatePlatformSubAdminPayload`           |
+| List platform sub-admins            | GET    | `/access/sub-admins`                             | `adminAccessSlice`        | `ListPlatformSubAdminsQuery`     | none                                      |
+| Update platform sub-admin modules   | PATCH  | `/access/sub-admins/:userId/modules`             | `adminAccessSlice`        | none                             | `UpdateAllowedModulesPayload`             |
+| Dashboard overview                  | GET    | `/dashboard/overview`                            | `adminDashboardSlice`     | none                             | none                                      |
+| List users                          | GET    | `/users`                                         | `adminUsersSlice`         | `ListUsersQuery`                 | none                                      |
+| Get user detail                     | GET    | `/users/:userId`                                 | `adminUsersSlice`         | none                             | none                                      |
+| Update user                         | PATCH  | `/users/:userId`                                 | `adminUsersSlice`         | none                             | `UpdateUserPayload`                       |
+| Deactivate user                     | DELETE | `/users/:userId`                                 | `adminUsersSlice`         | none                             | `DeactivateUserPayload`                   |
+| List vendors/sellers                | GET    | `/vendors`                                       | `adminVendorsSlice`       | `ListVendorsQuery`               | none                                      |
+| Update vendor status                | PATCH  | `/vendors/:sellerId/status`                      | `adminVendorsSlice`       | none                             | `UpdateVendorStatusPayload`               |
+| Product moderation queue            | GET    | `/products/moderation-queue`                     | `adminProductsSlice`      | `ModerationQueueQuery`           | none                                      |
+| Moderate product                    | PATCH  | `/products/:productId/moderate`                  | `adminProductsSlice`      | none                             | `ModerateProductPayload`                  |
+| List orders                         | GET    | `/orders`                                        | `adminOrdersSlice`        | `ListOrdersQuery`                | none                                      |
+| List payments                       | GET    | `/payments`                                      | `adminPaymentsSlice`      | `ListPaymentsQuery`              | none                                      |
+| Create payout                       | POST   | `/payouts`                                       | `adminPayoutsSlice`       | none                             | `CreatePayoutPayload`                     |
+| List payouts                        | GET    | `/payouts`                                       | `adminPayoutsSlice`       | `ListPayoutsQuery`               | none                                      |
+| Tax reports                         | GET    | `/tax/reports`                                   | `adminTaxSlice`           | `TaxReportQuery`                 | none                                      |
+| Generate invoice                    | POST   | `/tax/orders/:orderId/invoice`                   | `adminTaxSlice`           | none                             | none                                      |
+| Create API key                      | POST   | `/platform/api-keys`                             | `adminPlatformSlice`      | none                             | `CreateApiKeyPayload`                     |
+| List API keys                       | GET    | `/platform/api-keys`                             | `adminPlatformSlice`      | `ListApiKeysQuery`               | none                                      |
+| Create webhook                      | POST   | `/platform/webhooks`                             | `adminPlatformSlice`      | none                             | `CreateWebhookSubscriptionPayload`        |
+| List webhooks                       | GET    | `/platform/webhooks`                             | `adminPlatformSlice`      | `ListWebhookSubscriptionsQuery`  | none                                      |
+| Upsert feature flag                 | PUT    | `/platform/feature-flags`                        | `adminPlatformSlice`      | none                             | `UpsertFeatureFlagPayload`                |
+| List feature flags                  | GET    | `/platform/feature-flags`                        | `adminPlatformSlice`      | `ListFeatureFlagsQuery`          | none                                      |
+| Realtime analytics                  | GET    | `/analytics/realtime`                            | `adminAnalyticsSlice`     | `RealtimeAnalyticsQuery`         | none                                      |
+| Returns analytics                   | GET    | `/returns/analytics`                             | `adminAnalyticsSlice`     | `ReturnsAnalyticsQuery`          | none                                      |
+| List chargebacks                    | GET    | `/chargebacks`                                   | `adminPaymentsSlice`      | `ListChargebacksQuery`           | none                                      |
+| System health                       | GET    | `/system/health`                                 | `adminSystemSlice`        | none                             | none                                      |
+| Queue status                        | GET    | `/system/queues`                                 | `adminSystemSlice`        | none                             | none                                      |
+| Pause queue                         | POST   | `/system/queues/:queueName/pause`                | `adminSystemSlice`        | none                             | none                                      |
+| Resume queue                        | POST   | `/system/queues/:queueName/resume`               | `adminSystemSlice`        | none                             | none                                      |
+| List dead-letter events             | GET    | `/system/dead-letter`                            | `adminSystemSlice`        | `ListDeadLetterQuery`            | none                                      |
+| Retry dead-letter event             | POST   | `/system/dead-letter/:eventId/retry`             | `adminSystemSlice`        | none                             | `DeadLetterActionPayload`                 |
+| Discard dead-letter event           | POST   | `/system/dead-letter/:eventId/discard`           | `adminSystemSlice`        | none                             | `DeadLetterActionPayload`                 |
+| Create subscription plan            | POST   | `/platform/subscription-plans`                   | `adminSubscriptionsSlice` | none                             | `CreateSubscriptionPlanPayload`           |
+| List subscription plans             | GET    | `/platform/subscription-plans`                   | `adminSubscriptionsSlice` | `ListSubscriptionPlanQuery`      | none                                      |
+| Get subscription plan               | GET    | `/platform/subscription-plans/:planId`           | `adminSubscriptionsSlice` | none                             | none                                      |
+| Update subscription plan            | PATCH  | `/platform/subscription-plans/:planId`           | `adminSubscriptionsSlice` | none                             | `UpdateSubscriptionPlanPayload`           |
+| Delete subscription plan            | DELETE | `/platform/subscription-plans/:planId`           | `adminSubscriptionsSlice` | none                             | none                                      |
+| List platform subscriptions         | GET    | `/platform/subscriptions`                        | `adminSubscriptionsSlice` | `ListPlatformSubscriptionsQuery` | none                                      |
+| Update platform subscription status | PATCH  | `/platform/subscriptions/:subscriptionId/status` | `adminSubscriptionsSlice` | none                             | `UpdatePlatformSubscriptionStatusPayload` |
+| Create platform fee config          | POST   | `/platform/fee-config`                           | `adminSubscriptionsSlice` | none                             | `CreatePlatformFeeConfigPayload`          |
+| List platform fee configs           | GET    | `/platform/fee-config`                           | `adminSubscriptionsSlice` | `ListPlatformFeeConfigQuery`     | none                                      |
+| Get platform fee config             | GET    | `/platform/fee-config/:configId`                 | `adminSubscriptionsSlice` | none                             | none                                      |
+| Update platform fee config          | PATCH  | `/platform/fee-config/:configId`                 | `adminSubscriptionsSlice` | none                             | `UpdatePlatformFeeConfigPayload`          |
+| Delete platform fee config          | DELETE | `/platform/fee-config/:configId`                 | `adminSubscriptionsSlice` | none                             | none                                      |
+| Create category                     | POST   | `/platform/categories`                           | `adminPlatformSlice`      | none                             | `CreateCategoryPayload`                   |
+| List categories                     | GET    | `/platform/categories`                           | `adminPlatformSlice`      | `ListCategoriesQuery`            | none                                      |
+| Get category                        | GET    | `/platform/categories/:categoryKey`              | `adminPlatformSlice`      | none                             | none                                      |
+| Update category                     | PATCH  | `/platform/categories/:categoryKey`              | `adminPlatformSlice`      | none                             | `UpdateCategoryPayload`                   |
+| Delete category                     | DELETE | `/platform/categories/:categoryKey`              | `adminPlatformSlice`      | none                             | none                                      |
+| Create product family               | POST   | `/platform/product-families`                     | `adminPlatformSlice`      | none                             | `CreateProductFamilyPayload`              |
+| List product families               | GET    | `/platform/product-families`                     | `adminPlatformSlice`      | `ListProductFamiliesQuery`       | none                                      |
+| Get product family                  | GET    | `/platform/product-families/:familyCode`         | `adminPlatformSlice`      | none                             | none                                      |
+| Update product family               | PATCH  | `/platform/product-families/:familyCode`         | `adminPlatformSlice`      | none                             | `UpdateProductFamilyPayload`              |
+| Delete product family               | DELETE | `/platform/product-families/:familyCode`         | `adminPlatformSlice`      | none                             | none                                      |
+| Create product variant              | POST   | `/platform/product-variants`                     | `adminPlatformSlice`      | none                             | `CreateProductVariantPayload`             |
+| List product variants               | GET    | `/platform/product-variants`                     | `adminPlatformSlice`      | `ListProductVariantsQuery`       | none                                      |
+| Get product variant                 | GET    | `/platform/product-variants/:variantId`          | `adminPlatformSlice`      | none                             | none                                      |
+| Update product variant              | PATCH  | `/platform/product-variants/:variantId`          | `adminPlatformSlice`      | none                             | `UpdateProductVariantPayload`             |
+| Delete product variant              | DELETE | `/platform/product-variants/:variantId`          | `adminPlatformSlice`      | none                             | none                                      |
+| Create HSN code                     | POST   | `/platform/hsn-codes`                            | `adminPlatformSlice`      | none                             | `CreateHsnCodePayload`                    |
+| List HSN codes                      | GET    | `/platform/hsn-codes`                            | `adminPlatformSlice`      | `ListHsnCodesQuery`              | none                                      |
+| Get HSN code                        | GET    | `/platform/hsn-codes/:hsnCode`                   | `adminPlatformSlice`      | none                             | none                                      |
+| Update HSN code                     | PATCH  | `/platform/hsn-codes/:hsnCode`                   | `adminPlatformSlice`      | none                             | `UpdateHsnCodePayload`                    |
+| Delete HSN code                     | DELETE | `/platform/hsn-codes/:hsnCode`                   | `adminPlatformSlice`      | none                             | none                                      |
+| Create geography                    | POST   | `/platform/geography`                            | `adminPlatformSlice`      | none                             | `CreateGeographyPayload`                  |
+| List geography                      | GET    | `/platform/geography`                            | `adminPlatformSlice`      | `ListGeographiesQuery`           | none                                      |
+| Get geography                       | GET    | `/platform/geography/:countryCode`               | `adminPlatformSlice`      | none                             | none                                      |
+| Update geography                    | PATCH  | `/platform/geography/:countryCode`               | `adminPlatformSlice`      | none                             | `UpdateGeographyPayload`                  |
+| Delete geography                    | DELETE | `/platform/geography/:countryCode`               | `adminPlatformSlice`      | none                             | none                                      |
+| Create content page                 | POST   | `/platform/content-pages`                        | `adminPlatformSlice`      | none                             | `CreateContentPagePayload`                |
+| List content pages                  | GET    | `/platform/content-pages`                        | `adminPlatformSlice`      | `ListContentPagesQuery`          | none                                      |
+| Get content page                    | GET    | `/platform/content-pages/:slug`                  | `adminPlatformSlice`      | none                             | none                                      |
+| Update content page                 | PATCH  | `/platform/content-pages/:slug`                  | `adminPlatformSlice`      | none                             | `UpdateContentPagePayload`                |
+| Delete content page                 | DELETE | `/platform/content-pages/:slug`                  | `adminPlatformSlice`      | none                             | none                                      |
 
 ## Admin Query Types
 
 ```ts
 export type ListAccessModulesQuery = {
-  role?: "admin" | "sub-admin" | "seller" | "seller-sub-admin" | "buyer" | "super-admin";
+  role?:
+    | "admin"
+    | "sub-admin"
+    | "seller"
+    | "seller-sub-admin"
+    | "buyer"
+    | "super-admin";
   roleId?: string;
   roleSlug?: string;
   active?: boolean;
@@ -323,7 +323,13 @@ export type ListPlatformSubAdminsQuery = {
 
 export type ListUsersQuery = {
   q?: string;
-  role?: "admin" | "sub-admin" | "seller" | "seller-sub-admin" | "buyer" | "super-admin";
+  role?:
+    | "admin"
+    | "sub-admin"
+    | "seller"
+    | "seller-sub-admin"
+    | "buyer"
+    | "super-admin";
   accountStatus?: "active" | "suspended" | "pending_approval";
   page?: number;
   limit?: number;
@@ -332,7 +338,12 @@ export type ListUsersQuery = {
 export type ListVendorsQuery = {
   q?: string;
   status?: "active" | "suspended" | "pending_approval";
-  onboardingStatus?: "initiated" | "in_progress" | "under_review" | "ready_for_go_live" | "rejected";
+  onboardingStatus?:
+    | "initiated"
+    | "in_progress"
+    | "under_review"
+    | "ready_for_go_live"
+    | "rejected";
   page?: number;
   limit?: number;
 };
@@ -766,32 +777,51 @@ Base path:
 /api/v1/sellers
 ```
 
-| Feature | Method | Path | Slice | Auth/permission | Query | Body |
-| --- | --- | --- | --- | --- | --- | --- |
-| Submit onboarding KYC | POST | `/onboarding/kyc` | `sellerSlice` | onboarding seller token | none | `SellerKycPayload` |
-| Update onboarding profile | PATCH | `/onboarding/profile` | `sellerSlice` | onboarding seller token | none | `SellerProfilePayload` |
-| Review seller KYC | PATCH | `/:sellerId/kyc/review` | `adminVendorsSlice` | `kyc:review` capability | none | `ReviewSellerKycPayload` |
-| Seller web status | GET | `/me/status` | `sellerSlice` | seller or seller-sub-admin | none | none |
-| Seller tracking list | GET | `/me/tracking` | `sellerTrackingSlice` | seller or seller-sub-admin | `SellerTrackingQuery` | none |
-| Seller tracking detail | GET | `/me/tracking/:orderId` | `sellerTrackingSlice` | seller or seller-sub-admin | none | none |
-| Get seller profile | GET | `/me/profile` | `sellerSlice` | `seller:profile:manage` capability | none | none |
-| Update seller profile | PATCH | `/me/profile` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerProfilePayload` |
-| Update business address | PATCH | `/me/business-address` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerAddressPayload` |
-| Update pickup address | PATCH | `/me/pickup-address` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerAddressPayload` |
-| Update bank details | PATCH | `/me/bank-details` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerBankPayload` |
-| Update more info | PATCH | `/me/more-info` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerMoreInfoPayload` |
-| Update settings | PATCH | `/me/settings` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerSettingsPayload` |
-| Seller dashboard | GET | `/me/dashboard` | `sellerDashboardSlice` | `seller:dashboard:view` capability | `SellerDashboardQuery` | none |
-| Create seller sub-admin | POST | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | `CreateSellerSubAdminPayload` |
-| List seller sub-admins | GET | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | none |
-| Update seller sub-admin modules | PATCH | `/me/sub-admins/:userId/modules` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | `UpdateAllowedModulesPayload` |
+| Feature                         | Method | Path                             | Slice                  | Auth/permission                    | Query                  | Body                          |
+| ------------------------------- | ------ | -------------------------------- | ---------------------- | ---------------------------------- | ---------------------- | ----------------------------- |
+| Submit onboarding KYC           | POST   | `/onboarding/kyc`                | `sellerSlice`          | onboarding seller token            | none                   | `SellerKycPayload`            |
+| Update onboarding profile       | PATCH  | `/onboarding/profile`            | `sellerSlice`          | onboarding seller token            | none                   | `SellerProfilePayload`        |
+| Review seller KYC               | PATCH  | `/:sellerId/kyc/review`          | `adminVendorsSlice`    | `kyc:review` capability            | none                   | `ReviewSellerKycPayload`      |
+| Seller web status               | GET    | `/me/status`                     | `sellerSlice`          | seller or seller-sub-admin         | none                   | none                          |
+| Seller tracking list            | GET    | `/me/tracking`                   | `sellerTrackingSlice`  | seller or seller-sub-admin         | `SellerTrackingQuery`  | none                          |
+| Seller tracking detail          | GET    | `/me/tracking/:orderId`          | `sellerTrackingSlice`  | seller or seller-sub-admin         | none                   | none                          |
+| Get seller profile              | GET    | `/me/profile`                    | `sellerSlice`          | `seller:profile:manage` capability | none                   | none                          |
+| Update seller profile           | PATCH  | `/me/profile`                    | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerProfilePayload`        |
+| Update business address         | PATCH  | `/me/business-address`           | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerAddressPayload`        |
+| Update pickup address           | PATCH  | `/me/pickup-address`             | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerAddressPayload`        |
+| Update bank details             | PATCH  | `/me/bank-details`               | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerBankPayload`           |
+| Update more info                | PATCH  | `/me/more-info`                  | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerMoreInfoPayload`       |
+| Update settings                 | PATCH  | `/me/settings`                   | `sellerSlice`          | `seller:profile:manage` capability | none                   | `SellerSettingsPayload`       |
+| Seller dashboard                | GET    | `/me/dashboard`                  | `sellerDashboardSlice` | `seller:dashboard:view` capability | `SellerDashboardQuery` | none                          |
+| Create seller sub-admin         | POST   | `/me/sub-admins`                 | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none                   | `CreateSellerSubAdminPayload` |
+| List seller sub-admins          | GET    | `/me/sub-admins`                 | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none                   | none                          |
+| Update seller sub-admin modules | PATCH  | `/me/sub-admins/:userId/modules` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none                   | `UpdateAllowedModulesPayload` |
 
 ## Seller Query Types
 
 ```ts
 export type SellerTrackingQuery = {
-  status?: "pending_payment" | "payment_failed" | "confirmed" | "packed" | "shipped" | "delivered" | "return_requested" | "returned" | "cancelled" | "fulfilled";
-  deliveryStatus?: "not_created" | "initiated" | "manifested" | "picked_up" | "in_transit" | "out_for_delivery" | "delivered" | "failed" | "cancelled";
+  status?:
+    | "pending_payment"
+    | "payment_failed"
+    | "confirmed"
+    | "packed"
+    | "shipped"
+    | "delivered"
+    | "return_requested"
+    | "returned"
+    | "cancelled"
+    | "fulfilled";
+  deliveryStatus?:
+    | "not_created"
+    | "initiated"
+    | "manifested"
+    | "picked_up"
+    | "in_transit"
+    | "out_for_delivery"
+    | "delivered"
+    | "failed"
+    | "cancelled";
   fromDate?: string;
   toDate?: string;
   limit?: number;
@@ -924,13 +954,13 @@ Base path:
 /api/v1/sellers/commissions
 ```
 
-| Feature | Method | Path | Slice | Auth/role | Query | Body |
-| --- | --- | --- | --- | --- | --- | --- |
-| My commissions | GET | `/my-commissions` | `sellerCommissionsSlice` | seller token | none | none |
-| My payouts | GET | `/my-payouts` | `sellerCommissionsSlice` | seller token | none | none |
-| Calculate order commission | POST | `/calculate/:orderId` | `sellerCommissionsSlice` | admin role | none | none |
-| Process batch payouts | POST | `/process-payouts` | `sellerCommissionsSlice` | admin role | none | `ProcessPayoutsPayload` |
-| View settlements | GET | `/settlements` | `sellerCommissionsSlice` | admin role | none | none |
+| Feature                    | Method | Path                  | Slice                    | Auth/role    | Query | Body                    |
+| -------------------------- | ------ | --------------------- | ------------------------ | ------------ | ----- | ----------------------- |
+| My commissions             | GET    | `/my-commissions`     | `sellerCommissionsSlice` | seller token | none  | none                    |
+| My payouts                 | GET    | `/my-payouts`         | `sellerCommissionsSlice` | seller token | none  | none                    |
+| Calculate order commission | POST   | `/calculate/:orderId` | `sellerCommissionsSlice` | admin role   | none  | none                    |
+| Process batch payouts      | POST   | `/process-payouts`    | `sellerCommissionsSlice` | admin role   | none  | `ProcessPayoutsPayload` |
+| View settlements           | GET    | `/settlements`        | `sellerCommissionsSlice` | admin role   | none  | none                    |
 
 ```json
 {
@@ -949,14 +979,16 @@ export const adminEndpoints = {
   accessModules: `${API_PREFIX}/admin/access/modules`,
   admins: `${API_PREFIX}/admin/access/admins`,
   subAdmins: `${API_PREFIX}/admin/access/sub-admins`,
-  subAdminModules: (userId) => `${API_PREFIX}/admin/access/sub-admins/${userId}/modules`,
+  subAdminModules: (userId) =>
+    `${API_PREFIX}/admin/access/sub-admins/${userId}/modules`,
   dashboardOverview: `${API_PREFIX}/admin/dashboard/overview`,
   users: `${API_PREFIX}/admin/users`,
   userById: (userId) => `${API_PREFIX}/admin/users/${userId}`,
   vendors: `${API_PREFIX}/admin/vendors`,
   vendorStatus: (sellerId) => `${API_PREFIX}/admin/vendors/${sellerId}/status`,
   moderationQueue: `${API_PREFIX}/admin/products/moderation-queue`,
-  moderateProduct: (productId) => `${API_PREFIX}/admin/products/${productId}/moderate`,
+  moderateProduct: (productId) =>
+    `${API_PREFIX}/admin/products/${productId}/moderate`,
   orders: `${API_PREFIX}/admin/orders`,
   payments: `${API_PREFIX}/admin/payments`,
   payouts: `${API_PREFIX}/admin/payouts`,
@@ -970,29 +1002,42 @@ export const adminEndpoints = {
   chargebacks: `${API_PREFIX}/admin/chargebacks`,
   systemHealth: `${API_PREFIX}/admin/system/health`,
   queues: `${API_PREFIX}/admin/system/queues`,
-  pauseQueue: (queueName) => `${API_PREFIX}/admin/system/queues/${queueName}/pause`,
-  resumeQueue: (queueName) => `${API_PREFIX}/admin/system/queues/${queueName}/resume`,
+  pauseQueue: (queueName) =>
+    `${API_PREFIX}/admin/system/queues/${queueName}/pause`,
+  resumeQueue: (queueName) =>
+    `${API_PREFIX}/admin/system/queues/${queueName}/resume`,
   deadLetter: `${API_PREFIX}/admin/system/dead-letter`,
-  retryDeadLetter: (eventId) => `${API_PREFIX}/admin/system/dead-letter/${eventId}/retry`,
-  discardDeadLetter: (eventId) => `${API_PREFIX}/admin/system/dead-letter/${eventId}/discard`,
+  retryDeadLetter: (eventId) =>
+    `${API_PREFIX}/admin/system/dead-letter/${eventId}/retry`,
+  discardDeadLetter: (eventId) =>
+    `${API_PREFIX}/admin/system/dead-letter/${eventId}/discard`,
   subscriptionPlans: `${API_PREFIX}/admin/platform/subscription-plans`,
-  subscriptionPlanById: (planId) => `${API_PREFIX}/admin/platform/subscription-plans/${planId}`,
+  subscriptionPlanById: (planId) =>
+    `${API_PREFIX}/admin/platform/subscription-plans/${planId}`,
   platformSubscriptions: `${API_PREFIX}/admin/platform/subscriptions`,
-  platformSubscriptionStatus: (subscriptionId) => `${API_PREFIX}/admin/platform/subscriptions/${subscriptionId}/status`,
+  platformSubscriptionStatus: (subscriptionId) =>
+    `${API_PREFIX}/admin/platform/subscriptions/${subscriptionId}/status`,
   feeConfig: `${API_PREFIX}/admin/platform/fee-config`,
-  feeConfigById: (configId) => `${API_PREFIX}/admin/platform/fee-config/${configId}`,
+  feeConfigById: (configId) =>
+    `${API_PREFIX}/admin/platform/fee-config/${configId}`,
   categories: `${API_PREFIX}/admin/platform/categories`,
-  categoryByKey: (categoryKey) => `${API_PREFIX}/admin/platform/categories/${categoryKey}`,
+  categoryByKey: (categoryKey) =>
+    `${API_PREFIX}/admin/platform/categories/${categoryKey}`,
   productFamilies: `${API_PREFIX}/admin/platform/product-families`,
-  productFamilyByCode: (familyCode) => `${API_PREFIX}/admin/platform/product-families/${familyCode}`,
+  productFamilyByCode: (familyCode) =>
+    `${API_PREFIX}/admin/platform/product-families/${familyCode}`,
   productVariants: `${API_PREFIX}/admin/platform/product-variants`,
-  productVariantById: (variantId) => `${API_PREFIX}/admin/platform/product-variants/${variantId}`,
+  productVariantById: (variantId) =>
+    `${API_PREFIX}/admin/platform/product-variants/${variantId}`,
   hsnCodes: `${API_PREFIX}/admin/platform/hsn-codes`,
-  hsnCodeByCode: (hsnCode) => `${API_PREFIX}/admin/platform/hsn-codes/${hsnCode}`,
+  hsnCodeByCode: (hsnCode) =>
+    `${API_PREFIX}/admin/platform/hsn-codes/${hsnCode}`,
   geography: `${API_PREFIX}/admin/platform/geography`,
-  geographyByCode: (countryCode) => `${API_PREFIX}/admin/platform/geography/${countryCode}`,
+  geographyByCode: (countryCode) =>
+    `${API_PREFIX}/admin/platform/geography/${countryCode}`,
   contentPages: `${API_PREFIX}/admin/platform/content-pages`,
-  contentPageBySlug: (slug) => `${API_PREFIX}/admin/platform/content-pages/${slug}`,
+  contentPageBySlug: (slug) =>
+    `${API_PREFIX}/admin/platform/content-pages/${slug}`,
 };
 
 export const sellerEndpoints = {
@@ -1010,13 +1055,15 @@ export const sellerEndpoints = {
   settings: `${API_PREFIX}/sellers/me/settings`,
   dashboard: `${API_PREFIX}/sellers/me/dashboard`,
   subAdmins: `${API_PREFIX}/sellers/me/sub-admins`,
-  subAdminModules: (userId) => `${API_PREFIX}/sellers/me/sub-admins/${userId}/modules`,
+  subAdminModules: (userId) =>
+    `${API_PREFIX}/sellers/me/sub-admins/${userId}/modules`,
 };
 
 export const sellerCommissionEndpoints = {
   myCommissions: `${API_PREFIX}/sellers/commissions/my-commissions`,
   myPayouts: `${API_PREFIX}/sellers/commissions/my-payouts`,
-  calculate: (orderId) => `${API_PREFIX}/sellers/commissions/calculate/${orderId}`,
+  calculate: (orderId) =>
+    `${API_PREFIX}/sellers/commissions/calculate/${orderId}`,
   processPayouts: `${API_PREFIX}/sellers/commissions/process-payouts`,
   settlements: `${API_PREFIX}/sellers/commissions/settlements`,
 };
@@ -1024,34 +1071,34 @@ export const sellerCommissionEndpoints = {
 
 ## Admin Panel Features To Build
 
-| Feature | Main APIs | Components |
-| --- | --- | --- |
-| Access and roles | `/access/modules`, `/access/admins`, `/access/sub-admins` | admin list, sub-admin list, create modal, module assignment form |
-| Dashboard | `/dashboard/overview`, `/analytics/realtime` | KPI cards, realtime metrics, order/payment summary |
-| Users | `/users`, `/users/:userId` | user table, user detail drawer, edit status/profile form |
-| Sellers/vendors | `/vendors`, `/vendors/:sellerId/status`, `/sellers/:sellerId/kyc/review` | seller table, onboarding checklist, KYC review form, status update action |
-| Product moderation | `/products/moderation-queue`, `/products/:productId/moderate` | moderation queue, review checklist, approve/reject action |
-| Orders | `/orders` | order table, filters, detail link if separate order detail API is added |
-| Payments and chargebacks | `/payments`, `/chargebacks` | payment table, provider/status filters, chargeback table |
-| Payouts and commission | `/payouts`, `/sellers/commissions/*` | payout table, create payout form, commission calculation, settlements |
-| Tax | `/tax/reports`, `/tax/orders/:orderId/invoice` | tax report table, invoice generation action |
-| Platform setup | `/platform/categories`, `/product-families`, `/product-variants`, `/hsn-codes`, `/geography`, `/content-pages` | CRUD tables and forms |
-| Integrations | `/platform/api-keys`, `/platform/webhooks` | API key table/form, webhook table/form |
-| Feature flags | `/platform/feature-flags` | flag table, rollout form |
-| Subscriptions and fees | `/platform/subscription-plans`, `/platform/subscriptions`, `/platform/fee-config` | plan CRUD, subscription table, fee config CRUD |
-| System ops | `/system/health`, `/system/queues`, `/system/dead-letter` | health cards, queue controls, dead-letter retry/discard |
+| Feature                  | Main APIs                                                                                                      | Components                                                                |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Access and roles         | `/access/modules`, `/access/admins`, `/access/sub-admins`                                                      | admin list, sub-admin list, create modal, module assignment form          |
+| Dashboard                | `/dashboard/overview`, `/analytics/realtime`                                                                   | KPI cards, realtime metrics, order/payment summary                        |
+| Users                    | `/users`, `/users/:userId`                                                                                     | user table, user detail drawer, edit status/profile form                  |
+| Sellers/vendors          | `/vendors`, `/vendors/:sellerId/status`, `/sellers/:sellerId/kyc/review`                                       | seller table, onboarding checklist, KYC review form, status update action |
+| Product moderation       | `/products/moderation-queue`, `/products/:productId/moderate`                                                  | moderation queue, review checklist, approve/reject action                 |
+| Orders                   | `/orders`                                                                                                      | order table, filters, detail link if separate order detail API is added   |
+| Payments and chargebacks | `/payments`, `/chargebacks`                                                                                    | payment table, provider/status filters, chargeback table                  |
+| Payouts and commission   | `/payouts`, `/sellers/commissions/*`                                                                           | payout table, create payout form, commission calculation, settlements     |
+| Tax                      | `/tax/reports`, `/tax/orders/:orderId/invoice`                                                                 | tax report table, invoice generation action                               |
+| Platform setup           | `/platform/categories`, `/product-families`, `/product-variants`, `/hsn-codes`, `/geography`, `/content-pages` | CRUD tables and forms                                                     |
+| Integrations             | `/platform/api-keys`, `/platform/webhooks`                                                                     | API key table/form, webhook table/form                                    |
+| Feature flags            | `/platform/feature-flags`                                                                                      | flag table, rollout form                                                  |
+| Subscriptions and fees   | `/platform/subscription-plans`, `/platform/subscriptions`, `/platform/fee-config`                              | plan CRUD, subscription table, fee config CRUD                            |
+| System ops               | `/system/health`, `/system/queues`, `/system/dead-letter`                                                      | health cards, queue controls, dead-letter retry/discard                   |
 
 ## Seller Panel Features To Build
 
-| Feature | Main APIs | Components |
-| --- | --- | --- |
-| Onboarding | `/onboarding/profile`, `/onboarding/kyc` | profile form, KYC form, document URL inputs, bank info form |
-| Seller status | `/me/status` | onboarding checklist, KYC status, next steps |
-| Dashboard | `/me/dashboard` | KPI cards, top products, recent orders |
-| Tracking | `/me/tracking`, `/me/tracking/:orderId` | tracking table, status filters, order tracking detail |
-| Profile management | `/me/profile`, `/me/business-address`, `/me/pickup-address`, `/me/bank-details`, `/me/more-info`, `/me/settings` | profile forms, address forms, bank form, seller settings form |
-| Seller sub-admins | `/me/sub-admins`, `/me/sub-admins/:userId/modules` | sub-admin table, create form, module assignment form |
-| Commissions and payouts | `/sellers/commissions/my-commissions`, `/sellers/commissions/my-payouts` | commission report, payout history |
+| Feature                 | Main APIs                                                                                                        | Components                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Onboarding              | `/onboarding/profile`, `/onboarding/kyc`                                                                         | profile form, KYC form, document URL inputs, bank info form   |
+| Seller status           | `/me/status`                                                                                                     | onboarding checklist, KYC status, next steps                  |
+| Dashboard               | `/me/dashboard`                                                                                                  | KPI cards, top products, recent orders                        |
+| Tracking                | `/me/tracking`, `/me/tracking/:orderId`                                                                          | tracking table, status filters, order tracking detail         |
+| Profile management      | `/me/profile`, `/me/business-address`, `/me/pickup-address`, `/me/bank-details`, `/me/more-info`, `/me/settings` | profile forms, address forms, bank form, seller settings form |
+| Seller sub-admins       | `/me/sub-admins`, `/me/sub-admins/:userId/modules`                                                               | sub-admin table, create form, module assignment form          |
+| Commissions and payouts | `/sellers/commissions/my-commissions`, `/sellers/commissions/my-payouts`                                         | commission report, payout history                             |
 
 ## Required UI States
 
