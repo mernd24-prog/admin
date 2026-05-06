@@ -89,6 +89,12 @@
       "ring": "ring-green-400"
     },
     {
+      "value": "update",
+      "label": "Update",
+      "color": "bg-green-100",
+      "ring": "ring-green-400"
+    },
+    {
       "value": "delete",
       "label": "Delete",
       "color": "bg-red-100",

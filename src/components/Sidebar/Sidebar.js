@@ -205,7 +205,8 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
     if (!permissions) return [];
 
     const groupedByTab = permissions?.reduce((acc, curr) => {
-      if (!curr.permissions.some(p => p.assigned)) return acc;
+      const hasAssignedPermission = (curr.permissions || []).some(p => p.assigned);
+      if (!curr.assigned && !hasAssignedPermission) return acc;
       const moduleCode = curr.slug;
       const tabName = getTabName(curr.slug);
       if (!acc[tabName]) {

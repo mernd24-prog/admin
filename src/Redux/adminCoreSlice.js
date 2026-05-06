@@ -138,7 +138,7 @@ const pickQuery = (keys = []) => (params = {}) =>
     return acc;
   }, {});
 
-const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "active", "includePermissions"];
+const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "userId", "active", "includePermissions"];
 const listOrderQueryKeys = ["status", "fromDate", "toDate", "limit", "offset"];
 const moderationQueueQueryKeys = ["status", "category", "page", "limit"];
 const updateModerationKeys = ["status", "rejectionReason", "checklist"];
@@ -178,7 +178,7 @@ export const createPlatformSubAdmin = createApiThunkPrivate(
   ENDPOINTS.adminAccess.subAdmins,
   "POST",
   false,
-  { transformBody: (payload = {}) => toSubAdminCreateBody(payload, DEFAULT_PLATFORM_MODULES) }
+  { transformBody: (payload = {}) => toSubAdminCreateBody(payload, ["admin"]) }
 );
 
 export const getPlatformSubAdmins = createApiThunkPrivate(
@@ -197,6 +197,9 @@ export const updatePlatformSubAdminModules = createApiThunkPrivate(
   {
     transformBody: (payload = {}) => ({
       allowedModules: normalizeAllowedModules(payload.allowedModules, DEFAULT_PLATFORM_MODULES),
+      ...(Array.isArray(payload.modulePermissions)
+        ? { modulePermissions: payload.modulePermissions }
+        : {}),
     }),
   }
 );
@@ -352,22 +355,28 @@ export const createContentPage = createApiThunkPrivate("adminCore/createContentP
 export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["slug", "id"]) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
-export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET");
-export const getRbacModules = createApiThunkPrivate("rbac/getModules", ENDPOINTS.rbac.modules, "GET");
+export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {
+  transformParams: (params = {}) => ({
+    ...(params.roleId ? { roleId: params.roleId } : {}),
+    ...(params.roleSlug || params.role ? { roleSlug: params.roleSlug || params.role } : {}),
+    ...(params.active !== undefined ? { active: params.active } : {}),
+  }),
+});
+export const getRbacModules = createApiThunkPrivate("rbac/getModules", ENDPOINTS.rbac.modules, "GET", true, { transformParams: pickQuery(["active", "limit", "offset"]) });
 export const createRbacModule = createApiThunkPrivate("rbac/createModule", ENDPOINTS.rbac.modules, "POST");
-export const updateRbacModule = createApiThunkPrivate("rbac/updateModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "PATCH");
-export const deleteRbacModule = createApiThunkPrivate("rbac/deleteModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "DELETE");
-export const getRbacPermissions = createApiThunkPrivate("rbac/getPermissions", ENDPOINTS.rbac.permissions, "GET");
+export const updateRbacModule = createApiThunkPrivate("rbac/updateModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["moduleId", "id"]) });
+export const deleteRbacModule = createApiThunkPrivate("rbac/deleteModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "DELETE", false, { transformParams: noParams });
+export const getRbacPermissions = createApiThunkPrivate("rbac/getPermissions", ENDPOINTS.rbac.permissions, "GET", true, { transformParams: pickQuery(["moduleId", "active", "limit", "offset"]) });
 export const createRbacPermission = createApiThunkPrivate("rbac/createPermission", ENDPOINTS.rbac.permissions, "POST");
-export const updateRbacPermission = createApiThunkPrivate("rbac/updatePermission", (payload) => ENDPOINTS.rbac.permission(payload.permissionId || payload.id), "PATCH");
-export const getRbacRoles = createApiThunkPrivate("rbac/getRoles", ENDPOINTS.rbac.roles, "GET");
+export const updateRbacPermission = createApiThunkPrivate("rbac/updatePermission", (payload) => ENDPOINTS.rbac.permission(payload.permissionId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["permissionId", "id"]) });
+export const getRbacRoles = createApiThunkPrivate("rbac/getRoles", ENDPOINTS.rbac.roles, "GET", true, { transformParams: pickQuery(["active", "limit", "offset"]) });
 export const createRbacRole = createApiThunkPrivate("rbac/createRole", ENDPOINTS.rbac.roles, "POST");
-export const updateRbacRole = createApiThunkPrivate("rbac/updateRole", (payload) => ENDPOINTS.rbac.role(payload.roleId || payload.id), "PATCH");
-export const getRolePermissions = createApiThunkPrivate("rbac/getRolePermissions", (payload) => ENDPOINTS.rbac.rolePermissions(payload.roleId || payload.id), "GET");
-export const updateRolePermissionsBulk = createApiThunkPrivate("rbac/updateRolePermissionsBulk", (payload) => ENDPOINTS.rbac.rolePermissionsBulk(payload.roleId || payload.id), "POST");
-export const getUserPermissions = createApiThunkPrivate("rbac/getUserPermissions", (payload) => ENDPOINTS.rbac.userPermissions(payload.userId || payload.id), "GET");
-export const getUserEffectivePermissions = createApiThunkPrivate("rbac/getUserEffectivePermissions", (payload) => ENDPOINTS.rbac.userEffectivePermissions(payload.userId || payload.id), "GET");
-export const getUserRoles = createApiThunkPrivate("rbac/getUserRoles", (payload) => ENDPOINTS.rbac.userRoles(payload.userId || payload.id), "GET");
+export const updateRbacRole = createApiThunkPrivate("rbac/updateRole", (payload) => ENDPOINTS.rbac.role(payload.roleId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["roleId", "id"]) });
+export const getRolePermissions = createApiThunkPrivate("rbac/getRolePermissions", (payload) => ENDPOINTS.rbac.rolePermissions(payload.roleId || payload.id), "GET", true, { transformParams: noParams });
+export const updateRolePermissionsBulk = createApiThunkPrivate("rbac/updateRolePermissionsBulk", (payload) => ENDPOINTS.rbac.rolePermissionsBulk(payload.roleId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["permissionIds"]) });
+export const getUserPermissions = createApiThunkPrivate("rbac/getUserPermissions", (payload) => ENDPOINTS.rbac.userPermissions(payload.userId || payload.id), "GET", true, { transformParams: noParams });
+export const getUserEffectivePermissions = createApiThunkPrivate("rbac/getUserEffectivePermissions", (payload) => ENDPOINTS.rbac.userEffectivePermissions(payload.userId || payload.id), "GET", true, { transformParams: noParams });
+export const getUserRoles = createApiThunkPrivate("rbac/getUserRoles", (payload) => ENDPOINTS.rbac.userRoles(payload.userId || payload.id), "GET", true, { transformParams: noParams });
 
 export const getSystemHealth = createApiThunkPrivate("system/getHealth", ENDPOINTS.system.health, "GET");
 export const getSystemQueues = createApiThunkPrivate("system/getQueues", ENDPOINTS.system.queues, "GET");

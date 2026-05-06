@@ -1,7 +1,8 @@
 import React from 'react'
 import selectJson from '../../../_helpers/SelectJson.json'
 
-const PermissionsSelector = ({ module, selected, onChange }) => {
+const PermissionsSelector = ({ module, selected, availablePermissions = [], onChange }) => {
+    const available = new Set(['none', ...availablePermissions]);
     
     const handlePermissionChange = (optionValue) => {
         if (optionValue === 'none') {
@@ -29,7 +30,7 @@ const PermissionsSelector = ({ module, selected, onChange }) => {
     return (
         <div>
             <div className="flex gap-3 flex-wrap">
-                {selectJson?.permissionOptions.map((option) => {
+                {selectJson?.permissionOptions.filter((option) => available.has(option.value)).map((option) => {
                     const isSelected = selected.includes(option.value);
                     return (
                         <label

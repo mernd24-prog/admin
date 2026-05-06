@@ -107,9 +107,12 @@ export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
   ...(options.allowedModules
     ? { allowedModules: normalizeAllowedModules(payload.allowedModules, options.allowedModules) }
     : {}),
+  ...(Array.isArray(payload.modulePermissions)
+    ? { modulePermissions: payload.modulePermissions }
+    : {}),
 });
 
-export const toSubAdminCreateBody = (payload = {}, fallbackModules = DEFAULT_PLATFORM_MODULES) =>
+export const toSubAdminCreateBody = (payload = {}, fallbackModules = ["admin"]) =>
   toManagedUserCreateBody(payload, { allowedModules: fallbackModules });
 
 export const toSellerRegisterBody = (payload = {}) => ({

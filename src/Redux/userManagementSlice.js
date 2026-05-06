@@ -2,7 +2,6 @@ import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
 import {
-    DEFAULT_PLATFORM_MODULES,
     firstId,
     normalizeAllowedModules,
     patchMany,
@@ -67,7 +66,7 @@ export const create = createApiThunkPrivate(
     ENDPOINTS.adminAccess.subAdmins,
     'POST',
     false,
-    { transformBody: (payload = {}) => toSubAdminCreateBody(payload, DEFAULT_PLATFORM_MODULES) }
+    { transformBody: (payload = {}) => toSubAdminCreateBody(payload, ['admin']) }
 );
 
 export const update = createApiThunkPrivate(
@@ -97,13 +96,10 @@ export const getAllModulePermission = createApiThunkPrivate(
                 ...(params.roleId ? { roleId: params.roleId } : {}),
                 ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
                 ...(params._id ? { userId: params._id } : {}),
+                ...(params.userId ? { userId: params.userId } : {}),
+                ...(params.role ? { role: params.role } : {}),
             };
-            
-            // Only add role parameter if explicitly provided and not 'admin'
-            if (params.role && params.role !== 'admin') {
-                result.role = params.role;
-            }
-            
+
             return result;
         },
     }
@@ -117,6 +113,9 @@ export const updateModulePermission = createApiThunkPrivate(
     {
         transformBody: (payload = {}) => ({
             allowedModules: normalizeAllowedModules(payload.allowedModules, []),
+            ...(Array.isArray(payload.modulePermissions)
+                ? { modulePermissions: payload.modulePermissions }
+                : {}),
         }),
     }
 );
