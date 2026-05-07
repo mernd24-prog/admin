@@ -1,0 +1,805 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Outfit:wght@100..900&family=Oxygen+Mono&family=Oxygen:wght@300;400;700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Public+Sans:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Special+Gothic&display=swap');
+
+
+body {
+  font-family: "Poppins", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+
+}
+
+
+/* Theme CSS Start */
+
+.text-primary {
+  color: #CE9F2D;
+}
+
+.border-primary {
+  border: 1px solid #CE9F2D;
+}
+
+.bg-primary {
+  background-color: #CE9F2D;
+}
+
+/* Global Primary Button Style for All Buttons */
+button,
+.button-primary {
+  padding: 10px 20px !important;
+  border: 1px solid #CE9F2D !important;
+  border-radius: 999px !important;
+  color: white !important;
+  cursor: pointer !important;
+  transition: 0.3s ease !important;
+
+  background: linear-gradient(
+    90deg,
+    #A26D27 0%,
+    #CE9F2D 100%
+  ) !important;
+}
+
+button:hover,
+.button-primary:hover {
+  opacity: 0.9 !important;
+  color: white !important;
+}
+
+/* Outline Primary Button */
+.button-outline-primary {
+  padding: 10px 20px;
+  border: 1px solid #CE9F2D;
+  border-radius: 999px;
+  background: transparent;
+  color: #CE9F2D;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.button-outline-primary:hover {
+
+  background: linear-gradient(
+    90deg,
+    #A26D27 0%,
+    #CE9F2D 100%
+  );
+  color: white;
+}
+
+.bgcolor {
+  background-color: #911212;
+}
+
+.bggray {
+  background-color: #f8f4f0;
+}
+
+/* .bgcolor {
+  background-color: #EA7A04;
+} */
+
+.bgblue {
+  background: #911212;
+}
+
+.bgyellow {
+  background: #fffe00;
+}
+
+.bgdarkbrown {
+  background: #78350f;
+}
+
+.bgwhite {
+  background-color: #FFFFFF;
+}
+
+
+.textcolor {
+  color: #911212;
+}
+
+.texthover:hover {
+  background: #FFFFFF;
+  color: #911212;
+}
+
+.textred {
+  color: #FE0000
+}
+
+.textwhite {
+  color: #FFFFFF;
+}
+
+.textblack {
+  color: #000000;
+}
+
+.textyellow {
+  color: #FBF117;
+}
+
+.textgreen {
+  color: #50fe00;
+}
+
+.textblue {
+  color: #001F3F;
+}
+
+.borderone {
+  border: 1px solid #911212;
+}
+
+.bordertwo {
+  border: 1px dashed #911212;
+}
+
+
+.react-select__control {
+  height: 35px !important;
+  min-height: 35px !important;
+  border: 1px solid #9ca3af !important;
+}
+
+/* Theme Css End */
+
+.pagination {
+  @apply items-center flex
+}
+
+.pagination>li>a,
+.pagination>li>span {
+  @apply relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer bg-[#911212] bg-opacity-10
+}
+
+.pagination>li:nth-child(2n + 1)>a,
+.pagination>li:nth-child(2n + 1)>span {
+  @apply bg-opacity-5
+}
+
+/* .pagination>li.active>a {
+    @apply bg-shine text-black
+} */
+
+
+/* loading animation */
+.sk-fading-circle {
+  margin: 100px auto;
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+
+.sk-fading-circle .sk-circle {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.sk-fading-circle .sk-circle:before {
+  content: '';
+  display: block;
+  margin: 5 auto;
+  width: 20%;
+  height: 20%;
+  background-color: #855DF6;
+  border-radius: 100%;
+  -webkit-animation: sk-circleFadeDelay 1.2s infinite ease-in-out both;
+  animation: sk-circleFadeDelay 1.2s infinite ease-in-out both;
+}
+
+.sk-fading-circle .sk-circle2 {
+  -webkit-transform: rotate(30deg);
+  -ms-transform: rotate(30deg);
+  transform: rotate(30deg);
+}
+
+.sk-fading-circle .sk-circle3 {
+  -webkit-transform: rotate(60deg);
+  -ms-transform: rotate(60deg);
+  transform: rotate(60deg);
+}
+
+.sk-fading-circle .sk-circle4 {
+  -webkit-transform: rotate(90deg);
+  -ms-transform: rotate(90deg);
+  transform: rotate(90deg);
+}
+
+.sk-fading-circle .sk-circle5 {
+  -webkit-transform: rotate(120deg);
+  -ms-transform: rotate(120deg);
+  transform: rotate(120deg);
+}
+
+.sk-fading-circle .sk-circle6 {
+  -webkit-transform: rotate(150deg);
+  -ms-transform: rotate(150deg);
+  transform: rotate(150deg);
+}
+
+.sk-fading-circle .sk-circle7 {
+  -webkit-transform: rotate(180deg);
+  -ms-transform: rotate(180deg);
+  transform: rotate(180deg);
+}
+
+.sk-fading-circle .sk-circle8 {
+  -webkit-transform: rotate(210deg);
+  -ms-transform: rotate(210deg);
+  transform: rotate(210deg);
+}
+
+.sk-fading-circle .sk-circle9 {
+  -webkit-transform: rotate(240deg);
+  -ms-transform: rotate(240deg);
+  transform: rotate(240deg);
+}
+
+.sk-fading-circle .sk-circle10 {
+  -webkit-transform: rotate(270deg);
+  -ms-transform: rotate(270deg);
+  transform: rotate(270deg);
+}
+
+.sk-fading-circle .sk-circle11 {
+  -webkit-transform: rotate(300deg);
+  -ms-transform: rotate(300deg);
+  transform: rotate(300deg);
+}
+
+.sk-fading-circle .sk-circle12 {
+  -webkit-transform: rotate(330deg);
+  -ms-transform: rotate(330deg);
+  transform: rotate(330deg);
+}
+
+.sk-fading-circle .sk-circle2:before {
+  -webkit-animation-delay: -1.1s;
+  animation-delay: -1.1s;
+}
+
+.sk-fading-circle .sk-circle3:before {
+  -webkit-animation-delay: -1s;
+  animation-delay: -1s;
+}
+
+.sk-fading-circle .sk-circle4:before {
+  -webkit-animation-delay: -0.9s;
+  animation-delay: -0.9s;
+}
+
+.sk-fading-circle .sk-circle5:before {
+  -webkit-animation-delay: -0.8s;
+  animation-delay: -0.8s;
+}
+
+.sk-fading-circle .sk-circle6:before {
+  -webkit-animation-delay: -0.7s;
+  animation-delay: -0.7s;
+}
+
+.sk-fading-circle .sk-circle7:before {
+  -webkit-animation-delay: -0.6s;
+  animation-delay: -0.6s;
+}
+
+.sk-fading-circle .sk-circle8:before {
+  -webkit-animation-delay: -0.5s;
+  animation-delay: -0.5s;
+}
+
+.sk-fading-circle .sk-circle9:before {
+  -webkit-animation-delay: -0.4s;
+  animation-delay: -0.4s;
+}
+
+.sk-fading-circle .sk-circle10:before {
+  -webkit-animation-delay: -0.3s;
+  animation-delay: -0.3s;
+}
+
+.sk-fading-circle .sk-circle11:before {
+  -webkit-animation-delay: -0.2s;
+  animation-delay: -0.2s;
+}
+
+.sk-fading-circle .sk-circle12:before {
+  -webkit-animation-delay: -0.1s;
+  animation-delay: -0.1s;
+}
+
+@-webkit-keyframes sk-circleFadeDelay {
+
+  0%,
+  39%,
+  100% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+@keyframes sk-circleFadeDelay {
+
+  0%,
+  39%,
+  100% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+
+/* Style the active class (and buttons on mouse-over) */
+/* .pagination>li>a:hover {
+    @apply bg-shine text-black
+} */
+
+.pagination>li:first-child>a,
+.pagination>li:first-child>span {
+  @apply rounded-l block
+}
+
+.pagination>li:last-child>a,
+.pagination>li:last-child>span {
+  @apply rounded-r block mr-0
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+
+/* Pagination container */
+.pagination {
+  display: flex;
+  justify-content: end;
+  list-style: none;
+  padding: 0;
+  margin-top: 20px;
+}
+
+/* Individual page link */
+.page-cls {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 5px 10px;
+  /* border: 1px solid red; */
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  /* Style for page link text */
+  color: #333;
+  text-decoration: none;
+}
+
+/* Active page link */
+.page-cls.active {
+  background-color: #b577ac;
+  color: #fff;
+}
+
+/* Previous and Next button styles */
+.pagination>li {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+/* Previous and Next button link styles */
+.pagination>li>a {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  color: black;
+  text-decoration: none;
+}
+
+/* Styling for active page link of Previous and Next button */
+.pagination>li>a.active {
+  background-color: #b577ac;
+  color: #fff;
+}
+
+
+.login_font {
+  font-family: "Dancing Script", cursive;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+
+}
+
+
+
+.menu {
+  position: relative;
+  background: #0275d8;
+  font-family: 'Roboto', sans-serif;
+  width: 3em;
+  height: 3em;
+  border-radius: 5em;
+  margin: auto;
+  margin-top: 2%;
+  cursor: pointer;
+  border: 1em solid #5795D8;
+}
+
+.menu:after {
+  content: "+";
+  position: absolute;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  font-size: 38px;
+  margin: -19px 0 0 -2px;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.menu li {
+  width: 5em;
+  height: 1.4em;
+  padding: 0.2em;
+  margin-top: 0.2em;
+  text-align: center;
+  border-top-right-radius: 0.5em;
+  border-bottom-right-radius: 0.5em;
+  transition: all 1s;
+  background: #5795D8;
+  opacity: 0;
+  z-index: -1;
+  font-weight: normal;
+}
+
+.menu:hover li {
+  opacity: 1;
+}
+
+.menu:hover ul::before {
+  position: absolute;
+  content: "";
+  width: 0;
+  height: 0;
+  display: block;
+  left: 50%;
+  top: "10px";
+  border-width: 6.5em;
+  border-radius: 0 7.5em 7.5em 0;
+  border-left: 0;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.01);
+  z-index: -1;
+  cursor: default;
+}
+
+.menu span {
+  color: white;
+  text-decoration: none;
+  line-height: 1.5em;
+}
+
+.menu ul {
+  transform: rotate(180deg) translateY(-2em);
+  transition: 1s all;
+}
+
+.menu:hover ul {
+  transform: rotate(0deg) translateY(-1em);
+}
+
+.menu li:hover {
+  text-shadow: 1px 1px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  transition: all 1s;
+}
+
+.menu li:nth-of-type(1) {
+  transform: rotate(-90deg);
+  position: absolute;
+  left: -1.2em;
+  top: -4.2em;
+}
+
+.menu li:nth-of-type(2) {
+  transform: rotate(-45deg);
+  position: absolute;
+  left: 2em;
+  top: -3em;
+}
+
+.menu li:nth-of-type(3) {
+  position: absolute;
+  left: 3.4em;
+  top: 0.3em;
+}
+
+.menu li:nth-of-type(4) {
+  transform: rotate(45deg);
+  position: absolute;
+  left: 2em;
+  top: 3.7em;
+}
+
+
+svg-background {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #1E88E5;
+  -webkit-clip-path: polygon(0 0, 14% 0, 48% 100%, 0% 100%);
+  clip-path: polygon(0 0, 14% 0, 48% 100%, 0% 100%);
+}
+
+.svg-background2 {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 20px;
+  background-color: #855DF6;
+  z-index: -9;
+  -webkit-clip-path: polygon(0 0, 14% 0, 48% 100%, 0% 100%);
+  clip-path: polygon(0 0, 14% 0, 48% 100%, 0% 100%);
+}
+
+.profile-img {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  margin-top: 55px;
+  margin-left: 40px;
+  border-radius: 50%;
+}
+
+.circle {
+  position: absolute;
+  width: 162px;
+  height: 161px;
+  left: 0;
+  top: 0;
+  background-color: #ECEFF1;
+  border-radius: 50%;
+  margin-top: 50.5px;
+  margin-left: 35px;
+}
+
+.text-container {
+  position: absolute;
+  right: 0;
+  margin-right: 40px;
+  margin-top: 45px;
+  max-width: 230px;
+  text-align: center;
+}
+
+.title-text {
+  color: #263238;
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.info-text {
+  margin-top: 10px;
+  font-siize: 18px;
+}
+
+.desc-text {
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+
+body {
+  background-color: #212121;
+}
+
+.container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #ECEFF1;
+  width: 500px;
+  height: 250px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.menu-icon {
+  position: absolute;
+  right: 0;
+  width: 53px;
+  height: 53px;
+  /* background-color: ; */
+}
+
+.truncate-description {
+  display: block;
+  max-width: 200px;
+  /* Adjust this to the desired width */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.truncate-description:hover {
+  overflow: visible;
+  /* Make the full text visible on hover */
+  white-space: normal;
+  /* Allow the description to wrap on hover */
+}
+
+
+h2 {
+  margin-top: 0;
+  margin-bottom: .5rem;
+  font-weight: 500;
+  line-height: 1.2;
+  font-size: 1.5rem;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.text-muted {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+
+label {
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.87);
+  margin: 0;
+  margin-bottom: 5px;
+  display: inline-block;
+  cursor: default;
+  font-weight: 500;
+}
+
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes rotate-3d {
+  0% {
+    transform: rotateX(0) rotateY(0);
+  }
+
+  100% {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+
+  70%,
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-rotate-3d {
+  animation: rotate-3d 8s linear infinite;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+
+/* In your global CSS */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 4px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: #0A73CF;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #413d3d;
+  border-radius: 4px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #E0E0E0;
+}
+
+/* src/components/loader.css */
+@keyframes pulse-wave {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  20% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-pulse-wave {
+  animation: pulse-wave 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-scan {
+  animation: scan 2.5s linear infinite;
+}
+
+
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rotate {
+  animation: rotate 30s linear infinite;
+}
+
+.animate-rotate-reverse {
+  animation: rotate 30s linear infinite reverse;
+}

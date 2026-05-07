@@ -1,0 +1,367 @@
+{
+  "statusOptions": [
+    {
+      "value": "Does not matter",
+      "label": "Does not matter"
+    },
+    {
+      "value": "Active",
+      "label": "Active"
+    },
+    {
+      "value": "Inactive",
+      "label": "Inactive"
+    }
+  ],
+  "approvalOptions": [
+    {
+      "value": "Does not matter",
+      "label": "Does not matter"
+    },
+    {
+      "value": "Approved",
+      "label": "Approved"
+    },
+    {
+      "value": "Pending",
+      "label": "Pending"
+    },
+    {
+      "value": "Rejected",
+      "label": "Rejected"
+    }
+  ],
+  "paymentStatus": [
+    {
+      "value": "Does not matter",
+      "label": "Select"
+    },
+    {
+      "value": "Active",
+      "label": "Canceled"
+    },
+    {
+      "value": "Inactive",
+      "label": "Pending"
+    },
+    {
+      "value": "Inactive",
+      "label": "Paid"
+    }
+  ],
+  "deleteStatus": [
+    {
+      "value": "",
+      "label": "Select"
+    },
+    {
+      "value": "yes",
+      "label": "Yes"
+    },
+    {
+      "value": "no",
+      "label": "No"
+    }
+  ],
+  "permissionOptions": [
+    {
+      "value": "none",
+      "label": "None",
+      "color": "bg-gray-100",
+      "ring": "ring-gray-400"
+    },
+    {
+      "value": "view",
+      "label": "View",
+      "color": "bg-blue-100",
+      "ring": "ring-blue-400"
+    },
+    {
+      "value": "add",
+      "label": "Add",
+      "color": "bg-green-100",
+      "ring": "ring-green-400"
+    },
+    {
+      "value": "edit",
+      "label": "Edit",
+      "color": "bg-green-100",
+      "ring": "ring-green-400"
+    },
+    {
+      "value": "update",
+      "label": "Update",
+      "color": "bg-green-100",
+      "ring": "ring-green-400"
+    },
+    {
+      "value": "delete",
+      "label": "Delete",
+      "color": "bg-red-100",
+      "ring": "ring-red-400"
+    },
+    {
+      "value": "status",
+      "label": "Status",
+      "color": "bg-purple-100",
+      "ring": "ring-purple-400"
+    },
+    {
+      "value": "approval",
+      "label": "Approval",
+      "color": "bg-yellow-100",
+      "ring": "ring-yellow-400"
+    }
+  ],
+  "triggerOptions": [
+    {
+      "value": "",
+      "label": "Select"
+    },
+    {
+      "value": "automatic",
+      "label": "Automatic"
+    },
+    {
+      "value": "manual",
+      "label": "Manual"
+    }
+  ],
+  "adminApprove": [
+    {
+      "value": "",
+      "label": "Select"
+    },
+    {
+      "value": "true",
+      "label": "Required"
+    },
+    {
+      "value": "false",
+      "label": "Not Required"
+    }
+  ],
+  "discountType": [
+    {
+      "value": "",
+      "label": "Select"
+    },
+    {
+      "value": "flat",
+      "label": "Flat"
+    },
+    {
+      "value": "percentage",
+      "label": "Percentage"
+    }
+  ],
+  "ORDER_STATUS": [
+    {
+      "value": "cancelled",
+      "label": "Cancelled"
+    },
+    {
+      "value": "packed",
+      "label": "Packed"
+    },
+    {
+      "value": "shipped",
+      "label": "Shipped"
+    },
+    {
+      "value": "delivered",
+      "label": "Delivered"
+    },
+    {
+      "value": "fulfilled",
+      "label": "Fulfilled"
+    },
+    {
+      "value": "return_requested",
+      "label": "Return Requested"
+    },
+    {
+      "value": "returned",
+      "label": "Returned"
+    }
+  ],
+  "PAYMENT_STATUS": [
+    {
+      "value": "pending",
+      "label": "Pending"
+    },
+    {
+      "value": "successful",
+      "label": "Successful"
+    },
+    {
+      "value": "failed",
+      "label": "Failed "
+    },
+    {
+      "value": "refunded",
+      "label": "Refunded"
+    },
+    {
+      "value": "'partial-refunded",
+      "label": "Partial Refunded"
+    }
+  ],
+  "promotionBannerType": [
+    {
+      "value": "",
+      "label": "Select"
+    },
+    {
+      "value": "category",
+      "label": "category"
+    },
+    {
+      "value": "brand",
+      "label": "brand"
+    },
+    {
+      "value": "product",
+      "label": "product"
+    },
+    {
+      "value": "general",
+      "label": "general"
+    }
+  ],
+  "INITIALS_DATA": {
+    "name": "",
+    "description": "",
+    "store_id": "",
+    "catalogsUrls": [],
+    "brand_id": "",
+    "category_id": "",
+    "isDisable": true,
+    "isApproved": true,
+    "markAsFeatured": true,
+    "prescription_required": true,
+    "cod": true,
+    "hsn_code": "",
+    "warranty_id": "",
+    "salt_composition": "",
+    "primary_use": "",
+    "salt_synonyms": "",
+    "storage": "",
+    "introduction": "",
+    "use_of": "",
+    "benefits": "",
+    "side_effect": "",
+    "how_to_use": "",
+    "how_works": "",
+    "safety_advise": "",
+    "if_miss": "",
+    "rack_no": ""
+ 
+  },
+  "HEADS_TYPE": [
+    {
+      "label": "Box",
+      "value": "Box"
+    },
+    {
+      "label": "Strip",
+      "value": "Strip"
+    },
+    {
+      "label": "Tablet",
+      "value": "Tablet"
+    },
+    {
+      "label": "Capsule",
+      "value": "Capsule"
+    },
+    {
+      "label": "Bottle",
+      "value": "Bottle"
+    },
+    {
+      "label": "Syrup",
+      "value": "Syrup"
+    },
+    {
+      "label": "Injection",
+      "value": "Injection"
+    },
+    {
+      "label": "Tube",
+      "value": "Tube"
+    },
+    {
+      "label": "Drop",
+      "value": "Drop"
+    },
+    {
+      "label": "Ointment",
+      "value": "Ointment"
+    },
+    {
+      "label": "Cream",
+      "value": "Cream"
+    },
+    {
+      "label": "Piece",
+      "value": "Piece"
+    },
+    {
+      "label": "Pack",
+      "value": "Pack"
+    },
+    {
+      "label": "Vial",
+      "value": "Vial"
+    },
+    {
+      "label": "Ampoule",
+      "value": "Ampoule"
+    },
+    {
+      "label": "Kit",
+      "value": "Kit"
+    },
+    {
+      "label": "Sachet",
+      "value": "Sachet"
+    },
+    {
+      "label": "Spray",
+      "value": "Spray"
+    },
+    {
+      "label": "Roll",
+      "value": "Roll"
+    },
+    {
+      "label": "Jar",
+      "value": "Jar"
+    },
+    {
+      "label": "Can",
+      "value": "Can"
+    },
+    {
+      "label": "Bag",
+      "value": "Bag"
+    },
+    {
+      "label": "Blister",
+      "value": "Blister"
+    },
+    {
+      "label": "Applicator",
+      "value": "Applicator"
+    },
+    {
+      "label": "Cartridge",
+      "value": "Cartridge"
+    },
+    {
+      "label": "Pen",
+      "value": "Pen"
+    }
+  ]
+}
