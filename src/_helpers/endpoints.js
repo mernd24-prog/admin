@@ -35,7 +35,7 @@ export const ENDPOINTS = {
     myAddress: (addressId) => `/users/me/addresses/${addressId}`,
   },
   adminAccess: {
-    modules: "/admin/access/modules",
+    modules: byPanel("/admin/access/modules", "/sellers/me/access/modules"),
     admins: "/admin/access/admins",
     subAdmins: byPanel("/admin/access/sub-admins", "/sellers/me/sub-admins"),
     subAdminModules: byPanelFn(

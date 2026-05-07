@@ -198,6 +198,7 @@ export const sellerEndpoints = {
   moreInfo: withPrefix("/sellers/me/more-info"),
   settings: withPrefix("/sellers/me/settings"),
   dashboard: withPrefix("/sellers/me/dashboard"),
+  accessModules: withPrefix("/sellers/me/access/modules"),
   subAdmins: withPrefix("/sellers/me/sub-admins"),
   subAdminModules: (userId) => withPrefix(`/sellers/me/sub-admins/${userId}/modules`),
 };

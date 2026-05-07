@@ -45,7 +45,7 @@ const getTabName = (slug) => {
 };
 
 const SELLER_SIDEBAR_SECTIONS = [
-  { module: "dashboard", tab: "Home", label: "Dashboard", route: "home" },
+  { module: "analytics", tab: "Home", label: "Dashboard", route: "home" },
   { module: "products", tab: "Product Management", label: "Products", route: "product-catalog" },
   { module: "orders", tab: "Orders", label: "Orders", route: "orders" },
   { module: "pricing", tab: "Promotions", label: "Coupons", route: "discount-coupons" },
@@ -54,7 +54,6 @@ const SELLER_SIDEBAR_SECTIONS = [
   { module: "sellers", tab: "Settings", label: "Profile", route: "profile" },
   { module: "sellers/commissions", tab: "Users", label: "Commissions", route: "transactions" },
   { module: "notifications", tab: "Settings", label: "Notifications", route: "messages" },
-  { module: "analytics", tab: "Home", label: "Analytics", route: "home" },
 ];
 
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {

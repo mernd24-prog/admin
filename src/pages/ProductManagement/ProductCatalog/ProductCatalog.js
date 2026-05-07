@@ -110,7 +110,7 @@ const ProductCatalog = () => {
     "Created On",
     "Approved",
     "Status",
-    ...(userData?.roleId === '3' ? ["Action"] : [])
+    ...(Number(userData?.roleId) === 3 ? ["Action"] : [])
   ];
 
 

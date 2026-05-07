@@ -8,6 +8,22 @@ const ALLOWED_MODULES_KEY = "allowedModules";
 
 export const ADMIN_ROLES = ["super-admin", "admin", "sub-admin"];
 export const BLOCKED_ADMIN_ROLES = ["seller", "seller-sub-admin", "buyer"];
+export const LEGACY_ROLE_IDS = {
+  "super-admin": 1,
+  admin: 1,
+  "sub-admin": 2,
+  seller: 3,
+  "seller-sub-admin": 9,
+  buyer: 5,
+};
+
+const LEGACY_ROLE_BY_ID = {
+  1: "admin",
+  2: "sub-admin",
+  3: "seller",
+  5: "buyer",
+  9: "seller-sub-admin",
+};
 
 const safeParse = (value, fallback = null) => {
   try {
@@ -19,9 +35,16 @@ const safeParse = (value, fallback = null) => {
 
 export const normalizeRole = (roleLike) => {
   if (!roleLike) return "";
-  if (typeof roleLike === "string") return roleLike;
-  return roleLike.slug || roleLike.code || roleLike.name || roleLike.role || "";
+  if (typeof roleLike === "number") return LEGACY_ROLE_BY_ID[roleLike] || "";
+  if (typeof roleLike === "string") {
+    const cleanRole = roleLike.trim().toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-");
+    return LEGACY_ROLE_BY_ID[cleanRole] || cleanRole;
+  }
+  return normalizeRole(roleLike.slug || roleLike.code || roleLike.name || roleLike.role);
 };
+
+export const getLegacyRoleId = (roleLike) =>
+  LEGACY_ROLE_IDS[normalizeRole(roleLike)] || null;
 
 export const extractRole = (...sources) => {
   for (const source of sources) {

@@ -31,6 +31,9 @@ export const updateSellerSubAdminModules = createApiThunkPrivate(
   {
     transformBody: (payload = {}) => ({
       allowedModules: normalizeAllowedModules(payload.allowedModules, DEFAULT_SELLER_MODULES),
+      ...(Array.isArray(payload.modulePermissions)
+        ? { modulePermissions: payload.modulePermissions }
+        : {}),
     }),
   }
 );

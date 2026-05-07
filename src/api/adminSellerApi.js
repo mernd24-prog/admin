@@ -29,7 +29,7 @@ const withoutKeys = (payload = {}, keys = []) =>
   }, {});
 
 export const queryKeys = {
-  listAccessModules: ["role", "roleId", "roleSlug", "active", "includePermissions"],
+  listAccessModules: ["role", "roleId", "roleSlug", "userId", "active", "includePermissions"],
   listAdmins: ["q", "accountStatus", "page", "limit"],
   listPlatformSubAdmins: ["ownerAdminId"],
   listUsers: ["q", "role", "accountStatus", "page", "limit"],

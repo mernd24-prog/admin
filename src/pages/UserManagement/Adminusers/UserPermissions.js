@@ -4,9 +4,11 @@ import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAdminUserDetails, getAllModulePermission, updateModulePermission } from '../../../Redux/userManagementSlice';
+import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
 import { toast } from 'sonner';
 import Loader from '../../../components/Loader/Loader';
 import PermissionsSelector from '../../../components/Atoms/PermissionsTab/PermissionsSelector';
+import { isSellerPanel } from '../../../_helpers/panelConfig';
 
 const ACTION_ALIASES = {
     create: 'add',
@@ -17,6 +19,12 @@ const ACTION_ALIASES = {
 };
 
 const getPayload = (sliceData) => sliceData?.data?.data || sliceData?.normalized?.data || {};
+
+const getListItems = (sliceData) => {
+    const payload = getPayload(sliceData);
+    if (Array.isArray(payload)) return payload;
+    return payload?.list || payload?.items || [];
+};
 
 const getModuleActions = (module) => {
     const actions = (module.permissions || [])
@@ -38,18 +46,29 @@ const UserPermissions = ({ setModuleName }) => {
     const { id } = useParams();
     const dispatch = useDispatch();
     const selector = useSelector(state => state.user);
+    const sellerSelector = useSelector(state => state.sellerSubAdmins);
+    const sellerPanel = isSellerPanel();
     const [permissions, setPermissions] = useState([]);
     const [filters, setFilters] = useState({ search: '' });
     const [userName, setUserName] = useState('');
 
     useEffect(() => {
         if (id) {
-            dispatch(getAdminUserDetails({ _id: id }));
+            if (sellerPanel) {
+                dispatch(listSellerSubAdmins());
+            } else {
+                dispatch(getAdminUserDetails({ _id: id }));
+            }
         }
-    }, [id, dispatch]);
+    }, [id, dispatch, sellerPanel]);
 
     useEffect(() => {
-        const user = getPayload(selector?.getAdminUserDetailsData);
+        const sellerSubAdmins = getListItems(sellerSelector?.listSubAdminsData);
+        const user = sellerPanel
+            ? sellerSubAdmins.find((item) =>
+                String(item?._id || item?.id || item?.userId) === String(id)
+            )
+            : getPayload(selector?.getAdminUserDetailsData);
         const selectedUserId = user?._id || user?.id || user?.userId;
         if (!id || !selectedUserId || String(selectedUserId) !== String(id)) return;
 
@@ -58,10 +77,21 @@ const UserPermissions = ({ setModuleName }) => {
             role: user?.role || 'sub-admin',
             includePermissions: true,
         }));
-    }, [id, dispatch, selector?.getAdminUserDetailsData]);
+    }, [
+        id,
+        dispatch,
+        sellerPanel,
+        selector?.getAdminUserDetailsData,
+        sellerSelector?.listSubAdminsData,
+    ]);
 
     useEffect(() => {
-        const user = getPayload(selector?.getAdminUserDetailsData);
+        const sellerSubAdmins = getListItems(sellerSelector?.listSubAdminsData);
+        const user = sellerPanel
+            ? sellerSubAdmins.find((item) =>
+                String(item?._id || item?.id || item?.userId) === String(id)
+            )
+            : getPayload(selector?.getAdminUserDetailsData);
         const modulePayload = getPayload(selector?.getAllModulePermissionData);
         const modules = modulePayload?.modules || modulePayload?.list || [];
         const allowedModules = Array.isArray(user?.allowedModules) ? user.allowedModules : [];
@@ -93,7 +123,14 @@ const UserPermissions = ({ setModuleName }) => {
                 permissions: selectedPermissions,
             };
         }));
-    }, [selector?.getAdminUserDetailsData, selector?.getAllModulePermissionData, setModuleName]);
+    }, [
+        id,
+        sellerPanel,
+        selector?.getAdminUserDetailsData,
+        selector?.getAllModulePermissionData,
+        sellerSelector?.listSubAdminsData,
+        setModuleName,
+    ]);
 
     const assignedModules = (items) => items
         .filter((item) => item.permissions.length && !item.permissions.includes('none'))
@@ -121,7 +158,7 @@ const UserPermissions = ({ setModuleName }) => {
         const modulePermissions = assignedModulePermissions(next);
 
         if (!allowedModules.length) {
-            toast.error('At least one module is required for this admin user.');
+            toast.error('At least one module is required for this user.');
             return;
         }
 
@@ -130,13 +167,17 @@ const UserPermissions = ({ setModuleName }) => {
             .unwrap()
             .then((response) => {
                 toast.success(response?.message || 'Permission updated successfully');
-                dispatch(getAdminUserDetails({ _id: id }));
+                if (sellerPanel) {
+                    dispatch(listSellerSubAdmins());
+                } else {
+                    dispatch(getAdminUserDetails({ _id: id }));
+                }
             })
             .catch((error) => {
                 toast.error(error || 'Failed to update permissions');
                 setPermissions(previous);
             });
-    }, [permissions, dispatch, id]);
+    }, [permissions, dispatch, id, sellerPanel]);
 
     const filteredPermissions = useMemo(() => {
         return permissions.filter(permission =>

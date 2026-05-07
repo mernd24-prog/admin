@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { isSellerPanel, PANEL_MODES } from "../../_helpers/panelConfig";
 import {
   clearStoredAuth,
+  getLegacyRoleId,
   isAllowedRoleForPanel,
   setStoredAuth,
 } from "../../_helpers/authStorage";
@@ -378,13 +379,16 @@ const Login = () => {
   const persistAuthenticatedSession = useCallback((auth) => {
     const user = auth.user || {};
     const role = auth.role;
+    const legacyRoleId = getLegacyRoleId(role);
     const sessionUser = {
       ...user,
       userId: user.id || user._id || user.userId,
       token: auth.accessToken,
       refreshToken: auth.refreshToken,
       role,
-      roleId: role,
+      roleSlug: role,
+      roleId: legacyRoleId,
+      role_id: legacyRoleId,
       allowedModules: auth.allowedModules || [],
     };
 
