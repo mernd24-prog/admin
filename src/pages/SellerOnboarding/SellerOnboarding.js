@@ -1307,9 +1307,6 @@ const SellerOnboarding = () => {
     legalName: "",
     businessType: "individual",
     dateOfBirth: "",
-    city: "",
-    zipCode: "",
-    panCardFile: null,
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -1421,20 +1418,6 @@ const SellerOnboarding = () => {
     setKycErrors((prev) => ({ ...prev, [name]: null }));
   };
 
-  const onPanCardFileChange = (event) => {
-    const file = event.target.files?.[0] || null;
-    setKycForm((prev) => ({ ...prev, panCardFile: file }));
-    setKycErrors((prev) => ({ ...prev, panCardFile: null }));
-  };
-
-  const onPanCardDrop = (event) => {
-    event.preventDefault();
-    const file = event.dataTransfer.files?.[0] || null;
-    if (!file) return;
-    setKycForm((prev) => ({ ...prev, panCardFile: file }));
-    setKycErrors((prev) => ({ ...prev, panCardFile: null }));
-  };
-
   const onGstCertificateFileChange = (event) => {
     const file = event.target.files?.[0] || null;
     setProfileForm((prev) => ({ ...prev, gstCertificateFile: file }));
@@ -1474,11 +1457,10 @@ const SellerOnboarding = () => {
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
     if (!kycForm.dateOfBirth.trim())
       errors.dateOfBirth = "Date of birth is required";
-    if (!kycForm.city.trim()) errors.city = "City is required";
-    if (!kycForm.zipCode.trim()) errors.zipCode = "Zip code is required";
+    if (!kycForm.businessType.trim())
+      errors.businessType = "Business type is required";
     if (!PAN_REGEX.test(kycForm.panNumber.trim()))
       errors.panNumber = "PAN format should be like ABCDE1234F";
-    if (!kycForm.panCardFile) errors.panCardFile = "PAN card file is required";
     if (kycForm.gstNumber.trim() && !GST_REGEX.test(kycForm.gstNumber.trim())) {
       errors.gstNumber = "GST format is invalid";
     }
@@ -1547,10 +1529,10 @@ const SellerOnboarding = () => {
     if (!validateKyc()) return;
     try {
       const kycPayload = {
-        panNumber: kycForm.panNumber,
-        gstNumber: kycForm.gstNumber,
-        aadhaarNumber: kycForm.aadhaarNumber,
-        legalName: kycForm.legalName,
+        panNumber: kycForm.panNumber.trim(),
+        gstNumber: kycForm.gstNumber.trim(),
+        aadhaarNumber: kycForm.aadhaarNumber.trim(),
+        legalName: kycForm.legalName.trim(),
         businessType: kycForm.businessType,
         dateOfBirth: kycForm.dateOfBirth,
       };
@@ -1594,10 +1576,10 @@ const SellerOnboarding = () => {
     try {
       if (!kycSubmittedApi) {
         const kycPayload = {
-          panNumber: kycForm.panNumber,
-          gstNumber: kycForm.gstNumber,
-          aadhaarNumber: kycForm.aadhaarNumber,
-          legalName: kycForm.legalName,
+          panNumber: kycForm.panNumber.trim(),
+          gstNumber: kycForm.gstNumber.trim(),
+          aadhaarNumber: kycForm.aadhaarNumber.trim(),
+          legalName: kycForm.legalName.trim(),
           businessType: kycForm.businessType,
           dateOfBirth: kycForm.dateOfBirth,
         };
@@ -1774,47 +1756,43 @@ const SellerOnboarding = () => {
                 )}
               </div>
 
-              {/* City */}
+              {/* Business Type */}
               <div>
                 <div className="relative">
                   <select
-                    id="city"
-                    name="city"
+                    id="businessType"
+                    name="businessType"
                     className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
-                    value={kycForm.city}
+                    value={kycForm.businessType}
                     onChange={onKycChange}
                   >
-                    <option value="">City*</option>
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Bengaluru">Bengaluru</option>
-                    <option value="Delhi">Delhi</option>
-                    <option value="Hyderabad">Hyderabad</option>
-                    <option value="Mumbai">Mumbai</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Jaipur">Jaipur</option>
-                    <option value="Kolkata">Kolkata</option>
+                    <option value="">Business Type*</option>
+                    <option value="individual">Individual</option>
+                    <option value="proprietorship">Proprietorship</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="private_limited">Private Limited</option>
                   </select>
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#c99528] text-white">
                     <ChevronDown size={12} />
                   </span>
                 </div>
-                {kycErrors.city && (
-                  <p className={ERROR_CLASS}>{kycErrors.city}</p>
+                {kycErrors.businessType && (
+                  <p className={ERROR_CLASS}>{kycErrors.businessType}</p>
                 )}
               </div>
 
-              {/* Zip Code */}
+              {/* GST Number */}
               <div>
                 <input
-                  id="zipCode"
-                  name="zipCode"
-                  placeholder="Zip Code*"
+                  id="gstNumber"
+                  name="gstNumber"
+                  placeholder="GST Number"
                   className={STEP_ONE_INPUT_CLASS}
-                  value={kycForm.zipCode}
+                  value={kycForm.gstNumber}
                   onChange={onKycChange}
                 />
-                {kycErrors.zipCode && (
-                  <p className={ERROR_CLASS}>{kycErrors.zipCode}</p>
+                {kycErrors.gstNumber && (
+                  <p className={ERROR_CLASS}>{kycErrors.gstNumber}</p>
                 )}
               </div>
 
@@ -1834,52 +1812,19 @@ const SellerOnboarding = () => {
                 )}
               </div>
 
-              {/* Upload PAN Card */}
+              {/* Aadhaar Number */}
               <div className="md:col-span-2">
-                <p className="mb-3 text-[13px] text-gray-600">
-                  Upload PAN Card*
-                </p>
-                <div
-                  className="min-h-[120px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={onPanCardDrop}
-                >
-                  {kycForm.panCardFile ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <AiOutlineShoppingCart
-                        size={18}
-                        className="text-[#c99528]"
-                      />
-                      {kycForm.panCardFile.name}
-                    </div>
-                  ) : (
-                    <>
-                      <UploadCloud size={20} className="mb-2 text-[#3b3b3b]" />
-                      <p className="text-[13px] text-gray-600 mb-2">
-                        {kycForm.panCardFile?.name || "Drag Your File Here"}
-                      </p>
-                      <p className="text-[11px] text-gray-400 mb-2 uppercase">
-                        OR
-                      </p>
-                      <label
-                        htmlFor="panCardFile"
-                        className="px-4 py-1.5 rounded-full bg-[#d9d9d9] text-gray-600 text-xs font-medium cursor-pointer hover:bg-[#cccccc] transition inline-flex items-center h-[23px]"
-                      >
-                        Browser
-                      </label>
-                    </>
-                  )}
-                  <input
-                    id="panCardFile"
-                    name="panCardFile"
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={onPanCardFileChange}
-                  />
-                </div>
-                {kycErrors.panCardFile && (
-                  <p className={ERROR_CLASS}>{kycErrors.panCardFile}</p>
+                <input
+                  id="aadhaarNumber"
+                  name="aadhaarNumber"
+                  placeholder="Aadhaar Number"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={kycForm.aadhaarNumber}
+                  onChange={onKycChange}
+                  maxLength="12"
+                />
+                {kycErrors.aadhaarNumber && (
+                  <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>
                 )}
               </div>
             </div>
@@ -2458,12 +2403,14 @@ const SellerOnboarding = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">City</p>
-                    <p className="text-sm text-gray-800">{kycForm.city}</p>
+                    <p className="text-xs text-gray-500 mb-1">Business Type</p>
+                    <p className="text-sm text-gray-800">{kycForm.businessType}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Zip Code</p>
-                    <p className="text-sm text-gray-800">{kycForm.zipCode}</p>
+                    <p className="text-xs text-gray-500 mb-1">Aadhaar Number</p>
+                    <p className="text-sm text-gray-800">
+                      {kycForm.aadhaarNumber || "-"}
+                    </p>
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-xs text-gray-500 mb-1">PAN Number</p>
@@ -2475,20 +2422,6 @@ const SellerOnboarding = () => {
                       <p className="text-sm text-gray-800">
                         {kycForm.gstNumber}
                       </p>
-                    </div>
-                  )}
-                  {kycForm.panCardFile && (
-                    <div className="md:col-span-2">
-                      <p className="text-xs text-gray-500 mb-1">
-                        PAN Card File
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <AiOutlineShoppingCart
-                          size={18}
-                          className="text-[#c99528]"
-                        />
-                        {kycForm.panCardFile.name}
-                      </div>
                     </div>
                   )}
                 </div>
