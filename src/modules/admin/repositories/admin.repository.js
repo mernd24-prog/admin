@@ -1,0 +1,723 @@
+const { postgresPool } = require("../../../infrastructure/postgres/postgres-client");
+const { UserModel } = require("../../user/models/user.model");
+const { ProductModel } = require("../../product/models/product.model");
+const { v4: uuidv4 } = require("uuid");
+const { randomBytes } = require("crypto");
+const { hashValue } = require("../../../shared/utils/hash");
+
+class AdminRepository {
+  async getOverviewStats() {
+    const [totalUsers, totalSellers, totalProducts, pendingProducts] = await Promise.all([
+      UserModel.countDocuments({}),
+      UserModel.countDocuments({ role: "seller" }),
+      ProductModel.countDocuments({}),
+      ProductModel.countDocuments({ status: "pending_approval" }),
+    ]);
+
+    const [ordersAgg, paymentsAgg] = await Promise.all([
+      postgresPool.query(
+        `SELECT
+           COUNT(*)::INT AS total_orders,
+           COALESCE(SUM(total_amount), 0)::NUMERIC AS gmv,
+           COALESCE(SUM(platform_fee_amount), 0)::NUMERIC AS total_platform_fees
+         FROM orders`,
+      ),
+      postgresPool.query(
+        `SELECT
+           COUNT(*)::INT AS total_payments,
+           COALESCE(SUM(amount), 0)::NUMERIC AS total_collected
+         FROM payments
+         WHERE status = 'captured'`,
+      ),
+    ]);
+
+    return {
+      users: {
+        totalUsers,
+        totalSellers,
+      },
+      catalog: {
+        totalProducts,
+        pendingProducts,
+      },
+      commerce: {
+        totalOrders: Number(ordersAgg.rows[0]?.total_orders || 0),
+        gmv: Number(ordersAgg.rows[0]?.gmv || 0),
+        totalPlatformFees: Number(ordersAgg.rows[0]?.total_platform_fees || 0),
+      },
+      payments: {
+        totalPayments: Number(paymentsAgg.rows[0]?.total_payments || 0),
+        totalCollected: Number(paymentsAgg.rows[0]?.total_collected || 0),
+      },
+    };
+  }
+
+  async listVendors({ q = "", status = null, onboardingStatus = null, limit = 50, page = 1 } = {}) {
+    const filter = { role: "seller" };
+    if (status) {
+      filter.accountStatus = status;
+    }
+    if (onboardingStatus) {
+      filter["sellerProfile.onboardingStatus"] = onboardingStatus;
+    }
+    if (q) {
+      filter.$or = [
+        { email: { $regex: q, $options: "i" } },
+        { "sellerProfile.displayName": { $regex: q, $options: "i" } },
+        { "sellerProfile.legalBusinessName": { $regex: q, $options: "i" } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [items, total] = await Promise.all([
+      UserModel.find(filter)
+        .select("email phone role accountStatus sellerProfile createdAt updatedAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      UserModel.countDocuments(filter),
+    ]);
+
+    return { items, total };
+  }
+
+  async listUsers({ q = "", role = null, accountStatus = null, page = 1, limit = 50 } = {}) {
+    const filter = {};
+    if (role) {
+      filter.role = role;
+    }
+    if (accountStatus) {
+      filter.accountStatus = accountStatus;
+    }
+    if (q) {
+      filter.$or = [
+        { email: { $regex: q, $options: "i" } },
+        { phone: { $regex: q, $options: "i" } },
+        { "profile.firstName": { $regex: q, $options: "i" } },
+        { "profile.lastName": { $regex: q, $options: "i" } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [items, total] = await Promise.all([
+      UserModel.find(filter)
+        .select("email phone role accountStatus profile sellerProfile createdAt updatedAt lastLoginAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      UserModel.countDocuments(filter),
+    ]);
+
+    return { items, total };
+  }
+
+  async getUserById(userId) {
+    return UserModel.findById(userId).select("-passwordHash -refreshSessions.tokenHash");
+  }
+
+  async findSellerKycBySellerIds(sellerIds = []) {
+    const normalizedIds = sellerIds.map(String).filter(Boolean);
+    if (!normalizedIds.length) {
+      return [];
+    }
+
+    const { rows } = await postgresPool.query(
+      `SELECT
+         seller_id,
+         verification_status,
+         rejection_reason,
+         submitted_at,
+         reviewed_at,
+         legal_name,
+         business_type,
+         pan_number,
+         gst_number,
+         aadhaar_number
+       FROM seller_kyc
+       WHERE seller_id = ANY($1::text[])`,
+      [normalizedIds],
+    );
+    return rows;
+  }
+
+  async updateUserById(userId, payload) {
+    const update = {
+      $set: {
+        ...(payload.accountStatus ? { accountStatus: payload.accountStatus } : {}),
+        ...(payload.role ? { role: payload.role } : {}),
+        ...(payload.profile ? { profile: payload.profile } : {}),
+      },
+    };
+    return UserModel.findByIdAndUpdate(userId, update, {
+      new: true,
+    }).select("-passwordHash -refreshSessions.tokenHash");
+  }
+
+  async deactivateUserById(userId, reason = null) {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          accountStatus: "suspended",
+          deactivatedAt: new Date(),
+          deactivationReason: reason || null,
+        },
+      },
+      { new: true },
+    ).select("-passwordHash -refreshSessions.tokenHash");
+  }
+
+  async updateVendorStatus(sellerId, payload) {
+    return UserModel.findByIdAndUpdate(
+      sellerId,
+      {
+        $set: {
+          accountStatus: payload.accountStatus,
+          ...(payload.onboardingStatus
+            ? { "sellerProfile.onboardingStatus": payload.onboardingStatus }
+            : {}),
+        },
+      },
+      { new: true },
+    ).select("-passwordHash -refreshSessions.tokenHash");
+  }
+
+  async listProductsForModeration({ status = "pending_approval", category = null, limit = 50, page = 1 } = {}) {
+    const filter = { status };
+    if (category) {
+      filter.category = category;
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const [items, total] = await Promise.all([
+      ProductModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      ProductModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async listOrders({ status = null, fromDate = null, toDate = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+    if (fromDate) {
+      clauses.push(`created_at >= $${idx++}`);
+      values.push(fromDate);
+    }
+    if (toDate) {
+      clauses.push(`created_at <= $${idx++}`);
+      values.push(toDate);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const { rows } = await postgresPool.query(
+      `SELECT *
+       FROM orders
+       ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT $${idx++}
+       OFFSET $${idx}`,
+      values,
+    );
+    return rows;
+  }
+
+  async listPayments({ status = null, provider = null, fromDate = null, toDate = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+    if (provider) {
+      clauses.push(`provider = $${idx++}`);
+      values.push(provider);
+    }
+    if (fromDate) {
+      clauses.push(`created_at >= $${idx++}`);
+      values.push(fromDate);
+    }
+    if (toDate) {
+      clauses.push(`created_at <= $${idx++}`);
+      values.push(toDate);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const { rows } = await postgresPool.query(
+      `SELECT *
+       FROM payments
+       ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT $${idx++}
+       OFFSET $${idx}`,
+      values,
+    );
+    return rows;
+  }
+
+  async createPayout(payload) {
+    const { rows } = await postgresPool.query(
+      `INSERT INTO vendor_payouts (
+        id, seller_id, period_start, period_end, gross_amount, commission_amount,
+        processing_fee_amount, tax_withheld_amount, net_payout_amount, currency, status,
+        scheduled_at, metadata
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+      )
+      RETURNING *`,
+      [
+        uuidv4(),
+        payload.sellerId,
+        payload.periodStart,
+        payload.periodEnd,
+        payload.grossAmount,
+        payload.commissionAmount || 0,
+        payload.processingFeeAmount || 0,
+        payload.taxWithheldAmount || 0,
+        payload.netPayoutAmount,
+        payload.currency || "INR",
+        payload.status || "scheduled",
+        payload.scheduledAt || new Date(),
+        payload.metadata || {},
+      ],
+    );
+    return rows[0];
+  }
+
+  async listPayouts({ sellerId = null, status = null, fromDate = null, toDate = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (sellerId) {
+      clauses.push(`seller_id = $${idx++}`);
+      values.push(sellerId);
+    }
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+    if (fromDate) {
+      clauses.push(`created_at >= $${idx++}`);
+      values.push(fromDate);
+    }
+    if (toDate) {
+      clauses.push(`created_at <= $${idx++}`);
+      values.push(toDate);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const { rows } = await postgresPool.query(
+      `SELECT *
+       FROM vendor_payouts
+       ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT $${idx++}
+       OFFSET $${idx}`,
+      values,
+    );
+    return rows;
+  }
+
+  async createApiKey({ ownerId, keyName, scopes = [], expiresAt = null }) {
+    const rawKey = `mkp_${randomBytes(24).toString("hex")}`;
+    const keyPrefix = rawKey.slice(0, 12);
+    const keyHash = await hashValue(rawKey);
+
+    const { rows } = await postgresPool.query(
+      `INSERT INTO api_keys (
+        id, owner_id, key_name, key_prefix, key_hash, scopes, status, expires_at, created_at, updated_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()
+      )
+      RETURNING id, owner_id, key_name, key_prefix, scopes, status, expires_at, created_at`,
+      [uuidv4(), ownerId, keyName, keyPrefix, keyHash, scopes, "active", expiresAt],
+    );
+
+    return { record: rows[0], rawKey };
+  }
+
+  async listApiKeys({ ownerId = null, status = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (ownerId) {
+      clauses.push(`owner_id = $${idx++}`);
+      values.push(ownerId);
+    }
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const { rows } = await postgresPool.query(
+      `SELECT id, owner_id, key_name, key_prefix, scopes, status, expires_at, last_used_at, created_at
+       FROM api_keys
+       ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT $${idx++}
+       OFFSET $${idx}`,
+      values,
+    );
+    return rows;
+  }
+
+  async createWebhookSubscription({ ownerId, endpointUrl, secret, eventTypes = [], retryPolicy = {} }) {
+    const secretHash = await hashValue(secret);
+    const { rows } = await postgresPool.query(
+      `INSERT INTO webhook_subscriptions (
+        id, owner_id, endpoint_url, secret_hash, event_types, status, retry_policy, created_at, updated_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,NOW(),NOW()
+      )
+      RETURNING id, owner_id, endpoint_url, event_types, status, retry_policy, created_at`,
+      [uuidv4(), ownerId, endpointUrl, secretHash, eventTypes, "active", retryPolicy],
+    );
+    return rows[0];
+  }
+
+  async listWebhookSubscriptions({ ownerId = null, status = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (ownerId) {
+      clauses.push(`owner_id = $${idx++}`);
+      values.push(ownerId);
+    }
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const { rows } = await postgresPool.query(
+      `SELECT id, owner_id, endpoint_url, event_types, status, retry_policy, last_delivery_at, created_at
+       FROM webhook_subscriptions
+       ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT $${idx++}
+       OFFSET $${idx}`,
+      values,
+    );
+
+    return rows;
+  }
+
+  async createManagedUser(payload) {
+    return UserModel.create(payload);
+  }
+
+  async findUserByEmail(email) {
+    return UserModel.findOne({ email });
+  }
+
+  async listSubAdmins({ ownerAdminId = null } = {}) {
+    const filter = { role: "sub-admin" };
+    if (ownerAdminId) {
+      filter.ownerAdminId = ownerAdminId;
+    }
+    return UserModel.find(filter)
+      .select("email phone role profile accountStatus allowedModules ownerAdminId createdAt updatedAt")
+      .sort({ createdAt: -1 });
+  }
+
+  async updateSubAdminModules(userId, ownerAdminId, allowedModules) {
+    return UserModel.findOneAndUpdate(
+      { _id: userId, role: "sub-admin", ownerAdminId },
+      { $set: { allowedModules } },
+      { new: true },
+    ).select("email phone role profile accountStatus allowedModules ownerAdminId createdAt updatedAt");
+  }
+
+  async upsertFeatureFlag({ flagKey, description, enabled, rolloutPercentage, targetRules, actorId }) {
+    const { rows } = await postgresPool.query(
+      `INSERT INTO feature_flag_rollouts (
+        id, flag_key, description, enabled, rollout_percentage, target_rules, created_by, updated_by, created_at, updated_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()
+      )
+      ON CONFLICT (flag_key) DO UPDATE SET
+        description = EXCLUDED.description,
+        enabled = EXCLUDED.enabled,
+        rollout_percentage = EXCLUDED.rollout_percentage,
+        target_rules = EXCLUDED.target_rules,
+        updated_by = EXCLUDED.updated_by,
+        updated_at = NOW()
+      RETURNING *`,
+      [uuidv4(), flagKey, description || null, enabled, rolloutPercentage, targetRules || {}, actorId, actorId],
+    );
+
+    await postgresPool.query(
+      `INSERT INTO config_change_history (
+        id, config_key, previous_value, new_value, changed_by, reason, created_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,NOW()
+      )`,
+      [
+        uuidv4(),
+        `feature_flag:${flagKey}`,
+        null,
+        {
+          enabled,
+          rolloutPercentage,
+          targetRules: targetRules || {},
+        },
+        actorId,
+        "feature_flag_update",
+      ],
+    );
+
+    return rows[0];
+  }
+
+  async listFeatureFlags({ enabled = null, limit = 100, offset = 0 } = {}) {
+    const values = [];
+    let whereSql = "";
+    if (enabled !== null && enabled !== undefined) {
+      values.push(enabled);
+      whereSql = `WHERE enabled = $1`;
+    }
+    values.push(limit, offset);
+    const limIdx = values.length - 1;
+    const offIdx = values.length;
+
+    const { rows } = await postgresPool.query(
+      `SELECT *
+       FROM feature_flag_rollouts
+       ${whereSql}
+       ORDER BY updated_at DESC
+       LIMIT $${limIdx}
+       OFFSET $${offIdx}`,
+      values,
+    );
+    return rows;
+  }
+
+  async getRealtimeAnalytics({ hours = 24 } = {}) {
+    const windowHours = Number(hours) > 0 ? Number(hours) : 24;
+    const [ordersResult, paymentsResult, userResult] = await Promise.all([
+      postgresPool.query(
+        `SELECT
+           COUNT(*)::INT AS order_count,
+           COALESCE(SUM(total_amount), 0)::NUMERIC AS gmv
+         FROM orders
+         WHERE created_at >= NOW() - ($1::TEXT || ' hours')::INTERVAL`,
+        [String(windowHours)],
+      ),
+      postgresPool.query(
+        `SELECT
+           COUNT(*)::INT AS payment_count,
+           COALESCE(SUM(amount), 0)::NUMERIC AS amount_collected
+         FROM payments
+         WHERE status = 'captured'
+           AND created_at >= NOW() - ($1::TEXT || ' hours')::INTERVAL`,
+        [String(windowHours)],
+      ),
+      UserModel.countDocuments({
+        createdAt: { $gte: new Date(Date.now() - windowHours * 60 * 60 * 1000) },
+      }),
+    ]);
+
+    return {
+      windowHours,
+      orders: {
+        count: Number(ordersResult.rows[0]?.order_count || 0),
+        gmv: Number(ordersResult.rows[0]?.gmv || 0),
+      },
+      payments: {
+        count: Number(paymentsResult.rows[0]?.payment_count || 0),
+        collectedAmount: Number(paymentsResult.rows[0]?.amount_collected || 0),
+      },
+      users: {
+        newRegistrations: Number(userResult || 0),
+      },
+    };
+  }
+
+  async getReturnsAnalytics({ fromDate = null, toDate = null } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (fromDate) {
+      clauses.push(`requested_at >= $${idx++}`);
+      values.push(fromDate);
+    }
+    if (toDate) {
+      clauses.push(`requested_at <= $${idx++}`);
+      values.push(toDate);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const [summaryResult, reasonResult] = await Promise.all([
+      postgresPool.query(
+        `SELECT
+          COUNT(*)::INT AS total_requests,
+          COUNT(*) FILTER (WHERE status = 'requested')::INT AS requested,
+          COUNT(*) FILTER (WHERE status = 'approved')::INT AS approved,
+          COUNT(*) FILTER (WHERE status = 'rejected')::INT AS rejected,
+          COALESCE(SUM(refund_amount), 0)::NUMERIC AS refund_amount
+         FROM return_requests
+         ${whereSql}`,
+        values,
+      ),
+      postgresPool.query(
+        `SELECT reason_code, COUNT(*)::INT AS count
+         FROM return_requests
+         ${whereSql}
+         GROUP BY reason_code
+         ORDER BY count DESC`,
+        values,
+      ),
+    ]);
+
+    return {
+      summary: {
+        totalRequests: Number(summaryResult.rows[0]?.total_requests || 0),
+        requested: Number(summaryResult.rows[0]?.requested || 0),
+        approved: Number(summaryResult.rows[0]?.approved || 0),
+        rejected: Number(summaryResult.rows[0]?.rejected || 0),
+        refundAmount: Number(summaryResult.rows[0]?.refund_amount || 0),
+      },
+      reasons: reasonResult.rows.map((row) => ({
+        reasonCode: row.reason_code,
+        count: Number(row.count || 0),
+      })),
+    };
+  }
+
+  async listChargebacks({ status = null, fromDate = null, toDate = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (status) {
+      clauses.push(`representment_status = $${idx++}`);
+      values.push(status);
+    }
+    if (fromDate) {
+      clauses.push(`opened_at >= $${idx++}`);
+      values.push(fromDate);
+    }
+    if (toDate) {
+      clauses.push(`opened_at <= $${idx++}`);
+      values.push(toDate);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+    const countValues = values.slice(0, values.length - 2);
+
+    const [rowsResult, totalResult] = await Promise.all([
+      postgresPool.query(
+        `SELECT *
+         FROM chargebacks
+         ${whereSql}
+         ORDER BY opened_at DESC
+         LIMIT $${idx++}
+         OFFSET $${idx}`,
+        values,
+      ),
+      postgresPool.query(`SELECT COUNT(*)::INT AS total FROM chargebacks ${whereSql}`, countValues),
+    ]);
+
+    return { items: rowsResult.rows, total: Number(totalResult.rows[0]?.total || 0) };
+  }
+
+  async listDeadLetterEvents({ status = null, eventType = null, limit = 50, offset = 0 } = {}) {
+    const values = [];
+    const clauses = [];
+    let idx = 1;
+
+    if (status) {
+      clauses.push(`status = $${idx++}`);
+      values.push(status);
+    }
+    if (eventType) {
+      clauses.push(`event_type = $${idx++}`);
+      values.push(eventType);
+    }
+
+    const whereSql = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    values.push(limit, offset);
+    const countValues = values.slice(0, values.length - 2);
+
+    const [rowsResult, totalResult] = await Promise.all([
+      postgresPool.query(
+        `SELECT *
+         FROM dead_letter_events
+         ${whereSql}
+         ORDER BY created_at DESC
+         LIMIT $${idx++}
+         OFFSET $${idx}`,
+        values,
+      ),
+      postgresPool.query(`SELECT COUNT(*)::INT AS total FROM dead_letter_events ${whereSql}`, countValues),
+    ]);
+
+    return { items: rowsResult.rows, total: Number(totalResult.rows[0]?.total || 0) };
+  }
+
+  async retryDeadLetterEvent(eventId) {
+    const existing = await postgresPool.query("SELECT * FROM dead_letter_events WHERE id = $1 LIMIT 1", [eventId]);
+    if (!existing.rows[0]) {
+      return null;
+    }
+    const event = existing.rows[0];
+
+    await postgresPool.query(
+      `INSERT INTO outbox_events (
+        id, event_name, aggregate_id, version, payload, occurred_at, status
+      ) VALUES (
+        $1,$2,$3,$4,$5,NOW(),'pending'
+      )`,
+      [uuidv4(), event.event_type, event.aggregate_id, 1, event.payload || {}],
+    );
+
+    const { rows } = await postgresPool.query(
+      `UPDATE dead_letter_events
+       SET status = 'retry_scheduled',
+           retry_count = retry_count + 1,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [eventId],
+    );
+
+    return rows[0];
+  }
+
+  async discardDeadLetterEvent(eventId, reason = null) {
+    const { rows } = await postgresPool.query(
+      `UPDATE dead_letter_events
+       SET status = 'discarded',
+           updated_at = NOW(),
+           last_error = COALESCE($2, last_error)
+       WHERE id = $1
+       RETURNING *`,
+      [eventId, reason],
+    );
+    return rows[0] || null;
+  }
+}
+
+module.exports = { AdminRepository };

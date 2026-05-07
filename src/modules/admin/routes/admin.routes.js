@@ -1,0 +1,498 @@
+const express = require("express");
+const { AdminController } = require("../controllers/admin.controller");
+const {
+  PlatformController,
+} = require("../../platform/controllers/platform.controller");
+const { authenticate } = require("../../../shared/middleware/authenticate");
+const { authorize } = require("../../../shared/middleware/authorize");
+const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const {
+  validateRequest,
+} = require("../../../shared/middleware/validate-request");
+const { ROLES } = require("../../../shared/constants/roles");
+const {
+  adminOverviewSchema,
+  listVendorsSchema,
+  listUsersSchema,
+  userParamSchema,
+  updateUserSchema,
+  deactivateUserSchema,
+  updateVendorStatusSchema,
+  moderationQueueSchema,
+  moderateProductSchema,
+  listOrdersSchema,
+  listPaymentsSchema,
+  createPayoutSchema,
+  listPayoutsSchema,
+  taxReportSchema,
+  generateInvoiceSchema,
+  createApiKeySchema,
+  listApiKeysSchema,
+  createWebhookSubscriptionSchema,
+  listWebhookSubscriptionsSchema,
+  upsertFeatureFlagSchema,
+  listFeatureFlagsSchema,
+  realtimeAnalyticsSchema,
+  returnsAnalyticsSchema,
+  listChargebacksSchema,
+  listDeadLetterSchema,
+  deadLetterActionSchema,
+  queueStatusSchema,
+  queueActionSchema,
+  createSubscriptionPlanSchema,
+  listSubscriptionPlanSchema,
+  subscriptionPlanParamSchema,
+  updateSubscriptionPlanSchema,
+  listPlatformSubscriptionsSchema,
+  updatePlatformSubscriptionStatusSchema,
+  createPlatformFeeConfigSchema,
+  listPlatformFeeConfigSchema,
+  platformFeeConfigParamSchema,
+  updatePlatformFeeConfigSchema,
+  listAccessModulesSchema,
+  createAdminSchema,
+  listAdminsSchema,
+  createPlatformSubAdminSchema,
+  listPlatformSubAdminsSchema,
+  updatePlatformSubAdminModulesSchema,
+} = require("../validation/admin.validation");
+const {
+  createCategorySchema,
+  updateCategorySchema,
+  listCategoriesSchema,
+  categoryKeySchema,
+  createProductFamilySchema,
+  updateProductFamilySchema,
+  listProductFamiliesSchema,
+  productFamilyCodeSchema,
+  createProductVariantSchema,
+  updateProductVariantSchema,
+  listProductVariantsSchema,
+  productVariantIdSchema,
+  createHsnCodeSchema,
+  updateHsnCodeSchema,
+  listHsnCodesSchema,
+  hsnCodeSchema,
+  createGeographySchema,
+  updateGeographySchema,
+  listGeographiesSchema,
+  geographyCodeSchema,
+  createContentPageSchema,
+  updateContentPageSchema,
+  listContentPagesSchema,
+  contentPageSlugSchema,
+} = require("../../platform/validation/platform.validation");
+
+const adminRoutes = express.Router();
+const adminController = new AdminController();
+const platformController = new PlatformController();
+
+adminRoutes.use(authenticate, authorize(ROLES.ADMIN));
+
+adminRoutes.get(
+  "/access/modules",
+  validateRequest(listAccessModulesSchema),
+  asyncHandler(adminController.listAccessModules),
+);
+adminRoutes.post(
+  "/access/admins",
+  authorize(ROLES.SUPER_ADMIN),
+  validateRequest(createAdminSchema),
+  asyncHandler(adminController.createAdmin),
+);
+adminRoutes.get(
+  "/access/admins",
+  authorize(ROLES.SUPER_ADMIN),
+  validateRequest(listAdminsSchema),
+  asyncHandler(adminController.listAdmins),
+);
+adminRoutes.post(
+  "/access/sub-admins",
+  validateRequest(createPlatformSubAdminSchema),
+  asyncHandler(adminController.createPlatformSubAdmin),
+);
+adminRoutes.get(
+  "/access/sub-admins",
+  validateRequest(listPlatformSubAdminsSchema),
+  asyncHandler(adminController.listPlatformSubAdmins),
+);
+adminRoutes.patch(
+  "/access/sub-admins/:userId/modules",
+  validateRequest(updatePlatformSubAdminModulesSchema),
+  asyncHandler(adminController.updatePlatformSubAdminModules),
+);
+
+adminRoutes.get(
+  "/dashboard/overview",
+  validateRequest(adminOverviewSchema),
+  asyncHandler(adminController.overview),
+);
+adminRoutes.get(
+  "/users",
+  validateRequest(listUsersSchema),
+  asyncHandler(adminController.listUsers),
+);
+adminRoutes.get(
+  "/users/:userId",
+  validateRequest(userParamSchema),
+  asyncHandler(adminController.getUser),
+);
+adminRoutes.patch(
+  "/users/:userId",
+  validateRequest(updateUserSchema),
+  asyncHandler(adminController.updateUser),
+);
+adminRoutes.delete(
+  "/users/:userId",
+  validateRequest(deactivateUserSchema),
+  asyncHandler(adminController.deactivateUser),
+);
+adminRoutes.get(
+  "/vendors",
+  validateRequest(listVendorsSchema),
+  asyncHandler(adminController.listVendors),
+);
+adminRoutes.patch(
+  "/vendors/:sellerId/status",
+  validateRequest(updateVendorStatusSchema),
+  asyncHandler(adminController.updateVendorStatus),
+);
+adminRoutes.get(
+  "/products/moderation-queue",
+  validateRequest(moderationQueueSchema),
+  asyncHandler(adminController.moderationQueue),
+);
+adminRoutes.patch(
+  "/products/:productId/moderate",
+  validateRequest(moderateProductSchema),
+  asyncHandler(adminController.moderateProduct),
+);
+adminRoutes.get(
+  "/orders",
+  validateRequest(listOrdersSchema),
+  asyncHandler(adminController.listOrders),
+);
+adminRoutes.get(
+  "/payments",
+  validateRequest(listPaymentsSchema),
+  asyncHandler(adminController.listPayments),
+);
+adminRoutes.post(
+  "/payouts",
+  validateRequest(createPayoutSchema),
+  asyncHandler(adminController.createPayout),
+);
+adminRoutes.get(
+  "/payouts",
+  validateRequest(listPayoutsSchema),
+  asyncHandler(adminController.listPayouts),
+);
+adminRoutes.get(
+  "/tax/reports",
+  validateRequest(taxReportSchema),
+  asyncHandler(adminController.taxReport),
+);
+adminRoutes.post(
+  "/tax/orders/:orderId/invoice",
+  validateRequest(generateInvoiceSchema),
+  asyncHandler(adminController.generateInvoice),
+);
+adminRoutes.post(
+  "/platform/api-keys",
+  validateRequest(createApiKeySchema),
+  asyncHandler(adminController.createApiKey),
+);
+adminRoutes.get(
+  "/platform/api-keys",
+  validateRequest(listApiKeysSchema),
+  asyncHandler(adminController.listApiKeys),
+);
+adminRoutes.post(
+  "/platform/webhooks",
+  validateRequest(createWebhookSubscriptionSchema),
+  asyncHandler(adminController.createWebhookSubscription),
+);
+adminRoutes.get(
+  "/platform/webhooks",
+  validateRequest(listWebhookSubscriptionsSchema),
+  asyncHandler(adminController.listWebhookSubscriptions),
+);
+adminRoutes.put(
+  "/platform/feature-flags",
+  validateRequest(upsertFeatureFlagSchema),
+  asyncHandler(adminController.upsertFeatureFlag),
+);
+adminRoutes.get(
+  "/platform/feature-flags",
+  validateRequest(listFeatureFlagsSchema),
+  asyncHandler(adminController.listFeatureFlags),
+);
+adminRoutes.get(
+  "/analytics/realtime",
+  validateRequest(realtimeAnalyticsSchema),
+  asyncHandler(adminController.realtimeAnalytics),
+);
+adminRoutes.get(
+  "/returns/analytics",
+  validateRequest(returnsAnalyticsSchema),
+  asyncHandler(adminController.returnsAnalytics),
+);
+adminRoutes.get(
+  "/chargebacks",
+  validateRequest(listChargebacksSchema),
+  asyncHandler(adminController.listChargebacks),
+);
+adminRoutes.get(
+  "/system/health",
+  validateRequest(queueStatusSchema),
+  asyncHandler(adminController.systemHealth),
+);
+adminRoutes.get(
+  "/system/queues",
+  validateRequest(queueStatusSchema),
+  asyncHandler(adminController.queueStatus),
+);
+adminRoutes.post(
+  "/system/queues/:queueName/pause",
+  validateRequest(queueActionSchema),
+  asyncHandler(adminController.pauseQueue),
+);
+adminRoutes.post(
+  "/system/queues/:queueName/resume",
+  validateRequest(queueActionSchema),
+  asyncHandler(adminController.resumeQueue),
+);
+adminRoutes.get(
+  "/system/dead-letter",
+  validateRequest(listDeadLetterSchema),
+  asyncHandler(adminController.listDeadLetterEvents),
+);
+adminRoutes.post(
+  "/system/dead-letter/:eventId/retry",
+  validateRequest(deadLetterActionSchema),
+  asyncHandler(adminController.retryDeadLetterEvent),
+);
+adminRoutes.post(
+  "/system/dead-letter/:eventId/discard",
+  validateRequest(deadLetterActionSchema),
+  asyncHandler(adminController.discardDeadLetterEvent),
+);
+adminRoutes.post(
+  "/platform/subscription-plans",
+  validateRequest(createSubscriptionPlanSchema),
+  asyncHandler(adminController.createSubscriptionPlan),
+);
+adminRoutes.get(
+  "/platform/subscription-plans",
+  validateRequest(listSubscriptionPlanSchema),
+  asyncHandler(adminController.listSubscriptionPlans),
+);
+adminRoutes.get(
+  "/platform/subscription-plans/:planId",
+  validateRequest(subscriptionPlanParamSchema),
+  asyncHandler(adminController.getSubscriptionPlan),
+);
+adminRoutes.patch(
+  "/platform/subscription-plans/:planId",
+  validateRequest(updateSubscriptionPlanSchema),
+  asyncHandler(adminController.updateSubscriptionPlan),
+);
+adminRoutes.delete(
+  "/platform/subscription-plans/:planId",
+  validateRequest(subscriptionPlanParamSchema),
+  asyncHandler(adminController.deleteSubscriptionPlan),
+);
+adminRoutes.get(
+  "/platform/subscriptions",
+  validateRequest(listPlatformSubscriptionsSchema),
+  asyncHandler(adminController.listPlatformSubscriptions),
+);
+adminRoutes.patch(
+  "/platform/subscriptions/:subscriptionId/status",
+  validateRequest(updatePlatformSubscriptionStatusSchema),
+  asyncHandler(adminController.updatePlatformSubscriptionStatus),
+);
+adminRoutes.post(
+  "/platform/fee-config",
+  validateRequest(createPlatformFeeConfigSchema),
+  asyncHandler(adminController.createPlatformFeeConfig),
+);
+adminRoutes.get(
+  "/platform/fee-config",
+  validateRequest(listPlatformFeeConfigSchema),
+  asyncHandler(adminController.listPlatformFeeConfigs),
+);
+adminRoutes.get(
+  "/platform/fee-config/:configId",
+  validateRequest(platformFeeConfigParamSchema),
+  asyncHandler(adminController.getPlatformFeeConfig),
+);
+adminRoutes.patch(
+  "/platform/fee-config/:configId",
+  validateRequest(updatePlatformFeeConfigSchema),
+  asyncHandler(adminController.updatePlatformFeeConfig),
+);
+adminRoutes.delete(
+  "/platform/fee-config/:configId",
+  validateRequest(platformFeeConfigParamSchema),
+  asyncHandler(adminController.deletePlatformFeeConfig),
+);
+
+// Platform Management Routes
+adminRoutes.post(
+  "/platform/categories",
+  validateRequest(createCategorySchema),
+  asyncHandler(platformController.createCategory),
+);
+adminRoutes.get(
+  "/platform/categories",
+  validateRequest(listCategoriesSchema),
+  asyncHandler(platformController.listCategories),
+);
+adminRoutes.get(
+  "/platform/categories/:categoryKey",
+  validateRequest(categoryKeySchema),
+  asyncHandler(platformController.getCategory),
+);
+adminRoutes.patch(
+  "/platform/categories/:categoryKey",
+  validateRequest(updateCategorySchema),
+  asyncHandler(platformController.updateCategory),
+);
+adminRoutes.delete(
+  "/platform/categories/:categoryKey",
+  validateRequest(categoryKeySchema),
+  asyncHandler(platformController.deleteCategory),
+);
+
+adminRoutes.post(
+  "/platform/product-families",
+  validateRequest(createProductFamilySchema),
+  asyncHandler(platformController.createProductFamily),
+);
+adminRoutes.get(
+  "/platform/product-families",
+  validateRequest(listProductFamiliesSchema),
+  asyncHandler(platformController.listProductFamilies),
+);
+adminRoutes.get(
+  "/platform/product-families/:familyCode",
+  validateRequest(productFamilyCodeSchema),
+  asyncHandler(platformController.getProductFamily),
+);
+adminRoutes.patch(
+  "/platform/product-families/:familyCode",
+  validateRequest(updateProductFamilySchema),
+  asyncHandler(platformController.updateProductFamily),
+);
+adminRoutes.delete(
+  "/platform/product-families/:familyCode",
+  validateRequest(productFamilyCodeSchema),
+  asyncHandler(platformController.deleteProductFamily),
+);
+
+adminRoutes.post(
+  "/platform/product-variants",
+  validateRequest(createProductVariantSchema),
+  asyncHandler(platformController.createProductVariant),
+);
+adminRoutes.get(
+  "/platform/product-variants",
+  validateRequest(listProductVariantsSchema),
+  asyncHandler(platformController.listProductVariants),
+);
+adminRoutes.get(
+  "/platform/product-variants/:variantId",
+  validateRequest(productVariantIdSchema),
+  asyncHandler(platformController.getProductVariant),
+);
+adminRoutes.patch(
+  "/platform/product-variants/:variantId",
+  validateRequest(updateProductVariantSchema),
+  asyncHandler(platformController.updateProductVariant),
+);
+adminRoutes.delete(
+  "/platform/product-variants/:variantId",
+  validateRequest(productVariantIdSchema),
+  asyncHandler(platformController.deleteProductVariant),
+);
+
+adminRoutes.post(
+  "/platform/hsn-codes",
+  validateRequest(createHsnCodeSchema),
+  asyncHandler(platformController.createHsnCode),
+);
+adminRoutes.get(
+  "/platform/hsn-codes",
+  validateRequest(listHsnCodesSchema),
+  asyncHandler(platformController.listHsnCodes),
+);
+adminRoutes.get(
+  "/platform/hsn-codes/:hsnCode",
+  validateRequest(hsnCodeSchema),
+  asyncHandler(platformController.getHsnCode),
+);
+adminRoutes.patch(
+  "/platform/hsn-codes/:hsnCode",
+  validateRequest(updateHsnCodeSchema),
+  asyncHandler(platformController.updateHsnCode),
+);
+adminRoutes.delete(
+  "/platform/hsn-codes/:hsnCode",
+  validateRequest(hsnCodeSchema),
+  asyncHandler(platformController.deleteHsnCode),
+);
+
+adminRoutes.post(
+  "/platform/geography",
+  validateRequest(createGeographySchema),
+  asyncHandler(platformController.createGeography),
+);
+adminRoutes.get(
+  "/platform/geography",
+  validateRequest(listGeographiesSchema),
+  asyncHandler(platformController.listGeographies),
+);
+adminRoutes.get(
+  "/platform/geography/:countryCode",
+  validateRequest(geographyCodeSchema),
+  asyncHandler(platformController.getGeography),
+);
+adminRoutes.patch(
+  "/platform/geography/:countryCode",
+  validateRequest(updateGeographySchema),
+  asyncHandler(platformController.updateGeography),
+);
+adminRoutes.delete(
+  "/platform/geography/:countryCode",
+  validateRequest(geographyCodeSchema),
+  asyncHandler(platformController.deleteGeography),
+);
+
+adminRoutes.post(
+  "/platform/content-pages",
+  validateRequest(createContentPageSchema),
+  asyncHandler(platformController.createContentPage),
+);
+adminRoutes.get(
+  "/platform/content-pages",
+  validateRequest(listContentPagesSchema),
+  asyncHandler(platformController.listContentPages),
+);
+adminRoutes.get(
+  "/platform/content-pages/:slug",
+  validateRequest(contentPageSlugSchema),
+  asyncHandler(platformController.getContentPage),
+);
+adminRoutes.patch(
+  "/platform/content-pages/:slug",
+  validateRequest(updateContentPageSchema),
+  asyncHandler(platformController.updateContentPage),
+);
+adminRoutes.delete(
+  "/platform/content-pages/:slug",
+  validateRequest(contentPageSlugSchema),
+  asyncHandler(platformController.deleteContentPage),
+);
+
+module.exports = { adminRoutes };

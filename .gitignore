@@ -1,3 +1,18 @@
+<<<<<<< HEAD
+node_modules/
+.env
+dist/
+build/
+coverage/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+.idea/
+=======
 # ========================
 # Node.js
 # ========================
@@ -80,3 +95,4 @@ elasticsearch/data/
 # Misc
 # ========================
 *.local
+>>>>>>> daf81ad5752c219ee7482b0fdb4a2ddd59125ce3
