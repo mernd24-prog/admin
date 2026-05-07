@@ -3,17 +3,22 @@ export const PANEL_MODES = {
   SELLER: "seller",
 };
 
-const normalizeMode = (value) => String(value || "").trim().toLowerCase();
+const normalizeMode = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
 
 const configuredMode =
   normalizeMode(process.env.REACT_APP_PANEL_MODE) ||
   normalizeMode(process.env.VITE_PANEL_MODE) ||
   normalizeMode(process.env.REACT_APP_APP_MODE) ||
   normalizeMode(process.env.VITE_APP_MODE) ||
-  PANEL_MODES.ADMIN;
+  PANEL_MODES.SELLER;
 
 export const getPanelMode = () =>
-  configuredMode === PANEL_MODES.SELLER ? PANEL_MODES.SELLER : PANEL_MODES.ADMIN;
+  configuredMode === PANEL_MODES.SELLER
+    ? PANEL_MODES.SELLER
+    : PANEL_MODES.ADMIN;
 
 export const isSellerPanel = () => getPanelMode() === PANEL_MODES.SELLER;
 export const isAdminPanel = () => getPanelMode() === PANEL_MODES.ADMIN;
