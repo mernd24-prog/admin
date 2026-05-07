@@ -19,51 +19,51 @@ const KYCStatusLayout = ({
     (item) => item.id === currentSection
   );
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-200 flex items-center justify-center">
-      <div className="w-full h-full bg-white shadow-2xl overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-3 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 lg:flex lg:h-screen lg:items-center lg:justify-center lg:overflow-hidden">
+      <div className="min-h-screen w-full bg-white shadow-2xl lg:h-full lg:min-h-0 lg:overflow-hidden">
+        <div className="grid min-h-screen grid-cols-1 lg:grid-cols-3">
           <div
-            className="w-1/2 lg:col-span-1  flex flex-col items-center justify-evenly bg-cover bg-center bg-no-repeat ml-0 sm:ml-6 md:ml-10 lg:ml-16"
+            className="w-full bg-cover bg-center bg-no-repeat px-4 py-4 sm:px-6 lg:col-span-1 lg:ml-16 lg:flex lg:w-1/2 lg:flex-col lg:items-center lg:justify-evenly lg:px-0 lg:py-0"
             style={{
               backgroundImage: `url('${backgroundImage}')`,
             }}
           >
             {/* Logo Section */}
-            <div className="mb-8 pb-6 border-b border-amber-200">
-              <div className="flex items-center justify-center lg:justify-start gap-3 mb-2">
+            <div className="mb-4 border-b border-amber-200 pb-4 lg:mb-8 lg:pb-6">
+              <div className="mb-0 flex items-center justify-center gap-3 lg:mb-2 lg:justify-start">
                 <img
                   src={logo}
                   alt="Logo"
-                  className="w-28 sm:w-36 md:w-44 lg:w-52 h-auto mb-4 object-contain"
+                  className="h-auto w-28 object-contain sm:w-36 md:w-44 lg:mb-4 lg:w-52"
                 />
               </div>
             </div>
 
             {/* Navigation Menu */}
-            <nav className="space-y-2 w-full">
+            <nav className="flex w-full gap-2 overflow-x-auto pb-2 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
               {menuItems.map((item, index) => (
-                <p
+                <div
                   key={item.id}
-                  className={`w-full text-left px-4 py-3   transition-all ${
+                  className={`min-w-[180px] px-3 py-2 text-left transition-all sm:min-w-[210px] lg:w-full lg:min-w-0 lg:px-4 lg:py-3 ${
                     item.id === currentSection
                       ? "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg"
                       : "bg-white text-gray-700 hover:bg-white hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="text-xs font-medium sm:text-sm">{item.label}</span>
 
                     {/* Show check only for completed steps */}
                     {index < currentIndex && (
                       <Check size={16} className="text-green-600" />
                     )}
                   </div>
-                </p>
+                </div>
               ))}
             </nav>
 
             {/* Info Box */}
-            <div className="mt-8 p-4 bg-white/60 rounded-xl border border-amber-200">
+            <div className="mt-4 hidden rounded-xl border border-amber-200 bg-white/60 p-4 sm:block lg:mt-8">
               <p className="text-xs text-gray-600">
                 <strong className="text-indigo-800">Need Help?</strong>
                 <br />
@@ -74,9 +74,9 @@ const KYCStatusLayout = ({
           </div>
 
           {/* Right Panel - Form Container */}
-          <div className="lg:col-span-2 bg-white h-screen overflow-hidden flex items-start justify-start px-4 sm:px-2 md:px-2 lg:-ml-16 lg:px-2 xl:-ml-24">
+          <div className="min-w-0 bg-white px-3 sm:px-4 lg:col-span-2 lg:-ml-16 lg:flex lg:h-screen lg:items-start lg:justify-start lg:overflow-hidden lg:px-2 xl:-ml-24">
             {/* Child perfectly centered */}
-            <div className="w-full max-w-6xl h-screen overflow-y-auto hide-scrollbar flex items-start justify-start pr-2">
+            <div className="hide-scrollbar flex w-full items-start justify-start lg:h-screen lg:max-w-6xl lg:overflow-y-auto lg:pr-2">
               {children}
             </div>
           </div>
