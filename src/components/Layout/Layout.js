@@ -89,6 +89,9 @@ const AdminUsers = React.lazy(() =>
 const Users = React.lazy(() =>
   import("../../pages/UserManagement/Users/Users")
 );
+const UserDetails = React.lazy(() =>
+  import("../../pages/UserManagement/UserDetails/UserDetails")
+);
 const UsersTransactions = React.lazy(() =>
   import("../../pages/UserManagement/UsersTransactions/UsersTransactions")
 );
@@ -162,6 +165,9 @@ const RecommendedProductTagWeightages = React.lazy(() =>
 );
 const DiscountCoupons = React.lazy(() =>
   import("../../pages/Promotions/DiscountCoupons/DiscountCoupons")
+);
+const ReferralCommerce = React.lazy(() =>
+  import("../../pages/ReferralCommerce/ReferralCommerce")
 );
 const Ribbons = React.lazy(() =>
   import("../../pages/Promotions/Ribbons/Ribbons")
@@ -384,6 +390,9 @@ function Layout() {
                 element={renderRoute("/admin-users", <AdminUsers />)}
               />
               <Route path="/users" element={renderRoute("/users", <Users />)} />
+              <Route path="/users/view/:id" element={renderRoute("/users", <UserDetails />)} />
+              <Route path="/admin-users/view/:id" element={renderRoute("/admin-users", <UserDetails />)} />
+              <Route path="/seller/view/:id" element={renderRoute("/seller", <UserDetails />)} />
               <Route
                 path="/transactions"
                 element={renderRoute("/transactions", <UsersTransactions />)}
@@ -504,6 +513,10 @@ function Layout() {
               <Route
                 path="/discount-coupons"
                 element={renderRoute("/discount-coupons", <DiscountCoupons />)}
+              />
+              <Route
+                path="/referral-commerce"
+                element={renderRoute("/referral-commerce", <ReferralCommerce />)}
               />
               {/* <Route path="/badges" element={renderRoute('/badges', <Badges />)} /> */}
               <Route path="/ribbons" element={renderRoute('/ribbons', <Ribbons />)} />

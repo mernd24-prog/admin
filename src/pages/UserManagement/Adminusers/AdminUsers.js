@@ -321,6 +321,8 @@ const AdminUsers = () => {
         showDeleteButton={false}
         showPasswordButton={false}
         showLinkButton={false}
+        viewButton={true}
+        onViewClick={() => navigate(`/app/admin-users/view/${user._id}`)}
         userPermissions={true}
         onPermissionClick={() => handleUserPermission(user)}
 

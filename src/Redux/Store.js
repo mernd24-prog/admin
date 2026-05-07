@@ -29,6 +29,7 @@ import deliveryReducer from './deliverySlice'
 import notificationsReducer from './notificationsSlice'
 import sellerReturnsReducer from './sellerReturnsSlice'
 import sellerAnalyticsReducer from './sellerAnalyticsSlice'
+import referralCommerceReducer from './referralCommerceSlice'
 
 export const store = configureStore({
   reducer: {
@@ -61,7 +62,8 @@ export const store = configureStore({
     delivery: deliveryReducer,
     notifications: notificationsReducer,
     sellerReturns: sellerReturnsReducer,
-    sellerAnalytics: sellerAnalyticsReducer
+    sellerAnalytics: sellerAnalyticsReducer,
+    referralCommerce: referralCommerceReducer
 
     // adminSlice: adminReducer
   },

@@ -105,12 +105,13 @@ const TaxRule = () => {
     // Filter subTax options based on selected tax
     useEffect(() => {
         if (selectedTax && subTaxList.length > 0) {
-            const filtered = subTaxList.filter(subTax => subTax.tax_id === selectedTax.value);
+            const filtered = subTaxList.filter(subTax => (subTax.tax_id?._id || subTax.tax_id) === selectedTax.value);
             setFilteredSubTaxOptions(transformArray(filtered));
 
             // Reset subTax selection if the selected tax changes
             if (selectedSubTax.length > 0) {
-                const currentSubTaxTaxId = subTaxList.find(sub => sub._id === selectedSubTax[0]?.value)?.tax_id;
+                const currentSubTax = subTaxList.find(sub => sub._id === selectedSubTax[0]?.value);
+                const currentSubTaxTaxId = currentSubTax?.tax_id?._id || currentSubTax?.tax_id;
                 if (currentSubTaxTaxId !== selectedTax.value) {
                     setSelectedSubTax([]);
                     setForm(prev => ({ ...prev, subTaxes_id: [] }));

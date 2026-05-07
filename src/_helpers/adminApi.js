@@ -22,6 +22,7 @@ export const DEFAULT_PLATFORM_MODULES = [
   "returns",
   "fraud",
   "dynamic-pricing",
+  "referral",
   "delivery",
   "admin",
 ];
@@ -112,6 +113,15 @@ export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
     : {}),
 });
 
+export const toBuyerCreateBody = (payload = {}) => ({
+  email: String(payload.email || "").trim(),
+  phone: payload.phone || null,
+  password: payload.password,
+  role: payload.role || "buyer",
+  accountStatus: toAccountStatus(payload),
+  profile: toProfile(payload),
+});
+
 export const toSubAdminCreateBody = (payload = {}, fallbackModules = ["admin"]) =>
   toManagedUserCreateBody(payload, { allowedModules: fallbackModules });
 
@@ -120,7 +130,14 @@ export const toSellerRegisterBody = (payload = {}) => ({
   phone: String(payload.phone || "").trim(),
   password: payload.password,
   role: "seller",
+  ...(payload.isDisable ? { accountStatus: toAccountStatus(payload) } : {}),
   profile: toProfile(payload, true),
+  sellerProfile: {
+    displayName: payload.displayName || payload.storeName || payload.full_name || payload.fullName || payload.name,
+    legalBusinessName: payload.legalBusinessName || payload.businessName || payload.full_name || payload.fullName || payload.name,
+    supportEmail: payload.email,
+    supportPhone: payload.phone,
+  },
 });
 
 export const toUserUpdateBody = (payload = {}) => {
@@ -165,6 +182,31 @@ export const patchMany = (name, endpointBuilder, bodyBuilder, successMessage) =>
       const results = [];
       for (const id of ids) {
         results.push(await apiRequest("PATCH", endpointBuilder(id), bodyBuilder(payload)));
+      }
+
+      return {
+        success: true,
+        message: results[0]?.message || successMessage,
+        data: ids.length === 1 ? (results[0]?.data ?? results[0]) : results.map((item) => item?.data ?? item),
+        meta: { total: ids.length },
+        raw: results,
+      };
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error));
+    }
+  });
+
+export const deleteMany = (name, endpointBuilder, successMessage = "Deleted successfully") =>
+  createAsyncThunk(name, async (payload, { rejectWithValue }) => {
+    try {
+      const ids = toIdList(payload);
+      if (!ids.length) {
+        return rejectWithValue("Missing record id");
+      }
+
+      const results = [];
+      for (const id of ids) {
+        results.push(await apiRequest("DELETE", endpointBuilder(id)));
       }
 
       return {

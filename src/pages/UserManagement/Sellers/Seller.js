@@ -14,8 +14,10 @@ import Pagination from '../../../components/Pagination/Pagination';
 import Loader from '../../../components/Loader/Loader';
 import AddButton from '../../../components/Button/AddButton';
 import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
+import { useNavigate } from 'react-router';
 const Sellers = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [toggleStates, setToggleStates] = useState(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [pageNo, setPageNo] = useState(1);
@@ -512,6 +514,8 @@ const Sellers = () => {
                 showLinkButton={false}
                 showPasswordButton={false}
                 showEditButton={true}
+                viewButton={true}
+                onViewClick={() => navigate(`/app/seller/view/${user._id}`)}
             />
         </span>,
     ])

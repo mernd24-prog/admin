@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { patchMany } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany } from '../_helpers/adminApi';
 
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
@@ -24,6 +24,25 @@ const toProductListParams = (params = {}) => ({
 
 const toProductStatusBody = (payload = {}) => ({
     status: payload.isDisable ? "inactive" : "active",
+});
+
+const toHsnListParams = (params = {}) => ({
+    ...(params.page ? { page: Number(params.page) } : {}),
+    ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+    ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
+    ...(params.category ? { category: params.category } : {}),
+    ...(params.active !== undefined ? { active: params.active } : {}),
+});
+
+const toHsnBody = (payload = {}) => ({
+    ...(payload.code ? { code: String(payload.code) } : {}),
+    description: payload.description || '',
+    gstRate: Number(payload.IGST ?? payload.gstRate ?? 0),
+    cessRate: Number(payload.additionalTax ?? payload.cessRate ?? 0),
+    taxType: payload.taxType || 'gst',
+    exempt: Boolean(payload.exempt),
+    category: payload.category || '',
+    active: payload.active ?? payload.isDisable !== true,
 });
 
 const initialState = {
@@ -170,12 +189,33 @@ export const getProductStocks = createApiThunkPrivate('getProductStocks', '/erp/
 
 /// hsn code==============>>>>>>>>>>>>>>>
 
-export const getHsnList = createApiThunkPrivate('getHsnList', '/hsn-code/getList', 'GET')
-export const enableDisableHsn = createApiThunkPrivate('enableDisableHsn', '/hsn-code/enableDisable', 'PUT')
-export const softDeleteHsn = createApiThunkPrivate('softDeleteHsn', '/hsn-code/softDelete', 'DELETE')
-export const createHsn = createApiThunkPrivate('createHsn', '/hsn-code/create')
-export const updateHsn = createApiThunkPrivate('updateHsn', '/hsn-code/update', 'PUT')
-export const getAllHsn = createApiThunkPrivate('getAllHsn', '/hsn-code/getAllDocuments', 'GET')
+export const getHsnList = createApiThunkPrivate('getHsnList', ENDPOINTS.platform.hsnCodes, 'GET', true, {
+    transformParams: toHsnListParams,
+})
+export const enableDisableHsn = patchMany(
+    'enableDisableHsn',
+    ENDPOINTS.platform.hsnCode,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'HSN status updated successfully'
+)
+export const softDeleteHsn = deleteMany(
+    'softDeleteHsn',
+    ENDPOINTS.platform.hsnCode,
+    'HSN code deleted successfully'
+)
+export const createHsn = createApiThunkPrivate('createHsn', ENDPOINTS.platform.hsnCodes, 'POST', false, {
+    transformBody: toHsnBody,
+})
+export const updateHsn = createApiThunkPrivate('updateHsn', (payload) => ENDPOINTS.platform.hsnCode(firstId(payload) || payload.code), 'PATCH', false, {
+    transformBody: (payload = {}) => {
+        const body = toHsnBody(payload);
+        delete body.code;
+        return body;
+    },
+})
+export const getAllHsn = createApiThunkPrivate('getAllHsn', ENDPOINTS.platform.hsnCodes, 'GET', true, {
+    transformParams: (params = {}) => toHsnListParams({ ...params, limit: params.limit || params.size || 100 }),
+})
 export const downloadSampleCsv = createApiThunkPrivate('downloadSampleCsv', '/product/downLoad-sample-csv', 'GET')
 export const uploadHistory = createApiThunkPrivate('uploadHistory', '/product/bulk-upload-history', 'GET')
 export const productOptionList = createApiThunkPrivate('productOptionList', '/product-option/getOptionsWithValues', 'GET')

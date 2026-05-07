@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { create, enableDisableUser, getUserList, update, updatePasswordUser } from '../../../Redux/userManagementSlice';
+import { createUser, enableDisableUser, getUserList, update, updatePasswordUser } from '../../../Redux/userManagementSlice';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
@@ -248,7 +248,7 @@ const Users = () => {
       isDisable: formData.isDisable
     };
 
-    dispatch(create(reqData))
+    dispatch(createUser(reqData))
       .unwrap()
       .then((res) => {
         if (res.error) {
@@ -321,6 +321,8 @@ const Users = () => {
         showDeleteButton={false}
         showPasswordButton={false}
         showLinkButton={false}
+        viewButton={true}
+        onViewClick={() => navigate(`/app/users/view/${user._id}`)}
         userPermissions={false}
         onPermissionClick={() => handleUserPermission(user)}
 

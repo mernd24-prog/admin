@@ -241,6 +241,11 @@
                 "key": "discount-coupons"
             },
             {
+                "label": "Referral Commerce",
+                "icon": "MdShare",
+                "key": "referral-commerce"
+            },
+            {
                 "label": "Badges",
                 "icon": "MdVerified",
                 "key": "badges"

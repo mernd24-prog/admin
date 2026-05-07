@@ -5,6 +5,7 @@ import {
     firstId,
     normalizeAllowedModules,
     patchMany,
+    toBuyerCreateBody,
     toKycReviewBody,
     toListParams,
     toSellerRegisterBody,
@@ -31,6 +32,7 @@ const initialState = {
     updatePasswordSellerData: {},
     changePasswordData: {},
     getUserListData: {},
+    createUserData: {},
     enableDisableUserData: {},
     updatePasswordUserData: {},
     getUserAddressListData: {},
@@ -144,7 +146,7 @@ export const enableDisableSeller = patchMany(
 
 export const createSeller = createApiThunkPrivate(
     'createSeller',
-    ENDPOINTS.auth.register,
+    ENDPOINTS.users.adminUsers,
     'POST',
     false,
     { transformBody: toSellerRegisterBody }
@@ -190,6 +192,14 @@ export const getUserList = createApiThunkPrivate(
     'GET',
     true,
     { transformParams: (params = {}) => toListParams(params, { role: params.role || 'buyer' }) }
+);
+
+export const createUser = createApiThunkPrivate(
+    'createUser',
+    ENDPOINTS.users.adminUsers,
+    'POST',
+    false,
+    { transformBody: toBuyerCreateBody }
 );
 
 export const enableDisableUser = patchMany(
@@ -246,6 +256,7 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
         createExtraReducersForThunk(builder, changePassword, 'changePasswordData')
         createExtraReducersForThunk(builder, getUserList, 'getUserListData')
+        createExtraReducersForThunk(builder, createUser, 'createUserData')
         createExtraReducersForThunk(builder, enableDisableUser, 'enableDisableUserData')
         createExtraReducersForThunk(builder, updatePasswordUser, 'updatePasswordUserData')
         createExtraReducersForThunk(builder, getUserAddressList, 'getUserAddressListData')

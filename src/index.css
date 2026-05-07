@@ -35,7 +35,7 @@ body {
 }
 
 /* Global Primary Button Style for All Buttons */
-button,
+/* button, */
 .button-primary {
   padding: 10px 20px !important;
   border: 1px solid #CE9F2D !important;
@@ -51,7 +51,7 @@ button,
   ) !important;
 }
 
-button:hover,
+/* button:hover, */
 .button-primary:hover {
   opacity: 0.9 !important;
   color: white !important;

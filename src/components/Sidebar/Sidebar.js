@@ -26,6 +26,7 @@ const getTabName = (slug) => {
     'sellers': 'Seller Management',
     'analytics': 'Analytics',
     'pricing': 'Promotions',
+    'referral': 'Promotions',
     'tax': 'Tax',
     'rbac': 'Settings',
     'carts': 'Orders',
@@ -241,6 +242,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
   };
 
   const getIconForTab = (tabName) => {
+    const normalizedTabName = String(tabName || "").toLowerCase();
     const iconMap = {
       'home': MdOutlineDashboard,
       'product management': FaProductHunt,
@@ -248,13 +250,14 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
       'users': FaUserGear,
       'orders': GrOrderedList,
       'promotions': PiBroomThin,
+      'marketing': PiBroomThin,
       'blog': FaBlog,
       'shipping/pickup': BsTruckFlatbed,
       'cms': RiChatSmile2Fill,
       'settings': CiSettings,
       "tax":HiOutlineReceiptTax
     };
-    return iconMap[tabName] || MdOutlineDashboard;
+    return iconMap[normalizedTabName] || MdOutlineDashboard;
   };
 
   const sidebarWidth = isExpanded ? 'w-64' : 'w-16';

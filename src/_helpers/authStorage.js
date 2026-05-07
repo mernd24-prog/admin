@@ -148,6 +148,7 @@ export const hasModuleAccess = (moduleCode) => {
     products: ["products", "product-catalog", "seller-product-inventory"],
     orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
     pricing: ["pricing", "coupons", "discount_coupons"],
+    referral: ["referral", "referral-commerce", "influencers"],
     delivery: ["delivery", "shipping_packages", "shipping_profile", "pickup_addresses", "delivery-staff"],
     sellers: ["sellers", "seller", "vendors", "profile"],
     "sellers/commissions": ["sellers/commissions", "commissions", "transactions"],

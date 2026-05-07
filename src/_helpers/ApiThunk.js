@@ -74,6 +74,13 @@ const normalizeLegacyRecord = (record) => {
   if (!next.userName && next.email) next.userName = String(next.email).split("@")[0];
   if (!next.name && next.title) next.name = next.title;
   if (!next.title && next.name) next.title = next.name;
+  if (next.body && !next.content) next.content = next.body;
+  if (next.content && !next.body) next.body = next.content;
+  if (next.pageType && !next.category_id) next.category_id = next.pageType;
+  if (next.gstRate !== undefined && next.IGST === undefined) next.IGST = Number(next.gstRate || 0);
+  if (next.gstRate !== undefined && next.CGST === undefined) next.CGST = Number(next.gstRate || 0) / 2;
+  if (next.gstRate !== undefined && next.SGST === undefined) next.SGST = Number(next.gstRate || 0) / 2;
+  if (next.cessRate !== undefined && next.additionalTax === undefined) next.additionalTax = Number(next.cessRate || 0);
   if (Array.isArray(next.images) && !next.product_image_id) {
     next.product_image_id = { images: next.images };
   }
@@ -86,6 +93,8 @@ const normalizeLegacyRecord = (record) => {
       next.isDisable = !["active", "ready_for_go_live", "verified", "confirmed", "delivered", "fulfilled"].includes(accountStatus);
     } else if (typeof next.active === "boolean") {
       next.isDisable = !next.active;
+    } else if (typeof next.published === "boolean") {
+      next.isDisable = !next.published;
     } else if (typeof next.enabled === "boolean") {
       next.isDisable = !next.enabled;
     }

@@ -331,7 +331,7 @@ export const createProductFamily = createApiThunkPrivate("adminCore/createProduc
 export const updateProductFamily = createApiThunkPrivate("adminCore/updateProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["familyCode", "code", "id"]) });
 export const deleteProductFamily = createApiThunkPrivate("adminCore/deleteProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "DELETE", false, { transformParams: noParams });
 
-export const getProductVariants = createApiThunkPrivate("adminCore/getProductVariants", ENDPOINTS.platform.productVariants, "GET", true, { transformParams: pickQuery(["page", "limit", "productId", "familyCode", "sellerId", "status"]) });
+export const getProductVariants = createApiThunkPrivate("adminCore/getProductVariants", ENDPOINTS.platform.productVariants, "GET", true, { transformParams: pickQuery(["page", "limit", "productId", "familyCode", "sellerId", "sku", "status"]) });
 export const getProductVariant = createApiThunkPrivate("adminCore/getProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "GET");
 export const createProductVariant = createApiThunkPrivate("adminCore/createProductVariant", ENDPOINTS.platform.productVariants, "POST");
 export const updateProductVariant = createApiThunkPrivate("adminCore/updateProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["variantId", "id"]) });
@@ -349,10 +349,10 @@ export const createGeography = createApiThunkPrivate("adminCore/createGeography"
 export const updateGeography = createApiThunkPrivate("adminCore/updateGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["countryCode", "code", "id"]) });
 export const deleteGeography = createApiThunkPrivate("adminCore/deleteGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "DELETE", false, { transformParams: noParams });
 
-export const getContentPages = createApiThunkPrivate("adminCore/getContentPages", ENDPOINTS.platform.contentPages, "GET", true, { transformParams: pickQuery(["page", "limit", "pageType", "language", "published"]) });
+export const getContentPages = createApiThunkPrivate("adminCore/getContentPages", ENDPOINTS.platform.contentPages, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "pageType", "language", "published"]) });
 export const getContentPage = createApiThunkPrivate("adminCore/getContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "GET");
 export const createContentPage = createApiThunkPrivate("adminCore/createContentPage", ENDPOINTS.platform.contentPages, "POST");
-export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["slug", "id"]) });
+export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {
