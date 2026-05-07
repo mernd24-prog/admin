@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { apiUrl, refreshAccessToken } from './axiosProvider';
-import { normalizeApiError } from '../api/normalizeApiError';
+import { normalizeApiError } from './normalizeApiError';
 import {
   forceLogout,
   getStoredAccessToken,

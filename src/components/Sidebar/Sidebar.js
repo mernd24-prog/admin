@@ -15,6 +15,7 @@ import { RiChatSmile2Fill } from 'react-icons/ri';
 import { CiSettings } from 'react-icons/ci';
 import { HiOutlineReceiptTax } from "react-icons/hi";
 import { isSellerPanel } from '../../_helpers/panelConfig';
+import { getModuleRoute } from '../../_helpers/rbacRoutes';
 
 const getTabName = (slug) => {
   const tabMap = {
@@ -206,8 +207,8 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
     const groupedByTab = permissions?.reduce((acc, curr) => {
       const hasAssignedPermission = (curr.permissions || []).some(p => p.assigned);
       if (!curr.assigned && !hasAssignedPermission) return acc;
-      const moduleCode = curr.slug;
-      const tabName = getTabName(curr.slug);
+      const moduleCode = getModuleRoute(curr.slug);
+      const tabName = curr.tab || curr.metadata?.tab || getTabName(curr.slug);
       if (!acc[tabName]) {
         acc[tabName] = [];
       }

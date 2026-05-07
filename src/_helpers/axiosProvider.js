@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { sessionStorageGetItem } from './globalFunctions';
-import { normalizeApiError } from '../api/normalizeApiError';
+import { normalizeApiError } from './normalizeApiError';
 import {
     forceLogout,
     getStoredAccessToken,

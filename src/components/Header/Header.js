@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutFunction } from "../../_helpers";
 import { IoLogOutOutline } from "react-icons/io5";
 import { MdOutlineMenu } from 'react-icons/md';
@@ -6,6 +6,21 @@ import { FiUser, FiKey } from 'react-icons/fi';
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from '../../Redux/userSlice';
 import { Link, useLocation } from "react-router-dom";
+
+const getDisplayName = (user = {}) => {
+  const profile = user.profile || {};
+  return (
+    user.full_name ||
+    user.fullName ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+    user.userName ||
+    user.email?.split("@")?.[0] ||
+    "User"
+  );
+};
+
+const getAvatarUrl = (user = {}) =>
+  user.user_image || user.profile?.avatarUrl || "/Img/user.png";
 
 export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
   const [openModel, setOpenModel] = useState(false);
@@ -17,7 +32,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
   const [userData, setUserData] = useState({})
 
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const res = await dispatch(getProfile()).unwrap();
       setUserData(res?.data);
@@ -25,7 +40,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
       // Handle error here
       console.error("Failed to fetch profile:", error);
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     fetchUserData()
@@ -49,7 +64,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
     } else {
       setHeaderTitle(moduleName);
     }
-  }, [moduleName, currentPath]);
+  }, [fetchUserData, moduleName, currentPath]);
 
   const handleLogout = () => {
     logoutFunction();
@@ -100,7 +115,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
               <div>
                 <img
                   className="object-contain w-10 h-10 rounded-full cursor-pointer transition-transform hover:scale-105"
-                  src={userData?.user_image || `/Img/user.png`}
+                  src={getAvatarUrl(userData)}
                   alt="Profile"
                   onClick={toggleLogoutModal}
                 />
@@ -115,13 +130,13 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
                   <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center gap-3">
                     <img
                       className="object-contain w-12 h-12 rounded cursor-pointer transition-transform hover:scale-105"
-                      src={`${userData?.role_id !== 9 ? "/Img/user.png" : userData?.user_image}` }
+                      src={getAvatarUrl(userData)}
 
                       alt="Profile"
                       onClick={toggleLogoutModal}
                     />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Hi, {userData?.userName}</p>
+                      <p className="text-sm font-medium text-gray-900">Hi, {getDisplayName(userData)}</p>
                       <p className="text-xs text-gray-500 truncate text-wrap">{userData?.email}</p>
                     </div>
                   </div>

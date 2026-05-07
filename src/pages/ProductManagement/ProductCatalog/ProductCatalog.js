@@ -201,7 +201,7 @@ const ProductCatalog = () => {
   }
 
   const handleApproveToggle = async (data) => {
-    const nextStatus = data?.status === "active" || data?.isApproved ? "draft" : "active";
+    const nextStatus = data?.status === "active" || data?.isApproved ? "inactive" : "active";
     const apiPayload = {
       id: data?._id,
       body: {

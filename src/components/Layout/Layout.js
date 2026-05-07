@@ -6,6 +6,10 @@ import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
+import {
+  getRouteModuleCandidates,
+  isSelfServiceRoute,
+} from "../../_helpers/rbacRoutes";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
 import Badge from "../../pages/Admin/Badge/Badge";
 import QtyHead from "../../pages/Admin/QTY/QtyHead";
@@ -29,49 +33,55 @@ import TermsConditions from "../../pages/CMS/Terms&Conditions/Terms&Conditions";
 import PromotionsBanner from "../../pages/Admin/PromotionsBanner/PromotionsBanner";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
-import MaterialStatus from "../../ERP/Stoks/components/MaterialStatus";
-import Reconciliation from "../../ERP/Stoks/Reconciliation";
-import ReturnNote from "../../ERP/Stoks/ReturnNote";
-import ReturnNotePreview from "../../ERP/Stoks/components/ReturnNotePreview";
-import StorePage from "../../ERP/Store/StorePage";
-import Product from "../../ERP/Product/Product";
-// import BatchPage from "../../ERP/Product/Batch";
-import CategoryPage from "../../ERP/Product/Category";
-import SubCategoryPage from "../../ERP/Product/SubCategory";
-import ProductStorePage from "../../ERP/Product/Store";
-import ProductSupplierPage from "../../ERP/Product/Supplier";
-import WarningPage from "../../ERP/Product/Warning";
-import BrandPage from "../../ERP/Product/Brand";
-import QtyheadPage from "../../ERP/Product/QtyHead";
-import WarrantyPage from "../../ERP/Product/Warranty";
-import HsnCodePage from "../../ERP/Product/HsnCode";
-import BarCodePage from "../../ERP/Product/Barcode";
-import AddNewProduct from "../../ERP/Product/components/AddNewProduct";
-import Purchase from "../../ERP/Purchase/Purchase";
-import AddNewPurchase from "../../ERP/Purchase/components/AddNewPurchase";
-import PurchaseOrderPreview from "../../ERP/Purchase/components/PurchaseOrderPreview";
-import PurchaseDetails from "../../ERP/Purchase/components/PurchaseDetails";
-import GoodsReceivedDetails from '../../ERP/Purchase/components/goodRecieveDetails.js';
-import SalePage from "../../ERP/Purchase/SalePage";
-import AddNewSale from "../../ERP/Purchase/components/AddNewSale";
-import SalesInvoicePage from "../../ERP/Purchase/components/SalesInvoice";
-import SaleDetailPage from "../../ERP/Purchase/components/SaleDetailPage";
-import Ledger from "../../ERP/Ledger/Ledger";
-import VenderLedger from "../../ERP/Ledger/VenderLedger";
-import MaterialReceived from "../../ERP/Ledger/MaterialReceived";
-import ReturnNoteLedger from "../../ERP/Ledger/ReturnNoteLedger";
 import Settings from "../../pages/Setting/Setting";
 import BulkUploadProduct from "../../pages/ProductManagement/BulkUploadProduct";
-import SupplierViewPage from "../../ERP/Suplier/components/SupplierViewPage";
-import CreateInventory from "../../ERP/Enventory/components/CreateInventory";
-import Inventory from "../../ERP/Enventory/Inventory";
-import ViewInventory from "../../ERP/Enventory/components/ViewInventory";
-import Stocks from '../../ERP/Stoks/Stoks';
 import HelpAndSupport from '../../pages/CMS/Help&Support/HelpAndSupport.js';
 import HelpSupportList from '../../pages/CMS/Help&Support/HelpSupportList.js';
-import ReceiveOrderDetails from '../../ERP/Purchase/ReceiveOrderDetails.js';
 import DeliveryStaff from '../../pages/UserManagement/DeliveryStaff/DeliveryStaff.js';
 import CircularMenu from '../../pages/Admin/Orbit/Orbit.js';
+
+const UnavailableRoute = () => (
+  <div className="m-6 bg-white p-6 text-sm text-gray-600">
+    This module is not available in the current admin build.
+  </div>
+);
+
+const MaterialStatus = UnavailableRoute;
+const Reconciliation = UnavailableRoute;
+const ReturnNote = UnavailableRoute;
+const ReturnNotePreview = UnavailableRoute;
+const StorePage = UnavailableRoute;
+const Product = UnavailableRoute;
+const CategoryPage = UnavailableRoute;
+const SubCategoryPage = UnavailableRoute;
+const ProductStorePage = UnavailableRoute;
+const ProductSupplierPage = UnavailableRoute;
+const WarningPage = UnavailableRoute;
+const BrandPage = UnavailableRoute;
+const QtyheadPage = UnavailableRoute;
+const WarrantyPage = UnavailableRoute;
+const HsnCodePage = UnavailableRoute;
+const BarCodePage = UnavailableRoute;
+const AddNewProduct = UnavailableRoute;
+const Purchase = UnavailableRoute;
+const AddNewPurchase = UnavailableRoute;
+const PurchaseOrderPreview = UnavailableRoute;
+const PurchaseDetails = UnavailableRoute;
+const GoodsReceivedDetails = UnavailableRoute;
+const SalePage = UnavailableRoute;
+const AddNewSale = UnavailableRoute;
+const SalesInvoicePage = UnavailableRoute;
+const SaleDetailPage = UnavailableRoute;
+const Ledger = UnavailableRoute;
+const VenderLedger = UnavailableRoute;
+const MaterialReceived = UnavailableRoute;
+const ReturnNoteLedger = UnavailableRoute;
+const SupplierViewPage = UnavailableRoute;
+const CreateInventory = UnavailableRoute;
+const Inventory = UnavailableRoute;
+const ViewInventory = UnavailableRoute;
+const Stocks = UnavailableRoute;
+const ReceiveOrderDetails = UnavailableRoute;
 const Dashboard = React.lazy(() => import("../../pages/dashboard/Dashboard"));
 const AdminUsers = React.lazy(() =>
   import("../../pages/UserManagement/Adminusers/AdminUsers")
@@ -262,16 +272,9 @@ const Sellers = React.lazy(() =>
 const UserPermissions = React.lazy(() =>
   import("../../pages/UserManagement/Adminusers/UserPermissions")
 );
-const Supplier = React.lazy(() => import("../../../src/ERP/Suplier/Supplier"));
-const AddSupplier = React.lazy(() =>
-  import("../../../src/ERP/Suplier/components/AddSupplier")
-);
-const MedPharama = React.lazy(() =>
-  import("../../../src/ERP/Suplier/MedPharma")
-);
-// const GoodsReceived = React.lazy(() =>
-//   import("../../../src/ERP/Stoks/Stoks.js")
-// );
+const Supplier = UnavailableRoute;
+const AddSupplier = UnavailableRoute;
+const MedPharama = UnavailableRoute;
 
 function Layout() {
   const [navbarOpen, setNavbarOpen] = useState(false);
@@ -286,11 +289,29 @@ function Layout() {
 
   const modulePermissions = useMemo(() => {
     const permMap = {};
-    if (permissions && permissions.length) {
-      permissions?.forEach((perm) => {
-        if (perm.module_code && perm.module_code.module_code) {
-          permMap[perm.module_code.module_code] = perm.view;
-        }
+    const modules = Array.isArray(permissions?.modules)
+      ? permissions.modules
+      : Array.isArray(permissions)
+        ? permissions
+        : [];
+
+    if (modules.length) {
+      modules.forEach((module) => {
+        const moduleCode =
+          module.slug ||
+          module.module ||
+          module.module_code?.module_code ||
+          module.module_code;
+
+        if (!moduleCode) return;
+
+        const viewPermission = Array.isArray(module.permissions)
+          ? module.permissions.find((permission) => permission.action === "view")
+          : null;
+        const hasAssignedView =
+          viewPermission ? viewPermission.assigned !== false : module.assigned !== false;
+
+        permMap[moduleCode] = module.assigned !== false && hasAssignedView;
       });
     }
     return permMap;
@@ -308,152 +329,15 @@ function Layout() {
   }, [isRefreshConfig, socket]);
 
   const hasPermission = (path) => {
-    const basePath = path.replace(/\/:.*$/, "");
+    if (isSelfServiceRoute(path)) return true;
 
-    const routeToModuleMap = {
-      "/home": "home",
-      "/admin-users": "admin_users",
-      "/users": "users",
-      "/transactions": "transactions",
-      "/users-addresses": "users-addresses",
-      "/messages": "messages",
-      "/product-catalog": "product-catalog",
-      "/seller-Product-Inventory": "seller-product-inventory",
-      "/store": "store",
-      "/brands": "brands",
-      "/product-options": "product-options",
-      "/product-tags": "product-tags",
-      "/threshold-products": "threshold-products",
-      "/orders": "orders",
-      "/order-status": "order_status",
-      "/gift-card-orders": "gift-card-orders",
-      "/order-cancellation-reasons": "order-cancellation-reasons",
-      "/order-return-reasons": "order_return_reasons",
-      "/product-reviews": "product_reviews",
-      "/special-price": "special_price",
-      "/volume-discounts": "volume_discounts",
-      "/similar-products": "similar_products",
-      "/frequently-bought-together": "frequently_bought_together",
-      "/PPC-promotions-management": "ppc_promotions_management",
-      "/reward-on-purchase": "reward_on_purchase",
-      "/product-event-weightages": "product_event_weightages",
-      "/recommended-product-tag-weightages":
-        "recommended_product_tag_weightages",
-      "/discount-coupons": "discount_coupons",
-      "/badges": "badges",
-      "/ribbons": "ribbons",
-      "/shipping-company-users": "shipping_company_users",
-      "/shipping-packages": "shipping_packages",
-      "/shipping-profile": "shipping_profile",
-      "/pickup-addresses": "pickup_addresses",
-      "/categories": "categories",
-      "/subscription-orders": "subscription_orders",
-      "/interest-management": "interest_management",
-      "/homepage-slides": "homepage_slides",
-      "/banners": "banners",
-      "/content-pages": "content_pages",
-      "/view-orders": "view_orders",
-      "/add-product": "add_product",
-      "/view-subscription-orders": "view_subscription_orders",
-      "/inner-banners": "inner_banners",
-      "/profile": "profile",
-      "/changePassword": "change-password",
-      "/settings": "settings",
-      "/state": "state",
-      "/city": "city",
-      "/country": "country",
-      "/zipcode": "zipcode",
-      "/tax-structure": "tax-structure",
-      "/tax-category": "tax-category",
-      "/tax-category-rules": "tax-category-rules",
-      "/collections": "collections",
-      "/product-variants": "product-variants",
-      "/product-dimensions": "product-dimensions",
-      "/pattern": "pattern",
-      "/finish": "finish",
-      "/colors": "colors",
-      "/privacy-policy": "privacy-policy",
-      "/user-permissions": "user-permissions",
-      "/warranty": "warranty",
-      "/seller": "seller",
-      "/batch": "batch",
+    const moduleCandidates = getRouteModuleCandidates(path);
+    if (!moduleCandidates.length) return true;
 
-      "/supplier": "supplier",
-      "/supplier/form": "add-supplier",
-      "/supplier/med-pharma": "med-pharma",
-
-      "/goods-receive": "goods-receive",
-      "/stoks/material-receipt": "material-receipt",
-      "/stoks/reconciliation": "reconciliation",
-      "/stoks/return-note": "return-note",
-      "/stoks/return-note/preview": "return-note-preview",
-
-      "/store/store-page": "store-page",
-
-      "/product": "product",
-      "/product/form": "add-product",
-      "/product/batch-page": "batch-page",
-      "/product/category-page": "category-page",
-      "/product/sub-category-page": "sub-category-page",
-      "/product/store-page": "store-page",
-      "/product/supplier-page": "supplier-page",
-      "/product/warning-page": "warning-page",
-      "/product/brand-page": "brand-page",
-      "/product/qtyhead-page": "qtyhead-page",
-      "/product/warranty-page": "warranty-page",
-      "/product/hsn-code-page": "hsn-code-page",
-      "/product/barcode-page": "barcode-page",
-
-
-      "/purchase": "purchase-page",
-      "/purchase/form": "add-purchase-page",
-      "/purchase/purchase-preview": "purchase-preview-page",
-      "/purchase/purchase-details": "purchase-details-page",
-      "/sale": "sale-page",
-      "/sale/form": "add-sale-page",
-      "/purchase/sale/invoice-preview": "invoice-preview-page",
-      "/purchase/sale/sale-detail": "sale-detail-page",
-
-
-      "/ledger": "ledger-page",
-      "/ledger/vender-ledger": "vender-ledger-page",
-      "/ledger/return-note": "return-note-page",
-      "/ledger/material-received": "material-received-page",
-    };
-
-    const matchedRouteKey =
-      routeToModuleMap[basePath]
-        ? basePath
-        : Object.keys(routeToModuleMap).find((key) => path.startsWith(key));
-
-    const moduleCode = matchedRouteKey ? routeToModuleMap[matchedRouteKey] : undefined;
-
-    const moduleAliases = {
-      "admin_users": ["admin_users", "admins", "rbac"],
-      "users": ["users"],
-      "seller": ["seller", "sellers", "vendors"],
-      "seller-product-inventory": ["seller-product-inventory", "products", "sellers"],
-      "product-catalog": ["product-catalog", "products"],
-      "products": ["products"],
-      "orders": ["orders"],
-      "gift-card-orders": ["gift-card-orders", "orders"],
-      "order_status": ["order_status", "orders"],
-      "subscription_orders": ["subscription_orders", "orders"],
-      "discount_coupons": ["discount_coupons", "coupons", "pricing"],
-      "shipping_packages": ["shipping_packages", "delivery"],
-      "shipping_profile": ["shipping_profile", "delivery"],
-      "pickup_addresses": ["pickup_addresses", "delivery", "sellers"],
-      "delivery-staff": ["delivery-staff", "delivery"],
-      "tax": ["tax"],
-      "settings": ["settings", "system"],
-      "home": ["home", "dashboard"],
-    };
-
-    if (moduleCode && !hasModuleAccess(moduleAliases[moduleCode] || moduleCode)) {
-      return false;
-    }
-
-    return modulePermissions[moduleCode] !== false;
+    return moduleCandidates.some((moduleCode) => {
+      if (modulePermissions[moduleCode] === false) return false;
+      return hasModuleAccess(moduleCode);
+    });
   };
 
   const renderRoute = (path, element) => {

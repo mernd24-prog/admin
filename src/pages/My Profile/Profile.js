@@ -9,6 +9,19 @@ import { toast } from 'sonner';
 import { uploadFile } from '../../_helpers/globalFunctions';
 import Loader from '../../components/Loader/Loader';
 
+const profileToForm = (user = {}) => {
+    const profile = user.profile || {};
+    const fullName = user.full_name || [profile.firstName, profile.lastName].filter(Boolean).join(" ");
+
+    return {
+        ...user,
+        userName: user.userName || user.email?.split("@")?.[0] || "",
+        email: user.email || "",
+        full_name: fullName || "",
+        user_image: user.user_image || profile.avatarUrl || null,
+    };
+};
+
 const Profile = () => {
     const dispatch = useDispatch();
     const [formData, setFormData] = useState({
@@ -29,7 +42,7 @@ const Profile = () => {
             try {
                 const res = await dispatch(getProfile()).unwrap();
                 if (res) {
-                    setFormData(res?.data);
+                    setFormData(profileToForm(res?.data));
                 }
             } catch (error) {
                 console.log(error)
@@ -86,7 +99,10 @@ const Profile = () => {
                 user_image: formData?.user_image,
                 full_name: formData?.full_name
             }
-            await dispatch(updateProfile(apiPayload)).unwrap();
+            const res = await dispatch(updateProfile(apiPayload)).unwrap();
+            if (res?.data) {
+                setFormData(profileToForm(res.data));
+            }
             setShowSuccess(true);
             setIsEditing(false);
             toast.success("Profile Update Successfully")

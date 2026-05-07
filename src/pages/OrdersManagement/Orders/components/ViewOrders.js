@@ -28,6 +28,75 @@ const initialFormData = {
   staff_id: ""
 };
 
+const money = (value) => Number(value || 0);
+
+const normalizeAddress = (address = {}) => ({
+  house_flat_floor: address.line1 || "N/A",
+  apartment_area_road: address.line2 || "",
+  delivery_instructions: address.deliveryInstructions || "",
+  phone: address.phone || "",
+  location: {
+    address_string: {
+      fullAddress: [address.line1, address.line2, address.city, address.state, address.postalCode, address.country]
+        .filter(Boolean)
+        .join(", "),
+      city: address.city || "",
+      state: address.state || "",
+      pincode: address.postalCode || "",
+      country: address.country || "",
+    },
+  },
+});
+
+const normalizeOrderDetail = (order = {}) => {
+  const orderId = order._id || order.id;
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  return {
+    ...order,
+    allOrders: [
+      {
+        _id: orderId,
+        status: order.status,
+        store_id: { _id: order.seller_id || "", name: "Platform" },
+        items: items.map((item) => ({
+          ...item,
+          _id: item._id || item.id,
+          quantity: item.quantity || 0,
+          total: money(item.total || item.line_total),
+          product_id:
+            typeof item.product_id === "object"
+              ? item.product_id
+              : {
+                  _id: item.product_id,
+                  name: item.product_id || "Product",
+                  description: "",
+                },
+        })),
+      },
+    ],
+    orderSummary: {
+      createAt: order.createdAt || order.created_at,
+      cartTotal: money(order.subtotalAmount || order.subtotal_amount),
+      taxCharges: money(order.taxAmount || order.tax_amount),
+      discountAmount: money(order.discountAmount || order.discount_amount),
+      netAmount: money(order.totalAmount || order.total_amount),
+    },
+    contactInformation: {
+      email: order.buyerEmail || "",
+      phone: order.buyerPhone || "",
+    },
+    deliveryAddress: normalizeAddress(order.shippingAddress || order.shipping_address),
+    orderPayment: {
+      paymentDate: order.updatedAt || order.updated_at || order.createdAt || order.created_at,
+      paymentDetails: { transactionId: order.payment_id || orderId },
+      paymentMethod: order.paymentProvider || "N/A",
+      amount: money(order.payableAmount || order.payable_amount || order.totalAmount || order.total_amount),
+      paymentStatus: order.paymentStatus || order.status || "N/A",
+    },
+  };
+};
+
 const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -90,7 +159,8 @@ const OrderSummary = () => {
         throw new Error("Invalid response format");
       }
 
-      const options = res.data.allOrders?.map(store => ({
+      const normalizedOrder = normalizeOrderDetail(res.data);
+      const options = normalizedOrder.allOrders?.map(store => ({
         label: store.store_id?.name || "Unknown Store",
         value: store.store_id?._id || ""
       })) || [];
@@ -98,7 +168,7 @@ const OrderSummary = () => {
       setState(prev => ({
         ...prev,
         storeOptions: [...allStoresOption, ...options],
-        orderInfo: res.data
+        orderInfo: normalizedOrder
       }));
     } catch (error) {
       handleError(error, "Failed to fetch order information");
@@ -256,7 +326,7 @@ const OrderSummary = () => {
 
   // Handle status modal open
   const handleStatusModalOpen = useCallback((order) => {
-    if (!order?._id || !order?.store_id?._id) {
+    if (!order?._id) {
       handleError(null, "Invalid order data");
       return;
     }
@@ -264,7 +334,7 @@ const OrderSummary = () => {
     setFormData({
       ...initialFormData,
       order_id: order._id,
-      store_id: order.store_id._id
+      store_id: order.store_id?._id || ""
     });
     setState(prev => ({ ...prev, statusModal: true }));
   }, [handleError]);

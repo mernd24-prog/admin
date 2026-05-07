@@ -47,14 +47,43 @@ const normalizeLegacyRecord = (record) => {
   const fullName = getProfileName(next);
 
   if (id && !next._id) next._id = String(id);
+  if (next.created_at && !next.createdAt) next.createdAt = next.created_at;
+  if (next.updated_at && !next.updatedAt) next.updatedAt = next.updated_at;
+  if (next.buyer_id && !next.buyerId) next.buyerId = next.buyer_id;
+  if (next.buyer_id && !next.user_id) next.user_id = next.buyer_id;
+  if (next.id && !next.order_no && next.buyer_id) next.order_no = next.id;
+  if (next.total_amount !== undefined && next.totalAmount === undefined) {
+    next.totalAmount = Number(next.total_amount || 0);
+  }
+  if (next.payable_amount !== undefined && next.payableAmount === undefined) {
+    next.payableAmount = Number(next.payable_amount || 0);
+  }
+  if (next.subtotal_amount !== undefined && next.subtotalAmount === undefined) {
+    next.subtotalAmount = Number(next.subtotal_amount || 0);
+  }
+  if (next.discount_amount !== undefined && next.discountAmount === undefined) {
+    next.discountAmount = Number(next.discount_amount || 0);
+  }
+  if (next.tax_amount !== undefined && next.taxAmount === undefined) {
+    next.taxAmount = Number(next.tax_amount || 0);
+  }
+  if (next.status && !next.paymentStatus && next.buyer_id) {
+    next.paymentStatus = next.status;
+  }
   if (!next.full_name && fullName) next.full_name = fullName;
   if (!next.userName && next.email) next.userName = String(next.email).split("@")[0];
   if (!next.name && next.title) next.name = next.title;
   if (!next.title && next.name) next.title = next.name;
+  if (Array.isArray(next.images) && !next.product_image_id) {
+    next.product_image_id = { images: next.images };
+  }
+  if (next.status && next.isApproved === undefined && (next.title || next.sku || next.price !== undefined)) {
+    next.isApproved = next.status === "active";
+  }
 
   if (typeof next.isDisable !== "boolean") {
     if (accountStatus) {
-      next.isDisable = !["active", "ready_for_go_live", "verified"].includes(accountStatus);
+      next.isDisable = !["active", "ready_for_go_live", "verified", "confirmed", "delivered", "fulfilled"].includes(accountStatus);
     } else if (typeof next.active === "boolean") {
       next.isDisable = !next.active;
     } else if (typeof next.enabled === "boolean") {

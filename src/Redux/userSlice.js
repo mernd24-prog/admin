@@ -1,5 +1,40 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiRequest } from '../_helpers/apiConfig';
+import { ENDPOINTS } from '../_helpers/endpoints';
+
+const splitFullName = (fullName = "") => {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() || "User",
+    lastName: parts.join(" ") || "User",
+  };
+};
+
+const isUrl = (value) => {
+  try {
+    return Boolean(value) && Boolean(new URL(value));
+  } catch {
+    return false;
+  }
+};
+
+const toProfileUpdateBody = (payload = {}) => {
+  const profile = payload.profile || {};
+  const nameParts = splitFullName(
+    payload.full_name ||
+    payload.fullName ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+  );
+  const avatarUrl = payload.user_image || payload.avatarUrl || profile.avatarUrl;
+
+  return {
+    profile: {
+      firstName: profile.firstName || nameParts.firstName,
+      lastName: profile.lastName || nameParts.lastName,
+      ...(isUrl(avatarUrl) ? { avatarUrl } : {}),
+    },
+  };
+};
 
 export const adminLogin = createAsyncThunk("user/login", async (credentials, { rejectWithValue }) => {
   try {
@@ -15,7 +50,7 @@ export const adminLogin = createAsyncThunk("user/login", async (credentials, { r
 });
 
 export const forgotPassword = createAsyncThunk("admin/forgotPassword", async (filters) => {
-  const response = await apiRequest('POST', '/auth/forgotPassword', filters);
+  const response = await apiRequest('POST', ENDPOINTS.auth.forgotPassword, filters);
   return response;
 });
 
@@ -30,7 +65,10 @@ export const updatePasswordAdmin = createAsyncThunk("admin/updatePasswordAdmin",
 
 
 export const verifyOtp = createAsyncThunk("admin/forgotPassOTPVerify", async (filters) => {
-  const response = await apiRequest('POST', '/auth/verifyForgotPasswordOtp', filters);
+  const response = await apiRequest('POST', ENDPOINTS.auth.verifyOtp, {
+    ...filters,
+    purpose: filters?.purpose || "forgot_password",
+  });
   return response;
 });
 
@@ -38,17 +76,20 @@ export const verifyOtp = createAsyncThunk("admin/forgotPassOTPVerify", async (fi
 
 
 export const resetPassword = createAsyncThunk("admin/setNewPassword", async (filters) => {
-  const response = await apiRequest('POST', '/auth/setNewPassword', filters);
+  const response = await apiRequest('POST', ENDPOINTS.auth.resetPassword, {
+    ...filters,
+    newPassword: filters?.newPassword || filters?.password,
+  });
   return response;
 });
 
 export const getProfile = createAsyncThunk("admin/getProfile", async (filters) => {
-  const response = await apiRequest('GET', '/users/me', filters);
+  const response = await apiRequest('GET', ENDPOINTS.auth.me, filters);
   return response;
 });
 
 export const updateProfile = createAsyncThunk("admin/update-profile", async (filters) => {
-  const response = await apiRequest('POST', '/auth/update-profile', filters);
+  const response = await apiRequest('PATCH', ENDPOINTS.auth.me, toProfileUpdateBody(filters));
   return response;
 });
 

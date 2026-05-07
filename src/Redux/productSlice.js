@@ -1,6 +1,30 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
+import { patchMany } from '../_helpers/adminApi';
+
+const firstProductId = (payload = {}) => {
+    const value = payload.productId || payload.product_id || payload._id || payload.id;
+    return Array.isArray(value) ? value[0] : value;
+};
+
+const toProductListParams = (params = {}) => ({
+    ...(params.page ? { page: Number(params.page) } : {}),
+    ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+    ...(params.category ? { category: params.category } : {}),
+    ...(params.status ? { status: params.status } : {}),
+    ...(params.hsnCode || params.hsn_code ? { hsnCode: params.hsnCode || params.hsn_code } : {}),
+    ...(params.color ? { color: params.color } : {}),
+    ...(params.country ? { country: params.country } : {}),
+    ...(params.state ? { state: params.state } : {}),
+    ...(params.city ? { city: params.city } : {}),
+    ...(params.productFamilyCode ? { productFamilyCode: params.productFamilyCode } : {}),
+    ...(params.sku ? { sku: params.sku } : {}),
+});
+
+const toProductStatusBody = (payload = {}) => ({
+    status: payload.isDisable ? "inactive" : "active",
+});
 
 const initialState = {
     getListData: {}, softDeleteData: {}, enableDisableData: {}, createData: {}, updateData: {}, getCollectionListData: {},
@@ -103,11 +127,18 @@ export const getAllTaxRulesList = createApiThunkPrivate('getAllTaxRulesList', '/
 
 
 export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST')
-export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true)
-export const updateProducts = createApiThunkPrivate('updateProducts', (payload) => ENDPOINTS.products.detail(payload?.productId || payload?._id || payload?.id), 'GET')
-export const enableDisableProductCatalogs = createApiThunkPrivate('enableDisableProductCatalogs', '/product/enableDisable', 'PUT')
-export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(payload?.productId || payload?._id || payload?.id), 'PATCH')
-export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(payload?.productId || payload?._id || payload?.id), 'DELETE')
+export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
+    transformParams: toProductListParams,
+})
+export const updateProducts = createApiThunkPrivate('updateProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'GET')
+export const enableDisableProductCatalogs = patchMany(
+    'enableDisableProductCatalogs',
+    ENDPOINTS.products.detail,
+    toProductStatusBody,
+    'Product status updated successfully'
+)
+export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH')
+export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
 export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
     transformBody: (payload = {}) => ({
         ...(payload.status ? { status: payload.status } : {}),
@@ -115,7 +146,9 @@ export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (pay
         ...(payload.checklist ? { checklist: payload.checklist } : {}),
     }),
 })
-export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.products.listForPanel, 'GET')
+export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
+    transformParams: toProductListParams,
+})
 export const getProductModerationQueue = createApiThunkPrivate('getProductModerationQueue', ENDPOINTS.products.moderationQueue, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.status ? { status: params.status } : {}),

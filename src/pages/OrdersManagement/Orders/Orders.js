@@ -104,7 +104,7 @@ const Orders = () => {
 
   const handleViewOrders = (order) => {
 
-    navigate(`/app/orders/view/${order.order_no}`,);
+    navigate(`/app/orders/view/${order._id || order.id || order.order_no}`,);
 
   };
 
@@ -124,16 +124,22 @@ const Orders = () => {
 
   const tableRows = list?.map((ele) => [
 
-    <span className='capitalize'>{ele?.order_no}</span>,
+    <span className='capitalize'>{ele?.order_no || ele?.id}</span>,
     <p>
-      {ele?.user_id?.phone && <span>{ele.user_id.phone}</span>}
-      {ele?.user_id?.phone && ele?.user_id?.email && <br />}
-      {ele?.user_id?.email && <span>{ele.user_id.email}</span>}
+      {typeof ele?.user_id === "object" ? (
+        <>
+          {ele?.user_id?.phone && <span>{ele.user_id.phone}</span>}
+          {ele?.user_id?.phone && ele?.user_id?.email && <br />}
+          {ele?.user_id?.email && <span>{ele.user_id.email}</span>}
+        </>
+      ) : (
+        <span>{ele?.buyerId || ele?.buyer_id || ele?.user_id || "N/A"}</span>
+      )}
     </p>
     ,
-    <span>{moment(ele?.createdAt).format('DD-MM-YYYY')}</span>,
-    ele?.totalAmount,
-    <span className='capitalize'>{ele?.paymentStatus}</span>,
+    <span>{ele?.createdAt ? moment(ele.createdAt).format('DD-MM-YYYY') : "N/A"}</span>,
+    ele?.totalAmount ?? ele?.total_amount ?? 0,
+    <span className='capitalize'>{ele?.paymentStatus || ele?.status || "N/A"}</span>,
     <ActionButtons
       showLinkButton={false}
       showDeleteButton={false}
