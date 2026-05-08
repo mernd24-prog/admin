@@ -88,7 +88,7 @@ export const APIcallFunction = async (credentials) => {
         body: JSON.stringify(credentials.body)
     };
     try {
-        const response = await fetch(`${backendUrl}/v1${credentials.endPoint}`, requestOptions);
+        const response = await fetch(`${backendUrl}${credentials.endPoint}`, requestOptions);
 
         const responseData = await handleResponse(response);
 

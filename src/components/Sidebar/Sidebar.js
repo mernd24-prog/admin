@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { MdChevronRight, MdOutlineDashboard, MdRequestPage } from 'react-icons/md';
-import { getAllModulePermission } from '../../Redux/userManagementSlice';
+import { getMyModulePermission } from '../../Redux/userManagementSlice';
 import { hasModuleAccess } from '../../_helpers/authStorage';
 import { IoIosMenu } from 'react-icons/io';
 import { RxCross2 } from 'react-icons/rx';
@@ -16,6 +16,32 @@ import { CiSettings } from 'react-icons/ci';
 import { HiOutlineReceiptTax } from "react-icons/hi";
 import { isSellerPanel } from '../../_helpers/panelConfig';
 import { getModuleRoute } from '../../_helpers/rbacRoutes';
+
+export const SUPPORTED_ADMIN_ROUTES = new Set([
+  'home',
+  'admin-users',
+  'user-permissions',
+  'users',
+  'seller',
+  'orders',
+  'view-orders',
+  'discount-coupons',
+  'referral-commerce',
+  'content-pages',
+  'product-variants',
+  'product-families',
+  'product-catalog',
+  'country',
+  'state',
+  'city',
+  'tax',
+  'subTax',
+  'tax-rule',
+  'profile',
+  'changePassword',
+  'settings',
+  'setting',
+]);
 
 const getTabName = (slug) => {
   const tabMap = {
@@ -58,10 +84,19 @@ const SELLER_SIDEBAR_SECTIONS = [
   { module: "notifications", tab: "Settings", label: "Notifications", route: "messages" },
 ];
 
+const MODULE_ROUTE_EXPANSIONS = {
+  products: [
+    { label: 'Product Catalog', route: 'product-catalog' },
+    { label: 'Product Variants', route: 'product-variants' },
+    { label: 'Product Families', route: 'product-families' },
+    { label: 'HSN Codes', route: 'hsn-code' },
+  ],
+};
+
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {
   const dispatch = useDispatch();
   const selector = useSelector(state => state.user);
-  const permissions = selector?.getAllModulePermissionData?.data?.data?.modules;
+  const permissions = selector?.getMyModulePermissionData?.data?.data?.modules;
   const sellerPanel = isSellerPanel();
   const [activeTab, setActiveTab] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -88,7 +123,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
 
   useEffect(() => {
     if (!sellerPanel && userData?.userId) {
-      dispatch(getAllModulePermission({ _id: userData.userId, role: userData.role }));
+      dispatch(getMyModulePermission({ _id: userData.userId, role: userData.role }));
     }
   }, [userData, dispatch, isRefreshConfig, sellerPanel]);
 
@@ -162,6 +197,9 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
     setHasPermanentOpen(newState);
     setIsPermanentlyOpen(newState);
     setIsExpanded(newState);
+    if (newState) {
+      setNavbarOpen(true);
+    }
     sessionStorage.setItem('sidebarPermanentState', JSON.stringify(newState));
   };
 
@@ -184,7 +222,9 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
 
   const getSidebarData = () => {
     if (sellerPanel) {
-      const sellerItems = SELLER_SIDEBAR_SECTIONS.filter((entry) => hasModuleAccess(entry.module));
+      const sellerItems = SELLER_SIDEBAR_SECTIONS.filter((entry) =>
+        hasModuleAccess(entry.module)
+      );
       const groupedByTab = sellerItems.reduce((acc, curr) => {
         if (!acc[curr.tab]) acc[curr.tab] = [];
         acc[curr.tab].push({
@@ -214,11 +254,22 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         acc[tabName] = [];
       }
 
-      acc[tabName].push({
-        name: curr.name,
-        label: curr.name,
-        module_code: moduleCode,
-      });
+      const expanded = MODULE_ROUTE_EXPANSIONS[curr.slug];
+      if (Array.isArray(expanded) && expanded.length) {
+        expanded.forEach((item) => {
+          acc[tabName].push({
+            name: item.label,
+            label: item.label,
+            module_code: item.route,
+          });
+        });
+      } else {
+        acc[tabName].push({
+          name: curr.name,
+          label: curr.name,
+          module_code: moduleCode,
+        });
+      }
       return acc;
     }, {});
 

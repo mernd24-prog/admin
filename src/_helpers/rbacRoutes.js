@@ -15,7 +15,7 @@ export const MODULE_DEFAULT_ROUTES = {
   sellers: "seller",
   "sellers/commissions": "transactions",
   products: "product-catalog",
-  platform: "categories",
+  platform: "content-pages",
   cms: "content-pages",
   warranty: "warranty",
   carts: "orders",
@@ -25,7 +25,7 @@ export const MODULE_DEFAULT_ROUTES = {
   payments: "orders",
   wallets: "transactions",
   tax: "tax",
-  subscriptions: "subscription-orders",
+  subscriptions: "settings",
   pricing: "discount-coupons",
   "dynamic-pricing": "special-price",
   referral: "referral-commerce",
@@ -44,6 +44,7 @@ const ROUTE_MODULES = [
   [
     [
       "/product-catalog",
+      "/product-families",
       "/product-option-value",
       "/product-options",
       "/product-tags",

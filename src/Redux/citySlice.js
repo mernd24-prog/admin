@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { firstId, toListParams } from '../_helpers/adminApi';
+import { firstId, toListParams, unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getCityListData: {},
@@ -101,11 +101,13 @@ export const getAllCityList = createApiThunkPrivate(
 );
 
 //////////Ribbons/////////////
-export const getRibbonsList = createApiThunkPrivate('getRibbonsList', '/ribbon/getList', 'GET')
-export const enableDisableRibbon = createApiThunkPrivate('enableDisableRibbon', '/ribbon/enableDisable', 'PUT')
-export const deleteRibbon = createApiThunkPrivate('deleteRibbon', '/ribbon/softDelete', 'DELETE')
-export const updateRibbon = createApiThunkPrivate('updateRibbon', '/ribbon/update', 'PUT')
-export const createRibbon = createApiThunkPrivate('createRibbon', '/ribbon/create')
+const RIBBON_UNSUPPORTED_MESSAGE =
+    'Ribbon API is not exposed by the current backend.';
+export const getRibbonsList = unsupportedThunk('getRibbonsList', RIBBON_UNSUPPORTED_MESSAGE)
+export const enableDisableRibbon = unsupportedThunk('enableDisableRibbon', RIBBON_UNSUPPORTED_MESSAGE)
+export const deleteRibbon = unsupportedThunk('deleteRibbon', RIBBON_UNSUPPORTED_MESSAGE)
+export const updateRibbon = unsupportedThunk('updateRibbon', RIBBON_UNSUPPORTED_MESSAGE)
+export const createRibbon = unsupportedThunk('createRibbon', RIBBON_UNSUPPORTED_MESSAGE)
 
 const citySlice = createSlice({
     name: 'city',

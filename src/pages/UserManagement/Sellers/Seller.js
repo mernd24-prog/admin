@@ -5,7 +5,7 @@ import { ActionButtons } from '../../../components/Atoms/TableActionButton/Table
 import { useDispatch, useSelector } from 'react-redux';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { createSeller, enableDisableSeller, getSellerList, updatePasswordSeller, updateSeller } from '../../../Redux/userManagementSlice';
+import { createSeller, enableDisableSeller, getSellerList, reviewSellerKyc, updatePasswordSeller, updateSeller } from '../../../Redux/userManagementSlice';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
@@ -41,6 +41,12 @@ const Sellers = () => {
     const [passwordForm, setPasswordForm] = useState({
         password: '',
         confirmPassword: ''
+    });
+    const [isKycReviewOpen, setIsKycReviewOpen] = useState(false);
+    const [kycForm, setKycForm] = useState({
+        sellerId: '',
+        verificationStatus: 'verified',
+        rejectionReason: ''
     });
     const [passwordErrors, setPasswordErrors] = useState({
         password: '',
@@ -440,6 +446,57 @@ const Sellers = () => {
                 toast.error(error.message || "Error in updating password");
             });
     };
+
+    const handleOpenKycReview = (user, nextStatus) => {
+        setKycForm({
+            sellerId: user._id,
+            verificationStatus: nextStatus,
+            rejectionReason: '',
+        });
+        setIsKycReviewOpen(true);
+    };
+
+    const handleSubmitKycReview = async (e) => {
+        e.preventDefault();
+        if (kycForm.verificationStatus === 'rejected' && !kycForm.rejectionReason.trim()) {
+            toast.error('Rejection reason is required');
+            return;
+        }
+        try {
+            const res = await dispatch(reviewSellerKyc(kycForm)).unwrap();
+            toast.success(res?.message || "KYC status updated");
+            setIsKycReviewOpen(false);
+            setIsRefresh(!isRefresh);
+        } catch (error) {
+            toast.error(error?.message || error || "Failed to update KYC");
+        }
+    };
+
+    const handleActivateSeller = async (user) => {
+        try {
+            const res = await dispatch(enableDisableSeller({
+                _id: [user._id],
+                isDisable: false,
+                status: 'active',
+            })).unwrap();
+            toast.success(res?.message || "Seller activated");
+            setIsRefresh(!isRefresh);
+        } catch (error) {
+            toast.error(error?.details?.onboardingStatus
+                ? `Cannot activate yet. Onboarding: ${error.details.onboardingStatus}`
+                : (error?.message || error || "Failed to activate seller"));
+        }
+    };
+
+    const statusPill = (value, good = "active") => {
+        const normalized = String(value || '').toLowerCase();
+        const isGood = normalized === good;
+        return (
+            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${isGood ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {value || 'N/A'}
+            </span>
+        );
+    };
     // Table data preparation
     const tableRows = getListData?.list?.map((user) => [
         // <input
@@ -464,6 +521,12 @@ const Sellers = () => {
         </span>,
         <span key={`email-${user._id}`}>
             {user?.email}
+        </span>,
+        <span key={`onboarding-${user._id}`}>
+            {statusPill(user?.onboarding?.status || user?.sellerProfile?.onboardingStatus, 'ready_for_go_live')}
+        </span>,
+        <span key={`kyc-${user._id}`}>
+            {statusPill(user?.onboarding?.kycStatus || 'pending', 'verified')}
         </span>,
         // <div key={`status-${user._id}`} className="flex flex-col">
         //     <label className="relative inline-flex" title="Enable/Disable">
@@ -492,31 +555,42 @@ const Sellers = () => {
 
         />,
         <span key={`actions-${user._id}`}>
-            <ActionButtons
-                onEdit={() => {
-                    setForm({
-                        _id: user._id,
-                        full_name: user.full_name,
-                        userName: user.userName,
-                        email: user.email,
-                        isDisable: user.isDisable
-                    });
-                    setIsEditModal(true);
-                }}
-                onPasswordChange={() => {
-                    setForm({
-                        _id: user._id,
-                        full_name: user.full_name
-                    });
-                    setIsOpenPassword(true);
-                }}
-                showDeleteButton={true}
-                showLinkButton={false}
-                showPasswordButton={false}
-                showEditButton={true}
-                viewButton={true}
-                onViewClick={() => navigate(`/app/seller/view/${user._id}`)}
-            />
+            <div className='flex items-center gap-2 flex-wrap'>
+                <ActionButtons
+                    onEdit={() => {
+                        setForm({
+                            _id: user._id,
+                            full_name: user.full_name,
+                            userName: user.userName,
+                            email: user.email,
+                            isDisable: user.isDisable
+                        });
+                        setIsEditModal(true);
+                    }}
+                    onPasswordChange={() => {
+                        setForm({
+                            _id: user._id,
+                            full_name: user.full_name
+                        });
+                        setIsOpenPassword(true);
+                    }}
+                    showDeleteButton={false}
+                    showLinkButton={false}
+                    showPasswordButton={true}
+                    showEditButton={true}
+                    viewButton={true}
+                    onViewClick={() => navigate(`/app/seller/view/${user._id}`)}
+                />
+                <button className='text-xs px-2 py-1 rounded bg-green-50 text-green-700' onClick={() => handleOpenKycReview(user, 'verified')}>
+                    KYC Approve
+                </button>
+                <button className='text-xs px-2 py-1 rounded bg-red-50 text-red-700' onClick={() => handleOpenKycReview(user, 'rejected')}>
+                    KYC Reject
+                </button>
+                <button className='text-xs px-2 py-1 rounded bg-blue-50 text-blue-700' onClick={() => handleActivateSeller(user)}>
+                    Go Live
+                </button>
+            </div>
         </span>,
     ])
     return (
@@ -589,6 +663,8 @@ const Sellers = () => {
                                 "Full Name",
                                 "Username",
                                 "Email",
+                                "Onboarding",
+                                "KYC",
                                 "Status",
                                 "Actions"
                             ]}
@@ -711,6 +787,42 @@ const Sellers = () => {
                         />
                     </div>
                 </DefaultModal>
+                <DefaultMiddleModal
+                    isOpen={isKycReviewOpen}
+                    onClose={() => setIsKycReviewOpen(false)}
+                    title="Review Seller KYC"
+                >
+                    <form onSubmit={handleSubmitKycReview} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Decision</label>
+                            <select
+                                className="w-full border rounded px-3 py-2"
+                                value={kycForm.verificationStatus}
+                                onChange={(e) => setKycForm((prev) => ({ ...prev, verificationStatus: e.target.value }))}
+                            >
+                                <option value="verified">Approve</option>
+                                <option value="rejected">Reject</option>
+                                <option value="under_review">Under Review</option>
+                            </select>
+                        </div>
+                        {kycForm.verificationStatus === 'rejected' && (
+                            <FormInput
+                                label="Rejection reason"
+                                name="rejectionReason"
+                                value={kycForm.rejectionReason}
+                                onChange={(e) => setKycForm((prev) => ({ ...prev, rejectionReason: e.target.value }))}
+                            />
+                        )}
+                        <div className="flex justify-end gap-2">
+                            <button type="button" className="px-4 py-2 rounded border" onClick={() => setIsKycReviewOpen(false)}>
+                                Cancel
+                            </button>
+                            <button type="submit" className="px-4 py-2 rounded bg-[#3E4094] text-white">
+                                Update KYC
+                            </button>
+                        </div>
+                    </form>
+                </DefaultMiddleModal>
 
                 {/* Edit Seller Modal */}
                 <DefaultModal

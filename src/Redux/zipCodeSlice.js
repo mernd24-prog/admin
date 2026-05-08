@@ -1,15 +1,19 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
+import { createExtraReducersForThunk } from '../_helpers/ApiThunk';
+import { unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getZipCodeListData: {}, createData: {}, editData: {}, enableDisablezipCodeData: {}, getAllZipCodeListData: {}
 }
 
-export const getZipCodeList = createApiThunkPrivate('getZipCodeList', '/setting/zipCode/getList', 'GET', true)
-export const create = createApiThunkPrivate('create', '/setting/zipCode/create', 'POST')
-export const edit = createApiThunkPrivate('edit', '/setting/zipCode/update', 'PUT')
-export const enableDisableZipCode = createApiThunkPrivate('enableDisableState', '/setting/zipCode/enableDisable', 'PUT')
-export const getAllZipCodeList = createApiThunkPrivate('getAllZipCodeList', '/setting/zipCode/getAllDocuments', 'GET', true)
+const ZIP_UNSUPPORTED_MESSAGE =
+  'Zip code management API is not exposed by the current backend.';
+
+export const getZipCodeList = unsupportedThunk('getZipCodeList', ZIP_UNSUPPORTED_MESSAGE);
+export const create = unsupportedThunk('zipCode/create', ZIP_UNSUPPORTED_MESSAGE);
+export const edit = unsupportedThunk('zipCode/edit', ZIP_UNSUPPORTED_MESSAGE);
+export const enableDisableZipCode = unsupportedThunk('zipCode/enableDisable', ZIP_UNSUPPORTED_MESSAGE);
+export const getAllZipCodeList = unsupportedThunk('getAllZipCodeList', ZIP_UNSUPPORTED_MESSAGE);
 
 
 

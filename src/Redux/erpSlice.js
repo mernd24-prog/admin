@@ -1,8 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit'
 import {
-  createApiThunkPrivate,
   createExtraReducersForThunk
 } from '../_helpers/ApiThunk'
+import { unsupportedThunk } from '../_helpers/adminApi'
 
 const initialState = {
   // Supplier related states
@@ -40,154 +40,48 @@ const initialState = {
 }
 
 // supplier related
-export const getSupplierList = createApiThunkPrivate(
-  'getSupplierList',
-  '/erp/suppliers/listSupplier',
-  'POST'
-)
-export const createSupplier = createApiThunkPrivate(
-  'createSupplier',
-  '/erp/suppliers/createSupplier',
-  'POST'
-)
-export const approveDisapprove = createApiThunkPrivate(
-  'approveDisapprove',
-  '/erp/suppliers/updateStatus',
-  'POST'
-)
-export const getSupplierDetails = createApiThunkPrivate(
-  'getSupplierDetails',
-  '/erp/suppliers/supplierDetails',
-  'POST'
-)
-export const editSupplireDetails = createApiThunkPrivate(
-  'editSupplierDetails',
-  '/erp/suppliers/updateData',
-  'POST'
-)
-export const staffList = createApiThunkPrivate(
-  'staffList',
-  '/deliveryStaff/staff-list',
-  'GET'
-)
-export const addDeliveryStaff = createApiThunkPrivate(
-  'addDeliveryStaff',
-  '/deliveryStaff/addDeliveryStaff',
-  'POST'
-)
-export const updateDeliveryStaff = createApiThunkPrivate(
-  'updateDeliveryStaff',
-  '/deliveryStaff/updateDeliveryStaff',
-  'POST'
-)
+const ERP_UNSUPPORTED_MESSAGE =
+  'ERP and legacy delivery-staff APIs are not exposed by the current backend.';
+export const getSupplierList = unsupportedThunk('getSupplierList', ERP_UNSUPPORTED_MESSAGE)
+export const createSupplier = unsupportedThunk('createSupplier', ERP_UNSUPPORTED_MESSAGE)
+export const approveDisapprove = unsupportedThunk('approveDisapprove', ERP_UNSUPPORTED_MESSAGE)
+export const getSupplierDetails = unsupportedThunk('getSupplierDetails', ERP_UNSUPPORTED_MESSAGE)
+export const editSupplireDetails = unsupportedThunk('editSupplierDetails', ERP_UNSUPPORTED_MESSAGE)
+export const staffList = unsupportedThunk('staffList', ERP_UNSUPPORTED_MESSAGE)
+export const addDeliveryStaff = unsupportedThunk('addDeliveryStaff', ERP_UNSUPPORTED_MESSAGE)
+export const updateDeliveryStaff = unsupportedThunk('updateDeliveryStaff', ERP_UNSUPPORTED_MESSAGE)
 // purchase related
-export const getPurchaseOrderList = createApiThunkPrivate(
-  'getPurchaseOrderList',
-  '/erp/purchase-orders/purchaseOrderList',
-  'POST'
-)
-export const createPurchaseOrder = createApiThunkPrivate(
-  'createPurchaseOrder',
-  '/erp/purchase-orders/createPurchaseOrder',
-  'POST'
-)
-export const updatePurchaseOrderById = createApiThunkPrivate(
-  'updatePurchaseOrderById',
-  '/erp/purchase-orders/updatePurchaseOrderById',
-  'POST'
-)
-export const updateReceivedOrderById = createApiThunkPrivate(
-  'updateReceivedOrderById',
-  '/erp/purchase-orders/updateReceivedOrderById',
-  'POST'
-)
-export const purchaseOrderDetails = createApiThunkPrivate(
-  'purchaseOrderDetails',
-  '/erp/purchase-orders/purchaseOrderDetails',
-  'POST'
-)
-export const receivedOrder = createApiThunkPrivate(
-  'receivedOrder',
-  '/erp/purchase-orders/receiveOrder',
-  'POST'
-)
-export const receivedOrderList = createApiThunkPrivate(
-  'receivedOrder',
-  '/erp/purchase-orders/getrecieveOderList',
-  'POST'
-)
+export const getPurchaseOrderList = unsupportedThunk('getPurchaseOrderList', ERP_UNSUPPORTED_MESSAGE)
+export const createPurchaseOrder = unsupportedThunk('createPurchaseOrder', ERP_UNSUPPORTED_MESSAGE)
+export const updatePurchaseOrderById = unsupportedThunk('updatePurchaseOrderById', ERP_UNSUPPORTED_MESSAGE)
+export const updateReceivedOrderById = unsupportedThunk('updateReceivedOrderById', ERP_UNSUPPORTED_MESSAGE)
+export const purchaseOrderDetails = unsupportedThunk('purchaseOrderDetails', ERP_UNSUPPORTED_MESSAGE)
+export const receivedOrder = unsupportedThunk('receivedOrder', ERP_UNSUPPORTED_MESSAGE)
+export const receivedOrderList = unsupportedThunk('receivedOrderList', ERP_UNSUPPORTED_MESSAGE)
 
 
 
 // inventry related
-export const getInventoryList = createApiThunkPrivate(
-  'getAllStockList',
-  '/erp/purchase-orders/getAllStockList',
-  'POST'
-)
-export const createInventory = createApiThunkPrivate(
-  'createInventory',
-  '/erp/inventory/createInventory',
-  'POST'
-)
-export const approveDisapproveEnventory = createApiThunkPrivate(
-  'approveDisapproveEnventory',
-  '/erp/inventory/updateStatus',
-  'POST'
-)
-export const getInventoryDetailsById = createApiThunkPrivate(
-  'getInventoryDetailsById',
-  '/erp/inventory/inventoryDetails',
-  'POST'
-)
-export const editInventoryDetails = createApiThunkPrivate(
-  'editInventoryDetails',
-  '/erp/inventory/updateInventory',
-  'POST'
-)
+export const getInventoryList = unsupportedThunk('getAllStockList', ERP_UNSUPPORTED_MESSAGE)
+export const createInventory = unsupportedThunk('createInventory', ERP_UNSUPPORTED_MESSAGE)
+export const approveDisapproveEnventory = unsupportedThunk('approveDisapproveEnventory', ERP_UNSUPPORTED_MESSAGE)
+export const getInventoryDetailsById = unsupportedThunk('getInventoryDetailsById', ERP_UNSUPPORTED_MESSAGE)
+export const editInventoryDetails = unsupportedThunk('editInventoryDetails', ERP_UNSUPPORTED_MESSAGE)
 
 // sale related
-export const getSaleOrderList = createApiThunkPrivate(
-  'getSaleOrderList',
-  '/erp/sales-orders/saleOrderList',
-  'POST'
-)
-export const saleOrderDetails = createApiThunkPrivate(
-  'saleOrderDetails',
-  '/erp/sales-orders/saleOrderDetails',
-  'POST'
-)
-export const createSaleOrder = createApiThunkPrivate(
-  'createSaleOrder',
-  '/erp/sales-orders/createSalesOrder',
-  'POST'
-)
+export const getSaleOrderList = unsupportedThunk('getSaleOrderList', ERP_UNSUPPORTED_MESSAGE)
+export const saleOrderDetails = unsupportedThunk('saleOrderDetails', ERP_UNSUPPORTED_MESSAGE)
+export const createSaleOrder = unsupportedThunk('createSaleOrder', ERP_UNSUPPORTED_MESSAGE)
 
 // get product
-export const getProductsList = createApiThunkPrivate(
-  'getProductList',
-  '/erp/purchase-orders/productNameList',
-  'GET'
-)
+export const getProductsList = unsupportedThunk('getProductList', ERP_UNSUPPORTED_MESSAGE)
 
 // get batch
-export const getBatchList = createApiThunkPrivate(
-  'getBatchList',
-  `/batch/getALLDocuments`,
-  'GET'
-)
+export const getBatchList = unsupportedThunk('getBatchList', ERP_UNSUPPORTED_MESSAGE)
 
-export const getHeadList = createApiThunkPrivate(
-  'getHeadList',
-  `/erp/purchase-orders/getProdcutoption`,
-  'POST'
-)
+export const getHeadList = unsupportedThunk('getHeadList', ERP_UNSUPPORTED_MESSAGE)
 
-export const getOrderReceivedList = createApiThunkPrivate(
-  'getOrderReceivedList',
-  `/erp/purchase-orders/getrecieveOderList`,
-  'POST'
-)
+export const getOrderReceivedList = unsupportedThunk('getOrderReceivedList', ERP_UNSUPPORTED_MESSAGE)
 
 
 const erpSlice = createSlice({

@@ -156,6 +156,39 @@ export const toUserUpdateBody = (payload = {}) => {
   if (hasProfile) {
     body.profile = toProfile(payload);
   }
+  const hasSellerProfile =
+    payload.sellerProfile ||
+    payload.displayName ||
+    payload.legalBusinessName ||
+    payload.supportEmail ||
+    payload.supportPhone ||
+    payload.businessType ||
+    payload.registrationNumber ||
+    payload.gstNumber ||
+    payload.panNumber ||
+    payload.aadhaarNumber ||
+    payload.businessWebsite ||
+    payload.primaryContactName ||
+    payload.description ||
+    payload.onboardingStatus;
+  if (hasSellerProfile) {
+    body.sellerProfile = {
+      ...(payload.sellerProfile || {}),
+      ...(payload.displayName ? { displayName: payload.displayName } : {}),
+      ...(payload.legalBusinessName ? { legalBusinessName: payload.legalBusinessName } : {}),
+      ...(payload.supportEmail ? { supportEmail: payload.supportEmail } : {}),
+      ...(payload.supportPhone ? { supportPhone: payload.supportPhone } : {}),
+      ...(payload.businessType ? { businessType: payload.businessType } : {}),
+      ...(payload.registrationNumber ? { registrationNumber: payload.registrationNumber } : {}),
+      ...(payload.gstNumber ? { gstNumber: payload.gstNumber } : {}),
+      ...(payload.panNumber ? { panNumber: payload.panNumber } : {}),
+      ...(payload.aadhaarNumber ? { aadhaarNumber: payload.aadhaarNumber } : {}),
+      ...(payload.businessWebsite ? { businessWebsite: payload.businessWebsite } : {}),
+      ...(payload.primaryContactName ? { primaryContactName: payload.primaryContactName } : {}),
+      ...(payload.description ? { description: payload.description } : {}),
+      ...(payload.onboardingStatus ? { onboardingStatus: payload.onboardingStatus } : {}),
+    };
+  }
   return body;
 };
 

@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany, unsupportedThunk } from '../_helpers/adminApi';
 
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
@@ -62,87 +62,90 @@ const initialState = {
     uploadHistoryData: {}, getProductsForPurchaseData: {},getProductStocksData:{}, productModerationQueueData:{}
 
 }
-export const getList = createApiThunkPrivate('getList', '/category/getList', 'GET')
-export const softDelete = createApiThunkPrivate('softDelete', '/category/softDelete', 'DELETE')
-export const enableDisable = createApiThunkPrivate('enableDisable', '/category/enableDisable', 'PUT')
-export const create = createApiThunkPrivate('create', '/category/create')
-export const update = createApiThunkPrivate('update', '/category/update', 'PUT')
-export const createCategory = createApiThunkPrivate('createCategory', '/category/create')
+const PRODUCT_LEGACY_UNSUPPORTED_MESSAGE =
+    'This legacy product management API is not exposed by the current backend.';
+
+export const getList = unsupportedThunk('product/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const softDelete = unsupportedThunk('product/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisable = unsupportedThunk('product/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const create = unsupportedThunk('product/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const update = unsupportedThunk('product/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createCategory = unsupportedThunk('product/createCategory', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 
 //collection->>>>>>>>>>>>>
-export const getCollectionList = createApiThunkPrivate('getCollectionList', '/collections/getList', 'GET')
-export const createCollection = createApiThunkPrivate('createCollection', '/collections/create', 'POST')
-export const updateCollection = createApiThunkPrivate('updateCollection', '/collections/update', 'PUT')
-export const deleteCollection = createApiThunkPrivate('deleteCollection', '/collections/softDelete', 'DELETE')
-export const enableDisableCollection = createApiThunkPrivate('enableDisableCollection', '/collections/enableDisable', 'PUT')
-export const getAllCollectionList = createApiThunkPrivate('getAllCollectionList', '/collections/getAllDocuments', 'GET')
+export const getCollectionList = unsupportedThunk('collections/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createCollection = unsupportedThunk('collections/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateCollection = unsupportedThunk('collections/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const deleteCollection = unsupportedThunk('collections/delete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableCollection = unsupportedThunk('collections/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllCollectionList = unsupportedThunk('collections/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 ////Finish->>>>>>>>>>>
-export const FinishGetList = createApiThunkPrivate('FinishGetList', '/finish/getList', "GET")
-export const CreateFinish = createApiThunkPrivate('CreateFinish', '/finish/create', 'POST')
-export const softDeleteFinish = createApiThunkPrivate('softDeleteFinish', '/finish/softDelete', 'DELETE')
-export const enableDisableFinish = createApiThunkPrivate('enableDisableFinish', '/finish/enableDisable', 'PUT')
-export const updateFinish = createApiThunkPrivate('updateFinish', '/finish/update', 'PUT')
-export const getAllFinishList = createApiThunkPrivate('getAllFinishList', '/finish/getAllDocuments', "GET")
+export const FinishGetList = unsupportedThunk('finish/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const CreateFinish = unsupportedThunk('finish/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const softDeleteFinish = unsupportedThunk('finish/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableFinish = unsupportedThunk('finish/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateFinish = unsupportedThunk('finish/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllFinishList = unsupportedThunk('finish/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 ////Dimension--->>>>>>>>>>
-export const getListDimension = createApiThunkPrivate('getListDimension', '/dimension/getList', 'GET')
-export const createDimension = createApiThunkPrivate('createDimension', '/dimension/create', 'POST')
-export const enableDisableDimension = createApiThunkPrivate('enableDisableDimension', '/dimension/enableDisable', 'PUT')
-export const softDeleteDimension = createApiThunkPrivate('softDeleteDimension', '/dimension/softDelete', 'DELETE')
-export const updateDimension = createApiThunkPrivate('updateDimension', '/dimension/update', "PUT")
-export const getAllListDimension = createApiThunkPrivate('getAllListDimension', '/dimension/getAllDocuments', 'GET')
+export const getListDimension = unsupportedThunk('dimension/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createDimension = unsupportedThunk('dimension/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableDimension = unsupportedThunk('dimension/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const softDeleteDimension = unsupportedThunk('dimension/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateDimension = unsupportedThunk('dimension/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllListDimension = unsupportedThunk('dimension/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 /// brand functions===>>>>>>>>>>>>>>>>>
 
-export const getBrandList = createApiThunkPrivate('getBrandList', '/brands/getList', 'GET')
-export const createBrand = createApiThunkPrivate('createBrand', '/brands/create', 'POST')
-export const updateBrand = createApiThunkPrivate('updateBrand', '/brands/update', 'PUT')
-export const deleteBrand = createApiThunkPrivate('deleteBrand', '/brands/softDelete', 'DELETE')
-export const enableDisableBrand = createApiThunkPrivate('enableDisableBrand', '/brands/enableDisable', 'PUT')
+export const getBrandList = unsupportedThunk('brands/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createBrand = unsupportedThunk('brands/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateBrand = unsupportedThunk('brands/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const deleteBrand = unsupportedThunk('brands/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableBrand = unsupportedThunk('brands/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 /// batch functions ===>>>>>>>>>>>>>>>>>
 
-export const getBatchList = createApiThunkPrivate('getBatchList', '/batch/getList', 'GET');
-export const createBatch = createApiThunkPrivate('createBatch', '/batch/create', 'POST');
-export const updateBatch = createApiThunkPrivate('updateBatch', '/batch/update', 'PUT');
-export const deleteBatch = createApiThunkPrivate('deleteBatch', '/batch/softDelete', 'DELETE');
-export const enableDisableBatch = createApiThunkPrivate('enableDisableBatch', '/batch/enableDisable', 'PUT');
-export const getAllBatchList = createApiThunkPrivate('getAllBatchList', '/batch/getAllDocuments', 'GET')
-export const getAllQtyHeadList = createApiThunkPrivate('getAllQtyHeadList', '/qtyHead/getAllDocuments', 'GET')
+export const getBatchList = unsupportedThunk('batch/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
+export const createBatch = unsupportedThunk('batch/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
+export const updateBatch = unsupportedThunk('batch/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
+export const deleteBatch = unsupportedThunk('batch/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
+export const enableDisableBatch = unsupportedThunk('batch/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
+export const getAllBatchList = unsupportedThunk('batch/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllQtyHeadList = unsupportedThunk('qtyHead/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 
 /// product Warranty===>>>>>>>>>>>>>>>>>
-export const getWarrantyList = createApiThunkPrivate('getWarrantyList', '/warranty/getList', 'GET')
-export const enableDisableWarranty = createApiThunkPrivate('enableDisableWarranty', '/warranty/enableDisable', 'PUT')
-export const softDeleteWarranty = createApiThunkPrivate('softDeleteWarranty', '/warranty/softDelete', 'DELETE')
-export const createWarranty = createApiThunkPrivate('createWarranty', '/warranty/create')
-export const updateWarranty = createApiThunkPrivate('updateWarranty', '/warranty/update', 'PUT')
-export const getAllWarrantyList = createApiThunkPrivate('getAllWarrantyList', '/warranty/getAllDocuments', 'GET')
+export const getWarrantyList = unsupportedThunk('warranty/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableWarranty = unsupportedThunk('warranty/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const softDeleteWarranty = unsupportedThunk('warranty/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createWarranty = unsupportedThunk('warranty/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateWarranty = unsupportedThunk('warranty/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllWarrantyList = unsupportedThunk('warranty/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 //product-options
-export const getListProduct = createApiThunkPrivate('getListProduct', '/product-option/getList', 'GET')
-export const enableDisableProduct = createApiThunkPrivate('enableDisableProduct', '/product-option/enableDisable', 'PUT')
-export const updateProduct = createApiThunkPrivate('updateProduct', '/product-option/update', 'PUT')
-export const createProduct = createApiThunkPrivate('createProduct', '/product-option/create')
-export const deleteProduct = createApiThunkPrivate('deleteProduct', '/product-option/softDelete', 'DELETE')
-export const getListProductOption = createApiThunkPrivate('getListProductOption', '/product-option-value/getList', 'GET')
-export const enableDisableProductOption = createApiThunkPrivate('enableDisableProductOption', '/product-option-value/enableDisable', 'PUT')
-export const deleteProductOption = createApiThunkPrivate('deleteProductOption', '/product-option-value/softDelete', 'DELETE')
-export const createProductOption = createApiThunkPrivate('createProductOption', '/product-option-value/create')
-export const updateProductOption = createApiThunkPrivate('updateProductOption', '/product-option-value/update', 'PUT')
+export const getListProduct = unsupportedThunk('product-option/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableProduct = unsupportedThunk('product-option/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateProduct = unsupportedThunk('product-option/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createProduct = unsupportedThunk('product-option/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const deleteProduct = unsupportedThunk('product-option/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getListProductOption = unsupportedThunk('product-option-value/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const enableDisableProductOption = unsupportedThunk('product-option-value/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const deleteProductOption = unsupportedThunk('product-option-value/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createProductOption = unsupportedThunk('product-option-value/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const updateProductOption = unsupportedThunk('product-option-value/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
-export const getAllPatternList = createApiThunkPrivate('getAllPatternList', '/pattern/getAllDocuments', 'GET')
-export const getAllPrivacyPolicyList = createApiThunkPrivate('getAllPrivacyPolicyList', '/replace-policy/getAllDocuments', 'GET')
-export const getAllStoreList = createApiThunkPrivate('getAllStoreList', '/store/getAllDocuments', 'GET')
-export const getAllStoreShippingDurationList = createApiThunkPrivate('getAllStoreShippingDurationList', '/store-shipping-duration/getAllDocuments', 'GET')
-export const getAllTaxRulesList = createApiThunkPrivate('getAllTaxRulesList', '/taxRule/getAllDocuments', 'GET')
+export const getAllPatternList = unsupportedThunk('pattern/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllPrivacyPolicyList = unsupportedThunk('replace-policy/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllStoreList = unsupportedThunk('store/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllStoreShippingDurationList = unsupportedThunk('store-shipping-duration/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllTaxRulesList = unsupportedThunk('taxRule/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST')
@@ -176,16 +179,14 @@ export const getProductModerationQueue = createApiThunkPrivate('getProductModera
         ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
     }),
 })
-export const getAllBrandList = createApiThunkPrivate('getAllBrandList', '/brands/getAllDocuments', 'GET')
-export const getProductsForPurchase = createApiThunkPrivate('getProductsForPurchase', '/erp/product/get-products-for-purchase-order', 'GET', true)
+export const getAllBrandList = unsupportedThunk('brands/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getProductsForPurchase = unsupportedThunk('erp/product/get-products-for-purchase-order', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
-export const getProductStocks = createApiThunkPrivate('getProductStocks', '/erp/product/get-product-stocks', 'POST')
-
-
+export const getProductStocks = unsupportedThunk('erp/product/get-product-stocks', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 
-// export const getListCategory = createApiThunkPrivate('getListCategory', '/category/getList', 'GET')
+
 
 /// hsn code==============>>>>>>>>>>>>>>>
 
@@ -216,9 +217,9 @@ export const updateHsn = createApiThunkPrivate('updateHsn', (payload) => ENDPOIN
 export const getAllHsn = createApiThunkPrivate('getAllHsn', ENDPOINTS.platform.hsnCodes, 'GET', true, {
     transformParams: (params = {}) => toHsnListParams({ ...params, limit: params.limit || params.size || 100 }),
 })
-export const downloadSampleCsv = createApiThunkPrivate('downloadSampleCsv', '/product/downLoad-sample-csv', 'GET')
-export const uploadHistory = createApiThunkPrivate('uploadHistory', '/product/bulk-upload-history', 'GET')
-export const productOptionList = createApiThunkPrivate('productOptionList', '/product-option/getOptionsWithValues', 'GET')
+export const downloadSampleCsv = unsupportedThunk('product/downLoad-sample-csv', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const uploadHistory = unsupportedThunk('product/bulk-upload-history', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const productOptionList = unsupportedThunk('product-option/getOptionsWithValues', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 

@@ -1,18 +1,52 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
+import { ENDPOINTS } from '../_helpers/endpoints';
+import { firstId, toListParams, toSellerRegisterBody, toUserUpdateBody, toVendorStatusBody, unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getShopListData: {}, createData: {}, editData: {}, enableDisableData: {}, getAllSellerListData: {},updatePasswordData:{}
 }
 
-export const getShopList = createApiThunkPrivate('getShopList', '/store/getList', 'GET')
-export const create = createApiThunkPrivate('create', '/store/create', 'POST')
-export const edit = createApiThunkPrivate('const', '/store/update', 'PUT')
-export const enableDisable = createApiThunkPrivate('enableDisable', '/store/enableDisable', 'PUT')
-export const getAllSellerList = createApiThunkPrivate('getAllSellerList', '/seller/getAllDocuments', 'GET')
+export const getShopList = createApiThunkPrivate(
+    'getShopList',
+    ENDPOINTS.sellers.vendors,
+    'GET',
+    true,
+    { transformParams: (params = {}) => toListParams(params) }
+)
+export const create = createApiThunkPrivate(
+    'create',
+    ENDPOINTS.users.adminUsers,
+    'POST',
+    false,
+    { transformBody: toSellerRegisterBody }
+)
+export const edit = createApiThunkPrivate(
+    'edit',
+    (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
+    'PATCH',
+    false,
+    { transformBody: toUserUpdateBody }
+)
+export const enableDisable = createApiThunkPrivate(
+    'enableDisable',
+    (payload) => ENDPOINTS.sellers.vendorStatus(firstId(payload)),
+    'PATCH',
+    false,
+    { transformBody: toVendorStatusBody }
+)
+export const getAllSellerList = createApiThunkPrivate(
+    'getAllSellerList',
+    ENDPOINTS.sellers.vendors,
+    'GET',
+    true,
+    { transformParams: (params = {}) => toListParams(params, { limit: 100 }) }
+)
 
-
-export const updatePassword = createApiThunkPrivate('updatePassword', '/store/updatePassword', 'PUT')
+export const updatePassword = unsupportedThunk(
+    'store/updatePassword',
+    'Store password update API is not exposed by the current backend. Use forgot/reset password flow.',
+)
 
 
 const storeSlice = createSlice({

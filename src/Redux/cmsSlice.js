@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany, toListParams, unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getCategoryListData: {},
@@ -115,12 +115,17 @@ const toTaxRuleBody = (payload = {}) => ({
     ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
 });
 
-export const getCategoryList = createApiThunkPrivate('getCategoryList', '/cmsCategory/getList', 'GET')
-export const createCategory = createApiThunkPrivate('createCategory', '/cmsCategory/create')
-export const updateCategory = createApiThunkPrivate('updateCategory', '/cmsCategory/update', 'PUT')
-export const deleteCategory = createApiThunkPrivate('deleteCategory', '/cmsCategory/softDelete', 'DELETE')
-export const updateCMSCategory = createApiThunkPrivate('updateCMSCategory', '/cmsCategory/update', 'PUT')
-export const enableDisableCategory = createApiThunkPrivate('enableDisableCategory', '/cmsCategory/enableDisable', 'PUT')
+const CMS_CATEGORY_UNSUPPORTED_MESSAGE =
+  'Legacy CMS category API is not exposed by the current backend.';
+const SHIPPING_DURATION_UNSUPPORTED_MESSAGE =
+  'Store shipping duration API is not exposed by the current backend.';
+
+export const getCategoryList = unsupportedThunk('getCategoryList', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
+export const createCategory = unsupportedThunk('createCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
+export const updateCategory = unsupportedThunk('updateCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
+export const deleteCategory = unsupportedThunk('deleteCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
+export const updateCMSCategory = unsupportedThunk('updateCMSCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
+export const enableDisableCategory = unsupportedThunk('enableDisableCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
 
 export const getCMSContentList = createApiThunkPrivate(
     'getCMSContentList',
@@ -319,11 +324,11 @@ export const softDeleteTaxRule = deleteMany(
     'Tax rule deleted successfully'
 );
 
-export const getListShipping = createApiThunkPrivate('getListShipping', '/store-shipping-duration/getList', 'GET')
-export const softDeleteShipping = createApiThunkPrivate('softDeleteShipping', '/store-shipping-duration/softDelete', 'DELETE')
-export const enableDisableShipping = createApiThunkPrivate('enableDisableShipping', '/store-shipping-duration/enableDisable', 'PUT')
-export const createShipping = createApiThunkPrivate('createShipping', '/store-shipping-duration/create')
-export const updateShipping = createApiThunkPrivate('updateShipping', '/store-shipping-duration/update', 'PUT')
+export const getListShipping = unsupportedThunk('getListShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
+export const softDeleteShipping = unsupportedThunk('softDeleteShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
+export const enableDisableShipping = unsupportedThunk('enableDisableShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
+export const createShipping = unsupportedThunk('createShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
+export const updateShipping = unsupportedThunk('updateShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
 
 const cmsSlice = createSlice({
     name: 'cms',

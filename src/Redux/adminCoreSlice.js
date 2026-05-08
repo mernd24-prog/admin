@@ -130,6 +130,14 @@ const omitPayload = (payload = {}, keys = []) =>
 
 const noBody = () => undefined;
 const noParams = () => undefined;
+const toBool = (value, fallback = undefined) =>
+  value === undefined || value === null ? fallback : Boolean(value);
+const toNum = (value, fallback = undefined) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+const firstDefined = (...values) => values.find((v) => v !== undefined && v !== null);
 
 const pickQuery = (keys = []) => (params = {}) =>
   keys.reduce((acc, key) => {
@@ -142,6 +150,176 @@ const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "userId", "acti
 const listOrderQueryKeys = ["status", "fromDate", "toDate", "limit", "offset"];
 const moderationQueueQueryKeys = ["status", "category", "page", "limit"];
 const updateModerationKeys = ["status", "rejectionReason", "checklist"];
+
+const toAdminPayoutBody = (payload = {}) => ({
+  ...(firstDefined(payload.sellerId, payload.seller_id) ? { sellerId: firstDefined(payload.sellerId, payload.seller_id) } : {}),
+  ...(firstDefined(payload.periodStart, payload.period_start, payload.fromDate, payload.startDate)
+    ? { periodStart: firstDefined(payload.periodStart, payload.period_start, payload.fromDate, payload.startDate) }
+    : {}),
+  ...(firstDefined(payload.periodEnd, payload.period_end, payload.toDate, payload.endDate)
+    ? { periodEnd: firstDefined(payload.periodEnd, payload.period_end, payload.toDate, payload.endDate) }
+    : {}),
+  ...(toNum(firstDefined(payload.grossAmount, payload.gross_amount, payload.amount)) !== undefined
+    ? { grossAmount: toNum(firstDefined(payload.grossAmount, payload.gross_amount, payload.amount)) }
+    : {}),
+  ...(toNum(firstDefined(payload.commissionAmount, payload.commission_amount)) !== undefined
+    ? { commissionAmount: toNum(firstDefined(payload.commissionAmount, payload.commission_amount)) }
+    : {}),
+  ...(toNum(firstDefined(payload.processingFeeAmount, payload.processing_fee_amount)) !== undefined
+    ? { processingFeeAmount: toNum(firstDefined(payload.processingFeeAmount, payload.processing_fee_amount)) }
+    : {}),
+  ...(toNum(firstDefined(payload.taxWithheldAmount, payload.tax_withheld_amount)) !== undefined
+    ? { taxWithheldAmount: toNum(firstDefined(payload.taxWithheldAmount, payload.tax_withheld_amount)) }
+    : {}),
+  ...(toNum(firstDefined(payload.netPayoutAmount, payload.net_payout_amount)) !== undefined
+    ? { netPayoutAmount: toNum(firstDefined(payload.netPayoutAmount, payload.net_payout_amount)) }
+    : {}),
+  ...(firstDefined(payload.currency, payload.currencyCode) ? { currency: firstDefined(payload.currency, payload.currencyCode) } : {}),
+  ...(payload.status ? { status: payload.status } : {}),
+  ...(firstDefined(payload.scheduledAt, payload.scheduled_at)
+    ? { scheduledAt: firstDefined(payload.scheduledAt, payload.scheduled_at) }
+    : {}),
+  ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
+});
+
+const toApiKeyBody = (payload = {}) => ({
+  ...(firstDefined(payload.ownerId, payload.owner_id) ? { ownerId: firstDefined(payload.ownerId, payload.owner_id) } : {}),
+  keyName: firstDefined(payload.keyName, payload.key_name, payload.name, payload.title),
+  scopes: Array.isArray(payload.scopes) ? payload.scopes : [],
+  expiresAt: firstDefined(payload.expiresAt, payload.expires_at, null),
+});
+
+const toWebhookBody = (payload = {}) => ({
+  ...(firstDefined(payload.ownerId, payload.owner_id) ? { ownerId: firstDefined(payload.ownerId, payload.owner_id) } : {}),
+  endpointUrl: firstDefined(payload.endpointUrl, payload.endpoint_url, payload.url),
+  secret: payload.secret,
+  eventTypes: Array.isArray(payload.eventTypes) ? payload.eventTypes : (Array.isArray(payload.events) ? payload.events : []),
+  retryPolicy: {
+    maxRetries: toNum(firstDefined(payload.retryPolicy?.maxRetries, payload.retryPolicy?.max_retries, payload.maxRetries, payload.max_retries), 5),
+    ...(toNum(firstDefined(payload.retryPolicy?.backoffMs, payload.retryPolicy?.backoff_ms, payload.backoffMs, payload.backoff_ms)) !== undefined
+      ? { backoffMs: toNum(firstDefined(payload.retryPolicy?.backoffMs, payload.retryPolicy?.backoff_ms, payload.backoffMs, payload.backoff_ms)) }
+      : {}),
+  },
+});
+
+const toFeatureFlagBody = (payload = {}) => ({
+  flagKey: firstDefined(payload.flagKey, payload.flag_key, payload.key),
+  ...(payload.description !== undefined ? { description: payload.description } : {}),
+  ...(firstDefined(payload.enabled, payload.isEnabled, payload.active) !== undefined
+    ? { enabled: toBool(firstDefined(payload.enabled, payload.isEnabled, payload.active), false) }
+    : {}),
+  ...(toNum(firstDefined(payload.rolloutPercentage, payload.rollout_percentage, payload.rollout)) !== undefined
+    ? { rolloutPercentage: toNum(firstDefined(payload.rolloutPercentage, payload.rollout_percentage, payload.rollout), 100) }
+    : {}),
+  ...(payload.targetRules !== undefined || payload.target_rules !== undefined
+    ? { targetRules: payload.targetRules || payload.target_rules || {} }
+    : {}),
+});
+
+const toSubscriptionPlanBody = (payload = {}) => ({
+  ...(firstDefined(payload.planCode, payload.plan_code, payload.code) ? { planCode: firstDefined(payload.planCode, payload.plan_code, payload.code) } : {}),
+  ...(payload.title !== undefined ? { title: payload.title } : {}),
+  ...(payload.description !== undefined ? { description: payload.description } : {}),
+  ...(firstDefined(payload.targetRoles, payload.target_roles, payload.roles) !== undefined
+    ? { targetRoles: firstDefined(payload.targetRoles, payload.target_roles, payload.roles) || [] }
+    : {}),
+  ...(firstDefined(payload.featureFlags, payload.feature_flags) !== undefined
+    ? { featureFlags: firstDefined(payload.featureFlags, payload.feature_flags) || [] }
+    : {}),
+  ...(toNum(firstDefined(payload.monthlyPrice, payload.monthly_price)) !== undefined
+    ? { monthlyPrice: toNum(firstDefined(payload.monthlyPrice, payload.monthly_price)) }
+    : {}),
+  ...(toNum(firstDefined(payload.yearlyPrice, payload.yearly_price)) !== undefined
+    ? { yearlyPrice: toNum(firstDefined(payload.yearlyPrice, payload.yearly_price)) }
+    : {}),
+  ...(firstDefined(payload.currency, payload.currencyCode) ? { currency: firstDefined(payload.currency, payload.currencyCode) } : {}),
+  ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+  ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
+});
+
+const toPlatformFeeConfigBody = (payload = {}) => ({
+  ...(firstDefined(payload.category, payload.categoryCode, payload.category_code) ? { category: firstDefined(payload.category, payload.categoryCode, payload.category_code) } : {}),
+  ...(toNum(firstDefined(payload.commissionPercent, payload.commission_percentage, payload.commission)) !== undefined
+    ? { commissionPercent: toNum(firstDefined(payload.commissionPercent, payload.commission_percentage, payload.commission)) }
+    : {}),
+  ...(toNum(firstDefined(payload.fixedFeeAmount, payload.fixed_fee_amount)) !== undefined
+    ? { fixedFeeAmount: toNum(firstDefined(payload.fixedFeeAmount, payload.fixed_fee_amount)) }
+    : {}),
+  ...(toNum(firstDefined(payload.closingFeeAmount, payload.closing_fee_amount)) !== undefined
+    ? { closingFeeAmount: toNum(firstDefined(payload.closingFeeAmount, payload.closing_fee_amount)) }
+    : {}),
+  ...(firstDefined(payload.active, payload.isActive) !== undefined ? { active: toBool(firstDefined(payload.active, payload.isActive), true) } : {}),
+  ...(firstDefined(payload.effectiveFrom, payload.effective_from) ? { effectiveFrom: firstDefined(payload.effectiveFrom, payload.effective_from) } : {}),
+  ...(firstDefined(payload.effectiveTo, payload.effective_to) ? { effectiveTo: firstDefined(payload.effectiveTo, payload.effective_to) } : {}),
+});
+
+const toPlatformCategoryBody = (payload = {}) => ({
+  ...(firstDefined(payload.categoryKey, payload.key, payload.code) ? { categoryKey: firstDefined(payload.categoryKey, payload.key, payload.code) } : {}),
+  ...(firstDefined(payload.title, payload.name) !== undefined ? { title: firstDefined(payload.title, payload.name) } : {}),
+  ...(firstDefined(payload.parentKey, payload.parent_key, payload.parentId, payload.parent_id) !== undefined
+    ? { parentKey: firstDefined(payload.parentKey, payload.parent_key, payload.parentId, payload.parent_id, "") }
+    : {}),
+  ...(toNum(firstDefined(payload.level, payload.depth)) !== undefined ? { level: toNum(firstDefined(payload.level, payload.depth), 0) } : {}),
+  ...(payload.attributesSchema !== undefined || payload.attributes_schema !== undefined
+    ? { attributesSchema: payload.attributesSchema || payload.attributes_schema || {} }
+    : {}),
+  ...(firstDefined(payload.active, payload.isActive) !== undefined ? { active: toBool(firstDefined(payload.active, payload.isActive), true) } : {}),
+  ...(toNum(firstDefined(payload.sortOrder, payload.sort_order)) !== undefined ? { sortOrder: toNum(firstDefined(payload.sortOrder, payload.sort_order), 0) } : {}),
+});
+
+const toProductFamilyBody = (payload = {}) => ({
+  ...(firstDefined(payload.familyCode, payload.family_code, payload.code) ? { familyCode: firstDefined(payload.familyCode, payload.family_code, payload.code) } : {}),
+  ...(firstDefined(payload.sellerId, payload.seller_id) !== undefined ? { sellerId: firstDefined(payload.sellerId, payload.seller_id) } : {}),
+  ...(firstDefined(payload.title, payload.name) !== undefined ? { title: firstDefined(payload.title, payload.name) } : {}),
+  ...(firstDefined(payload.category, payload.categoryCode, payload.category_code) !== undefined ? { category: firstDefined(payload.category, payload.categoryCode, payload.category_code) } : {}),
+  ...(payload.baseAttributes !== undefined || payload.base_attributes !== undefined
+    ? { baseAttributes: payload.baseAttributes || payload.base_attributes || {} }
+    : {}),
+  ...(firstDefined(payload.variantAxes, payload.variant_axes) !== undefined
+    ? { variantAxes: firstDefined(payload.variantAxes, payload.variant_axes) || [] }
+    : {}),
+  ...(payload.status !== undefined ? { status: payload.status } : {}),
+});
+
+const toProductVariantBody = (payload = {}) => ({
+  ...(firstDefined(payload.familyCode, payload.family_code) ? { familyCode: firstDefined(payload.familyCode, payload.family_code) } : {}),
+  ...(firstDefined(payload.productId, payload.product_id) ? { productId: firstDefined(payload.productId, payload.product_id) } : {}),
+  ...(firstDefined(payload.sellerId, payload.seller_id) ? { sellerId: firstDefined(payload.sellerId, payload.seller_id) } : {}),
+  ...(payload.sku !== undefined ? { sku: payload.sku } : {}),
+  ...(payload.attributes !== undefined ? { attributes: payload.attributes } : {}),
+  ...(toNum(payload.stock) !== undefined ? { stock: toNum(payload.stock) } : {}),
+  ...(toNum(firstDefined(payload.reservedStock, payload.reserved_stock)) !== undefined ? { reservedStock: toNum(firstDefined(payload.reservedStock, payload.reserved_stock)) } : {}),
+  ...(payload.status !== undefined ? { status: payload.status } : {}),
+});
+
+const toHsnCodeBody = (payload = {}) => ({
+  ...(payload.code !== undefined ? { code: String(payload.code) } : {}),
+  ...(payload.description !== undefined ? { description: payload.description } : {}),
+  ...(toNum(firstDefined(payload.gstRate, payload.IGST, payload.gst_rate)) !== undefined ? { gstRate: toNum(firstDefined(payload.gstRate, payload.IGST, payload.gst_rate)) } : {}),
+  ...(toNum(firstDefined(payload.cessRate, payload.additionalTax, payload.cess_rate)) !== undefined ? { cessRate: toNum(firstDefined(payload.cessRate, payload.additionalTax, payload.cess_rate)) } : {}),
+  ...(payload.taxType !== undefined ? { taxType: payload.taxType } : {}),
+  ...(payload.exempt !== undefined ? { exempt: Boolean(payload.exempt) } : {}),
+  ...(payload.category !== undefined ? { category: payload.category } : {}),
+  ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+});
+
+const toGeographyBody = (payload = {}) => ({
+  ...(firstDefined(payload.countryCode, payload.country_code) ? { countryCode: firstDefined(payload.countryCode, payload.country_code) } : {}),
+  ...(firstDefined(payload.countryName, payload.country_name, payload.name) ? { countryName: firstDefined(payload.countryName, payload.country_name, payload.name) } : {}),
+  ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+  states: Array.isArray(payload.states) ? payload.states : [],
+});
+
+const toContentPageBody = (payload = {}) => ({
+  ...(payload.slug !== undefined ? { slug: payload.slug } : {}),
+  ...(payload.title !== undefined ? { title: payload.title } : {}),
+  ...(payload.pageType !== undefined ? { pageType: payload.pageType } : {}),
+  ...(payload.body !== undefined ? { body: payload.body } : {}),
+  ...(payload.language !== undefined ? { language: payload.language } : {}),
+  ...(payload.published !== undefined ? { published: Boolean(payload.published) } : {}),
+  ...(payload.publishedAt !== undefined ? { publishedAt: payload.publishedAt } : {}),
+  ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
+});
 
 export const getDashboardOverview = createApiThunkPrivate(
   "adminCore/getDashboardOverview",
@@ -287,7 +465,7 @@ export const getAdminOrders = createApiThunkPrivate(
 
 export const getAdminPayments = createApiThunkPrivate("adminCore/getAdminPayments", ENDPOINTS.payments.admin, "GET", true, { transformParams: pickQuery(["status", "provider", "fromDate", "toDate", "limit", "offset"]) });
 export const getAdminPayouts = createApiThunkPrivate("adminCore/getAdminPayouts", ENDPOINTS.payouts.admin, "GET", true, { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) });
-export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST");
+export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST", false, { transformBody: toAdminPayoutBody });
 export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.adminReports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "limit", "offset"]) });
 export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoice", (payload) => ENDPOINTS.tax.adminInvoice(payload.orderId), "POST", false, { transformBody: noBody });
 export const getDeliveryServiceability = createApiThunkPrivate("adminCore/getDeliveryServiceability", ENDPOINTS.delivery.serviceability, "GET");
@@ -300,59 +478,59 @@ export const getReturnsAnalytics = createApiThunkPrivate("adminCore/getReturnsAn
 export const getChargebacks = createApiThunkPrivate("adminCore/getChargebacks", ENDPOINTS.analytics.chargebacks, "GET", true, { transformParams: pickQuery(["status", "fromDate", "toDate", "limit", "offset"]) });
 
 export const getApiKeys = createApiThunkPrivate("adminCore/getApiKeys", ENDPOINTS.platform.apiKeys, "GET", true, { transformParams: pickQuery(["ownerId", "status", "limit", "offset"]) });
-export const createApiKey = createApiThunkPrivate("adminCore/createApiKey", ENDPOINTS.platform.apiKeys, "POST");
+export const createApiKey = createApiThunkPrivate("adminCore/createApiKey", ENDPOINTS.platform.apiKeys, "POST", false, { transformBody: toApiKeyBody });
 export const getWebhooks = createApiThunkPrivate("adminCore/getWebhooks", ENDPOINTS.platform.webhooks, "GET", true, { transformParams: pickQuery(["ownerId", "status", "limit", "offset"]) });
-export const createWebhook = createApiThunkPrivate("adminCore/createWebhook", ENDPOINTS.platform.webhooks, "POST");
+export const createWebhook = createApiThunkPrivate("adminCore/createWebhook", ENDPOINTS.platform.webhooks, "POST", false, { transformBody: toWebhookBody });
 export const getFeatureFlags = createApiThunkPrivate("adminCore/getFeatureFlags", ENDPOINTS.platform.featureFlags, "GET", true, { transformParams: pickQuery(["enabled", "limit", "offset"]) });
-export const upsertFeatureFlag = createApiThunkPrivate("adminCore/upsertFeatureFlag", ENDPOINTS.platform.featureFlags, "PUT");
+export const upsertFeatureFlag = createApiThunkPrivate("adminCore/upsertFeatureFlag", ENDPOINTS.platform.featureFlags, "PUT", false, { transformBody: toFeatureFlagBody });
 
 export const getSubscriptionPlans = createApiThunkPrivate("adminCore/getSubscriptionPlans", ENDPOINTS.platform.subscriptionPlans, "GET", true, { transformParams: pickQuery(["active", "limit", "offset"]) });
 export const getSubscriptionPlan = createApiThunkPrivate("adminCore/getSubscriptionPlan", (payload) => ENDPOINTS.platform.subscriptionPlan(payload.planId || payload.id), "GET");
-export const createSubscriptionPlan = createApiThunkPrivate("adminCore/createSubscriptionPlan", ENDPOINTS.platform.subscriptionPlans, "POST");
-export const updateSubscriptionPlan = createApiThunkPrivate("adminCore/updateSubscriptionPlan", (payload) => ENDPOINTS.platform.subscriptionPlan(payload.planId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["planId", "id"]) });
+export const createSubscriptionPlan = createApiThunkPrivate("adminCore/createSubscriptionPlan", ENDPOINTS.platform.subscriptionPlans, "POST", false, { transformBody: toSubscriptionPlanBody });
+export const updateSubscriptionPlan = createApiThunkPrivate("adminCore/updateSubscriptionPlan", (payload) => ENDPOINTS.platform.subscriptionPlan(payload.planId || payload.id), "PATCH", false, { transformBody: (payload = {}) => toSubscriptionPlanBody(omitPayload(payload, ["planId", "id"])) });
 export const deleteSubscriptionPlan = createApiThunkPrivate("adminCore/deleteSubscriptionPlan", (payload) => ENDPOINTS.platform.subscriptionPlan(payload.planId || payload.id), "DELETE", false, { transformParams: noParams });
 export const getPlatformSubscriptions = createApiThunkPrivate("adminCore/getPlatformSubscriptions", ENDPOINTS.platform.subscriptions, "GET", true, { transformParams: pickQuery(["status", "userRole", "limit", "offset"]) });
 export const updatePlatformSubscriptionStatus = createApiThunkPrivate("adminCore/updatePlatformSubscriptionStatus", (payload) => ENDPOINTS.platform.subscriptionStatus(payload.subscriptionId || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["status"]) });
 export const getPlatformFeeConfigs = createApiThunkPrivate("adminCore/getPlatformFeeConfigs", ENDPOINTS.platform.feeConfig, "GET", true, { transformParams: pickQuery(["active", "category", "limit", "offset"]) });
 export const getPlatformFeeConfig = createApiThunkPrivate("adminCore/getPlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "GET");
-export const createPlatformFeeConfig = createApiThunkPrivate("adminCore/createPlatformFeeConfig", ENDPOINTS.platform.feeConfig, "POST");
-export const updatePlatformFeeConfig = createApiThunkPrivate("adminCore/updatePlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["configId", "id"]) });
+export const createPlatformFeeConfig = createApiThunkPrivate("adminCore/createPlatformFeeConfig", ENDPOINTS.platform.feeConfig, "POST", false, { transformBody: toPlatformFeeConfigBody });
+export const updatePlatformFeeConfig = createApiThunkPrivate("adminCore/updatePlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "PATCH", false, { transformBody: (payload = {}) => toPlatformFeeConfigBody(omitPayload(payload, ["configId", "id"])) });
 export const deletePlatformFeeConfig = createApiThunkPrivate("adminCore/deletePlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getPlatformCategories = createApiThunkPrivate("adminCore/getPlatformCategories", ENDPOINTS.platform.categories, "GET", true, { transformParams: pickQuery(["page", "limit", "parentKey", "active", "categoryKey"]) });
 export const getPlatformCategory = createApiThunkPrivate("adminCore/getPlatformCategory", (payload) => ENDPOINTS.platform.category(payload.categoryKey || payload.key || payload.id), "GET");
-export const createPlatformCategory = createApiThunkPrivate("adminCore/createPlatformCategory", ENDPOINTS.platform.categories, "POST");
-export const updatePlatformCategory = createApiThunkPrivate("adminCore/updatePlatformCategory", (payload) => ENDPOINTS.platform.category(payload.categoryKey || payload.key || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["categoryKey", "key", "id"]) });
+export const createPlatformCategory = createApiThunkPrivate("adminCore/createPlatformCategory", ENDPOINTS.platform.categories, "POST", false, { transformBody: toPlatformCategoryBody });
+export const updatePlatformCategory = createApiThunkPrivate("adminCore/updatePlatformCategory", (payload) => ENDPOINTS.platform.category(payload.categoryKey || payload.key || payload.id), "PATCH", false, { transformBody: (payload = {}) => toPlatformCategoryBody(omitPayload(payload, ["categoryKey", "key", "id"])) });
 export const deletePlatformCategory = createApiThunkPrivate("adminCore/deletePlatformCategory", (payload) => ENDPOINTS.platform.category(payload.categoryKey || payload.key || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getProductFamilies = createApiThunkPrivate("adminCore/getProductFamilies", ENDPOINTS.platform.productFamilies, "GET", true, { transformParams: pickQuery(["page", "limit", "category", "sellerId", "status"]) });
 export const getProductFamily = createApiThunkPrivate("adminCore/getProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "GET");
-export const createProductFamily = createApiThunkPrivate("adminCore/createProductFamily", ENDPOINTS.platform.productFamilies, "POST");
-export const updateProductFamily = createApiThunkPrivate("adminCore/updateProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["familyCode", "code", "id"]) });
+export const createProductFamily = createApiThunkPrivate("adminCore/createProductFamily", ENDPOINTS.platform.productFamilies, "POST", false, { transformBody: toProductFamilyBody });
+export const updateProductFamily = createApiThunkPrivate("adminCore/updateProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => toProductFamilyBody(omitPayload(payload, ["familyCode", "code", "id"])) });
 export const deleteProductFamily = createApiThunkPrivate("adminCore/deleteProductFamily", (payload) => ENDPOINTS.platform.productFamily(payload.familyCode || payload.code || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getProductVariants = createApiThunkPrivate("adminCore/getProductVariants", ENDPOINTS.platform.productVariants, "GET", true, { transformParams: pickQuery(["page", "limit", "productId", "familyCode", "sellerId", "sku", "status"]) });
 export const getProductVariant = createApiThunkPrivate("adminCore/getProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "GET");
-export const createProductVariant = createApiThunkPrivate("adminCore/createProductVariant", ENDPOINTS.platform.productVariants, "POST");
-export const updateProductVariant = createApiThunkPrivate("adminCore/updateProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["variantId", "id"]) });
+export const createProductVariant = createApiThunkPrivate("adminCore/createProductVariant", ENDPOINTS.platform.productVariants, "POST", false, { transformBody: toProductVariantBody });
+export const updateProductVariant = createApiThunkPrivate("adminCore/updateProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "PATCH", false, { transformBody: (payload = {}) => toProductVariantBody(omitPayload(payload, ["variantId", "id"])) });
 export const deleteProductVariant = createApiThunkPrivate("adminCore/deleteProductVariant", (payload) => ENDPOINTS.platform.productVariant(payload.variantId || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getHsnCodes = createApiThunkPrivate("adminCore/getHsnCodes", ENDPOINTS.platform.hsnCodes, "GET", true, { transformParams: pickQuery(["page", "limit", "category", "active"]) });
 export const getHsnCode = createApiThunkPrivate("adminCore/getHsnCode", (payload) => ENDPOINTS.platform.hsnCode(payload.hsnCode || payload.code || payload.id), "GET");
-export const createHsnCode = createApiThunkPrivate("adminCore/createHsnCode", ENDPOINTS.platform.hsnCodes, "POST");
-export const updateHsnCode = createApiThunkPrivate("adminCore/updateHsnCode", (payload) => ENDPOINTS.platform.hsnCode(payload.hsnCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["hsnCode", "code", "id"]) });
+export const createHsnCode = createApiThunkPrivate("adminCore/createHsnCode", ENDPOINTS.platform.hsnCodes, "POST", false, { transformBody: toHsnCodeBody });
+export const updateHsnCode = createApiThunkPrivate("adminCore/updateHsnCode", (payload) => ENDPOINTS.platform.hsnCode(payload.hsnCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => toHsnCodeBody(omitPayload(payload, ["hsnCode", "code", "id"])) });
 export const deleteHsnCode = createApiThunkPrivate("adminCore/deleteHsnCode", (payload) => ENDPOINTS.platform.hsnCode(payload.hsnCode || payload.code || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getGeographies = createApiThunkPrivate("adminCore/getGeographies", ENDPOINTS.platform.geography, "GET", true, { transformParams: pickQuery(["page", "limit", "active"]) });
 export const getGeography = createApiThunkPrivate("adminCore/getGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "GET");
-export const createGeography = createApiThunkPrivate("adminCore/createGeography", ENDPOINTS.platform.geography, "POST");
-export const updateGeography = createApiThunkPrivate("adminCore/updateGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["countryCode", "code", "id"]) });
+export const createGeography = createApiThunkPrivate("adminCore/createGeography", ENDPOINTS.platform.geography, "POST", false, { transformBody: toGeographyBody });
+export const updateGeography = createApiThunkPrivate("adminCore/updateGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "PATCH", false, { transformBody: (payload = {}) => toGeographyBody(omitPayload(payload, ["countryCode", "code", "id"])) });
 export const deleteGeography = createApiThunkPrivate("adminCore/deleteGeography", (payload) => ENDPOINTS.platform.geographyDetail(payload.countryCode || payload.code || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getContentPages = createApiThunkPrivate("adminCore/getContentPages", ENDPOINTS.platform.contentPages, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "pageType", "language", "published"]) });
 export const getContentPage = createApiThunkPrivate("adminCore/getContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "GET");
-export const createContentPage = createApiThunkPrivate("adminCore/createContentPage", ENDPOINTS.platform.contentPages, "POST");
-export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
+export const createContentPage = createApiThunkPrivate("adminCore/createContentPage", ENDPOINTS.platform.contentPages, "POST", false, { transformBody: toContentPageBody });
+export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (payload = {}) => toContentPageBody(omitPayload(payload, ["id"])) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {

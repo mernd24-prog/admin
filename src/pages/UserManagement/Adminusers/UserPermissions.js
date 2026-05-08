@@ -3,12 +3,15 @@ import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAdminUserDetails, getAllModulePermission, updateModulePermission } from '../../../Redux/userManagementSlice';
+import { getAdminUserDetails, updateModulePermission } from '../../../Redux/userManagementSlice';
 import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
 import { toast } from 'sonner';
 import Loader from '../../../components/Loader/Loader';
 import PermissionsSelector from '../../../components/Atoms/PermissionsTab/PermissionsSelector';
 import { isSellerPanel } from '../../../_helpers/panelConfig';
+import { apiRequest } from '../../../_helpers/apiConfig';
+import { ENDPOINTS } from '../../../_helpers/endpoints';
+import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/authStorage';
 
 const ACTION_ALIASES = {
     create: 'add',
@@ -17,6 +20,7 @@ const ACTION_ALIASES = {
     manage: 'status',
     action: 'status',
 };
+const BACKEND_PERMISSION_ACTIONS = ['view', 'add', 'edit', 'update', 'delete', 'status', 'approval'];
 
 const getPayload = (sliceData) => sliceData?.data?.data || sliceData?.normalized?.data || {};
 
@@ -31,7 +35,7 @@ const getModuleActions = (module) => {
         .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
         .filter(Boolean);
     const unique = Array.from(new Set(['view', ...actions]));
-    return unique.filter((action) => ['view', 'add', 'edit', 'update', 'delete', 'status', 'approval'].includes(action));
+    return unique.filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
 };
 
 const getAssignedModuleActions = (module) => {
@@ -40,6 +44,31 @@ const getAssignedModuleActions = (module) => {
         .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
         .filter(Boolean);
     return Array.from(new Set(assigned));
+};
+
+const normalizeActionsForBackend = (actions = []) => {
+    const normalized = actions
+        .map((action) => ACTION_ALIASES[action] || action)
+        .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
+
+    const withView = normalized.includes('view') ? normalized : ['view', ...normalized];
+    return Array.from(new Set(withView));
+};
+
+const ASSIGNMENT_ACTIONS = ['edit', 'update', 'approval', 'status', 'add'];
+
+const buildAssignedActionMap = (modules = []) => {
+    const result = {};
+    modules.forEach((module) => {
+        const moduleCode = module?.slug || module?.module || module?.module_code?.module_code || module?.module_code;
+        if (!moduleCode) return;
+        const assigned = (module.permissions || [])
+            .filter((permission) => permission?.assigned)
+            .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
+            .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
+        result[moduleCode] = new Set(Array.from(new Set(assigned)));
+    });
+    return result;
 };
 
 const UserPermissions = ({ setModuleName }) => {
@@ -51,6 +80,13 @@ const UserPermissions = ({ setModuleName }) => {
     const [permissions, setPermissions] = useState([]);
     const [filters, setFilters] = useState({ search: '' });
     const [userName, setUserName] = useState('');
+    const [modulePayload, setModulePayload] = useState({});
+    const [actorPermissionMap, setActorPermissionMap] = useState({});
+    const [canAssignPermissions, setCanAssignPermissions] = useState(false);
+    const hasActorPermissionCeiling = useMemo(
+        () => Object.keys(actorPermissionMap || {}).length > 0,
+        [actorPermissionMap],
+    );
 
     useEffect(() => {
         if (id) {
@@ -63,6 +99,53 @@ const UserPermissions = ({ setModuleName }) => {
     }, [id, dispatch, sellerPanel]);
 
     useEffect(() => {
+        let isMounted = true;
+        const role = normalizeRole(getStoredRole());
+        if (role === 'admin' || role === 'super-admin') {
+            setCanAssignPermissions(true);
+            setActorPermissionMap({});
+            return () => {
+                isMounted = false;
+            };
+        }
+
+        const currentUser = getStoredUser() || {};
+        const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+        if (!currentUserId) {
+            setCanAssignPermissions(false);
+            setActorPermissionMap({});
+            return () => {
+                isMounted = false;
+            };
+        }
+
+        apiRequest('GET', ENDPOINTS.adminAccess.modules, {
+            userId: currentUserId,
+            role,
+            includePermissions: true,
+        })
+            .then((response) => {
+                if (!isMounted) return;
+                const payload = response?.data?.data || response?.normalized?.data || response?.data || {};
+                const modules = Array.isArray(payload?.modules) ? payload.modules : [];
+                const map = buildAssignedActionMap(modules);
+                setActorPermissionMap(map);
+                const rbacActions = map.rbac || map['admin-users'] || new Set();
+                const hasAssignmentAction = ASSIGNMENT_ACTIONS.some((action) => rbacActions.has(action));
+                setCanAssignPermissions(hasAssignmentAction);
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setCanAssignPermissions(false);
+                setActorPermissionMap({});
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
         const sellerSubAdmins = getListItems(sellerSelector?.listSubAdminsData);
         const user = sellerPanel
             ? sellerSubAdmins.find((item) =>
@@ -72,11 +155,17 @@ const UserPermissions = ({ setModuleName }) => {
         const selectedUserId = user?._id || user?.id || user?.userId;
         if (!id || !selectedUserId || String(selectedUserId) !== String(id)) return;
 
-        dispatch(getAllModulePermission({
+        apiRequest('GET', ENDPOINTS.adminAccess.modules, {
             userId: selectedUserId,
             role: user?.role || 'sub-admin',
             includePermissions: true,
-        }));
+        })
+            .then((response) => {
+                setModulePayload(response?.data?.data || response?.normalized?.data || response?.data || {});
+            })
+            .catch(() => {
+                setModulePayload({});
+            });
     }, [
         id,
         dispatch,
@@ -92,7 +181,6 @@ const UserPermissions = ({ setModuleName }) => {
                 String(item?._id || item?.id || item?.userId) === String(id)
             )
             : getPayload(selector?.getAdminUserDetailsData);
-        const modulePayload = getPayload(selector?.getAllModulePermissionData);
         const modules = modulePayload?.modules || modulePayload?.list || [];
         const allowedModules = Array.isArray(user?.allowedModules) ? user.allowedModules : [];
         const userUsesModuleScope = ['sub-admin', 'seller-sub-admin'].includes(user?.role);
@@ -108,6 +196,12 @@ const UserPermissions = ({ setModuleName }) => {
 
         setPermissions(modules.map((module) => {
             const availablePermissions = getModuleActions(module);
+            const actorModuleActions = actorPermissionMap[module.slug] || new Set();
+            const effectiveAssignablePermissions = canAssignPermissions
+                ? (hasActorPermissionCeiling
+                    ? availablePermissions.filter((action) => action === 'view' || actorModuleActions.has(action))
+                    : availablePermissions)
+                : [];
             const assignedActions = getAssignedModuleActions(module).filter((action) => availablePermissions.includes(action));
             const selected = userUsesModuleScope
                 ? allowedModules.includes(module.slug)
@@ -120,6 +214,8 @@ const UserPermissions = ({ setModuleName }) => {
                 module: module.name || module.slug,
                 tab: module.slug,
                 availablePermissions,
+                assignablePermissions: effectiveAssignablePermissions,
+                canAssign: canAssignPermissions && effectiveAssignablePermissions.includes('view'),
                 permissions: selectedPermissions,
             };
         }));
@@ -127,9 +223,12 @@ const UserPermissions = ({ setModuleName }) => {
         id,
         sellerPanel,
         selector?.getAdminUserDetailsData,
-        selector?.getAllModulePermissionData,
+        modulePayload,
         sellerSelector?.listSubAdminsData,
         setModuleName,
+        actorPermissionMap,
+        hasActorPermissionCeiling,
+        canAssignPermissions,
     ]);
 
     const assignedModules = (items) => items
@@ -140,17 +239,19 @@ const UserPermissions = ({ setModuleName }) => {
         .filter((item) => item.permissions.length && !item.permissions.includes('none'))
         .map((item) => ({
             module: item.id,
-            actions: item.permissions.filter((permission) => permission !== 'none'),
+            actions: normalizeActionsForBackend(item.permissions.filter((permission) => permission !== 'none')),
         }));
 
     const handlePermissionChange = useCallback((permissionId, newPermissions) => {
         const previous = permissions;
         const next = permissions.map((item) => {
             if (item.id !== permissionId) return item;
+            if (!item.canAssign) return item;
+            const allowedForAssigner = new Set(item.assignablePermissions || []);
             const selected = newPermissions.includes('none') || !newPermissions.length
                 ? ['none']
                 : Array.from(new Set(['view', ...newPermissions])).filter((permission) =>
-                    item.availablePermissions.includes(permission)
+                    item.availablePermissions.includes(permission) && allowedForAssigner.has(permission)
                 );
             return { ...item, permissions: selected };
         });
@@ -159,6 +260,10 @@ const UserPermissions = ({ setModuleName }) => {
 
         if (!allowedModules.length) {
             toast.error('At least one module is required for this user.');
+            return;
+        }
+        if (!canAssignPermissions) {
+            toast.error('You do not have permission to assign module permissions.');
             return;
         }
 
@@ -177,7 +282,7 @@ const UserPermissions = ({ setModuleName }) => {
                 toast.error(error || 'Failed to update permissions');
                 setPermissions(previous);
             });
-    }, [permissions, dispatch, id, sellerPanel]);
+    }, [permissions, dispatch, id, sellerPanel, canAssignPermissions]);
 
     const filteredPermissions = useMemo(() => {
         return permissions.filter(permission =>
@@ -196,7 +301,8 @@ const UserPermissions = ({ setModuleName }) => {
                 key={`perm-${permission.id}`}
                 module={permission.module}
                 selected={permission.permissions}
-                availablePermissions={permission.availablePermissions}
+                availablePermissions={permission.canAssign ? permission.assignablePermissions : permission.availablePermissions}
+                disabled={!permission.canAssign}
                 onChange={(value) => handlePermissionChange(permission.id, value)}
             />,
         ]);

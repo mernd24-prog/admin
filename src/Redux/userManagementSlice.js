@@ -23,6 +23,7 @@ const initialState = {
     updateData: {},
     getAdminUserDetailsData: {},
     getAllModulePermissionData: {},
+    getMyModulePermissionData: {},
     updateModulePermissionData: {},
     getAllModulePermissionForUserData: {},
     getSellerListData: {},
@@ -88,6 +89,27 @@ export const getAdminUserDetails = createApiThunkPrivate(
 
 export const getAllModulePermission = createApiThunkPrivate(
     'getAllModulePermission',
+    ENDPOINTS.adminAccess.modules,
+    'GET',
+    true,
+    {
+        transformParams: (params = {}) => {
+            const result = {
+                includePermissions: params.includePermissions !== false,
+                ...(params.roleId ? { roleId: params.roleId } : {}),
+                ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
+                ...(params._id ? { userId: params._id } : {}),
+                ...(params.userId ? { userId: params.userId } : {}),
+                ...(params.role ? { role: params.role } : {}),
+            };
+
+            return result;
+        },
+    }
+);
+
+export const getMyModulePermission = createApiThunkPrivate(
+    'getMyModulePermission',
     ENDPOINTS.adminAccess.modules,
     'GET',
     true,
@@ -246,6 +268,7 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, update, 'updateData')
         createExtraReducersForThunk(builder, getAdminUserDetails, 'getAdminUserDetailsData')
         createExtraReducersForThunk(builder, getAllModulePermission, 'getAllModulePermissionData')
+        createExtraReducersForThunk(builder, getMyModulePermission, 'getMyModulePermissionData')
         createExtraReducersForThunk(builder, updateModulePermission, 'updateModulePermissionData')
         createExtraReducersForThunk(builder, getSellerList, 'getSellerListData')
         createExtraReducersForThunk(builder, enableDisableSeller, 'enableDisableSellerData')

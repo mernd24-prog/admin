@@ -38,7 +38,7 @@ const toProfileUpdateBody = (payload = {}) => {
 
 export const adminLogin = createAsyncThunk("user/login", async (credentials, { rejectWithValue }) => {
   try {
-    const response = await apiRequest('POST', '/auth/login', credentials);
+    const response = await apiRequest('POST', ENDPOINTS.auth.login, credentials);
 
     if (!response.data || !response.data.token) {
       throw new Error(response.message || 'Invalid credentials');
@@ -54,13 +54,13 @@ export const forgotPassword = createAsyncThunk("admin/forgotPassword", async (fi
   return response;
 });
 
-
-
-//updatePassword
-export const updatePasswordAdmin = createAsyncThunk("admin/updatePasswordAdmin", async (filters) => {
-  const response = await apiRequest('POST', '/v1/admin/updatePasswordAdmin', filters);
-  return response;
-});
+export const updatePasswordAdmin = createAsyncThunk(
+  "admin/updatePasswordAdmin",
+  async (_filters, { rejectWithValue }) =>
+    rejectWithValue(
+      "Admin password reset for another user is not available in the backend. Use the forgot/reset password flow.",
+    ),
+);
 
 
 

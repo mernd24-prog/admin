@@ -1,7 +1,7 @@
 import React from 'react'
 import selectJson from '../../../_helpers/SelectJson.json'
 
-const PermissionsSelector = ({ module, selected, availablePermissions = [], onChange }) => {
+const PermissionsSelector = ({ module, selected, availablePermissions = [], onChange, disabled = false }) => {
     const available = new Set(['none', ...availablePermissions]);
     
     const handlePermissionChange = (optionValue) => {
@@ -48,7 +48,11 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
                                 id={`${module}-${option.value}`}
                                 className="peer hidden"
                                 checked={isSelected}
-                                onChange={() => handlePermissionChange(option.value)}
+                                onChange={() => {
+                                    if (disabled) return;
+                                    handlePermissionChange(option.value);
+                                }}
+                                disabled={disabled}
                             />
                             <span
                                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center
@@ -57,7 +61,7 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
                             >
                                 {isSelected && <span className="w-2 h-2 bg-[#7256F8] rounded-full" />}
                             </span>
-                            <span className="text-sm font-light">{option.label}</span>
+                            <span className={`text-sm font-light ${disabled ? "text-gray-400" : ""}`}>{option.label}</span>
                         </label>
                     );
                 })}

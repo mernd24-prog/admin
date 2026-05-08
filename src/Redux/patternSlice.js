@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
+import { createExtraReducersForThunk } from '../_helpers/ApiThunk';
+import { unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getListData: {}, softDeleteData: {}, enableDisableData: {}, createData: {}, updateData: {},
@@ -9,24 +10,27 @@ const initialState = {
 }
 
 /// pattern functions------------------>>>>>>>>>>>>>>>>>>>>>>>
-export const getList = createApiThunkPrivate('getList', '/pattern/getList', 'GET')
-export const softDelete = createApiThunkPrivate('softDelete', '/pattern/softDelete', 'DELETE')
-export const enableDisable = createApiThunkPrivate('enableDisable', '/pattern/enableDisable', 'PUT')
-export const create = createApiThunkPrivate('create', '/pattern/create')
-export const update = createApiThunkPrivate('update', '/pattern/update', 'PUT')
+const PATTERN_UNSUPPORTED_MESSAGE =
+  'Pattern, color, and legacy privacy-policy APIs are not exposed by the current backend.';
+
+export const getList = unsupportedThunk('pattern/getList', PATTERN_UNSUPPORTED_MESSAGE);
+export const softDelete = unsupportedThunk('pattern/softDelete', PATTERN_UNSUPPORTED_MESSAGE);
+export const enableDisable = unsupportedThunk('pattern/enableDisable', PATTERN_UNSUPPORTED_MESSAGE);
+export const create = unsupportedThunk('pattern/create', PATTERN_UNSUPPORTED_MESSAGE);
+export const update = unsupportedThunk('pattern/update', PATTERN_UNSUPPORTED_MESSAGE);
 
 /// color functions---------------------->>>>>>>>>>>>>>>>>>>>>
-export const getColorList = createApiThunkPrivate('getColorList', '/color/getList', 'GET')
-export const createColor = createApiThunkPrivate('createColor', '/color/create', 'POST')
-export const updateColor = createApiThunkPrivate('updateColor', '/color/update', 'PUT')
-export const enableDisableColor = createApiThunkPrivate('enableDisableColor', '/color/enableDisable', 'PUT')
-export const softDeleteColor = createApiThunkPrivate('softDeleteColor', '/color/softDelete', 'DELETE')
+export const getColorList = unsupportedThunk('color/getList', PATTERN_UNSUPPORTED_MESSAGE);
+export const createColor = unsupportedThunk('color/create', PATTERN_UNSUPPORTED_MESSAGE);
+export const updateColor = unsupportedThunk('color/update', PATTERN_UNSUPPORTED_MESSAGE);
+export const enableDisableColor = unsupportedThunk('color/enableDisable', PATTERN_UNSUPPORTED_MESSAGE);
+export const softDeleteColor = unsupportedThunk('color/softDelete', PATTERN_UNSUPPORTED_MESSAGE);
 
-export const getPrivacyPolicyList = createApiThunkPrivate('getPrivacyPolicyList', '/replace-policy/getList', 'GET')
-export const createPrivacyPolicy = createApiThunkPrivate('createPrivacyPolicy', '/replace-policy/create', 'POST')
-export const editPrivacyPolicy = createApiThunkPrivate('editPrivacyPolicy', '/replace-policy/update', 'PUT')
-export const enableDisablePrivacyPolicy = createApiThunkPrivate('enableDisablePrivacyPolicy', '/replace-policy/enableDisable', 'PUT')
-export const softDeletePrivacyPolicy = createApiThunkPrivate('softDeletePrivacyPolicy', '/replace-policy/softDelete', 'DELETE')
+export const getPrivacyPolicyList = unsupportedThunk('replace-policy/getList', PATTERN_UNSUPPORTED_MESSAGE);
+export const createPrivacyPolicy = unsupportedThunk('replace-policy/create', PATTERN_UNSUPPORTED_MESSAGE);
+export const editPrivacyPolicy = unsupportedThunk('replace-policy/update', PATTERN_UNSUPPORTED_MESSAGE);
+export const enableDisablePrivacyPolicy = unsupportedThunk('replace-policy/enableDisable', PATTERN_UNSUPPORTED_MESSAGE);
+export const softDeletePrivacyPolicy = unsupportedThunk('replace-policy/softDelete', PATTERN_UNSUPPORTED_MESSAGE);
 
 
 

@@ -20,7 +20,7 @@ import {
 const PAGE_SIZE = 10;
 
 const emptyForm = {
-  _id: '',
+  recordSlug: '',
   slug: '',
   title: '',
   pageType: 'content',
@@ -35,6 +35,8 @@ const slugify = (value = '') =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'content-page';
+
+const pageSlug = (page = {}) => page?.slug || page?.id || page?._id || '';
 
 const ContentPages = () => {
   const dispatch = useDispatch();
@@ -68,7 +70,7 @@ const ContentPages = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
-      ...(name === 'title' && !prev._id && !prev.slug ? { slug: slugify(value) } : {}),
+      ...(name === 'title' && !prev.recordSlug && !prev.slug ? { slug: slugify(value) } : {}),
     }));
     setErrors(prev => ({ ...prev, [name]: undefined }));
   };
@@ -103,8 +105,8 @@ const ContentPages = () => {
     };
 
     try {
-      if (formData._id) {
-        await dispatch(updateContentPage({ ...body, id: formData._id })).unwrap();
+      if (formData.recordSlug) {
+        await dispatch(updateContentPage({ ...body, slug: formData.recordSlug })).unwrap();
         toast.success('Content page updated successfully');
       } else {
         await dispatch(createContentPage(body)).unwrap();
@@ -119,8 +121,8 @@ const ContentPages = () => {
 
   const openEdit = (page) => {
     setFormData({
-      _id: page._id,
-      slug: page.slug || '',
+      recordSlug: pageSlug(page),
+      slug: page.slug || pageSlug(page),
       title: page.title || '',
       pageType: page.pageType || 'content',
       language: page.language || 'en',
@@ -131,9 +133,10 @@ const ContentPages = () => {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget?._id) return;
+    const slug = pageSlug(deleteTarget);
+    if (!slug) return;
     try {
-      await dispatch(deleteContentPage({ id: deleteTarget._id })).unwrap();
+      await dispatch(deleteContentPage({ slug })).unwrap();
       toast.success('Content page deleted successfully');
       setDeleteTarget(null);
       setIsRefresh(value => !value);
@@ -145,7 +148,7 @@ const ContentPages = () => {
   const togglePublished = async (page) => {
     try {
       await dispatch(updateContentPage({
-        id: page._id,
+        slug: pageSlug(page),
         published: !page.published,
       })).unwrap();
       toast.success('Status updated successfully');

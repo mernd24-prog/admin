@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { useSelector } from 'react-redux';
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
+import { SUPPORTED_ADMIN_ROUTES } from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
@@ -256,6 +257,9 @@ const Collections = React.lazy(() =>
 const ProductVariants = React.lazy(() =>
   import("../../pages/ProductManagement/ProductVariants/ProductVariants")
 );
+const ProductFamilies = React.lazy(() =>
+  import("../../pages/ProductManagement/ProductFamilies/ProductFamilies")
+);
 const ProductDimensions = React.lazy(() =>
   import("../../pages/ProductManagement/ProductDimensions/ProductDimensions")
 );
@@ -285,13 +289,25 @@ const MedPharama = UnavailableRoute;
 function Layout() {
   const [navbarOpen, setNavbarOpen] = useState(false);
   const [moduleName, setModuleName] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      return Boolean(JSON.parse(sessionStorage.getItem("sidebarPermanentState") || "false"));
+    } catch {
+      return false;
+    }
+  });
   const [isRefreshConfig, setIsRefreshConfig] = useState(false);
   const socket = socketConnection();
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
-  const permissions = selector?.getAllModulePermissionData?.data?.data;
-  const [hasPermanentOpen, setHasPermanentOpen] = useState(false);
+  const permissions = selector?.getMyModulePermissionData?.data?.data;
+  const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
+    try {
+      return Boolean(JSON.parse(sessionStorage.getItem("sidebarPermanentState") || "false"));
+    } catch {
+      return false;
+    }
+  });
 
   const modulePermissions = useMemo(() => {
     const permMap = {};
@@ -352,6 +368,14 @@ function Layout() {
     ) : (
       <PermissionNotAllowed loading={isPermissionShow} />
     );
+  };
+
+  const renderSupportedRoute = (path, element) => {
+    const normalizedPath = String(path || "").replace(/^\/+/, "");
+    if (!SUPPORTED_ADMIN_ROUTES.has(normalizedPath)) {
+      return <PermissionNotAllowed loading={isPermissionShow} />;
+    }
+    return renderRoute(path, element);
   };
 
   return (
@@ -547,16 +571,23 @@ function Layout() {
               <Route path="/tax-category-rules" element={renderRoute('/tax-category-rules', <TaxRules />)} />
               <Route path="/collections" element={renderRoute('/collections', <Collections />)} />
               <Route path="/product-variants" element={renderRoute('/product-variants', <ProductVariants />)} />
+              <Route path="/product-families" element={renderRoute('/product-families', <ProductFamilies />)} />
               <Route path='/product-dimensions' element={renderRoute('/product-dimensions', <ProductDimensions />)} />
               <Route path="/pattern" element={renderRoute('/pattern', <Pattern />)} />
               <Route path='/finish' element={renderRoute('/finish', <FinishProducts />)} />
               <Route path='/colors' element={renderRoute('/colors', <ColorManagement />)} />
               <Route path='/privacy-policy' element={renderRoute('/privacy-policy', <PrivacyPolicy />)} />
-              <Route path='/user-permissions/:id' element={<UserPermissions setModuleName={setModuleName} />} />
+              <Route
+                path='/user-permissions/:id'
+                element={renderSupportedRoute('/user-permissions', <UserPermissions setModuleName={setModuleName} />)}
+              />
               <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
               <Route path='/seller' element={renderRoute('/seller', <Sellers />)} />
               <Route path='/batch' element={renderRoute('/seller', <Batch />)} />
-              <Route path='/product-option-value/:id' element={<ProductOptionValue setModuleName={setModuleName} />} />
+              <Route
+                path='/product-option-value/:id'
+                element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
+              />
               {/* <Route path="/interests" element={renderRoute('/interests', <InterestManagement />)} /> */}
               {/* <Route path="/preferences" element={renderRoute('/preferences', <Preferences />)} /> */}
               <Route path="/badges" element={renderRoute('/badge', <Badge />)} />
@@ -564,23 +595,50 @@ function Layout() {
               <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
               <Route path='/faqs' element={renderRoute('/faqs', <FAQ />)} />
               <Route path="/faqsList/:id" element={renderRoute('/faqs', <FAQList />)} />
-              <Route path='/product-option-value/:id' element={<ProductOptionValue setModuleName={setModuleName} />} />
+              <Route
+                path='/product-option-value/:id'
+                element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
+              />
               <Route path='/return-policy' element={renderRoute('/return-policy', <ReturnPolicy />)} />
-              <Route path='/return-policy-list/:id' element={<ReturnPolicyList setModuleName={setModuleName} />} />
+              <Route
+                path='/return-policy-list/:id'
+                element={renderSupportedRoute('/return-policy', <ReturnPolicyList setModuleName={setModuleName} />)}
+              />
               <Route path='/holidays' element={renderRoute('/holidays', <Holidays />)} />
-              <Route path='/holidays-list/:id' element={<HolidaysList setModuleName={setModuleName} />} />
+              <Route
+                path='/holidays-list/:id'
+                element={renderSupportedRoute('/holidays', <HolidaysList setModuleName={setModuleName} />)}
+              />
               <Route path='/payment-policy' element={renderRoute('/payment-policy', <PaymentPolicy />)} />
-              <Route path='/payment-policy-list/:id' element={<PaymentPolicyList setModuleName={setModuleName} />} />
+              <Route
+                path='/payment-policy-list/:id'
+                element={renderSupportedRoute('/payment-policy', <PaymentPolicyList setModuleName={setModuleName} />)}
+              />
               <Route path='/privacy-policies' element={renderRoute('/privacy-policies', <PrivacyPolicyCategory />)} />
-              <Route path='/privacy-policies-list/:id' element={<PrivacyPolicyList setModuleName={setModuleName} />} />
+              <Route
+                path='/privacy-policies-list/:id'
+                element={renderSupportedRoute('/privacy-policies', <PrivacyPolicyList setModuleName={setModuleName} />)}
+              />
               <Route path="/tax" element={renderRoute('/tax', <Tax />)} />
-              <Route path='/subTax/:id' element={<SubTax setModuleName={setModuleName} />} />
-              <Route path='/tax-rule' element={<TaxRule setModuleName={setModuleName} />} />
+              <Route
+                path='/subTax/:id'
+                element={renderSupportedRoute('/subTax', <SubTax setModuleName={setModuleName} />)}
+              />
+              <Route
+                path='/tax-rule'
+                element={renderSupportedRoute('/tax-rule', <TaxRule setModuleName={setModuleName} />)}
+              />
               <Route path="/shipping-duration" element={renderRoute('/shipping-duration', <ShippingDurations />)} />
               <Route path="/discount-coupons" element={renderRoute('/discount-coupons', <DiscountCoupons />)} />
               <Route path="/terms-and-conditions" element={renderRoute('/terms-and-conditions', <TermsConditions />)} />
-              <Route path='/terms-and-conditions/:id' element={<TermsConditionsList setModuleName={setModuleName} />} />
-              <Route path='/help-and-support/:id' element={<HelpSupportList setModuleName={setModuleName} />} />
+              <Route
+                path='/terms-and-conditions/:id'
+                element={renderSupportedRoute('/terms-and-conditions', <TermsConditionsList setModuleName={setModuleName} />)}
+              />
+              <Route
+                path='/help-and-support/:id'
+                element={renderSupportedRoute('/help-and-support', <HelpSupportList setModuleName={setModuleName} />)}
+              />
 
               <Route path="/promotions-banners" element={renderRoute('/promotions-banners', <PromotionsBanner />)} />
               <Route path="/bar-code" element={renderRoute('/barcode', <BarcodePage />)} />

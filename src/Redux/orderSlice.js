@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
+import { unsupportedThunk } from '../_helpers/adminApi';
 
 const firstOrderId = (payload = {}) =>
     payload.orderId || payload.order_id || payload._id || payload.id || payload.order_no;
@@ -31,7 +32,9 @@ const initialState = {
 
 }
 
-export const getReviewList = createApiThunkPrivate('getReviewList', '/review/getList', 'GET', true)
+const ORDER_LEGACY_UNSUPPORTED_MESSAGE =
+    'This legacy order-side API is not exposed by the current backend.';
+export const getReviewList = unsupportedThunk('getReviewList', ORDER_LEGACY_UNSUPPORTED_MESSAGE)
 
 export const getOrderList = createApiThunkPrivate('getOrderList', ENDPOINTS.orders.listForPanel, 'GET', true, {
     transformParams: toOrderListParams,
@@ -43,8 +46,8 @@ export const updateOrderStatus = createApiThunkPrivate('updateOrderStatus', (pay
 export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => ENDPOINTS.orders.cancel(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ reason: payload.reason || payload.cancelReason || "" }),
 })
-export const getDeliveryStaffForOrder = createApiThunkPrivate('getDeliveryStaffForOrder', '/deliveryStaff/get-delivery-staffs-for-order-delivery', 'GET', true)
-export const assignOrder = createApiThunkPrivate('assignOrder', '/staffOrderAssignment/assignOrder', 'POST',)
+export const getDeliveryStaffForOrder = unsupportedThunk('getDeliveryStaffForOrder', ORDER_LEGACY_UNSUPPORTED_MESSAGE)
+export const assignOrder = unsupportedThunk('assignOrder', ORDER_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 

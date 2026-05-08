@@ -1,22 +1,26 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
+import { createExtraReducersForThunk } from '../_helpers/ApiThunk';
+import { unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getListData: {}, createData: {}, editData: {}, enableDisableData: {}, softDeleteBadgeData: {},
     getQtyHeadListData: {}, createQtyHeadData: {}, editQtyHeadData: {}, enableDisableQtyHeadData: {}, softDeleteQtyHeadData: {}
 }
 
-export const getBadgeList = createApiThunkPrivate('getBadgeList', '/badge/getList', 'GET')
-export const createBadge = createApiThunkPrivate('createBadge', '/badge/create', 'POST')
-export const editBadge = createApiThunkPrivate('editBadge', '/badge/update', 'PUT')
-export const enableDisableBadge = createApiThunkPrivate('enableDisableBadge', '/badge/enableDisable', 'PUT')
-export const softDeleteBadge = createApiThunkPrivate('softDeleteBadge', '/badge/softDelete', 'DELETE')
+const BADGE_UNSUPPORTED_MESSAGE =
+  'Badge and quantity-head APIs are not exposed by the current backend.';
 
-export const getQtyHeadList = createApiThunkPrivate('getQtyHeadList', '/qtyHead/getList', 'GET')
-export const createQtyHead = createApiThunkPrivate('createQtyHead', '/qtyHead/create', 'POST')
-export const editQtyHead = createApiThunkPrivate('editQtyHead', '/qtyHead/update', 'PUT')
-export const enableDisableQtyHead = createApiThunkPrivate('enableDisableQtyHead', '/qtyHead/enableDisable', 'PUT')
-export const softDeleteQtyHead = createApiThunkPrivate('softDeleteQtyHead', '/qtyHead/softDelete', 'DELETE')
+export const getBadgeList = unsupportedThunk('getBadgeList', BADGE_UNSUPPORTED_MESSAGE);
+export const createBadge = unsupportedThunk('createBadge', BADGE_UNSUPPORTED_MESSAGE);
+export const editBadge = unsupportedThunk('editBadge', BADGE_UNSUPPORTED_MESSAGE);
+export const enableDisableBadge = unsupportedThunk('enableDisableBadge', BADGE_UNSUPPORTED_MESSAGE);
+export const softDeleteBadge = unsupportedThunk('softDeleteBadge', BADGE_UNSUPPORTED_MESSAGE);
+
+export const getQtyHeadList = unsupportedThunk('getQtyHeadList', BADGE_UNSUPPORTED_MESSAGE);
+export const createQtyHead = unsupportedThunk('createQtyHead', BADGE_UNSUPPORTED_MESSAGE);
+export const editQtyHead = unsupportedThunk('editQtyHead', BADGE_UNSUPPORTED_MESSAGE);
+export const enableDisableQtyHead = unsupportedThunk('enableDisableQtyHead', BADGE_UNSUPPORTED_MESSAGE);
+export const softDeleteQtyHead = unsupportedThunk('softDeleteQtyHead', BADGE_UNSUPPORTED_MESSAGE);
 
 const badgeSlice = createSlice({
     name: 'badge',

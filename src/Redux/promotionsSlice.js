@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
+import { unsupportedThunk } from '../_helpers/adminApi';
 
 const initialState = {
     getDiscountCouponsData: {}, createData: {}, editData: {}, enableDisableData: {}, softDeleteDiscountCouponsData: {},
@@ -13,11 +14,13 @@ export const editDiscountCoupons = createApiThunkPrivate('editDiscountCoupons', 
 export const enableDisableDiscountCoupons = createApiThunkPrivate('enableDisable', (payload) => ENDPOINTS.coupons.detail(payload?.couponId || payload?._id || payload?.id), 'PATCH')
 export const softDeleteDiscountCoupons = createApiThunkPrivate('softDeleteDiscountCoupons', (payload) => ENDPOINTS.coupons.detail(payload?.couponId || payload?._id || payload?.id), 'DELETE')
 
-export const getPromotionBannersList = createApiThunkPrivate('getPromotionBannersList', '/promotions-banner/getList', 'GET')
-export const createPromotionBanners = createApiThunkPrivate('createPromotionBanners', '/promotions-banner/create', 'POST')
-export const editPromotionBanner = createApiThunkPrivate('editPromotionBanner', '/promotions-banner/update', 'PUT')
-export const enableDisablePromotionBanner = createApiThunkPrivate('enableDisablePromotionBanner', '/promotions-banner/enableDisable', 'PUT')
-export const softDeletePromotionBanner = createApiThunkPrivate('softDeletePromotionBanner', '/promotions-banner/softDelete', 'DELETE')
+const BANNER_UNSUPPORTED_MESSAGE =
+    'Promotion banner API is not exposed by the current backend.';
+export const getPromotionBannersList = unsupportedThunk('getPromotionBannersList', BANNER_UNSUPPORTED_MESSAGE)
+export const createPromotionBanners = unsupportedThunk('createPromotionBanners', BANNER_UNSUPPORTED_MESSAGE)
+export const editPromotionBanner = unsupportedThunk('editPromotionBanner', BANNER_UNSUPPORTED_MESSAGE)
+export const enableDisablePromotionBanner = unsupportedThunk('enableDisablePromotionBanner', BANNER_UNSUPPORTED_MESSAGE)
+export const softDeletePromotionBanner = unsupportedThunk('softDeletePromotionBanner', BANNER_UNSUPPORTED_MESSAGE)
 
 const promotionsSlice = createSlice({
     name: 'promotions',

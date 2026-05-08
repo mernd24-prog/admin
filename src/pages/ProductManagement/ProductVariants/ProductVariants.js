@@ -23,8 +23,10 @@ import {
 
 const PAGE_SIZE = 10;
 
+const variantIdFromRecord = (variant = {}) => variant?.id || variant?._id || variant?.variantId || '';
+
 const emptyForm = {
-  _id: '',
+  variantId: '',
   familyCode: '',
   productId: '',
   sellerId: '',
@@ -118,8 +120,8 @@ const ProductVariants = () => {
     if (!validateForm()) return;
 
     try {
-      if (formData._id) {
-        await dispatch(updateProductVariant({ ...toPayload(), id: formData._id })).unwrap();
+      if (formData.variantId) {
+        await dispatch(updateProductVariant({ ...toPayload(), variantId: formData.variantId })).unwrap();
         toast.success('Product variant updated successfully');
       } else {
         await dispatch(createProductVariant(toPayload())).unwrap();
@@ -134,7 +136,7 @@ const ProductVariants = () => {
 
   const openEdit = (variant) => {
     setFormData({
-      _id: variant._id,
+      variantId: variantIdFromRecord(variant),
       familyCode: variant.familyCode || '',
       productId: variant.productId || '',
       sellerId: variant.sellerId || '',
@@ -148,9 +150,10 @@ const ProductVariants = () => {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget?._id) return;
+    const variantId = variantIdFromRecord(deleteTarget);
+    if (!variantId) return;
     try {
-      await dispatch(deleteProductVariant({ id: deleteTarget._id })).unwrap();
+      await dispatch(deleteProductVariant({ variantId })).unwrap();
       toast.success('Product variant deleted successfully');
       setDeleteTarget(null);
       setSelectedRow([]);
@@ -161,10 +164,11 @@ const ProductVariants = () => {
   };
 
   const handleToggle = async () => {
-    if (!toggleTarget?._id) return;
+    const variantId = variantIdFromRecord(toggleTarget);
+    if (!variantId) return;
     try {
       await dispatch(updateProductVariant({
-        id: toggleTarget._id,
+        variantId,
         status: toggleTarget.status === 'active' ? 'inactive' : 'active',
       })).unwrap();
       toast.success('Status updated successfully');
@@ -183,7 +187,7 @@ const ProductVariants = () => {
     const status = action === 'Active' ? 'active' : action === 'Inactive' ? 'inactive' : null;
     if (!status) return;
     try {
-      await Promise.all(selectedRow.map(id => dispatch(updateProductVariant({ id, status })).unwrap()));
+      await Promise.all(selectedRow.map(variantId => dispatch(updateProductVariant({ variantId, status })).unwrap()));
       toast.success('Bulk status updated successfully');
       setSelectedRow([]);
       setIsRefresh(value => !value);
@@ -194,12 +198,12 @@ const ProductVariants = () => {
 
   const tableRows = variants.map((variant) => [
     <CustomCheckbox
-      key={`check-${variant._id}`}
-      checked={selectedRow.includes(variant._id)}
+            key={`check-${variantIdFromRecord(variant)}`}
+      checked={selectedRow.includes(variantIdFromRecord(variant))}
       onChange={(event) => {
         setSelectedRow(prev => event.target.checked
-          ? [...prev, variant._id]
-          : prev.filter(id => id !== variant._id));
+          ? [...prev, variantIdFromRecord(variant)]
+          : prev.filter(id => id !== variantIdFromRecord(variant)));
       }}
     />,
     <span className="font-mono text-sm">{variant.sku}</span>,
@@ -265,7 +269,7 @@ const ProductVariants = () => {
               onPageChange={setPageNo}
               isHeaderCheckbox={true}
               handleHeaderCheckboxChange={(event) => {
-                setSelectedRow(event.target.checked ? variants.map(item => item._id) : []);
+                setSelectedRow(event.target.checked ? variants.map(item => variantIdFromRecord(item)) : []);
               }}
               allRowsSelected={isAllRowsSelected}
             />
@@ -287,9 +291,9 @@ const ProductVariants = () => {
         onClose={closeModal}
         onSubmit={handleSubmit}
         isButtonView={true}
-        submitButtonText={formData._id ? 'Update' : 'Submit'}
+        submitButtonText={formData.variantId ? 'Update' : 'Submit'}
         closeButtonText="Cancel"
-        title={formData._id ? 'Edit Product Variant' : 'Add Product Variant'}
+        title={formData.variantId ? 'Edit Product Variant' : 'Add Product Variant'}
       >
         <div className='p-4 grid grid-cols-1 md:grid-cols-2 gap-4'>
           <FormInput label="Family Code" name="familyCode" value={formData.familyCode} onChange={handleInputChange} error={errors.familyCode} required />

@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
 import Loader from '../../../components/Loader/Loader';
-import { getAdminUserDetails } from '../../../Redux/userManagementSlice';
+import FormInput from '../../../components/Atoms/FormInput/FormInput';
+import { getAdminUserDetails, reviewSellerKyc, updateSeller } from '../../../Redux/userManagementSlice';
+import { toast } from 'sonner';
 
 const Row = ({ label, value }) => (
   <div className="border-b border-gray-100 py-3">
@@ -27,10 +29,69 @@ const UserDetails = () => {
   const profile = user.profile || {};
   const sellerProfile = user.sellerProfile || {};
   const onboarding = user.onboarding || {};
+  const [editSeller, setEditSeller] = useState({
+    displayName: '',
+    legalBusinessName: '',
+    supportEmail: '',
+    supportPhone: '',
+    businessType: '',
+  });
 
   useEffect(() => {
     if (id) dispatch(getAdminUserDetails({ _id: id }));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    setEditSeller({
+      displayName: sellerProfile.displayName || '',
+      legalBusinessName: sellerProfile.legalBusinessName || '',
+      supportEmail: sellerProfile.supportEmail || user.email || '',
+      supportPhone: sellerProfile.supportPhone || user.phone || '',
+      businessType: sellerProfile.businessType || '',
+    });
+  }, [sellerProfile.displayName, sellerProfile.legalBusinessName, sellerProfile.supportEmail, sellerProfile.supportPhone, sellerProfile.businessType, user.email, user.phone]);
+
+  const refresh = () => dispatch(getAdminUserDetails({ _id: id }));
+
+  const handleKycDecision = async (verificationStatus) => {
+    try {
+      const payload = { sellerId: id, verificationStatus };
+      if (verificationStatus === 'rejected') {
+        payload.rejectionReason = 'Rejected by admin review';
+      }
+      const res = await dispatch(reviewSellerKyc(payload)).unwrap();
+      toast.success(res?.message || 'KYC updated');
+      refresh();
+    } catch (error) {
+      toast.error(error?.message || error || 'Failed to update KYC');
+    }
+  };
+
+  const handleGoLive = async () => {
+    try {
+      const res = await dispatch(updateSeller({ _id: id, accountStatus: 'active' })).unwrap();
+      toast.success(res?.message || 'Seller marked active');
+      refresh();
+    } catch (error) {
+      toast.error(error?.details?.onboardingStatus
+        ? `Not ready for go-live (${error.details.onboardingStatus})`
+        : (error?.message || error || 'Failed to activate seller'));
+    }
+  };
+
+  const handleSaveSellerProfile = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await dispatch(updateSeller({
+        _id: id,
+        sellerProfile: { ...editSeller },
+      })).unwrap();
+      toast.success(res?.message || 'Seller details updated');
+      refresh();
+    } catch (error) {
+      toast.error(error?.message || error || 'Failed to update seller details');
+    }
+  };
 
   return (
     <>
@@ -61,6 +122,11 @@ const UserDetails = () => {
           {user.role === 'seller' && (
             <section className="bg-white border border-[#E6E6E6] rounded-lg p-5 lg:col-span-3">
               <h2 className="text-lg font-semibold mb-3">Seller</h2>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button className="px-3 py-1 text-xs rounded bg-green-50 text-green-700" onClick={() => handleKycDecision('verified')}>Approve KYC</button>
+                <button className="px-3 py-1 text-xs rounded bg-red-50 text-red-700" onClick={() => handleKycDecision('rejected')}>Reject KYC</button>
+                <button className="px-3 py-1 text-xs rounded bg-blue-50 text-blue-700" onClick={handleGoLive}>Ready To Explore Panel</button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
                 <Row label="Display Name" value={sellerProfile.displayName} />
                 <Row label="Legal Business" value={sellerProfile.legalBusinessName} />
@@ -69,6 +135,16 @@ const UserDetails = () => {
                 <Row label="GST Number" value={sellerProfile.gstNumber} />
                 <Row label="PAN Number" value={sellerProfile.panNumber} />
               </div>
+              <form className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveSellerProfile}>
+                <FormInput label="Display Name" name="displayName" value={editSeller.displayName} onChange={(e) => setEditSeller((prev) => ({ ...prev, displayName: e.target.value }))} />
+                <FormInput label="Legal Business Name" name="legalBusinessName" value={editSeller.legalBusinessName} onChange={(e) => setEditSeller((prev) => ({ ...prev, legalBusinessName: e.target.value }))} />
+                <FormInput label="Support Email" name="supportEmail" value={editSeller.supportEmail} onChange={(e) => setEditSeller((prev) => ({ ...prev, supportEmail: e.target.value }))} />
+                <FormInput label="Support Phone" name="supportPhone" value={editSeller.supportPhone} onChange={(e) => setEditSeller((prev) => ({ ...prev, supportPhone: e.target.value }))} />
+                <FormInput label="Business Type" name="businessType" value={editSeller.businessType} onChange={(e) => setEditSeller((prev) => ({ ...prev, businessType: e.target.value }))} />
+                <div className="md:col-span-2 flex justify-end">
+                  <button type="submit" className="px-4 py-2 rounded bg-[#3E4094] text-white text-sm">Save Seller Details</button>
+                </div>
+              </form>
             </section>
           )}
         </div>
