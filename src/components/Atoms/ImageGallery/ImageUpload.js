@@ -133,7 +133,7 @@ const ImageUpload = ({
               </div>
               <div className="flex items-center text-xs text-gray-500">
                 <FaImage className="mr-1" />
-                <span>Supports: JPEG, PNG</span>
+                <span>Supports: JPEG, PNG, WEBP</span>
               </div>
             </div>
           </div>

@@ -19,7 +19,7 @@ const MultiImageUpload = ({
     const handleFiles = async (files) => {
         if (isDisabled || isUploading) return;
 
-        const allowedTypes = ["image/jpeg", "image/png"];
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
         const maxSize = 5 * 1024 * 1024; // 5MB
         const filesArray = Array.from(files);
 
@@ -34,7 +34,7 @@ const MultiImageUpload = ({
         const validFiles = [];
         for (const file of newFiles) {
             if (!allowedTypes.includes(file.type)) {
-                toast.error(`${file.name} is not a valid image. Only PNG and JPG are allowed.`);
+                toast.error(`${file.name} is not a valid image. Only PNG, JPG, and WEBP are allowed.`);
                 continue;
             }
             if (file.size > maxSize) {
@@ -179,7 +179,7 @@ const MultiImageUpload = ({
                             or <span className="text-blue-600 font-medium">click to browse</span>
                         </p>
                         <p className="text-xs text-gray-400">
-                            Supports JPG, PNG,  (Max {maxFiles} images)
+                            Supports JPG, PNG, WEBP (Max {maxFiles} images)
                         </p>
                     </div>
                 )}

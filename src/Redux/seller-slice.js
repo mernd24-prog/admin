@@ -233,6 +233,12 @@ const sellerSlice = createSlice({
         state.authMode = requiresOnboarding ? "onboarding" : "authenticated";
         localStorage.setItem(AUTH_MODE_KEY, state.authMode);
         localStorage.setItem(AUTH_FLOW_STATE_KEY, JSON.stringify(action.payload));
+        if (!requiresOnboarding) {
+          state.onboardingToken = null;
+          state.onboardingUser = null;
+          localStorage.removeItem(ONBOARDING_TOKEN_KEY);
+          localStorage.removeItem(ONBOARDING_USER_KEY);
+        }
       })
       .addCase(fetchAuthStatus.rejected, (state, action) => {
         state.loading = false;

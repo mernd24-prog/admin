@@ -8,12 +8,27 @@ const normalizeMode = (value) =>
     .trim()
     .toLowerCase();
 
+const detectModeFromRuntime = () => {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const host = normalizeMode(window.location.hostname);
+  const path = normalizeMode(window.location.pathname);
+  if (host.includes("seller") || path.startsWith("/seller")) {
+    return PANEL_MODES.SELLER;
+  }
+
+  return "";
+};
+
 const configuredMode =
   normalizeMode(process.env.REACT_APP_PANEL_MODE) ||
   normalizeMode(process.env.VITE_PANEL_MODE) ||
   normalizeMode(process.env.REACT_APP_APP_MODE) ||
   normalizeMode(process.env.VITE_APP_MODE) ||
-  PANEL_MODES.SELLER;
+  detectModeFromRuntime() ||
+  PANEL_MODES.ADMIN;
 
 export const getPanelMode = () =>
   configuredMode === PANEL_MODES.SELLER

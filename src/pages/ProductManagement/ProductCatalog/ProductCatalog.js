@@ -73,8 +73,9 @@ const ProductCatalog = () => {
         page: pageNo,
         size: size,
         keyWord: filters?.search,
-        searchFields: "name",
-        populate: 'product_catalogs_id:images|product_image_id:images',
+        ...(filters?.category?.value ? { category: filters.category.value } : {}),
+        ...(filters?.activationStatus?.value === "Active" ? { status: "active" } : {}),
+        ...(filters?.activationStatus?.value === "Inactive" ? { status: "inactive" } : {}),
       };
       const response = await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
@@ -83,7 +84,7 @@ const ProductCatalog = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, pageNo, size]);
+  }, [dispatch, pageNo, size, filters]);
 
   useEffect(() => {
     fetchProductsList();
@@ -107,8 +108,12 @@ const ProductCatalog = () => {
   const TABLE_HEADINGS = [
     "Image",
     "Product",
+    "SKU",
     "Seller",
     "Category",
+    "Brand",
+    "Color",
+    "Origin",
     "Price",
     "Stock",
     "Status",
@@ -293,8 +298,9 @@ const ProductCatalog = () => {
         page: 1,
         size: size,
         keyWord: filters?.search,
-        searchFields: "name",
-        populate: 'product_catalogs_id:images|product_image_id:images',
+        ...(filters?.category?.value ? { category: filters.category.value } : {}),
+        ...(filters?.activationStatus?.value === "Active" ? { status: "active" } : {}),
+        ...(filters?.activationStatus?.value === "Inactive" ? { status: "inactive" } : {}),
       };
       const response = await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
@@ -312,8 +318,6 @@ const ProductCatalog = () => {
         page: pageNo,
         size: size,
         keyWord: '',
-        searchFields: "name",
-        populate: 'product_catalogs_id:images|product_image_id:images',
       };
       const response = await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
@@ -370,8 +374,12 @@ const ProductCatalog = () => {
           </span>
         </div>,
         <span className='capitalize'>{product?.title || product?.name || 'N/A'}</span>,
+        <span>{product?.sku || 'N/A'}</span>,
         <span>{product?.sellerName || product?.sellerId || 'N/A'}</span>,
         <span>{product?.categoryName || product?.category || product?.categoryId || 'N/A'}</span>,
+        <span>{product?.brand || 'N/A'}</span>,
+        <span>{product?.color || 'N/A'}</span>,
+        <span>{[product?.origin?.city, product?.origin?.state, product?.origin?.country].filter(Boolean).join(', ') || 'N/A'}</span>,
         <span>{product?.price !== undefined ? `₹${product.price}` : 'N/A'}</span>,
         <span>{product?.stock ?? 'N/A'}</span>,
         <span className='capitalize'>{product?.status || 'draft'}</span>,

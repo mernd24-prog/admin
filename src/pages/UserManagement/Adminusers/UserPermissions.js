@@ -101,7 +101,7 @@ const UserPermissions = ({ setModuleName }) => {
     useEffect(() => {
         let isMounted = true;
         const role = normalizeRole(getStoredRole());
-        if (role === 'admin' || role === 'super-admin') {
+        if (role === 'admin' || role === 'super-admin' || role === 'seller') {
             setCanAssignPermissions(true);
             setActorPermissionMap({});
             return () => {
@@ -131,7 +131,10 @@ const UserPermissions = ({ setModuleName }) => {
                 const map = buildAssignedActionMap(modules);
                 setActorPermissionMap(map);
                 const rbacActions = map.rbac || map['admin-users'] || new Set();
-                const hasAssignmentAction = ASSIGNMENT_ACTIONS.some((action) => rbacActions.has(action));
+                const sellerAccessActions = map.sellers || new Set();
+                const hasAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
+                    rbacActions.has(action) || sellerAccessActions.has(action)
+                );
                 setCanAssignPermissions(hasAssignmentAction);
             })
             .catch(() => {

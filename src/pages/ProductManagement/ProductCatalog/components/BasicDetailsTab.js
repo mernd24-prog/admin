@@ -96,6 +96,8 @@ const INITIAL_FORM_HSN = {
   isDisable: true
 }
 
+const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
+
 export default function BasicDetailsTab({
   formData,
   handleChange,
@@ -318,6 +320,16 @@ export default function BasicDetailsTab({
         ...prev,
         [fieldName]: ""
       }));
+    }
+  };
+
+  const handleProductOriginSelect = (selectedOption, action) => {
+    handleSelectChange(selectedOption, action);
+    if (action === 'PRODUCT_COUNTRY' && selectedOption?.value) {
+      dispatch(getAllStateList({ countryId: selectedOption.value }));
+    }
+    if (action === 'PRODUCT_STATE' && selectedOption?.value) {
+      dispatch(getAllCityList({ stateId: selectedOption.value }));
     }
   };
 
@@ -618,7 +630,7 @@ export default function BasicDetailsTab({
 
         <div className="p-2 space-y-6 ">
           <div className="grid w-auto grid-cols-1 gap-4 md:grid-cols-2">
-            {userData?.role !== 'seller' && (
+            {!SELLER_PANEL_ROLES.has(userData?.role) && (
               <div>
                 <FilterSelect
                   label="Seller"
@@ -643,47 +655,14 @@ export default function BasicDetailsTab({
                 error={errors?.name}
               />
             </div>
-            {
-              userData?.roleId !== 9 && (
-                <div>
-                  <div className='flex justify-between items-center'>
-                    <label>Store</label>
-                    <button
-                      className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                      onClick={() => handleAction("Store")}
-                    >
-                      Add store
-                    </button>
-                  </div>
-                  <FilterSelect
-                    name="store_id"
-                    value={storeList.find(opt => opt.value === formData?.store_id)}
-                    onChange={(e) => handleSelectChange(e, 'STORE_ID')}
-                    options={storeList || []}
-                    error={errors?.store_id}
-                    placeholder="Store"
-                  />
-                </div>
-              )
-            }
-
             <div>
-              <div className='flex justify-between items-center'>
-                <label>Brand</label>
-                <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("BRAND")}
-                >
-                  Add Brand
-                </button>
-              </div>
-              <FilterSelect
-                name="brand_id"
-                value={formattedBrandList.find(opt => opt.value === formData.brand_id)}
-                onChange={(e) => handleSelectChange(e, 'BRAND_ID')}
-                options={formattedBrandList || []}
-                error={errors?.brand_id}
-                placeholder="Brand"
+              <Input
+                labelName="Brand"
+                name="brand"
+                value={formData.brand || ""}
+                onChange={handleChange}
+                placeholder="Enter brand name"
+                error={errors?.brand}
               />
             </div>
 
@@ -749,25 +728,6 @@ export default function BasicDetailsTab({
 
             <div>
               <div className='flex justify-between items-center'>
-                <label>Warranty</label>
-                <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("Warranty")}
-                >
-                  Add Warranty
-                </button>
-              </div>
-              <FilterSelect
-                name="warranty_id"
-                value={formattedWarrantyList.find(opt => opt.value === formData.warranty_id)}
-                onChange={(e) => handleSelectChange(e, 'STORE_WARRANTY_ID')}
-                options={formattedWarrantyList || []}
-                error={errors?.warranty_id}
-                placeholder="Warranty"
-              />
-            </div>
-            <div>
-              <div className='flex justify-between items-center'>
                 <label>Hsn Code</label>
                 <button
                   className='font-semibold text-xs text-blue-600 hover:text-blue-800'
@@ -796,6 +756,26 @@ export default function BasicDetailsTab({
               onChange={handleChange}
               placeholder="Enter SKU"
               error={errors?.sku}
+              textareaClasses='text-sm'
+            />
+            <Input
+              labelName="Color"
+              name="color"
+              type="text"
+              value={formData.color || ""}
+              onChange={handleChange}
+              placeholder="Enter color"
+              error={errors?.color}
+              textareaClasses='text-sm'
+            />
+            <Input
+              labelName="Product Family Code"
+              name="productFamilyCode"
+              type="text"
+              value={formData.productFamilyCode || ""}
+              onChange={handleChange}
+              placeholder="Optional family/group code"
+              error={errors?.productFamilyCode}
               textareaClasses='text-sm'
             />
             <Input
@@ -830,6 +810,100 @@ export default function BasicDetailsTab({
               placeholder="Enter stock"
               error={errors?.stock}
               textareaClasses='text-sm'
+            />
+            <FilterSelect
+              label="Origin Country"
+              value={modifiedCountry.find(opt => opt.label === formData.origin?.country || opt.value === formData.origin?.country) || null}
+              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_COUNTRY')}
+              options={modifiedCountry || []}
+              placeholder="Select country"
+            />
+            <FilterSelect
+              label="Origin State"
+              value={modifiedState.find(opt => opt.label === formData.origin?.state || opt.value === formData.origin?.state) || null}
+              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_STATE')}
+              options={modifiedState || []}
+              placeholder="Select state"
+            />
+            <FilterSelect
+              label="Origin City"
+              value={modifiedCity.find(opt => opt.label === formData.origin?.city || opt.value === formData.origin?.city) || null}
+              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_CITY')}
+              options={modifiedCity || []}
+              placeholder="Select city"
+            />
+            <Input
+              labelName="Length"
+              name="dimensions.length"
+              type="number"
+              value={formData.dimensions?.length || ""}
+              onChange={handleChange}
+              placeholder="Length"
+            />
+            <Input
+              labelName="Width"
+              name="dimensions.width"
+              type="number"
+              value={formData.dimensions?.width || ""}
+              onChange={handleChange}
+              placeholder="Width"
+            />
+            <Input
+              labelName="Height"
+              name="dimensions.height"
+              type="number"
+              value={formData.dimensions?.height || ""}
+              onChange={handleChange}
+              placeholder="Height"
+            />
+            <Input
+              labelName="Weight"
+              name="dimensions.weight"
+              type="number"
+              value={formData.dimensions?.weight || ""}
+              onChange={handleChange}
+              placeholder="Weight"
+            />
+            <Input
+              labelName="Warranty Period"
+              name="warranty.period"
+              type="number"
+              value={formData.warranty?.period || ""}
+              onChange={handleChange}
+              placeholder="Example: 12"
+            />
+            <FilterSelect
+              label="Warranty Unit"
+              value={[
+                { value: 'days', label: 'Days' },
+                { value: 'weeks', label: 'Weeks' },
+                { value: 'months', label: 'Months' },
+                { value: 'years', label: 'Years' },
+              ].find(opt => opt.value === formData.warranty?.periodUnit) || null}
+              onChange={(e) => handleChange({ target: { name: 'warranty.periodUnit', value: e?.value || '' } })}
+              options={[
+                { value: 'days', label: 'Days' },
+                { value: 'weeks', label: 'Weeks' },
+                { value: 'months', label: 'Months' },
+                { value: 'years', label: 'Years' },
+              ]}
+              placeholder="Select unit"
+            />
+            <Input
+              labelName="Warranty Provider"
+              name="warranty.provider"
+              type="text"
+              value={formData.warranty?.provider || ""}
+              onChange={handleChange}
+              placeholder="Provider"
+            />
+            <Input
+              labelName="Return Window Days"
+              name="warrantyReturnDays"
+              type="number"
+              value={formData.warrantyReturnDays || ""}
+              onChange={handleChange}
+              placeholder="Example: 7"
             />
           </div>
 

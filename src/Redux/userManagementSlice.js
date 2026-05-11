@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
 import {
+    DEFAULT_SELLER_MODULES,
     firstId,
     normalizeAllowedModules,
     patchMany,
@@ -14,6 +15,7 @@ import {
     toVendorStatusBody,
     unsupportedThunk,
 } from '../_helpers/adminApi';
+import { isSellerPanel } from '../_helpers/panelConfig';
 
 const initialState = {
     getListData: {},
@@ -71,7 +73,7 @@ export const create = createApiThunkPrivate(
     ENDPOINTS.adminAccess.subAdmins,
     'POST',
     false,
-    { transformBody: (payload = {}) => toSubAdminCreateBody(payload, ['admin']) }
+    { transformBody: (payload = {}) => toSubAdminCreateBody(payload, isSellerPanel() ? DEFAULT_SELLER_MODULES : ['admin']) }
 );
 
 export const update = createApiThunkPrivate(

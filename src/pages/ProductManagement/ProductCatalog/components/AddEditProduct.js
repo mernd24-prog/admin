@@ -6,7 +6,7 @@ import ProductSettingsPanel from './ProductSettingsPanel';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   createProducts, getAllBrandList, getAllStoreList, getAllStoreShippingDurationList, getAllTaxRulesList, getList,
-  updateProducts, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList, productOptionList,
+  updateProducts, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList,
   getAllHsn, getCategoryAttributes,
 } from '../../../../Redux/productSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
@@ -23,16 +23,10 @@ import { BsMenuApp } from 'react-icons/bs';
 import VariantsOptionsTab from './VariantsOptionsTab';
 import DynamicAttributesTab from './DynamicAttributesTab';
 
-const API_CALLS = [{ action: getAllBrandList, name: 'Brand List' },
+const API_CALLS = [
 { action: getList, name: 'Category List' },
-{ action: getAllStoreList, name: 'Store List' },
 { action: getAllCountryList, name: 'Country List' },
-{ action: getAllBatchList, name: 'Batch List' },
-{ action: getAllWarrantyList, name: 'Warranty List' },
-{ action: getAllQtyHeadList, name: 'Qty Head List' },
 { action: getAllHsn, name: 'Hsn code List' },
-{ action: productOptionList, name: 'Product Option List' },
-
 ];
 
 const API_CALL_OBJECT = {
@@ -46,6 +40,38 @@ const API_CALL_OBJECT = {
   "Hsn code list": { action: getAllHsn, name: "Hsn code List" },
 
 }
+
+const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
+
+const hasValue = (value) => value !== undefined && value !== null && value !== '';
+
+const toOptionalNumber = (value) => {
+  if (!hasValue(value)) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const compactObject = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map(compactObject)
+      .filter((item) => hasValue(item) && !(typeof item === 'object' && !Array.isArray(item) && Object.keys(item).length === 0));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.entries(value).reduce((acc, [key, item]) => {
+    const nextValue = compactObject(item);
+    if (!hasValue(nextValue)) return acc;
+    if (typeof nextValue === 'object' && !Array.isArray(nextValue) && Object.keys(nextValue).length === 0) {
+      return acc;
+    }
+    acc[key] = nextValue;
+    return acc;
+  }, {});
+};
 
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
@@ -84,6 +110,23 @@ export default function ProductManagementUI() {
     const taxAmount = (basePrice * totalTaxRate / 100);
     const priceWithTax = Number(basePrice) + Number(taxAmount);
     return priceWithTax;
+  };
+
+  const getListPayload = (sliceData) => {
+    const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
+    if (Array.isArray(data)) return data;
+    return data.list || data.items || [];
+  };
+
+  const toSelectId = (record = {}) => String(record._id || record.id || record.value || record.categoryKey || record.code || "");
+
+  const toCategoryOption = (category = {}, prefix = '') => {
+    const categoryName = category.name || category.title || category.categoryKey;
+    return {
+      value: toSelectId(category),
+      categoryKey: category.categoryKey || toSelectId(category),
+      label: prefix ? `${prefix} > ${categoryName}` : categoryName,
+    };
   };
 
   const refs = {
@@ -147,14 +190,11 @@ export default function ProductManagementUI() {
 
 
 
-          if (res?.data?.store_id) {
-            Promise.all([
-              dispatch(getAllStoreShippingDurationList({ query: JSON.stringify({ store_id: res?.data.store_id }) }))
-            ]);
-          }
-
-          if (res?.data?.hsn_code) {
-            const hsnCodeData = selector?.getAllHsnData?.data?.data?.list?.find(item => item?._id === res?.data?.hsn_code);
+          if (res?.data?.hsnCode || res?.data?.hsn_code) {
+            const hsnValue = res?.data?.hsnCode || res?.data?.hsn_code;
+            const hsnCodeData = getListPayload(selector?.getAllHsnData).find(item =>
+              item?.code === hsnValue || item?._id === hsnValue || item?.id === hsnValue
+            );
             if (hsnCodeData) {
               setTaxData(hsnCodeData);
             }
@@ -254,25 +294,24 @@ export default function ProductManagementUI() {
     batchList: transformArray(selector?.getAllBatchListData?.data?.data?.list || []),
     warrantyList: transformArray(selector?.getAllWarrantyListData?.data?.data?.list || []),
     qtyHeadList: transformArray(selector?.getAllQtyHeadListData?.data?.data?.list || []),
-    hsnCodeList: transformArray(selector?.getAllHsnData?.data?.data?.list || []),
+    hsnCodeList: getListPayload(selector?.getAllHsnData).map((item) => ({
+      value: item.code || item._id || item.id,
+      code: item.code,
+      label: `${item.code || item._id || item.id} | GST: ${Number(item.gstRate || item.IGST || 0)}%`,
+    })),
 
   }), [selector]);
 
   const createSelectOptions = useMemo(() => {
     const options = [];
-    const categorySource = selector?.getListData?.data?.data?.list || selector?.getListData?.data?.data || [];
+    const categorySource = getListPayload(selector?.getListData);
     const addOptions = (categories, prefix = '') => {
       if (!Array.isArray(categories)) return;
       categories.forEach(category => {
-        const categoryName = category.name || category.title || category.categoryKey;
-        const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
-        options.push({
-          value: `${category._id}`,
-          categoryKey: category.categoryKey,
-          label,
-        });
+        const option = toCategoryOption(category, prefix);
+        options.push(option);
         if (Array.isArray(category.subcategories || category.subCategories) && (category.subcategories || category.subCategories).length > 0) {
-          addOptions(category.subcategories || category.subCategories, label);
+          addOptions(category.subcategories || category.subCategories, option.label);
         }
       });
     };
@@ -283,9 +322,12 @@ export default function ProductManagementUI() {
 
   const validateForm = () => {
     const newErrors = {};
+    const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
+    if (formData?.name?.trim() && formData.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters.";
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
-    if (!formData?.sellerId && userData?.role !== 'seller') newErrors.sellerId = "Seller is required.";
+    if (formData?.description?.trim() && formData.description.trim().length < 10) newErrors.description = "Description must be at least 10 characters.";
+    if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
     if (!formData?.category_id) newErrors.category_id = "Category is required.";
     if (!formData?.price || Number(formData.price) <= 0) newErrors.price = "Price is required.";
     if (!formData?.mrp || Number(formData.mrp) <= 0) newErrors.mrp = "MRP is required.";
@@ -412,6 +454,17 @@ export default function ProductManagementUI() {
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [group, field] = name.split('.');
+      setFormData((prev) => ({
+        ...prev,
+        [group]: {
+          ...(prev[group] || {}),
+          [field]: value,
+        },
+      }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev, [name]: value
     }))
@@ -487,11 +540,18 @@ export default function ProductManagementUI() {
         break;
 
       case 'BRAND_ID':
-        setFormData(prev => ({ ...prev, brand_id: selectedOption?.value || "" }));
+        setFormData(prev => ({ ...prev, brand: selectedOption?.label || selectedOption?.value || "" }));
         break;
 
       case 'CATEGORY_ID':
-        setFormData(prev => ({ ...prev, category_id: selectedOption?.value || "", attributes: {} }));
+        setFormData(prev => ({
+          ...prev,
+          category_id: selectedOption?.value || "",
+          categoryId: selectedOption?.value || "",
+          category: selectedOption?.categoryKey || selectedOption?.value || "",
+          category_key: selectedOption?.categoryKey || selectedOption?.value || "",
+          attributes: {}
+        }));
         if (selectedOption?.value) {
           dispatch(getAllTaxRulesList({ query: JSON.stringify({ category_id: selectedOption.value }) }))
         }
@@ -506,12 +566,48 @@ export default function ProductManagementUI() {
         setFormData(prev => ({ ...prev, warranty_id: selectedOption?.value || "" }));
         break;
       case 'hsn_code':
-        setFormData(prev => ({ ...prev, hsn_code: selectedOption?.value || "" }));
-        const hsnCodeData = selector?.getAllHsnData?.data?.data?.list.find(item => item?._id === selectedOption?.value)
+        setFormData(prev => ({
+          ...prev,
+          hsn_code: selectedOption?.value || "",
+          hsnCode: selectedOption?.code || selectedOption?.value || "",
+        }));
+        const hsnCodeData = getListPayload(selector?.getAllHsnData).find(item =>
+          toSelectId(item) === String(selectedOption?.value) || item?.code === selectedOption?.value
+        )
 
         setTaxData(hsnCodeData)
 
 
+        break;
+      case 'PRODUCT_COUNTRY':
+        setFormData(prev => ({
+          ...prev,
+          origin: {
+            ...(prev.origin || {}),
+            country: selectedOption?.label || selectedOption?.value || "",
+            state: "",
+            city: "",
+          },
+        }));
+        break;
+      case 'PRODUCT_STATE':
+        setFormData(prev => ({
+          ...prev,
+          origin: {
+            ...(prev.origin || {}),
+            state: selectedOption?.label || selectedOption?.value || "",
+            city: "",
+          },
+        }));
+        break;
+      case 'PRODUCT_CITY':
+        setFormData(prev => ({
+          ...prev,
+          origin: {
+            ...(prev.origin || {}),
+            city: selectedOption?.label || selectedOption?.value || "",
+          },
+        }));
         break;
       default:
         console.warn(`Unhandled select change action: ${action}`);
@@ -547,10 +643,6 @@ export default function ProductManagementUI() {
 
     const updatedFormData = { ...formData };
 
-    if (userData?.roleId === 9 && userData?.storeId) {
-      updatedFormData.store_id = userData.storeId;
-    }
-
     const formattedOptions = options.map(option => ({
       sku: option.sku || '',
       type: option.type,
@@ -564,22 +656,38 @@ export default function ProductManagementUI() {
     }));
 
     const primaryOption = formattedOptions[0] || {};
+    const origin = compactObject(updatedFormData.origin || {});
+    const dimensions = compactObject({
+      unit: updatedFormData.dimensions?.unit,
+      weightUnit: updatedFormData.dimensions?.weightUnit,
+      length: toOptionalNumber(updatedFormData.dimensions?.length),
+      width: toOptionalNumber(updatedFormData.dimensions?.width),
+      height: toOptionalNumber(updatedFormData.dimensions?.height),
+      weight: toOptionalNumber(updatedFormData.dimensions?.weight),
+    });
+    const warranty = compactObject({
+      ...(updatedFormData.warranty || {}),
+      period: toOptionalNumber(updatedFormData.warranty?.period),
+      returnPolicy: {
+        ...(updatedFormData.warranty?.returnPolicy || {}),
+        days: toOptionalNumber(updatedFormData.warrantyReturnDays || updatedFormData.warranty?.returnPolicy?.days),
+      },
+    });
+
     const productPayload = {
       sellerId: updatedFormData.sellerId,
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
       mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),
-      category: updatedFormData.category_id || updatedFormData.category,
-      categoryId: updatedFormData.category_id || updatedFormData.category,
-      brand: updatedFormData.brand_id || updatedFormData.brand || "",
-      productFamilyCode: updatedFormData.productFamilyCode || updatedFormData.brand_id || "DEFAULT",
+      category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
+      categoryId: updatedFormData.category_id || updatedFormData.categoryId,
+      brand: updatedFormData.brand || updatedFormData.brand_id || "",
+      productFamilyCode: updatedFormData.productFamilyCode || "DEFAULT",
       sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
       color: updatedFormData.color || "default",
       attributes: {
         ...(updatedFormData.attributes || {}),
-        ...(updatedFormData.brand_id ? { brand: updatedFormData.brand_id } : {}),
-        warranty: updatedFormData.warranty_id,
       },
       variants: formattedOptions
         .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
@@ -590,12 +698,19 @@ export default function ProductManagementUI() {
           stock: Number(option.stock || 0),
           attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
           images: [],
-        })),
-      hsnCode: updatedFormData.hsn_code,
-      origin: updatedFormData.origin || {},
+      })),
+      hsnCode: updatedFormData.hsnCode || updatedFormData.hsn_code,
+      origin,
+      ...(Object.keys(dimensions).length ? { dimensions } : {}),
+      ...(Object.keys(warranty).length ? { warranty } : {}),
       stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
       images: images?.length ? images : catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
+      metadata: {
+        featured: Boolean(updatedFormData.markAsFeatured),
+        codAvailable: Boolean(updatedFormData.cod),
+        prescriptionRequired: Boolean(updatedFormData.prescription_required),
+      },
     };
 
     try {
@@ -656,7 +771,7 @@ export default function ProductManagementUI() {
           handleSelectChange={handleSelectChange}
           batchData={formattedData?.batchList}
           fetchAllData={fetchAllData}
-          allCategories={selector?.getListData?.data?.data?.list || selector?.getListData?.data?.data || []}
+          allCategories={getListPayload(selector?.getListData)}
           hsnCodeList={formattedData?.hsnCodeList}
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}

@@ -111,11 +111,23 @@ export const uploadFile = async (file, moduleName = 'DEFAULT') => {
 
   try {
     const response = await apiRequestImage('POST', '/file-uploader/upload', formData);
-    return response?.data?.imageURL;
+    const payload = response?.data || response || {};
+    const imageURL =
+      payload?.imageURL ||
+      payload?.url ||
+      payload?.image?.imageURL ||
+      payload?.image?.url;
+
+    if (!imageURL) {
+      throw new Error("Upload response did not include an image URL");
+    }
+
+    return imageURL;
   } catch (error) {
     throw error.message || 'Upload failed';
   }
 };
+
 export const uploadFileMulti = async (files, moduleName = 'DEFAULT') => {
   if (!files || files.length === 0) {
     throw new Error('No files provided');
@@ -129,7 +141,17 @@ export const uploadFileMulti = async (files, moduleName = 'DEFAULT') => {
 
   try {
     const response = await apiRequestImage('POST', '/file-uploader/upload-multi', formData);
-    return response?.data?.imageURLs;
+    const payload = response?.data || response || {};
+    const imageURLs =
+      payload?.imageURLs ||
+      payload?.images?.map((image) => image?.imageURL || image?.url).filter(Boolean) ||
+      [];
+
+    if (!imageURLs.length) {
+      throw new Error("Upload response did not include image URLs");
+    }
+
+    return imageURLs;
   } catch (error) {
     throw error?.message || 'Upload failed';
   }
@@ -179,13 +201,13 @@ export const transformArray = (data) => {
 
 
 export const validateFiles = (files) => {
-  const allowedTypes = ["image/jpeg", "image/png"];
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   const maxSize = 5 * 1024 * 1024; // 5MB
   const validFiles = [];
 
   for (const f of files) {
     if (!allowedTypes.includes(f.type)) {
-      toast.error(`${f.name} is not a valid image. Only PNG and JPG are allowed.`);
+      toast.error(`${f.name} is not a valid image. Only PNG, JPG, and WEBP are allowed.`);
       continue;
     }
     if (f.size > maxSize) {

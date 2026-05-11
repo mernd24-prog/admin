@@ -25,7 +25,48 @@ const toProductListParams = (params = {}) => ({
 
 const toProductStatusBody = (payload = {}) => ({
     status: payload.isDisable ? "inactive" : "active",
+    checklist: {
+        titleVerified: true,
+        categoryVerified: true,
+        complianceVerified: true,
+        mediaVerified: true,
+    },
 });
+
+const toProductBody = (payload = {}) => {
+    const categoryId = payload.categoryId || payload.category_id || payload.category;
+    const category = payload.category || payload.categoryKey || payload.category_key || categoryId;
+    const hsnCode = payload.hsnCode || payload.hsn_code || "";
+    const variants = Array.isArray(payload.variants) ? payload.variants : [];
+    const primaryVariant = variants[0] || {};
+    const title = payload.title || payload.name || "";
+
+    return {
+        ...(payload.sellerId ? { sellerId: payload.sellerId } : {}),
+        title,
+        description: payload.description || "",
+        price: Number(payload.price || primaryVariant.price || primaryVariant.salePrice || 0),
+        mrp: Number(payload.mrp || primaryVariant.mrp || 0),
+        category,
+        ...(categoryId ? { categoryId } : {}),
+        ...(payload.brand || payload.brand_id ? { brand: payload.brand || payload.brand_id } : {}),
+        ...(payload.productFamilyCode ? { productFamilyCode: payload.productFamilyCode } : {}),
+        ...(payload.sku ? { sku: payload.sku } : {}),
+        ...(payload.color ? { color: payload.color } : {}),
+        attributes: payload.attributes || {},
+        variants,
+        ...(Array.isArray(payload.options) ? { options: payload.options } : {}),
+        ...(payload.dimensions ? { dimensions: payload.dimensions } : {}),
+        ...(hsnCode ? { hsnCode } : {}),
+        origin: payload.origin || {},
+        ...(payload.warranty ? { warranty: payload.warranty } : {}),
+        ...(payload.metadata ? { metadata: payload.metadata } : {}),
+        stock: Number(payload.stock || payload.quantity || 0),
+        images: Array.isArray(payload.images) ? payload.images : [],
+        ...(payload.status ? { status: payload.status } : {}),
+        ...(payload.gstRate !== undefined ? { gstRate: Number(payload.gstRate || 0) } : {}),
+    };
+};
 
 const toHsnListParams = (params = {}) => ({
     ...(params.page ? { page: Number(params.page) } : {}),
@@ -173,7 +214,9 @@ export const getAllStoreShippingDurationList = unsupportedThunk('store-shipping-
 export const getAllTaxRulesList = unsupportedThunk('taxRule/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
-export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST')
+export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST', false, {
+    transformBody: toProductBody,
+})
 export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
     transformParams: toProductListParams,
 })
@@ -184,7 +227,9 @@ export const enableDisableProductCatalogs = patchMany(
     toProductStatusBody,
     'Product status updated successfully'
 )
-export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH')
+export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH', false, {
+    transformBody: toProductBody,
+})
 export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
 export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
     transformBody: (payload = {}) => ({
