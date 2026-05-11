@@ -23,12 +23,14 @@ export default function VariantsOptionsTab({
         } else {
             const initialRow = {
                 id: Date.now(),
+                sku: '',
                 type: null,
                 remark: '',
                 packaging: '',
                 mrp: '',
                 discount: '',
-                salePrice: ''
+                salePrice: '',
+                stock: ''
             };
             setLocalVariantRows([initialRow]);
             setVariantRows([initialRow]);
@@ -59,12 +61,14 @@ export default function VariantsOptionsTab({
         try {
             const newRow = {
                 id: Date.now(),
+                sku: '',
                 type: null,
                 remark: '',
                 packaging: '',
                 mrp: '',
                 discount: '',
-                salePrice: ''
+                salePrice: '',
+                stock: ''
             };
 
             const updatedRows = [...variantRows, newRow];
@@ -200,6 +204,16 @@ export default function VariantsOptionsTab({
                                 <div className="flex items-start justify-between p-2 border border-gray-200">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
                                         <div>
+                                            <Input
+                                                labelName="SKU"
+                                                value={row.sku || ''}
+                                                onChange={(e) => handleVariantFieldChange(index, 'sku', e.target.value)}
+                                                placeholder="Enter variant SKU"
+                                                isLoading={isLoading}
+                                                name={`sku_${index}`}
+                                            />
+                                        </div>
+                                        <div>
                                             <FilterSelect
                                                 label="Options"
                                                 options={selectJson?.HEADS_TYPE || []}
@@ -285,6 +299,17 @@ export default function VariantsOptionsTab({
                                             {errors[index]?.salePrice && (
                                                 <p className="mt-1 text-sm text-red-600">{errors[index].salePrice}</p>
                                             )}
+                                        </div>
+                                        <div>
+                                            <Input
+                                                labelName="Stock"
+                                                value={row.stock || ''}
+                                                onChange={(e) => handleVariantFieldChange(index, 'stock', e.target.value)}
+                                                placeholder="Enter variant stock"
+                                                isLoading={isLoading}
+                                                name={`stock_${index}`}
+                                                type="number"
+                                            />
                                         </div>
                                     </div>
 

@@ -190,8 +190,16 @@ const AddEditProductPopup = React.lazy(() =>
     "../../pages/ProductManagement/ProductCatalog/components/AddEditProduct"
   )
 );
+const ProductAdminDetails = React.lazy(() =>
+  import(
+    "../../pages/ProductManagement/ProductCatalog/components/ProductAdminDetails"
+  )
+);
 const ProductCategories = React.lazy(() =>
   import("../../pages/ProductManagement/ProductCategories/ProductCategories")
+);
+const CategoryAttributes = React.lazy(() =>
+  import("../../pages/ProductManagement/ProductCategories/CategoryAttributes")
 );
 const OrderSummary = React.lazy(() =>
   import("../../pages/OrdersManagement/Orders/components/ViewOrders")
@@ -549,12 +557,14 @@ function Layout() {
               <Route path="/shipping-profile" element={renderRoute('/shipping-profile', <ShippingProfiles />)} />
               <Route path="/pickup-addresses" element={renderRoute('/pickup-addresses', <PickupAddresses />)} />
               <Route path="/categories" element={renderRoute('/categories', <ProductCategories />)} />
+              <Route path="/category-attributes" element={renderRoute('/category-attributes', <CategoryAttributes />)} />
               <Route path="/subscription-orders" element={renderRoute('/subscription-orders', <SubscriptionOrders />)} />
               <Route path="/homepage-slides" element={renderRoute('/homepage-slides', <HomepageSlides />)} />
               <Route path="/banners" element={renderRoute('/banners', <BannerLocations />)} />
               <Route path="/content-pages" element={renderRoute('/content-pages', <ContentPages />)} />
               <Route path="/view-orders" element={renderRoute('/view-orders', <OrderSummary />)} />
               <Route path="/product-catalog/form/:id?" element={renderRoute('/product-catalog/form', <AddEditProductPopup />)} />
+              <Route path="/product-catalog/view/:id" element={renderRoute('/product-catalog', <ProductAdminDetails />)} />
               <Route path="/view-subscription-orders" element={renderRoute('/view-subscription-orders', <ViewSubscriptionOrders />)} />
               <Route path="/inner-banners" element={renderRoute('/inner-banners', <Banners />)} />
               <Route path="/profile" element={renderRoute('/profile', <Profile />)} />

@@ -91,7 +91,7 @@ export const fetchSellerWebStatus = createAsyncThunk(
   "seller/fetchSellerWebStatus",
   async (_payload = {}, { rejectWithValue }) => {
     try {
-      const response = await apiRequest("GET", ENDPOINTS.sellers.status);
+      const response = await apiRequest("GET", ENDPOINTS.sellers.myStatus);
       return response;
     } catch (error) {
       return rejectWithValue(normalizeError(error, "Unable to fetch seller status"));

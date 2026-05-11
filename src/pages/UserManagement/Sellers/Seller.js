@@ -5,7 +5,7 @@ import { ActionButtons } from '../../../components/Atoms/TableActionButton/Table
 import { useDispatch, useSelector } from 'react-redux';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { createSeller, enableDisableSeller, getSellerList, reviewSellerKyc, updatePasswordSeller, updateSeller } from '../../../Redux/userManagementSlice';
+import { createSeller, enableDisableSeller, getSellerList, reviewSellerKyc, updatePasswordSeller, updateSeller, updateSellerBankStatus, updateSellerGoLive } from '../../../Redux/userManagementSlice';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
@@ -43,10 +43,16 @@ const Sellers = () => {
         confirmPassword: ''
     });
     const [isKycReviewOpen, setIsKycReviewOpen] = useState(false);
+    const [isBankReviewOpen, setIsBankReviewOpen] = useState(false);
     const [kycForm, setKycForm] = useState({
         sellerId: '',
         verificationStatus: 'verified',
         rejectionReason: ''
+    });
+    const [bankForm, setBankForm] = useState({
+        sellerId: '',
+        bankVerificationStatus: 'verified',
+        bankRejectionReason: ''
     });
     const [passwordErrors, setPasswordErrors] = useState({
         password: '',
@@ -472,14 +478,38 @@ const Sellers = () => {
         }
     };
 
+    const handleOpenBankReview = (user, nextStatus) => {
+        setBankForm({
+            sellerId: user._id,
+            bankVerificationStatus: nextStatus,
+            bankRejectionReason: '',
+        });
+        setIsBankReviewOpen(true);
+    };
+
+    const handleSubmitBankReview = async (e) => {
+        e.preventDefault();
+        if (bankForm.bankVerificationStatus === 'rejected' && !bankForm.bankRejectionReason.trim()) {
+            toast.error('Bank rejection reason is required');
+            return;
+        }
+        try {
+            const res = await dispatch(updateSellerBankStatus(bankForm)).unwrap();
+            toast.success(res?.message || "Bank status updated");
+            setIsBankReviewOpen(false);
+            setIsRefresh(!isRefresh);
+        } catch (error) {
+            toast.error(error?.message || error || "Failed to update bank status");
+        }
+    };
+
     const handleActivateSeller = async (user) => {
         try {
-            const res = await dispatch(enableDisableSeller({
-                _id: [user._id],
-                isDisable: false,
-                status: 'active',
+            const res = await dispatch(updateSellerGoLive({
+                sellerId: user._id,
+                goLiveStatus: 'live',
             })).unwrap();
-            toast.success(res?.message || "Seller activated");
+            toast.success(res?.message || "Seller moved live");
             setIsRefresh(!isRefresh);
         } catch (error) {
             toast.error(error?.details?.onboardingStatus
@@ -514,19 +544,28 @@ const Sellers = () => {
         />,
        
         <span key={`name-${user._id}`} className="capitalize">
-            {user?.full_name}
+            {user?.full_name || user?.sellerProfile?.displayName || user?.profile?.firstName || "N/A"}
         </span>,
-        <span key={`username-${user._id}`}>
-            {user?.userName}
+        <span key={`business-${user._id}`}>
+            {user?.sellerProfile?.businessName || user?.sellerProfile?.legalBusinessName || "N/A"}
         </span>,
         <span key={`email-${user._id}`}>
             {user?.email}
         </span>,
+        <span key={`phone-${user._id}`}>{user?.phone || "N/A"}</span>,
+        <span key={`gst-${user._id}`}>{user?.sellerProfile?.gstNumber || "N/A"}</span>,
+        <span key={`pan-${user._id}`}>{user?.sellerProfile?.panNumber || "N/A"}</span>,
         <span key={`onboarding-${user._id}`}>
             {statusPill(user?.onboarding?.status || user?.sellerProfile?.onboardingStatus, 'ready_for_go_live')}
         </span>,
         <span key={`kyc-${user._id}`}>
-            {statusPill(user?.onboarding?.kycStatus || 'pending', 'verified')}
+            {statusPill(user?.sellerProfile?.kycStatus || user?.onboarding?.kycStatus || 'pending', 'verified')}
+        </span>,
+        <span key={`bank-${user._id}`}>
+            {statusPill(user?.sellerProfile?.bankVerificationStatus || 'not_submitted', 'verified')}
+        </span>,
+        <span key={`go-live-${user._id}`}>
+            {statusPill(user?.sellerProfile?.goLiveStatus || 'pending', 'live')}
         </span>,
         // <div key={`status-${user._id}`} className="flex flex-col">
         //     <label className="relative inline-flex" title="Enable/Disable">
@@ -586,6 +625,12 @@ const Sellers = () => {
                 </button>
                 <button className='text-xs px-2 py-1 rounded bg-red-50 text-red-700' onClick={() => handleOpenKycReview(user, 'rejected')}>
                     KYC Reject
+                </button>
+                <button className='text-xs px-2 py-1 rounded bg-emerald-50 text-emerald-700' onClick={() => handleOpenBankReview(user, 'verified')}>
+                    Bank Verify
+                </button>
+                <button className='text-xs px-2 py-1 rounded bg-orange-50 text-orange-700' onClick={() => handleOpenBankReview(user, 'rejected')}>
+                    Bank Reject
                 </button>
                 <button className='text-xs px-2 py-1 rounded bg-blue-50 text-blue-700' onClick={() => handleActivateSeller(user)}>
                     Go Live
@@ -661,10 +706,15 @@ const Sellers = () => {
                                     key="select-all"
                                 />,
                                 "Full Name",
-                                "Username",
+                                "Business",
                                 "Email",
+                                "Phone",
+                                "GST",
+                                "PAN",
                                 "Onboarding",
                                 "KYC",
+                                "Bank",
+                                "Go Live",
                                 "Status",
                                 "Actions"
                             ]}
@@ -819,6 +869,42 @@ const Sellers = () => {
                             </button>
                             <button type="submit" className="px-4 py-2 rounded bg-[#3E4094] text-white">
                                 Update KYC
+                            </button>
+                        </div>
+                    </form>
+                </DefaultMiddleModal>
+                <DefaultMiddleModal
+                    isOpen={isBankReviewOpen}
+                    onClose={() => setIsBankReviewOpen(false)}
+                    title="Review Seller Bank"
+                >
+                    <form onSubmit={handleSubmitBankReview} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Decision</label>
+                            <select
+                                className="w-full border rounded px-3 py-2"
+                                value={bankForm.bankVerificationStatus}
+                                onChange={(e) => setBankForm((prev) => ({ ...prev, bankVerificationStatus: e.target.value }))}
+                            >
+                                <option value="verified">Verify</option>
+                                <option value="rejected">Reject</option>
+                                <option value="submitted">Submitted</option>
+                            </select>
+                        </div>
+                        {bankForm.bankVerificationStatus === 'rejected' && (
+                            <FormInput
+                                label="Rejection reason"
+                                name="bankRejectionReason"
+                                value={bankForm.bankRejectionReason}
+                                onChange={(e) => setBankForm((prev) => ({ ...prev, bankRejectionReason: e.target.value }))}
+                            />
+                        )}
+                        <div className="flex justify-end gap-2">
+                            <button type="button" className="px-4 py-2 rounded border" onClick={() => setIsBankReviewOpen(false)}>
+                                Cancel
+                            </button>
+                            <button type="submit" className="px-4 py-2 rounded bg-[#3E4094] text-white">
+                                Update Bank
                             </button>
                         </div>
                     </form>

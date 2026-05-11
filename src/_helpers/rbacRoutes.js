@@ -64,6 +64,7 @@ const ROUTE_MODULES = [
   [
     [
       "/categories",
+      "/category-attributes",
       "/collections",
       "/product-variants",
       "/product-dimensions",

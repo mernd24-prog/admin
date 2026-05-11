@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
 import Loader from '../../../components/Loader/Loader';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
-import { getAdminUserDetails, reviewSellerKyc, updateSeller } from '../../../Redux/userManagementSlice';
+import { getAdminUserDetails, reviewSellerKyc, updateSeller, updateSellerBankStatus, updateSellerGoLive } from '../../../Redux/userManagementSlice';
 import { toast } from 'sonner';
 
 const Row = ({ label, value }) => (
@@ -69,13 +69,27 @@ const UserDetails = () => {
 
   const handleGoLive = async () => {
     try {
-      const res = await dispatch(updateSeller({ _id: id, accountStatus: 'active' })).unwrap();
-      toast.success(res?.message || 'Seller marked active');
+      const res = await dispatch(updateSellerGoLive({ sellerId: id, goLiveStatus: 'live' })).unwrap();
+      toast.success(res?.message || 'Seller moved live');
       refresh();
     } catch (error) {
       toast.error(error?.details?.onboardingStatus
         ? `Not ready for go-live (${error.details.onboardingStatus})`
         : (error?.message || error || 'Failed to activate seller'));
+    }
+  };
+
+  const handleBankDecision = async (bankVerificationStatus) => {
+    try {
+      const payload = { sellerId: id, bankVerificationStatus };
+      if (bankVerificationStatus === 'rejected') {
+        payload.bankRejectionReason = 'Rejected by admin review';
+      }
+      const res = await dispatch(updateSellerBankStatus(payload)).unwrap();
+      toast.success(res?.message || 'Bank status updated');
+      refresh();
+    } catch (error) {
+      toast.error(error?.message || error || 'Failed to update bank status');
     }
   };
 
@@ -125,13 +139,17 @@ const UserDetails = () => {
               <div className="mb-4 flex flex-wrap gap-2">
                 <button className="px-3 py-1 text-xs rounded bg-green-50 text-green-700" onClick={() => handleKycDecision('verified')}>Approve KYC</button>
                 <button className="px-3 py-1 text-xs rounded bg-red-50 text-red-700" onClick={() => handleKycDecision('rejected')}>Reject KYC</button>
-                <button className="px-3 py-1 text-xs rounded bg-blue-50 text-blue-700" onClick={handleGoLive}>Ready To Explore Panel</button>
+                <button className="px-3 py-1 text-xs rounded bg-emerald-50 text-emerald-700" onClick={() => handleBankDecision('verified')}>Verify Bank</button>
+                <button className="px-3 py-1 text-xs rounded bg-orange-50 text-orange-700" onClick={() => handleBankDecision('rejected')}>Reject Bank</button>
+                <button className="px-3 py-1 text-xs rounded bg-blue-50 text-blue-700" onClick={handleGoLive}>Approve Go Live</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
                 <Row label="Display Name" value={sellerProfile.displayName} />
                 <Row label="Legal Business" value={sellerProfile.legalBusinessName} />
                 <Row label="Onboarding" value={onboarding.status || sellerProfile.onboardingStatus} />
-                <Row label="KYC Status" value={onboarding.kycStatus} />
+                <Row label="KYC Status" value={sellerProfile.kycStatus || onboarding.kycStatus} />
+                <Row label="Bank Status" value={sellerProfile.bankVerificationStatus} />
+                <Row label="Go Live Status" value={sellerProfile.goLiveStatus} />
                 <Row label="GST Number" value={sellerProfile.gstNumber} />
                 <Row label="PAN Number" value={sellerProfile.panNumber} />
               </div>

@@ -197,7 +197,7 @@ export const toVendorStatusBody = (payload = {}) => ({
 });
 
 export const toKycReviewBody = (payload = {}) => ({
-  verificationStatus: payload.verificationStatus || payload.status,
+  kycStatus: payload.kycStatus || payload.verificationStatus || payload.status,
   rejectionReason: payload.rejectionReason || null,
 });
 

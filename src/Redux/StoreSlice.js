@@ -9,7 +9,7 @@ const initialState = {
 
 export const getShopList = createApiThunkPrivate(
     'getShopList',
-    ENDPOINTS.sellers.vendors,
+    ENDPOINTS.sellers.list,
     'GET',
     true,
     { transformParams: (params = {}) => toListParams(params) }
@@ -30,14 +30,14 @@ export const edit = createApiThunkPrivate(
 )
 export const enableDisable = createApiThunkPrivate(
     'enableDisable',
-    (payload) => ENDPOINTS.sellers.vendorStatus(firstId(payload)),
+    (payload) => ENDPOINTS.sellers.adminStatus(firstId(payload)),
     'PATCH',
     false,
     { transformBody: toVendorStatusBody }
 )
 export const getAllSellerList = createApiThunkPrivate(
     'getAllSellerList',
-    ENDPOINTS.sellers.vendors,
+    ENDPOINTS.sellers.list,
     'GET',
     true,
     { transformParams: (params = {}) => toListParams(params, { limit: 100 }) }

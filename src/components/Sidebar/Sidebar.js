@@ -31,6 +31,8 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'product-variants',
   'product-families',
   'product-catalog',
+  'categories',
+  'category-attributes',
   'country',
   'state',
   'city',
@@ -87,6 +89,8 @@ const SELLER_SIDEBAR_SECTIONS = [
 const MODULE_ROUTE_EXPANSIONS = {
   products: [
     { label: 'Product Catalog', route: 'product-catalog' },
+    { label: 'Categories', route: 'categories' },
+    { label: 'Category Attributes', route: 'category-attributes' },
     { label: 'Product Variants', route: 'product-variants' },
     { label: 'Product Families', route: 'product-families' },
     { label: 'HSN Codes', route: 'hsn-code' },

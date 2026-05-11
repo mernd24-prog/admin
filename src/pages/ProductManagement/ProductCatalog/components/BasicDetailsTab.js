@@ -369,11 +369,12 @@ export default function BasicDetailsTab({
       if (!Array.isArray(categories)) return;
 
       categories.forEach(category => {
-        const label = prefix ? `${prefix} > ${category.name}` : category.name;
+        const categoryName = category.name || category.title || category.categoryKey;
+        const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
         options.push({ value: category._id, label });
 
-        if (depth < 2 && category.subcategories?.length) {
-          addOptions(category.subcategories, label, depth + 1);
+        if (depth < 2 && (category.subcategories || category.subCategories)?.length) {
+          addOptions(category.subcategories || category.subCategories, label, depth + 1);
         }
       });
     };
@@ -617,6 +618,20 @@ export default function BasicDetailsTab({
 
         <div className="p-2 space-y-6 ">
           <div className="grid w-auto grid-cols-1 gap-4 md:grid-cols-2">
+            {userData?.role !== 'seller' && (
+              <div>
+                <FilterSelect
+                  label="Seller"
+                  name="sellerId"
+                  value={modifiedSellerList.find(opt => opt.value === formData.sellerId) || null}
+                  onChange={(e) => handleSelectChange(e, 'SELLER_ID')}
+                  options={modifiedSellerList || []}
+                  error={errors?.sellerId}
+                  placeholder="Select Seller"
+                  required
+                />
+              </div>
+            )}
             <div className={`${userData?.roleId !== 9 ? "col-span-1" : "col-span-2"}`}>
               <Input
                 labelName="Product Name"
@@ -774,14 +789,46 @@ export default function BasicDetailsTab({
 
 
             <Input
-              labelName="Rack no"
-              name="rack_no"
-              type="number"
-              value={formData.rack_no}
+              labelName="SKU"
+              name="sku"
+              type="text"
+              value={formData.sku}
               onChange={handleChange}
-              required={true}
-              placeholder="Enter product rack_no "
-              error={errors?.rack_no}
+              placeholder="Enter SKU"
+              error={errors?.sku}
+              textareaClasses='text-sm'
+            />
+            <Input
+              labelName="Price"
+              name="price"
+              type="number"
+              value={formData.price}
+              onChange={handleChange}
+              required
+              placeholder="Enter selling price"
+              error={errors?.price}
+              textareaClasses='text-sm'
+            />
+            <Input
+              labelName="MRP"
+              name="mrp"
+              type="number"
+              value={formData.mrp}
+              onChange={handleChange}
+              required
+              placeholder="Enter MRP"
+              error={errors?.mrp}
+              textareaClasses='text-sm'
+            />
+            <Input
+              labelName="Stock"
+              name="stock"
+              type="number"
+              value={formData.stock}
+              onChange={handleChange}
+              required
+              placeholder="Enter stock"
+              error={errors?.stock}
               textareaClasses='text-sm'
             />
           </div>

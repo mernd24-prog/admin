@@ -287,12 +287,21 @@ const Users = () => {
       checked={selectedRow.includes(user._id)}
       onChange={(e) => handleRowCheckboxChange(e, user._id)}
     />,
+    <span className="capitalize">
+      {user?.full_name || user?.profile?.firstName || "N/A"}
+    </span>,
     <span>{user?.email || 'N/A'}</span>,
     <span key={`phone-${user._id}`}>
       {user?.phone || "Not Available"}
     </span>,
-    <span key={`phone-${user._id}`}>
+    <span className='capitalize'>{user?.role || "N/A"}</span>,
+    <span className='capitalize'>{user?.accountStatus || (user?.isDisable ? "suspended" : "active")}</span>,
+    <span>{user?.emailVerified ? "Yes" : "No"}</span>,
+    <span key={`created-${user._id}`}>
       {formatDateForDisplay(user?.createdAt)}
+    </span>,
+    <span key={`last-login-${user._id}`}>
+      {user?.lastLoginAt ? formatDateForDisplay(user?.lastLoginAt) : "N/A"}
     </span>,
     <div className='flex flex-col'>
       <ToggleButton isToggle={!user?.isDisable} handleClick={() => handleToggle(user)} />
@@ -527,7 +536,7 @@ const Users = () => {
               </div>
             </div>
             <TableData
-              tableHeadings={["Email", "Mobile No.", "Reg.Date", "Status", "Actions"]}
+              tableHeadings={["Name", "Email", "Mobile No.", "Role", "Account Status", "Email Verified", "Created", "Last Login", "Actions"]}
               data={tableRows}
               showSearch={true}
               placeholder='Search by...'

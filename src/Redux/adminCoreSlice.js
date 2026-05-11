@@ -417,7 +417,7 @@ export const deactivateAdminUser = createApiThunkPrivate(
 
 export const getAdminVendors = createApiThunkPrivate(
   "adminCore/getAdminVendors",
-  ENDPOINTS.sellers.vendors,
+  ENDPOINTS.sellers.list,
   "GET",
   true,
   { transformParams: (params = {}) => toListParams(params) }
@@ -425,7 +425,7 @@ export const getAdminVendors = createApiThunkPrivate(
 
 export const updateAdminVendorStatus = createApiThunkPrivate(
   "adminCore/updateAdminVendorStatus",
-  (payload) => ENDPOINTS.sellers.vendorStatus(payload?.sellerId || firstId(payload)),
+  (payload) => ENDPOINTS.sellers.adminStatus(payload?.sellerId || firstId(payload)),
   "PATCH",
   false,
   { transformBody: toVendorStatusBody }
@@ -433,7 +433,7 @@ export const updateAdminVendorStatus = createApiThunkPrivate(
 
 export const reviewAdminSellerKyc = createApiThunkPrivate(
   "adminCore/reviewAdminSellerKyc",
-  (payload) => ENDPOINTS.sellers.kycReview(payload?.sellerId || firstId(payload)),
+  (payload) => ENDPOINTS.sellers.kycReviewAdmin(payload?.sellerId || firstId(payload)),
   "PATCH",
   false,
   { transformBody: toKycReviewBody }

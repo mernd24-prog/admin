@@ -40,6 +40,8 @@ const initialState = {
     getListCategoryData: {},
     getAllUserListData: {},
     reviewSellerKycData: {},
+    updateSellerBankStatusData: {},
+    updateSellerGoLiveData: {},
 };
 
 export const getList = createApiThunkPrivate(
@@ -153,7 +155,7 @@ export const getAllModulePermissionForUser = createApiThunkPrivate(
 
 export const getSellerList = createApiThunkPrivate(
     'getSellerList',
-    ENDPOINTS.sellers.vendors,
+    ENDPOINTS.sellers.list,
     'GET',
     true,
     { transformParams: (params = {}) => toListParams(params) }
@@ -161,7 +163,7 @@ export const getSellerList = createApiThunkPrivate(
 
 export const enableDisableSeller = patchMany(
     'enableDisableSeller',
-    ENDPOINTS.sellers.vendorStatus,
+    ENDPOINTS.sellers.adminStatus,
     toVendorStatusBody,
     'Seller status updated successfully'
 );
@@ -189,10 +191,35 @@ export const updatePasswordSeller = unsupportedThunk(
 
 export const reviewSellerKyc = createApiThunkPrivate(
     'reviewSellerKyc',
-    (payload) => ENDPOINTS.sellers.kycReview(payload?.sellerId || firstId(payload)),
+    (payload) => ENDPOINTS.sellers.kycReviewAdmin(payload?.sellerId || firstId(payload)),
     'PATCH',
     false,
     { transformBody: toKycReviewBody }
+);
+
+export const updateSellerBankStatus = createApiThunkPrivate(
+    'updateSellerBankStatus',
+    (payload) => ENDPOINTS.sellers.bankStatus(payload?.sellerId || firstId(payload)),
+    'PATCH',
+    false,
+    {
+        transformBody: (payload = {}) => ({
+            bankVerificationStatus: payload.bankVerificationStatus || payload.status,
+            bankRejectionReason: payload.bankRejectionReason || payload.rejectionReason || null,
+        }),
+    }
+);
+
+export const updateSellerGoLive = createApiThunkPrivate(
+    'updateSellerGoLive',
+    (payload) => ENDPOINTS.sellers.goLive(payload?.sellerId || firstId(payload)),
+    'PATCH',
+    false,
+    {
+        transformBody: (payload = {}) => ({
+            goLiveStatus: payload.goLiveStatus || payload.status || 'live',
+        }),
+    }
 );
 
 export const changePassword = createApiThunkPrivate(
@@ -277,6 +304,8 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, getAllModulePermissionForUser, 'getAllModulePermissionForUserData')
         createExtraReducersForThunk(builder, updatePasswordSeller, 'updatePasswordSellerData')
         createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
+        createExtraReducersForThunk(builder, updateSellerBankStatus, 'updateSellerBankStatusData')
+        createExtraReducersForThunk(builder, updateSellerGoLive, 'updateSellerGoLiveData')
         createExtraReducersForThunk(builder, changePassword, 'changePasswordData')
         createExtraReducersForThunk(builder, getUserList, 'getUserListData')
         createExtraReducersForThunk(builder, createUser, 'createUserData')

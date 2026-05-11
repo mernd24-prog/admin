@@ -10,7 +10,7 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
         <Button className={`w-full bg-white text-black`} onClick={handleSaveSubmit}>Save</Button>
         <div className="flex items-center justify-between p-4 mb-4 border rounded">
           <span className="font-light text-gray-800">Activate it</span>
-          <ToggleButton isToggle={formData?.isDisable} handleClick={() => handleToggleProductSetting('DISABLE')} />
+          <ToggleButton isToggle={!formData?.isDisable} handleClick={() => handleToggleProductSetting('DISABLE')} />
         </div>
         <div className="flex items-center justify-between p-4 mb-4 border rounded">
           <span className="font-light text-gray-800">Approval status</span>

@@ -106,11 +106,16 @@ const ProductCatalog = () => {
   }, []);
   const TABLE_HEADINGS = [
     "Image",
-    "Name",
-    "Created On",
-    "Approved",
+    "Product",
+    "Seller",
+    "Category",
+    "Price",
+    "Stock",
     "Status",
-    ...(Number(userData?.roleId) === 3 ? ["Action"] : [])
+    "Approval",
+    "Created On",
+    "Active",
+    "Action"
   ];
 
 
@@ -231,6 +236,32 @@ const ProductCatalog = () => {
     }
   }
 
+  const handleRejectProduct = async (data) => {
+    const apiPayload = {
+      id: data?._id,
+      body: {
+        status: "rejected",
+        rejectionReason: "Rejected by admin review",
+        checklist: {
+          titleVerified: true,
+          categoryVerified: true,
+          complianceVerified: true,
+          mediaVerified: true,
+        },
+      },
+    };
+    try {
+      setLoading(true);
+      const response = await dispatch(approveDisapprove(apiPayload)).unwrap();
+      toast.success(response?.message || 'Product rejected successfully.');
+      fetchProductsList();
+    } catch (error) {
+      toast.error(error?.message || error || 'Failed to reject product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   function handleDelete(data) {
     setShowDeleteConfirmation(true)
     setProductToDelete(data)
@@ -334,21 +365,35 @@ const ProductCatalog = () => {
         <CustomCheckbox checked={selectedRow.includes(product._id)} onChange={(e) => handleRowCheckboxChange(e, product._id)} />,
 
         <div className="relative flex items-center">
-          <span className='text-blue-500 hover:underline' onClick={() => handleImageClick(product?.product_image_id?.images)}>
+          <span className='text-blue-500 hover:underline' onClick={() => handleImageClick(product?.images || product?.product_image_id?.images)}>
             View
           </span>
         </div>,
-        <span className='capitalize'>{product?.name || 'N/A'}</span>,
-        <span key={`date-${product._id}`}>{formatDate(product.createdAt)}</span>,
+        <span className='capitalize'>{product?.title || product?.name || 'N/A'}</span>,
+        <span>{product?.sellerName || product?.sellerId || 'N/A'}</span>,
+        <span>{product?.categoryName || product?.category || product?.categoryId || 'N/A'}</span>,
+        <span>{product?.price !== undefined ? `₹${product.price}` : 'N/A'}</span>,
+        <span>{product?.stock ?? 'N/A'}</span>,
+        <span className='capitalize'>{product?.status || 'draft'}</span>,
         <ToggleButton key={`toggle-${product._id}`} isToggle={product?.isApproved} handleClick={() => handleApproveToggle(product)} />,
+        <span key={`date-${product._id}`}>{formatDate(product.createdAt)}</span>,
         <ToggleButton key={`toggle-${product._id}`} isToggle={!product?.isDisable} handleClick={() => handleToggle(product)} />,
         <span>
-
-          <ActionButtons
-            onEdit={() => handleEditProduct(product?._id)}
-            showLinkButton={false}
-            onDelete={() => handleDelete(product)}
-          />
+          <div className="flex flex-wrap gap-2">
+            <ActionButtons
+              onEdit={() => handleEditProduct(product?._id)}
+              viewButton={true}
+              onViewClick={() => navigate(`/app/product-catalog/view/${product?._id}`)}
+              showLinkButton={false}
+              onDelete={() => handleDelete(product)}
+            />
+            <button className="text-xs px-2 py-1 rounded bg-green-50 text-green-700" onClick={() => handleApproveToggle(product)}>
+              Approve
+            </button>
+            <button className="text-xs px-2 py-1 rounded bg-red-50 text-red-700" onClick={() => handleRejectProduct(product)}>
+              Reject
+            </button>
+          </div>
 
         </span>
       ];

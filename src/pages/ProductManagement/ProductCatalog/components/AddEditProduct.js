@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   createProducts, getAllBrandList, getAllStoreList, getAllStoreShippingDurationList, getAllTaxRulesList, getList,
   updateProducts, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList, productOptionList,
-  getAllHsn,
+  getAllHsn, getCategoryAttributes,
 } from '../../../../Redux/productSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
 import Loader from '../../../../components/Loader/Loader';
@@ -18,10 +18,10 @@ import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import TabNavigation from './TabNavigation';
 import Breadcrumb from './Breadcrumb';
-import ProductDetails from './ProductDetails';
 import selectJson from '../../../../_helpers/SelectJson.json'
 import { BsMenuApp } from 'react-icons/bs';
 import VariantsOptionsTab from './VariantsOptionsTab';
+import DynamicAttributesTab from './DynamicAttributesTab';
 
 const API_CALLS = [{ action: getAllBrandList, name: 'Brand List' },
 { action: getList, name: 'Category List' },
@@ -58,12 +58,14 @@ export default function ProductManagementUI() {
   let { INITIALS_DATA } = selectJson
   const [formData, setFormData] = useState(INITIALS_DATA);
   const [options, setVariantRows] = useState([{
+    "sku": "",
     "type": null,
     "remark": "",
     "packaging": "",
     "mrp": "",
     "discount": "",
-    "salePrice": ""
+    "salePrice": "",
+    "stock": ""
   }]);
   const [activeTab, setActiveTab] = useState('basic-details');
   const [isScrolling, setIsScrolling] = useState(false);
@@ -71,6 +73,7 @@ export default function ProductManagementUI() {
   const isEditMode = id ? true : false;
   const [taxData, setTaxData] = useState(null)
   const [userData, setUserData] = useState({})
+  const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -105,30 +108,42 @@ export default function ProductManagementUI() {
           setFormData({
             ...INITIALS_DATA,
             ...productData,
+            name: productData?.title || productData?.name || '',
+            category_id: productData?.categoryId || productData?.category || '',
+            sellerId: productData?.sellerId || '',
+            stock: productData?.stock ?? '',
+            price: productData?.price ?? '',
+            mrp: productData?.mrp ?? '',
+            attributes: productData?.attributes || {},
             options: productData?.options || [{
+              "sku": "",
               "type": null,
               "remark": "",
               "packaging": "",
               "mrp": "",
               "discount": "",
-              "salePrice": ""
+              "salePrice": "",
+              "stock": ""
             }]
           });
 
-          if (productData?.options && Array.isArray(productData.options)) {
-            const formattedOptions = productData.options.map((option, index) => ({
+          const sourceVariants = productData?.variants?.length ? productData.variants : productData?.options;
+          if (sourceVariants && Array.isArray(sourceVariants)) {
+            const formattedOptions = sourceVariants.map((option, index) => ({
               id: option._id || Date.now() + index,
-              type: option.type,
+              sku: option.sku || '',
+              type: option.type || Object.keys(option.attributes || {})[0] || '',
               remark: option.remark || '',
               packaging: option.packaging || '',
               mrp: option.mrp || '',
               discount: option.discount || '',
-              salePrice: option.salePrice || ''
+              salePrice: option.salePrice || option.price || '',
+              stock: option.stock || ''
             }));
             setVariantRows(formattedOptions);
           }
 
-          setImages(res?.data?.imageUrls || []);
+          setImages(productData?.images || res?.data?.imageUrls || []);
 
 
 
@@ -198,6 +213,24 @@ export default function ProductManagementUI() {
   }, [isEditMode, id, loading]);
 
   useEffect(() => {
+    const categoryId = formData?.category_id || formData?.categoryId || formData?.category;
+    if (!categoryId) {
+      setCategoryAttributeSchema([]);
+      return;
+    }
+
+    dispatch(getCategoryAttributes({ categoryId }))
+      .unwrap()
+      .then((res) => {
+        const data = res?.data || {};
+        setCategoryAttributeSchema(data.attributeSchema || []);
+      })
+      .catch(() => {
+        setCategoryAttributeSchema([]);
+      });
+  }, [dispatch, formData?.category_id, formData?.categoryId, formData?.category]);
+
+  useEffect(() => {
     const container = mainContainerRef.current;
     if (!container) return;
 
@@ -227,20 +260,23 @@ export default function ProductManagementUI() {
 
   const createSelectOptions = useMemo(() => {
     const options = [];
+    const categorySource = selector?.getListData?.data?.data?.list || selector?.getListData?.data?.data || [];
     const addOptions = (categories, prefix = '') => {
       if (!Array.isArray(categories)) return;
       categories.forEach(category => {
-        const label = prefix ? `${prefix} > ${category.name}` : category.name;
+        const categoryName = category.name || category.title || category.categoryKey;
+        const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
         options.push({
           value: `${category._id}`,
+          categoryKey: category.categoryKey,
           label,
         });
-        if (Array.isArray(category.subcategories) && category.subcategories.length > 0) {
-          addOptions(category.subcategories, label);
+        if (Array.isArray(category.subcategories || category.subCategories) && (category.subcategories || category.subCategories).length > 0) {
+          addOptions(category.subcategories || category.subCategories, label);
         }
       });
     };
-    addOptions(selector?.getListData?.data?.data);
+    addOptions(categorySource);
     return options;
   }, [selector?.getListData]);
 
@@ -249,49 +285,20 @@ export default function ProductManagementUI() {
     const newErrors = {};
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
-    if (userData?.roleId !== 9 && !formData?.store_id) {
-      newErrors.store_id = "Store is required.";
-      if (!formData?.rack_no) newErrors.rack_no = "Rack No is required.";
-    }
-    if (!formData?.brand_id) newErrors.brand_id = "Brand is required.";
+    if (!formData?.sellerId && userData?.role !== 'seller') newErrors.sellerId = "Seller is required.";
     if (!formData?.category_id) newErrors.category_id = "Category is required.";
-    if (!formData?.hsn_code) newErrors.hsn_code = "HSN Code is required.";
-    // if (!formData?.batch_id) newErrors.batch_id = "Batch is required.";
-    if (!formData?.salt_composition) newErrors.salt_composition = "salt composition  is required.";
-    if (!formData?.primary_use) newErrors.primary_use = "Primary use   is required.";
-    if (!formData?.salt_synonyms) newErrors.salt_synonyms = "Salt synonyms is required.";
-    if (!formData?.storage) newErrors.storage = "storage is required.";
-    if (!formData?.introduction) newErrors.introduction = "introduction is required.";
-    if (!formData?.use_of) newErrors.use_of = "Use of is required.";
-    if (!formData?.benefits) newErrors.benefits = "benefits  is required.";
-    if (!formData?.side_effect) newErrors.side_effect = "Side effect is required.";
-    if (!formData?.how_to_use) newErrors.how_to_use = "How to use is required.";
-    if (!formData?.how_works) newErrors.how_works = "How works is required.";
-    if (!formData?.safety_advise) newErrors.safety_advise = "How works is required.";
-    if (!formData?.if_miss) newErrors.if_miss = "How works is required.";
-
-    if (options.length === 0) {
-      newErrors.options = toast.info("At least one variant option is required.");
-    } else {
-      options.forEach((option, index) => {
-        if (!option.type) {
-          newErrors[`options[${index}].type`] = toast.info("Option type is required.");
-        }
-        if (!option.mrp || isNaN(option.mrp)) {
-          newErrors[`options[${index}].mrp`] = toast.info("MRP must be a valid number.");
-        }
-        if (option.discount && isNaN(option.discount)) {
-          newErrors[`options[${index}].discount`] = toast.info("Discount must be a valid number.");
-        }
-        if (!option.salePrice || isNaN(option.salePrice)) {
-          newErrors[`options[${index}].salePrice`] = toast.info("Sale price must be a valid number.");
-        }
-        if (option.mrp && option.salePrice && parseFloat(option.salePrice) > parseFloat(option.mrp)) {
-          newErrors[`options[${index}].salePrice`] = toast.info("Sale price cannot be greater than MRP.");
-        }
-      });
-    }
-
+    if (!formData?.price || Number(formData.price) <= 0) newErrors.price = "Price is required.";
+    if (!formData?.mrp || Number(formData.mrp) <= 0) newErrors.mrp = "MRP is required.";
+    if (formData?.stock === undefined || formData?.stock === '' || Number(formData.stock) < 0) newErrors.stock = "Stock is required.";
+    categoryAttributeSchema.forEach((field) => {
+      const value = formData?.attributes?.[field.key];
+      if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
+        newErrors.attributes = {
+          ...(newErrors.attributes || {}),
+          [field.key]: `${field.label || field.key} is required.`,
+        };
+      }
+    });
 
     if (!images || images.length === 0) {
       newErrors.images = "At least one image is required.";
@@ -428,6 +435,9 @@ export default function ProductManagementUI() {
         case 'STORE_ID':
           delete newErrors.store_id;
           break;
+        case 'SELLER_ID':
+          delete newErrors.sellerId;
+          break;
         case 'BRAND_ID':
           delete newErrors.brand_id;
           break;
@@ -472,13 +482,16 @@ export default function ProductManagementUI() {
           dispatch(getAllStoreShippingDurationList({ query: JSON.stringify({ store_id: selectedOption.value }) }))
         }
         break;
+      case 'SELLER_ID':
+        setFormData(prev => ({ ...prev, sellerId: selectedOption?.value || "" }));
+        break;
 
       case 'BRAND_ID':
         setFormData(prev => ({ ...prev, brand_id: selectedOption?.value || "" }));
         break;
 
       case 'CATEGORY_ID':
-        setFormData(prev => ({ ...prev, category_id: selectedOption?.value || "" }));
+        setFormData(prev => ({ ...prev, category_id: selectedOption?.value || "", attributes: {} }));
         if (selectedOption?.value) {
           dispatch(getAllTaxRulesList({ query: JSON.stringify({ category_id: selectedOption.value }) }))
         }
@@ -539,46 +552,50 @@ export default function ProductManagementUI() {
     }
 
     const formattedOptions = options.map(option => ({
+      sku: option.sku || '',
       type: option.type,
       remark: option.remark || '',
       packaging: option.packaging || '',
       mrp: parseFloat(option.mrp) || 0,
       discount: parseFloat(option.discount) || 0,
       salePrice: parseFloat(option.salePrice) || 0,
+      stock: Number(option.stock || 0),
       ...(option._id && { _id: option._id })
     }));
 
     const primaryOption = formattedOptions[0] || {};
     const productPayload = {
+      sellerId: updatedFormData.sellerId,
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
-      price: Number(primaryOption.salePrice || updatedFormData.price || 0),
-      mrp: Number(primaryOption.mrp || updatedFormData.mrp || 0),
+      price: Number(updatedFormData.price || primaryOption.salePrice || 0),
+      mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),
       category: updatedFormData.category_id || updatedFormData.category,
+      categoryId: updatedFormData.category_id || updatedFormData.category,
+      brand: updatedFormData.brand_id || updatedFormData.brand || "",
       productFamilyCode: updatedFormData.productFamilyCode || updatedFormData.brand_id || "DEFAULT",
       sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
       color: updatedFormData.color || "default",
       attributes: {
-        brand: updatedFormData.brand_id,
+        ...(updatedFormData.attributes || {}),
+        ...(updatedFormData.brand_id ? { brand: updatedFormData.brand_id } : {}),
         warranty: updatedFormData.warranty_id,
-        saltComposition: updatedFormData.salt_composition,
-        primaryUse: updatedFormData.primary_use,
-        saltSynonyms: updatedFormData.salt_synonyms,
-        storage: updatedFormData.storage,
-        introduction: updatedFormData.introduction,
-        benefits: updatedFormData.benefits,
-        sideEffect: updatedFormData.side_effect,
-        howToUse: updatedFormData.how_to_use,
-        howWorks: updatedFormData.how_works,
-        safetyAdvise: updatedFormData.safety_advise,
-        ifMiss: updatedFormData.if_miss,
-        options: formattedOptions,
       },
+      variants: formattedOptions
+        .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
+        .map((option, index) => ({
+          sku: option.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
+          price: Number(option.salePrice || updatedFormData.price || 0),
+          mrp: Number(option.mrp || updatedFormData.mrp || 0),
+          stock: Number(option.stock || 0),
+          attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
+          images: [],
+        })),
       hsnCode: updatedFormData.hsn_code,
       origin: updatedFormData.origin || {},
       stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
       images: images?.length ? images : catalogsUrlsArray,
-      status: updatedFormData.isDisable ? "draft" : "active",
+      status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
     };
 
     try {
@@ -591,12 +608,14 @@ export default function ProductManagementUI() {
           setFormData({});
           setImages([]);
           setVariantRows([{
+            "sku": "",
             "type": null,
             "remark": "",
             "packaging": "",
             "mrp": "",
             "discount": "",
-            "salePrice": ""
+            "salePrice": "",
+            "stock": ""
           }]);
         }
         toast.success(response?.message || "Product saved successfully!");
@@ -637,7 +656,7 @@ export default function ProductManagementUI() {
           handleSelectChange={handleSelectChange}
           batchData={formattedData?.batchList}
           fetchAllData={fetchAllData}
-          allCategories={selector?.getListData?.data?.data || []}
+          allCategories={selector?.getListData?.data?.data?.list || selector?.getListData?.data?.data || []}
           hsnCodeList={formattedData?.hsnCodeList}
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}
@@ -648,11 +667,16 @@ export default function ProductManagementUI() {
     },
     {
       id: 'product-details',
-      title: 'Product details',
-      description: 'Manage the product\'s details information.',
+      title: 'Attributes',
+      description: 'Manage category-based product attributes.',
       icon: <GrDocument />,
       component: (
-        <ProductDetails formData={formData} onChange={handleProductDetailChange} error={error} />
+        <DynamicAttributesTab
+          attributeSchema={categoryAttributeSchema}
+          formData={formData}
+          setFormData={setFormData}
+          errors={error}
+        />
       )
     },
     {
@@ -690,7 +714,7 @@ export default function ProductManagementUI() {
   ], [
     formData, formattedData, createSelectOptions, formattedBatchData,
     handleChange, handleSelectChange,
-    selector, options
+    selector, options, categoryAttributeSchema, error
   ]);
 
 

@@ -35,6 +35,11 @@
                 "key": "categories"
             },
             {
+                "label": "Category Attributes",
+                "icon": "MdTune",
+                "key": "category-attributes"
+            },
+            {
                 "label": "Brands",
                 "icon": "MdBrandingWatermark",
                 "key": "brands"

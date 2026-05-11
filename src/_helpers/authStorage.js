@@ -145,7 +145,7 @@ export const hasModuleAccess = (moduleCode) => {
 
   const moduleAliases = {
     dashboard: ["home", "dashboard", "analytics"],
-    products: ["products", "product-catalog", "seller-product-inventory"],
+    products: ["products", "product-catalog", "seller-product-inventory", "categories", "category-attributes"],
     orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
     pricing: ["pricing", "coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],

@@ -11,6 +11,7 @@ const firstProductId = (payload = {}) => {
 const toProductListParams = (params = {}) => ({
     ...(params.page ? { page: Number(params.page) } : {}),
     ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+    ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
     ...(params.category ? { category: params.category } : {}),
     ...(params.status ? { status: params.status } : {}),
     ...(params.hsnCode || params.hsn_code ? { hsnCode: params.hsnCode || params.hsn_code } : {}),
@@ -59,18 +60,42 @@ const initialState = {
     productOptionListData: {}, createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
     deleteProductsData: {}, approveDisapproveData: {}, getAllTaxRulesListData: {}, getAllProductsData: {}, createCategoryData: {},
     getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, downloadSampleCsvData: {},
-    uploadHistoryData: {}, getProductsForPurchaseData: {},getProductStocksData:{}, productModerationQueueData:{}
+    uploadHistoryData: {}, getProductsForPurchaseData: {}, getProductStocksData: {}, productModerationQueueData: {},
+    getCategoryAttributesData: {}, updateCategoryAttributesData: {}
 
 }
 const PRODUCT_LEGACY_UNSUPPORTED_MESSAGE =
     'This legacy product management API is not exposed by the current backend.';
 
-export const getList = unsupportedThunk('product/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.page ? { page: Number(params.page) } : {}),
+        limit: Number(params.limit || params.size || 100),
+        ...(params.parentKey ? { parentKey: params.parentKey } : {}),
+        ...(params.active !== undefined ? { active: params.active } : {}),
+        ...(params.categoryKey ? { categoryKey: params.categoryKey } : {}),
+    }),
+})
 export const softDelete = unsupportedThunk('product/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const enableDisable = unsupportedThunk('product/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const create = unsupportedThunk('product/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const update = unsupportedThunk('product/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createCategory = unsupportedThunk('product/createCategory', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const createCategory = createApiThunkPrivate('product/createCategory', ENDPOINTS.platform.categories, 'POST', false, {
+    transformBody: (payload = {}) => {
+        const title = payload.title || payload.name || payload.categoryName || '';
+        const keyBase = payload.categoryKey || title;
+        return {
+            categoryKey: String(keyBase).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+            title,
+            parentKey: payload.parentKey || payload.categoryId || null,
+            level: payload.level || (payload.categoryId ? 1 : 0),
+            attributeSchema: payload.attributeSchema || [],
+            attributesSchema: payload.attributesSchema || {},
+            active: payload.active ?? payload.isDisable !== true,
+            sortOrder: Number(payload.sortOrder || payload.priority || 0),
+        };
+    },
+})
 
 
 
@@ -155,7 +180,7 @@ export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.produc
 export const updateProducts = createApiThunkPrivate('updateProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'GET')
 export const enableDisableProductCatalogs = patchMany(
     'enableDisableProductCatalogs',
-    ENDPOINTS.products.detail,
+    ENDPOINTS.products.status,
     toProductStatusBody,
     'Product status updated successfully'
 )
@@ -179,6 +204,23 @@ export const getProductModerationQueue = createApiThunkPrivate('getProductModera
         ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
     }),
 })
+export const getCategoryAttributes = createApiThunkPrivate(
+    'getCategoryAttributes',
+    (payload) => ENDPOINTS.platform.categoryAttributes(payload?.categoryKey || payload?.categoryId || payload?._id || payload?.id),
+    'GET',
+    true
+)
+export const updateCategoryAttributes = createApiThunkPrivate(
+    'updateCategoryAttributes',
+    (payload) => ENDPOINTS.platform.category(payload?.categoryKey || payload?.categoryId || payload?._id || payload?.id),
+    'PATCH',
+    false,
+    {
+        transformBody: (payload = {}) => ({
+            attributeSchema: payload.attributeSchema || [],
+        }),
+    }
+)
 export const getAllBrandList = unsupportedThunk('brands/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const getProductsForPurchase = unsupportedThunk('erp/product/get-products-for-purchase-order', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
@@ -300,6 +342,8 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
         createExtraReducersForThunk(builder, getProductModerationQueue, 'productModerationQueueData')
         createExtraReducersForThunk(builder, createCategory, 'createCategoryData')
+        createExtraReducersForThunk(builder, getCategoryAttributes, 'getCategoryAttributesData')
+        createExtraReducersForThunk(builder, updateCategoryAttributes, 'updateCategoryAttributesData')
 
         createExtraReducersForThunk(builder, getHsnList, 'getHsnListData')
         createExtraReducersForThunk(builder, createHsn, 'createHsnData')
