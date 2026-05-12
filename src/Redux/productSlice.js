@@ -14,6 +14,7 @@ const toProductListParams = (params = {}) => ({
     ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
     ...(params.category ? { category: params.category } : {}),
     ...(params.status ? { status: params.status } : {}),
+    ...(params.sellerId ? { sellerId: params.sellerId } : {}),
     ...(params.hsnCode || params.hsn_code ? { hsnCode: params.hsnCode || params.hsn_code } : {}),
     ...(params.color ? { color: params.color } : {}),
     ...(params.country ? { country: params.country } : {}),
@@ -21,6 +22,7 @@ const toProductListParams = (params = {}) => ({
     ...(params.city ? { city: params.city } : {}),
     ...(params.productFamilyCode ? { productFamilyCode: params.productFamilyCode } : {}),
     ...(params.sku ? { sku: params.sku } : {}),
+    ...(params.includeAllStatuses !== undefined ? { includeAllStatuses: params.includeAllStatuses } : {}),
 });
 
 const toProductStatusBody = (payload = {}) => ({
@@ -220,7 +222,8 @@ export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.
 export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
     transformParams: toProductListParams,
 })
-export const updateProducts = createApiThunkPrivate('updateProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'GET')
+export const getProductById = createApiThunkPrivate('getProductById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'GET')
+export const updateProducts = getProductById
 export const enableDisableProductCatalogs = patchMany(
     'enableDisableProductCatalogs',
     ENDPOINTS.products.status,
@@ -375,7 +378,7 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, getAllStoreShippingDurationList, 'getAllStoreShippingDurationListData')
         createExtraReducersForThunk(builder, createProducts, 'createProductsData')
         createExtraReducersForThunk(builder, getProducts, 'getProductsData')
-        createExtraReducersForThunk(builder, updateProducts, 'updateProductsData')
+        createExtraReducersForThunk(builder, getProductById, 'updateProductsData')
         createExtraReducersForThunk(builder, enableDisableProductCatalogs, 'enableDisableProductCatalogsData')
         createExtraReducersForThunk(builder, updateProductsById, 'updateProductsByIdData')
         createExtraReducersForThunk(builder, deleteProducts, 'deleteProductsData')

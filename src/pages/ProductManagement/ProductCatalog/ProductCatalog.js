@@ -24,6 +24,8 @@ import { generateCSV, transformArray, uploadCsvFile } from '../../../_helpers/gl
 import UploadFile from '../../../components/Atoms/UploadFile/UploadFile';
 import DownloadButton from '../../../components/Button/DownloadButton';
 import Button from '../../../components/Atoms/buttons/button';
+import ProductReviewModal from '../../../components/Product/ProductReviewModal';
+import ProductStatusBadge from '../../../components/Product/ProductStatusBadge';
 // import { GoDesktopDownload } from "react-icons/go";
 
 
@@ -61,6 +63,7 @@ const ProductCatalog = () => {
   const [isBulkUpload, setIsBulkUpload] = useState(false)
   const [bulkUploadData, setBulkUploadData] = useState({ seller_id: "", store_id: "", file: '' })
   const [isLoading, setIsLoading] = useState(false)
+  const [reviewModal, setReviewModal] = useState({ open: false, product: null })
 
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || []);
@@ -73,9 +76,13 @@ const ProductCatalog = () => {
         page: pageNo,
         size: size,
         keyWord: filters?.search,
+        includeAllStatuses: true,
         ...(filters?.category?.value ? { category: filters.category.value } : {}),
+        ...(filters?.sellerName?.value ? { sellerId: filters.sellerName.value } : {}),
         ...(filters?.activationStatus?.value === "Active" ? { status: "active" } : {}),
         ...(filters?.activationStatus?.value === "Inactive" ? { status: "inactive" } : {}),
+        ...(filters?.approvalStatus?.value === "Pending" ? { status: "pending_approval" } : {}),
+        ...(filters?.approvalStatus?.value === "Rejected" ? { status: "rejected" } : {}),
       };
       const response = await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
@@ -117,7 +124,6 @@ const ProductCatalog = () => {
     "Price",
     "Stock",
     "Status",
-    "Approval",
     "Created On",
     "Active",
     "Action"
@@ -210,58 +216,30 @@ const ProductCatalog = () => {
     fetchProductsList()
   }
 
-  const handleApproveToggle = async (data) => {
-    const nextStatus = data?.status === "active" || data?.isApproved ? "inactive" : "active";
-    const apiPayload = {
-      id: data?._id,
-      body: {
-        status: nextStatus,
-        rejectionReason: null,
-        checklist: {
-          titleVerified: true,
-          categoryVerified: true,
-          complianceVerified: true,
-          mediaVerified: true,
-        },
-      },
-    }
-    try {
-      setLoading(true);
-      const response = await dispatch(approveDisapprove(apiPayload)).unwrap();
-      if (response.message) {
-        toast.success(`Product ${nextStatus === "active" ? 'approved' : 'moved to draft'} successfully.`);
-        fetchProductsList()
-      } else {
-        toast.info(response?.message || 'Something went wrong');
-      }
-    } catch (error) {
-      toast.error(error?.message || 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const handleApproveToggle = (data) => {
+    setReviewModal({ open: true, product: data });
+  };
 
-  const handleRejectProduct = async (data) => {
+  const handleRejectProduct = (data) => {
+    setReviewModal({ open: true, product: data });
+  };
+
+  const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
+    const product = reviewModal.product;
     const apiPayload = {
-      id: data?._id,
-      body: {
-        status: "rejected",
-        rejectionReason: "Rejected by admin review",
-        checklist: {
-          titleVerified: true,
-          categoryVerified: true,
-          complianceVerified: true,
-          mediaVerified: true,
-        },
-      },
+      id: product?._id,
+      status: decision,
+      rejectionReason: rejectionReason || null,
+      checklist,
     };
+    setLoading(true);
     try {
-      setLoading(true);
       const response = await dispatch(approveDisapprove(apiPayload)).unwrap();
-      toast.success(response?.message || 'Product rejected successfully.');
+      const labels = { active: 'approved', inactive: 'deactivated', rejected: 'rejected' };
+      toast.success(response?.message || `Product ${labels[decision] || 'updated'} successfully.`);
       fetchProductsList();
     } catch (error) {
-      toast.error(error?.message || error || 'Failed to reject product');
+      throw new Error(error?.message || error || 'Failed to update product');
     } finally {
       setLoading(false);
     }
@@ -298,9 +276,13 @@ const ProductCatalog = () => {
         page: 1,
         size: size,
         keyWord: filters?.search,
+        includeAllStatuses: true,
         ...(filters?.category?.value ? { category: filters.category.value } : {}),
+        ...(filters?.sellerName?.value ? { sellerId: filters.sellerName.value } : {}),
         ...(filters?.activationStatus?.value === "Active" ? { status: "active" } : {}),
         ...(filters?.activationStatus?.value === "Inactive" ? { status: "inactive" } : {}),
+        ...(filters?.approvalStatus?.value === "Pending" ? { status: "pending_approval" } : {}),
+        ...(filters?.approvalStatus?.value === "Rejected" ? { status: "rejected" } : {}),
       };
       const response = await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
@@ -382,8 +364,7 @@ const ProductCatalog = () => {
         <span>{[product?.origin?.city, product?.origin?.state, product?.origin?.country].filter(Boolean).join(', ') || 'N/A'}</span>,
         <span>{product?.price !== undefined ? `₹${product.price}` : 'N/A'}</span>,
         <span>{product?.stock ?? 'N/A'}</span>,
-        <span className='capitalize'>{product?.status || 'draft'}</span>,
-        <ToggleButton key={`toggle-${product._id}`} isToggle={product?.isApproved} handleClick={() => handleApproveToggle(product)} />,
+        <ProductStatusBadge status={product?.status} />,
         <span key={`date-${product._id}`}>{formatDate(product.createdAt)}</span>,
         <ToggleButton key={`toggle-${product._id}`} isToggle={!product?.isDisable} handleClick={() => handleToggle(product)} />,
         <span>
@@ -395,14 +376,13 @@ const ProductCatalog = () => {
               showLinkButton={false}
               onDelete={() => handleDelete(product)}
             />
-            <button className="text-xs px-2 py-1 rounded bg-green-50 text-green-700" onClick={() => handleApproveToggle(product)}>
-              Approve
-            </button>
-            <button className="text-xs px-2 py-1 rounded bg-red-50 text-red-700" onClick={() => handleRejectProduct(product)}>
-              Reject
+            <button
+              className="text-xs px-2 py-1 rounded bg-[#3E4094] text-white hover:bg-[#2e3074]"
+              onClick={() => handleApproveToggle(product)}
+            >
+              Review
             </button>
           </div>
-
         </span>
       ];
     }),
@@ -564,6 +544,13 @@ const ProductCatalog = () => {
         images={selectedImages}
         isOpen={galleryOpen}
         onClose={() => setGalleryOpen(false)}
+      />
+
+      <ProductReviewModal
+        isOpen={reviewModal.open}
+        product={reviewModal.product}
+        onClose={() => setReviewModal({ open: false, product: null })}
+        onSubmit={handleReviewSubmit}
       />
     </div>
   );

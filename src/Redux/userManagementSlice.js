@@ -44,6 +44,7 @@ const initialState = {
     reviewSellerKycData: {},
     updateSellerBankStatusData: {},
     updateSellerGoLiveData: {},
+    getSellerKycData: {},
 };
 
 export const getList = createApiThunkPrivate(
@@ -212,6 +213,13 @@ export const updateSellerBankStatus = createApiThunkPrivate(
     }
 );
 
+export const getSellerKyc = createApiThunkPrivate(
+    'getSellerKyc',
+    (payload) => ENDPOINTS.sellers.kycDetail(payload?.sellerId || firstId(payload)),
+    'GET',
+    true,
+);
+
 export const updateSellerGoLive = createApiThunkPrivate(
     'updateSellerGoLive',
     (payload) => ENDPOINTS.sellers.goLive(payload?.sellerId || firstId(payload)),
@@ -308,6 +316,7 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
         createExtraReducersForThunk(builder, updateSellerBankStatus, 'updateSellerBankStatusData')
         createExtraReducersForThunk(builder, updateSellerGoLive, 'updateSellerGoLiveData')
+        createExtraReducersForThunk(builder, getSellerKyc, 'getSellerKycData')
         createExtraReducersForThunk(builder, changePassword, 'changePasswordData')
         createExtraReducersForThunk(builder, getUserList, 'getUserListData')
         createExtraReducersForThunk(builder, createUser, 'createUserData')

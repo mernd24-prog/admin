@@ -6,7 +6,7 @@ import ProductSettingsPanel from './ProductSettingsPanel';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   createProducts, getAllBrandList, getAllStoreList, getAllStoreShippingDurationList, getAllTaxRulesList, getList,
-  updateProducts, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList,
+  getProductById, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList,
   getAllHsn, getCategoryAttributes,
 } from '../../../../Redux/productSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
@@ -145,7 +145,7 @@ export default function ProductManagementUI() {
 
   const fetchProductById = async (productId) => {
     try {
-      dispatch(updateProducts({ _id: productId })).unwrap()
+      dispatch(getProductById({ _id: productId })).unwrap()
         .then((res) => {
           const productData = res?.data;
           setFormData({
@@ -157,6 +157,7 @@ export default function ProductManagementUI() {
             stock: productData?.stock ?? '',
             price: productData?.price ?? '',
             mrp: productData?.mrp ?? '',
+            gstRate: productData?.gstRate ?? 18,
             attributes: productData?.attributes || {},
             options: productData?.options || [{
               "sku": "",
@@ -677,6 +678,7 @@ export default function ProductManagementUI() {
     const productPayload = {
       sellerId: updatedFormData.sellerId,
       title: updatedFormData.name || updatedFormData.title,
+      gstRate: Number(taxData?.gstRate ?? taxData?.IGST ?? updatedFormData.gstRate ?? 18),
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
       mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),

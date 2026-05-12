@@ -1,0 +1,185 @@
+import React, { useState, useEffect } from 'react';
+import DefaultMiddleModal from '../Atoms/Modal/DefaultMiddleModal ';
+
+const CHECKLIST_ITEMS = [
+  { key: 'titleVerified',      label: 'Title & Description verified' },
+  { key: 'categoryVerified',   label: 'Category correctly assigned' },
+  { key: 'complianceVerified', label: 'Compliance & legal checks passed' },
+  { key: 'mediaVerified',      label: 'Images & media verified' },
+];
+
+const DEFAULT_CHECKLIST = {
+  titleVerified: false,
+  categoryVerified: false,
+  complianceVerified: false,
+  mediaVerified: false,
+};
+
+/**
+ * Modal for approving or rejecting a product with optional checklist + rejection reason.
+ *
+ * Props:
+ *  isOpen         - boolean
+ *  onClose        - () => void
+ *  onSubmit       - (decision: 'active'|'rejected'|'inactive', rejectionReason?: string, checklist: object) => Promise<void>
+ *  product        - { title, status, moderation: { rejectionReason, checklist } }
+ */
+const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
+  const [decision, setDecision] = useState('active');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setDecision('active');
+      setRejectionReason('');
+      setChecklist({
+        ...DEFAULT_CHECKLIST,
+        ...(product?.moderation?.checklist || {}),
+      });
+      setError('');
+    }
+  }, [isOpen, product]);
+
+  const needsReason = decision === 'rejected';
+
+  const allChecked = Object.values(checklist).every(Boolean);
+
+  const handleChecklistToggle = (key) => {
+    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleCheckAll = () => {
+    const next = !allChecked;
+    setChecklist({
+      titleVerified: next,
+      categoryVerified: next,
+      complianceVerified: next,
+      mediaVerified: next,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (needsReason && !rejectionReason.trim()) {
+      setError('Rejection reason is required');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await onSubmit(decision, needsReason ? rejectionReason.trim() : null, checklist);
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <DefaultMiddleModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Product Review Decision"
+      isButtonView={false}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {product?.title && (
+          <p className="text-sm text-gray-600">
+            Product: <span className="font-medium text-gray-800">{product.title}</span>
+          </p>
+        )}
+
+        {product?.moderation?.rejectionReason && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-xs font-semibold text-red-700 mb-1">Previous Rejection Reason</p>
+            <p className="text-sm text-red-600">{product.moderation.rejectionReason}</p>
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Decision</label>
+          <select
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            value={decision}
+            onChange={(e) => { setDecision(e.target.value); setError(''); }}
+          >
+            <option value="active">Approve — make product active</option>
+            <option value="inactive">Deactivate — set to inactive</option>
+            <option value="rejected">Reject — requires reason</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">Moderation Checklist</p>
+            <button
+              type="button"
+              onClick={handleCheckAll}
+              className="text-xs text-[#3E4094] hover:underline"
+            >
+              {allChecked ? 'Uncheck all' : 'Check all'}
+            </button>
+          </div>
+          {CHECKLIST_ITEMS.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!checklist[key]}
+                onChange={() => handleChecklistToggle(key)}
+                className="w-4 h-4 text-[#3E4094] border-gray-300 rounded focus:ring-[#3E4094]"
+              />
+              <span className="text-sm text-gray-700">{label}</span>
+            </label>
+          ))}
+        </div>
+
+        {needsReason && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Rejection Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+              rows={3}
+              placeholder="Provide a clear reason for rejection..."
+              value={rejectionReason}
+              onChange={(e) => { setRejectionReason(e.target.value); setError(''); }}
+            />
+          </div>
+        )}
+
+        {error && <p className="text-xs text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`px-4 py-2 text-sm rounded-md text-white disabled:opacity-60 ${
+              needsReason
+                ? 'bg-red-600 hover:bg-red-700'
+                : decision === 'active'
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-orange-500 hover:bg-orange-600'
+            }`}
+            disabled={loading}
+          >
+            {loading ? 'Submitting…' : decision === 'active' ? 'Approve' : decision === 'rejected' ? 'Reject' : 'Deactivate'}
+          </button>
+        </div>
+      </form>
+    </DefaultMiddleModal>
+  );
+};
+
+export default ProductReviewModal;
