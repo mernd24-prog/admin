@@ -45,15 +45,16 @@ const ProductOptionValue = () => {
       page: pageNo,
       size: size,
       keyWord: filters.search,
+      option_id: id,
       searchFields: 'name',
       select: 'name isDisable'
     };
     dispatch(getListProductOption(reqData));
-  }, [size, pageNo, isRefresh]);
+  }, [size, pageNo, isRefresh, id]);
 
   const selector = useSelector(state => state.product);
-  const getListData = selector?.getListProductOptionData?.data?.data?.list;
-  const totalUsers = getListData?.total || 0;
+  const listResponse = selector?.getListProductOptionData?.data?.data || {};
+  const getListData = listResponse?.list || [];
 
   const handleInputChange = e => {
     const { name, value } = e.target;
@@ -165,7 +166,7 @@ const ProductOptionValue = () => {
           setIsEditModal(true);
         }}
         onDelete={() => {
-          setDeleteData({ _id: Array(user._id) })
+          setDeleteData({ _id: [user._id] })
           setShowDeleteConfirmation(true)
         }}
         showLinkButton={false}
@@ -194,7 +195,7 @@ const ProductOptionValue = () => {
   const handleDisableFunc = () => {
     if (!toggleStates) return;
     const obj = {
-      _id: Array(toggleStates._id),
+      _id: [toggleStates._id],
       isDisable: !toggleStates.isDisable
     };
 
@@ -321,6 +322,7 @@ const ProductOptionValue = () => {
       page: pageNo,
       size: size,
       keyWord: filters.search,
+      option_id: id,
       searchFields: 'name',
       select: 'name isDisable'
     };
@@ -391,7 +393,7 @@ const ProductOptionValue = () => {
               placeholder='Search by...'
               showFilter={false}
               showSummary={false}
-              totalData={ selector?.getListProductOptionData?.data?.data?.total}
+              totalData={listResponse?.total || 0}
               totalSize={size}
               currentPage={pageNo}
               onPageChange={onPageChange}
@@ -400,9 +402,9 @@ const ProductOptionValue = () => {
             />
           </div>
           <div className="flex justify-center my-6">
-            {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
+            {listResponse?.total && size && Math.ceil(listResponse.total / size) > 1 && (
               <Pagination
-                totalPages={Math.ceil(getListData.total / size)}
+                totalPages={Math.ceil(listResponse.total / size)}
                 currentPage={pageNo}
                 onPageChange={onPageChange}
               />

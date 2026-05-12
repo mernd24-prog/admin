@@ -1,162 +1,204 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useDispatch, useSelector } from 'react-redux';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import ImageViewer from '../../../components/ImageViewer/ImageViewer';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import SearchComponent from '../../../components/Atoms/New Table/NewTable';
+import Loader from '../../../components/Loader/Loader';
+import Pagination from '../../../components/Pagination/Pagination';
+import { getProducts, updateProductsById } from '../../../Redux/productSlice';
 import AddEditSpecialPrice from './components/AddEditSpecialPrice';
 
+const PAGE_SIZE = 10;
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+const productIdOf = (product = {}) => firstDefined(product._id, product.id, product.productId);
 
 const SpecialPrice = () => {
-  const [apiRes, setApiRes] = useState([])
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const selector = useSelector((state) => state.product);
+
+  const listResponse = selector?.getProductsData?.data?.data || {};
+  const list = listResponse?.list || [];
+  const total = Number(listResponse?.total || 0);
+
   const [selectedImage, setSelectedImage] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const handleImageClick = (imageUrl) => {
-    setSelectedImage(imageUrl);
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({ search: '' });
+  const [selectedRow, setSelectedRow] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
 
-  const dummy = [
-    {
-      image: "https://demo.yo-kart.com/image/product/1421/SMALL/35519/0/1?t=1739517778",
-      name: "AUSHA 4K 60fps Dual Touch Screen",
-      desc: "Sold by: Shopper Shop",
-      sellingPrice: "$172.67",
-      specialPrice: "$169.49",
-      off: "1.84% OFF",
-      startDate: "2025-02-14",
-      endDate: "2030-02-28",
-      ava: "In Stock"
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/1409/SMALL/35519/0/1?t=1739517788",
-      name: "Canon EOS M50 Mark II Mirrorless",
-      desc: "Sold by: Tech World",
-      sellingPrice: "$899.00",
-      specialPrice: "$849.00",
-      off: "5.56% OFF",
-      startDate: "2025-03-01",
-      endDate: "2030-03-31",
-      ava: "In Stock"
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/1377/SMALL/35519/0/1?t=1739517798",
-      name: "Sony WH-1000XM4 Wireless Headphones",
-      desc: "Sold by: SoundStore",
-      sellingPrice: "$349.99",
-      specialPrice: "$299.99",
-      off: "14.29% OFF",
-      startDate: "2025-01-01",
-      endDate: "2026-01-01",
-      ava: "In Stock"
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/1364/SMALL/35519/0/1?t=1739517808",
-      name: "Apple Watch Series 9 GPS",
-      desc: "Sold by: Apple Hub",
-      sellingPrice: "$399.00",
-      specialPrice: "$379.00",
-      off: "5.01% OFF",
-      startDate: "2025-04-01",
-      endDate: "2026-04-01",
-      ava: "In Stock"
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/1399/SMALL/35519/0/1?t=1739517818",
-      name: "GoPro HERO12 Action Camera",
-      desc: "Sold by: Camera Kings",
-      sellingPrice: "$499.99",
-      specialPrice: "$469.99",
-      off: "6.00% OFF",
-      startDate: "2025-05-01",
-      endDate: "2026-05-01",
-      ava: "In Stock"
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await dispatch(
+        getProducts({
+          page: pageNo,
+          limit: PAGE_SIZE,
+          search: filters.search || undefined,
+        }),
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to fetch special price products');
+    } finally {
+      setIsLoading(false);
     }
-  ];
-
-  const handleEditChange = (index, field, value) => {
-    const updated = [...apiRes];
-    updated[index][field] = value;
-    setApiRes(updated);
-  };
+  }, [dispatch, pageNo, filters.search]);
 
   useEffect(() => {
-    setApiRes(dummy)
-  }, [])
-  const tableHeadings = [
-    "Product",
-    "Selling Price",
-    "Special Price",
-    "Start Date",
-    'End Date',
-    "Action"
-  ]
+    fetchProducts();
+  }, [fetchProducts]);
 
-  const tableRows = apiRes?.map((ele, index) => {
+  const handlePageChange = useCallback((newPageNo) => {
+    setPageNo(newPageNo);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setPageNo(1);
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSearchRemove = useCallback(() => {
+    setFilters({ search: '' });
+    setPageNo(1);
+  }, []);
+
+  const tableHeadings = ['Product', 'Selling Price', 'Special Price', 'Start Date', 'End Date', 'Action'];
+
+  const tableRows = list.map((product) => {
+    const id = productIdOf(product);
+    const title = firstDefined(product?.title, product?.name, 'N/A');
+    const image = firstDefined(product?.thumbnail, product?.thumbnails, product?.images?.[0], '');
+    const sellingPrice = Number(firstDefined(product?.mrp, product?.price, 0));
+    const specialPrice = Number(firstDefined(product?.metadata?.specialPrice?.price, product?.price, 0));
+    const discountPercent = sellingPrice > 0 ? (((sellingPrice - specialPrice) / sellingPrice) * 100) : 0;
+
     return [
-      <span className="flex items-center space-x-2 cursor-pointer" onClick={() => handleImageClick(ele?.image)}>
-        <img src={ele?.image} alt='' className='object-cover w-20 h-20 border rounded' />
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">{ele?.name}</span>
-          <span className="text-sm text-gray-500">{ele?.desc}</span>
+      <span className='flex items-center space-x-2 cursor-pointer'>
+        {image ? (
+          <img src={image} alt='' className='object-cover w-20 h-20 border rounded' onClick={() => setSelectedImage(image)} />
+        ) : (
+          <span className='w-20 h-20 border rounded bg-gray-100' />
+        )}
+        <div className='flex flex-col'>
+          <span className='text-sm font-medium'>{title}</span>
+          <span className='text-sm text-gray-500'>Seller: {firstDefined(product?.sellerId?.name, product?.sellerId?.email, product?.sellerId, 'N/A')}</span>
         </div>
       </span>,
-      <span className="text-sm font-medium">{ele?.sellingPrice}</span>,
-      <div className="flex flex-col space-y-1">
-        <input
-          type="text"
-          className="px-2 py-1 text-sm rounded outline-none border border-[#a19e9e1c]" title='Click to edit'
-          value={ele.specialPrice}
-          onChange={(e) => handleEditChange(index, 'specialPrice', e.target.value)}
-        />
-        <span className="px-2 py-1 text-xs font-semibold text-green-600">{ele.off}</span>
+      <span className='text-sm font-medium'>₹ {sellingPrice.toFixed(2)}</span>,
+      <div className='flex flex-col space-y-1'>
+        <span className='text-sm font-medium'>₹ {specialPrice.toFixed(2)}</span>
+        <span className='px-2 py-1 text-xs font-semibold text-green-600'>{discountPercent > 0 ? `${discountPercent.toFixed(2)}% OFF` : 'No discount'}</span>
       </div>,
-
-      <input
-        type="date"
-        className="px-2 py-1 text-sm rounded outline-none border border-[#a19e9e1c]" title='Click to edit'
-        value={ele.startDate}
-        onChange={(e) => handleEditChange(index, 'startDate', e.target.value)}
+      <span>{firstDefined(product?.metadata?.specialPrice?.startDate, product?.specialPriceStartDate, product?.saleStartDate, 'N/A')}</span>,
+      <span>{firstDefined(product?.metadata?.specialPrice?.endDate, product?.specialPriceEndDate, product?.saleEndDate, 'N/A')}</span>,
+      <ActionButtons
+        showDeleteButton={false}
+        showEditButton={false}
+        showViewButton={false}
+        viewButton={true}
+        onViewClick={() => {
+          if (!id) {
+            toast.error('Product ID not found');
+            return;
+          }
+          navigate(`/app/product-catalog/view/${id}`);
+        }}
       />,
-
-      <input
-        type="date"
-        className="px-2 py-1 text-sm rounded outline-none border border-[#a19e9e1c]" title='Click to edit'
-        value={ele.endDate}
-        onChange={(e) => handleEditChange(index, 'endDate', e.target.value)}
-      />,
-      <span>
-        <ActionButtons showEditButton={false} showLinkButton={false} />
-      </span>
     ];
   });
 
-
   return (
     <>
-      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto'>
+      <Loader loading={isLoading} />
+      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3'>
+        <h3 className='text-gray-500 text-sm font-semibold py-3'>
+          <Link to='/app/home'>Home</Link> / <span className='text-[#181c32]'>Special Price</span>
+        </h3>
         <div className='p-4 overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
+          <SearchComponent
+            tableHeadings={tableHeadings}
+            data={tableRows}
+            selectedRow={selectedRow}
+            setSelectedRow={setSelectedRow}
+            loading={isLoading}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={false}
+            isApprovalOptions={false}
+            isProduct={false}
+            isUser={false}
+            isActionButton={false}
+            isSearchDown={false}
+            isStatusAction={false}
+            isDelete={false}
+            applyFilters={applyFilters}
+            handleSearchRemove={handleSearchRemove}
+          />
           <TableData
-            Heading="Special Price"
+            Heading='Special Price'
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
-            placeholder='Search by...'
+            placeholder='Search by product...'
             showFilter={false}
             showSummary={false}
             showAddButton={true}
-            addButtonLabel="Add"
-            onClickFunction={() => {
-              setIsModalOpen(true);
-            }}
+            addButtonLabel='Add'
+            onClickFunction={() => setIsModalOpen(true)}
+            isHeaderCheckbox={false}
+            totalData={total}
           />
         </div>
+        {total > PAGE_SIZE && (
+          <Pagination
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            currentPage={pageNo}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
       <ImageViewer imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
       <AddEditSpecialPrice
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        productOptions={list.map((product) => ({
+          value: productIdOf(product),
+          label: firstDefined(product?.title, product?.name, productIdOf(product)),
+        })).filter((option) => option.value)}
+        onSubmit={async (formData) => {
+          if (!formData?.product) {
+            toast.error('Please select a product');
+            return;
+          }
+          try {
+            await dispatch(updateProductsById({
+              _id: formData.product,
+              metadata: {
+                specialPrice: {
+                  price: Number(formData.specialPrice || 0),
+                  startDate: formData.startDate || null,
+                  endDate: formData.endDate || null,
+                },
+              },
+              specialPriceStartDate: formData.startDate || undefined,
+              specialPriceEndDate: formData.endDate || undefined,
+            })).unwrap();
+            toast.success('Special price updated successfully');
+            setIsModalOpen(false);
+            fetchProducts();
+          } catch (err) {
+            toast.error(err?.message || err || 'Failed to update special price');
+          }
+        }}
       />
     </>
-  )
-}
+  );
+};
 
-export default SpecialPrice
+export default SpecialPrice;

@@ -31,7 +31,6 @@ const ManageZipcode = () => {
   const [pageNo, setPageNo] = useState(1);
   const [filters, setFilters] = useState({ search: "", country: "" });
   const [isLoading, setIsLoading] = useState(false)
-  console.warn(selector)
   const initialFormState = {
     country_code: "",
     state_code: "",
@@ -105,7 +104,6 @@ const ManageZipcode = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    console.log(e.target.value)
     setFormData(prev => ({
       ...prev,
       [name]: value

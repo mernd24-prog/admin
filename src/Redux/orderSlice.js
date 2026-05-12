@@ -11,6 +11,10 @@ const toOrderListParams = (params = {}) => {
     const page = Number(params.page || 1);
     return {
         ...(params.status ? { status: params.status } : {}),
+        ...(params.orderType || params.order_type ? { orderType: params.orderType || params.order_type } : {}),
+        ...(params.paymentStatus || params.payment_status ? { paymentStatus: params.paymentStatus || params.payment_status } : {}),
+        ...(params.userId || params.buyerId ? { buyerId: params.userId || params.buyerId } : {}),
+        ...(params.keyWord ? { keyWord: params.keyWord } : {}),
         ...(params.fromDate || params.dateFrom ? { fromDate: params.fromDate || params.dateFrom } : {}),
         ...(params.toDate || params.dateTo ? { toDate: params.toDate || params.dateTo } : {}),
         limit,
@@ -28,7 +32,7 @@ const normalizeOrderStatus = (status) => {
 
 const initialState = {
     getReviewListData: {}, getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
-    orderCancelData: {}, getDeliveryStaffForOrderData: {}, assignOrderData: {}
+    orderCancelData: {}, getDeliveryStaffForOrderData: {}, assignOrderData: {}, createOrderData: {}, deleteOrderData: {}
 
 }
 
@@ -40,9 +44,11 @@ export const getOrderList = createApiThunkPrivate('getOrderList', ENDPOINTS.orde
     transformParams: toOrderListParams,
 })
 export const getOrderInfo = createApiThunkPrivate('getOrderInfo', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'GET', true)
+export const createOrder = createApiThunkPrivate('createOrder', ENDPOINTS.orders.create, 'POST')
 export const updateOrderStatus = createApiThunkPrivate('updateOrderStatus', (payload) => ENDPOINTS.orders.status(firstOrderId(payload)), 'PATCH', false, {
     transformBody: (payload = {}) => ({ status: normalizeOrderStatus(payload.status) }),
 })
+export const deleteOrder = createApiThunkPrivate('deleteOrder', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'DELETE')
 export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => ENDPOINTS.orders.cancel(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ reason: payload.reason || payload.cancelReason || "" }),
 })
@@ -68,7 +74,9 @@ const orderSlice = createSlice({
         createExtraReducersForThunk(builder, getReviewList, 'getReviewListData')
         createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
         createExtraReducersForThunk(builder, getOrderInfo, 'getOrderInfoData')
+        createExtraReducersForThunk(builder, createOrder, 'createOrderData')
         createExtraReducersForThunk(builder, updateOrderStatus, 'updateOrderStatusData')
+        createExtraReducersForThunk(builder, deleteOrder, 'deleteOrderData')
         createExtraReducersForThunk(builder, orderCancel, 'orderCancelData')
         createExtraReducersForThunk(builder, getDeliveryStaffForOrder, 'getDeliveryStaffForOrderData')
         createExtraReducersForThunk(builder, assignOrder, 'assignOrderData')

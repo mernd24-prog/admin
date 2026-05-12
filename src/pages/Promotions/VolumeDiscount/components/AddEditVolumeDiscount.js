@@ -4,9 +4,11 @@ import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
 
-const AddEditVolumeDiscount = ({ isOpen, onClose }) => {
+const AddEditVolumeDiscount = ({ isOpen, onClose, productOptions = [], onSubmit }) => {
   const [formData, setFormData] = useState({
     product: '',
+    minimumQuantity: '',
+    discount: '',
   });
 
   const handleChange = (e) => {
@@ -19,7 +21,7 @@ const AddEditVolumeDiscount = ({ isOpen, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('FBT Data:', formData);
+    onSubmit?.(formData);
   };
 
   return (
@@ -42,21 +44,21 @@ const AddEditVolumeDiscount = ({ isOpen, onClose }) => {
             type="select"
             value={formData.product}
             onChange={handleChange}
-            options={['Select', 'Product A', 'Product B', 'Product C']}
+            options={[{ value: '', label: 'Select' }, ...productOptions]}
           />
           <FormInput
             label="Minimum quantity"
-            name="name"
-            value={formData.name}
+            name="minimumQuantity"
+            value={formData.minimumQuantity}
             onChange={handleChange}
-            placeholder="Enter ribbon name"
+            placeholder="Enter minimum quantity"
           />
           <FormInput
             label="Discount In"
-            name="name"
-            value={formData.name}
+            name="discount"
+            value={formData.discount}
             onChange={handleChange}
-            placeholder="Enter ribbon name"
+            placeholder="Enter discount (%)"
           />
           <div className="flex justify-end gap-4 mt-6">
             <ButtonTransparent type="button" onClick={onClose}>

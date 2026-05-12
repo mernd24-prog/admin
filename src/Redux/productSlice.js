@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany, unsupportedThunk } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany, toListParams, unsupportedThunk } from '../_helpers/adminApi';
 
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
@@ -23,6 +23,14 @@ const toProductListParams = (params = {}) => ({
     ...(params.productFamilyCode ? { productFamilyCode: params.productFamilyCode } : {}),
     ...(params.sku ? { sku: params.sku } : {}),
     ...(params.includeAllStatuses !== undefined ? { includeAllStatuses: params.includeAllStatuses } : {}),
+    ...(params.productType ? { productType: params.productType } : {}),
+    ...(params.visibility ? { visibility: params.visibility } : {}),
+    ...(params.brand ? { brand: params.brand } : {}),
+    ...(params.tags ? { tags: params.tags } : {}),
+    ...(params.minPrice !== undefined ? { minPrice: Number(params.minPrice) } : {}),
+    ...(params.maxPrice !== undefined ? { maxPrice: Number(params.maxPrice) } : {}),
+    ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
+    ...(params.sortBy ? { sortBy: params.sortBy } : {}),
 });
 
 const toProductStatusBody = (payload = {}) => ({
@@ -63,11 +71,54 @@ const toProductBody = (payload = {}) => {
         origin: payload.origin || {},
         ...(payload.warranty ? { warranty: payload.warranty } : {}),
         ...(payload.metadata ? { metadata: payload.metadata } : {}),
+        ...(Array.isArray(payload.relatedProducts) ? { relatedProducts: payload.relatedProducts } : {}),
+        ...(Array.isArray(payload.crossSellProducts) ? { crossSellProducts: payload.crossSellProducts } : {}),
+        ...(Array.isArray(payload.upSellProducts) ? { upSellProducts: payload.upSellProducts } : {}),
         stock: Number(payload.stock || payload.quantity || 0),
         images: Array.isArray(payload.images) ? payload.images : [],
         ...(payload.status ? { status: payload.status } : {}),
         ...(payload.gstRate !== undefined ? { gstRate: Number(payload.gstRate || 0) } : {}),
     };
+};
+
+const toProductPatchBody = (payload = {}) => {
+    const body = {};
+    const categoryId = payload.categoryId || payload.category_id || payload.category;
+    const category = payload.category || payload.categoryKey || payload.category_key || categoryId;
+
+    if (payload.sellerId !== undefined) body.sellerId = payload.sellerId;
+    if (payload.title !== undefined || payload.name !== undefined) body.title = payload.title || payload.name || "";
+    if (payload.description !== undefined) body.description = payload.description || "";
+    if (payload.price !== undefined) body.price = Number(payload.price || 0);
+    if (payload.mrp !== undefined) body.mrp = Number(payload.mrp || 0);
+    if (payload.category !== undefined || payload.categoryKey !== undefined || payload.category_id !== undefined || payload.categoryId !== undefined) {
+        body.category = category;
+    }
+    if (payload.categoryId !== undefined || payload.category_id !== undefined) body.categoryId = categoryId;
+    if (payload.brand !== undefined || payload.brand_id !== undefined) body.brand = payload.brand || payload.brand_id || "";
+    if (payload.productFamilyCode !== undefined) body.productFamilyCode = payload.productFamilyCode;
+    if (payload.sku !== undefined) body.sku = payload.sku;
+    if (payload.color !== undefined) body.color = payload.color;
+    if (payload.attributes !== undefined) body.attributes = payload.attributes || {};
+    if (payload.variants !== undefined) body.variants = Array.isArray(payload.variants) ? payload.variants : [];
+    if (payload.options !== undefined && Array.isArray(payload.options)) body.options = payload.options;
+    if (payload.dimensions !== undefined) body.dimensions = payload.dimensions;
+    if (payload.hsnCode !== undefined || payload.hsn_code !== undefined) body.hsnCode = payload.hsnCode || payload.hsn_code || "";
+    if (payload.origin !== undefined) body.origin = payload.origin || {};
+    if (payload.warranty !== undefined) body.warranty = payload.warranty;
+    if (payload.metadata !== undefined) body.metadata = payload.metadata || {};
+    if (payload.relatedProducts !== undefined && Array.isArray(payload.relatedProducts)) body.relatedProducts = payload.relatedProducts;
+    if (payload.crossSellProducts !== undefined && Array.isArray(payload.crossSellProducts)) body.crossSellProducts = payload.crossSellProducts;
+    if (payload.upSellProducts !== undefined && Array.isArray(payload.upSellProducts)) body.upSellProducts = payload.upSellProducts;
+    if (payload.stock !== undefined || payload.quantity !== undefined) body.stock = Number(payload.stock || payload.quantity || 0);
+    if (payload.images !== undefined && Array.isArray(payload.images)) body.images = payload.images;
+    if (payload.status !== undefined) body.status = payload.status;
+    if (payload.gstRate !== undefined) body.gstRate = Number(payload.gstRate || 0);
+    if (payload.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(payload.minPurchaseQuantity || 0);
+    if (payload.volumeDiscount !== undefined) body.volumeDiscount = Number(payload.volumeDiscount || 0);
+    if (payload.specialPriceStartDate !== undefined) body.specialPriceStartDate = payload.specialPriceStartDate;
+    if (payload.specialPriceEndDate !== undefined) body.specialPriceEndDate = payload.specialPriceEndDate;
+    return body;
 };
 
 const toHsnListParams = (params = {}) => ({
@@ -104,8 +155,8 @@ const initialState = {
     deleteProductsData: {}, approveDisapproveData: {}, getAllTaxRulesListData: {}, getAllProductsData: {}, createCategoryData: {},
     getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, downloadSampleCsvData: {},
     uploadHistoryData: {}, getProductsForPurchaseData: {}, getProductStocksData: {}, productModerationQueueData: {},
-    getCategoryAttributesData: {}, updateCategoryAttributesData: {}
-
+    getCategoryAttributesData: {}, updateCategoryAttributesData: {},
+    bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
 }
 const PRODUCT_LEGACY_UNSUPPORTED_MESSAGE =
     'This legacy product management API is not exposed by the current backend.';
@@ -119,10 +170,44 @@ export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platfo
         ...(params.categoryKey ? { categoryKey: params.categoryKey } : {}),
     }),
 })
-export const softDelete = unsupportedThunk('product/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisable = unsupportedThunk('product/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const create = unsupportedThunk('product/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const update = unsupportedThunk('product/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const softDelete = deleteMany(
+    'product/softDelete',
+    ENDPOINTS.platform.category,
+    'Category deleted successfully',
+)
+export const enableDisable = patchMany(
+    'product/enableDisable',
+    ENDPOINTS.platform.category,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Category status updated successfully',
+)
+export const create = createApiThunkPrivate('product/createCategoryLegacy', ENDPOINTS.platform.categories, 'POST', false, {
+    transformBody: (payload = {}) => {
+        const title = payload.title || payload.name || payload.categoryName || '';
+        const keyBase = payload.categoryKey || title;
+        return {
+            categoryKey: String(keyBase).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+            title,
+            parentKey: payload.parentKey || payload.categoryId || null,
+            level: payload.level || (payload.categoryId ? 1 : 0),
+            attributeSchema: payload.attributeSchema || [],
+            attributesSchema: payload.attributesSchema || {},
+            active: payload.active ?? payload.isDisable !== true,
+            sortOrder: Number(payload.sortOrder || payload.priority || 0),
+        };
+    },
+})
+export const update = createApiThunkPrivate('product/updateCategoryLegacy', (payload) => ENDPOINTS.platform.category(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => {
+        const body = {};
+        if (payload.name || payload.title || payload.categoryName) body.title = payload.name || payload.title || payload.categoryName;
+        if (payload.active !== undefined || payload.isDisable !== undefined) body.active = payload.active ?? payload.isDisable !== true;
+        if (payload.sortOrder !== undefined || payload.priority !== undefined) body.sortOrder = Number(payload.sortOrder ?? payload.priority ?? 0);
+        if (payload.attributeSchema) body.attributeSchema = payload.attributeSchema;
+        if (payload.attributesSchema) body.attributesSchema = payload.attributesSchema;
+        return body;
+    },
+})
 export const createCategory = createApiThunkPrivate('product/createCategory', ENDPOINTS.platform.categories, 'POST', false, {
     transformBody: (payload = {}) => {
         const title = payload.title || payload.name || payload.categoryName || '';
@@ -152,62 +237,199 @@ export const getAllCollectionList = unsupportedThunk('collections/getAllDocument
 
 
 ////Finish->>>>>>>>>>>
-export const FinishGetList = unsupportedThunk('finish/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const CreateFinish = unsupportedThunk('finish/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const softDeleteFinish = unsupportedThunk('finish/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableFinish = unsupportedThunk('finish/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateFinish = unsupportedThunk('finish/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const FinishGetList = createApiThunkPrivate('finish/getList', ENDPOINTS.platform.finishes, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const CreateFinish = createApiThunkPrivate('finish/create', ENDPOINTS.platform.finishes, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        active: payload.active ?? payload.isDisable !== true,
+    }),
+})
+export const softDeleteFinish = deleteMany('finish/softDelete', ENDPOINTS.platform.finish, 'Finish deleted successfully')
+export const enableDisableFinish = patchMany(
+    'finish/enableDisable',
+    ENDPOINTS.platform.finish,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Finish status updated successfully',
+)
+export const updateFinish = createApiThunkPrivate('finish/update', (payload) => ENDPOINTS.platform.finish(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+    }),
+})
 export const getAllFinishList = unsupportedThunk('finish/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 ////Dimension--->>>>>>>>>>
-export const getListDimension = unsupportedThunk('dimension/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createDimension = unsupportedThunk('dimension/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableDimension = unsupportedThunk('dimension/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const softDeleteDimension = unsupportedThunk('dimension/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateDimension = unsupportedThunk('dimension/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getListDimension = createApiThunkPrivate('dimension/getList', ENDPOINTS.platform.dimensions, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const createDimension = createApiThunkPrivate('dimension/create', ENDPOINTS.platform.dimensions, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        dimensions_value: String(payload.dimensions_value || '').trim(),
+        active: payload.active ?? payload.isDisable !== true,
+    }),
+})
+export const enableDisableDimension = patchMany(
+    'dimension/enableDisable',
+    ENDPOINTS.platform.dimension,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Dimension status updated successfully',
+)
+export const softDeleteDimension = deleteMany('dimension/softDelete', ENDPOINTS.platform.dimension, 'Dimension deleted successfully')
+export const updateDimension = createApiThunkPrivate('dimension/update', (payload) => ENDPOINTS.platform.dimension(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.dimensions_value !== undefined ? { dimensions_value: String(payload.dimensions_value || '').trim() } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+    }),
+})
 export const getAllListDimension = unsupportedThunk('dimension/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 /// brand functions===>>>>>>>>>>>>>>>>>
 
-export const getBrandList = unsupportedThunk('brands/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createBrand = unsupportedThunk('brands/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateBrand = unsupportedThunk('brands/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const deleteBrand = unsupportedThunk('brands/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableBrand = unsupportedThunk('brands/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getBrandList = createApiThunkPrivate('brands/getList', ENDPOINTS.platform.brands, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const createBrand = createApiThunkPrivate('brands/create', ENDPOINTS.platform.brands, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        logo: payload.logo || '',
+        thumbnails: payload.thumbnails || '',
+        active: payload.active ?? payload.isDisable !== true,
+        sortOrder: Number(payload.sortOrder || 0),
+    }),
+})
+export const updateBrand = createApiThunkPrivate('brands/update', (payload) => ENDPOINTS.platform.brand(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
+        ...(payload.logo !== undefined ? { logo: payload.logo || '' } : {}),
+        ...(payload.thumbnails !== undefined ? { thumbnails: payload.thumbnails || '' } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+        ...(payload.sortOrder !== undefined ? { sortOrder: Number(payload.sortOrder || 0) } : {}),
+    }),
+})
+export const deleteBrand = deleteMany('brands/softDelete', ENDPOINTS.platform.brand, 'Brand deleted successfully')
+export const enableDisableBrand = patchMany(
+    'brands/enableDisable',
+    ENDPOINTS.platform.brand,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Brand status updated successfully',
+)
 
 /// batch functions ===>>>>>>>>>>>>>>>>>
 
-export const getBatchList = unsupportedThunk('batch/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
-export const createBatch = unsupportedThunk('batch/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
-export const updateBatch = unsupportedThunk('batch/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
-export const deleteBatch = unsupportedThunk('batch/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
-export const enableDisableBatch = unsupportedThunk('batch/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE);
-export const getAllBatchList = unsupportedThunk('batch/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getBatchList = createApiThunkPrivate('batch/getList', ENDPOINTS.platform.batches, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+});
+export const createBatch = createApiThunkPrivate('batch/create', ENDPOINTS.platform.batches, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        batchCode: String(payload.batchCode || '').trim(),
+        manufactureDate: Number(payload.manufactureDate || 0),
+        expiryDate: Number(payload.expiryDate || 0),
+        active: payload.active ?? payload.isDisable !== true,
+    }),
+});
+export const updateBatch = createApiThunkPrivate('batch/update', (payload) => ENDPOINTS.platform.batch(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.batchCode !== undefined ? { batchCode: String(payload.batchCode || '').trim() } : {}),
+        ...(payload.manufactureDate !== undefined ? { manufactureDate: Number(payload.manufactureDate || 0) } : {}),
+        ...(payload.expiryDate !== undefined ? { expiryDate: Number(payload.expiryDate || 0) } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+    }),
+});
+export const deleteBatch = deleteMany('batch/softDelete', ENDPOINTS.platform.batch, 'Batch deleted successfully');
+export const enableDisableBatch = patchMany(
+    'batch/enableDisable',
+    ENDPOINTS.platform.batch,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Batch status updated successfully',
+);
+export const getAllBatchList = createApiThunkPrivate('batch/getAllDocuments', ENDPOINTS.platform.batches, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params, { limit: 100 }),
+})
 export const getAllQtyHeadList = unsupportedThunk('qtyHead/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 
 
 /// product Warranty===>>>>>>>>>>>>>>>>>
-export const getWarrantyList = unsupportedThunk('warranty/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableWarranty = unsupportedThunk('warranty/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const softDeleteWarranty = unsupportedThunk('warranty/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createWarranty = unsupportedThunk('warranty/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateWarranty = unsupportedThunk('warranty/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllWarrantyList = unsupportedThunk('warranty/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getWarrantyList = createApiThunkPrivate('warranty/getList', ENDPOINTS.platform.warrantyTemplates, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const enableDisableWarranty = patchMany(
+    'warranty/enableDisable',
+    ENDPOINTS.platform.warrantyTemplate,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Warranty template status updated successfully',
+)
+export const softDeleteWarranty = deleteMany('warranty/softDelete', ENDPOINTS.platform.warrantyTemplate, 'Warranty template deleted successfully')
+export const createWarranty = createApiThunkPrivate('warranty/create', ENDPOINTS.platform.warrantyTemplates, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        period: String(payload.period || '').trim(),
+        active: payload.active ?? payload.isDisable !== true,
+        metadata: payload.metadata || {},
+    }),
+})
+export const updateWarranty = createApiThunkPrivate('warranty/update', (payload) => ENDPOINTS.platform.warrantyTemplate(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.period !== undefined ? { period: String(payload.period || '').trim() } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+        ...(payload.metadata !== undefined ? { metadata: payload.metadata || {} } : {}),
+    }),
+})
+export const getAllWarrantyList = createApiThunkPrivate('warranty/getAllDocuments', ENDPOINTS.platform.warrantyTemplates, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params, { limit: 100 }),
+})
 
 
 //product-options
-export const getListProduct = unsupportedThunk('product-option/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableProduct = unsupportedThunk('product-option/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateProduct = unsupportedThunk('product-option/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createProduct = unsupportedThunk('product-option/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const deleteProduct = unsupportedThunk('product-option/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getListProductOption = unsupportedThunk('product-option-value/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableProductOption = unsupportedThunk('product-option-value/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const deleteProductOption = unsupportedThunk('product-option-value/softDelete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createProductOption = unsupportedThunk('product-option-value/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateProductOption = unsupportedThunk('product-option-value/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getListProduct = createApiThunkPrivate('product-option/getList', ENDPOINTS.platform.productOptions, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const enableDisableProduct = patchMany(
+    'product-option/enableDisable',
+    ENDPOINTS.platform.productOption,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Product option status updated successfully',
+)
+export const updateProduct = createApiThunkPrivate('product-option/update', (payload) => ENDPOINTS.platform.productOption(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+    }),
+})
+export const createProduct = createApiThunkPrivate('product-option/create', ENDPOINTS.platform.productOptions, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        active: payload.active ?? payload.isDisable !== true,
+    }),
+})
+export const deleteProduct = deleteMany('product-option/softDelete', ENDPOINTS.platform.productOption, 'Product option deleted successfully')
+export const getListProductOption = createApiThunkPrivate('product-option-value/getList', ENDPOINTS.platform.productOptionValues, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params),
+})
+export const enableDisableProductOption = patchMany(
+    'product-option-value/enableDisable',
+    ENDPOINTS.platform.productOptionValue,
+    (payload = {}) => ({ active: payload.isDisable !== true }),
+    'Product option value status updated successfully',
+)
+export const deleteProductOption = deleteMany('product-option-value/softDelete', ENDPOINTS.platform.productOptionValue, 'Product option value deleted successfully')
+export const createProductOption = createApiThunkPrivate('product-option-value/create', ENDPOINTS.platform.productOptionValues, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        option_id: payload.option_id,
+        name: String(payload.name || '').trim(),
+        active: payload.active ?? payload.isDisable !== true,
+    }),
+})
+export const updateProductOption = createApiThunkPrivate('product-option-value/update', (payload) => ENDPOINTS.platform.productOptionValue(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.option_id !== undefined ? { option_id: payload.option_id } : {}),
+        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
+        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+    }),
+})
 
 export const getAllPatternList = unsupportedThunk('pattern/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const getAllPrivacyPolicyList = unsupportedThunk('replace-policy/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
@@ -231,7 +453,7 @@ export const enableDisableProductCatalogs = patchMany(
     'Product status updated successfully'
 )
 export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH', false, {
-    transformBody: toProductBody,
+    transformBody: toProductPatchBody,
 })
 export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
 export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
@@ -269,7 +491,9 @@ export const updateCategoryAttributes = createApiThunkPrivate(
         }),
     }
 )
-export const getAllBrandList = unsupportedThunk('brands/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
+export const getAllBrandList = createApiThunkPrivate('brands/getAllDocuments', ENDPOINTS.platform.brands, 'GET', true, {
+    transformParams: (params = {}) => toListParams(params, { limit: 100 }),
+})
 export const getProductsForPurchase = unsupportedThunk('erp/product/get-products-for-purchase-order', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 export const getProductStocks = unsupportedThunk('erp/product/get-product-stocks', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
@@ -311,6 +535,37 @@ export const downloadSampleCsv = unsupportedThunk('product/downLoad-sample-csv',
 export const uploadHistory = unsupportedThunk('product/bulk-upload-history', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 export const productOptionList = unsupportedThunk('product-option/getOptionsWithValues', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
+export const bulkUpdateProducts = createApiThunkPrivate('bulkUpdateProducts', ENDPOINTS.products.bulkUpdate, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        productIds: Array.isArray(payload.productIds) ? payload.productIds : [],
+        ...(payload.status !== undefined ? { status: payload.status } : {}),
+        ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
+    }),
+})
+export const adjustProductInventory = createApiThunkPrivate(
+    'adjustProductInventory',
+    (payload) => ENDPOINTS.products.inventory(firstProductId(payload)),
+    'PATCH',
+    false,
+    {
+        transformBody: (payload = {}) => ({
+            adjustment: Number(payload.adjustment || 0),
+            ...(payload.variantSku ? { variantSku: payload.variantSku } : {}),
+            ...(payload.reason ? { reason: payload.reason } : {}),
+        }),
+    }
+)
+export const getInventoryStats = createApiThunkPrivate('getInventoryStats', ENDPOINTS.products.inventoryStats, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+    }),
+})
+export const getTopProducts = createApiThunkPrivate('getTopProducts', ENDPOINTS.products.analyticsTop, 'GET', true, {
+    transformParams: (params = {}) => ({
+        limit: Number(params.limit || 10),
+        ...(params.metric ? { metric: params.metric } : {}),
+    }),
+})
 
 
 const countrySlice = createSlice({
@@ -405,8 +660,10 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, getProductsForPurchase, 'getProductsForPurchaseData')
 
         createExtraReducersForThunk(builder, getProductStocks, 'getProductStocksData')
-
-
+        createExtraReducersForThunk(builder, bulkUpdateProducts, 'bulkUpdateProductsData')
+        createExtraReducersForThunk(builder, adjustProductInventory, 'adjustProductInventoryData')
+        createExtraReducersForThunk(builder, getInventoryStats, 'getInventoryStatsData')
+        createExtraReducersForThunk(builder, getTopProducts, 'getTopProductsData')
     }
 })
 

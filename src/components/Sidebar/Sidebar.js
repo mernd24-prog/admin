@@ -24,13 +24,38 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'users',
   'seller',
   'orders',
+  'order-status',
+  'gift-card-orders',
+  'subscription-orders',
+  'order-cancellation-reasons',
+  'order-return-reasons',
+  'product-reviews',
   'view-orders',
+  'view-subscription-orders',
   'discount-coupons',
+  'special-price',
+  'volume-discounts',
+  'similar-products',
+  'frequently-bought-together',
+  'PPC-promotions-management',
+  'reward-on-purchase',
+  'product-event-weightages',
+  'recommended-product-tag-weightages',
   'referral-commerce',
   'content-pages',
   'product-variants',
   'product-families',
+  'product-dimensions',
   'product-catalog',
+  'product-options',
+  'product-option-value',
+  'product-tags',
+  'threshold-products',
+  'brands',
+  'finish',
+  'batch',
+  'warranty',
+  'hsn-code',
   'categories',
   'category-attributes',
   'country',
@@ -39,6 +64,12 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'tax',
   'subTax',
   'tax-rule',
+  'return-policy',
+  'holidays',
+  'payment-policy',
+  'privacy-policies',
+  'terms-and-conditions',
+  'help-and-support',
   'profile',
   'changePassword',
   'settings',
@@ -87,15 +118,52 @@ const SELLER_SIDEBAR_SECTIONS = [
 ];
 
 const MODULE_ROUTE_EXPANSIONS = {
+  orders: [
+    { label: 'Orders', route: 'orders' },
+    { label: 'Order Status', route: 'order-status' },
+    { label: 'Gift Card Orders', route: 'gift-card-orders' },
+    { label: 'Subscription Orders', route: 'subscription-orders' },
+    { label: 'Order Cancellation Reasons', route: 'order-cancellation-reasons' },
+    { label: 'Order Return Reasons', route: 'order-return-reasons' },
+    { label: 'Product Reviews', route: 'product-reviews' },
+  ],
   products: [
     { label: 'Product Catalog', route: 'product-catalog' },
     { label: 'Categories', route: 'categories' },
     { label: 'Category Attributes', route: 'category-attributes' },
     { label: 'Product Variants', route: 'product-variants' },
     { label: 'Product Families', route: 'product-families' },
+    { label: 'Product Dimensions', route: 'product-dimensions' },
+    { label: 'Product Options', route: 'product-options' },
+    { label: 'Product Option Values', route: 'product-option-value' },
+    { label: 'Brands', route: 'brands' },
+    { label: 'Warranty', route: 'warranty' },
+    { label: 'Batch', route: 'batch' },
+    { label: 'Finish', route: 'finish' },
     { label: 'HSN Codes', route: 'hsn-code' },
   ],
+  tax: [
+    { label: 'Tax', route: 'tax' },
+    { label: 'Sub Tax', route: 'subTax' },
+    { label: 'Tax Rule', route: 'tax-rule' },
+    { label: 'Country', route: 'country' },
+    { label: 'State', route: 'state' },
+    { label: 'City', route: 'city' },
+  ],
+  pricing: [
+    { label: 'Discount Coupons', route: 'discount-coupons' },
+    { label: 'Special Price', route: 'special-price' },
+    { label: 'Volume Discounts', route: 'volume-discounts' },
+    { label: 'Similar Products', route: 'similar-products' },
+    { label: 'Frequently Bought Together', route: 'frequently-bought-together' },
+    { label: 'PPC Promotions', route: 'PPC-promotions-management' },
+    { label: 'Reward On Purchase', route: 'reward-on-purchase' },
+    { label: 'Product Event Weightages', route: 'product-event-weightages' },
+    { label: 'Recommended Tag Weightages', route: 'recommended-product-tag-weightages' },
+  ],
 };
+
+const isSupportedRoute = (route) => SUPPORTED_ADMIN_ROUTES.has(String(route || '').trim());
 
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {
   const dispatch = useDispatch();
@@ -261,6 +329,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
       const expanded = MODULE_ROUTE_EXPANSIONS[curr.slug];
       if (Array.isArray(expanded) && expanded.length) {
         expanded.forEach((item) => {
+          if (!isSupportedRoute(item.route)) return;
           acc[tabName].push({
             name: item.label,
             label: item.label,
@@ -268,6 +337,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
           });
         });
       } else {
+        if (!isSupportedRoute(moduleCode)) return acc;
         acc[tabName].push({
           name: curr.name,
           label: curr.name,
@@ -278,22 +348,25 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
     }, {});
 
     return Object.entries(groupedByTab).map(([tabName, modules]) => {
+      const uniqueModules = Array.from(
+        new Map((modules || []).map((item) => [item.module_code, item])).values(),
+      );
       if (tabName.toLowerCase() !== 'home') {
         return {
           label: tabName,
           icon: getIconForTab(tabName),
-          subItems: modules,
+          subItems: uniqueModules,
           isSingleItem: false
         };
       } else {
         return {
           label: tabName,
           icon: getIconForTab(tabName),
-          subItems: modules,
-          isSingleItem: modules.length === 1
+          subItems: uniqueModules,
+          isSingleItem: uniqueModules.length === 1
         };
       }
-    });
+    }).filter((tab) => Array.isArray(tab.subItems) && tab.subItems.length > 0);
   };
 
   const getIconForTab = (tabName) => {

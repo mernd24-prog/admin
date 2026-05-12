@@ -1,766 +1,435 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import TableData from '../../../components/Atoms/TableData/TableData'
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { create, enableDisable, getList, update, updatePassword } from '../../../Redux/userManagementSlice';
-import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
-import FormInput from '../../../components/Atoms/FormInput/FormInput';
-import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import Pagination from '../../../components/Pagination/Pagination';
-import Loader from '../../../components/Loader/Loader';
-import AddButton from '../../../components/Button/AddButton';
-import { useNavigate } from 'react-router';
-import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox';
 import { Link } from 'react-router-dom';
+import {
+  getAdminUsers, getAdminUser, updateAdminUser, deactivateAdminUser,
+  getPlatformSubAdmins, createPlatformSubAdmin, createAdmin,
+} from '../../../Redux/adminCoreSlice';
+import TableData from '../../../components/Atoms/TableData/TableData';
+import SearchComponent from '../../../components/Atoms/New Table/NewTable';
+import Loader from '../../../components/Loader/Loader';
+import Pagination from '../../../components/Pagination/Pagination';
+import AddButton from '../../../components/Button/AddButton';
+import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
+import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
+import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
+import FormInput from '../../../components/Atoms/FormInput/FormInput';
+import { getStoredRole, normalizeRole } from '../../../_helpers/authStorage';
+import { DEFAULT_PLATFORM_MODULES } from '../../../_helpers/adminApi';
+
+const PAGE_SIZE = 10;
+
+const MODULE_LABELS = {
+  users: 'User Management',
+  products: 'Product Management',
+  orders: 'Order Management',
+  payments: 'Payment Management',
+  sellers: 'Seller Management',
+  'sellers/commissions': 'Seller Commissions',
+  platform: 'Platform Catalog',
+  cms: 'CMS Management',
+  warranty: 'Warranty',
+  carts: 'Cart Management',
+  returns: 'Return Management',
+  delivery: 'Delivery Management',
+  wallets: 'Wallet Management',
+  tax: 'Tax Management',
+  subscriptions: 'Subscriptions',
+  pricing: 'Pricing & Promotions',
+  'dynamic-pricing': 'Dynamic Pricing',
+  loyalty: 'Loyalty',
+  referral: 'Referral Commerce',
+  recommendations: 'Recommendations',
+  notifications: 'Notifications',
+  analytics: 'Analytics',
+  fraud: 'Fraud Management',
+  rbac: 'RBAC Management',
+  admin: 'Admin Dashboard',
+};
+
+const ModuleSelector = ({ selected, onChange, disabled = false }) => {
+  const toggle = (mod) => {
+    if (disabled) return;
+    const next = selected.includes(mod) ? selected.filter((m) => m !== mod) : [...selected, mod];
+    if (next.length === 0) return;
+    onChange(next);
+  };
+  return (
+    <div className="grid grid-cols-2 gap-1.5 max-h-52 overflow-y-auto pr-1">
+      {DEFAULT_PLATFORM_MODULES.map((mod) => (
+        <button
+          key={mod}
+          type="button"
+          disabled={disabled}
+          onClick={() => toggle(mod)}
+          className={`text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
+            selected.includes(mod)
+              ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094] font-medium'
+              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          {MODULE_LABELS[mod] || mod}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '' };
+const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: ['products', 'orders'] };
 
 const AdminUsers = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate()
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    full_name: '',
-    userName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    isDisable: false
-  });
+  const navigate = useNavigate();
+  const selector = useSelector((s) => s.adminCore);
+
+  const storedRole = normalizeRole(getStoredRole());
+  const isSuperAdmin = storedRole === 'super-admin';
+  const isAdmin = storedRole === 'admin' || isSuperAdmin;
+
+  const [tab, setTab] = useState('subadmins');
+  const [pageAdmin, setPageAdmin] = useState(1);
+  const [pageSubAdmin, setPageSubAdmin] = useState(1);
+  const [refresh, setRefresh] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({ search: '' });
+
+  // Modals
+  const [addAdminOpen, setAddAdminOpen] = useState(false);
+  const [addSubAdminOpen, setAddSubAdminOpen] = useState(false);
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Forms
+  const [adminForm, setAdminForm] = useState(emptyUser);
+  const [subAdminForm, setSubAdminForm] = useState(emptySubAdmin);
   const [errors, setErrors] = useState({});
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenPassword, setIsOpenPassword] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    password: '',
-    confirmPassword: ''
-  });
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState({
-    password: '',
-    confirmPassword: ''
-  });
-  const [selectedRow, setSelectedRow] = useState([]);
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-  const size = 10
+  // ── Data ────────────────────────────────────────────────────────────────────
+
+  const adminsRaw = selector?.adminsData?.data?.data || selector?.adminsData?.normalized?.data || {};
+  const admins = adminsRaw?.list || adminsRaw?.items || [];
+  const adminsTotal = adminsRaw?.total || 0;
+
+  const subAdminsRaw = selector?.platformSubAdminsData?.data?.data || selector?.platformSubAdminsData?.normalized?.data || {};
+  const subAdmins = subAdminsRaw?.list || subAdminsRaw?.items || subAdminsRaw || [];
+  const subAdminsTotal = subAdminsRaw?.total || (Array.isArray(subAdmins) ? subAdmins.length : 0);
+
+  const loading = selector?.loading || false;
+
+  // ── Fetch ────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: 'full_name',
-      select: 'full_name isDisable userName email'
-    };
-    dispatch(getList(reqData));
-  }, [size, pageNo, dispatch, isRefresh]);
-
-  const selector = useSelector(state => state.user);
-  const getListData = selector?.getListData?.data?.data;
-  const totalUsers = getListData?.total || 0;
-  const handleInputChange = e => {
-    const { name, value } = e.target;
-    setForm(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+    if (tab === 'admins' && isAdmin) {
+      dispatch(getAdminUsers({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search }));
     }
+  }, [tab, pageAdmin, refresh, filters.search]);
+
+  useEffect(() => {
+    if (tab === 'subadmins') {
+      dispatch(getPlatformSubAdmins({ page: pageSubAdmin, limit: PAGE_SIZE, q: filters.search }));
+    }
+  }, [tab, pageSubAdmin, refresh, filters.search]);
+
+  // ── Validation ───────────────────────────────────────────────────────────────
+
+  const validateUserForm = (form, requirePassword = true) => {
+    const errs = {};
+    if (!form.fullName?.trim()) errs.fullName = 'Full name is required';
+    if (!form.email?.trim()) errs.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
+    if (requirePassword) {
+      if (!form.password) errs.password = 'Password is required';
+      else if (form.password.length < 8) errs.password = 'Minimum 8 characters';
+      if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    }
+    return errs;
   };
 
-  const validateAddUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = 'Full name is required';
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = 'Full name must be at least 3 characters';
-      isValid = false;
-    }
-
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = 'Username is required';
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = 'Username must be at least 5 characters';
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName = 'Username can only contain letters, numbers and underscores';
-      isValid = false;
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-      isValid = false;
-    }
-
-    // Password validation (only for add mode)
-    setErrors(newErrors);
-    return isValid;
-  };
-
-
-  const closeUpdatePassword = () => {
-    setIsOpenPassword(false);
-    setPasswordForm({
-      password: '',
-      confirmPassword: ''
-    });
-    setPasswordErrors({
-      password: '',
-      confirmPassword: ''
-    });
-  };
-
-  const handlePasswordChange = e => {
-    const { name, value } = e.target;
-    setPasswordForm(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-
-    // Clear error when user types
-    if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validatePasswordForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!passwordForm.password.trim()) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (passwordForm.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-      isValid = false;
-    } else if (passwordForm.password.length > 15) {
-      newErrors.password = 'Password should be maximum 15 characters long';
-      isValid = false;
-    }
-    else if (!/[A-Z]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter';
-      isValid = false;
-    } else if (!/[a-z]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one lowercase letter';
-      isValid = false;
-    } else if (!/[0-9]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one number';
-      isValid = false;
-    } else if (!/[^A-Za-z0-9]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one special character';
-      isValid = false;
-    }
-
-    // Confirm password validation
-    if (!passwordForm.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
-      isValid = false;
-    } else if (passwordForm.password !== passwordForm.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-      isValid = false;
-    }
-
-    setPasswordErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmitUpdatePassword = (e) => {
+  const handleCreateAdmin = async (e) => {
     e.preventDefault();
-
-    if (!validatePasswordForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      password: passwordForm.password,
-      confirmPassword: passwordForm.confirmPassword
-    };
-
-    dispatch(updatePassword(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Password updated successfully");
-          closeUpdatePassword();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in updating password");
-      });
+    const errs = validateUserForm(adminForm);
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    try {
+      await dispatch(createAdmin(adminForm)).unwrap();
+      toast.success('Admin created successfully');
+      setAddAdminOpen(false);
+      setAdminForm(emptyUser);
+      setErrors({});
+      setRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to create admin');
+    }
   };
 
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      full_name: '',
-      userName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      isDisable: false
-    });
-    setErrors({});
-  };
-
-  const handleAddUserSubmit = (e) => {
+  const handleCreateSubAdmin = async (e) => {
     e.preventDefault();
-
-    if (!validateAddUserForm()) return;
-
-    const reqData = {
-      full_name: formData.full_name,
-      userName: formData.userName,
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      isDisable: formData.isDisable
-    };
-
-    dispatch(create(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          (toast.error(res.error));
-          return
-
-        } else {
-          toast.success(res.message || "User created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error)
-        toast.error(error || "Error in creating user");
-      });
-  };
-
-
-
-  const handleUserPermission = (data) => {
-    navigate(`/app/user-permissions/${data._id}`);
-  };
-
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow(prev =>
-      e.target.checked
-        ? [...prev, rowId]
-        : prev.filter(id => id !== rowId)
-    );
-  };
-  const tableRows = getListData?.list?.map((user) => [
-     <CustomCheckbox
-      key={`checkbox-${user._id}`}
-      checked={selectedRow.includes(user._id)}
-      onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    />,
-    <span key={`name-${user._id}`} className="capitalize">
-      {user?.full_name}
-    </span>,
-    <span key={`username-${user._id}`}>
-      {user?.userName}
-    </span>,
-    <span key={`email-${user._id}`}>
-      {user?.email}
-    </span>,
-    <div className='flex flex-col'>
-      <ToggleButton isToggle={!user?.isDisable} handleClick={() => handleToggle(user)} />
-
-    </div>,
-    <span key={`actions-${user._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: user._id,
-            full_name: user.full_name,
-            userName: user.userName,
-            email: user.email,
-            isDisable: user.isDisable
-          });
-          setIsEditModal(true);
-        }}
-        onPasswordChange={() => {
-          setForm({
-            _id: user._id,
-            full_name: user.full_name
-          });
-          setIsOpenPassword(true);
-        }}
-        showDeleteButton={false}
-        showPasswordButton={false}
-        showLinkButton={false}
-        viewButton={true}
-        onViewClick={() => navigate(`/app/admin-users/view/${user._id}`)}
-        userPermissions={true}
-        onPermissionClick={() => handleUserPermission(user)}
-
-      />
-    </span>,
-  ]);
-  const confirmDelete = () => {
-    setShowDeleteConfirmation(false);
-  };
-
-  const handleDisableFunc = () => {
-
-    if (!toggleStates) return;
-    const obj = {
-      _id: Array(toggleStates._id),
-      isDisable: !toggleStates.isDisable
-    };
-
-    dispatch(enableDisable(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
-  };
-
-  const handleToggle = (user) => {
-    setToggleStates(user);
-    setIsConfirmModalOpen(true);
-  };
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true
-      };
-      try {
-        const res = await dispatch(enableDisable(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setIsRefresh(!isRefresh)
-          setSelectedRow([])
-        }
-
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        if (error.errors) {
-          setErrors(error.errors);
-        }
-      }
+    const errs = validateUserForm(subAdminForm);
+    if (!subAdminForm.allowedModules?.length) errs.allowedModules = 'Select at least one module';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    try {
+      await dispatch(createPlatformSubAdmin(subAdminForm)).unwrap();
+      toast.success('Sub-admin created successfully');
+      setAddSubAdminOpen(false);
+      setSubAdminForm(emptySubAdmin);
+      setErrors({});
+      setRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to create sub-admin');
     }
   };
 
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      full_name: '',
-      userName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      isDisable: false
+  const handleToggleStatus = (user) => {
+    setToggleTarget(user);
+    setConfirmOpen(true);
+  };
+
+  const confirmToggle = async () => {
+    if (!toggleTarget) return;
+    const isActive = toggleTarget.accountStatus === 'active' || !toggleTarget.isDisable;
+    try {
+      await dispatch(deactivateAdminUser({ userId: toggleTarget._id || toggleTarget.id, reason: isActive ? 'deactivated by admin' : undefined })).unwrap();
+      toast.success('Status updated');
+      setConfirmOpen(false);
+      setToggleTarget(null);
+      setRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update status');
+    }
+  };
+
+  const handleSearchApply = () => setRefresh((r) => !r);
+  const handleSearchRemove = () => { setFilters({ search: '' }); setRefresh((r) => !r); };
+
+  // ── Table data ───────────────────────────────────────────────────────────────
+
+  const buildRows = (list, showModules = false) =>
+    (Array.isArray(list) ? list : []).map((user) => {
+      const name = user.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : user.full_name || user.email;
+      const isActive = user.accountStatus === 'active' || !user.isDisable;
+      const userId = user._id || user.id;
+      return [
+        <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
+        <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
+        ...(showModules ? [
+          <div key={`mods-${userId}`} className="flex flex-wrap gap-1">
+            {(user.allowedModules || []).slice(0, 3).map((m) => (
+              <span key={m} className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded">{MODULE_LABELS[m] || m}</span>
+            ))}
+            {(user.allowedModules || []).length > 3 && (
+              <span className="text-xs text-gray-400">+{user.allowedModules.length - 3} more</span>
+            )}
+          </div>,
+        ] : []),
+        <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
+        <ActionButtons
+          key={`actions-${userId}`}
+          showDeleteButton={false}
+          showPasswordButton={false}
+          showLinkButton={false}
+          viewButton={true}
+          onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
+          userPermissions={true}
+          onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+        />,
+      ];
     });
-    setErrors({});
-  };
 
-  // This does nothing functionally, as it sets the same value
-  const handleToggleAdd = () => {
-    setForm((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-  const validateEditUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
+  const adminRows = useMemo(() => buildRows(admins, false), [admins]);
+  const subAdminRows = useMemo(() => buildRows(subAdmins, true), [subAdmins]);
 
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = 'Full name is required';
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = 'Full name must be at least 3 characters';
-      isValid = false;
-    }
+  // ── Render ───────────────────────────────────────────────────────────────────
 
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = 'Username is required';
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = 'Username must be at least 5 characters';
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName = 'Username can only contain letters, numbers and underscores';
-      isValid = false;
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.(com)$/.test(formData.email)) {
-      newErrors.email = 'Email must be a valid .com address';
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  }
-  const handleEditUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateEditUserForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      full_name: formData.full_name,
-      userName: formData.userName,
-      email: formData.email,
-      isDisable: formData.isDisable
-    };
-
-    dispatch(update(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "User Updated Successfully");
-          setIsEditModal(false);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        toast.error(error || "Error in Updating User");
-      });
-  };
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.list?.map(user => user._id) || [];
-      setSelectedRow(allIds);
-    } else {
-      setSelectedRow([]);
-    }
-  };
-  const handleApplySearchFilters = () => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: 'full_name',
-      select: 'full_name isDisable userName email'
-
-    };
-    dispatch(getList(reqData));
-  }
-  const handleSearchRemove = useCallback(() => {
-    setFilters(prev => ({ ...prev, search: "" }));
-    setIsRefresh(!isRefresh)
-  }, [isRefresh]);
- 
-    const isAllRowsSelected = useMemo(() =>
-      selectedRow.length === getListData?.list?.length && getListData?.list?.length > 0,
-      [selectedRow.length, getListData?.list?.length]
-    )
   return (
     <>
-      <Loader loading={selector.loading} />
-      <div className='max-w-7xl mx-auto'>
-        <div className=' overflow-hidden overflow-y-auto py-6'>
-          <div className="flex justify-between items-center">
-           <h3><Link to="/app/home"className='cursor-pointer'>Home</Link> / <b>Admin Users</b></h3>
-            <AddButton
-              className="border-[#3E4094] text-[#3E4094] mb-3"
-              onClick={() => {
-                setIsOpenAddModal(true);
-              }}
-            >
-              Add User
-            </AddButton>
-          </div>
-          <div className='overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    placeholder="Search By Full Name"
-                    handleSearchRemove={handleSearchRemove}
-                    applyFilters={handleApplySearchFilters}
-                  />
-                </div>
-              </div>
-            </div>
-            <TableData
-              Heading='Admin Users'
-              tableHeadings={[ 
-              "Full Name", "Username", "Email", "Status", "Actions"]}
-              data={tableRows}
-              showSearch={true}
-              placeholder='Search by...'
-              showFilter={false}
-              showSummary={false}
-              totalData={totalUsers}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              isHeaderCheckbox={true}
-              handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={isAllRowsSelected}
-
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
-              <Pagination
-                totalPages={Math.ceil(getListData.total / size)}
-                currentPage={pageNo}
-                onPageChange={onPageChange}
-              />
+      <Loader loading={loading} />
+      <div className="max-w-7xl mx-auto py-6 px-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm text-gray-500">
+            <Link to="/app/home" className="hover:underline text-[#3E4094]">Home</Link> / <b className="text-gray-800">Admin Users</b>
+          </h3>
+          <div className="flex gap-2">
+            {tab === 'admins' && isSuperAdmin && (
+              <AddButton onClick={() => { setErrors({}); setAdminForm(emptyUser); setAddAdminOpen(true); }}>
+                + Add Admin
+              </AddButton>
+            )}
+            {tab === 'subadmins' && isAdmin && (
+              <AddButton onClick={() => { setErrors({}); setSubAdminForm(emptySubAdmin); setAddSubAdminOpen(true); }}>
+                + Add Sub-Admin
+              </AddButton>
             )}
           </div>
         </div>
 
-        {/* Add User Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddUserSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Reset"
-          title="Admin User Setup"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className='p-4 flex space-x-4'>
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-              />
-            </div>
-          </div>
-          <div className='p-4'>
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
+        {/* Tab navigation */}
+        <div className="flex gap-0 mb-4 border-b border-gray-200">
+          {[
+            { key: 'subadmins', label: 'Sub-Admins' },
+            ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins' }] : []),
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? 'border-[#3E4094] text-[#3E4094]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-3 border-b">
+            <SearchComponent
+              isSearchShow={true}
+              filters={filters}
+              setFilters={setFilters}
+              placeholder={`Search ${tab === 'admins' ? 'admins' : 'sub-admins'}…`}
+              handleSearchRemove={handleSearchRemove}
+              applyFilters={handleSearchApply}
             />
           </div>
-          <div className='p-4 flex space-x-4'>
-            <div className="w-1/2">
-              <FormInput
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                error={errors.confirmPassword}
-                maxLength={15}
-                required
-              />
-            </div>
-          </div>
-          {/* <div className='p-4'>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div> */}
-          <div className='flex justify-between items-center border p-3'>
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton isToggle={!formData.isDisable} handleClick={handleToggleAdd} />
-          </div>
-        </DefaultModal>
 
-        {/* Edit User Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditUserSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Admin User"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className='p-4 flex space-x-4'>
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-                disabled
-              />
-            </div>
-          </div>
-          <div className='p-4'>
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
-              disabled
+          {tab === 'admins' && (
+            <TableData
+              Heading="Admins"
+              tableHeadings={['Name', 'Email', 'Status', 'Actions']}
+              data={adminRows}
+              totalData={adminsTotal}
+              totalSize={PAGE_SIZE}
+              currentPage={pageAdmin}
+              onPageChange={setPageAdmin}
+            />
+          )}
+
+          {tab === 'subadmins' && (
+            <TableData
+              Heading="Sub-Admins"
+              tableHeadings={['Name', 'Email', 'Assigned Modules', 'Status', 'Actions']}
+              data={subAdminRows}
+              totalData={subAdminsTotal}
+              totalSize={PAGE_SIZE}
+              currentPage={pageSubAdmin}
+              onPageChange={setPageSubAdmin}
+            />
+          )}
+        </div>
+
+        {tab === 'subadmins' && subAdminsTotal > PAGE_SIZE && (
+          <div className="flex justify-center mt-4">
+            <Pagination
+              totalPages={Math.ceil(subAdminsTotal / PAGE_SIZE)}
+              currentPage={pageSubAdmin}
+              onPageChange={setPageSubAdmin}
             />
           </div>
-          <div className='flex justify-between items-center border p-3'>
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton isToggle={!formData.isDisable} handleClick={handleToggleAdd} />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={'Are you sure you want to delete this user?'}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this user?`}
-        />
-
-        <DefaultMiddleModal
-          isOpen={isOpenPassword}
-          onClose={closeUpdatePassword}
-          onSubmit={handleSubmitUpdatePassword}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Update Password"
-        >
-          <div className='pb-4'>
-            <div className="mb-4">
-              <FormInput
-                label="New Password"
-                name="password"
-                type="password"
-                value={passwordForm.password}
-                onChange={handlePasswordChange}
-                error={passwordErrors.password}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <FormInput
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={handlePasswordChange}
-                error={passwordErrors.confirmPassword}
-                maxLength={15}
-                required
-              />
-            </div>
-          </div>
-        </DefaultMiddleModal>
+        )}
       </div>
-    </>
-  )
-}
 
-export default AdminUsers
+      {/* Create Admin modal — super-admin only */}
+      <DefaultModal
+        isOpen={addAdminOpen}
+        onClose={() => setAddAdminOpen(false)}
+        onSubmit={handleCreateAdmin}
+        isButtonView={true}
+        submitButtonText="Create Admin"
+        closeButtonText="Cancel"
+        title="Create Admin"
+        titleClassName="mt-5 font-medium"
+      >
+        <div className="p-4 space-y-4">
+          <FormInput label="Full Name *" name="fullName" value={adminForm.fullName}
+            onChange={(e) => setAdminForm((f) => ({ ...f, fullName: e.target.value }))}
+            error={errors.fullName} maxLength={60} required />
+          <FormInput label="Email *" name="email" type="email" value={adminForm.email}
+            onChange={(e) => setAdminForm((f) => ({ ...f, email: e.target.value }))}
+            error={errors.email} maxLength={80} required />
+          <FormInput label="Phone" name="phone" value={adminForm.phone}
+            onChange={(e) => setAdminForm((f) => ({ ...f, phone: e.target.value }))}
+            maxLength={15} />
+          <div className="grid grid-cols-2 gap-3">
+            <FormInput label="Password *" name="password" type="password" value={adminForm.password}
+              onChange={(e) => setAdminForm((f) => ({ ...f, password: e.target.value }))}
+              error={errors.password} maxLength={64} required />
+            <FormInput label="Confirm Password *" name="confirmPassword" type="password" value={adminForm.confirmPassword}
+              onChange={(e) => setAdminForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+              error={errors.confirmPassword} maxLength={64} required />
+          </div>
+        </div>
+      </DefaultModal>
+
+      {/* Create Sub-Admin modal */}
+      <DefaultModal
+        isOpen={addSubAdminOpen}
+        onClose={() => setAddSubAdminOpen(false)}
+        onSubmit={handleCreateSubAdmin}
+        isButtonView={true}
+        submitButtonText="Create Sub-Admin"
+        closeButtonText="Cancel"
+        title="Create Sub-Admin"
+        titleClassName="mt-5 font-medium"
+      >
+        <div className="p-4 space-y-4">
+          <FormInput label="Full Name *" name="fullName" value={subAdminForm.fullName}
+            onChange={(e) => setSubAdminForm((f) => ({ ...f, fullName: e.target.value }))}
+            error={errors.fullName} maxLength={60} required />
+          <FormInput label="Email *" name="email" type="email" value={subAdminForm.email}
+            onChange={(e) => setSubAdminForm((f) => ({ ...f, email: e.target.value }))}
+            error={errors.email} maxLength={80} required />
+          <FormInput label="Phone" name="phone" value={subAdminForm.phone}
+            onChange={(e) => setSubAdminForm((f) => ({ ...f, phone: e.target.value }))}
+            maxLength={15} />
+          <div className="grid grid-cols-2 gap-3">
+            <FormInput label="Password *" name="password" type="password" value={subAdminForm.password}
+              onChange={(e) => setSubAdminForm((f) => ({ ...f, password: e.target.value }))}
+              error={errors.password} maxLength={64} required />
+            <FormInput label="Confirm Password *" name="confirmPassword" type="password" value={subAdminForm.confirmPassword}
+              onChange={(e) => setSubAdminForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+              error={errors.confirmPassword} maxLength={64} required />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">
+              Assign Modules <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-400">
+              The sub-admin can only access modules you select. You can only grant modules you yourself have access to.
+            </p>
+            <ModuleSelector
+              selected={subAdminForm.allowedModules}
+              onChange={(mods) => setSubAdminForm((f) => ({ ...f, allowedModules: mods }))}
+            />
+            {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              {subAdminForm.allowedModules.length} module{subAdminForm.allowedModules.length !== 1 ? 's' : ''} selected.{' '}
+              Click a module to toggle it.
+            </p>
+          </div>
+        </div>
+      </DefaultModal>
+
+      {/* Status toggle confirm */}
+      <StatusPopup
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onConfirm={confirmToggle}
+        heading={`Are you sure you want to ${
+          toggleTarget?.accountStatus === 'active' || !toggleTarget?.isDisable ? 'deactivate' : 'activate'
+        } this user?`}
+      />
+    </>
+  );
+};
+
+export default AdminUsers;

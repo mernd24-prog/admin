@@ -1,220 +1,155 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import ImageViewer from '../../../components/ImageViewer/ImageViewer';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { getOrderList } from '../../../Redux/orderSlice';
+import moment from 'moment';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
+import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import TableData from '../../../components/Atoms/TableData/TableData';
+import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import Loader from '../../../components/Loader/Loader';
 import Pagination from '../../../components/Pagination/Pagination';
-import moment from 'moment';
-import selectJson from '../../../_helpers/SelectJson.json'
+import selectJson from '../../../_helpers/SelectJson.json';
+import { getOrderList } from '../../../Redux/orderSlice';
 import { getAllUserList } from '../../../Redux/userManagementSlice';
 
+const PAGE_SIZE = 10;
+
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+const orderIdOf = (order = {}) => firstDefined(order._id, order.id, order.order_no, order.orderId);
+
 const Orders = () => {
-  const dispatch = useDispatch()
-  const selector = useSelector(state => state.order)
-  const user = useSelector(state => state)
-  const { getOrderListData: { data: { data: { list = [], total = 0 } = {} } = {} } = {} } = selector || {};
-
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedRow, setSelectedRow] = useState([])
-  const [loading] = useState(false)
+  const selector = useSelector((state) => state.order);
+  const userSelector = useSelector((state) => state.userManagement);
+
+  const listPayload = selector?.getOrderListData?.data?.data || {};
+  const list = listPayload?.list || [];
+  const total = Number(listPayload?.total || 0);
+
   const [filters, setFilters] = useState({
-    search: "", activationStatus: '', dateFrom: "", dateTo: "", orderTo: "", orderFrom: "", sellerName: ""
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [pageNo, setPageNo] = useState(1)
-  const size = 10
+    search: '',
+    activationStatus: '',
+    dateFrom: '',
+    dateTo: '',
+    sellerName: '',
+  });
+  const [selectedRow, setSelectedRow] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
 
-  const transformUserData = (user) => {
+  const userListData = useMemo(() =>
+    (userSelector?.getAllUserListData?.data?.data?.list || []).map((user) => ({
+      value: user?._id || '',
+      label: [user?.email, user?.phone].filter(Boolean).join(' - ') || user?._id || 'Unknown',
+    })),
+  [userSelector?.getAllUserListData]);
+
+  const fetchOrders = useCallback(async () => {
     try {
-      return user?.user?.getAllUserListData?.data?.data?.list?.map((user) => ({
-        value: user?._id || '',
-        label: `${user?.email || 'No email'} - ${user?.phone || 'No phone'}`
-      })) || [];
-    } catch (error) {
-      console.error('Error transforming user data:', error);
-      return [];
-    }
-  };
-
-  const userListData = transformUserData(user)
-
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        setIsLoading(true);
-
-        const query = {};
-        if (filters?.activationStatus) {
-          query.paymentStatus = filters.activationStatus;
-        }
-        if (filters?.dateFrom) {
-          query.fromDate = filters.dateFrom;
-        }
-        if (filters?.dateTo) {
-          query.toDate = filters.dateTo;
-        }
-        if (filters?.orderFrom) {
-          query.orderFrom = filters.orderFrom;
-        }
-        if (filters?.orderTo) {
-          query.orderTo = filters.orderTo;
-        }
-        if (filters?.sellerName) {
-          query.user_id = filters.sellerName;
-        }
-
-
-        const apiPayload = {
-          size: size,
+      setIsLoading(true);
+      await dispatch(
+        getOrderList({
           page: pageNo,
-          select: "order_no, user_id, totalAmount, paymentStatus, updatedAt, createdAt,status",
-          populate: "user_id:email,full_name,country_code,phone,user_image|user_id.country_code:dialCode,name",
-          keyWord: filters?.search || "",
-          query: JSON.stringify(query)
-        };
-
-        await dispatch(getOrderList(apiPayload)).unwrap();
-      } catch (err) {
-        toast.error('Failed to fetch product reviews. Please try again.');
-        console.error('Review fetch error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const apiPayload = {
-      searchFields: "email,phone",
-      select: ""
+          limit: PAGE_SIZE,
+          status: filters.activationStatus || undefined,
+          fromDate: filters.dateFrom || undefined,
+          toDate: filters.dateTo || undefined,
+          userId: filters.sellerName || undefined,
+          keyWord: filters.search || undefined,
+        }),
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to fetch orders');
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchReviews();
-    dispatch(getAllUserList(apiPayload))
-
   }, [dispatch, pageNo, filters]);
 
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
-  const handleViewOrders = (order) => {
+  useEffect(() => {
+    dispatch(getAllUserList({ searchFields: 'email,phone', select: '' }));
+  }, [dispatch]);
 
-    navigate(`/app/orders/view/${order._id || order.id || order.order_no}`,);
-
-  };
-
+  const handleViewOrders = useCallback((order) => {
+    const orderId = orderIdOf(order);
+    if (!orderId) {
+      toast.error('Order ID not found');
+      return;
+    }
+    navigate(`/app/orders/view/${orderId}`);
+  }, [navigate]);
 
   const handlePageChange = useCallback((newPageNo) => {
-    setPageNo(newPageNo)
-  }, [])
+    setPageNo(newPageNo);
+  }, []);
 
-  const tableHeadings = [
-    "Order ID",
-    "Buyer",
-    "Order's Date & Time",
-    "Amount",
-    "Payment Status",
-    "Action"
-  ];
+  const handleFilterChange = useCallback((field, option) => {
+    setFilters((prev) => ({ ...prev, [field]: option?.value || '' }));
+    setPageNo(1);
+  }, []);
 
-  const tableRows = list?.map((ele) => [
+  const applyFilters = useCallback(() => {
+    setPageNo(1);
+    fetchOrders();
+  }, [fetchOrders]);
 
-    <span className='capitalize'>{ele?.order_no || ele?.id}</span>,
-    <p>
-      {typeof ele?.user_id === "object" ? (
-        <>
-          {ele?.user_id?.phone && <span>{ele.user_id.phone}</span>}
-          {ele?.user_id?.phone && ele?.user_id?.email && <br />}
-          {ele?.user_id?.email && <span>{ele.user_id.email}</span>}
-        </>
-      ) : (
-        <span>{ele?.buyerId || ele?.buyer_id || ele?.user_id || "N/A"}</span>
-      )}
-    </p>
-    ,
-    <span>{ele?.createdAt ? moment(ele.createdAt).format('DD-MM-YYYY') : "N/A"}</span>,
-    ele?.totalAmount ?? ele?.total_amount ?? 0,
-    <span className='capitalize'>{ele?.paymentStatus || ele?.status || "N/A"}</span>,
-    <ActionButtons
-      showLinkButton={false}
-      showDeleteButton={false}
-      showViewButton={false}
-      showEditButton={false}
-      viewButton={true}
-      onViewClick={() => handleViewOrders(ele)}
+  const handleSearchRemove = useCallback(() => {
+    setFilters({
+      search: '',
+      activationStatus: '',
+      dateFrom: '',
+      dateTo: '',
+      sellerName: '',
+    });
+    setPageNo(1);
+  }, []);
 
-    />
-  ]);
+  const tableHeadings = ['Order ID', 'Buyer', "Order Date & Time", 'Amount', 'Payment Status', 'Action'];
 
-  const applyFilters = async () => {
+  const tableRows = list.map((order) => {
+    const paymentStatus = firstDefined(order?.paymentStatus, order?.status, 'N/A');
+    const buyer = typeof order?.user_id === 'object'
+      ? [order?.user_id?.phone, order?.user_id?.email].filter(Boolean).join(' / ') || 'N/A'
+      : firstDefined(order?.buyerId, order?.buyer_id, order?.user_id, 'N/A');
+    const amount = Number(firstDefined(order?.totalAmount, order?.total_amount, order?.payableAmount, order?.payable_amount, 0));
+    const createdAt = firstDefined(order?.createdAt, order?.created_at);
 
-    try {
-      setIsLoading(true);
-      const apiPayload = {
-        size: size,
-        page: pageNo,
-        select: "order_no, user_id, totalAmount, paymentStatus, updatedAt, createdAt",
-        searchFields: "order_no",
-        populate: "user_id:email,full_name,country_code,phone,user_image|user_id.country_code:dialCode,name",
-        keyWord: filters?.search
-      };
-      await dispatch(getOrderList(apiPayload)).unwrap();
-    } catch (err) {
-      toast.error('Failed to fetch product reviews. Please try again.');
-      console.error('Review fetch error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-
-  }
-
-  const handleSearchRemove = async () => {
-    setFilters({ search: "" })
-    try {
-      setIsLoading(true);
-      const apiPayload = {
-        size: size,
-        page: pageNo,
-        select: "order_no, user_id, totalAmount, paymentStatus, updatedAt, createdAt",
-        populate: "user_id:email,full_name,country_code,phone,user_image|user_id.country_code:dialCode,name",
-        keyWord: ""
-      };
-      await dispatch(getOrderList(apiPayload)).unwrap();
-    } catch (err) {
-      toast.error('Failed to fetch product reviews. Please try again.');
-      console.error('Review fetch error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const handleFilterChange = (field, value) => {
-    console.log("react select filter:", field, value)
-    setFilters(prev => ({
-      ...prev,
-      [field]: value.value
-    }));
-  }
-
-  console.warn(filters)
+    return [
+      <span className='capitalize'>{firstDefined(order?.order_no, order?.id, order?._id, 'N/A')}</span>,
+      <span>{buyer}</span>,
+      <span>{createdAt ? moment(createdAt).format('DD-MM-YYYY HH:mm') : 'N/A'}</span>,
+      <span>₹ {amount.toFixed(2)}</span>,
+      <span className='capitalize'>{paymentStatus}</span>,
+      <ActionButtons
+        showLinkButton={false}
+        showDeleteButton={false}
+        showViewButton={false}
+        showEditButton={false}
+        viewButton={true}
+        onViewClick={() => handleViewOrders(order)}
+      />,
+    ];
+  });
 
   return (
     <>
       <Loader loading={isLoading} />
       <div className="p-3 max-w-7xl mx-auto">
-        <h3 className='text-gray-500 text-sm font-semibold py-6'><Link to={`/app/home`}>Home</Link> / <span className='text-[#181c32]'>Order</span></h3>
+        <h3 className='text-gray-500 text-sm font-semibold py-6'>
+          <Link to={`/app/home`}>Home</Link> / <span className='text-[#181c32]'>Order</span>
+        </h3>
         <section className='bg-white p-2'>
           <SearchComponent
             tableHeadings={tableHeadings}
             data={tableRows}
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
-            loading={loading}
+            loading={isLoading}
             filters={filters}
             setFilters={setFilters}
             isSearchShow={true}
@@ -226,18 +161,14 @@ const Orders = () => {
             isSearchDown={true}
             isStatusAction={false}
             userLable={`Buyer`}
-            userOptions={userListData || []}
+            userOptions={userListData}
             isDelete={false}
             activationStatus={`Payment Status`}
-            approvalStatus={`Order Status`}
             dateFrom={true}
             dateTo={true}
-            orderFrom={true}
-            orderTo={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
-            approvalOptions={selectJson?.ORDER_STATUS}
-            activationStatusOptions={selectJson?.PAYMENT_STATUS}
+            activationStatusOptions={selectJson?.PAYMENT_STATUS || []}
             handleFilterChange={handleFilterChange}
           />
           <div className="bg-white">
@@ -246,7 +177,7 @@ const Orders = () => {
               tableHeadings={tableHeadings}
               data={tableRows}
               showSearch={true}
-              placeholder="Search by..."
+              placeholder="Search by order id..."
               showFilter={false}
               showSummary={false}
               showAddButton={false}
@@ -255,25 +186,14 @@ const Orders = () => {
             />
           </div>
         </section>
-        {total > size && (
+        {total > PAGE_SIZE && (
           <Pagination
-            totalPages={Math.ceil(total / size)}
+            totalPages={Math.ceil(total / PAGE_SIZE)}
             currentPage={pageNo}
             onPageChange={handlePageChange}
           />
         )}
       </div>
-
-      <DeletePopup
-        isDeleteModalOpen={showDeleteConfirmation}
-        closeDeleteModal={() => setShowDeleteConfirmation(false)}
-        DeleteHeading="Are you sure you want to delete?"
-      />
-
-      <ImageViewer
-        imageUrl={selectedImage}
-        onClose={() => setSelectedImage(null)}
-      />
     </>
   );
 };

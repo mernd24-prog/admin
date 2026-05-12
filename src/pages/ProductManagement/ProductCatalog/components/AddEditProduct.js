@@ -5,13 +5,14 @@ import MediaTab from './MediaTab';
 import ProductSettingsPanel from './ProductSettingsPanel';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  createProducts, getAllBrandList, getAllStoreList, getAllStoreShippingDurationList, getAllTaxRulesList, getList,
-  getProductById, updateProductsById, getAllBatchList, getAllWarrantyList, getAllQtyHeadList,
-  getAllHsn, getCategoryAttributes,
+  createProducts, getAllProducts, getList,
+  getProductById, updateProductsById, getAllHsn, getCategoryAttributes, getAllBrandList, getAllWarrantyList,
 } from '../../../../Redux/productSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
 import Loader from '../../../../components/Loader/Loader';
 import { getAllCountryList } from '../../../../Redux/CountrySlice';
+import { getAllStateList } from '../../../../Redux/stateSlice';
+import { getAllCityList } from '../../../../Redux/citySlice';
 import { GrDocument } from 'react-icons/gr';
 import { IoImage } from 'react-icons/io5';
 import { toast } from 'sonner';
@@ -22,21 +23,26 @@ import selectJson from '../../../../_helpers/SelectJson.json'
 import { BsMenuApp } from 'react-icons/bs';
 import VariantsOptionsTab from './VariantsOptionsTab';
 import DynamicAttributesTab from './DynamicAttributesTab';
+import VariantBuilder from '../../../../components/Product/VariantBuilder';
+import ProductTypeSelector from '../../../../components/Product/ProductTypeSelector';
+import SEOPanel from '../../../../components/Product/SEOPanel';
+import TagsInput from '../../../../components/Product/TagsInput';
+import DigitalProductPanel from '../../../../components/Product/DigitalProductPanel';
+import SubscriptionPanel from '../../../../components/Product/SubscriptionPanel';
+import BundleBuilder from '../../../../components/Product/BundleBuilder';
 
 const API_CALLS = [
 { action: getList, name: 'Category List' },
 { action: getAllCountryList, name: 'Country List' },
 { action: getAllHsn, name: 'Hsn code List' },
+{ action: getAllBrandList, name: 'Brand List' },
+{ action: getAllWarrantyList, name: 'Warranty List' },
+{ action: getAllProducts, name: 'Products List' },
 ];
 
 const API_CALL_OBJECT = {
-  "Brand List": { action: getAllBrandList, name: "Brand List" },
   "Category List": { action: getList, name: "Category List" },
-  "Store List": { action: getAllStoreList, name: "Store List" },
   "Country List": { action: getAllCountryList, name: "Country List" },
-  "Batch List": { action: getAllBatchList, name: "Batch List" },
-  "Warranty List": { action: getAllWarrantyList, name: "Warranty List" },
-  "Qty Head List": { action: getAllQtyHeadList, name: "Qty Head List" },
   "Hsn code list": { action: getAllHsn, name: "Hsn code List" },
 
 }
@@ -100,6 +106,8 @@ export default function ProductManagementUI() {
   const [taxData, setTaxData] = useState(null)
   const [userData, setUserData] = useState({})
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
+  const [variantsData, setVariantsData] = useState([]);
+  const [variantAxes, setVariantAxes] = useState([]);
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -118,7 +126,7 @@ export default function ProductManagementUI() {
     return data.list || data.items || [];
   };
 
-  const toSelectId = (record = {}) => String(record._id || record.id || record.value || record.categoryKey || record.code || "");
+  const toSelectId = (record = {}) => String(record.categoryKey || record._id || record.id || record.value || record.code || "");
 
   const toCategoryOption = (category = {}, prefix = '') => {
     const categoryName = category.name || category.title || category.categoryKey;
@@ -131,28 +139,28 @@ export default function ProductManagementUI() {
 
   const refs = {
     'basic-details': useRef(null),
+    'product-type': useRef(null),
     'variants-options': useRef(null),
     'media': useRef(null),
+    'seo': useRef(null),
+    'tags': useRef(null),
   };
-
-  const formattedBatchData = useMemo(() =>
-    selector?.getAllBatchListData?.data?.data?.list?.map((e) => ({
-      value: e?.id,
-      label: e?.batchCode
-    })) || [],
-    [selector?.getAllBatchListData]
-  );
 
   const fetchProductById = async (productId) => {
     try {
       dispatch(getProductById({ _id: productId })).unwrap()
         .then((res) => {
           const productData = res?.data;
+          const resolvedCategoryId = productData?.categoryId || productData?.category_id || productData?.categoryKey || productData?.category || '';
+          const resolvedCategoryKey = productData?.categoryKey || productData?.category_key || productData?.category || resolvedCategoryId;
           setFormData({
             ...INITIALS_DATA,
             ...productData,
             name: productData?.title || productData?.name || '',
-            category_id: productData?.categoryId || productData?.category || '',
+            category_id: resolvedCategoryId,
+            categoryId: resolvedCategoryId,
+            category: resolvedCategoryKey,
+            category_key: resolvedCategoryKey,
             sellerId: productData?.sellerId || '',
             stock: productData?.stock ?? '',
             price: productData?.price ?? '',
@@ -189,7 +197,15 @@ export default function ProductManagementUI() {
 
           setImages(productData?.images || res?.data?.imageUrls || []);
 
-
+          if (Array.isArray(productData?.variants) && productData.variants.length) {
+            const hasAttributes = productData.variants.some((v) => v.attributes && Object.keys(v.attributes).length);
+            if (hasAttributes) {
+              setVariantsData(productData.variants);
+            }
+          }
+          if (Array.isArray(productData?.variantAxes) && productData.variantAxes.length) {
+            setVariantAxes(productData.variantAxes);
+          }
 
           if (res?.data?.hsnCode || res?.data?.hsn_code) {
             const hsnValue = res?.data?.hsnCode || res?.data?.hsn_code;
@@ -254,13 +270,13 @@ export default function ProductManagementUI() {
   }, [isEditMode, id, loading]);
 
   useEffect(() => {
-    const categoryId = formData?.category_id || formData?.categoryId || formData?.category;
-    if (!categoryId) {
+    const categoryKey = formData?.category_key || formData?.category || formData?.category_id || formData?.categoryId;
+    if (!categoryKey) {
       setCategoryAttributeSchema([]);
       return;
     }
 
-    dispatch(getCategoryAttributes({ categoryId }))
+    dispatch(getCategoryAttributes({ categoryKey }))
       .unwrap()
       .then((res) => {
         const data = res?.data || {};
@@ -269,7 +285,18 @@ export default function ProductManagementUI() {
       .catch(() => {
         setCategoryAttributeSchema([]);
       });
-  }, [dispatch, formData?.category_id, formData?.categoryId, formData?.category]);
+  }, [dispatch, formData?.category_key, formData?.category, formData?.category_id, formData?.categoryId]);
+
+  useEffect(() => {
+    const originCountry = formData?.origin?.country;
+    const originState = formData?.origin?.state;
+    if (originCountry) {
+      dispatch(getAllStateList({ countryId: originCountry }));
+    }
+    if (originState) {
+      dispatch(getAllCityList({ stateId: originState }));
+    }
+  }, [dispatch, formData?.origin?.country, formData?.origin?.state]);
 
   useEffect(() => {
     const container = mainContainerRef.current;
@@ -289,12 +316,31 @@ export default function ProductManagementUI() {
   }, []);
 
   const formattedData = useMemo(() => ({
-    brandList: transformArray(selector?.getAllBrandListData?.data?.data?.list || []),
-    storeList: transformArray(selector?.getAllStoreListData?.data?.data?.list || []),
+    brandList: getListPayload(selector?.getAllBrandListData).map((item) => ({
+      value: item?.name || item?._id || item?.id,
+      label: item?.name || item?.title || item?.code || String(item?._id || item?.id || ''),
+    })),
+    warrantyTemplateList: getListPayload(selector?.getAllWarrantyListData).map((item) => ({
+      value: item?.period || item?._id || item?.id,
+      label: item?.period || item?.name || String(item?._id || item?.id || ''),
+    })),
+    colorList: Array.from(
+      new Set(
+        (getListPayload(selector?.getAllProductsData) || [])
+          .map((item) => item?.color)
+          .filter(Boolean)
+          .map((color) => String(color).trim())
+      )
+    ).map((color) => ({ value: color, label: color })),
+    productFamilyList: Array.from(
+      new Set(
+        (getListPayload(selector?.getAllProductsData) || [])
+          .map((item) => item?.productFamilyCode)
+          .filter(Boolean)
+          .map((code) => String(code).trim())
+      )
+    ).map((code) => ({ value: code, label: code })),
     taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
-    batchList: transformArray(selector?.getAllBatchListData?.data?.data?.list || []),
-    warrantyList: transformArray(selector?.getAllWarrantyListData?.data?.data?.list || []),
-    qtyHeadList: transformArray(selector?.getAllQtyHeadListData?.data?.data?.list || []),
     hsnCodeList: getListPayload(selector?.getAllHsnData).map((item) => ({
       value: item.code || item._id || item.id,
       code: item.code,
@@ -304,19 +350,58 @@ export default function ProductManagementUI() {
   }), [selector]);
 
   const createSelectOptions = useMemo(() => {
-    const options = [];
     const categorySource = getListPayload(selector?.getListData);
+    const options = [];
+    if (!Array.isArray(categorySource) || categorySource.length === 0) return options;
+
+    const hasNested = categorySource.some(
+      (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+    );
+
     const addOptions = (categories, prefix = '') => {
       if (!Array.isArray(categories)) return;
-      categories.forEach(category => {
+      categories.forEach((category) => {
         const option = toCategoryOption(category, prefix);
         options.push(option);
-        if (Array.isArray(category.subcategories || category.subCategories) && (category.subcategories || category.subCategories).length > 0) {
-          addOptions(category.subcategories || category.subCategories, option.label);
+        const children = category.subcategories || category.subCategories || [];
+        if (Array.isArray(children) && children.length > 0) {
+          addOptions(children, option.label);
         }
       });
     };
-    addOptions(categorySource);
+
+    if (hasNested) {
+      addOptions(categorySource);
+      return options;
+    }
+
+    const byKey = new Map();
+    categorySource.forEach((item) => {
+      const key = item?.categoryKey || item?._id;
+      if (key) byKey.set(String(key), item);
+    });
+
+    const byParent = new Map();
+    categorySource.forEach((item) => {
+      const parentKey = item?.parentKey ? String(item.parentKey) : "__root__";
+      if (!byParent.has(parentKey)) byParent.set(parentKey, []);
+      byParent.get(parentKey).push(item);
+    });
+
+    const walk = (parentKey = "__root__", prefix = "") => {
+      const children = byParent.get(parentKey) || [];
+      children
+        .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+        .forEach((category) => {
+          const option = toCategoryOption(category, prefix);
+          options.push(option);
+          const key = String(category?.categoryKey || category?._id || "");
+          if (key && byParent.has(key)) {
+            walk(key, option.label);
+          }
+        });
+    };
+    walk("__root__", "");
     return options;
   }, [selector?.getListData]);
 
@@ -329,7 +414,9 @@ export default function ProductManagementUI() {
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
     if (formData?.description?.trim() && formData.description.trim().length < 10) newErrors.description = "Description must be at least 10 characters.";
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
-    if (!formData?.category_id) newErrors.category_id = "Category is required.";
+    if (!(formData?.category_id || formData?.category || formData?.category_key)) {
+      newErrors.category_id = "Category is required.";
+    }
     if (!formData?.price || Number(formData.price) <= 0) newErrors.price = "Price is required.";
     if (!formData?.mrp || Number(formData.mrp) <= 0) newErrors.mrp = "MRP is required.";
     if (formData?.stock === undefined || formData?.stock === '' || Number(formData.stock) < 0) newErrors.stock = "Stock is required.";
@@ -475,7 +562,6 @@ export default function ProductManagementUI() {
 
 
   const handleSelectChange = (selectedOption, action) => {
-    console.log("selectedOption", selectedOption)
     setError(prevErrors => {
       const newErrors = { ...prevErrors };
       switch (action) {
@@ -532,9 +618,6 @@ export default function ProductManagementUI() {
       case 'STORE_ID':
         setFormData(prev => ({ ...prev, store_id: selectedOption?.value || "" }));
         setError({})
-        if (selectedOption?.value) {
-          dispatch(getAllStoreShippingDurationList({ query: JSON.stringify({ store_id: selectedOption.value }) }))
-        }
         break;
       case 'SELLER_ID':
         setFormData(prev => ({ ...prev, sellerId: selectedOption?.value || "" }));
@@ -553,9 +636,6 @@ export default function ProductManagementUI() {
           category_key: selectedOption?.categoryKey || selectedOption?.value || "",
           attributes: {}
         }));
-        if (selectedOption?.value) {
-          dispatch(getAllTaxRulesList({ query: JSON.stringify({ category_id: selectedOption.value }) }))
-        }
         break;
       case 'STORE_BATCH_ID':
         setFormData(prev => ({ ...prev, batch_id: selectedOption?.value || "" }));
@@ -565,6 +645,12 @@ export default function ProductManagementUI() {
         break;
       case 'STORE_WARRANTY_ID':
         setFormData(prev => ({ ...prev, warranty_id: selectedOption?.value || "" }));
+        break;
+      case 'PRODUCT_COLOR':
+        setFormData(prev => ({ ...prev, color: selectedOption?.value || "" }));
+        break;
+      case 'PRODUCT_FAMILY':
+        setFormData(prev => ({ ...prev, productFamilyCode: selectedOption?.value || "" }));
         break;
       case 'hsn_code':
         setFormData(prev => ({
@@ -713,6 +799,20 @@ export default function ProductManagementUI() {
         codAvailable: Boolean(updatedFormData.cod),
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
       },
+      ...(updatedFormData.productType ? { productType: updatedFormData.productType } : {}),
+      ...(updatedFormData.shortDescription ? { shortDescription: updatedFormData.shortDescription } : {}),
+      ...(updatedFormData.visibility ? { visibility: updatedFormData.visibility } : {}),
+      tags: Array.isArray(updatedFormData.tags) ? updatedFormData.tags : [],
+      ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length ? { seo: updatedFormData.seo } : {}),
+      ...(updatedFormData.digital && Object.keys(updatedFormData.digital).length ? { digital: updatedFormData.digital } : {}),
+      ...(updatedFormData.subscription && Object.keys(updatedFormData.subscription).length ? { subscription: updatedFormData.subscription } : {}),
+      ...(Array.isArray(updatedFormData.bundleItems) && updatedFormData.bundleItems.length ? { bundleItems: updatedFormData.bundleItems } : {}),
+      ...(typeof updatedFormData.bundleDiscount === 'number' ? { bundleDiscount: updatedFormData.bundleDiscount } : {}),
+      ...(variantAxes.length ? { variantAxes } : {}),
+      ...(variantsData.length ? {
+        variants: variantsData,
+        hasVariants: true,
+      } : {}),
     };
 
     try {
@@ -752,7 +852,24 @@ export default function ProductManagementUI() {
     setError({})
   };
 
+  const handleNestedChange = useCallback((field, value) => {
+    const parts = field.split('.');
+    if (parts.length === 1) {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    } else {
+      const [group, subKey, deepKey] = parts;
+      setFormData((prev) => ({
+        ...prev,
+        [group]: deepKey
+          ? { ...(prev[group] || {}), [subKey]: { ...((prev[group] || {})[subKey] || {}), [deepKey]: value } }
+          : { ...(prev[group] || {}), [subKey]: value },
+      }));
+    }
+  }, []);
 
+
+
+  const productType = formData?.productType || 'simple';
 
   const tabs = useMemo(() => [
     {
@@ -767,19 +884,90 @@ export default function ProductManagementUI() {
           handleChange={handleChange}
           formattedCategoryList={createSelectOptions}
           formattedBrandList={formattedData.brandList}
-          formattedWarrantyList={formattedData.warrantyList}
-          formattedQtyHeadList={formattedData.qtyHeadList}
-          storeList={formattedData.storeList}
+          formattedWarrantyList={formattedData.warrantyTemplateList}
+          formattedColorList={formattedData.colorList}
+          formattedProductFamilyList={formattedData.productFamilyList}
           handleSelectChange={handleSelectChange}
-          batchData={formattedData?.batchList}
           fetchAllData={fetchAllData}
           allCategories={getListPayload(selector?.getListData)}
           hsnCodeList={formattedData?.hsnCodeList}
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}
           userData={userData}
-
         />
+      )
+    },
+    {
+      id: 'product-type',
+      title: 'Product Type',
+      description: 'Set the product type and type-specific configuration.',
+      icon: <BsMenuApp />,
+      component: (
+        <div className="space-y-6">
+          <ProductTypeSelector
+            value={productType}
+            onChange={(val) => setFormData((prev) => ({ ...prev, productType: val }))}
+          />
+
+          {/* Short description */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Short Description</label>
+            <textarea
+              rows={2}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+              placeholder="Brief one-line summary shown in product cards…"
+              value={formData?.shortDescription || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
+            />
+          </div>
+
+          {/* Visibility */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Visibility</label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+              value={formData?.visibility || 'public'}
+              onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
+            >
+              <option value="public">Public — visible to all customers</option>
+              <option value="private">Private — hidden from catalog</option>
+              <option value="hidden">Hidden — accessible via direct link only</option>
+              <option value="scheduled">Scheduled — publish at a set date</option>
+            </select>
+          </div>
+
+          {productType === 'digital' && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h5 className="text-sm font-semibold text-gray-800 mb-4">Digital Product Settings</h5>
+              <DigitalProductPanel
+                digital={formData?.digital || {}}
+                onChange={handleNestedChange}
+              />
+            </div>
+          )}
+
+          {productType === 'subscription' && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h5 className="text-sm font-semibold text-gray-800 mb-4">Subscription Settings</h5>
+              <SubscriptionPanel
+                subscription={formData?.subscription || {}}
+                onChange={handleNestedChange}
+              />
+            </div>
+          )}
+
+          {productType === 'bundle' && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h5 className="text-sm font-semibold text-gray-800 mb-4">Bundle Configuration</h5>
+              <BundleBuilder
+                bundleItems={formData?.bundleItems || []}
+                bundleDiscount={formData?.bundleDiscount || 0}
+                onChange={(items) => setFormData((prev) => ({ ...prev, bundleItems: items }))}
+                onDiscountChange={(d) => setFormData((prev) => ({ ...prev, bundleDiscount: d }))}
+              />
+            </div>
+          )}
+        </div>
       )
     },
     {
@@ -801,11 +989,26 @@ export default function ProductManagementUI() {
       title: 'Variants & options',
       description: 'Customize the product variants, including size, color, etc.',
       icon: <BsMenuApp />,
-      component: (
+      component: productType === 'variable' ? (
+        <div className="space-y-2">
+          <div className="mb-2">
+            <h4 className="text-sm font-semibold text-gray-800">Variant Builder</h4>
+            <p className="text-xs text-gray-500">Define option axes (Color, Size…), generate combinations, then edit each variant.</p>
+          </div>
+          <VariantBuilder
+            variants={variantsData}
+            options={variantAxes}
+            basePrice={Number(formData?.price || 0)}
+            baseMrp={Number(formData?.mrp || 0)}
+            onChange={setVariantsData}
+            onOptionsChange={setVariantAxes}
+          />
+        </div>
+      ) : (
         <VariantsOptionsTab
           optionsData={selector?.productOptionListData?.data?.data}
           setVariantRows={setVariantRows}
-          options={options} // Make sure this is passed
+          options={options}
           formData={formData}
           handleChange={handleChange}
           selectJson={selectJson}
@@ -827,11 +1030,71 @@ export default function ProductManagementUI() {
         />
       )
     },
+    {
+      id: 'seo',
+      title: 'SEO',
+      description: 'Search engine metadata and social sharing settings.',
+      icon: <GrDocument />,
+      component: (
+        <div className="space-y-2">
+          <div className="mb-2">
+            <h4 className="text-sm font-semibold text-gray-800">SEO &amp; Metadata</h4>
+            <p className="text-xs text-gray-500">Optimise how this product appears in Google and social sharing.</p>
+          </div>
+          <SEOPanel
+            seo={formData?.seo || {}}
+            onChange={handleNestedChange}
+            slug={formData?.slug || ''}
+          />
+        </div>
+      )
+    },
+    {
+      id: 'tags',
+      title: 'Tags & Discovery',
+      description: 'Tags, badges, and discoverability settings.',
+      icon: <BsMenuApp />,
+      component: (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-800">Product Tags</h4>
+            <p className="text-xs text-gray-500 mb-2">Tags help customers find this product through search and filters.</p>
+            <TagsInput
+              tags={Array.isArray(formData?.tags) ? formData.tags : []}
+              onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+              placeholder="Add tag…"
+              maxTags={20}
+            />
+          </div>
 
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-800">Product Badges</h4>
+            {[
+              { key: 'markAsFeatured', label: 'Featured', desc: 'Show on homepage / featured sections.' },
+              { key: 'cod', label: 'Cash on Delivery', desc: 'Allow COD payment for this product.' },
+              { key: 'prescription_required', label: 'Prescription Required', desc: 'Customer must upload a prescription.' },
+            ].map(({ key, label, desc }) => (
+              <label key={key} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-[#3E4094]"
+                  checked={!!formData?.[key]}
+                  onChange={() => handleToggleProductSetting(key === 'markAsFeatured' ? 'FEATURED' : key === 'cod' ? 'COD' : 'prescription_required')}
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">{label}</p>
+                  <p className="text-xs text-gray-400">{desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      )
+    },
   ], [
-    formData, formattedData, createSelectOptions, formattedBatchData,
-    handleChange, handleSelectChange,
-    selector, options, categoryAttributeSchema, error
+    formData, productType, formattedData, createSelectOptions,
+    handleChange, handleSelectChange, handleNestedChange,
+    selector, options, variantsData, variantAxes, categoryAttributeSchema, error, images,
   ]);
 
 

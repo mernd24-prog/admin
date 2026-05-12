@@ -27,7 +27,6 @@ const ManageCity = () => {
   const [pageNo, setPageNo] = useState(1);
   const [filters, setFilters] = useState({ search: "", country: "" });
   const [isLoading, setIsLoading] = useState(false)
-  console.warn(selector)
   const initialFormState = {
     name: '',
     state_code: null,
@@ -43,23 +42,24 @@ const ManageCity = () => {
   })) || [];
 
   const modifiedData = [
-    { value: "", label: "All " },
+    { value: "", label: "All States" },
     ...mappedCountries
   ];
 
-  const fetchCountryList = useCallback(() => {
+  const fetchCityList = useCallback(() => {
     const query = {
       page: pageNo,
       size: size,
       keyWord: filters?.search,
       searchFields: "name",
       populate: 'state_code:name',
+      stateId: filters?.country?.value || undefined,
     };
     setIsLoading(true)
     dispatch(getCityList(query))
       .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
+        if (res?.payload?.data?.data) {
+          setApiRes(res.payload.data.data);
         } else {
           setApiRes({ list: [], total: 0 });
         }
@@ -70,12 +70,12 @@ const ManageCity = () => {
       }).finally(() => {
         setIsLoading(false)
       })
-  }, [dispatch, pageNo, filters.search]);
+  }, [dispatch, pageNo, filters.search, filters?.country?.value]);
 
   useEffect(() => {
-    fetchCountryList();
+    fetchCityList();
     dispatch(getAllStateList())
-  }, [fetchCountryList]);
+  }, [fetchCityList, dispatch]);
 
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
@@ -154,7 +154,7 @@ const ManageCity = () => {
         toast.success('City created successfully');
       }
       closeModal();
-      fetchCountryList();
+      fetchCityList();
     } catch (error) {
       console.error("Error saving city:", error);
       toast.error(error || 'Failed to save city');
@@ -164,17 +164,21 @@ const ManageCity = () => {
     }
   };
 
+  const isRowActive = (row = {}) =>
+    row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
   const handleToggle = async (city) => {
+    const currentlyActive = isRowActive(city);
     let apiPayload = {
       _id: [city?._id],
-      isDisable: city?.isDisable ? false : true
+      isDisable: currentlyActive
     }
     try {
       const res = await dispatch(enableDisableCity(apiPayload)).unwrap();
       if (res) {
         toast.success(res?.message)
       }
-      fetchCountryList();
+      fetchCityList();
     } catch (error) {
       toast.error(error?.message || error || "Failed...!")
       if (error.errors) {
@@ -184,30 +188,9 @@ const ManageCity = () => {
   };
 
   const applyFilters = useCallback(() => {
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: filters?.search,
-      searchFields: "name",
-      populate: 'state_code:name',
-      query: JSON.stringify(filters?.country?.value ? { state_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true)
-    dispatch(getCityList(query))
-      .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching cities:", err);
-        setApiRes({ list: [], total: 0 });
-      }).finally(() => {
-        setIsLoading(false)
-      })
-  }, [dispatch, pageNo, filters]);
+    setPageNo(1);
+    fetchCityList();
+  }, [fetchCityList]);
 
   const tableHeadings = ["City Name", "State Name", "Status", "Action"];
 
@@ -218,15 +201,15 @@ const ManageCity = () => {
       onChange={(e) => handleRowCheckboxChange(e, ele._id)}
     />,
     <span className='capitalize'>{ele?.name}</span>,
-    <span className='capitalize'>{ele?.state_code?.name}</span>,
+    <span className='capitalize'>{ele?.stateId?.name || ele?.state_code?.name || 'N/A'}</span>,
     <div className='flex flex-col'>
-      <ToggleButton isToggle={!ele?.isDisable} handleClick={() => handleToggle(ele)} />
+      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
     </div>,
     <ActionButtons
       onEdit={() => {
         setFormData({
           name: ele.name,
-          state_code: ele.state_code?._id,
+          state_code: ele.stateId?._id || ele.state_code?._id,
           _id: ele._id
         });
         setIsEditMode(true);
@@ -249,7 +232,7 @@ const ManageCity = () => {
           toast.success(res?.message);
         }
         setSelectedRow([])
-        fetchCountryList();
+        fetchCityList();
       } catch (error) {
         toast.error(error?.message || error || "Failed...!");
         setSelectedRow([])
@@ -262,28 +245,7 @@ const ManageCity = () => {
 
   const handleSearchRemove = () => {
     setFilters({ search: "", country: "" })
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: "",
-      searchFields: "name",
-      populate: 'state_code:name',
-    };
-    setIsLoading(true)
-    dispatch(getCityList(query))
-      .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching cities:", err);
-        setApiRes({ list: [], total: 0 });
-      }).finally(() => {
-        setIsLoading(false)
-      })
+    setPageNo(1);
   }
 
   return (

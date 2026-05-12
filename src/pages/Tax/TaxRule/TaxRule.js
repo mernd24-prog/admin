@@ -219,27 +219,56 @@ const TaxRule = () => {
     };
     const createSelectOptions = useMemo(() => {
         const options = [];
-
-        const addOptions = (categories, prefix = '') => {
-            if (!Array.isArray(categories)) return;
-            categories.forEach(category => {
-                const categoryName = category.name || category.title || category.categoryKey;
-                const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
-
-                options.push({
-                    value: String(category._id || category.categoryKey),
-                    label,
-                });
-
-                if (Array.isArray(category.subcategories) && category.subcategories.length > 0) {
-                    addOptions(category.subcategories, label);
-                }
-            });
-        };
         const categoryPayload = productSelector?.getListCategoryData?.data?.data;
-        addOptions(Array.isArray(categoryPayload) ? categoryPayload : categoryPayload?.list || []);
+        const categories = Array.isArray(categoryPayload) ? categoryPayload : categoryPayload?.list || [];
+        if (!Array.isArray(categories) || categories.length === 0) return options;
+
+        const hasNested = categories.some((item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories));
+        if (hasNested) {
+            const addOptions = (nodes, prefix = '') => {
+                if (!Array.isArray(nodes)) return;
+                nodes.forEach((category) => {
+                    const categoryName = category.name || category.title || category.categoryKey;
+                    const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
+                    options.push({
+                        value: String(category.categoryKey || category._id),
+                        label,
+                    });
+                    const children = category.subcategories || category.subCategories || [];
+                    if (children.length) addOptions(children, label);
+                });
+            };
+            addOptions(categories);
+            return options;
+        }
+
+        const byParent = new Map();
+        categories.forEach((category) => {
+            const parent = category?.parentKey ? String(category.parentKey) : '__root__';
+            if (!byParent.has(parent)) byParent.set(parent, []);
+            byParent.get(parent).push(category);
+        });
+
+        const walk = (parent = '__root__', prefix = '') => {
+            const children = byParent.get(parent) || [];
+            children
+                .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+                .forEach((category) => {
+                    const categoryName = category.name || category.title || category.categoryKey;
+                    const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
+                    options.push({
+                        value: String(category.categoryKey || category._id),
+                        label,
+                    });
+                    walk(String(category.categoryKey || category._id), label);
+                });
+        };
+        walk();
         return options;
     }, [productSelector.getListCategoryData]);
+    const isRowActive = (row = {}) =>
+        row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
     const tableRows = getListTaxRuleData?.map((rule) => [
         <CustomCheckbox
             key={`checkbox-${rule._id}`}
@@ -251,13 +280,13 @@ const TaxRule = () => {
         </span>
         ,
         <span key={`tax-${rule._id}`} className='capitalize'>
-            {rule?.tax_id?.name || 'N/A'}
+            {rule?.taxId?.name || rule?.tax_id?.name || 'N/A'}
         </span>,
         <span key={`category-${rule._id}`} className='capitalize'>
-            {rule?.category_id?.name || 'N/A'}
+            {rule?.category || rule?.category_id?.name || 'N/A'}
         </span>,
         <div className='flex flex-col' key={`status-${rule._id}`}>
-            <ToggleButton isToggle={!rule?.isDisable} handleClick={() => handleToggle(rule)} />
+            <ToggleButton isToggle={isRowActive(rule)} handleClick={() => handleToggle(rule)} />
         </div>,
         <span key={`actions-${rule._id}`}>
             <ActionButtons
@@ -279,17 +308,21 @@ const TaxRule = () => {
                     setForm({
                         _id: rule._id,
                         description: rule.description,
-                        tax_id: rule.tax_id?._id,
-                        subTaxes_id: Array.isArray(rule.subTaxes_id)
-                            ? rule.subTaxes_id.map(sub => sub._id)
-                            : [rule.subTaxes_id?._id],
-                        category_id: rule.category_id?._id,
-                        isDisable: rule.isDisable
+                        tax_id: rule.taxId?._id || rule.tax_id?._id || rule.taxId || rule.tax_id,
+                        subTaxes_id: Array.isArray(rule.subTaxIds)
+                            ? rule.subTaxIds.map((sub) => sub?._id || sub)
+                            : (Array.isArray(rule.subTaxes_id)
+                                ? rule.subTaxes_id.map((sub) => sub?._id || sub)
+                                : [rule.subTaxes_id?._id || rule.subTaxes_id].filter(Boolean)),
+                        category_id: rule.category_id?._id || rule.category_id || rule.category || '',
+                        isDisable: !isRowActive(rule)
                     });
 
-                    setSelectedTax(rule.tax_id ? { value: rule.tax_id._id, label: rule.tax_id.name } : null);
+                    const selectedTaxValue = rule.taxId || rule.tax_id;
+                    setSelectedTax(selectedTaxValue ? { value: selectedTaxValue._id || selectedTaxValue, label: selectedTaxValue.name || 'Selected Tax' } : null);
                     setSelectedSubTax(subTaxOptions);
-                    setSelectedCategory(rule.category_id ? { value: rule.category_id._id, label: rule.category_id.name } : null);
+                    const selectedCategoryValue = rule.category_id || rule.category;
+                    setSelectedCategory(selectedCategoryValue ? { value: selectedCategoryValue._id || selectedCategoryValue, label: selectedCategoryValue.name || selectedCategoryValue } : null);
                     setIsEditModal(true);
                 }}
                 onDelete={() => {
@@ -322,7 +355,7 @@ const TaxRule = () => {
         if (!toggleStates) return;
         const obj = {
             _id: [toggleStates._id],
-            isDisable: !toggleStates.isDisable
+            isDisable: isRowActive(toggleStates)
         };
 
         dispatch(enableDisableTaxRule(obj))
@@ -486,7 +519,6 @@ const TaxRule = () => {
 
     const handleSubTaxChange = (selectedOption) => {
         setSelectedSubTax(selectedOption);
-        console.log(selectedOption)
         setForm(prev => ({
             ...prev,
             subTaxes_id: selectedOption.map(e => e.value)
@@ -715,7 +747,7 @@ const TaxRule = () => {
                     isOpen={isConfirmModalOpen}
                     onClose={() => setIsConfirmModalOpen(false)}
                     onConfirm={handleDisableFunc}
-                    heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this tax rule?`}
+                    heading={`Are you sure you want to ${isRowActive(toggleStates) ? 'disable' : 'enable'} this tax rule?`}
                 />
             </div>
         </>

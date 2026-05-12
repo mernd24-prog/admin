@@ -10,7 +10,7 @@ import Input from '../../../components/Atoms/Input/Input';
 import AddButton from '../../../components/Button/AddButton';
 import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import { useDispatch, useSelector } from 'react-redux';
-import { create, edit, enableDisable, getAllSellerList, getShopList, updatePassword } from '../../../Redux/StoreSlice';
+import { create, edit, enableDisable, getAllSellerList, getShopList } from '../../../Redux/StoreSlice';
 import { getAllCountryList } from '../../../Redux/CountrySlice';
 import { getAllStateList } from '../../../Redux/stateSlice';
 import { getAllCityList } from '../../../Redux/citySlice';
@@ -557,22 +557,10 @@ const Store = () => {
   }
 
   const handleSubmitUpdatePassword = async () => {
-    let { user_id, password, confirmPassword } = formValues
-    try {
-      setIsLoading(true)
-      await dispatch(updatePassword({ _id: user_id, password, confirmPassword })).unwrap()
-        .then((res) => {
-          toast.success(res?.message)
-          setFormValues(INITIAL_FORM_STATE)
-          setIsPasswordUpdateModal(false)
-          setFormErrors({})
-          setIsLoading(false)
-        })
-    } catch (error) {
-      toast.error(error)
-    } finally {
-      setIsLoading(false)
-    }
+    toast.info('Store password update API is unavailable. Please use the seller forgot/reset password flow.');
+    setIsPasswordUpdateModal(false);
+    setFormValues(INITIAL_FORM_STATE);
+    setFormErrors({});
   }
 
   const handlePageChange = (newPageNo) => {

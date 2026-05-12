@@ -83,12 +83,6 @@
       "ring": "ring-green-400"
     },
     {
-      "value": "edit",
-      "label": "Edit",
-      "color": "bg-green-100",
-      "ring": "ring-green-400"
-    },
-    {
       "value": "update",
       "label": "Update",
       "color": "bg-green-100",
@@ -101,16 +95,10 @@
       "ring": "ring-red-400"
     },
     {
-      "value": "status",
-      "label": "Status",
+      "value": "action",
+      "label": "Action",
       "color": "bg-purple-100",
       "ring": "ring-purple-400"
-    },
-    {
-      "value": "approval",
-      "label": "Approval",
-      "color": "bg-yellow-100",
-      "ring": "ring-yellow-400"
     }
   ],
   "triggerOptions": [

@@ -4,9 +4,12 @@ import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
 
-const AddEditSpecialPrice = ({ isOpen, onClose }) => {
+const AddEditSpecialPrice = ({ isOpen, onClose, productOptions = [], onSubmit }) => {
   const [formData, setFormData] = useState({
     product: '',
+    specialPrice: '',
+    startDate: '',
+    endDate: '',
   });
 
   const handleChange = (e) => {
@@ -19,7 +22,7 @@ const AddEditSpecialPrice = ({ isOpen, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('FBT Data:', formData);
+    onSubmit?.(formData);
   };
 
   return (
@@ -42,30 +45,28 @@ const AddEditSpecialPrice = ({ isOpen, onClose }) => {
             type="select"
             value={formData.product}
             onChange={handleChange}
-            options={['Select', 'Product A', 'Product B', 'Product C']}
+            options={[{ value: '', label: 'Select' }, ...productOptions]}
           />
           <FormInput
             label="Special price"
-            name="name"
-            value={formData.name}
+            name="specialPrice"
+            value={formData.specialPrice}
             onChange={handleChange}
-            placeholder="Enter ribbon name"
+            placeholder="Enter special price"
           />
           <FormInput
             label="Price start date"
-            name="name"
+            name="startDate"
             type='date'
-            value={formData.name}
+            value={formData.startDate}
             onChange={handleChange}
-            placeholder="Enter ribbon name"
           />
           <FormInput
             label="Price End date"
-            name="name"
+            name="endDate"
             type='date'
-            value={formData.name}
+            value={formData.endDate}
             onChange={handleChange}
-            placeholder="Enter ribbon name"
           />
           <div className="flex justify-end gap-4 mt-6">
             <ButtonTransparent type="button" onClick={onClose}>

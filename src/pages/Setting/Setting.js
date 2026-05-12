@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { CiBank } from 'react-icons/ci';
 import { FiSearch } from 'react-icons/fi';
 import { PiCityThin } from "react-icons/pi";
-import { PiMapPinThin } from "react-icons/pi";
 import { RiPinDistanceLine } from "react-icons/ri";
 import { Link } from 'react-router-dom';
 
@@ -29,14 +28,6 @@ const settingsData = [
         path: '/app/city'
 
     },
-    {
-        title: 'Zip Code',
-        description: 'Manage the Zip (for the active countries) that will be visible in the states dropdown list all over the platform.',
-        icon: <PiMapPinThin className="text-3xl text-blue-500" />,
-        path: '/app/zipCode'
-    },
-
-
 ];
 
 export default function Settings() {

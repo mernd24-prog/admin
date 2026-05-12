@@ -5,7 +5,7 @@ import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../components/Atoms/Input/Input';
 import Button from '../../../components/Atoms/buttons/button';
 import Loader from '../../../components/Loader/Loader';
-import { getList, updateCategoryAttributes } from '../../../Redux/productSlice';
+import { getCategoryAttributes, getList, updateCategoryAttributes } from '../../../Redux/productSlice';
 
 const EMPTY_ATTRIBUTE = {
   key: '',
@@ -30,7 +30,7 @@ const typeOptions = [
 
 const toCategoryOptions = (categories = []) =>
   categories.map((category) => ({
-    value: category._id,
+    value: category.categoryKey || category._id,
     label: category.name || category.title || category.categoryKey,
     category,
   }));
@@ -38,10 +38,11 @@ const toCategoryOptions = (categories = []) =>
 const CategoryAttributes = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.product);
-  const categories = useMemo(
-    () => selector?.getListData?.data?.data?.list || [],
-    [selector?.getListData?.data?.data?.list],
-  );
+  const categories = useMemo(() => {
+    const payload = selector?.getListData?.data?.data || {};
+    if (Array.isArray(payload)) return payload;
+    return payload?.list || payload?.items || [];
+  }, [selector?.getListData?.data?.data]);
   const categoryOptions = useMemo(() => toCategoryOptions(categories), [categories]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [attributes, setAttributes] = useState([]);
@@ -52,13 +53,21 @@ const CategoryAttributes = () => {
 
   const handleSelectCategory = (option) => {
     setSelectedCategory(option);
-    setAttributes(
-      (option?.category?.attributeSchema || []).map((item) => ({
-        ...EMPTY_ATTRIBUTE,
-        ...item,
-        options: Array.isArray(item.options) ? item.options.join(', ') : '',
-      })),
-    );
+    dispatch(getCategoryAttributes({ categoryKey: option?.value }))
+      .unwrap()
+      .then((res) => {
+        const schema = res?.data?.attributeSchema || [];
+        setAttributes(
+          schema.map((item) => ({
+            ...EMPTY_ATTRIBUTE,
+            ...item,
+            options: Array.isArray(item.options) ? item.options.join(', ') : '',
+          })),
+        );
+      })
+      .catch(() => {
+        setAttributes([]);
+      });
   };
 
   const updateAttribute = (index, field, value) => {
@@ -94,7 +103,7 @@ const CategoryAttributes = () => {
 
     try {
       await dispatch(updateCategoryAttributes({
-        categoryId: selectedCategory.value,
+        categoryKey: selectedCategory.value,
         attributeSchema: payload,
       })).unwrap();
       toast.success('Category attributes updated');

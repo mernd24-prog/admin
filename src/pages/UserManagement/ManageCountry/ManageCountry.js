@@ -67,7 +67,7 @@ const ManageCountry = () => {
     setIsLoading(true)
     dispatch(getCountryList(query))
       .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
+        setApiRes(res?.payload?.data?.data || { list: [], total: 0 });
       })
       .catch((err) => {
         console.error("Error fetching countries:", err);
@@ -112,10 +112,14 @@ const ManageCountry = () => {
     setErrors({});
   };
 
+  const isRowActive = (row = {}) =>
+    row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
   const handleToggle = async (country) => {
+    const currentlyActive = isRowActive(country);
     let apiPayload = {
       _id: [country?._id],
-      isDisable: country?.isDisable ? false : true
+      isDisable: currentlyActive
     }
     try {
       const res = await dispatch(enableDisableCountry(apiPayload)).unwrap();
@@ -155,7 +159,6 @@ const ManageCountry = () => {
     dispatch(apiCall(formData))
       .unwrap()
       .then((res) => {
-        console.log("??????????????????????????????",res)
         setIsLoading(false);
         fetchCountryList();
         closeModal();
@@ -163,8 +166,6 @@ const ManageCountry = () => {
       .catch((error) => {
         toast.error(error || "Error saving country:");
         setIsLoading(false);
-        console.log("??error",error)
-
         if (error?.errors) {
           setErrors(error.errors);
         }
@@ -213,7 +214,7 @@ const ManageCountry = () => {
     <span className='capitalize'>{ele?.name}</span>,
     ele?.code,
     <div className='flex flex-col'>
-      <ToggleButton isToggle={!ele?.isDisable} handleClick={() => handleToggle(ele)} />
+      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
 
     </div>,
     <ActionButtons

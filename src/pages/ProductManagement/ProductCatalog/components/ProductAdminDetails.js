@@ -21,6 +21,14 @@ const CHECKLIST_LABELS = {
   mediaVerified:      'Media / Images',
 };
 
+const refToLabel = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object') {
+    return value?.name || value?.title || value?.label || value?.email || value?._id || null;
+  }
+  return String(value);
+};
+
 const ProductAdminDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -95,9 +103,9 @@ const ProductAdminDetails = () => {
           <h2 className="text-base font-semibold text-gray-800 mb-3">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
             <Row label="Title" value={product.title} />
-            <Row label="Seller ID" value={product.sellerId} />
-            <Row label="Category" value={product.category || product.categoryId} />
-            <Row label="Brand" value={product.brand} />
+            <Row label="Seller" value={refToLabel(product.sellerId)} />
+            <Row label="Category" value={refToLabel(product.categoryName) || refToLabel(product.category) || refToLabel(product.categoryId)} />
+            <Row label="Brand" value={refToLabel(product.brand)} />
             <Row label="SKU" value={product.sku} />
             <Row label="Color" value={product.color} />
             <Row label="Price" value={product.price !== undefined ? `₹${product.price}` : null} />
@@ -227,6 +235,164 @@ const ProductAdminDetails = () => {
               {product.warranty?.returnPolicy?.eligible !== undefined && (
                 <Row label="Return Policy" value={product.warranty.returnPolicy.eligible ? `Eligible — ${product.warranty.returnPolicy.days || 7} days` : 'Not eligible'} />
               )}
+            </div>
+          </section>
+        )}
+
+        {/* Digital product details */}
+        {product.productType === 'digital' && product.digital && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">Digital Product Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+              <Row label="File Type" value={product.digital.fileType} />
+              <Row label="File Size" value={product.digital.fileSize ? `${product.digital.fileSize} MB` : null} />
+              <Row label="Download Limit" value={product.digital.downloadLimit ? String(product.digital.downloadLimit) : 'Unlimited'} />
+              <Row label="Link Expiry" value={product.digital.expiryDays ? `${product.digital.expiryDays} days` : 'Never'} />
+              <Row label="License Type" value={product.digital.licenseType} />
+              <Row label="Version" value={product.digital.version} />
+              <Row label="Platform" value={product.digital.platform} />
+              <Row label="Requires Auth" value={product.digital.requiresAuth ? 'Yes' : 'No'} />
+              {product.digital.fileUrl && (
+                <div className="border-b border-gray-100 py-3 md:col-span-3">
+                  <p className="text-xs uppercase text-gray-400">Download URL</p>
+                  <a href={product.digital.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-[#3E4094] hover:underline break-all">
+                    {product.digital.fileUrl}
+                  </a>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Subscription details */}
+        {product.productType === 'subscription' && product.subscription && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">Subscription Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+              <Row label="Billing Cycle" value={product.subscription.billingCycle} />
+              <Row label="Recurring Price" value={product.subscription.recurringPrice !== undefined ? `₹${product.subscription.recurringPrice}` : null} />
+              <Row label="Trial Period" value={product.subscription.trialDays ? `${product.subscription.trialDays} days` : 'No trial'} />
+              <Row label="Setup Fee" value={product.subscription.setupFee ? `₹${product.subscription.setupFee}` : 'Free'} />
+              <Row label="Grace Period" value={product.subscription.gracePeriodDays ? `${product.subscription.gracePeriodDays} days` : null} />
+              <Row label="Auto-renew" value={product.subscription.autoRenew ? 'Enabled' : 'Disabled'} />
+              <Row label="Pause Allowed" value={product.subscription.pauseAllowed ? 'Yes' : 'No'} />
+            </div>
+            {product.subscription.features?.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs uppercase text-gray-400 mb-2">Plan Features</p>
+                <ul className="space-y-1">
+                  {product.subscription.features.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                      <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Bundle items */}
+        {product.productType === 'bundle' && product.bundleItems?.length > 0 && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-800">Bundle Items ({product.bundleItems.length})</h2>
+              {product.bundleDiscount > 0 && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                  {product.bundleDiscount}% bundle discount
+                </span>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left p-3 font-medium text-gray-600 text-xs">Product</th>
+                    <th className="text-left p-3 font-medium text-gray-600 text-xs">SKU</th>
+                    <th className="text-right p-3 font-medium text-gray-600 text-xs">Qty</th>
+                    <th className="text-right p-3 font-medium text-gray-600 text-xs">Unit Price</th>
+                    <th className="text-right p-3 font-medium text-gray-600 text-xs">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.bundleItems.map((item, i) => (
+                    <tr key={item.productId || i} className="border-b hover:bg-gray-50">
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          {item.image && <img src={item.image} alt="" className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />}
+                          <span className="text-gray-800">{item.title || item.productId}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-gray-500 font-mono text-xs">{item.sku || '—'}</td>
+                      <td className="p-3 text-right">{item.quantity}</td>
+                      <td className="p-3 text-right">₹{Number(item.price || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-3 text-right font-medium">₹{(item.price * item.quantity).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* SEO data */}
+        {product.seo && Object.keys(product.seo).some((k) => product.seo[k]) && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">SEO Metadata</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+              <Row label="Meta Title" value={product.seo.metaTitle} />
+              <Row label="Meta Description" value={product.seo.metaDescription} />
+              <Row label="Canonical URL" value={product.seo.canonicalUrl} />
+              <Row label="OG Title" value={product.seo.ogTitle} />
+            </div>
+            {product.seo.keywords?.length > 0 && (
+              <div className="border-b border-gray-100 py-3">
+                <p className="text-xs uppercase text-gray-400 mb-2">Keywords</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.seo.keywords.map((kw) => (
+                    <span key={kw} className="px-2.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded-full">{kw}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Analytics */}
+        {product.analytics && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">Analytics</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Views', value: (product.analytics.views || 0).toLocaleString('en-IN') },
+                { label: 'Purchases', value: (product.analytics.purchases || 0).toLocaleString('en-IN') },
+                { label: 'Revenue', value: `₹${(product.analytics.revenue || 0).toLocaleString('en-IN')}` },
+                { label: 'Wishlists', value: (product.analytics.wishlists || 0).toLocaleString('en-IN') },
+                { label: 'Cart Adds', value: (product.analytics.cartAdds || 0).toLocaleString('en-IN') },
+                { label: 'Returns', value: (product.analytics.returns || 0).toLocaleString('en-IN') },
+                { label: 'Avg Rating', value: product.rating ? `${Number(product.rating).toFixed(1)} ★` : 'No ratings' },
+                { label: 'Reviews', value: (product.reviewCount || 0).toLocaleString('en-IN') },
+              ].map(({ label, value }) => (
+                <div key={label} className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="text-base font-bold text-gray-800 mt-0.5">{value}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Tags */}
+        {product.tags?.length > 0 && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">Tags</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {product.tags.map((tag) => (
+                <span key={tag} className="inline-flex px-2.5 py-0.5 bg-[#3E4094] text-white text-xs rounded-full">#{tag}</span>
+              ))}
             </div>
           </section>
         )}

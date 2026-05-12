@@ -51,7 +51,7 @@ const SubTax = () => {
       keyWord: filters.search,
       searchFields: 'name',
       select: 'name percentage isDisable',
-      query: JSON.stringify({ tax_id: id })
+      taxId: id
     };
     dispatch(getListSubTax(reqData));
   }, [size, pageNo, isRefresh, id, filters.search, dispatch]);
@@ -152,6 +152,9 @@ const SubTax = () => {
     );
   };
 
+  const isRowActive = (row = {}) =>
+    row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
   const tableRows = getListData?.map((user) => [
     <CustomCheckbox
       key={`checkbox-${user._id}`}
@@ -165,7 +168,7 @@ const SubTax = () => {
       {user?.percentage}%
     </span>,
     <div className='flex flex-col'>
-      <ToggleButton isToggle={!user?.isDisable} handleClick={() => handleToggle(user)} />
+      <ToggleButton isToggle={isRowActive(user)} handleClick={() => handleToggle(user)} />
     </div>,
     <span key={`actions-${user._id}`}>
       <ActionButtons
@@ -174,12 +177,12 @@ const SubTax = () => {
             _id: user._id,
             name: user.name,
             percentage: user.percentage,
-            isDisable: user.isDisable
+            isDisable: !isRowActive(user)
           });
           setIsEditModal(true);
         }}
         onDelete={() => {
-          setDeleteData({ _id: Array(user._id) })
+          setDeleteData({ _id: [user._id] })
           setShowDeleteConfirmation(true)
         }}
         showLinkButton={false}
@@ -207,8 +210,8 @@ const SubTax = () => {
   const handleDisableFunc = () => {
     if (!toggleStates) return;
     const obj = {
-      _id: Array(toggleStates._id),
-      isDisable: !toggleStates.isDisable
+      _id: [toggleStates._id],
+      isDisable: isRowActive(toggleStates)
     };
 
     dispatch(enableDisableSubTax(obj))
@@ -349,7 +352,7 @@ const SubTax = () => {
       keyWord: filters.search,
       searchFields: 'name',
       select: 'name percentage isDisable',
-      query: JSON.stringify({ tax_id: id })
+      taxId: id
     };
     dispatch(getListSubTax(reqData));
     setIsRefresh(!isRefresh)
@@ -582,7 +585,7 @@ const SubTax = () => {
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this sub tax?`}
+          heading={`Are you sure you want to ${isRowActive(toggleStates) ? 'disable' : 'enable'} this sub tax?`}
         />
       </div>
     </>

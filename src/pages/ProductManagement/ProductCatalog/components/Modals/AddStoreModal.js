@@ -6,7 +6,7 @@ import DefaultModal from '../../../../../components/Atoms/Modal/DefaultRightSide
 
 
 
-const AddStoreModal = ({ isOpen, onClose, handleSubmit, formValues, handleInputChange, formErrors, modifiedState = [], modifiedCountry = [], modifiedZipCode = [],
+const AddStoreModal = ({ isOpen, onClose, handleSubmit, formValues, handleInputChange, formErrors, modifiedState = [], modifiedCountry = [],
     handleSelectChange, modifiedCity = [], userData, modifiedSellerList
 
 }) => {
@@ -113,15 +113,12 @@ const AddStoreModal = ({ isOpen, onClose, handleSubmit, formValues, handleInputC
                             />
                         </div>
                         <div>
-                            <FilterSelect
-                                label="Zip Code *"
+                            <Input
+                                labelName="Zip Code *"
                                 name="zip_code"
-                                value={modifiedZipCode.find(z => z.value === formValues.zip_code) || null}
-                                onChange={(e) => handleSelectChange(e, 'ZIP_CODE')}
-                                options={modifiedZipCode}
-                                placeholder="Select Zip Code"
-                                disabled={!formValues.city_code}
-                            // error={formErrors.zip_code}
+                                value={formValues.zip_code}
+                                onChange={handleInputChange}
+                                placeholder="Enter zip code"
                             />
                         </div>
                         <Input labelName={`Longitude's`} value={formValues?.location?.coordinates[0]} name={`coordinates`} onChange={(e) => handleInputChange(e, 0)}

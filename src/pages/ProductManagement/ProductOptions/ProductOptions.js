@@ -54,8 +54,8 @@ const ProductOptions = () => {
 
   const selector = useSelector(state => state.product);
 
-  const getListData = selector?.getListProductData?.data?.data?.list;
-  const totalUsers = getListData?.total || 0;
+  const listResponse = selector?.getListProductData?.data?.data || {};
+  const getListData = listResponse?.list || [];
     console.log("sele",getListData)
   const handleInputChange = e => {
     const { name, value } = e.target;
@@ -165,7 +165,7 @@ const ProductOptions = () => {
           setIsEditModal(true);
         }}
         onDelete={() => {
-          setDeleteData({ _id: Array(user._id) })
+          setDeleteData({ _id: [user._id] })
           setShowDeleteConfirmation(true)
         }}
         onListing={()=>{
@@ -199,7 +199,7 @@ const ProductOptions = () => {
   const handleDisableFunc = () => {
     if (!toggleStates) return;
     const obj = {
-      _id: Array(toggleStates._id),
+      _id: [toggleStates._id],
       isDisable: !toggleStates.isDisable
     };
 
@@ -394,7 +394,7 @@ const ProductOptions = () => {
               placeholder='Search by...'
               showFilter={false}
               showSummary={false}
-              totalData={selector?.getListProductData?.data?.data?.total}
+              totalData={listResponse?.total || 0}
               totalSize={size}
               currentPage={pageNo}
               onPageChange={onPageChange}
@@ -403,9 +403,9 @@ const ProductOptions = () => {
             />
           </div>
           <div className="flex justify-center my-6">
-            {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
+            {listResponse?.total && size && Math.ceil(listResponse.total / size) > 1 && (
               <Pagination
-                totalPages={Math.ceil(getListData.total / size)}
+                totalPages={Math.ceil(listResponse.total / size)}
                 currentPage={pageNo}
                 onPageChange={onPageChange}
               />

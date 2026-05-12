@@ -19,7 +19,7 @@ const toggleLabels = {
   updateLanguages: "Update other languages data"
 };
 
-const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, togglePanel }) => {
+const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, togglePanel, onSave }) => {
   const [settings, setSettings] = useState({
     activate: true,
     approval: false,
@@ -113,7 +113,7 @@ const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, toggl
         </div>
 
         <div className="p-4">
-          <FormSubmitButton buttonLabel="Submit" />
+          <FormSubmitButton buttonLabel="Submit" onClick={onSave} />
         </div>
       </div>
     </div>

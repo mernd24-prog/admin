@@ -84,7 +84,9 @@ const Tax = () => {
 
     const selector = useSelector(state => state.cms);
     const countrySelector = useSelector(state => state.country);
-    const getListData = selector?.getTaxListData?.data?.data?.list;
+    const listPayload = selector?.getTaxListData?.data?.data || {};
+    const getListData = listPayload?.list || [];
+    const totalTax = Number(listPayload?.total || 0);
     const loading = selector.loading || countrySelector.loading;
 
     const handleInputChange = e => {
@@ -192,6 +194,9 @@ const Tax = () => {
         );
     };
 
+    const isRowActive = (row = {}) =>
+        row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
     const tableRows = getListData?.map((tax) => [
         <CustomCheckbox
             key={`checkbox-${tax._id}`}
@@ -202,10 +207,10 @@ const Tax = () => {
             {tax?.name}
         </span>,
         <span key={`country-${tax._id}`} className='capitalize'>
-            {tax?.country_code?.name || 'N/A'}
+            {tax?.countryId?.name || tax?.country_code?.name || 'N/A'}
         </span>,
         <div className='flex flex-col'>
-            <ToggleButton isToggle={!tax?.isDisable} handleClick={() => handleToggle(tax)} />
+            <ToggleButton isToggle={isRowActive(tax)} handleClick={() => handleToggle(tax)} />
         </div>,
         <span key={`actions-${tax._id}`}>
             <ActionButtons
@@ -213,13 +218,13 @@ const Tax = () => {
                     setForm({
                         _id: tax._id,
                         name: tax.name.charAt(0).toUpperCase() + tax.name.slice(1).toLowerCase(),
-                        country_code: tax.country_code?._id,
-                        isDisable: tax.isDisable
+                        country_code: tax.countryId?._id || tax.country_code?._id,
+                        isDisable: !isRowActive(tax)
                     });
                     setIsEditModal(true);
                 }}
                 onDelete={() => {
-                    setDeleteData({ _id: Array(tax._id) })
+                    setDeleteData({ _id: [tax._id] })
                     setShowDeleteConfirmation(true)
                 }}
                 onListing={() => {
@@ -250,8 +255,8 @@ const Tax = () => {
     const handleDisableFunc = () => {
         if (!toggleStates) return;
         const obj = {
-            _id: Array(toggleStates._id),
-            isDisable: !toggleStates.isDisable
+            _id: [toggleStates._id],
+            isDisable: isRowActive(toggleStates)
         };
 
         dispatch(enableDisableTaxList(obj))
@@ -420,7 +425,7 @@ const Tax = () => {
                             showSearch={false}
                             showFilter={false}
                             showSummary={false}
-                            totalData={selector?.getTaxListData?.data?.data?.total}
+                            totalData={totalTax}
                             totalSize={size}
                             currentPage={pageNo}
                             onPageChange={onPageChange}
@@ -432,9 +437,9 @@ const Tax = () => {
                         />
                     </div>
                     <div className="flex justify-center my-6">
-                        {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
+                        {totalTax > size && (
                             <Pagination
-                                totalPages={Math.ceil(getListData.total / size)}
+                                totalPages={Math.ceil(totalTax / size)}
                                 currentPage={pageNo}
                                 onPageChange={onPageChange}
                             />
@@ -550,7 +555,7 @@ const Tax = () => {
                     isOpen={isConfirmModalOpen}
                     onClose={() => setIsConfirmModalOpen(false)}
                     onConfirm={handleDisableFunc}
-                    heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this tax?`}
+                    heading={`Are you sure you want to ${isRowActive(toggleStates) ? 'disable' : 'enable'} this tax?`}
                 />
             </div>
         </>

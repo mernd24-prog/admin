@@ -15,7 +15,6 @@ import { getAllCountryList } from '../../../Redux/CountrySlice'
 import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect'
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
 import { Link } from 'react-router-dom'
-import Dropdown from '../../../components/Atoms/Dropdown/Dropdown'
 
 const size = 10
 
@@ -31,7 +30,6 @@ const ManageState = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  console.log(filters)
 
   const initialFormState = {
     name: '',
@@ -41,8 +39,6 @@ const ManageState = () => {
 
   const [formData, setFormData] = useState(initialFormState)
   const [errors, setErrors] = useState({});
-
-  console.log(formData)
 
   const mappedCountries = selector?.getAllCountryListData?.data?.data?.list?.map((e) => ({
     value: e?._id,
@@ -54,31 +50,31 @@ const ManageState = () => {
     ...(mappedCountries || [])
   ];
 
-  const fetchCountryList = useCallback(() => {
+  const fetchStateList = useCallback(() => {
     const query = {
       page: pageNo,
       size: size,
       keyWord: filters?.search,
       searchFields: "name,code,country",
       populate: 'country_code:name',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
+      countryId: filters?.country?.value || undefined,
     };
     setIsLoading(true)
     dispatch(getStateList(query))
       .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
+        setApiRes(res?.payload?.data?.data || { list: [], total: 0 });
       })
       .catch((err) => {
         console.error("Error fetching countries:", err);
       }).finally(() => {
         setIsLoading(false)
       })
-  }, [dispatch, pageNo,]);
+  }, [dispatch, pageNo, filters?.search, filters?.country?.value]);
 
   useEffect(() => {
-    fetchCountryList();
+    fetchStateList();
     dispatch(getAllCountryList())
-  }, [fetchCountryList]);
+  }, [fetchStateList, dispatch]);
 
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
@@ -104,7 +100,6 @@ const ManageState = () => {
   };
 
   const handleSelectChange = (selectedOption, { name }) => {
-    console.log(selectedOption, name)
     setFormData(prev => ({
       ...prev,
       country_code: selectedOption?.value || null
@@ -202,9 +197,8 @@ const ManageState = () => {
         toast.success('State created successfully');
       }
       closeModal();
-      fetchCountryList();
+      fetchStateList();
     } catch (error) {
-      console.log("??????????????????", error)
       console.error(error || "Error saving ");
 
       if (error?.errors) {
@@ -221,17 +215,21 @@ const ManageState = () => {
     }
   };
 
+  const isRowActive = (row = {}) =>
+    row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
   const handleToggle = async (state) => {
+    const currentlyActive = isRowActive(state);
     let apiPayload = {
       _id: [state?._id],
-      isDisable: state?.isDisable ? false : true
+      isDisable: currentlyActive
     }
     try {
       const res = await dispatch(enableDisableState(apiPayload)).unwrap();
       if (res) {
         toast.success(res?.message)
       }
-      fetchCountryList();
+      fetchStateList();
     } catch (error) {
       toast.error(error?.message || error || "Failed...!")
       if (error.errors) {
@@ -241,25 +239,9 @@ const ManageState = () => {
   };
 
   const applyFilters = useCallback(() => {
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: filters?.search,
-      searchFields: "name,code,country",
-      populate: 'country_code:name',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true)
-    dispatch(getStateList(query))
-      .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
-      })
-      .catch((err) => {
-        console.error("Error fetching countries:", err);
-      }).finally(() => {
-        setIsLoading(false)
-      })
-  }, [filters]);
+    setPageNo(1);
+    fetchStateList();
+  }, [fetchStateList]);
 
   const tableHeadings = ["State Name", "Country Name", "Status", "Action"];
 
@@ -270,15 +252,15 @@ const ManageState = () => {
       onChange={(e) => handleRowCheckboxChange(e, ele._id)}
     />,
     <span className='capitalize'>{ele?.name}</span>,
-    ele?.country_code?.name,
+    ele?.countryId?.name || ele?.country_code?.name || 'N/A',
     <div className='flex flex-col'>
-      <ToggleButton isToggle={!ele?.isDisable} handleClick={() => handleToggle(ele)} />
+      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
     </div>,
     <ActionButtons
       onEdit={() => {
         setFormData({
           name: ele.name,
-          country_code: ele.country_code?._id,
+          country_code: ele.countryId?._id || ele.country_code?._id,
           _id: ele._id
         });
         setIsEditMode(true);
@@ -302,7 +284,7 @@ const ManageState = () => {
           toast.success(res?.message);
         }
         setSelectedRow([])
-        fetchCountryList();
+        fetchStateList();
       } catch (error) {
         toast.error(error?.message || error || "Failed...!");
         setSelectedRow([])
@@ -314,25 +296,8 @@ const ManageState = () => {
   };
 
   const handleSearchRemove = () => {
-    setFilters({ search: "" })
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: "",
-      searchFields: "name,code,country",
-      populate: 'country_code:name',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true)
-    dispatch(getStateList(query))
-      .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
-      })
-      .catch((err) => {
-        console.error("Error fetching countries:", err);
-      }).finally(() => {
-        setIsLoading(false)
-      })
+    setFilters({ search: "", country: "" })
+    setPageNo(1);
   }
 
   return (
@@ -369,7 +334,7 @@ const ManageState = () => {
           />
 
           <TableData
-            Heading='Manage Country'
+            Heading='Manage State'
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}

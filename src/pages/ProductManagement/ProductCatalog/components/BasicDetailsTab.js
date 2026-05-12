@@ -1,5 +1,5 @@
 import 'react-quill/dist/quill.snow.css';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 
@@ -8,26 +8,19 @@ import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../../components/Atoms/Input/Input';
 import Loader from '../../../../components/Loader/Loader';
-import DefaultModal from '../../../../components/Atoms/Modal/DefaultRightSideModal';
 
 // Modals
 import AddStoreModal from './Modals/AddStoreModal';
-import AddBrandModal from './Modals/AddBrandModal';
 import AddCategoryModal from './Modals/AddCategoryModal';
-// import AddBatchModal from './Modals/AddBatchModal';
-import AddQtyHead from './Modals/AddQtyHead';
 
 // Redux Actions
 import { getAllCityList } from '../../../../Redux/citySlice';
 import { getAllStateList } from '../../../../Redux/stateSlice';
-import { getAllZipCodeList } from '../../../../Redux/zipCodeSlice';
 import { create, getAllSellerList } from '../../../../Redux/StoreSlice';
-import { createBatch, createBrand, createCategory, createHsn, createWarranty } from '../../../../Redux/productSlice';
-import { createQtyHead } from '../../../../Redux/badgeSlice';
+import { createCategory, createHsn } from '../../../../Redux/productSlice';
 
 import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
 import AddHsnModal from './Modals/AddHsnModal';
-import AddBatchModal from './Modals/AddBatchModal';
 // import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
 
 const INITIAL_FORM_STATE = {
@@ -52,38 +45,12 @@ const INITIAL_FORM_STATE = {
   businessLicense: '',
 };
 
-const INITIAL_FORM_VALUES = {
-  name: "",
-  thumbnails: "",
-  logo: "",
-  isDisable: true,
-};
-
 const INITIAL_FORM_CATEGORY = {
   categoryName: '',
   seoUrl: '',
   parentCategory: null,
   isPublish: true,
   isDashboardVisible: false, priority: "0"
-};
-
-const INITIAL_FORM_BATCH = {
-  batchCode: '',
-  manufactureDate: '',
-  expire_date: '',
-  isDisable: true
-};
-
-const INITIAL_FORM_QTY = {
-  name: "",
-  isDisable: true,
-  value: "",
-  description: "",
-  example: "",
-};
-
-const INITIAL_FORM_WARRANTY = {
-  period: ""
 };
 
 const INITIAL_FORM_HSN = {
@@ -102,15 +69,14 @@ export default function BasicDetailsTab({
   formData,
   handleChange,
   formattedBrandList,
-  formattedCategoryList,
-  storeList,
-  handleSelectChange,
-  batchData,
-  errors,
-  formattedQtyHeadList,
   formattedWarrantyList,
+  formattedColorList,
+  formattedProductFamilyList,
+  formattedCategoryList,
+  handleSelectChange,
+  errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, handleInputReactQuillChange, userData
+  allCategories, API_CALL_OBJECT, hsnCodeList, userData
 }) {
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
@@ -118,27 +84,37 @@ export default function BasicDetailsTab({
   const modifiedCountry = transformArray(selector?.country?.getAllCountryListData?.data?.data?.list || []);
   const modifiedState = transformArray(selector?.state?.getAllStateListData?.data?.data?.list || []);
   const modifiedCity = transformArray(selector?.city?.getAllCityListData?.data?.data?.list || []);
-  const modifiedZipCode = transformArray(selector?.zipCode?.getAllZipCodeListData?.data?.data?.list || []);
   const modifiedSellerList = transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
+  const selectedCategoryOption = useMemo(() => {
+    const currentCategory = String(formData.category_id || formData.categoryId || formData.category || formData.category_key || '');
+    if (!currentCategory) return null;
+    return (
+      formattedCategoryList.find((opt) =>
+        String(opt.value) === currentCategory || String(opt.categoryKey || '') === currentCategory
+      ) || null
+    );
+  }, [formattedCategoryList, formData.category_id, formData.categoryId, formData.category, formData.category_key]);
+
+  const selectedHsnOption = useMemo(() => {
+    const currentHsn = String(formData.hsn_code || formData.hsnCode || '');
+    if (!currentHsn) return null;
+    return (
+      hsnCodeList.find((opt) =>
+        String(opt.value) === currentHsn || String(opt.code || '') === currentHsn
+      ) || null
+    );
+  }, [hsnCodeList, formData.hsn_code, formData.hsnCode]);
 
 
 
 
   const [isAddStoreModal, setIsAddStoreModal] = useState(false);
-  const [isBrandAddModal, setIsBrandAddModal] = useState(false);
   const [isCategoryModal, setIsCategoryModal] = useState(false);
-  const [isBatchAddModal, setIsBatchAddModal] = useState(false);
-  const [isQtyModal, setIsQtyModal] = useState(false);
-  const [isWarrantyAddModal, setIsWarrantyAddModal] = useState(false);
   const [isHsnAddModal, setIsHsnAddModal] = useState(false)
 
   const [formValues, setFormValues] = useState(INITIAL_FORM_STATE);
   const [formErrors, setFormErrors] = useState({});
-  const [brandFormValues, setBrandFormValues] = useState(INITIAL_FORM_VALUES);
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
-  const [batchFormValues, setBatchFormValues] = useState(INITIAL_FORM_BATCH);
-  const [qtyFormValues, setQtyFormValues] = useState(INITIAL_FORM_QTY);
-  const [warrantyFormData, setWarrantyFormData] = useState(INITIAL_FORM_WARRANTY);
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
 
   const [isLoading, setIsLoading] = useState(false);
@@ -185,31 +161,9 @@ export default function BasicDetailsTab({
   };
 
 
-  const handleBrandInputChange = (e) => {
-    const { name, value } = e.target;
-    setBrandFormValues(prev => ({ ...prev, [name]: value }));
-  };
-
   const handleInputCategoryChange = (e) => {
     const { name, value } = e.target;
     setCategoryForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleBatchInputChange = (e) => {
-    const { name, value } = e.target;
-    setBatchFormValues(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleQtyInputChange = (e) => {
-    const { name, value } = e.target;
-    setQtyFormValues(prev => ({ ...prev, [name]: value }));
-    setFormErrors({})
-  };
-
-  const handleWarrantyInputChange = (e) => {
-    const { name, value } = e.target;
-    setWarrantyFormData(prev => ({ ...prev, [name]: value }));
-    setFormErrors({})
   };
 
   const handleHsnInputChange = (e) => {
@@ -221,11 +175,7 @@ export default function BasicDetailsTab({
   const handleAction = (action) => {
     const actionMap = {
       'Store': () => setIsAddStoreModal(true),
-      'BRAND': () => setIsBrandAddModal(true),
       'Category': () => setIsCategoryModal(true),
-      'Batch': () => setIsBatchAddModal(true),
-      'QTY': () => setIsQtyModal(true),
-      'Warranty': () => setIsWarrantyAddModal(true),
       'Hsn': () => setIsHsnAddModal(true),
 
     };
@@ -286,9 +236,6 @@ export default function BasicDetailsTab({
           city_code: selectedOption?.value || "",
           zip_code: ""
         }));
-        if (selectedOption?.value) {
-          dispatch(getAllZipCodeList({ query: JSON.stringify({ city_code: selectedOption.value }) }));
-        }
         break;
 
       case 'ZIP_CODE':
@@ -333,22 +280,6 @@ export default function BasicDetailsTab({
     }
   };
 
-  const handleFileUpload = useCallback(async (file, type) => {
-    if (!file) return;
-    try {
-      setIsLoading(true);
-      const uploadedImage = await uploadFile(file, type);
-      setBrandFormValues(prev => ({
-        ...prev,
-        ...(type === 'BRANDS' ? { logo: uploadedImage } : { thumbnails: uploadedImage })
-      }));
-    } catch (error) {
-      toast.error('File upload failed: ' + (error?.message || error));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const handleFileUploadCategory = async (file) => {
     if (!file) return;
     try {
@@ -376,41 +307,51 @@ export default function BasicDetailsTab({
 
   const createSelectOptions = useMemo(() => {
     const options = [{ label: "ROOT", value: "ROOT" }];
+    if (!Array.isArray(allCategories) || !allCategories.length) return options;
 
-    const addOptions = (categories, prefix = '', depth = 1) => {
-      if (!Array.isArray(categories)) return;
+    const hasNested = allCategories.some(
+      (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+    );
+    if (hasNested) {
+      const addOptions = (categories, prefix = '', depth = 1) => {
+        if (!Array.isArray(categories)) return;
+        categories.forEach((category) => {
+          const categoryName = category.name || category.title || category.categoryKey;
+          const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
+          options.push({ value: category.categoryKey || category._id, label });
+          const children = category.subcategories || category.subCategories || [];
+          if (depth < 2 && children.length) {
+            addOptions(children, label, depth + 1);
+          }
+        });
+      };
+      addOptions(allCategories);
+      return options;
+    }
 
-      categories.forEach(category => {
-        const categoryName = category.name || category.title || category.categoryKey;
-        const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
-        options.push({ value: category._id, label });
+    const byParent = new Map();
+    allCategories.forEach((category) => {
+      const parent = category?.parentKey ? String(category.parentKey) : '__root__';
+      if (!byParent.has(parent)) byParent.set(parent, []);
+      byParent.get(parent).push(category);
+    });
 
-        if (depth < 2 && (category.subcategories || category.subCategories)?.length) {
-          addOptions(category.subcategories || category.subCategories, label, depth + 1);
-        }
-      });
+    const walk = (parent = '__root__', prefix = '', depth = 1) => {
+      const children = byParent.get(parent) || [];
+      children
+        .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+        .forEach((category) => {
+          const categoryName = category.name || category.title || category.categoryKey;
+          const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
+          options.push({ value: category.categoryKey || category._id, label });
+          if (depth < 2) {
+            walk(String(category.categoryKey || category._id), label, depth + 1);
+          }
+        });
     };
-
-    addOptions(allCategories);
+    walk();
     return options;
   }, [allCategories]);
-
-  const handleSubmitBrand = async (e) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true)
-      const res = await dispatch(createBrand(brandFormValues)).unwrap();
-      toast.success(res?.message || 'Brand created successfully');
-      setIsBrandAddModal(false);
-      setBrandFormValues(INITIAL_FORM_VALUES);
-      fetchAllData([API_CALL_OBJECT["Brand List"]])
-
-    } catch (err) {
-      toast.error(err?.message || 'Failed to create brand');
-    } finally {
-      setIsLoading(false)
-    }
-  };
 
   const handleCategorySubmit = async () => {
     try {
@@ -425,7 +366,8 @@ export default function BasicDetailsTab({
       };
 
       if (type === "CHILD") {
-        reqData.categoryId = categoryForm.parentCategory.value;
+        reqData.parentKey = categoryForm.parentCategory.value;
+        reqData.level = 1;
       }
       setIsLoading(true)
       const res = await dispatch(createCategory(reqData)).unwrap();
@@ -437,67 +379,6 @@ export default function BasicDetailsTab({
       toast.error(error?.message || "Failed to create category");
     } finally {
       setIsLoading(false)
-    }
-  };
-
-  const handleBatchSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true)
-      const res = await dispatch(createBatch(batchFormValues)).unwrap();
-      toast.success(res?.message || 'Batch created successfully');
-      setIsBatchAddModal(false);
-      setBatchFormValues(INITIAL_FORM_BATCH);
-      fetchAllData([API_CALL_OBJECT["Batch List"]])
-      setFormErrors({})
-
-    } catch (error) {
-      toast.error(error?.message || 'Failed to create batch');
-    } finally {
-      setIsLoading(false)
-      setFormErrors({})
-    }
-  };
-
-  const handleQtyHeadSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true)
-      await dispatch(createQtyHead({ ...qtyFormValues, isDisable: true })).unwrap();
-      toast.success('Quantity head created successfully');
-      setQtyFormValues(INITIAL_FORM_QTY);
-      setIsQtyModal(false);
-      fetchAllData([API_CALL_OBJECT["Qty Head List"]])
-      setFormErrors({})
-    } catch (error) {
-      toast.error(error?.message || 'Failed to create quantity head');
-    } finally {
-      setIsLoading(false)
-      setFormErrors({})
-    }
-  };
-
-  const handleWarrantySubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true)
-      const res = await dispatch(createWarranty({
-        period: warrantyFormData.period,
-        isDisable: true
-      })).unwrap();
-
-      toast.success(res?.message || "Warranty period created successfully");
-      setIsWarrantyAddModal(false);
-      setWarrantyFormData(INITIAL_FORM_WARRANTY);
-      fetchAllData([API_CALL_OBJECT["Warranty List"]])
-      setIsLoading(false)
-      setFormErrors({})
-
-    } catch (error) {
-      toast.error(error?.message || "Failed to create warranty period");
-    } finally {
-      setIsLoading(false)
-      setFormErrors({})
     }
   };
 
@@ -543,43 +424,9 @@ export default function BasicDetailsTab({
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateBrandForm = () => {
-    const newErrors = {};
-    if (!brandFormValues.name) newErrors.name = "Brand name is required";
-    if (!brandFormValues.logo) newErrors.logo = "Logo is required";
-    return Object.keys(newErrors).length === 0;
-  };
-
   const validateCategoryForm = () => {
     const newErrors = {};
     if (!categoryForm.categoryName) newErrors.categoryName = "Category name is required";
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateBatchForm = () => {
-    const newErrors = {};
-    if (!batchFormValues.batchCode) newErrors.batchCode = "Batch code is required";
-    if (!batchFormValues.manufactureDate) newErrors.manufactureDate = "Manufacture date is required";
-    if (!batchFormValues.expire_date) newErrors.expire_date = "Expiry date is required";
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateQtyForm = () => {
-    const newErrors = {};
-    if (!qtyFormValues.name) newErrors.name = "Name is required";
-    if (!qtyFormValues.value) newErrors.value = "Value is required";
-    if (!qtyFormValues.example) newErrors.example = "example is required";
-    if (!qtyFormValues.description) newErrors.description = "description is required";
-
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateWarrantyForm = () => {
-    const newErrors = {};
-    if (!warrantyFormData.period) newErrors.period = "Warranty period is required";
-    setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -656,12 +503,13 @@ export default function BasicDetailsTab({
               />
             </div>
             <div>
-              <Input
-                labelName="Brand"
+              <FilterSelect
+                label="Brand"
                 name="brand"
-                value={formData.brand || ""}
-                onChange={handleChange}
-                placeholder="Enter brand name"
+                value={formattedBrandList.find((opt) => String(opt.value) === String(formData.brand || '')) || null}
+                onChange={(e) => handleSelectChange(e, 'BRAND_ID')}
+                options={formattedBrandList || []}
+                placeholder="Select Brand"
                 error={errors?.brand}
               />
             </div>
@@ -678,7 +526,7 @@ export default function BasicDetailsTab({
               </div>
               <FilterSelect
                 name="category_id"
-                value={formattedCategoryList.find(opt => opt.value === formData.category_id)}
+                value={selectedCategoryOption}
                 onChange={(e) => handleSelectChange(e, 'CATEGORY_ID')}
                 options={formattedCategoryList || []}
                 error={errors?.category_id}
@@ -738,7 +586,7 @@ export default function BasicDetailsTab({
               </div>
               <FilterSelect
                 name="hsn_code"
-                value={hsnCodeList.find(opt => opt.value === formData.hsn_code)}
+                value={selectedHsnOption}
                 onChange={(e) => handleSelectChange(e, 'hsn_code')}
                 options={hsnCodeList || []}
                 error={errors?.hsn_code}
@@ -758,25 +606,21 @@ export default function BasicDetailsTab({
               error={errors?.sku}
               textareaClasses='text-sm'
             />
-            <Input
-              labelName="Color"
-              name="color"
-              type="text"
-              value={formData.color || ""}
-              onChange={handleChange}
-              placeholder="Enter color"
+            <FilterSelect
+              label="Color"
+              value={(formattedColorList || []).find((opt) => String(opt.value) === String(formData.color || '')) || null}
+              onChange={(e) => handleSelectChange(e, 'PRODUCT_COLOR')}
+              options={formattedColorList || []}
+              placeholder="Select color"
               error={errors?.color}
-              textareaClasses='text-sm'
             />
-            <Input
-              labelName="Product Family Code"
-              name="productFamilyCode"
-              type="text"
-              value={formData.productFamilyCode || ""}
-              onChange={handleChange}
-              placeholder="Optional family/group code"
+            <FilterSelect
+              label="Product Family Code"
+              value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}
+              onChange={(e) => handleSelectChange(e, 'PRODUCT_FAMILY')}
+              options={formattedProductFamilyList || []}
+              placeholder="Select family code"
               error={errors?.productFamilyCode}
-              textareaClasses='text-sm'
             />
             <Input
               labelName="Price"
@@ -873,6 +717,13 @@ export default function BasicDetailsTab({
               placeholder="Example: 12"
             />
             <FilterSelect
+              label="Warranty Template"
+              value={(formattedWarrantyList || []).find((opt) => String(opt.value) === String(formData.warranty?.period || '')) || null}
+              onChange={(e) => handleChange({ target: { name: 'warranty.period', value: e?.value || '' } })}
+              options={formattedWarrantyList || []}
+              placeholder="Select warranty template"
+            />
+            <FilterSelect
               label="Warranty Unit"
               value={[
                 { value: 'days', label: 'Days' },
@@ -932,20 +783,11 @@ export default function BasicDetailsTab({
         modifiedCountry={modifiedCountry}
         modifiedState={modifiedState}
         modifiedCity={modifiedCity}
-        modifiedZipCode={modifiedZipCode}
         handleSelectChange={handleSelectAddChange}
         onClose={() => { setIsAddStoreModal(false); setFormValues(INITIAL_FORM_STATE); setFormErrors({}) }}
         handleSubmit={() => validateStoreForm() && handleAddStore()}
         modifiedSellerList={modifiedSellerList}
-      />
-
-      <AddBrandModal
-        isOpen={isBrandAddModal}
-        handleCloseModal={() => setIsBrandAddModal(false)}
-        formValues={brandFormValues}
-        handleInputChange={handleBrandInputChange}
-        handleFileUpload={handleFileUpload}
-        handleSubmit={(e) => validateBrandForm() && handleSubmitBrand(e)}
+        userData={userData}
       />
 
       <AddCategoryModal
@@ -960,51 +802,10 @@ export default function BasicDetailsTab({
         handleDashboardVisible={handleDashboardVisible}
       />
 
-      <AddBatchModal
-        isOpen={isBatchAddModal}
-        formValues={batchFormValues}
-        handleInputChange={handleBatchInputChange}
-        handleCloseModal={() => { setIsBatchAddModal(false); setBatchFormValues(INITIAL_FORM_BATCH); setFormErrors({}) }}
-        handleSubmit={(e) => validateBatchForm() && handleBatchSubmit(e)} errors={formErrors}
-      />
-
-      <AddQtyHead
-        isOpen={isQtyModal}
-        handleCloseModal={() => { setIsQtyModal(false); setQtyFormValues(INITIAL_FORM_QTY); setFormErrors({}) }}
-        formData={qtyFormValues}
-        handleInputChange={handleQtyInputChange}
-        handleSubmit={(e) => validateQtyForm() && handleQtyHeadSubmit(e)}
-        errors={formErrors}
-      />
-
       <AddHsnModal isOpen={isHsnAddModal} formData={hsnFormValues}
         resetForm={() => { setIsHsnAddModal(false); setIsHsnFormValue(INITIAL_FORM_HSN); setFormErrors({}) }}
         handleInputChange={handleHsnInputChange} handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
         errors={formErrors} />
-
-      <DefaultModal
-        isOpen={isWarrantyAddModal}
-        onClose={() => { setIsWarrantyAddModal(false); setFormErrors({}); setWarrantyFormData(INITIAL_FORM_WARRANTY) }}
-        onSubmit={(e) => validateWarrantyForm() && handleWarrantySubmit(e)}
-        isButtonView={true}
-        submitButtonText="Create"
-        closeButtonText="Cancel"
-        title="Add Warranty Period"
-        titleClassName="mt-5 font-medium"
-      >
-        <div className='p-4'>
-          <Input
-            labelName="Warranty Period"
-            name="period"
-            type="text"
-            placeholder="Enter warranty period (e.g., 1 year)"
-            value={warrantyFormData.period}
-            onChange={handleWarrantyInputChange}
-            required
-            error={formErrors?.period}
-          />
-        </div>
-      </DefaultModal >
     </>
   );
 }

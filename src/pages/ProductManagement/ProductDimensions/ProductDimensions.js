@@ -382,7 +382,7 @@ const ProductDimensions = () => {
               setSearchTerm={setKeyword}
               isHeaderCheckbox={true}
               handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={selectedRow.length === selector?.getListData?.data?.data?.list?.length}
+              allRowsSelected={selectedRow.length === (getListData?.list?.length || 0)}
             />
           </div>
           <div className="flex justify-center my-6">

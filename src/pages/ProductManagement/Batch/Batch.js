@@ -62,7 +62,7 @@ const Batch = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   
   const getAllRowIds = useMemo(
-    () => batch?.list?.map(row => row?.id) || [],
+    () => batch?.list?.map(row => row?._id) || [],
     [batch?.list]
   )
   
@@ -211,7 +211,7 @@ const Batch = () => {
         'Status updated',
         'Failed to update status',
         {
-          _id: [batch.id], // Changed from batch.id to batch.id
+          _id: [batch._id],
           isDisable: !batch.isDisable
         }
       )
@@ -279,7 +279,7 @@ const Batch = () => {
         manufactureDate:
           moment(batch.manufactureDate).format('YYYY-MM-DD') || '',
         expiryDate: moment(batch.expiryDate).format('YYYY-MM-DD') || '',
-        id: batch.id, // Changed from batch.id to batch.id
+        id: batch._id,
         isDisable: batch?.isDisable || false
       })
     } else {
@@ -292,8 +292,8 @@ const Batch = () => {
   }, [])
 
   const handleDelete = useCallback(() => {
-    if (modalState.selectedBatch?.id) { 
-      handleDeleteBatch(modalState.selectedBatch.id)
+    if (modalState.selectedBatch?._id) {
+      handleDeleteBatch(modalState.selectedBatch._id)
     }
   }, [modalState, handleDeleteBatch])
 
@@ -324,7 +324,7 @@ const Batch = () => {
             })
           ).unwrap()
         } else if (action === 'Delete') {
-          res = await dispatch(deleteBatch({ id: selectedRow })).unwrap()
+          res = await dispatch(deleteBatch({ _id: selectedRow })).unwrap()
         }
         
         toast.success(res?.message || 'Operation successful')
@@ -343,26 +343,26 @@ const Batch = () => {
     () =>
       batch?.list?.map(batchItem => [
         <CustomCheckbox
-          key={`checkbox-${batchItem.id}`}
-          checked={selectedRow.includes(batchItem.id)}
-          onChange={e => handleRowCheckboxChange(e, batchItem.id)}
+          key={`checkbox-${batchItem._id}`}
+          checked={selectedRow.includes(batchItem._id)}
+          onChange={e => handleRowCheckboxChange(e, batchItem._id)}
         />,
-        <span key={`code-${batchItem.id}`} className='font-medium capitalize'>
+        <span key={`code-${batchItem._id}`} className='font-medium capitalize'>
           {batchItem.batchCode}
         </span>,
-        <span key={`mfg-${batchItem.id}`}>
+        <span key={`mfg-${batchItem._id}`}>
           {new Date(batchItem.manufactureDate).toLocaleDateString()}
         </span>,
-        <span key={`exp-${batchItem.id}`}>
+        <span key={`exp-${batchItem._id}`}>
           {new Date(batchItem.expiryDate).toLocaleDateString()}
         </span>,
         <ToggleButton
-          key={`toggle-${batchItem.id}`}
+          key={`toggle-${batchItem._id}`}
           isToggle={!batchItem.isDisable}
           handleClick={() => handleToggleBatchStatus(batchItem)} // Pass the entire batchItem
         />,
         <ActionButtons
-          key={`actions-${batchItem.id}`}
+          key={`actions-${batchItem._id}`}
           onEdit={() => handleAction('EDIT', batchItem)} // Pass the entire batchItem
           onDelete={() => {
             setModalState({ type: 'DELETE', selectedBatch: batchItem }) // Pass the entire batchItem

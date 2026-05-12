@@ -1,154 +1,179 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react';
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import moment from 'moment';
+import { toast } from 'sonner';
+import { useDispatch, useSelector } from 'react-redux';
+import { ActionButtons, getStatusStyles } from '../../../components/Atoms/TableActionButton/TableActionButton';
 import TableData from '../../../components/Atoms/TableData/TableData';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import ImageViewer from '../../../components/ImageViewer/ImageViewer';
-import { useNavigate } from 'react-router-dom';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import Button from '../../../components/Atoms/buttons/button';
-import { IoMdAddCircleOutline } from 'react-icons/io';
+import Loader from '../../../components/Loader/Loader';
+import Pagination from '../../../components/Pagination/Pagination';
+import selectJson from '../../../_helpers/SelectJson.json';
+import { getOrderList } from '../../../Redux/orderSlice';
+
+const PAGE_SIZE = 10;
+
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+const orderIdOf = (order = {}) => firstDefined(order._id, order.id, order.order_no, order.orderId);
 
 const OrderReturn = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [apiRes, setApiRes] = useState([]);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedRow, setSelectedRow] = useState([])
-  const [loading] = useState(false)
+  const selector = useSelector((state) => state.order);
+
+  const listPayload = selector?.getOrderListData?.data?.data || {};
+  const list = listPayload?.list || [];
+  const total = Number(listPayload?.total || 0);
+
   const [filters, setFilters] = useState({
-    search: ""
-  })
+    search: '',
+    activationStatus: 'return_requested',
+    dateFrom: '',
+    dateTo: '',
+  });
+  const [selectedRow, setSelectedRow] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
 
-  // const handleImageClick = (imageUrl) => {
-  //   setSelectedImage(imageUrl);
-  // };
-
-  const dummy = [
-    {
-      id: "O6450151299-1",
-      image: "https://demo.yo-kart.com/image/user/21/MINITHUMB/1?t=1606880703",
-      title: "I am not able to contact the seller",
-      email: "tom@dummyid.com",
-      date: "14/02/2025 16:16",
-      amt: "$10,335.00",
-      sta: "Paid"
-    },
-
-  ];
-
-  const handleViewOrders = () => {
-    navigate("/app/view-orders");
-  };
+  const fetchOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await dispatch(
+        getOrderList({
+          page: pageNo,
+          limit: PAGE_SIZE,
+          status: filters.activationStatus || 'return_requested',
+          fromDate: filters.dateFrom || undefined,
+          toDate: filters.dateTo || undefined,
+          keyWord: filters.search || undefined,
+        }),
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to fetch return records');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dispatch, pageNo, filters]);
 
   useEffect(() => {
-    setApiRes(dummy);
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const handleViewOrder = useCallback((order) => {
+    const orderId = orderIdOf(order);
+    if (!orderId) {
+      toast.error('Order ID not found');
+      return;
+    }
+    navigate(`/app/orders/view/${orderId}`);
+  }, [navigate]);
+
+  const handlePageChange = useCallback((newPageNo) => {
+    setPageNo(newPageNo);
   }, []);
 
-  const handleRowCheckboxChange = (e, rowId) => {
-    console.log(e.target.checked, rowId)
-    if (e.target.checked) {
-      setSelectedRow(prev => {
-        return [...prev, rowId];
-      });
-    } else {
-      setSelectedRow(prev => {
-        return prev.filter(id => id !== rowId);
-      });
-    }
-  };
+  const handleFilterChange = useCallback((field, option) => {
+    setFilters((prev) => ({ ...prev, [field]: option?.value || '' }));
+    setPageNo(1);
+  }, []);
 
+  const applyFilters = useCallback(() => {
+    setPageNo(1);
+    fetchOrders();
+  }, [fetchOrders]);
 
+  const handleSearchRemove = useCallback(() => {
+    setFilters({
+      search: '',
+      activationStatus: 'return_requested',
+      dateFrom: '',
+      dateTo: '',
+    });
+    setPageNo(1);
+  }, []);
 
-  const tableHeadings = [
-    "Reason Title", "Actions"
-  ];
+  const tableHeadings = ['Order ID', 'Return Reason', 'Order Date & Time', 'Payment Status', 'Actions'];
 
-  const tableRows = apiRes?.map((ele) => {
-    // const statusStyle = getStatusStyles({ status: ele.sta });
-    const isSelected = selectedRow.includes(ele._id);
+  const tableRows = list.map((order) => {
+    const paymentStatus = firstDefined(order?.paymentStatus, order?.status, 'N/A');
+    const createdAt = firstDefined(order?.createdAt, order?.created_at);
+    const reason = firstDefined(order?.returnReason, order?.return_reason, order?.reason, 'Not specified');
 
     return [
-      <input
-        key={`checkbox-${ele._id}`}
-        type="checkbox"
-        checked={isSelected}
-        onChange={(e) => handleRowCheckboxChange(e, ele._id)}
-        className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+      <span className='capitalize'>{firstDefined(order?.order_no, order?.id, order?._id, 'N/A')}</span>,
+      <span>{reason}</span>,
+      <span>{createdAt ? moment(createdAt).format('DD-MM-YYYY HH:mm') : 'N/A'}</span>,
+      <span className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles({ status: paymentStatus })}`}>
+        {paymentStatus}
+      </span>,
+      <ActionButtons
+        showLinkButton={false}
+        showDeleteButton={false}
+        showViewButton={false}
+        showEditButton={false}
+        viewButton={true}
+        onViewClick={() => handleViewOrder(order)}
       />,
-      ele?.title,
-      <span>
-        <ActionButtons
-          onDelete={() => setShowDeleteConfirmation(true)}
-          showLinkButton={false}
-          showViewButton={true}
-          onView={handleViewOrders}
-          showEditButton={false}
-        />
-      </span>
     ];
   });
 
   return (
     <>
-      <div className="p-3 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto">
-        <header className='flex justify-between place-items-center'>
-          <h3 className='text-gray-500 text-sm font-semibold py-6'>Home / <span className='text-[#181c32]'>Order Return Reasons </span></h3>
-          <Button className={` border-2 border-[#0073cf] text-[#0073cf] bg-transparent rounded-[1px] transition-colors duration-150 hover:bg-[#0073cf] hover:text-black`}>
-            <IoMdAddCircleOutline />
-            Add
-          </Button>
-        </header>
+      <Loader loading={isLoading} />
+      <div className="p-3 max-w-7xl mx-auto">
+        <h3 className='text-gray-500 text-sm font-semibold py-6'>
+          <Link to={`/app/home`}>Home</Link> / <span className='text-[#181c32]'>Order Return Reasons</span>
+        </h3>
         <section className='bg-white p-2'>
           <SearchComponent
             tableHeadings={tableHeadings}
             data={tableRows}
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
-            loading={loading}
+            loading={isLoading}
             filters={filters}
             setFilters={setFilters}
-            isSearchShow={false}
+            isSearchShow={true}
             isActivationStatus={true}
             isApprovalOptions={false}
             isProduct={false}
-            isUser={true}
-            isActionButton={true}
-            isSearchDown={false}
+            isUser={false}
+            isActionButton={false}
+            isSearchDown={true}
             isStatusAction={false}
-            userLabel={`Buyer`}
-            isDelete={true}
-            activationStatus={`Payment Status`} approvalStatus={`Order Status`}
-            dateFrom={true} dateTo={true} orderFrom={true} orderTo={true}
-
+            isDelete={false}
+            activationStatus={`Order Status`}
+            dateFrom={true}
+            dateTo={true}
+            applyFilters={applyFilters}
+            handleSearchRemove={handleSearchRemove}
+            activationStatusOptions={selectJson?.ORDER_STATUS || []}
+            handleFilterChange={handleFilterChange}
           />
-          <div className=" bg-white border border-[#E6E6E6]">
+          <div className="bg-white border border-[#E6E6E6]">
             <TableData
-              Heading="Orders"
+              Heading="Order Return Reasons"
               tableHeadings={tableHeadings}
               data={tableRows}
               showSearch={true}
-              placeholder="Search by..."
+              placeholder="Search by order id or reason..."
               showFilter={false}
               showSummary={false}
               showAddButton={false}
-              isHeaderCheckbox={true}
+              isHeaderCheckbox={false}
+              totalData={total}
             />
           </div>
         </section>
-
+        {total > PAGE_SIZE && (
+          <Pagination
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            currentPage={pageNo}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
-
-      <DeletePopup
-        isDeleteModalOpen={showDeleteConfirmation}
-        closeDeleteModal={() => setShowDeleteConfirmation(false)}
-        DeleteHeading="Are you sure you want to delete?"
-      />
-
-      <ImageViewer
-        imageUrl={selectedImage}
-        onClose={() => setSelectedImage(null)}
-      />
     </>
   );
 };

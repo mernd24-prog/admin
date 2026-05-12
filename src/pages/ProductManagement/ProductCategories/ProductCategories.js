@@ -102,35 +102,45 @@ const ProductCategories = () => {
 
   // Transform API data structure
   const transformData = useCallback((apiData) => {
-    if (!apiData) return [];
+    const source = Array.isArray(apiData) ? apiData : apiData?.list || apiData?.items || [];
+    if (!Array.isArray(source) || source.length === 0) return [];
 
-    const transformSubcategories = (subcategories, parentId = null, parentName = null) => {
-      return subcategories?.map(subCategory => ({
-        _id: subCategory?._id,
-        name: subCategory?.name,
-        isDisable: subCategory?.isDisable,
-        thumbnails: subCategory?.thumbnails,
-        isExpanded: false,
-        type: subCategory?.type,
-        parentId: parentId,
-        parentName: parentName,
-        itemCount: calculateCategoryCount(subCategory) + 1,
-        subCategories: transformSubcategories(subCategory?.subcategories, subCategory?._id, subCategory?.name)
-      })) || [];
-    };
-
-    return Array.isArray(apiData) && apiData?.length > 0 ? apiData.map(category => ({
-      _id: category?._id,
-      name: category?.name,
-      isDisable: category?.isDisable,
-      thumbnails: category?.thumbnails,
+    const indexed = source.map((category) => ({
+      _id: category?.categoryKey || category?._id,
+      rawId: category?._id,
+      categoryKey: category?.categoryKey || category?._id,
+      name: category?.title || category?.name || category?.categoryKey,
+      isDisable: category?.active === false,
+      active: category?.active !== false,
+      thumbnails: category?.thumbnails || '',
       isExpanded: false,
-      itemCount: calculateCategoryCount(category) - 1,
-      type: category?.type,
-      subCategories: transformSubcategories(category?.subcategories, category?._id, category?.name),
-      isDashboardVisible: category?.isDashboardVisible,
-      priority: category?.priority
-    })) : [];
+      parentId: category?.parentKey || null,
+      parentName: null,
+      subCategories: [],
+      isDashboardVisible: Boolean(category?.isDashboardVisible),
+      priority: category?.sortOrder ?? category?.priority ?? 0,
+      level: Number(category?.level || 0),
+    }));
+
+    const map = new Map(indexed.map((item) => [String(item.categoryKey), item]));
+    const roots = [];
+    indexed.forEach((item) => {
+      const parentKey = item.parentId ? String(item.parentId) : null;
+      if (parentKey && map.has(parentKey)) {
+        const parent = map.get(parentKey);
+        item.parentName = parent?.name || null;
+        parent.subCategories.push(item);
+      } else {
+        roots.push(item);
+      }
+    });
+
+    const sortRecursive = (nodes = []) =>
+      nodes
+        .sort((a, b) => Number(a.priority || 0) - Number(b.priority || 0) || String(a.name).localeCompare(String(b.name)))
+        .map((node) => ({ ...node, subCategories: sortRecursive(node.subCategories || []) }));
+
+    return sortRecursive(roots);
   }, []);
 
   // Update categories when API data changes
@@ -154,7 +164,7 @@ const ProductCategories = () => {
     const addOptions = (categories, prefix = '', depth = 1) => {
       Array.isArray(categories) && categories?.length > 0 && categories.forEach(category => {
         options.push({
-          value: `SUB_${category._id}`,
+          value: category.categoryKey || category._id,
           label: <span className="capitalize">{prefix + category.name}</span>,
         });
 
@@ -190,19 +200,19 @@ const ProductCategories = () => {
 
   const handleSubmit = useCallback(() => {
     if (!validateForm()) return;
-    let type = "ROOT";
-    let categoryId = "";
+    let parentKey = null;
+    let level = 0;
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
-      const [prefix, id] = formData.parentCategory.value.split('_');
-      type = prefix;
-      categoryId = id;
+      parentKey = formData.parentCategory.value;
+      level = 1;
     }
 
     const reqData = {
       name: formData.categoryName,
       thumbnails: formData.seoUrl,
-      type: type,
+      parentKey,
+      level,
       isDisable: !isPublish,
       isDashboardVisible: formData?.isDashboardVisible?formData?.isDashboardVisible:false,
       priority: formData?.isDashboardVisible ? Number(formData?.priority) : 0,
@@ -210,10 +220,6 @@ const ProductCategories = () => {
 
 
     console.log("reqData===>>?///////", reqData)
-
-    if (type !== "ROOT") {
-      reqData.categoryId = categoryId;
-    }
 
     dispatch(create(reqData))
       .unwrap()
@@ -243,7 +249,7 @@ const ProductCategories = () => {
     if (category.parentId) {
       parentCategoryValue = {
         label: category.parentName,
-        value: `${category.type}_${category.parentId}`
+        value: category.parentId
       };
     }
     setFormData({
@@ -455,30 +461,26 @@ const ProductCategories = () => {
     if (!selectedCategory) return;
     if (!validateForm()) return;
 
-    let type = "ROOT";
-    let categoryId = "";
+    let parentKey = null;
+    let level = 0;
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
-      const [prefix, id] = formData.parentCategory.value.split('_');
-      type = prefix;
-      categoryId = id;
+      parentKey = formData.parentCategory.value;
+      level = 1;
     }
 
     const reqData = {
-      _id: selectedCategory._id,
+      _id: selectedCategory.categoryKey || selectedCategory._id,
       name: formData.categoryName,
       thumbnails: formData.seoUrl,
       isDisable: !isPublish,
-      type: type,
+      parentKey,
+      level,
       isDashboardVisible: formData?.isDashboardVisible ? formData?.isDashboardVisible : false,
       priority: formData?.priority
     };
 
     console.log("reqData//////",reqData)
-
-    if (type !== "ROOT") {
-      formData.categoryId = categoryId;
-    }
 
     dispatch(update(reqData))
       .unwrap()
@@ -499,8 +501,8 @@ const ProductCategories = () => {
 
   const calculateCategoryCount = useCallback((category) => {
     let count = 1; // Count the category itself
-    if (category.subcategories && category.subcategories.length > 0) {
-      count += category.subcategories.reduce((acc, subCat) =>
+    if (category.subCategories && category.subCategories.length > 0) {
+      count += category.subCategories.reduce((acc, subCat) =>
         acc + calculateCategoryCount(subCat), 0
       );
     }

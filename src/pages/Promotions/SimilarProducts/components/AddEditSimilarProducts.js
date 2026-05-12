@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MdOutlineClose } from 'react-icons/md';
-import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
 
-const AddEditSimilarProducts = ({ isOpen, onClose }) => {
+const AddEditSimilarProducts = ({ isOpen, onClose, onSubmit, productOptions = [] }) => {
   const [formData, setFormData] = useState({
-    product: '',
+    productId: '',
+    relatedProductIds: [],
   });
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({ productId: '', relatedProductIds: [] });
+    }
+  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,9 +23,19 @@ const AddEditSimilarProducts = ({ isOpen, onClose }) => {
     }));
   };
 
+  const handleMultiChange = (e) => {
+    const values = Array.from(e.target.selectedOptions || []).map((option) => option.value);
+    setFormData((prev) => ({
+      ...prev,
+      relatedProductIds: values,
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('FBT Data:', formData);
+    if (!formData.productId) return;
+    onSubmit?.(formData);
+    onClose?.();
   };
 
   return (
@@ -36,21 +52,39 @@ const AddEditSimilarProducts = ({ isOpen, onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <FormInput
-            label="Product"
-            name="product"
-            type="select"
-            value={formData.product}
-            onChange={handleChange}
-            options={['Select', 'Product A', 'Product B', 'Product C']}
-          />
-          <FormInput
-            label="Related products"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Enter ribbon name"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
+            <select
+              name="productId"
+              value={formData.productId}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded p-2"
+            >
+              <option value="">Select product</option>
+              {productOptions.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Related products</label>
+            <select
+              multiple
+              className="w-full border border-gray-300 rounded p-2 min-h-[140px]"
+              value={formData.relatedProductIds}
+              onChange={handleMultiChange}
+            >
+              {productOptions
+                .filter((item) => item.value !== formData.productId)
+                .map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+            </select>
+          </div>
 
           <div className="flex justify-end gap-4 mt-6">
             <ButtonTransparent type="button" onClick={onClose}>

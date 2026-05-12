@@ -54,7 +54,8 @@ const FinishProducts = () => {
   }, [size, pageNo, isRefresh]);
 
   const selector = useSelector(state => state.product);
-  const getListData = selector?.FinishGetListData?.data?.data?.list;
+  const listResponse = selector?.FinishGetListData?.data?.data || {};
+  const getListData = listResponse?.list || [];
   const handleInputChange = e => {
     const { name, value } = e.target;
     setForm(prevData => ({
@@ -173,7 +174,7 @@ const FinishProducts = () => {
           setIsEditModal(true);
         }}
         onDelete={() => {
-          setDeleteData({ _id: Array(user._id) })
+          setDeleteData({ _id: [user._id] })
           setShowDeleteConfirmation(true)
         }}
         showLinkButton={false}
@@ -202,7 +203,7 @@ const FinishProducts = () => {
   const handleDisableFunc = () => {
     if (!toggleStates) return;
     const obj = {
-      _id: Array(toggleStates._id),
+      _id: [toggleStates._id],
       isDisable: !toggleStates.isDisable
     };
 
@@ -377,7 +378,7 @@ const FinishProducts = () => {
                     placeholder="Search By Full Name"
                     handleSearchRemove={handleSearchRemove}
                     applyFilters={handleApplySearchFilters}
-                    totalData={selector?.FinishGetListData?.data?.data?.total}
+                    totalData={listResponse?.total || 0}
                   />
                 </div>
               </div>
@@ -391,7 +392,7 @@ const FinishProducts = () => {
               placeholder='Search by...'
               showFilter={false}
               showSummary={false}
-              totalData={selector?.FinishGetListData?.data?.data?.total}
+              totalData={listResponse?.total || 0}
               totalSize={size}
               currentPage={pageNo}
               onPageChange={onPageChange}
@@ -399,15 +400,15 @@ const FinishProducts = () => {
               setSearchTerm={setKeyword}
               isHeaderCheckbox={true}
               handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={selectedRow.length === selector?.FinishGetListData?.data?.data?.list?.length}
+              allRowsSelected={selectedRow.length === getListData?.length}
 
 
             />
           </div>
           <div className="flex justify-center my-6">
-            {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
+            {listResponse?.total && size && Math.ceil(listResponse.total / size) > 1 && (
               <Pagination
-                totalPages={Math.ceil(getListData.total / size)}
+                totalPages={Math.ceil(listResponse.total / size)}
                 currentPage={pageNo}
                 onPageChange={onPageChange}
               />

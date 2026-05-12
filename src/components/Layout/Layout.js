@@ -551,7 +551,7 @@ function Layout() {
                 element={renderRoute("/referral-commerce", <ReferralCommerce />)}
               />
               {/* <Route path="/badges" element={renderRoute('/badges', <Badges />)} /> */}
-              <Route path="/ribbons" element={renderRoute('/ribbons', <Ribbons />)} />
+              <Route path="/ribbons" element={renderSupportedRoute('/ribbons', <Ribbons />)} />
               <Route path="/shipping-company-users" element={renderRoute('/shipping-company-users', <ShippingCompanyUsers />)} />
               <Route path="/shipping-packages" element={renderRoute('/shipping-packages', <ShippingPackages />)} />
               <Route path="/shipping-profile" element={renderRoute('/shipping-profile', <ShippingProfiles />)} />
@@ -575,25 +575,25 @@ function Layout() {
               <Route path="/country" element={renderRoute('/country', <ManageCountry />)} />
               <Route path="/state" element={renderRoute('/state', <ManageState />)} />
               <Route path="/city" element={renderRoute('/city', <ManageCity />)} />
-              <Route path="/zipcode" element={renderRoute('/zipcode', <ManageZipcode />)} />
+              <Route path="/zipcode" element={renderSupportedRoute('/zipcode', <ManageZipcode />)} />
+              <Route path="/zipCode" element={renderSupportedRoute('/zipCode', <ManageZipcode />)} />
               <Route path="/tax-structure" element={renderRoute('/tax-structure', <TaxStructure />)} />
               <Route path="/tax-category" element={renderRoute('/tax-category', <TaxCategory />)} />
               <Route path="/tax-category-rules" element={renderRoute('/tax-category-rules', <TaxRules />)} />
-              <Route path="/collections" element={renderRoute('/collections', <Collections />)} />
+              <Route path="/collections" element={renderSupportedRoute('/collections', <Collections />)} />
               <Route path="/product-variants" element={renderRoute('/product-variants', <ProductVariants />)} />
               <Route path="/product-families" element={renderRoute('/product-families', <ProductFamilies />)} />
               <Route path='/product-dimensions' element={renderRoute('/product-dimensions', <ProductDimensions />)} />
-              <Route path="/pattern" element={renderRoute('/pattern', <Pattern />)} />
+              <Route path="/pattern" element={renderSupportedRoute('/pattern', <Pattern />)} />
               <Route path='/finish' element={renderRoute('/finish', <FinishProducts />)} />
-              <Route path='/colors' element={renderRoute('/colors', <ColorManagement />)} />
+              <Route path='/colors' element={renderSupportedRoute('/colors', <ColorManagement />)} />
               <Route path='/privacy-policy' element={renderRoute('/privacy-policy', <PrivacyPolicy />)} />
               <Route
                 path='/user-permissions/:id'
                 element={renderSupportedRoute('/user-permissions', <UserPermissions setModuleName={setModuleName} />)}
               />
-              <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
               <Route path='/seller' element={renderRoute('/seller', <Sellers />)} />
-              <Route path='/batch' element={renderRoute('/seller', <Batch />)} />
+              <Route path='/batch' element={renderRoute('/batch', <Batch />)} />
               <Route
                 path='/product-option-value/:id'
                 element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
@@ -605,10 +605,6 @@ function Layout() {
               <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
               <Route path='/faqs' element={renderRoute('/faqs', <FAQ />)} />
               <Route path="/faqsList/:id" element={renderRoute('/faqs', <FAQList />)} />
-              <Route
-                path='/product-option-value/:id'
-                element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
-              />
               <Route path='/return-policy' element={renderRoute('/return-policy', <ReturnPolicy />)} />
               <Route
                 path='/return-policy-list/:id'
@@ -638,7 +634,7 @@ function Layout() {
                 path='/tax-rule'
                 element={renderSupportedRoute('/tax-rule', <TaxRule setModuleName={setModuleName} />)}
               />
-              <Route path="/shipping-duration" element={renderRoute('/shipping-duration', <ShippingDurations />)} />
+              <Route path="/shipping-duration" element={renderSupportedRoute('/shipping-duration', <ShippingDurations />)} />
               <Route path="/discount-coupons" element={renderRoute('/discount-coupons', <DiscountCoupons />)} />
               <Route path="/terms-and-conditions" element={renderRoute('/terms-and-conditions', <TermsConditions />)} />
               <Route

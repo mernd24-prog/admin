@@ -1,97 +1,136 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react'
-// import Select from 'react-select';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useDispatch, useSelector } from 'react-redux';
 import TableData from '../../../components/Atoms/TableData/TableData';
-import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
+import Loader from '../../../components/Loader/Loader';
+import Pagination from '../../../components/Pagination/Pagination';
+import { getProducts } from '../../../Redux/productSlice';
 
+const PAGE_SIZE = 10;
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
 
 const ProductTags = () => {
-  const [apiRes, setApiRes] = useState([])
-  const [filters] = useState({ search: "" })
+  const dispatch = useDispatch();
+  const selector = useSelector((state) => state.product);
 
-  const dummydata = [
-    {
-      name: "Adobe InDesign, Word"
-    },
-    {
-      name: "AUSHA 4K 60fps Dual Touch Screen Sports Camera Waterproof Underwater Camera"
-    },
-    {
-      name: "Back Printed Fullsleeve Hooded Sweatshirt for Men"
-    },
-    {
-      name: "Bata COREY TRIM Loafers"
-    },
-    {
-      name: "boAt Stone 190 Portable Wireless Speaker"
-    },
-    {
-      name: "Bohemia Gypsy Tibetan Vintage Coin Necklace for Girls &amp; Women"
-    },
-    {
-      name: "Car Tyre Cleaning Brush Scrubber with Antislip Handle"
-    },
-    {
-      name: "Casual Backpack for Girls"
-    },
-    {
-      name: "Adobe InDesign, Word"
+  const listResponse = selector?.getProductsData?.data?.data || {};
+  const list = listResponse?.list || [];
+  const total = Number(listResponse?.total || 0);
+
+  const [filters, setFilters] = useState({ search: '' });
+  const [selectedRow, setSelectedRow] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await dispatch(
+        getProducts({
+          page: pageNo,
+          limit: PAGE_SIZE,
+          search: filters.search || undefined,
+        }),
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to fetch product tags');
+    } finally {
+      setIsLoading(false);
     }
-  ];
-  const tagOptions = [
-    { value: 'new', label: 'New' },
-    { value: 'featured', label: 'Featured' },
-    { value: 'sale', label: 'Sale' },
-    { value: 'popular', label: 'Popular' },
-  ];
+  }, [dispatch, pageNo, filters.search]);
 
   useEffect(() => {
-    setApiRes(dummydata)
-  }, [])
-  const tableHeadings = [
-    "Product Name",
-    "Tags"
-  ]
+    fetchProducts();
+  }, [fetchProducts]);
 
-  const tableRows = apiRes?.map((ele, index) => {
+  const handlePageChange = useCallback((newPageNo) => {
+    setPageNo(newPageNo);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setPageNo(1);
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSearchRemove = useCallback(() => {
+    setFilters({ search: '' });
+    setPageNo(1);
+  }, []);
+
+  const tableHeadings = ['Product Name', 'Tags'];
+
+  const tableRows = list.map((product) => {
+    const title = firstDefined(product?.title, product?.name, product?.productName, 'N/A');
+    const tags = Array.isArray(product?.tags) ? product.tags : [];
+
     return [
-      ele?.name,
-      <span className=''>
-        <FilterSelect
-          key={index}
-          isMulti
-          options={tagOptions}
-          onChange={(selected) => console.log(`Selected for ${ele.name}:`, selected)}
-          styles={{ container: (base) => ({ ...base, width: 500 }) }}
-        />
-      </span>
+      <span className='text-sm font-medium'>{title}</span>,
+      <div className='flex flex-wrap gap-1'>
+        {tags.length > 0 ? tags.map((tag) => (
+          <span key={`${product?._id || product?.id || title}-${tag}`} className='inline-flex px-2 py-0.5 rounded-full text-xs bg-[#eef3ff] text-[#2d4db3]'>
+            #{tag}
+          </span>
+        )) : <span className='text-xs text-gray-500'>No tags</span>}
+      </div>,
     ];
   });
 
-
   return (
     <>
+      <Loader loading={isLoading} />
       <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3'>
-        <div className=''><h3>Home / Tags</h3></div>
-        <div className=' overflow-auto overflow-y-auto bg-white '>
+        <h3 className='text-gray-500 text-sm font-semibold py-3'>
+          <Link to='/app/home'>Home</Link> / <span className='text-[#181c32]'>Product Tags</span>
+        </h3>
+        <div className='overflow-auto overflow-y-auto bg-white'>
           <div className='p-2 border-b'>
-            <SearchComponent filters={filters} />
+            <SearchComponent
+              tableHeadings={tableHeadings}
+              data={tableRows}
+              selectedRow={selectedRow}
+              setSelectedRow={setSelectedRow}
+              loading={isLoading}
+              filters={filters}
+              setFilters={setFilters}
+              isSearchShow={true}
+              isActivationStatus={false}
+              isApprovalOptions={false}
+              isProduct={false}
+              isUser={false}
+              isActionButton={false}
+              isSearchDown={false}
+              isStatusAction={false}
+              isDelete={false}
+              applyFilters={applyFilters}
+              handleSearchRemove={handleSearchRemove}
+            />
           </div>
           <TableData
-            Heading="Shops"
+            Heading='Product Tags'
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
-            placeholder='Search by...'
+            placeholder='Search by product name...'
             showFilter={false}
             showSummary={false}
             showAddButton={false}
+            isHeaderCheckbox={false}
+            totalData={total}
           />
         </div>
+        {total > PAGE_SIZE && (
+          <Pagination
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            currentPage={pageNo}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
     </>
-  )
-}
+  );
+};
 
-export default ProductTags
+export default ProductTags;

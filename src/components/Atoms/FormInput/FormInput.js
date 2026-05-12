@@ -58,8 +58,11 @@ const FormInput = ({
           className={selectClasses}
         >
           {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
+            <option
+              key={typeof opt === 'object' ? (opt.value ?? opt.label) : opt}
+              value={typeof opt === 'object' ? (opt.value ?? '') : opt}
+            >
+              {typeof opt === 'object' ? (opt.label ?? opt.value ?? '') : opt}
             </option>
           ))}
         </select>

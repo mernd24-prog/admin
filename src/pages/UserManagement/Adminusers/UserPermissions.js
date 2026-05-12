@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAdminUserDetails, updateModulePermission } from '../../../Redux/userManagementSlice';
 import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
@@ -15,12 +15,23 @@ import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/a
 
 const ACTION_ALIASES = {
     create: 'add',
-    approve: 'approval',
-    review: 'approval',
-    manage: 'status',
-    action: 'status',
+    edit: 'update',
+    approve: 'action',
+    review: 'action',
+    manage: 'action',
+    status: 'action',
+    approval: 'action',
 };
-const BACKEND_PERMISSION_ACTIONS = ['view', 'add', 'edit', 'update', 'delete', 'status', 'approval'];
+const ACTION_ALIASES_TO_STANDARD = {
+    create: 'add',
+    edit: 'update',
+    status: 'action',
+    approval: 'action',
+    approve: 'action',
+    review: 'action',
+    manage: 'action',
+};
+const BACKEND_PERMISSION_ACTIONS = ['view', 'add', 'update', 'delete', 'action'];
 
 const getPayload = (sliceData) => sliceData?.data?.data || sliceData?.normalized?.data || {};
 
@@ -32,7 +43,7 @@ const getListItems = (sliceData) => {
 
 const getModuleActions = (module) => {
     const actions = (module.permissions || [])
-        .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
+        .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
         .filter(Boolean);
     const unique = Array.from(new Set(['view', ...actions]));
     return unique.filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
@@ -41,21 +52,21 @@ const getModuleActions = (module) => {
 const getAssignedModuleActions = (module) => {
     const assigned = (module.permissions || [])
         .filter((permission) => permission.assigned)
-        .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
+        .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
         .filter(Boolean);
     return Array.from(new Set(assigned));
 };
 
 const normalizeActionsForBackend = (actions = []) => {
     const normalized = actions
-        .map((action) => ACTION_ALIASES[action] || action)
+        .map((action) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[action] || action] || action)
         .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
 
     const withView = normalized.includes('view') ? normalized : ['view', ...normalized];
     return Array.from(new Set(withView));
 };
 
-const ASSIGNMENT_ACTIONS = ['edit', 'update', 'approval', 'status', 'add'];
+const ASSIGNMENT_ACTIONS = ['update', 'action', 'add', 'delete', 'view'];
 
 const buildAssignedActionMap = (modules = []) => {
     const result = {};
@@ -64,7 +75,7 @@ const buildAssignedActionMap = (modules = []) => {
         if (!moduleCode) return;
         const assigned = (module.permissions || [])
             .filter((permission) => permission?.assigned)
-            .map((permission) => ACTION_ALIASES[permission.action] || permission.action)
+            .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
             .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
         result[moduleCode] = new Set(Array.from(new Set(assigned)));
     });
@@ -74,6 +85,7 @@ const buildAssignedActionMap = (modules = []) => {
 const UserPermissions = ({ setModuleName }) => {
     const { id } = useParams();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const selector = useSelector(state => state.user);
     const sellerSelector = useSelector(state => state.sellerSubAdmins);
     const sellerPanel = isSellerPanel();
@@ -311,20 +323,50 @@ const UserPermissions = ({ setModuleName }) => {
         ]);
     }, [filteredPermissions, handlePermissionChange]);
 
+    const storedRole = normalizeRole(getStoredRole());
+    const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin' || storedRole === 'sub-admin');
+
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
             <Loader loading={selector?.loading} />
-            <div className="flex items-center justify-between">
-                <div>
-                    <nav className="flex space-x-1 text-sm text-gray-500">
-                        <span>Home</span>  <span>/</span>  <span>Admin User</span> <span>/</span>
-                        <span className="text-gray-700 font-medium">Permissions</span>  <span>/</span>
-                        <span className="text-gray-700 font-medium">{userName}</span>
-                    </nav>
-                </div>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <nav className="flex space-x-1 text-sm text-gray-500 items-center">
+                    <Link to="/app/home" className="hover:underline text-[#3E4094]">Home</Link>
+                    <span>/</span>
+                    <Link to="/app/admin-users" className="hover:underline text-[#3E4094]">Admin Users</Link>
+                    <span>/</span>
+                    <span className="text-gray-700 font-medium">Permissions</span>
+                    {userName && <><span>/</span><span className="text-gray-800 font-semibold">{userName}</span></>}
+                </nav>
+                {canCreateSubSubAdmin && !sellerPanel && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/app/admin-users')}
+                        className="px-3 py-1.5 text-xs bg-[#3E4094] text-white rounded-md hover:bg-[#2e3074]"
+                    >
+                        + Add Sub-Admin
+                    </button>
+                )}
             </div>
 
-            <div className="bg-white overflow-hidden ">
+            {/* Info banner showing what this user can access */}
+            {userName && (
+                <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p className="text-sm font-medium text-blue-800">{userName}</p>
+                        <p className="text-xs text-blue-600 mt-0.5">
+                            {canAssignPermissions
+                                ? 'You can assign permissions for modules you have access to. Toggle actions below to grant or revoke access.'
+                                : 'You can view this user\'s module permissions. Contact an admin to make changes.'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="bg-white overflow-hidden border border-gray-200 rounded-lg">
                 <div className="p-4 border-b">
                     <SearchComponent
                         filters={filters}
@@ -339,6 +381,9 @@ const UserPermissions = ({ setModuleName }) => {
                         className="min-w-full"
                     />
                 </div>
+                {!permissions.length && (
+                    <p className="p-6 text-sm text-gray-400 text-center">No modules found for this user.</p>
+                )}
             </div>
         </div>
     );

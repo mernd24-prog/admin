@@ -11,7 +11,7 @@ import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import AddButton from '../../../components/Button/AddButton';
 
 // Redux
-import { approveDisapprove, deleteProducts, downloadSampleCsv, enableDisableProductCatalogs, getAllStoreList, getProducts } from '../../../Redux/productSlice';
+import { approveDisapprove, deleteProducts, downloadSampleCsv, enableDisableProductCatalogs, getProducts } from '../../../Redux/productSlice';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
 import Loader from '../../../components/Loader/Loader';
 import { toast } from 'sonner';
@@ -26,6 +26,7 @@ import DownloadButton from '../../../components/Button/DownloadButton';
 import Button from '../../../components/Atoms/buttons/button';
 import ProductReviewModal from '../../../components/Product/ProductReviewModal';
 import ProductStatusBadge from '../../../components/Product/ProductStatusBadge';
+import { getShopList } from '../../../Redux/StoreSlice';
 // import { GoDesktopDownload } from "react-icons/go";
 
 
@@ -42,6 +43,13 @@ const INITIAL_FILTERS = {
 };
 
 const size = 10
+const refToLabel = (value) => {
+  if (!value) return 'N/A';
+  if (typeof value === 'object') {
+    return value?.name || value?.title || value?.label || value?.email || value?._id || 'N/A';
+  }
+  return String(value);
+};
 
 
 const ProductCatalog = () => {
@@ -67,7 +75,7 @@ const ProductCatalog = () => {
 
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || []);
-  const storeList = transformArray(selector?.product?.getAllStoreListData?.data?.data?.list || [])
+  const storeList = transformArray(selector?.store?.getShopListData?.data?.list || [])
 
   const fetchProductsList = useCallback(async () => {
     setLoading(true);
@@ -96,9 +104,7 @@ const ProductCatalog = () => {
   useEffect(() => {
     fetchProductsList();
     dispatch(getAllSellerList())
-    if (userData?.roleId === 3) {
-      dispatch(getAllStoreList());
-    }
+    dispatch(getShopList({ page: 1, size: 100 }));
   }, [pageNo]);
 
   useEffect(() => {
@@ -313,7 +319,6 @@ const ProductCatalog = () => {
     setPageNo(newPageNo);
   };
   const handleBulkAction = async (action) => {
-    console.log(action)
     if (action === "Active" || action === "Inactive") {
       let apiPayload = {
         _id: selectedRow,
@@ -357,9 +362,9 @@ const ProductCatalog = () => {
         </div>,
         <span className='capitalize'>{product?.title || product?.name || 'N/A'}</span>,
         <span>{product?.sku || 'N/A'}</span>,
-        <span>{product?.sellerName || product?.sellerId || 'N/A'}</span>,
-        <span>{product?.categoryName || product?.category || product?.categoryId || 'N/A'}</span>,
-        <span>{product?.brand || 'N/A'}</span>,
+        <span>{refToLabel(product?.sellerName || product?.sellerId)}</span>,
+        <span>{refToLabel(product?.categoryName || product?.category || product?.categoryId)}</span>,
+        <span>{refToLabel(product?.brand)}</span>,
         <span>{product?.color || 'N/A'}</span>,
         <span>{[product?.origin?.city, product?.origin?.state, product?.origin?.country].filter(Boolean).join(', ') || 'N/A'}</span>,
         <span>{product?.price !== undefined ? `₹${product.price}` : 'N/A'}</span>,
@@ -398,7 +403,7 @@ const ProductCatalog = () => {
       setBulkUploadData((prev) => ({
         ...prev, seller_id: data?.value
       }))
-      dispatch(getAllStoreList({ query: JSON.stringify({ user_id: data?.value }) }))
+      dispatch(getShopList({ page: 1, size: 100, sellerId: data?.value }))
     } else {
       setBulkUploadData((prev) => ({
         ...prev, store_id: data?.value
@@ -438,7 +443,6 @@ const ProductCatalog = () => {
       };
 
       const csv = await uploadCsvFile(updatedBulkUploadData);
-      console.log(csv);
       toast.info(csv?.message || "Success!");
 
       navigate(`/app/product-catalog/bulk-history`);

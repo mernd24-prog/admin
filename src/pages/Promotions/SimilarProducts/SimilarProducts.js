@@ -1,156 +1,199 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react'
-import Select from 'react-select';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useDispatch, useSelector } from 'react-redux';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import ImageViewer from '../../../components/ImageViewer/ImageViewer';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import SearchComponent from '../../../components/Atoms/New Table/NewTable';
+import Loader from '../../../components/Loader/Loader';
+import Pagination from '../../../components/Pagination/Pagination';
+import { getProducts, updateProductsById } from '../../../Redux/productSlice';
 import AddEditSimilarProducts from './components/AddEditSimilarProducts';
 
+const PAGE_SIZE = 10;
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+const productIdOf = (product = {}) => firstDefined(product._id, product.id, product.productId);
 
 const SimilarProducts = () => {
-  const [apiRes, setApiRes] = useState([])
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const handleImageClick = (imageUrl) => {
-    setSelectedImage(imageUrl);
-  };
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const selector = useSelector((state) => state.product);
 
-  const dummydata = [
-    {
-      image: "https://demo.yo-kart.com/image/product/43/SMALL/84/0/1?t=1663763227",
-      name: "Animal cot hanging",
-      desc: "Animal",
-      sellerName: "Seller: Cindy",
-      options: [
-        { value: 'cot-hanging-fishes', label: 'Cot hanging fishes | Characters : Fishes | Cindy' },
-        { value: 'chotta-bheem', label: 'Chotta bheem soft toy | Characters : Chotta Bheem | Cindy' }
-      ],
-      selectedOptions: [
-        { value: 'cot-hanging-fishes', label: 'Cot hanging fishes | Characters : Fishes | Cindy' }
-      ]
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/44/SMALL/85/0/1?t=1663763227",
-      name: "Micky mouse soft toy",
-      desc: "Characters : Mickey Mouse",
-      sellerName: "Seller: Cindy",
-      options: [
-        { value: 'micky', label: 'Micky mouse soft toy | Characters : Mickey Mouse | Cindy' },
-        { value: 'batman', label: 'Blue Batman | Color : Blue | Cindy' }
-      ],
-      selectedOptions: [
-        { value: 'micky', label: 'Micky mouse soft toy | Characters : Mickey Mouse | Cindy' }
-      ]
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/45/SMALL/86/0/1?t=1663763227",
-      name: "Apple iPhone 6s Plus",
-      desc: "Space Grey, 32 GB",
-      sellerName: "Seller: Cindy",
-      options: [
-        { value: '32gb', label: 'Apple iPhone 6s Plus (Space Grey, 32 GB) | Select Color : Space grey | Storage : 32GB | Cindy' },
-        { value: '64gb', label: 'Apple iPhone 6s Plus (Space Grey, 64 GB) | Select Color : Space grey | Storage : 64 GB | Cindy' },
-        { value: '16gb', label: 'Apple iPhone 6s Plus (Gold, 16 GB) | Select Color : Gold | Storage : 16 GB | Cindy' }
-      ],
-      selectedOptions: [
-        { value: '32gb', label: 'Apple iPhone 6s Plus (Space Grey, 32 GB) | Select Color : Space grey | Storage : 32GB | Cindy' }
-      ]
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/44/SMALL/85/0/1?t=1663763227",
-      name: "Micky mouse soft toy",
-      desc: "Characters : Mickey Mouse",
-      sellerName: "Seller: Cindy",
-      options: [
-        { value: 'micky', label: 'Micky mouse soft toy | Characters : Mickey Mouse | Cindy' },
-        { value: 'batman', label: 'Blue Batman | Color : Blue | Cindy' }
-      ],
-      selectedOptions: [
-        { value: 'micky', label: 'Micky mouse soft toy | Characters : Mickey Mouse | Cindy' }
-      ]
-    },
-    {
-      image: "https://demo.yo-kart.com/image/product/45/SMALL/86/0/1?t=1663763227",
-      name: "Apple iPhone 6s Plus",
-      desc: "Space Grey, 32 GB",
-      sellerName: "Seller: Cindy",
-      options: [
-        { value: '32gb', label: 'Apple iPhone 6s Plus (Space Grey, 32 GB) | Select Color : Space grey | Storage : 32GB | Cindy' },
-        { value: '64gb', label: 'Apple iPhone 6s Plus (Space Grey, 64 GB) | Select Color : Space grey | Storage : 64 GB | Cindy' },
-        { value: '16gb', label: 'Apple iPhone 6s Plus (Gold, 16 GB) | Select Color : Gold | Storage : 16 GB | Cindy' }
-      ],
-      selectedOptions: [
-        { value: '32gb', label: 'Apple iPhone 6s Plus (Space Grey, 32 GB) | Select Color : Space grey | Storage : 32GB | Cindy' }
-      ]
-    },
-  ];
+  const listResponse = selector?.getProductsData?.data?.data || {};
+  const list = listResponse?.list || [];
+  const total = Number(listResponse?.total || 0);
+
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filters, setFilters] = useState({ search: '' });
+  const [selectedRow, setSelectedRow] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await dispatch(
+        getProducts({
+          page: pageNo,
+          limit: PAGE_SIZE,
+          search: filters.search || undefined,
+        }),
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to fetch similar products');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dispatch, pageNo, filters.search]);
 
   useEffect(() => {
-    setApiRes(dummydata)
-  }, [])
-  const tableHeadings = [
-    "Product Name",
-    "Similar Products",
-    "Action"
-  ]
+    fetchProducts();
+  }, [fetchProducts]);
 
-  const tableRows = apiRes?.map((ele, index) => {
+  const handlePageChange = useCallback((newPageNo) => {
+    setPageNo(newPageNo);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setPageNo(1);
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSearchRemove = useCallback(() => {
+    setFilters({ search: '' });
+    setPageNo(1);
+  }, []);
+
+  const tableHeadings = ['Product Name', 'Similar Products', 'Action'];
+  const productNameMap = useMemo(() => {
+    const map = {};
+    list.forEach((item) => {
+      const id = productIdOf(item);
+      if (id) map[String(id)] = firstDefined(item?.title, item?.name, String(id));
+    });
+    return map;
+  }, [list]);
+
+  const productOptions = useMemo(
+    () => list.map((item) => ({ value: String(productIdOf(item)), label: firstDefined(item?.title, item?.name, 'N/A') })).filter((item) => item.value && item.label !== 'N/A'),
+    [list],
+  );
+
+  const tableRows = list.map((product) => {
+    const id = productIdOf(product);
+    const title = firstDefined(product?.title, product?.name, 'N/A');
+    const image = firstDefined(product?.thumbnail, product?.thumbnails, product?.images?.[0], '');
+    const similarProducts = Array.isArray(product?.relatedProducts) ? product.relatedProducts : [];
+
     return [
-      <span className="flex items-center space-x-2 cursor-pointer">
-        <img src={ele?.image} alt='' className='object-cover w-20 h-20 border rounded' onClick={() => handleImageClick(ele?.image)} />
+      <span className='flex items-center space-x-2 cursor-pointer'>
+        {image ? (
+          <img src={image} alt='' className='object-cover w-20 h-20 border rounded' onClick={() => setSelectedImage(image)} />
+        ) : (
+          <span className='w-20 h-20 border rounded bg-gray-100' />
+        )}
         <div className='flex flex-col'>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold">{ele?.name}</span>
-          </div>
-          <div className="flex flex-col mt-4">
-            <span className="text-sm text-gray-500">{ele?.desc}</span>
-            <span className="text-sm text-gray-500">{ele?.sellerName}</span>
-          </div>
+          <span className='text-sm font-bold'>{title}</span>
+          <span className='text-sm text-gray-500'>Seller: {firstDefined(product?.sellerId?.name, product?.sellerId?.email, product?.sellerId, 'N/A')}</span>
         </div>
       </span>,
-      <span className=''>
-        <Select
-          key={index}
-          isMulti
-          options={ele.options}
-          defaultValue={ele.selectedOptions}
-          onChange={(selected) => console.log(`Selected for ${ele.name}:`, selected)}
-          styles={{ container: (base) => ({ ...base, width: 700 }) }}
-        />
-      </span>,
-      <ActionButtons showEditButton={false} showLinkButton={false} />
+      <div className='flex flex-wrap gap-1 max-w-[700px]'>
+        {similarProducts.length > 0 ? similarProducts.map((value) => (
+          <span key={`${id}-${value}`} className='inline-flex px-2 py-0.5 rounded-full text-xs bg-[#eef3ff] text-[#2d4db3]'>
+            {productNameMap[String(value)] || String(value)}
+          </span>
+        )) : <span className='text-xs text-gray-500'>No linked products</span>}
+      </div>,
+      <ActionButtons
+        showDeleteButton={false}
+        showEditButton={false}
+        showViewButton={false}
+        viewButton={true}
+        onViewClick={() => {
+          if (!id) {
+            toast.error('Product ID not found');
+            return;
+          }
+          navigate(`/app/product-catalog/view/${id}`);
+        }}
+      />,
     ];
   });
 
-
-
   return (
     <>
-      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto'>
+      <Loader loading={isLoading} />
+      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3'>
+        <h3 className='text-gray-500 text-sm font-semibold py-3'>
+          <Link to='/app/home'>Home</Link> / <span className='text-[#181c32]'>Similar Products</span>
+        </h3>
         <div className='p-4 overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
+          <SearchComponent
+            tableHeadings={tableHeadings}
+            data={tableRows}
+            selectedRow={selectedRow}
+            setSelectedRow={setSelectedRow}
+            loading={isLoading}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={false}
+            isApprovalOptions={false}
+            isProduct={false}
+            isUser={false}
+            isActionButton={false}
+            isSearchDown={false}
+            isStatusAction={false}
+            isDelete={false}
+            applyFilters={applyFilters}
+            handleSearchRemove={handleSearchRemove}
+          />
           <TableData
-            Heading="Similar Products"
+            Heading='Similar Products'
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
-            placeholder='Search by...'
+            placeholder='Search by product...'
             showFilter={false}
             showSummary={false}
             showAddButton={true}
-            addButtonLabel="Add"
-            onClickFunction={() => {
-              setIsModalOpen(true);
-            }}
+            addButtonLabel='Add'
+            onClickFunction={() => setIsModalOpen(true)}
+            isHeaderCheckbox={false}
+            totalData={total}
           />
         </div>
+        {total > PAGE_SIZE && (
+          <Pagination
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            currentPage={pageNo}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
       <ImageViewer imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
       <AddEditSimilarProducts
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        productOptions={productOptions}
+        onSubmit={async (data) => {
+          try {
+            await dispatch(updateProductsById({
+              productId: data.productId,
+              relatedProducts: data.relatedProductIds || [],
+            })).unwrap();
+            toast.success('Similar products updated successfully');
+            fetchProducts();
+          } catch (error) {
+            toast.error(error?.message || error || 'Failed to update similar products');
+          }
+        }}
       />
     </>
-  )
-}
+  );
+};
 
-export default SimilarProducts
+export default SimilarProducts;
