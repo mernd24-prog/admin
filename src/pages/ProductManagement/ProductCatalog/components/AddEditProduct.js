@@ -771,7 +771,7 @@ export default function ProductManagementUI() {
       category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
       brand: updatedFormData.brand || updatedFormData.brand_id || "",
-      productFamilyCode: updatedFormData.productFamilyCode || "DEFAULT",
+      productFamilyCode: updatedFormData.productFamilyCode,
       sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
       color: updatedFormData.color || "default",
       attributes: {
@@ -1097,11 +1097,114 @@ export default function ProductManagementUI() {
     selector, options, variantsData, variantAxes, categoryAttributeSchema, error, images,
   ]);
 
+  const flowReadiness = useMemo(() => {
+    const items = [
+      { label: 'Categories', count: createSelectOptions?.length || 0, route: '/app/categories' },
+      { label: 'Attributes (selected category)', count: categoryAttributeSchema?.length || 0, route: '/app/category-attributes' },
+      { label: 'Brands', count: formattedData?.brandList?.length || 0, route: '/app/brands' },
+      { label: 'HSN Codes', count: formattedData?.hsnCodeList?.length || 0, route: '/app/hsn-code' },
+      { label: 'Warranty Templates', count: formattedData?.warrantyTemplateList?.length || 0, route: '/app/warranty' },
+    ];
+    return items;
+  }, [createSelectOptions, categoryAttributeSchema, formattedData]);
+
+  const flowGateErrors = useMemo(() => {
+    const blockers = [];
+    if (!createSelectOptions?.length) {
+      blockers.push({ key: 'categories', message: 'Create at least one category before creating products.', route: '/app/categories' });
+    }
+    if (!formattedData?.brandList?.length) {
+      blockers.push({ key: 'brands', message: 'Create at least one brand to assign products properly.', route: '/app/brands' });
+    }
+    if (!formattedData?.hsnCodeList?.length) {
+      blockers.push({ key: 'hsn', message: 'Create at least one HSN code so tax mapping is consistent.', route: '/app/hsn-code' });
+    }
+    if (!formattedData?.productFamilyList?.length) {
+      blockers.push({ key: 'family', message: 'Create at least one product family code for grouping variants/products.', route: '/app/product-families' });
+    }
+    if (!formData?.brand) {
+      blockers.push({ key: 'brand_selected', message: 'Select a brand for this product.', route: '/app/brands' });
+    }
+    if (!formData?.hsnCode && !formData?.hsn_code) {
+      blockers.push({ key: 'hsn_selected', message: 'Select an HSN code for this product.', route: '/app/hsn-code' });
+    }
+    if (!formData?.productFamilyCode) {
+      blockers.push({ key: 'family_selected', message: 'Select a product family code for this product.', route: '/app/product-families' });
+    }
+    return blockers;
+  }, [createSelectOptions, formattedData, formData]);
+
+  const handleValidateAndSubmit = useCallback(() => {
+    const isBasicFormValid = validateForm();
+    if (!isBasicFormValid) return;
+    if (flowGateErrors.length) {
+      setError((prev) => ({
+        ...(prev || {}),
+        flow: `Complete ${flowGateErrors.length} setup ${flowGateErrors.length > 1 ? 'items' : 'item'} before saving.`,
+      }));
+      toast.error('Product flow is incomplete. Complete the highlighted setup items first.');
+      return;
+    }
+    setError((prev) => {
+      if (!prev?.flow) return prev;
+      const next = { ...prev };
+      delete next.flow;
+      return next;
+    });
+    handleSaveSubmit();
+  }, [flowGateErrors, handleSaveSubmit]);
+
 
   return (
     <div className='relative min-h-screen p-2 mx-auto max-w-7xl'>
       <Loader loading={loading} />
       <Breadcrumb isEditMode={isEditMode} />
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+        <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {flowReadiness.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => navigate(item.route)}
+              className={`rounded border px-2 py-1 text-xs ${item.count > 0 ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}
+            >
+              {item.label}: {item.count}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => navigate('/app/product-flow')}
+            className="rounded bg-[#3E4094] px-3 py-1 text-xs text-white"
+          >
+            Open Full Flow
+          </button>
+        </div>
+      </div>
+      {flowGateErrors.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
+          <p className="text-sm font-semibold text-amber-900">Complete Product Setup Flow Before Save</p>
+          <ul className="mt-2 space-y-2 text-xs text-amber-900">
+            {flowGateErrors.map((item) => (
+              <li key={item.key} className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-white p-2">
+                <span>{item.message}</span>
+                <button
+                  type="button"
+                  className="rounded bg-amber-600 px-2 py-1 text-white"
+                  onClick={() => navigate(item.route)}
+                >
+                  Fix Now
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {error?.flow && (
+        <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
+          {error.flow}
+        </div>
+      )}
       <div className="flex flex-col gap-4 pb-8 lg:flex-row ">
         <div className='h-full lg:sticky lg:top-24 '>
           <TabNavigation
@@ -1127,7 +1230,7 @@ export default function ProductManagementUI() {
           </main>
         </div>
         <div className="lg:w-5/12 lg:sticky lg:top-24 h-fit ">
-          <ProductSettingsPanel handleSaveSubmit={() => { validateForm() && handleSaveSubmit() }} formData={formData} handleToggleProductSetting={handleToggleProductSetting}
+          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting}
           />
         </div>
       </div>

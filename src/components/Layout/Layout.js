@@ -268,6 +268,9 @@ const ProductVariants = React.lazy(() =>
 const ProductFamilies = React.lazy(() =>
   import("../../pages/ProductManagement/ProductFamilies/ProductFamilies")
 );
+const ProductFlow = React.lazy(() =>
+  import("../../pages/ProductManagement/ProductFlow/ProductFlow")
+);
 const ProductDimensions = React.lazy(() =>
   import("../../pages/ProductManagement/ProductDimensions/ProductDimensions")
 );
@@ -436,6 +439,10 @@ function Layout() {
               <Route
                 path="/messages"
                 element={renderRoute("/messages", <UserMessages />)}
+              />
+              <Route
+                path="/product-flow"
+                element={renderRoute("/product-flow", <ProductFlow />)}
               />
               <Route
                 path="/product-catalog"
