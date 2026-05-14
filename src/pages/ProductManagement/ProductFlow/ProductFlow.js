@@ -3,36 +3,42 @@ import { useNavigate } from "react-router-dom";
 
 const steps = [
   {
-    title: "1) Categories & Attributes",
+    title: "1) Categories",
     description:
-      "Create categories first. Define attribute schema here (this drives product attributes).",
+      "Create categories first. This is the base for product mapping and filters.",
     route: "/app/categories",
   },
   {
-    title: "2) Brands",
+    title: "2) Category Attributes",
+    description:
+      "Define attribute schema per category. Product attribute fields come from this setup.",
+    route: "/app/category-attributes",
+  },
+  {
+    title: "3) Brands",
     description: "Create brands used by products.",
     route: "/app/brands",
   },
   {
-    title: "3) Product Families",
+    title: "4) Product Families",
     description:
       "Create families with base attributes and variant axes (size/color etc).",
     route: "/app/product-families",
   },
   {
-    title: "4) Product Options",
+    title: "5) Product Options",
     description:
       "Create options and option values used in variant dropdowns/selectors.",
     route: "/app/product-options",
   },
   {
-    title: "5) Product Variants",
+    title: "6) Product Variants",
     description:
       "Create reusable variant records (SKU, stock, attribute combinations).",
     route: "/app/product-variants",
   },
   {
-    title: "6) Dimensions / Warranty / Batch / HSN",
+    title: "7) HSN / Dimensions / Warranty / Batch",
     description:
       "Create compliance and operational masters before product creation.",
     route: "/app/product-dimensions",
@@ -43,10 +49,19 @@ const steps = [
     ],
   },
   {
-    title: "7) Product Catalog",
+    title: "8) Product Catalog",
     description:
-      "Create final products using all masters. Edit and moderate from catalog.",
+      "Create final products and map category, attributes, brand, family, HSN, and origin location.",
     route: "/app/product-catalog",
+  },
+  {
+    title: "9) Post-Create Management",
+    description:
+      "Manage seller inventory, threshold alerts, and moderation after products are created.",
+    route: "/app/seller-product-inventories",
+    extraRoutes: [
+      { label: "Threshold Products", route: "/app/threshold-products" },
+    ],
   },
 ];
 

@@ -2,6 +2,7 @@ import 'react-quill/dist/quill.snow.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 // Components
 import FormInput from '../../../../components/Atoms/FormInput/FormInput';
@@ -79,6 +80,7 @@ export default function BasicDetailsTab({
   allCategories, API_CALL_OBJECT, hsnCodeList, userData
 }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const selector = useSelector(state => state);
 
   const modifiedCountry = transformArray(selector?.country?.getAllCountryListData?.data?.data?.list || []);
@@ -476,6 +478,16 @@ export default function BasicDetailsTab({
         </div>
 
         <div className="p-2 space-y-6 ">
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <p className="text-xs font-semibold text-blue-900">Setup help</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/categories')}>Categories</button>
+              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/category-attributes')}>Category Attributes</button>
+              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-families')}>Product Families</button>
+              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/hsn-code')}>HSN Codes</button>
+              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-flow')}>Open Full Product Flow</button>
+            </div>
+          </div>
           <div className="grid w-auto grid-cols-1 gap-4 md:grid-cols-2">
             {!SELLER_PANEL_ROLES.has(userData?.role) && (
               <div>
@@ -532,6 +544,7 @@ export default function BasicDetailsTab({
                 error={errors?.category_id}
                 placeholder="Category"
               />
+              <p className="mt-1 text-xs text-gray-500">Attributes are controlled by the selected category schema.</p>
             </div>
 
             {/* <div>
@@ -657,21 +670,21 @@ export default function BasicDetailsTab({
             />
             <FilterSelect
               label="Origin Country"
-              value={modifiedCountry.find(opt => opt.label === formData.origin?.country || opt.value === formData.origin?.country) || null}
+              value={modifiedCountry.find(opt => String(opt.value) === String(formData.origin?.countryCode || '') || opt.label === formData.origin?.country || String(opt.value) === String(formData.origin?.country)) || null}
               onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_COUNTRY')}
               options={modifiedCountry || []}
               placeholder="Select country"
             />
             <FilterSelect
               label="Origin State"
-              value={modifiedState.find(opt => opt.label === formData.origin?.state || opt.value === formData.origin?.state) || null}
+              value={modifiedState.find(opt => String(opt.value) === String(formData.origin?.stateCode || '') || opt.label === formData.origin?.state || String(opt.value) === String(formData.origin?.state)) || null}
               onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_STATE')}
               options={modifiedState || []}
               placeholder="Select state"
             />
             <FilterSelect
               label="Origin City"
-              value={modifiedCity.find(opt => opt.label === formData.origin?.city || opt.value === formData.origin?.city) || null}
+              value={modifiedCity.find(opt => String(opt.value) === String(formData.origin?.cityCode || '') || opt.label === formData.origin?.city || String(opt.value) === String(formData.origin?.city)) || null}
               onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_CITY')}
               options={modifiedCity || []}
               placeholder="Select city"

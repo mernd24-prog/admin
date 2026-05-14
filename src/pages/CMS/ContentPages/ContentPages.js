@@ -20,15 +20,27 @@ import {
 const PAGE_SIZE = 10;
 
 const emptyForm = {
-  recordSlug: '',
-  slug: '',
-  title: '',
-  pageType: 'content',
-  language: 'en',
-  body: '',
+  slug: "",
+  title: "",
+  pageType: "",
+  body: "",
+  excerpt: "",
+  category: "",
+  tags: [],
+  coverImage: "",
+  thumbnailUrl: "",
+  heroImage: "",
+  galleryImages: [],
+  author: {
+    name: "",
+    avatar: "",
+  },
+  readTime: 0,
+  language: "en",
   published: false,
+  publishedAt: "",
+  metadata: {},
 };
-
 const slugify = (value = '') =>
   String(value || 'content-page')
     .trim()
@@ -93,15 +105,10 @@ const ContentPages = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validate()) return;
+    // if (!validate()) return;
 
     const body = {
-      slug: formData.slug,
-      title: formData.title,
-      pageType: formData.pageType,
-      language: formData.language || 'en',
-      body: formData.body,
-      published: formData.published,
+      ...formData
     };
 
     try {

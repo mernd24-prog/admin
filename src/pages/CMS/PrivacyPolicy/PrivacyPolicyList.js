@@ -15,13 +15,14 @@ import Input from '../../../components/Atoms/Input/Input';
 import AddButton from '../../../components/Button/AddButton';
 import { Link, useParams } from 'react-router-dom';
 import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox';
-import { 
-  createCMSContentList, 
-  enableDisableCMS, 
-  getCMSContentList, 
-  softDeleteCMSList, 
-  updateCMSList 
+import {
+  createCMSContentList,
+  enableDisableCMS,
+  getCMSContentList,
+  softDeleteCMSList,
+  updateCMSList
 } from '../../../Redux/cmsSlice';
+import { TextEditor } from '../../../components/Atoms/FormInput/TextEditor';
 
 const PrivacyPolicyList = () => {
   const dispatch = useDispatch();
@@ -89,6 +90,17 @@ const PrivacyPolicyList = () => {
     }
   };
 
+  const handleContentChange = (value) => {
+    setForm(prev => ({ ...prev, content: value }));
+    if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
+  };
+
+  const getPlainText = (html) => {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    return div.textContent?.trim() || '';
+  };
+
   // Form validations
   const validateForm = () => {
     const newErrors = {};
@@ -102,10 +114,11 @@ const PrivacyPolicyList = () => {
       isValid = false;
     }
 
-    if (!formData?.content?.trim()) {
+    const plainContent = getPlainText(formData?.content);
+    if (!plainContent) {
       newErrors.content = 'Content is required';
       isValid = false;
-    } else if (formData?.content.length < 10) {
+    } else if (plainContent.length < 10) {
       newErrors.content = 'Content must be at least 10 characters';
       isValid = false;
     }
@@ -418,15 +431,13 @@ const PrivacyPolicyList = () => {
             />
           </div>
           <div className="w-full px-4 pt-2">
-            <Input
-              labelName="Content"
-              name="content"
-              type="textarea"
+            <TextEditor
+              label="Content"
               value={formData.content}
-              onChange={handleInputChange}
+              onChange={handleContentChange}
+              placeholder="Write content..."
+              height="200px"
               error={errors.content}
-              maxLength={1000}
-              rows={4}
               required
             />
           </div>
@@ -466,15 +477,13 @@ const PrivacyPolicyList = () => {
             />
           </div>
           <div className="w-full px-4 pt-2">
-            <Input
-              labelName="Content"
-              name="content"
-              type="textarea"
+            <TextEditor
+              label="Content"
               value={formData.content}
-              onChange={handleInputChange}
+              onChange={handleContentChange}
+              placeholder="Write content..."
+              height="200px"
               error={errors.content}
-              maxLength={1000}
-              rows={4}
               required
             />
           </div>

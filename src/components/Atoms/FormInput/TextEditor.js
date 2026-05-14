@@ -1,6 +1,8 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { toast } from 'sonner';
+import { uploadFile } from '../../../_helpers/globalFunctions';
 
 const TOOLBAR_OPTIONS = [
   [{ 'header': [1, 2, 3, false] }],
@@ -32,9 +34,34 @@ export const TextEditor = React.memo(({
   height = '200px',
   maxLength = null
 }) => {
+  const quillRef = useRef(null);
+
   const modules = useMemo(() => ({
     toolbar: {
       container: TOOLBAR_OPTIONS,
+      handlers: {
+        image: function () {
+          const input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/jpeg,image/png,image/webp');
+          input.click();
+          input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+              const url = await uploadFile(file, 'CMS');
+              const quill = quillRef.current?.getEditor();
+              if (quill) {
+                const range = quill.getSelection(true);
+                quill.insertEmbed(range.index, 'image', url);
+                quill.setSelection(range.index + 1);
+              }
+            } catch {
+              toast.error('Image upload failed');
+            }
+          };
+        }
+      }
     },
     clipboard: {
       matchVisual: false,
@@ -79,6 +106,7 @@ export const TextEditor = React.memo(({
           style={{ minHeight: height }}
         >
           <ReactQuill
+            ref={quillRef}
             theme={theme}
             value={value}
             onChange={handleChange}

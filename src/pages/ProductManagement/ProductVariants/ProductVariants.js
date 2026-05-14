@@ -40,12 +40,12 @@ const emptyForm = {
   stock: 0,
   reservedStock: 0,
   status: 'active',
-  attributes: [emptyAttribute],
+  attributes: [],
 };
 
 const toAttributeRows = (obj = {}) => {
   const entries = Object.entries(obj || {});
-  if (!entries.length) return [emptyAttribute];
+  if (!entries.length) return [];
   return entries.map(([key, value]) => ({ key, value: String(value ?? '') }));
 };
 
@@ -318,14 +318,17 @@ const ProductVariants = () => {
         <div className='p-4 space-y-2'>
           <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-gray-700">Attributes</label>
-            <button type="button" className="text-xs text-blue-600" onClick={() => setFormData((p) => ({ ...p, attributes: [...(p.attributes || []), emptyAttribute] }))}>Add Attribute</button>
+            <button type="button" className="text-xs text-blue-600" onClick={() => setFormData((p) => ({ ...p, attributes: [...(p.attributes || []), { ...emptyAttribute }] }))}>Add Attribute</button>
           </div>
+          {!(formData.attributes || []).length && (
+            <p className="text-xs text-gray-500">Optional. Add only if this variant needs custom attribute overrides.</p>
+          )}
           {(formData.attributes || []).map((row, idx) => (
             <div key={`attr-${idx}`} className="grid grid-cols-2 gap-2">
               <input className="border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="key" value={row.key} onChange={(e) => setFormData((p) => ({ ...p, attributes: (p.attributes || []).map((r, i) => (i === idx ? { ...r, key: e.target.value } : r)) }))} />
               <div className="flex gap-2">
                 <input className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="value" value={row.value} onChange={(e) => setFormData((p) => ({ ...p, attributes: (p.attributes || []).map((r, i) => (i === idx ? { ...r, value: e.target.value } : r)) }))} />
-                <button type="button" className="px-2 text-red-600" onClick={() => setFormData((p) => ({ ...p, attributes: (p.attributes || []).filter((_, i) => i !== idx) || [emptyAttribute] }))}>X</button>
+                <button type="button" className="px-2 text-red-600" onClick={() => setFormData((p) => ({ ...p, attributes: (p.attributes || []).filter((_, i) => i !== idx) }))}>X</button>
               </div>
             </div>
           ))}

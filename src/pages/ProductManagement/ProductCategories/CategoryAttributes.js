@@ -5,6 +5,7 @@ import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../components/Atoms/Input/Input';
 import Button from '../../../components/Atoms/buttons/button';
 import Loader from '../../../components/Loader/Loader';
+import { useNavigate } from 'react-router-dom';
 import { getCategoryAttributes, getList, updateCategoryAttributes } from '../../../Redux/productSlice';
 
 const EMPTY_ATTRIBUTE = {
@@ -28,14 +29,57 @@ const typeOptions = [
   'date',
 ].map((value) => ({ value, label: value.replace('_', ' ') }));
 
-const toCategoryOptions = (categories = []) =>
-  categories.map((category) => ({
-    value: category.categoryKey || category._id,
-    label: category.name || category.title || category.categoryKey,
-    category,
-  }));
+const toCategoryOptions = (categories = []) => {
+  const options = [];
+
+  const walkNested = (nodes = [], prefix = '') => {
+    nodes.forEach((category) => {
+      const key = category?.categoryKey || category?._id;
+      if (!key) return;
+      const name = category?.name || category?.title || category?.categoryKey;
+      const label = prefix ? `${prefix} > ${name}` : name;
+      options.push({ value: key, label, category });
+      const children = category?.subcategories || category?.subCategories || [];
+      if (Array.isArray(children) && children.length) {
+        walkNested(children, label);
+      }
+    });
+  };
+
+  const hasNested = categories.some(
+    (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+  );
+  if (hasNested) {
+    walkNested(categories);
+    return options;
+  }
+
+  const byParent = new Map();
+  categories.forEach((category) => {
+    const parent = category?.parentKey ? String(category.parentKey) : '__root__';
+    if (!byParent.has(parent)) byParent.set(parent, []);
+    byParent.get(parent).push(category);
+  });
+
+  const walkFlatTree = (parent = '__root__', prefix = '') => {
+    (byParent.get(parent) || [])
+      .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+      .forEach((category) => {
+        const key = category?.categoryKey || category?._id;
+        if (!key) return;
+        const name = category?.name || category?.title || category?.categoryKey;
+        const label = prefix ? `${prefix} > ${name}` : name;
+        options.push({ value: key, label, category });
+        walkFlatTree(String(key), label);
+      });
+  };
+
+  walkFlatTree();
+  return options;
+};
 
 const CategoryAttributes = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.product);
   const categories = useMemo(() => {
@@ -84,10 +128,12 @@ const CategoryAttributes = () => {
       return;
     }
 
+    const keySet = new Set();
+    const duplicateKeys = [];
     const payload = attributes
       .filter((item) => item.key && item.label)
       .map((item) => ({
-        key: item.key.trim(),
+        key: item.key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'),
         label: item.label.trim(),
         type: item.type,
         required: Boolean(item.required),
@@ -100,6 +146,23 @@ const CategoryAttributes = () => {
         isFilterable: Boolean(item.isFilterable),
         isSearchable: Boolean(item.isSearchable),
       }));
+
+    payload.forEach((item) => {
+      if (keySet.has(item.key)) duplicateKeys.push(item.key);
+      keySet.add(item.key);
+    });
+    if (duplicateKeys.length) {
+      toast.error(`Duplicate attribute keys: ${duplicateKeys.join(', ')}`);
+      return;
+    }
+
+    const invalidSelectAttributes = payload.filter(
+      (item) => (item.type === 'select' || item.type === 'multi_select') && !item.options.length,
+    );
+    if (invalidSelectAttributes.length) {
+      toast.error('Select/multi-select attributes must have at least one option.');
+      return;
+    }
 
     try {
       await dispatch(updateCategoryAttributes({
@@ -121,6 +184,10 @@ const CategoryAttributes = () => {
         <Button className="bg-white text-black" onClick={handleSave}>Save Attributes</Button>
       </div>
       <div className="bg-white border border-[#E6E6E6] p-4 space-y-5">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+          <p className="text-xs text-blue-900">This schema controls which attributes appear in Product Catalog for this category.</p>
+          <button type="button" className="mt-2 rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-catalog')}>Open Product Catalog</button>
+        </div>
         <FilterSelect
           label="Category"
           options={categoryOptions}

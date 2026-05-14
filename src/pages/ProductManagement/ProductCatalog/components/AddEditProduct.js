@@ -8,6 +8,7 @@ import {
   createProducts, getAllProducts, getList,
   getProductById, updateProductsById, getAllHsn, getCategoryAttributes, getAllBrandList, getAllWarrantyList,
 } from '../../../../Redux/productSlice';
+import { getProductFamilies } from '../../../../Redux/adminCoreSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
 import Loader from '../../../../components/Loader/Loader';
 import { getAllCountryList } from '../../../../Redux/CountrySlice';
@@ -37,6 +38,7 @@ const API_CALLS = [
 { action: getAllHsn, name: 'Hsn code List' },
 { action: getAllBrandList, name: 'Brand List' },
 { action: getAllWarrantyList, name: 'Warranty List' },
+{ action: () => getProductFamilies({ page: 1, limit: 500 }), name: 'Product Families List' },
 { action: getAllProducts, name: 'Products List' },
 ];
 
@@ -83,6 +85,7 @@ export default function ProductManagementUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate()
   const selector = useSelector(state => state.product);
+  const adminCoreSelector = useSelector(state => state.adminCore);
   const mainContainerRef = useRef(null);
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
@@ -288,8 +291,8 @@ export default function ProductManagementUI() {
   }, [dispatch, formData?.category_key, formData?.category, formData?.category_id, formData?.categoryId]);
 
   useEffect(() => {
-    const originCountry = formData?.origin?.country;
-    const originState = formData?.origin?.state;
+    const originCountry = formData?.origin?.countryCode || formData?.origin?.country;
+    const originState = formData?.origin?.stateCode || formData?.origin?.state;
     if (originCountry) {
       dispatch(getAllStateList({ countryId: originCountry }));
     }
@@ -332,14 +335,11 @@ export default function ProductManagementUI() {
           .map((color) => String(color).trim())
       )
     ).map((color) => ({ value: color, label: color })),
-    productFamilyList: Array.from(
-      new Set(
-        (getListPayload(selector?.getAllProductsData) || [])
-          .map((item) => item?.productFamilyCode)
-          .filter(Boolean)
-          .map((code) => String(code).trim())
-      )
-    ).map((code) => ({ value: code, label: code })),
+    productFamilyList: getListPayload(adminCoreSelector?.productFamiliesData)
+      .map((item) => String(item?.familyCode || item?.code || '').trim())
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.indexOf(value) === index)
+      .map((code) => ({ value: code, label: code })),
     taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
     hsnCodeList: getListPayload(selector?.getAllHsnData).map((item) => ({
       value: item.code || item._id || item.id,
@@ -347,7 +347,7 @@ export default function ProductManagementUI() {
       label: `${item.code || item._id || item.id} | GST: ${Number(item.gstRate || item.IGST || 0)}%`,
     })),
 
-  }), [selector]);
+  }), [selector, adminCoreSelector?.productFamiliesData]);
 
   const createSelectOptions = useMemo(() => {
     const categorySource = getListPayload(selector?.getListData);
@@ -671,9 +671,12 @@ export default function ProductManagementUI() {
           ...prev,
           origin: {
             ...(prev.origin || {}),
+            countryCode: selectedOption?.value || "",
             country: selectedOption?.label || selectedOption?.value || "",
             state: "",
+            stateCode: "",
             city: "",
+            cityCode: "",
           },
         }));
         break;
@@ -682,8 +685,10 @@ export default function ProductManagementUI() {
           ...prev,
           origin: {
             ...(prev.origin || {}),
+            stateCode: selectedOption?.value || "",
             state: selectedOption?.label || selectedOption?.value || "",
             city: "",
+            cityCode: "",
           },
         }));
         break;
@@ -692,6 +697,7 @@ export default function ProductManagementUI() {
           ...prev,
           origin: {
             ...(prev.origin || {}),
+            cityCode: selectedOption?.value || "",
             city: selectedOption?.label || selectedOption?.value || "",
           },
         }));
@@ -1110,6 +1116,7 @@ export default function ProductManagementUI() {
 
   const flowGateErrors = useMemo(() => {
     const blockers = [];
+    const isVariableProduct = (formData?.productType || 'simple') === 'variable';
     if (!createSelectOptions?.length) {
       blockers.push({ key: 'categories', message: 'Create at least one category before creating products.', route: '/app/categories' });
     }
@@ -1119,17 +1126,17 @@ export default function ProductManagementUI() {
     if (!formattedData?.hsnCodeList?.length) {
       blockers.push({ key: 'hsn', message: 'Create at least one HSN code so tax mapping is consistent.', route: '/app/hsn-code' });
     }
-    if (!formattedData?.productFamilyList?.length) {
-      blockers.push({ key: 'family', message: 'Create at least one product family code for grouping variants/products.', route: '/app/product-families' });
-    }
     if (!formData?.brand) {
       blockers.push({ key: 'brand_selected', message: 'Select a brand for this product.', route: '/app/brands' });
     }
     if (!formData?.hsnCode && !formData?.hsn_code) {
       blockers.push({ key: 'hsn_selected', message: 'Select an HSN code for this product.', route: '/app/hsn-code' });
     }
-    if (!formData?.productFamilyCode) {
-      blockers.push({ key: 'family_selected', message: 'Select a product family code for this product.', route: '/app/product-families' });
+    if (isVariableProduct && !formattedData?.productFamilyList?.length) {
+      blockers.push({ key: 'family', message: 'Create at least one product family code for variable products.', route: '/app/product-families' });
+    }
+    if (isVariableProduct && !formData?.productFamilyCode) {
+      blockers.push({ key: 'family_selected', message: 'Select a product family code for this variable product.', route: '/app/product-families' });
     }
     return blockers;
   }, [createSelectOptions, formattedData, formData]);
