@@ -28,7 +28,7 @@ const configuredMode =
   normalizeMode(process.env.REACT_APP_APP_MODE) ||
   normalizeMode(process.env.VITE_APP_MODE) ||
   detectModeFromRuntime() ||
-  PANEL_MODES.ADMIN;
+  PANEL_MODES.SELLER;
 
 export const getPanelMode = () =>
   configuredMode === PANEL_MODES.SELLER
