@@ -103,8 +103,8 @@ const ProductVariants = () => {
   }, [fetchVariants, isRefresh]);
 
   useEffect(() => {
-    dispatch(getProductFamilies({ page: 1, limit: 200 }));
-    dispatch(getAllProducts({ page: 1, limit: 300 }));
+    dispatch(getProductFamilies({ page: 1, limit: 100 }));
+    dispatch(getAllProducts({ page: 1, limit: 100 }));
     dispatch(getAllSellerList());
   }, [dispatch]);
 

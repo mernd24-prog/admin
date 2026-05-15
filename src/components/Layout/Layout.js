@@ -634,6 +634,10 @@ function Layout() {
               />
               <Route path="/tax" element={renderRoute('/tax', <Tax />)} />
               <Route
+                path='/subTax'
+                element={renderSupportedRoute('/subTax', <SubTax setModuleName={setModuleName} />)}
+              />
+              <Route
                 path='/subTax/:id'
                 element={renderSupportedRoute('/subTax', <SubTax setModuleName={setModuleName} />)}
               />

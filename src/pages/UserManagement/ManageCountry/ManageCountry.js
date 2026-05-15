@@ -15,6 +15,17 @@ import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 import { Link } from 'react-router-dom';
 
 const PAGE_SIZE = 10;
+
+const extractListPayload = (payload = {}) => {
+  const data = payload?.data || payload;
+  const nestedData = data?.data || data;
+  const list = nestedData?.list || nestedData?.items || [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: Number(nestedData?.total || list.length || 0),
+  };
+};
+
 export const validateCountry = (data) => {
   const errors = {};
   if (!data.name?.trim()) {
@@ -67,10 +78,11 @@ const ManageCountry = () => {
     setIsLoading(true)
     dispatch(getCountryList(query))
       .then((res) => {
-        setApiRes(res?.payload?.data?.data || { list: [], total: 0 });
+        setApiRes(extractListPayload(res?.payload));
       })
       .catch((err) => {
         console.error("Error fetching countries:", err);
+        setApiRes({ list: [], total: 0 });
       }).finally(() => {
         setIsLoading(false)
       })
@@ -270,9 +282,10 @@ const ManageCountry = () => {
           totalData={apiRes?.total}
           totalSize={PAGE_SIZE}
           currentPage={pageNo}
+          onPageChange={onPageChange}
           isHeaderCheckbox={true}
           handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-          allRowsSelected={selectedRow.length === apiRes?.list?.length}
+          allRowsSelected={selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0}
         />
         {apiRes?.total > PAGE_SIZE && (
           <Pagination

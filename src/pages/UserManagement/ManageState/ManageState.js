@@ -18,6 +18,16 @@ import { Link } from 'react-router-dom'
 
 const size = 10
 
+const extractListPayload = (payload = {}) => {
+  const data = payload?.data || payload;
+  const nestedData = data?.data || data;
+  const list = nestedData?.list || nestedData?.items || [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: Number(nestedData?.total || list.length || 0),
+  };
+};
+
 const ManageState = () => {
   const dispatch = useDispatch();
   const selector = useSelector(state => state?.country)
@@ -62,10 +72,11 @@ const ManageState = () => {
     setIsLoading(true)
     dispatch(getStateList(query))
       .then((res) => {
-        setApiRes(res?.payload?.data?.data || { list: [], total: 0 });
+        setApiRes(extractListPayload(res?.payload));
       })
       .catch((err) => {
-        console.error("Error fetching countries:", err);
+        console.error("Error fetching states:", err);
+        setApiRes({ list: [], total: 0 });
       }).finally(() => {
         setIsLoading(false)
       })
@@ -343,9 +354,10 @@ const ManageState = () => {
             totalData={apiRes?.total}
             totalSize={size}
             currentPage={pageNo}
+            onPageChange={onPageChange}
             isHeaderCheckbox={true}
             handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            allRowsSelected={selectedRow.length === apiRes?.list?.length}
+            allRowsSelected={selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0}
           />
           {apiRes?.total > size && (
             <Pagination

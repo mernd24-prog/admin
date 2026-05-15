@@ -112,9 +112,11 @@ const CategorySetup = ({
 
   const handleFileUpload = async (file) => {
     if (!file) return;
-    const allowedTypes = ['image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Only JPG/PNG files are allowed');
+    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
+    const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+    const fileExtension = file.name?.split('.').pop()?.toLowerCase();
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      toast.error('Only JPG/PNG/WEBP files are allowed');
       return;
     }
 

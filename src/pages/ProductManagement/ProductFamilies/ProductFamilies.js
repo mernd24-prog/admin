@@ -120,8 +120,8 @@ const ProductFamilies = () => {
   }, [fetchList, isRefresh]);
 
   useEffect(() => {
-    dispatch(getList({ limit: 200 }));
-    dispatch(getAllProducts({ page: 1, limit: 500 }));
+    dispatch(getList({ limit: 100 }));
+    dispatch(getAllProducts({ page: 1, limit: 100 }));
     dispatch(getAllSellerList());
   }, [dispatch]);
 

@@ -218,6 +218,8 @@ export const ENDPOINTS = {
     geographyDetail: (countryCode) => `/admin/platform/geography/${countryCode}`,
     contentPages: "/admin/platform/content-pages",
     contentPage: (slug) => `/admin/platform/content-pages/${slug}`,
+    productReviews: "/admin/platform/product-reviews",
+    productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
   },
   common: {
     countries: "/admin/common/countries",

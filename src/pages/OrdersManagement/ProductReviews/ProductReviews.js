@@ -4,19 +4,33 @@ import TableData from '../../../components/Atoms/TableData/TableData';
 import ImageViewer from '../../../components/ImageViewer/ImageViewer';
 import EditProductReview from './components/EditProductReview';
 import { useDispatch, useSelector } from 'react-redux';
-import { getReviewList } from '../../../Redux/orderSlice';
+import { deleteProductReview, getProductReviews, updateProductReview } from '../../../Redux/adminCoreSlice';
 import Loader from '../../../components/Loader/Loader';
 import { Link } from 'react-router-dom';
 import Pagination from '../../../components/Pagination/Pagination';
+import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
+import { toast } from 'sonner';
 const SIZE = 10
+
+const getReviewsPayload = (state = {}) => {
+  const payload = state?.productReviewsData?.data?.data || {};
+  const list = payload?.list || payload?.items || [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: Number(payload?.total || list.length || 0),
+  };
+};
 
 const ProductReviews = () => {
   const dispatch = useDispatch();
-  const reviewsData = useSelector(state => state.order);
+  const reviewsData = useSelector(state => state.adminCore);
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageNo, setPageNo] = useState(1)
@@ -51,54 +65,48 @@ const ProductReviews = () => {
     );
   };
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const apiPayload = {
-          size: SIZE,
-          pageNo: pageNo,
-          populate:
-            "user_id:userName,email,fullName| product_id: name,product_catalogs_id,store_id | product_id.product_catalogs_id:images |product_id.store_id:name,user_id | product_id.store_id.user_id:userName,email"
-        };
-        await dispatch(getReviewList(apiPayload)).unwrap();
-      } catch (err) {
-        setError('Failed to fetch product reviews. Please try again.');
-        console.error('Review fetch error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchReviews = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await dispatch(getProductReviews({ limit: SIZE, page: pageNo })).unwrap();
+    } catch (err) {
+      setError(err?.message || err || 'Failed to fetch product reviews. Please try again.');
+      console.error('Review fetch error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchReviews();
-  }, [dispatch]);
+  }, [dispatch, pageNo]);
 
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
   };
 
   const tableHeadings = [
-    "Product",
-    "Store",
-    "Reviewed By",
+    "Product ID",
+    "Buyer ID",
+    "Order ID",
     "Rating",
-    "Comment",
+    "Review",
+    "Status",
     "Date",
+    "Action",
   ];
 
   const tableRows = useMemo(() => {
-    const list = reviewsData?.getReviewListData?.data?.data?.list;
-
-    if (!Array.isArray(list)) return [];
+    const { list } = getReviewsPayload(reviewsData);
 
     return list.map((review, index) => {
       try {
-        const product = review.product_id || {};
-        const store = product.store_id || {};
-        const user = review.user_id || {};
-        const productCatalog = product.product_catalogs_id || {};
-        const productImage = productCatalog.images?.[0] || '/placeholder-image.jpg';
+        const reviewId = review._id || review.id;
+        const productImage = review.media?.[0] || '/placeholder-image.jpg';
+        const comment = review.reviewText || review.comment || 'No comment';
+        const title = review.title || '';
+        const isPublished = (review.status || 'published') === 'published';
 
         return [
           <div
@@ -108,36 +116,22 @@ const ProductReviews = () => {
           >
             <img
               src={productImage}
-              alt={product.name || 'Product'}
+              alt={review.productId || 'Product'}
               className="object-cover w-16 h-16 border rounded-lg shadow-sm"
               onError={(e) => {
                 e.target.src = '/placeholder-image.jpg';
               }}
             />
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900 line-clamp-2">
-                {product.name || 'N/A'}
+              <span className="text-sm font-medium text-gray-900 break-all line-clamp-2">
+                {review.productId || 'N/A'}
               </span>
             </div>
           </div>,
 
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">
-              {store.name || 'Unknown Store'}
-            </span>
-            <span className="text-xs text-gray-500">
-              {store.email || 'N/A'}
-            </span>
-          </div>,
+          <span className="text-sm text-gray-700 break-all">{review.buyerId || 'N/A'}</span>,
 
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">
-              {user.fullName || user.userName || 'Anonymous'}
-            </span>
-            <span className="text-xs text-gray-500">
-              {user.email || 'N/A'}
-            </span>
-          </div>,
+          <span className="text-sm text-gray-700 break-all">{review.orderId || 'N/A'}</span>,
 
           <div className="flex flex-col items-center">
             {renderStars(review.rating)}
@@ -147,10 +141,24 @@ const ProductReviews = () => {
           </div>,
 
           <div className="max-w-xs">
-            <p className="text-sm text-gray-700 line-clamp-3" title={review.comment}>
-              {review.comment || 'No comment'}
+            {title && <p className="text-sm font-medium text-gray-900 line-clamp-1">{title}</p>}
+            <p className="text-sm text-gray-700 line-clamp-3" title={comment}>
+              {comment}
             </p>
           </div>,
+
+          <ToggleButton
+            isToggle={isPublished}
+            handleClick={async () => {
+              try {
+                await dispatch(updateProductReview({ reviewId, status: isPublished ? 'hidden' : 'published' })).unwrap();
+                toast.success('Review status updated');
+                fetchReviews();
+              } catch (err) {
+                toast.error(err?.message || err || 'Failed to update review status');
+              }
+            }}
+          />,
 
           <div className="flex flex-col">
             <span className="text-sm text-gray-900">
@@ -160,13 +168,37 @@ const ProductReviews = () => {
               Updated: {formatDate(review.updatedAt)}
             </span>
           </div>,
+
+          <ActionButtons
+            onEdit={() => {
+              setSelectedReview(review);
+              setIsEditOpen(true);
+            }}
+            onDelete={() => setDeleteTarget(review)}
+            showLinkButton={false}
+          />,
         ];
       } catch (innerErr) {
         console.error('Error rendering review row:', innerErr);
-        return ['Invalid data', '', '', '', '', ''];
+        return ['Invalid data', '', '', '', '', '', '', ''];
       }
     });
   }, [reviewsData]);
+
+  const totalReviews = getReviewsPayload(reviewsData).total;
+
+  const handleDeleteReview = async () => {
+    const reviewId = deleteTarget?._id || deleteTarget?.id;
+    if (!reviewId) return;
+    try {
+      await dispatch(deleteProductReview({ reviewId })).unwrap();
+      toast.success('Review deleted successfully');
+      setDeleteTarget(null);
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || err || 'Failed to delete review');
+    }
+  };
 
   return (
     <>
@@ -187,15 +219,19 @@ const ProductReviews = () => {
               showFilter={false}
               showSummary={false}
               showAddButton={false}
-              totalData={reviewsData?.getReviewListData?.data?.data?.total || 0}
+              totalData={totalReviews}
+              totalSize={SIZE}
+              currentPage={pageNo}
+              onPageChange={onPageChange}
+              loading={isLoading}
               emptyMessage={isLoading ? 'Loading reviews...' : 'No reviews found'}
             />
           )}
         </div>
 
-        {reviewsData?.getReviewListData?.data?.data?.total > SIZE && (
+        {totalReviews > SIZE && (
           <Pagination
-            totalPages={Math.ceil(reviewsData?.getReviewListData?.data?.data?.total / SIZE)}
+            totalPages={Math.ceil(totalReviews / SIZE)}
             currentPage={pageNo}
             onPageChange={onPageChange}
           />
@@ -211,6 +247,13 @@ const ProductReviews = () => {
           setSelectedReview(null);
         }}
         reviewData={selectedReview}
+      />
+
+      <DeletePopup
+        isDeleteModalOpen={Boolean(deleteTarget)}
+        closeDeleteModal={() => setDeleteTarget(null)}
+        confirmDelete={handleDeleteReview}
+        DeleteHeading="Are you sure you want to delete this product review?"
       />
     </>
   );

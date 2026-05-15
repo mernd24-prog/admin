@@ -29,7 +29,7 @@ const UsersTransactions = () => {
 
   const loadTransactions = async () => {
     try {
-      const response = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 200 })).unwrap();
+      const response = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
       setApiRes(extractList(response));
     } catch (error) {
       toast.error(error?.message || 'Failed to load transactions');
@@ -38,7 +38,7 @@ const UsersTransactions = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await dispatch(getAllUserList({ page: 1, limit: 200 })).unwrap();
+      const response = await dispatch(getAllUserList({ page: 1, limit: 100 })).unwrap();
       setUsers(extractList(response));
     } catch (error) {
       setUsers([]);
