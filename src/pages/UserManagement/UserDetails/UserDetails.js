@@ -50,6 +50,38 @@ const StatusBadge = ({ value }) => {
   );
 };
 
+const hasCompleteBankDetails = (bankDetails = {}) =>
+  Boolean(
+    bankDetails?.accountHolderName &&
+      bankDetails?.accountNumber &&
+      bankDetails?.ifscCode &&
+      bankDetails?.bankName
+  );
+
+const firstValue = (...values) =>
+  values.find((value) => String(value || '').trim().length > 0) || '';
+
+const normalizeBankDetails = (bankDetails = {}) => ({
+  accountHolderName: firstValue(
+    bankDetails.accountHolderName,
+    bankDetails.holderName,
+    bankDetails.accountName,
+    bankDetails.beneficiaryName,
+  ),
+  accountNumber: firstValue(
+    bankDetails.accountNumber,
+    bankDetails.bankAccountNumber,
+    bankDetails.accountNo,
+    bankDetails.bankAccountNo,
+  ),
+  ifscCode: firstValue(bankDetails.ifscCode, bankDetails.ifsc, bankDetails.ifsc_code),
+  bankName: firstValue(bankDetails.bankName, bankDetails.bank),
+  branchName: firstValue(bankDetails.branchName, bankDetails.branch),
+});
+
+const hasAnyBankDetails = (bankDetails = {}) =>
+  Object.values(bankDetails).some((value) => String(value || '').trim().length > 0);
+
 // ─── KYC decision options ─────────────────────────────────────────────────────
 
 const KYC_OPTIONS = [
@@ -75,10 +107,30 @@ const UserDetails = () => {
   const profile  = user.profile || {};
   const sellerProfile = user.sellerProfile || {};
   const onboarding    = user.onboarding || {};
+  const [bankReviewOverride, setBankReviewOverride] = useState(null);
+  const bankDetails = normalizeBankDetails(sellerProfile.bankDetails || user.bankDetails || {});
+  const bankRejectionReason =
+    bankReviewOverride?.bankRejectionReason ?? sellerProfile.bankRejectionReason;
+  const bankStatus =
+    bankReviewOverride?.bankVerificationStatus ||
+    (bankRejectionReason
+      ? 'rejected'
+      : sellerProfile.bankVerificationStatus &&
+        sellerProfile.bankVerificationStatus !== 'not_submitted'
+        ? sellerProfile.bankVerificationStatus
+        : hasCompleteBankDetails(bankDetails)
+          ? 'submitted'
+          : 'not_submitted');
+  const goLiveStatus =
+    sellerProfile.goLiveStatus ||
+    (user.accountStatus === 'active' && (onboarding.status || sellerProfile.onboardingStatus) === 'ready_for_go_live'
+      ? 'live'
+      : 'pending');
 
   // KYC lazy-load state
   const [kycData, setKycData]       = useState(null);
   const [kycLoading, setKycLoading] = useState(false);
+  const sellerKyc = kycData || user.kyc || {};
 
   // modal state
   const [kycModal, setKycModal]   = useState({ open: false, defaultDecision: 'verified' });
@@ -138,11 +190,24 @@ const UserDetails = () => {
 
   // ── Bank review ───────────────────────────────────────────────────────────
   const handleBankSubmit = async (decision, rejectionReason) => {
-    const res = await dispatch(
-      updateSellerBankStatus({ sellerId: id, bankVerificationStatus: decision, bankRejectionReason: rejectionReason }),
-    ).unwrap();
-    toast.success(res?.message || 'Bank status updated');
-    refresh();
+    try {
+      const res = await dispatch(
+        updateSellerBankStatus({ sellerId: id, bankVerificationStatus: decision, bankRejectionReason: rejectionReason }),
+      ).unwrap();
+      setBankReviewOverride({
+        bankVerificationStatus: decision,
+        bankRejectionReason: decision === 'rejected' ? rejectionReason : null,
+      });
+      toast.success(res?.message || 'Bank status updated');
+      await refresh();
+    } catch (error) {
+      const missingFields = error?.details?.missingFields || [];
+      toast.error(
+        missingFields.length
+          ? `Bank details missing: ${missingFields.join(', ')}`
+          : (error?.message || 'Failed to update bank status'),
+      );
+    }
   };
 
   // ── Go Live ───────────────────────────────────────────────────────────────
@@ -152,9 +217,19 @@ const UserDetails = () => {
       toast.success(res?.message || 'Seller moved live');
       refresh();
     } catch (error) {
+      const details = error?.details || {};
+      const missing = [
+        details.kycStatus && !['verified', 'approved'].includes(details.kycStatus)
+          ? `KYC: ${details.kycStatus}`
+          : null,
+        details.bankVerificationStatus && details.bankVerificationStatus !== 'verified'
+          ? `Bank: ${details.bankVerificationStatus}`
+          : null,
+        details.profileCompleted === false ? 'Profile incomplete' : null,
+      ].filter(Boolean);
       toast.error(
-        error?.details?.onboardingStatus
-          ? `Not ready for go-live (${error.details.onboardingStatus})`
+        missing.length
+          ? `Not ready for go-live: ${missing.join(', ')}`
           : (error?.message || 'Failed to activate seller'),
       );
     }
@@ -175,7 +250,7 @@ const UserDetails = () => {
   };
 
   const checklist = onboarding.checklist || sellerProfile.onboardingChecklist || {};
-  const kycStatus = onboarding.kycStatus || sellerProfile.kycStatus || 'not_submitted';
+  const kycStatus = onboarding.kycStatus || sellerKyc.verificationStatus || sellerProfile.kycStatus || 'not_submitted';
 
   return (
     <>
@@ -251,8 +326,8 @@ const UserDetails = () => {
                 {[
                   { label: 'Onboarding',  value: onboarding.status || sellerProfile.onboardingStatus },
                   { label: 'KYC',         value: kycStatus },
-                  { label: 'Bank',        value: sellerProfile.bankVerificationStatus || 'not_submitted' },
-                  { label: 'Go Live',     value: sellerProfile.goLiveStatus || 'pending' },
+                  { label: 'Bank',        value: bankStatus },
+                  { label: 'Go Live',     value: goLiveStatus },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col items-center bg-gray-50 rounded-lg p-3 gap-1">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
@@ -312,10 +387,10 @@ const UserDetails = () => {
               )}
 
               {/* Bank rejection reason alert */}
-              {sellerProfile.bankRejectionReason && (
+              {bankRejectionReason && (
                 <div className="mt-3 bg-orange-50 border border-orange-200 rounded-md p-3">
                   <p className="text-xs font-semibold text-orange-700">Bank Rejection Reason</p>
-                  <p className="text-sm text-orange-600 mt-0.5">{sellerProfile.bankRejectionReason}</p>
+                  <p className="text-sm text-orange-600 mt-0.5">{bankRejectionReason}</p>
                 </div>
               )}
             </section>
@@ -337,25 +412,39 @@ const UserDetails = () => {
                 <Row label="Display Name"    value={sellerProfile.displayName} />
                 <Row label="Legal Business"  value={sellerProfile.legalBusinessName} />
                 <Row label="Business Type"   value={sellerProfile.businessType} />
-                <Row label="GST Number"      value={sellerProfile.gstNumber} />
-                <Row label="PAN Number"      value={sellerProfile.panNumber} />
-                <Row label="Aadhaar Number"  value={sellerProfile.aadhaarNumber} />
+                <Row label="GST Number"      value={sellerProfile.gstNumber || sellerKyc.gstNumber} />
+                <Row label="PAN Number"      value={sellerProfile.panNumber || sellerKyc.panNumber} />
+                <Row label="Aadhaar Number"  value={sellerProfile.aadhaarNumber || sellerKyc.aadhaarNumber} />
                 <Row label="Support Email"   value={sellerProfile.supportEmail} />
                 <Row label="Support Phone"   value={sellerProfile.supportPhone} />
                 <Row label="Website"         value={sellerProfile.businessWebsite} />
               </div>
 
               {/* Bank Details */}
-              {sellerProfile.bankDetails && (
+              {hasAnyBankDetails(bankDetails) && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bank Details</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                    <Row label="Account Holder" value={sellerProfile.bankDetails?.accountHolderName} />
-                    <Row label="Account Number" value={sellerProfile.bankDetails?.accountNumber} />
-                    <Row label="IFSC Code"       value={sellerProfile.bankDetails?.ifscCode} />
-                    <Row label="Bank Name"        value={sellerProfile.bankDetails?.bankName} />
-                    <Row label="Branch Name"      value={sellerProfile.bankDetails?.branchName} />
+                  <div className="mb-2 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bank Details</p>
+                    <StatusBadge value={bankStatus} />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                    <Row label="Account Holder" value={bankDetails.accountHolderName} />
+                    <Row label="Account Number" value={bankDetails.accountNumber} />
+                    <Row label="IFSC Code"       value={bankDetails.ifscCode} />
+                    <Row label="Bank Name"        value={bankDetails.bankName} />
+                    <Row label="Branch Name"      value={bankDetails.branchName} />
+                  </div>
+                </div>
+              )}
+              {!hasAnyBankDetails(bankDetails) && (
+                <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Bank Details</p>
+                    <StatusBadge value={bankStatus} />
+                  </div>
+                  <p className="mt-1 text-sm text-yellow-700">
+                    Bank details are not submitted by seller yet. Seller must complete the Bank Details step before admin can verify bank.
+                  </p>
                 </div>
               )}
 

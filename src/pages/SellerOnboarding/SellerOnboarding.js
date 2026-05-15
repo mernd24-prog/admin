@@ -1236,7 +1236,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronDown, UploadCloud } from "lucide-react";
+import { ChevronDown, FileText, Hourglass, UploadCloud } from "lucide-react";
 import { FaCalendarAlt } from "react-icons/fa";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { RiEditBoxFill } from "react-icons/ri";
@@ -1247,12 +1247,17 @@ import {
   updateSellerOnboardingProfile,
 } from "../../Redux/seller-slice";
 import { useKYC } from "../../context/KycContext";
+import { apiRequest } from "../../_helpers/apiConfig";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /^https?:\/\/.+/i;
+const KYC_DOCUMENT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+const KYC_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+const MIN_SELLER_AGE = 18;
 
 const ERROR_CLASS = "mt-1 text-xs text-red-600";
 const STEP_ONE_INPUT_CLASS =
@@ -1285,6 +1290,195 @@ const formatDateForDisplay = (value) => {
   return `${day}/${month}/${year}`;
 };
 
+const getIsoDateYearsAgo = (years) => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - years);
+  return date.toISOString().slice(0, 10);
+};
+
+const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
+
+const detectDocumentMimeType = (bytes) => {
+  if (!bytes?.length) return "";
+  if (
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
+    return "image/jpeg";
+  }
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  ) {
+    return "application/pdf";
+  }
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return "";
+};
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return window.btoa(binary);
+};
+
+const readFileAsUploadPayload = async (file) => {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const mimeType =
+    detectDocumentMimeType(bytes) || String(file.type || "").toLowerCase();
+
+  return {
+    contentBase64: arrayBufferToBase64(buffer),
+    mimeType,
+    fileName: file.name,
+  };
+};
+
+const isPreviewableImage = (file) =>
+  file?.type && file.type.startsWith("image/");
+
+const isPreviewableImageUrl = (url = "") =>
+  /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
+
+const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
+  try {
+    const pathname = new URL(url).pathname;
+    const name = pathname.split("/").filter(Boolean).pop();
+    return name ? decodeURIComponent(name) : fallback;
+  } catch {
+    const name = String(url || "").split("/").filter(Boolean).pop();
+    return name || fallback;
+  }
+};
+
+const DocumentUploadField = ({
+  id,
+  label,
+  required = false,
+  file,
+  existingUrl = "",
+  error,
+  accept,
+  onChange,
+  onDrop,
+  emptyText,
+}) => {
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    let isActive = true;
+    if (!isPreviewableImage(file)) {
+      setPreviewUrl("");
+      return undefined;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (isActive) setPreviewUrl(reader.result || "");
+    };
+    reader.onerror = () => {
+      if (isActive) setPreviewUrl("");
+    };
+    reader.readAsDataURL(file);
+
+    return () => {
+      isActive = false;
+    };
+  }, [file]);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+        {label} {required && STEP_ONE_REQUIRED}
+      </label>
+      <div
+        className="min-h-[150px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={onDrop}
+      >
+        {file || existingUrl ? (
+          <div className="flex w-full flex-col items-center gap-3">
+            {previewUrl || isPreviewableImageUrl(existingUrl) ? (
+              <img
+                src={previewUrl || existingUrl}
+                alt={label}
+                className="h-24 max-w-full rounded-md border border-[#e5e5e5] bg-white object-contain"
+              />
+            ) : (
+              <div className="flex max-w-full items-center gap-2 text-sm text-gray-700">
+                <FileText size={18} className="shrink-0 text-[#c99528]" />
+                <span className="truncate">
+                  {file?.name || getFileNameFromUrl(existingUrl, label)}
+                </span>
+              </div>
+            )}
+            <div className="flex max-w-full items-center gap-3">
+              <span className="max-w-[220px] truncate text-xs text-gray-600">
+                {file?.name || getFileNameFromUrl(existingUrl, label)}
+              </span>
+              <label
+                htmlFor={id}
+                className="shrink-0 rounded-full bg-[#c99528] px-4 py-2 text-xs font-medium text-white cursor-pointer transition hover:bg-[#b27a25]"
+              >
+                Change
+              </label>
+            </div>
+          </div>
+        ) : (
+          <>
+            <UploadCloud size={24} className="mb-2 text-[#c99528]" />
+            <p className="text-sm text-gray-600 mb-2">{emptyText}</p>
+            <p className="text-xs text-gray-400 mb-2">OR</p>
+            <label
+              htmlFor={id}
+              className="px-4 py-2 rounded-full bg-[#c99528] text-white text-xs font-medium cursor-pointer hover:bg-[#b27a25] transition"
+            >
+              Browse
+            </label>
+          </>
+        )}
+        <input
+          id={id}
+          name={id}
+          type="file"
+          className="hidden"
+          accept={accept}
+          onChange={onChange}
+        />
+      </div>
+      {error && <p className={ERROR_CLASS}>{error}</p>}
+    </div>
+  );
+};
+
 const SellerOnboarding = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -1294,8 +1488,11 @@ const SellerOnboarding = () => {
     seller?.onboardingToken || localStorage.getItem("sellerOnboardingToken");
   const loading = seller?.loading;
   const flowState = seller?.flowState;
+  const accessToken =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
   const [kycSubmittedApi, setKycSubmittedApi] = useState(false);
+  const [requiresKycRefresh, setRequiresKycRefresh] = useState(false);
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
   const dateOfBirthRef = useRef(null);
@@ -1306,7 +1503,16 @@ const SellerOnboarding = () => {
     aadhaarNumber: "",
     legalName: "",
     businessType: "individual",
-    dateOfBirth: "",
+    dateOfBirth: MAX_DOB_FOR_SELLER,
+    panDocumentFile: null,
+    aadhaarFrontFile: null,
+    aadhaarBackFile: null,
+  });
+  const [documentUrls, setDocumentUrls] = useState({
+    panDocumentUrl: "",
+    gstCertificateUrl: "",
+    aadhaarFrontUrl: "",
+    aadhaarBackUrl: "",
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -1343,27 +1549,252 @@ const SellerOnboarding = () => {
     branchName: "",
   });
 
-  const canAccess = useMemo(() => !!onboardingToken, [onboardingToken]);
+  const canAccess = useMemo(
+    () => !!onboardingToken || !!accessToken,
+    [accessToken, onboardingToken]
+  );
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
   }, [dispatch, onboardingToken]);
 
   useEffect(() => {
+    if (!accessToken) return;
+
+    let isMounted = true;
+    const hydrateSellerOnboarding = async () => {
+      try {
+        const response = await apiRequest("GET", ENDPOINTS.auth.me);
+        if (!isMounted) return;
+
+        const user = response?.data || response || {};
+        const sellerProfile = user?.sellerProfile || {};
+        const kyc = user?.kyc || {};
+        const bankDetails = sellerProfile?.bankDetails || {};
+        const businessAddress = sellerProfile?.businessAddress || {};
+        const pickupAddress = sellerProfile?.pickupAddress || {};
+        const onboarding = user?.onboarding || {};
+        const kycStatus =
+          onboarding?.kycStatus || kyc?.verificationStatus || sellerProfile?.kycStatus;
+        const kycDocuments = kyc?.documents || {};
+        const hasSubmittedKyc =
+          onboarding?.checklist?.kycSubmitted ||
+          ["submitted", "under_review", "verified"].includes(kycStatus);
+        const hasCompleteStoredKyc =
+          !!kyc?.panNumber &&
+          !!kyc?.aadhaarNumber &&
+          !!kycDocuments?.panDocumentUrl &&
+          !!kycDocuments?.aadhaarFrontUrl &&
+          !!kycDocuments?.aadhaarBackUrl;
+        const shouldRefreshKyc =
+          Boolean(hasSubmittedKyc) &&
+          kycStatus !== "rejected" &&
+          !hasCompleteStoredKyc;
+
+        setRequiresKycRefresh(shouldRefreshKyc);
+        setKycSubmittedApi(
+          Boolean(hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc)
+        );
+        setDocumentUrls((prev) => ({
+          ...prev,
+          panDocumentUrl: prev.panDocumentUrl || kycDocuments?.panDocumentUrl || "",
+          gstCertificateUrl:
+            prev.gstCertificateUrl || kycDocuments?.gstCertificateUrl || "",
+          aadhaarFrontUrl:
+            prev.aadhaarFrontUrl || kycDocuments?.aadhaarFrontUrl || "",
+          aadhaarBackUrl: prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
+        }));
+        setKycForm((prev) => ({
+          ...prev,
+          panNumber: prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+          gstNumber: prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
+          aadhaarNumber:
+            prev.aadhaarNumber ||
+            kyc?.aadhaarNumber ||
+            sellerProfile?.aadhaarNumber ||
+            "",
+          legalName:
+            prev.legalName ||
+            kyc?.legalName ||
+            sellerProfile?.legalBusinessName ||
+            sellerProfile?.displayName ||
+            "",
+          businessType:
+            prev.businessType || kyc?.businessType || sellerProfile?.businessType || "individual",
+          dateOfBirth:
+            prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
+        }));
+        setProfileForm((prev) => ({
+          ...prev,
+          businessType: prev.businessType || sellerProfile?.businessType || kyc?.businessType || "",
+          businessName:
+            prev.businessName ||
+            sellerProfile?.businessName ||
+            sellerProfile?.displayName ||
+            "",
+          gstNumber: prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
+          displayName: prev.displayName || sellerProfile?.displayName || "",
+          legalBusinessName:
+            prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
+          supportEmail: prev.supportEmail || sellerProfile?.supportEmail || user?.email || "",
+          supportPhone: prev.supportPhone || sellerProfile?.supportPhone || user?.phone || "",
+          description: prev.description || sellerProfile?.description || "",
+          businessWebsite: prev.businessWebsite || sellerProfile?.businessWebsite || "",
+          registrationNumber:
+            prev.registrationNumber || sellerProfile?.registrationNumber || "",
+          primaryContactName:
+            prev.primaryContactName || sellerProfile?.primaryContactName || "",
+          businessAddressLine1:
+            prev.businessAddressLine1 || businessAddress?.line1 || "",
+          businessAddressLine2:
+            prev.businessAddressLine2 || businessAddress?.line2 || "",
+          businessAddressCity:
+            prev.businessAddressCity || businessAddress?.city || "",
+          businessAddressState:
+            prev.businessAddressState || businessAddress?.state || "",
+          businessAddressCountry:
+            prev.businessAddressCountry || businessAddress?.country || "India",
+          businessAddressPostalCode:
+            prev.businessAddressPostalCode || businessAddress?.postalCode || "",
+          pickupLine1: prev.pickupLine1 || pickupAddress?.line1 || "",
+          pickupLine2: prev.pickupLine2 || pickupAddress?.line2 || "",
+          pickupCity: prev.pickupCity || pickupAddress?.city || "",
+          pickupState: prev.pickupState || pickupAddress?.state || "",
+          pickupCountry: prev.pickupCountry || pickupAddress?.country || "India",
+          pickupPostalCode: prev.pickupPostalCode || pickupAddress?.postalCode || "",
+        }));
+        setBankForm((prev) => ({
+          ...prev,
+          accountHolderName:
+            prev.accountHolderName || bankDetails?.accountHolderName || "",
+          accountNumber: prev.accountNumber || bankDetails?.accountNumber || "",
+          ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
+          bankName: prev.bankName || bankDetails?.bankName || "",
+          branchName: prev.branchName || bankDetails?.branchName || "",
+        }));
+      } catch (error) {
+        toast.error(error?.message || "Unable to load seller account details");
+      }
+    };
+
+    hydrateSellerOnboarding();
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!flowState?.sellerProfile && !flowState?.kyc) return;
+
+    const sellerProfile = flowState?.sellerProfile || {};
+    const kyc = flowState?.kyc || {};
+    const bankDetails = sellerProfile?.bankDetails || {};
+    const businessAddress = sellerProfile?.businessAddress || {};
+    const pickupAddress = sellerProfile?.pickupAddress || {};
+    const kycStatus =
+      flowState?.kycStatus || kyc?.verificationStatus || sellerProfile?.kycStatus;
+    const kycDocuments = kyc?.documents || {};
+    const hasSubmittedKyc =
+      flowState?.checklist?.kycSubmitted ||
+      ["submitted", "under_review", "verified"].includes(kycStatus);
+    const hasCompleteStoredKyc =
+      !!kyc?.panNumber &&
+      !!kyc?.aadhaarNumber &&
+      !!kycDocuments?.panDocumentUrl &&
+      !!kycDocuments?.aadhaarFrontUrl &&
+      !!kycDocuments?.aadhaarBackUrl;
+    const shouldRefreshKyc =
+      Boolean(hasSubmittedKyc) &&
+      kycStatus !== "rejected" &&
+      !hasCompleteStoredKyc;
+
+    setRequiresKycRefresh(shouldRefreshKyc);
+    setKycSubmittedApi(
+      Boolean(hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc)
+    );
+    setDocumentUrls((prev) => ({
+      ...prev,
+      panDocumentUrl: prev.panDocumentUrl || kycDocuments?.panDocumentUrl || "",
+      gstCertificateUrl: prev.gstCertificateUrl || kycDocuments?.gstCertificateUrl || "",
+      aadhaarFrontUrl: prev.aadhaarFrontUrl || kycDocuments?.aadhaarFrontUrl || "",
+      aadhaarBackUrl: prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
+    }));
+    setKycForm((prev) => ({
+      ...prev,
+      panNumber: prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+      gstNumber: prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
+      aadhaarNumber:
+        prev.aadhaarNumber || kyc?.aadhaarNumber || sellerProfile?.aadhaarNumber || "",
+      legalName:
+        prev.legalName ||
+        kyc?.legalName ||
+        sellerProfile?.legalBusinessName ||
+        sellerProfile?.displayName ||
+        "",
+      businessType:
+        prev.businessType || kyc?.businessType || sellerProfile?.businessType || "individual",
+      dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
+    }));
+    setProfileForm((prev) => ({
+      ...prev,
+      businessType: prev.businessType || sellerProfile?.businessType || kyc?.businessType || "",
+      businessName:
+        prev.businessName || sellerProfile?.businessName || sellerProfile?.displayName || "",
+      gstNumber: prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
+      displayName: prev.displayName || sellerProfile?.displayName || "",
+      legalBusinessName: prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
+      supportEmail: prev.supportEmail || sellerProfile?.supportEmail || "",
+      supportPhone: prev.supportPhone || sellerProfile?.supportPhone || "",
+      description: prev.description || sellerProfile?.description || "",
+      businessWebsite: prev.businessWebsite || sellerProfile?.businessWebsite || "",
+      registrationNumber: prev.registrationNumber || sellerProfile?.registrationNumber || "",
+      primaryContactName: prev.primaryContactName || sellerProfile?.primaryContactName || "",
+      businessAddressLine1: prev.businessAddressLine1 || businessAddress?.line1 || "",
+      businessAddressLine2: prev.businessAddressLine2 || businessAddress?.line2 || "",
+      businessAddressCity: prev.businessAddressCity || businessAddress?.city || "",
+      businessAddressState: prev.businessAddressState || businessAddress?.state || "",
+      businessAddressCountry: prev.businessAddressCountry || businessAddress?.country || "India",
+      businessAddressPostalCode:
+        prev.businessAddressPostalCode || businessAddress?.postalCode || "",
+      pickupLine1: prev.pickupLine1 || pickupAddress?.line1 || "",
+      pickupLine2: prev.pickupLine2 || pickupAddress?.line2 || "",
+      pickupCity: prev.pickupCity || pickupAddress?.city || "",
+      pickupState: prev.pickupState || pickupAddress?.state || "",
+      pickupCountry: prev.pickupCountry || pickupAddress?.country || "India",
+      pickupPostalCode: prev.pickupPostalCode || pickupAddress?.postalCode || "",
+    }));
+    setBankForm((prev) => ({
+      ...prev,
+      accountHolderName: prev.accountHolderName || bankDetails?.accountHolderName || "",
+      accountNumber: prev.accountNumber || bankDetails?.accountNumber || "",
+      ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
+      bankName: prev.bankName || bankDetails?.bankName || "",
+      branchName: prev.branchName || bankDetails?.branchName || "",
+    }));
+  }, [flowState]);
+
+  useEffect(() => {
     if (!flowState) return;
     const profileCompleted =
       !!flowState?.checklist?.profileCompleted ||
       !!flowState?.requirements?.profile?.completed;
+    const bankRejected =
+      flowState?.bankVerificationStatus === "rejected" ||
+      flowState?.sellerProfile?.bankVerificationStatus === "rejected";
     const bankLinked =
-      !!flowState?.checklist?.bankLinked ||
-      !!flowState?.requirements?.bankDetails?.completed;
+      !bankRejected &&
+      (!!flowState?.checklist?.bankLinked ||
+        !!flowState?.requirements?.bankDetails?.completed);
     const kycSubmitted =
-      !!flowState?.checklist?.kycSubmitted ||
-      ["submitted", "under_review", "verified"].includes(flowState?.kycStatus);
+      !requiresKycRefresh &&
+      (!!flowState?.checklist?.kycSubmitted ||
+        ["submitted", "under_review", "verified"].includes(flowState?.kycStatus));
     const statusMeansReview =
       flowState?.kycStatus === "submitted" ||
       flowState?.kycStatus === "under_review" ||
       flowState?.onboardingStatus === "under_review";
+
+    setKycSubmittedApi(Boolean(kycSubmitted && flowState?.kycStatus !== "rejected"));
 
     if (
       flowState?.accountStatus === "active" &&
@@ -1374,6 +1805,14 @@ const SellerOnboarding = () => {
     }
     if (flowState?.kycStatus === "rejected") {
       setStep(1);
+      return;
+    }
+    if (requiresKycRefresh) {
+      setStep(1);
+      return;
+    }
+    if (bankRejected && profileCompleted && kycSubmitted) {
+      setStep(3);
       return;
     }
     if (statusMeansReview && profileCompleted && bankLinked) {
@@ -1394,7 +1833,7 @@ const SellerOnboarding = () => {
     }
 
     setStep(1);
-  }, [flowState, navigate, setStep]);
+  }, [flowState, navigate, requiresKycRefresh, setStep]);
 
   if (!canAccess) return <Navigate to="/login" />;
 
@@ -1418,10 +1857,57 @@ const SellerOnboarding = () => {
     setKycErrors((prev) => ({ ...prev, [name]: null }));
   };
 
+  const openDatePicker = () => {
+    const input = dateOfBirthRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+      return;
+    }
+    input.focus();
+    input.click();
+  };
+
+  const onKycDocumentFileChange = (fieldName) => (event) => {
+    const file = event.target.files?.[0] || null;
+    setKycForm((prev) => ({ ...prev, [fieldName]: file }));
+    const urlFieldMap = {
+      panDocumentFile: "panDocumentUrl",
+      aadhaarFrontFile: "aadhaarFrontUrl",
+      aadhaarBackFile: "aadhaarBackUrl",
+    };
+    if (file && urlFieldMap[fieldName]) {
+      setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
+    }
+    setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
+    event.target.value = "";
+  };
+
+  const onKycDocumentDrop = (fieldName) => (event) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0] || null;
+    if (!file) return;
+    setKycForm((prev) => ({ ...prev, [fieldName]: file }));
+    const urlFieldMap = {
+      panDocumentFile: "panDocumentUrl",
+      aadhaarFrontFile: "aadhaarFrontUrl",
+      aadhaarBackFile: "aadhaarBackUrl",
+    };
+    if (urlFieldMap[fieldName]) {
+      setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
+    }
+    setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
+  };
+
   const onGstCertificateFileChange = (event) => {
     const file = event.target.files?.[0] || null;
     setProfileForm((prev) => ({ ...prev, gstCertificateFile: file }));
+    if (file) {
+      setDocumentUrls((prev) => ({ ...prev, gstCertificateUrl: "" }));
+    }
     setProfileErrors((prev) => ({ ...prev, gstCertificateFile: null }));
+    setKycErrors((prev) => ({ ...prev, gstCertificateFile: null }));
+    event.target.value = "";
   };
 
   const onGstCertificateDrop = (event) => {
@@ -1429,7 +1915,9 @@ const SellerOnboarding = () => {
     const file = event.dataTransfer.files?.[0] || null;
     if (!file) return;
     setProfileForm((prev) => ({ ...prev, gstCertificateFile: file }));
+    setDocumentUrls((prev) => ({ ...prev, gstCertificateUrl: "" }));
     setProfileErrors((prev) => ({ ...prev, gstCertificateFile: null }));
+    setKycErrors((prev) => ({ ...prev, gstCertificateFile: null }));
   };
 
   const onProfileChange = (event) => {
@@ -1455,24 +1943,62 @@ const SellerOnboarding = () => {
   const validateKyc = () => {
     const errors = {};
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
-    if (!kycForm.dateOfBirth.trim())
+    if (!kycForm.dateOfBirth.trim()) {
       errors.dateOfBirth = "Date of birth is required";
+    } else if (kycForm.dateOfBirth > MAX_DOB_FOR_SELLER) {
+      errors.dateOfBirth = "Seller must be at least 18 years old";
+    }
     if (!kycForm.businessType.trim())
       errors.businessType = "Business type is required";
     if (!PAN_REGEX.test(kycForm.panNumber.trim()))
       errors.panNumber = "PAN format should be like ABCDE1234F";
+    if (!kycForm.panDocumentFile && !documentUrls.panDocumentUrl)
+      errors.panDocumentFile = "PAN document is required";
     if (kycForm.gstNumber.trim() && !GST_REGEX.test(kycForm.gstNumber.trim())) {
       errors.gstNumber = "GST format is invalid";
     }
-    if (
-      kycForm.aadhaarNumber.trim() &&
-      !AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())
-    ) {
+    if (!kycForm.aadhaarNumber.trim()) {
+      errors.aadhaarNumber = "Aadhaar number is required";
+    } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
       errors.aadhaarNumber = "Aadhaar must be 12 digits";
     }
+    if (!kycForm.aadhaarFrontFile && !documentUrls.aadhaarFrontUrl)
+      errors.aadhaarFrontFile = "Aadhaar front image is required";
+    if (!kycForm.aadhaarBackFile && !documentUrls.aadhaarBackUrl)
+      errors.aadhaarBackFile = "Aadhaar back image is required";
     setKycErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  const getDocumentUploadValue = async (file, existingUrl) =>
+    file ? readFileAsUploadPayload(file) : existingUrl || null;
+
+  const buildKycPayload = async () => ({
+    panNumber: kycForm.panNumber.trim(),
+    gstNumber: (profileForm.gstNumber || kycForm.gstNumber).trim(),
+    aadhaarNumber: kycForm.aadhaarNumber.trim(),
+    legalName: kycForm.legalName.trim(),
+    businessType: profileForm.businessType || kycForm.businessType,
+    dateOfBirth: kycForm.dateOfBirth,
+    documents: {
+      panDocumentUrl: await getDocumentUploadValue(
+        kycForm.panDocumentFile,
+        documentUrls.panDocumentUrl
+      ),
+      gstCertificateUrl: await getDocumentUploadValue(
+        profileForm.gstCertificateFile,
+        documentUrls.gstCertificateUrl
+      ),
+      aadhaarFrontUrl: await getDocumentUploadValue(
+        kycForm.aadhaarFrontFile,
+        documentUrls.aadhaarFrontUrl
+      ),
+      aadhaarBackUrl: await getDocumentUploadValue(
+        kycForm.aadhaarBackFile,
+        documentUrls.aadhaarBackUrl
+      ),
+    },
+  });
 
   const validateProfile = () => {
     const errors = {};
@@ -1482,7 +2008,7 @@ const SellerOnboarding = () => {
       errors.businessName = "Business name is required";
     if (!GST_REGEX.test(profileForm.gstNumber.trim()))
       errors.gstNumber = "GST format is invalid";
-    if (!profileForm.gstCertificateFile)
+    if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
       errors.gstCertificateFile = "GST certificate is required";
     if (!profileForm.supportEmail.trim())
       errors.supportEmail = "Support email is required";
@@ -1527,29 +2053,20 @@ const SellerOnboarding = () => {
   const submitKycStep = async (event) => {
     event.preventDefault();
     if (!validateKyc()) return;
-    try {
-      const kycPayload = {
-        panNumber: kycForm.panNumber.trim(),
-        gstNumber: kycForm.gstNumber.trim(),
-        aadhaarNumber: kycForm.aadhaarNumber.trim(),
-        legalName: kycForm.legalName.trim(),
-        businessType: kycForm.businessType,
-        dateOfBirth: kycForm.dateOfBirth,
-      };
-      await dispatch(submitSellerKyc(kycPayload)).unwrap();
-      setKycSubmittedApi(true);
-      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
-      setStep(2);
-    } catch (error) {
-      const parsed = parseApiError(error, "Unable to submit KYC");
-      setBackendFieldErrors(parsed.details, setKycErrors);
-      toast.error(parsed.message);
-    }
+    setProfileForm((prev) => ({
+      ...prev,
+      businessType: prev.businessType || kycForm.businessType,
+      gstNumber: prev.gstNumber || kycForm.gstNumber,
+    }));
+    setStep(2);
   };
 
   const submitBusinessStep = async (event) => {
     event.preventDefault();
-    if (!validateProfile()) return;
+    if (!validateProfile()) {
+      setStep(2);
+      return;
+    }
     setStep(3);
   };
 
@@ -1568,62 +2085,77 @@ const SellerOnboarding = () => {
       setProfileErrors((prev) => ({ ...prev, ...errors }));
       return;
     }
+    const bankRejected =
+      flowState?.bankVerificationStatus === "rejected" ||
+      flowState?.sellerProfile?.bankVerificationStatus === "rejected" ||
+      Boolean(flowState?.bankRejectionReason || flowState?.sellerProfile?.bankRejectionReason);
+    if (bankRejected) {
+      await submitFinalOnboarding();
+      return;
+    }
     setStep(4);
   };
 
   const submitFinalOnboarding = async () => {
-    if (!validateProfile()) return;
+    if (!kycSubmittedApi && !validateKyc()) {
+      setStep(1);
+      return;
+    }
+    if (!validateProfile()) {
+      setStep(2);
+      return;
+    }
+    const shouldSubmitKyc = !kycSubmittedApi;
     try {
-      if (!kycSubmittedApi) {
-        const kycPayload = {
-          panNumber: kycForm.panNumber.trim(),
-          gstNumber: kycForm.gstNumber.trim(),
-          aadhaarNumber: kycForm.aadhaarNumber.trim(),
-          legalName: kycForm.legalName.trim(),
-          businessType: kycForm.businessType,
-          dateOfBirth: kycForm.dateOfBirth,
-        };
+      if (shouldSubmitKyc) {
+        const kycPayload = await buildKycPayload();
         await dispatch(submitSellerKyc(kycPayload)).unwrap();
+        setKycSubmittedApi(true);
+        setRequiresKycRefresh(false);
       }
       const payload = {
-        displayName: profileForm.displayName || profileForm.businessName,
+        displayName:
+          profileForm.displayName.trim() || profileForm.businessName.trim(),
         legalBusinessName:
-          profileForm.legalBusinessName || profileForm.businessName,
-        description: profileForm.description,
-        supportEmail: profileForm.supportEmail,
-        supportPhone: profileForm.supportPhone,
+          profileForm.legalBusinessName.trim() || profileForm.businessName.trim(),
+        description: profileForm.description.trim(),
+        supportEmail: profileForm.supportEmail.trim(),
+        supportPhone: profileForm.supportPhone.trim(),
         businessType: profileForm.businessType,
-        registrationNumber: profileForm.registrationNumber,
-        gstNumber: profileForm.gstNumber,
-        panNumber: kycForm.panNumber,
-        aadhaarNumber: kycForm.aadhaarNumber,
-        dateOfBirth: kycForm.dateOfBirth,
-        businessWebsite: profileForm.businessWebsite,
-        primaryContactName: profileForm.primaryContactName || kycForm.legalName,
+        registrationNumber: profileForm.registrationNumber.trim(),
+        gstNumber: profileForm.gstNumber.trim(),
+        businessWebsite: profileForm.businessWebsite.trim(),
+        primaryContactName:
+          profileForm.primaryContactName.trim() || kycForm.legalName.trim(),
         businessAddress: {
-          line1: profileForm.businessAddressLine1,
-          line2: profileForm.businessAddressLine2,
-          city: profileForm.businessAddressCity,
-          state: profileForm.businessAddressState,
-          country: profileForm.businessAddressCountry || "India",
-          postalCode: profileForm.businessAddressPostalCode,
+          line1: profileForm.businessAddressLine1.trim(),
+          line2: profileForm.businessAddressLine2.trim(),
+          city: profileForm.businessAddressCity.trim(),
+          state: profileForm.businessAddressState.trim(),
+          country: profileForm.businessAddressCountry.trim() || "India",
+          postalCode: profileForm.businessAddressPostalCode.trim(),
         },
         pickupAddress: {
-          line1: profileForm.pickupLine1,
-          line2: profileForm.pickupLine2,
-          city: profileForm.pickupCity,
-          state: profileForm.pickupState,
-          country: profileForm.pickupCountry || "India",
-          postalCode: profileForm.pickupPostalCode,
+          line1: profileForm.pickupLine1.trim(),
+          line2: profileForm.pickupLine2.trim(),
+          city: profileForm.pickupCity.trim(),
+          state: profileForm.pickupState.trim(),
+          country: profileForm.pickupCountry.trim() || "India",
+          postalCode: profileForm.pickupPostalCode.trim(),
         },
         bankDetails: {
-          accountHolderName: bankForm.accountHolderName,
-          accountNumber: bankForm.accountNumber,
-          ifscCode: bankForm.ifscCode,
-          bankName: bankForm.bankName,
-          branchName: bankForm.branchName,
+          accountHolderName: bankForm.accountHolderName.trim(),
+          accountNumber: bankForm.accountNumber.trim(),
+          ifscCode: bankForm.ifscCode.trim(),
+          bankName: bankForm.bankName.trim(),
+          branchName: bankForm.branchName.trim(),
         },
       };
+      if (kycForm.panNumber.trim()) payload.panNumber = kycForm.panNumber.trim();
+      if (kycForm.aadhaarNumber.trim())
+        payload.aadhaarNumber = kycForm.aadhaarNumber.trim();
+      if (shouldSubmitKyc && kycForm.dateOfBirth)
+        payload.dateOfBirth = kycForm.dateOfBirth;
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       setStep(5);
@@ -1645,37 +2177,55 @@ const SellerOnboarding = () => {
   };
 
   if (step === 5) {
+    const isRejected = flowState?.kycStatus === "rejected";
     return (
-      <div className="min-h-screen w-full flex items-center justify-center  px-4">
-        <div className="w-full max-w-lg text-center p-8">
-          <h2 className="text-2xl font-semibold mb-2">
-            {flowState?.kycStatus === "rejected"
-              ? "KYC Rejected"
-              : "Verification In Progress"}
+      <div className="min-h-screen w-full bg-white flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div
+            className={`mx-auto mb-5 flex h-[110px] w-[110px] items-center justify-center rounded-full ${
+              isRejected ? "bg-red-700" : "bg-[#30318d]"
+            }`}
+          >
+            <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full border border-[#d09a2b]">
+              <Hourglass
+                size={54}
+                strokeWidth={2.6}
+                className="text-white"
+              />
+            </div>
+          </div>
+
+          <h2 className="mb-5 text-center font-montserrat text-[24px] leading-[40px] tracking-normal text-[#2E2E2E]">
+            {isRejected ? (
+              <span className="font-bold">KYC Rejected</span>
+            ) : (
+              <>
+                <span className="font-semibold">
+                  Your Account is Under Review
+                </span>
+                <br />
+                <span className="font-bold">(24-48 hrs)</span>
+              </>
+            )}
           </h2>
 
-          {flowState?.kycStatus === "rejected" ? (
-            <p className="text-gray-600 mb-6">
+          {isRejected && (
+            <p className="mx-auto mb-5 max-w-sm text-sm text-gray-600">
               {flowState?.kycRejectionReason ||
                 "Your KYC was rejected. Please update details and submit again."}
             </p>
-          ) : (
-            <p className="text-gray-600 mb-6">
-              Your verification is in progress. KYC status:{" "}
-              {flowState?.kycStatus || "under_review"}.
-            </p>
           )}
 
-          <button
-            type="button"
-            className="px-4 py-2 rounded bg-blue-600 text-white"
-            onClick={() => {
-              dispatch(clearSellerOnboarding());
-              navigate("/login");
-            }}
-          >
-            Back To Login
-          </button>
+<button
+  type="button"
+  className="rounded-full bg-gradient-to-r from-[#d7ab4a] to-[#b8831f] px-7 py-3 text-[14px] font-semibold text-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] transition-all duration-200 hover:from-[#c99a35] hover:to-[#a87416]"
+  onClick={() => {
+    dispatch(clearSellerOnboarding());
+    navigate("/login");
+  }}
+>
+  Return To Main Page
+</button>
         </div>
       </div>
     );
@@ -1729,24 +2279,44 @@ const SellerOnboarding = () => {
               <div>
                 <div className="relative">
                   <div
-                    className={`${DATE_FIELD_CLASS} pointer-events-none flex items-center justify-between gap-3 ${
+                    className={`${DATE_FIELD_CLASS} flex items-center justify-between gap-3 ${
                       kycForm.dateOfBirth ? "text-gray-800" : "text-gray-400"
                     }`}
+                    onClick={openDatePicker}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openDatePicker();
+                      }
+                    }}
                   >
                     <span>
                       {kycForm.dateOfBirth
                         ? formatDateForDisplay(kycForm.dateOfBirth)
                         : "Date of Birth*"}
                     </span>
-                    <FaCalendarAlt className="shrink-0 text-[18px] text-[#c99528]" />
+                    <button
+                      type="button"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-[#c99528] transition hover:bg-amber-100"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openDatePicker();
+                      }}
+                      aria-label="Open date picker"
+                    >
+                      <FaCalendarAlt className="shrink-0 text-[18px]" />
+                    </button>
                   </div>
                   <input
                     ref={dateOfBirthRef}
                     id="dateOfBirth"
                     name="dateOfBirth"
                     type="date"
-                    className="absolute inset-0 h-[35px] w-full cursor-pointer opacity-0"
+                    className="pointer-events-none absolute inset-0 h-[35px] w-full opacity-0"
                     value={kycForm.dateOfBirth}
+                    max={MAX_DOB_FOR_SELLER}
                     onChange={onKycChange}
                     aria-label="Date of Birth"
                   />
@@ -1827,6 +2397,48 @@ const SellerOnboarding = () => {
                   <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>
                 )}
               </div>
+
+              <DocumentUploadField
+                id="aadhaarFrontFile"
+                label="Upload Aadhaar Front Image"
+                required
+                file={kycForm.aadhaarFrontFile}
+                existingUrl={documentUrls.aadhaarFrontUrl}
+                error={kycErrors.aadhaarFrontFile}
+                accept={KYC_IMAGE_ACCEPT}
+                onDrop={onKycDocumentDrop("aadhaarFrontFile")}
+                onChange={onKycDocumentFileChange("aadhaarFrontFile")}
+                emptyText="Drag Aadhaar front image here"
+              />
+
+              <DocumentUploadField
+                id="aadhaarBackFile"
+                label="Upload Aadhaar Back Image"
+                required
+                file={kycForm.aadhaarBackFile}
+                existingUrl={documentUrls.aadhaarBackUrl}
+                error={kycErrors.aadhaarBackFile}
+                accept={KYC_IMAGE_ACCEPT}
+                onDrop={onKycDocumentDrop("aadhaarBackFile")}
+                onChange={onKycDocumentFileChange("aadhaarBackFile")}
+                emptyText="Drag Aadhaar back image here"
+              />
+
+              <div className="md:col-span-2">
+                <DocumentUploadField
+                  id="panDocumentFile"
+                  label="Upload PAN Document"
+                  required
+                  file={kycForm.panDocumentFile}
+                  existingUrl={documentUrls.panDocumentUrl}
+                  error={kycErrors.panDocumentFile}
+                  accept={KYC_DOCUMENT_ACCEPT}
+                  onDrop={onKycDocumentDrop("panDocumentFile")}
+                  onChange={onKycDocumentFileChange("panDocumentFile")}
+                  emptyText="Drag PAN file here"
+                />
+              </div>
+
             </div>
 
             <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -1914,51 +2526,18 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
-                  Upload GST Certificate {STEP_ONE_REQUIRED}
-                </label>
-                <div
-                  className="min-h-[122px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
-                  onDragOver={(event) => event.preventDefault()}
+                <DocumentUploadField
+                  id="gstCertificateFile"
+                  label="Upload GST Certificate"
+                  required
+                  file={profileForm.gstCertificateFile}
+                  existingUrl={documentUrls.gstCertificateUrl}
+                  error={profileErrors.gstCertificateFile}
+                  accept={KYC_DOCUMENT_ACCEPT}
                   onDrop={onGstCertificateDrop}
-                >
-                  {profileForm.gstCertificateFile ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <AiOutlineShoppingCart
-                        size={18}
-                        className="text-[#c99528]"
-                      />
-                      {profileForm.gstCertificateFile.name}
-                    </div>
-                  ) : (
-                    <>
-                      <UploadCloud size={24} className="mb-2 text-[#c99528]" />
-                      <p className="text-sm text-gray-600 mb-2">
-                        Drag Your File Here
-                      </p>
-                      <p className="text-xs text-gray-400 mb-2">OR</p>
-                      <label
-                        htmlFor="gstCertificateFile"
-                        className="px-4 py-2 rounded-full bg-[#c99528] text-white text-xs font-medium cursor-pointer hover:bg-[#b27a25] transition"
-                      >
-                        Browse
-                      </label>
-                    </>
-                  )}
-                  <input
-                    id="gstCertificateFile"
-                    name="gstCertificateFile"
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={onGstCertificateFileChange}
-                  />
-                </div>
-                {profileErrors.gstCertificateFile && (
-                  <p className={ERROR_CLASS}>
-                    {profileErrors.gstCertificateFile}
-                  </p>
-                )}
+                  onChange={onGstCertificateFileChange}
+                  emptyText="Drag GST certificate here"
+                />
               </div>
 
               <div>
@@ -2047,7 +2626,7 @@ const SellerOnboarding = () => {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
-                  Business Website
+                  Business Website (Optional)
                 </label>
                 <input
                   name="businessWebsite"
@@ -2275,6 +2854,24 @@ const SellerOnboarding = () => {
               Bank Details
             </h2>
 
+            {(flowState?.bankVerificationStatus === "rejected" ||
+              flowState?.sellerProfile?.bankVerificationStatus === "rejected") &&
+              (flowState?.bankRejectionReason ||
+                flowState?.sellerProfile?.bankRejectionReason) && (
+                <div className="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-red-700">
+                    Bank Rejection Reason
+                  </p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {flowState.bankRejectionReason ||
+                      flowState.sellerProfile.bankRejectionReason}
+                  </p>
+                  <p className="mt-2 text-xs font-medium text-red-700">
+                    Please update your bank details and submit again for review.
+                  </p>
+                </div>
+              )}
+
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
@@ -2424,6 +3021,40 @@ const SellerOnboarding = () => {
                       </p>
                     </div>
                   )}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">PAN Document</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <FileText size={18} className="text-[#c99528]" />
+                      <span className="truncate">
+                        {kycForm.panDocumentFile?.name ||
+                          getFileNameFromUrl(documentUrls.panDocumentUrl, "-")}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Aadhaar Front Image
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <FileText size={18} className="text-[#c99528]" />
+                      <span className="truncate">
+                        {kycForm.aadhaarFrontFile?.name ||
+                          getFileNameFromUrl(documentUrls.aadhaarFrontUrl, "-")}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Aadhaar Back Image
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <FileText size={18} className="text-[#c99528]" />
+                      <span className="truncate">
+                        {kycForm.aadhaarBackFile?.name ||
+                          getFileNameFromUrl(documentUrls.aadhaarBackUrl, "-")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2456,7 +3087,7 @@ const SellerOnboarding = () => {
                       {profileForm.gstNumber || "-"}
                     </p>
                   </div>
-                  {profileForm.gstCertificateFile && (
+                  {(profileForm.gstCertificateFile || documentUrls.gstCertificateUrl) && (
                     <div className="md:col-span-2">
                       <p className="text-xs text-gray-500 mb-1">
                         GST Certificate
@@ -2466,7 +3097,10 @@ const SellerOnboarding = () => {
                           size={18}
                           className="text-[#c99528]"
                         />
-                        {profileForm.gstCertificateFile.name}
+                        <span className="truncate">
+                          {profileForm.gstCertificateFile?.name ||
+                            getFileNameFromUrl(documentUrls.gstCertificateUrl, "-")}
+                        </span>
                       </div>
                     </div>
                   )}
