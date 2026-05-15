@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import VerificationDecisionModal from '../../../components/Seller/VerificationDecisionModal';
 import OnboardingChecklist from '../../../components/Seller/OnboardingChecklist';
 import SellerKycCard from '../../../components/Seller/SellerKycCard';
+import { uploadFile } from '../../../_helpers/globalFunctions';
 
 // ─── small display helpers ────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ const UserDetails = () => {
     supportEmail: '',
     supportPhone: '',
     businessType: '',
+    avatarUrl: '',
   });
 
   const isSeller = user.role === 'seller';
@@ -158,9 +160,10 @@ const UserDetails = () => {
       supportEmail:      sellerProfile.supportEmail      || user.email || '',
       supportPhone:      sellerProfile.supportPhone      || user.phone || '',
       businessType:      sellerProfile.businessType      || '',
+      avatarUrl:         profile.avatarUrl || user.user_image || '',
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sellerProfile.displayName, sellerProfile.legalBusinessName, user.email, user.phone]);
+  }, [sellerProfile.displayName, sellerProfile.legalBusinessName, user.email, user.phone, profile.avatarUrl]);
 
   const refresh = useCallback(() => dispatch(getAdminUserDetails({ _id: id })), [dispatch, id]);
 
@@ -236,11 +239,49 @@ const UserDetails = () => {
   };
 
   // ── Profile save ──────────────────────────────────────────────────────────
+  const handleSellerAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type?.startsWith('image/')) {
+      toast.error('Please upload a valid image');
+      return;
+    }
+
+    try {
+      const imageUrl = await uploadFile(file, 'PROFILES');
+      setEditSeller((prev) => ({ ...prev, avatarUrl: imageUrl }));
+      toast.success('Seller image uploaded');
+    } catch (error) {
+      toast.error(error?.message || 'Failed to upload seller image');
+    }
+  };
+
   const handleSaveSellerProfile = async (e) => {
     e.preventDefault();
     try {
+      const firstName = profile.firstName || editSeller.displayName?.split(/\s+/)?.[0] || 'Seller';
+      const lastName =
+        profile.lastName ||
+        editSeller.displayName?.split(/\s+/)?.slice(1).join(' ') ||
+        'User';
       const res = await dispatch(
-        updateSeller({ _id: id, sellerProfile: { ...editSeller } }),
+        updateSeller({
+          _id: id,
+          profile: {
+            firstName,
+            lastName,
+            avatarUrl: editSeller.avatarUrl || '',
+          },
+          sellerProfile: {
+            displayName: editSeller.displayName,
+            legalBusinessName: editSeller.legalBusinessName,
+            supportEmail: editSeller.supportEmail,
+            supportPhone: editSeller.supportPhone,
+            businessType: editSeller.businessType,
+          },
+        }),
       ).unwrap();
       toast.success(res?.message || 'Seller details updated');
       refresh();
@@ -477,6 +518,33 @@ const UserDetails = () => {
               {/* Editable Fields */}
               <form className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveSellerProfile}>
                 <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-2">Edit Core Fields</p>
+                <div className="md:col-span-2 flex items-center gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
+                  <img
+                    src={editSeller.avatarUrl || '/Img/user.png'}
+                    alt="Seller"
+                    className="h-16 w-16 rounded-full border border-gray-200 bg-white object-cover"
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                      Upload Seller Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleSellerAvatarUpload}
+                      />
+                    </label>
+                    {editSeller.avatarUrl && (
+                      <button
+                        type="button"
+                        className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-white"
+                        onClick={() => setEditSeller((prev) => ({ ...prev, avatarUrl: '' }))}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <FormInput
                   label="Display Name"
                   name="displayName"

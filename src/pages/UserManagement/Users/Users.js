@@ -17,7 +17,7 @@ import Loader from '../../../components/Loader/Loader';
 import { useNavigate } from 'react-router';
 import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox';
 import { Link } from 'react-router-dom';
-import { formatDateForDisplay } from '../../../_helpers/globalFunctions';
+import { formatDateForDisplay, uploadFile } from '../../../_helpers/globalFunctions';
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -32,6 +32,7 @@ const Users = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    avatarUrl: '',
     isDisable: false
   });
   const [errors, setErrors] = useState({});
@@ -229,9 +230,27 @@ const Users = () => {
       email: '',
       password: '',
       confirmPassword: '',
+      avatarUrl: '',
       isDisable: false
     });
     setErrors({});
+  };
+
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0] || null;
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Only JPG, PNG, and WEBP images are allowed');
+      return;
+    }
+    try {
+      const imageUrl = await uploadFile(file, 'USER_AVATAR');
+      setForm((prev) => ({ ...prev, avatarUrl: imageUrl }));
+      toast.success('Profile image uploaded');
+    } catch (error) {
+      toast.error(error?.message || error || 'Failed to upload profile image');
+    }
   };
 
   const handleAddUserSubmit = (e) => {
@@ -245,6 +264,7 @@ const Users = () => {
       email: formData.email,
       password: formData.password,
       confirmPassword: formData.confirmPassword,
+      avatarUrl: formData.avatarUrl,
       isDisable: formData.isDisable
     };
 
@@ -287,8 +307,13 @@ const Users = () => {
       checked={selectedRow.includes(user._id)}
       onChange={(e) => handleRowCheckboxChange(e, user._id)}
     />,
-    <span className="capitalize">
-      {user?.full_name || user?.profile?.firstName || "N/A"}
+    <span className="flex items-center gap-2 capitalize">
+      <img
+        src={user?.profile?.avatarUrl || '/Img/noData.png'}
+        alt={user?.profile?.firstName || user?.full_name || 'User'}
+        className="h-9 w-9 rounded-full border border-gray-200 object-cover bg-gray-50"
+      />
+      <span>{user?.full_name || [user?.profile?.firstName, user?.profile?.lastName].filter(Boolean).join(' ') || "N/A"}</span>
     </span>,
     <span>{user?.email || 'N/A'}</span>,
     <span key={`phone-${user._id}`}>
@@ -312,9 +337,10 @@ const Users = () => {
         onEdit={() => {
           setForm({
             _id: user._id,
-            full_name: user.full_name,
+            full_name: user.full_name || [user?.profile?.firstName, user?.profile?.lastName].filter(Boolean).join(' '),
             userName: user.userName,
             email: user.email,
+            avatarUrl: user?.profile?.avatarUrl || '',
             isDisable: user.isDisable
           });
           setIsEditModal(true);
@@ -403,6 +429,7 @@ const Users = () => {
       email: '',
       password: '',
       confirmPassword: '',
+      avatarUrl: '',
       isDisable: false
     });
     setErrors({});
@@ -461,6 +488,7 @@ const Users = () => {
       full_name: formData.full_name,
       // userName: formData.userName,
       email: formData.email,
+      avatarUrl: formData.avatarUrl,
       isDisable: formData.isDisable
     };
 
@@ -612,6 +640,38 @@ const Users = () => {
               required
             />
           </div>
+          <div className='p-4'>
+            <label className="label block text-sm font-medium text-gray-700 mb-1">
+              Profile Image
+            </label>
+            <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
+              <img
+                src={formData.avatarUrl || '/Img/noData.png'}
+                alt="Profile preview"
+                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
+              />
+              <div>
+                <label className="inline-flex cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                  Upload Image
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </label>
+                {formData.avatarUrl && (
+                  <button
+                    type="button"
+                    className="ml-3 text-xs text-red-600 hover:underline"
+                    onClick={() => setForm((prev) => ({ ...prev, avatarUrl: '' }))}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <div className='p-4 flex space-x-4'>
             <div className="w-1/2">
               <FormInput
@@ -699,6 +759,38 @@ const Users = () => {
               maxLength={50}
               required
             />
+          </div>
+          <div className='p-4'>
+            <label className="label block text-sm font-medium text-gray-700 mb-1">
+              Profile Image
+            </label>
+            <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
+              <img
+                src={formData.avatarUrl || '/Img/noData.png'}
+                alt="Profile preview"
+                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
+              />
+              <div>
+                <label className="inline-flex cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                  Change Image
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </label>
+                {formData.avatarUrl && (
+                  <button
+                    type="button"
+                    className="ml-3 text-xs text-red-600 hover:underline"
+                    onClick={() => setForm((prev) => ({ ...prev, avatarUrl: '' }))}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className='flex justify-between items-center border p-3'>
             <p className="font-medium text-sm">Status</p>

@@ -543,9 +543,16 @@ const Sellers = () => {
           key={`checkbox-${user._id}`}
         />,
        
-        <span key={`name-${user._id}`} className="capitalize">
-            {user?.full_name || user?.sellerProfile?.displayName || user?.profile?.firstName || "N/A"}
-        </span>,
+        <div key={`name-${user._id}`} className="flex items-center gap-2">
+            <img
+                src={user?.profile?.avatarUrl || '/Img/noData.png'}
+                alt=""
+                className="h-9 w-9 rounded-full border border-gray-200 bg-gray-50 object-cover"
+            />
+            <span className="capitalize">
+                {user?.full_name || user?.sellerProfile?.displayName || user?.profile?.firstName || "N/A"}
+            </span>
+        </div>,
         <span key={`business-${user._id}`}>
             {user?.sellerProfile?.businessName || user?.sellerProfile?.legalBusinessName || "N/A"}
         </span>,

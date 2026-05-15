@@ -20,7 +20,11 @@ const getDisplayName = (user = {}) => {
 };
 
 const getAvatarUrl = (user = {}) =>
-  user.user_image || user.profile?.avatarUrl || "/Img/user.png";
+  user.user_image ||
+  user.avatarUrl ||
+  user.profile?.avatarUrl ||
+  user.sellerProfile?.avatarUrl ||
+  "/Img/user.png";
 
 const getHeaderDescription = (path = "") => {
   if (path.includes("/country")) {
@@ -115,6 +119,21 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const handleProfileUpdated = (event) => {
+      if (event.detail) {
+        setUserData(event.detail);
+      } else {
+        fetchUserData();
+      }
+    };
+
+    window.addEventListener('profile:updated', handleProfileUpdated);
+    return () => {
+      window.removeEventListener('profile:updated', handleProfileUpdated);
+    };
+  }, [fetchUserData]);
 
 
 

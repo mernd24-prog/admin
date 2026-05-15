@@ -61,11 +61,37 @@ export const splitName = (fullName = "") => {
   };
 };
 
+const isUrl = (value) => {
+  try {
+    return Boolean(value) && Boolean(new URL(value));
+  } catch {
+    return false;
+  }
+};
+
 export const toProfile = (payload = {}, requireLastName = false) => {
+  const hasAvatarInput =
+    Object.prototype.hasOwnProperty.call(payload, "avatarUrl") ||
+    Object.prototype.hasOwnProperty.call(payload, "user_image") ||
+    Object.prototype.hasOwnProperty.call(payload, "profileImage") ||
+    Object.prototype.hasOwnProperty.call(payload.profile || {}, "avatarUrl");
+  const avatarUrl =
+    payload.avatarUrl ||
+    payload.user_image ||
+    payload.profileImage ||
+    payload.profile?.avatarUrl ||
+    "";
+  const avatarPatch = isUrl(avatarUrl)
+    ? { avatarUrl }
+    : hasAvatarInput
+      ? { avatarUrl: avatarUrl || "" }
+      : {};
+
   if (payload.profile?.firstName) {
     return {
       firstName: payload.profile.firstName,
       lastName: payload.profile.lastName || (requireLastName ? "User" : ""),
+      ...avatarPatch,
     };
   }
 
@@ -73,6 +99,7 @@ export const toProfile = (payload = {}, requireLastName = false) => {
   return {
     firstName: name.firstName,
     lastName: name.lastName || (requireLastName ? "User" : ""),
+    ...avatarPatch,
   };
 };
 
