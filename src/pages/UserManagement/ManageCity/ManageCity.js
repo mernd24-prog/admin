@@ -17,6 +17,17 @@ import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
 import { Link } from 'react-router-dom'
 
 const size = 10
+
+const extractListPayload = (payload = {}) => {
+  const data = payload?.data || payload;
+  const nestedData = data?.data || data;
+  const list = nestedData?.list || nestedData?.items || [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: Number(nestedData?.total || list.length || 0),
+  };
+};
+
 const ManageCity = () => {
   const dispatch = useDispatch();
   const selector = useSelector(state => state)
@@ -58,11 +69,7 @@ const ManageCity = () => {
     setIsLoading(true)
     dispatch(getCityList(query))
       .then((res) => {
-        if (res?.payload?.data?.data) {
-          setApiRes(res.payload.data.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
+        setApiRes(extractListPayload(res?.payload));
       })
       .catch((err) => {
         console.error("Error fetching cities:", err);
@@ -290,9 +297,10 @@ const ManageCity = () => {
             totalData={apiRes?.total}
             totalSize={size}
             currentPage={pageNo}
+            onPageChange={onPageChange}
             isHeaderCheckbox={true}
             handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            allRowsSelected={selectedRow.length === apiRes?.list?.length}
+            allRowsSelected={selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0}
           />
           {apiRes?.total > size && (
             <Pagination

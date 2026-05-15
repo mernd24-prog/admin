@@ -16,7 +16,8 @@ import ToggleButton from '../../components/Atoms/ToggleButton/ToggleButton';
 import Loader from '../../components/Loader/Loader';
 import AddButton from '../../components/Button/AddButton';
 import CustomCheckbox from '../../components/Atoms/Checkbox/Checkbox';
-import { createSubTax, enableDisableSubTax, getListSubTax, softDeleteSubTax, updateSubTax } from '../../Redux/cmsSlice';
+import FilterSelect from '../../components/Atoms/FilterSelect/FilterSelect';
+import { createSubTax, enableDisableSubTax, getListSubTax, getTaxList, softDeleteSubTax, updateSubTax } from '../../Redux/cmsSlice';
 
 const SubTax = () => {
   const dispatch = useDispatch();
@@ -28,6 +29,7 @@ const SubTax = () => {
     _id: '',
     name: '',
     percentage: '',
+    taxId: '',
     isDisable: false
   });
   const [errors, setErrors] = useState({});
@@ -45,13 +47,17 @@ const SubTax = () => {
   const size = 10
 
   useEffect(() => {
+    dispatch(getTaxList({ page: 1, limit: 100 }));
+  }, [dispatch]);
+
+  useEffect(() => {
     const reqData = {
       page: pageNo,
       size: size,
       keyWord: filters.search,
       searchFields: 'name',
       select: 'name percentage isDisable',
-      taxId: id
+      ...(id ? { taxId: id } : {})
     };
     dispatch(getListSubTax(reqData));
   }, [size, pageNo, isRefresh, id, filters.search, dispatch]);
@@ -59,6 +65,12 @@ const SubTax = () => {
   const selector = useSelector(state => state.cms);
   const getListData = selector?.getListSubTaxData?.data?.data?.list;
   const totalUsers = selector?.getListSubTaxData?.data?.data?.total || 0;
+  const taxList = selector?.getTaxListData?.data?.data?.list || [];
+  const taxOptions = useMemo(
+    () => taxList.map((tax) => ({ value: tax._id || tax.id, label: tax.name })),
+    [taxList],
+  );
+  const selectedTaxOption = taxOptions.find((tax) => String(tax.value) === String(formData.taxId || id || '')) || null;
 
   const handleInputChange = e => {
     const { name, value } = e.target;
@@ -100,6 +112,10 @@ const SubTax = () => {
       newErrors.percentage = 'Percentage must be between 0 and 100';
       isValid = false;
     }
+    if (!id && !formData.taxId) {
+      newErrors.taxId = 'Tax is required';
+      isValid = false;
+    }
     setErrors(newErrors);
     return isValid;
   };
@@ -110,6 +126,7 @@ const SubTax = () => {
       _id: '',
       name: "",
       percentage: "",
+      taxId: "",
       isDisable: false
     });
     setErrors({});
@@ -123,7 +140,7 @@ const SubTax = () => {
     const reqData = {
       "name": formData.name,
       "percentage": formData.percentage,
-      tax_id: id,
+      taxId: id || formData.taxId,
       "isDisable": formData.isDisable
     }
 
@@ -177,6 +194,7 @@ const SubTax = () => {
             _id: user._id,
             name: user.name,
             percentage: user.percentage,
+            taxId: user.taxId?._id || user.tax_id?._id || user.taxId || user.tax_id || id || '',
             isDisable: !isRowActive(user)
           });
           setIsEditModal(true);
@@ -264,6 +282,7 @@ const SubTax = () => {
       _id: '',
       name: '',
       percentage: '',
+      taxId: '',
       isDisable: false
     });
     setErrors({});
@@ -297,6 +316,10 @@ const SubTax = () => {
       newErrors.percentage = 'Percentage must be between 0 and 100';
       isValid = false;
     }
+    if (!id && !formData.taxId) {
+      newErrors.taxId = 'Tax is required';
+      isValid = false;
+    }
     setErrors(newErrors);
     return isValid;
   }
@@ -311,7 +334,7 @@ const SubTax = () => {
       name: formData.name,
       percentage: formData.percentage,
       isDisable: formData.isDisable,
-      tax_id: id,
+      taxId: id || formData.taxId,
     };
 
     dispatch(updateSubTax(reqData))
@@ -326,6 +349,7 @@ const SubTax = () => {
             _id: '',
             name: "",
             percentage: "",
+            taxId: "",
             isDisable: false
           })
           setIsRefresh(!isRefresh);
@@ -352,7 +376,7 @@ const SubTax = () => {
       keyWord: filters.search,
       searchFields: 'name',
       select: 'name percentage isDisable',
-      taxId: id
+      ...(id ? { taxId: id } : {})
     };
     dispatch(getListSubTax(reqData));
     setIsRefresh(!isRefresh)
@@ -449,6 +473,22 @@ const SubTax = () => {
           titleClassName="mt-5 font-medium"
         >
           <div className="w-full px-4 pt-2">
+            {!id && (
+              <FilterSelect
+                label="Tax"
+                options={taxOptions}
+                value={selectedTaxOption}
+                onChange={(option) => {
+                  setForm((prev) => ({ ...prev, taxId: option?.value || '' }));
+                  setErrors((prev) => ({ ...prev, taxId: undefined }));
+                }}
+                error={errors.taxId}
+                placeholder="Select tax"
+                required
+              />
+            )}
+          </div>
+          <div className="w-full px-4 pt-2">
             <Input
               labelName="Tax Name"
               name="name"
@@ -515,6 +555,22 @@ const SubTax = () => {
           title="Edit Sub Tax"
           titleClassName="mt-5 font-medium"
         >
+          <div className="w-full">
+            {!id && (
+              <FilterSelect
+                label="Tax"
+                options={taxOptions}
+                value={selectedTaxOption}
+                onChange={(option) => {
+                  setForm((prev) => ({ ...prev, taxId: option?.value || '' }));
+                  setErrors((prev) => ({ ...prev, taxId: undefined }));
+                }}
+                error={errors.taxId}
+                placeholder="Select tax"
+                required
+              />
+            )}
+          </div>
           <div className="w-full">
             <Input
               labelName="Name"

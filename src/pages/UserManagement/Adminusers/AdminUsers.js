@@ -1,11 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import {
-  getAdminUsers, getAdminUser, updateAdminUser, deactivateAdminUser,
+  getAdminUsers, deactivateAdminUser,
   getPlatformSubAdmins, createPlatformSubAdmin, createAdmin,
 } from '../../../Redux/adminCoreSlice';
 import TableData from '../../../components/Atoms/TableData/TableData';
@@ -17,7 +17,6 @@ import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
-import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import { getStoredRole, normalizeRole } from '../../../_helpers/authStorage';
 import { DEFAULT_PLATFORM_MODULES } from '../../../_helpers/adminApi';
@@ -83,6 +82,59 @@ const ModuleSelector = ({ selected, onChange, disabled = false }) => {
 const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '' };
 const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: ['products', 'orders'] };
 
+const extractListPayload = (sliceData = {}) => {
+  const candidates = [
+    sliceData?.data?.data,
+    sliceData?.data?.normalized?.data,
+    sliceData?.data,
+    sliceData?.normalized?.data,
+    sliceData?.normalized,
+    sliceData,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return { list: candidate, total: candidate.length };
+    }
+    if (!candidate || typeof candidate !== 'object') continue;
+
+    const list = Array.isArray(candidate.list)
+      ? candidate.list
+      : Array.isArray(candidate.items)
+        ? candidate.items
+        : Array.isArray(candidate.results)
+          ? candidate.results
+          : null;
+
+    if (list) {
+      return {
+        list,
+        total: Number(candidate.total ?? candidate.count ?? candidate.meta?.total ?? list.length),
+      };
+    }
+  }
+
+  return { list: [], total: 0 };
+};
+
+const filterUsers = (users = [], query = '') => {
+  const value = String(query || '').trim().toLowerCase();
+  if (!value) return users;
+  return users.filter((user = {}) => {
+    const profile = user.profile || {};
+    const searchable = [
+      user.full_name,
+      user.fullName,
+      user.email,
+      user.phone,
+      profile.firstName,
+      profile.lastName,
+      user.role,
+    ].join(' ').toLowerCase();
+    return searchable.includes(value);
+  });
+};
+
 const AdminUsers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -96,7 +148,6 @@ const AdminUsers = () => {
   const [pageAdmin, setPageAdmin] = useState(1);
   const [pageSubAdmin, setPageSubAdmin] = useState(1);
   const [refresh, setRefresh] = useState(false);
-  const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ search: '' });
 
   // Modals
@@ -112,13 +163,17 @@ const AdminUsers = () => {
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  const adminsRaw = selector?.adminsData?.data?.data || selector?.adminsData?.normalized?.data || {};
-  const admins = adminsRaw?.list || adminsRaw?.items || [];
-  const adminsTotal = adminsRaw?.total || 0;
-
-  const subAdminsRaw = selector?.platformSubAdminsData?.data?.data || selector?.platformSubAdminsData?.normalized?.data || {};
-  const subAdmins = subAdminsRaw?.list || subAdminsRaw?.items || subAdminsRaw || [];
-  const subAdminsTotal = subAdminsRaw?.total || (Array.isArray(subAdmins) ? subAdmins.length : 0);
+  const { list: admins, total: adminsTotal } = extractListPayload(selector?.adminUsersData);
+  const { list: allSubAdmins } = extractListPayload(selector?.platformSubAdminsData);
+  const filteredSubAdmins = useMemo(
+    () => filterUsers(allSubAdmins, filters.search),
+    [allSubAdmins, filters.search]
+  );
+  const subAdminsTotal = filteredSubAdmins.length;
+  const subAdmins = useMemo(() => {
+    const start = (pageSubAdmin - 1) * PAGE_SIZE;
+    return filteredSubAdmins.slice(start, start + PAGE_SIZE);
+  }, [filteredSubAdmins, pageSubAdmin]);
 
   const loading = selector?.loading || false;
 
@@ -126,7 +181,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     if (tab === 'admins' && isAdmin) {
-      dispatch(getAdminUsers({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search }));
+      dispatch(getAdminUsers({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search, role: 'admin' }));
     }
   }, [tab, pageAdmin, refresh, filters.search]);
 
@@ -273,7 +328,7 @@ const AdminUsers = () => {
         <div className="flex gap-0 mb-4 border-b border-gray-200">
           {[
             { key: 'subadmins', label: 'Sub-Admins' },
-            ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins' }] : []),
+            ...(isAdmin ? [{ key: 'admins', label: 'Admins' }] : []),
           ].map(({ key, label }) => (
             <button
               key={key}

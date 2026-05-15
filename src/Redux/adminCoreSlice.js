@@ -91,6 +91,9 @@ const initialState = {
   createContentPageData: {},
   updateContentPageData: {},
   deleteContentPageData: {},
+  productReviewsData: {},
+  updateProductReviewData: {},
+  deleteProductReviewData: {},
   rbacPermissionManagementModulesData: {},
   rbacModulesData: {},
   createRbacModuleData: {},
@@ -533,6 +536,10 @@ export const createContentPage = createApiThunkPrivate("adminCore/createContentP
 export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (payload = {}) => toContentPageBody(omitPayload(payload, ["id"])) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
+export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status"]) });
+export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status"]) });
+export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "DELETE", false, { transformParams: noParams });
+
 export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {
   transformParams: (params = {}) => ({
     ...(params.roleId ? { roleId: params.roleId } : {}),
@@ -648,6 +655,9 @@ const adminCoreSlice = createSlice({
       [createContentPage, "createContentPageData"],
       [updateContentPage, "updateContentPageData"],
       [deleteContentPage, "deleteContentPageData"],
+      [getProductReviews, "productReviewsData"],
+      [updateProductReview, "updateProductReviewData"],
+      [deleteProductReview, "deleteProductReviewData"],
       [getRbacPermissionManagementModules, "rbacPermissionManagementModulesData"],
       [getRbacModules, "rbacModulesData"],
       [createRbacModule, "createRbacModuleData"],

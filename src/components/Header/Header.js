@@ -22,6 +22,34 @@ const getDisplayName = (user = {}) => {
 const getAvatarUrl = (user = {}) =>
   user.user_image || user.profile?.avatarUrl || "/Img/user.png";
 
+const getHeaderDescription = (path = "") => {
+  if (path.includes("/country")) {
+    return "View and manage countries used across platform dropdowns, tax setup, and addresses.";
+  }
+  if (path.includes("/state")) {
+    return "View and manage states linked to active countries across the platform.";
+  }
+  if (path.includes("/city")) {
+    return "View and manage cities linked to active states across the platform.";
+  }
+  if (path.includes("/store")) {
+    return "View and manage all the seller's registered shops (stores) on the platform.";
+  }
+  if (path.includes("/subTax")) {
+    return "View and manage sub tax components linked to tax groups.";
+  }
+  if (path.includes("/order-status")) {
+    return "View and manage the order status workflow shown across order management.";
+  }
+  if (path.includes("/tax")) {
+    return "View and manage tax groups, countries, and tax rules.";
+  }
+  if (path.includes("/product-reviews")) {
+    return "View and moderate customer reviews submitted for products.";
+  }
+  return "View and manage platform records from this section.";
+};
+
 export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
   const [openModel, setOpenModel] = useState(false);
   const dispatch = useDispatch();
@@ -104,7 +132,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
           <div>
             <h1 className="text-xl font-semibold text-gray-900 capitalize">{headerTitle}</h1>
-            <p className="text-xs text-gray-500 md:block hidden">View and manage all the seller's registered shops (stores) on the platform</p>
+            <p className="text-xs text-gray-500 md:block hidden">{getHeaderDescription(currentPath)}</p>
           </div>
         </div>
 
