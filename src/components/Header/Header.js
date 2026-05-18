@@ -51,6 +51,9 @@ const getHeaderDescription = (path = "") => {
   if (path.includes("/product-reviews")) {
     return "View and moderate customer reviews submitted for products.";
   }
+  if (path.includes("/discount-coupons")) {
+    return "View and manage coupon codes, discount values, limits, validity, and status.";
+  }
   return "View and manage platform records from this section.";
 };
 

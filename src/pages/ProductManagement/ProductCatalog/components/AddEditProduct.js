@@ -50,6 +50,22 @@ const API_CALL_OBJECT = {
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
+const DEFAULT_COLOR_OPTIONS = [
+  'Black',
+  'White',
+  'Red',
+  'Blue',
+  'Green',
+  'Yellow',
+  'Orange',
+  'Pink',
+  'Purple',
+  'Brown',
+  'Grey',
+  'Silver',
+  'Gold',
+  'Multicolor',
+];
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
@@ -328,12 +344,13 @@ export default function ProductManagementUI() {
       label: item?.period || item?.name || String(item?._id || item?.id || ''),
     })),
     colorList: Array.from(
-      new Set(
-        (getListPayload(selector?.getAllProductsData) || [])
+      new Set([
+        ...DEFAULT_COLOR_OPTIONS,
+        ...(getListPayload(selector?.getAllProductsData) || [])
           .map((item) => item?.color)
           .filter(Boolean)
-          .map((color) => String(color).trim())
-      )
+          .map((color) => String(color).trim()),
+      ])
     ).map((color) => ({ value: color, label: color })),
     productFamilyList: getListPayload(adminCoreSelector?.productFamiliesData)
       .map((item) => String(item?.familyCode || item?.code || '').trim())

@@ -147,7 +147,7 @@ export const hasModuleAccess = (moduleCode) => {
     dashboard: ["home", "dashboard", "analytics"],
     products: ["products", "product-catalog", "seller-product-inventory", "categories", "category-attributes"],
     orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
-    pricing: ["pricing", "coupons", "discount_coupons"],
+    pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
     delivery: ["delivery", "shipping_packages", "shipping_profile", "pickup_addresses", "delivery-staff"],
     sellers: ["sellers", "seller", "vendors", "profile"],

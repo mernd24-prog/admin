@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { forgotPassword } from "../../Redux/auth-Slice";
 import FormLayout from "../../components/FormLayout/FormLayout";
-import { setToken } from "../../Redux/authSlice";
 import { showError, showSuccess } from "../../Redux/alertSlice";
 import EmailInput from "../../components/Atoms/EmailInput";
 import { CiUser } from "react-icons/ci";
@@ -32,7 +31,6 @@ const ForgetPassword = () => {
     }
     return "";
   };
-  console.log("errorsLogin", errorsLogin)
   // Validate entire form
   const validateForm = () => {
     const errors = {};
@@ -78,9 +76,7 @@ const ForgetPassword = () => {
         dispatch(showError(payload?.message));
       } else {
         dispatch(showSuccess(payload?.message));
-        const token = payload?.data?.token;
-        dispatch(setToken(token));
-        navigate(`/verifyOtp?token=${token}`, { state: { email: email.email } });
+        navigate("/verifyOtp", { state: { email: email.email } });
       }
     } catch (error) {
       console.error("Password reset failed:", error);

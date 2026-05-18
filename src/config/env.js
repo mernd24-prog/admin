@@ -13,7 +13,6 @@ const env = {
   sequelize: {
     logging: String(process.env.SEQUELIZE_LOGGING || "false") === "true",
   },
-  redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
   elasticsearchNode: process.env.ELASTICSEARCH_NODE || "http://localhost:9200",
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || "access-secret",
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "refresh-secret",

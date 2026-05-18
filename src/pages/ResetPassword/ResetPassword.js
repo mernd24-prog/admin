@@ -13,19 +13,20 @@ const ResetPassword = () => {
   const location = useLocation();
 
   const { loading, error } = useSelector((state) => state.authSlice || {});
+  const email = location.state?.email;
+  const otp = location.state?.otp;
 
   const [fields, setFields] = useState({
     password: "",
     confirmPassword: "",
   });
   const [formErrors, setFormErrors] = useState({});
-  const tokenFromUrl = new URLSearchParams(location.search).get("token");
 
   useEffect(() => {
-    if (!tokenFromUrl) {
-      navigate("/error");
+    if (!email || !otp) {
+      navigate("/forgotPassword");
     }
-  }, [tokenFromUrl, navigate]);
+  }, [email, otp, navigate]);
 
   const validateFields = () => {
     const errors = {};
@@ -33,8 +34,8 @@ const ResetPassword = () => {
 
     if (!password) {
       errors.password = "Enter password";
-    } else if (password.length < 6) {
-      errors.password = "Password must be at least 6 characters long.";
+    } else if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters long.";
     }
 
     if (!confirmPassword) {
@@ -59,9 +60,9 @@ const ResetPassword = () => {
     try {
       const result = await dispatch(
         resetPassword({
-          password: fields.password,
-          confirmPassword: fields.confirmPassword,
-          token: tokenFromUrl,
+          email,
+          otp,
+          newPassword: fields.password,
         })
       ).unwrap();
       dispatch(showSuccess(result.message || "Password reset successfully"));

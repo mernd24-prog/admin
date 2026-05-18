@@ -27,9 +27,6 @@ const CategorySetup = ({
   isEditing, // Added isEditing prop
   handleDashboardVisible
 }) => {
-
-  console.log("formData", formData)
-
   const [localErrors, setLocalErrors] = useState({
     categoryName: '',
     seoUrl: ''

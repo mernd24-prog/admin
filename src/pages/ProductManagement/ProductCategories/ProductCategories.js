@@ -112,7 +112,7 @@ const ProductCategories = () => {
       name: category?.title || category?.name || category?.categoryKey,
       isDisable: category?.active === false,
       active: category?.active !== false,
-      thumbnails: category?.thumbnails || '',
+      thumbnails: category?.imageUrl || category?.thumbnails || '',
       isExpanded: false,
       parentId: category?.parentKey || null,
       parentName: null,
@@ -160,9 +160,22 @@ const ProductCategories = () => {
   // Build select options for category dropdown
   const createSelectOptions = useMemo(() => {
     const options = [{ label: "ROOT", value: "ROOT" }];
+    const blockedKeys = new Set();
+
+    const collectBlockedKeys = (category) => {
+      if (!category) return;
+      blockedKeys.add(String(category.categoryKey || category._id));
+      (category.subCategories || []).forEach(collectBlockedKeys);
+    };
+
+    if (selectedCategory) {
+      collectBlockedKeys(selectedCategory);
+    }
 
     const addOptions = (categories, prefix = '', depth = 1) => {
       Array.isArray(categories) && categories?.length > 0 && categories.forEach(category => {
+        if (blockedKeys.has(String(category.categoryKey || category._id))) return;
+
         options.push({
           value: category.categoryKey || category._id,
           label: <span className="capitalize">{prefix + category.name}</span>,
@@ -177,7 +190,7 @@ const ProductCategories = () => {
 
     addOptions(allCategories);
     return options;
-  }, [allCategories]);
+  }, [allCategories, selectedCategory]);
 
   // Event handlers
   const handleIsPublish = useCallback(() => {
@@ -189,6 +202,8 @@ const ProductCategories = () => {
       categoryName: '',
       seoUrl: '',
       parentCategory: null,
+      isDashboardVisible: false,
+      priority: "0",
     });
     setSelectedCategory(null);
     setIsPublish(false);
@@ -205,7 +220,8 @@ const ProductCategories = () => {
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
       parentKey = formData.parentCategory.value;
-      level = 1;
+      const parentCategory = findCategoryById(allCategories, parentKey);
+      level = Number(parentCategory?.level || 0) + 1;
     }
 
     const reqData = {
@@ -218,9 +234,6 @@ const ProductCategories = () => {
       priority: formData?.isDashboardVisible ? Number(formData?.priority) : 0,
     };
 
-
-    console.log("reqData===>>?///////", reqData)
-
     dispatch(create(reqData))
       .unwrap()
       .then((res) => {
@@ -231,20 +244,17 @@ const ProductCategories = () => {
         toast.success(res.message || "Category Created Successfully");
         setIsRefresh(!isRefresh);
         setCategoryOpen(false);
-        // handleResetForm();
+        handleResetForm();
       })
       .catch((error) => {
         console.error("Error creating category:", error);
         toast.error(error || "Error in Creating Category");
       });
-  }, [dispatch, formData, isPublish, isRefresh, handleResetForm]);
+  }, [dispatch, formData, isPublish, isRefresh, handleResetForm, allCategories]);
 
   const handleEdit = useCallback((category) => {
     setSelectedCategory(category);
-    console.log(category)
     let parentCategoryValue = { label: "ROOT", value: "ROOT" };
-
-    console.log("category", category)
 
     if (category.parentId) {
       parentCategoryValue = {
@@ -466,7 +476,8 @@ const ProductCategories = () => {
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
       parentKey = formData.parentCategory.value;
-      level = 1;
+      const parentCategory = findCategoryById(allCategories, parentKey);
+      level = Number(parentCategory?.level || 0) + 1;
     }
 
     const reqData = {
@@ -477,10 +488,8 @@ const ProductCategories = () => {
       parentKey,
       level,
       isDashboardVisible: formData?.isDashboardVisible ? formData?.isDashboardVisible : false,
-      priority: formData?.priority
+      priority: formData?.isDashboardVisible ? Number(formData?.priority) : 0
     };
-
-    console.log("reqData//////",reqData)
 
     dispatch(update(reqData))
       .unwrap()
@@ -492,12 +501,13 @@ const ProductCategories = () => {
         toast.success(res.message || "Category Updated Successfully");
         setIsRefresh(!isRefresh);
         setCategoryEditOpen(false);
+        handleResetForm();
       })
       .catch((error) => {
         console.error("Error updating category:", error);
         toast.error(error || "Error in Updating Category");
       });
-  }, [dispatch, selectedCategory, formData, isPublish, isRefresh]);
+  }, [dispatch, selectedCategory, formData, isPublish, isRefresh, allCategories, handleResetForm]);
 
   const calculateCategoryCount = useCallback((category) => {
     let count = 1; // Count the category itself
@@ -776,7 +786,7 @@ const ProductCategories = () => {
 
             <div className="space-y-3">
               {categories.length > 0 ? (
-                categories.map(category => renderCategory(category))
+                categories.map(category => renderCategory(category, 0, null, categories))
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   {filters.search ? 'No categories match your search' : 'No categories found'}

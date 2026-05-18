@@ -2,7 +2,6 @@ import React, { useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
 import { verifyOtp } from "../../Redux/auth-Slice";
-import { setToken } from "../../Redux/authSlice";
 import FormLayout from "../../components/FormLayout/FormLayout";
 import OtpInputComponent from "../../components/Atoms/optInput";
 import { showError, showSuccess } from "../../Redux/alertSlice";
@@ -14,7 +13,7 @@ const VerifyOtp = () => {
   const selector = useSelector((state) => state);
   const { authSlice } = selector || {};
   const { loading, error } = authSlice || {};
-  const tokenFromUrl = new URLSearchParams(location.search).get("token");
+  const email = location.state?.email;
 
   const [otp, setOtp] = useState(new Array(6).fill(""));
   const [formErrors, setFormErrors] = useState({});
@@ -46,13 +45,14 @@ const VerifyOtp = () => {
       setFormErrors({ otp: "Please enter all OTP digits." });
       return;
     } 
-    if (!tokenFromUrl) {
-      setFormErrors({ otp: "Token not found. Please try again." });
+    if (!email) {
+      setFormErrors({ otp: "Email not found. Please request OTP again." });
       return;
     } 
     const otpData = {
-      token: tokenFromUrl,
+      email,
       otp: otpCode,
+      purpose: "forgot_password",
     }; 
     try {
       const resultAction = await dispatch(verifyOtp(otpData));
@@ -65,13 +65,7 @@ const VerifyOtp = () => {
       dispatch(showSuccess(resultAction?.payload?.message || "OTP verified successfully."));
       setFormErrors({});
       setOtp(new Array(6).fill("")); 
-      const token = resultAction?.payload?.data?.token;
-      if (token) {
-        dispatch(setToken(token));
-        navigate(`/ResetPassword?token=${token}`);
-      } else {
-        setFormErrors({ otp: "Verification succeeded, but no token was returned." });
-      } 
+      navigate("/ResetPassword", { state: { email, otp: otpCode } });
     } catch (error) {
       console.error("OTP verification failed:", error);
       setFormErrors({ otp: "OTP verification failed. Please try again later." });

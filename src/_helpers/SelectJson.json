@@ -135,8 +135,8 @@
       "label": "Select"
     },
     {
-      "value": "flat",
-      "label": "Flat"
+      "value": "fixed",
+      "label": "Fixed"
     },
     {
       "value": "percentage",

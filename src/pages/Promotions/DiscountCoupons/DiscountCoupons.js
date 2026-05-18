@@ -23,6 +23,86 @@ import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox'
 
 const size = 10
 
+const normalizeCouponType = (type) => type === 'flat' ? 'fixed' : type;
+
+const formatCouponType = (type) => {
+  const normalizedType = normalizeCouponType(type);
+  if (normalizedType === 'percentage') return 'Percentage';
+  if (normalizedType === 'fixed') return 'Fixed';
+  return '-';
+};
+
+const normalizeCouponPayload = (data) => ({
+  ...data,
+  type: normalizeCouponType(data?.type)
+});
+
+const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null);
+
+const toNumber = (value, fallback = null) => {
+  if (value === '' || value === undefined || value === null) return fallback;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().split('T')[0];
+};
+
+const normalizeCouponRecord = (coupon = {}) => ({
+  ...coupon,
+  _id: coupon?._id || coupon?.id,
+  type: normalizeCouponType(coupon?.type),
+  min_order_value: firstDefined(coupon?.min_order_value, coupon?.minOrderAmount, 0),
+  max_discount_value: firstDefined(coupon?.max_discount_value, coupon?.maxDiscountAmount, ''),
+  uses_per_coupon: firstDefined(coupon?.uses_per_coupon, coupon?.usageLimit, ''),
+  uses_per_customer: firstDefined(coupon?.uses_per_customer, coupon?.usesPerCustomer, ''),
+  valid_from: firstDefined(coupon?.valid_from, coupon?.startsAt),
+  valid_to: firstDefined(coupon?.valid_to, coupon?.expiresAt),
+  isDisable: typeof coupon?.isDisable === 'boolean'
+    ? coupon.isDisable
+    : coupon?.active === false
+});
+
+const normalizeCouponsResponse = (payload) => {
+  const data = payload?.data ?? payload;
+  const list = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.list)
+      ? data.list
+      : Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray(data?.coupons)
+          ? data.coupons
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+  return {
+    ...data,
+    list: list.map(normalizeCouponRecord),
+    total: data?.total ?? payload?.meta?.total ?? list.length,
+  };
+};
+
+const toCouponApiPayload = (data) => ({
+  code: String(data?.code || '').trim().toUpperCase(),
+  title: data?.title || '',
+  description: data?.description || '',
+  type: normalizeCouponType(data?.type),
+  value: toNumber(data?.value, 0),
+  minOrderAmount: toNumber(data?.min_order_value, 0),
+  maxDiscountAmount: toNumber(data?.max_discount_value, null),
+  usageLimit: toNumber(data?.uses_per_coupon, null),
+  usesPerCustomer: toNumber(data?.uses_per_customer, null),
+  startsAt: data?.valid_from || null,
+  expiresAt: data?.valid_to || null,
+  active: !data?.isDisable,
+});
+
 const DiscountCoupons = () => {
   const dispatch = useDispatch();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
@@ -32,6 +112,7 @@ const DiscountCoupons = () => {
   const [pageNo, setPageNo] = useState(1);
   const [filters, setFilters] = useState({ search: "", country: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [listError, setListError] = useState("");
   const [isConfirmModal, setIsConfirmModal] = useState(false);
   const [rowData, setRowData] = useState(null);
   // const [isDeleteModal,setisDeletModal]
@@ -55,22 +136,27 @@ const DiscountCoupons = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
 
-  const fetchDiscounts = () => {
+  const fetchDiscounts = (overrides = {}) => {
+    const nextFilters = overrides.filters || filters;
     const query = {
-      page: pageNo,
+      page: overrides.page || pageNo,
       size: size,
-      keyWord: "",
+      keyWord: overrides.search ?? nextFilters?.search ?? "",
       searchFields: "title,code,description",
       populate: '',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
+      query: JSON.stringify(nextFilters?.country?.value ? { country_code: nextFilters?.country?.value } : {})
     };
     setIsLoading(true);
+    setListError("");
     dispatch(getDiscountCoupons(query))
-      .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
+      .unwrap()
+      .then((payload) => {
+        setApiRes(normalizeCouponsResponse(payload));
       })
       .catch((err) => {
-        toast.error("Failed to fetch discount coupons");
+        const message = err?.message || err || "Failed to fetch discount coupons";
+        setListError(message);
+        toast.error(message);
       })
       .finally(() => {
         setIsLoading(false);
@@ -79,7 +165,7 @@ const DiscountCoupons = () => {
 
   useEffect(() => {
     fetchDiscounts();
-  }, []);
+  }, [pageNo]);
 
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
@@ -105,10 +191,9 @@ const DiscountCoupons = () => {
   };
 
   const handleSelectChange = (selectedOption) => {
-    console.log(selectedOption)
     setFormData(prev => ({
       ...prev,
-      type: selectedOption?.value || null
+      type: normalizeCouponType(selectedOption?.value) || null
     }));
     if (errors.type) {
       setErrors(prev => ({ ...prev, type: undefined }));
@@ -144,8 +229,10 @@ const DiscountCoupons = () => {
     } else if (formData.code.trim().length < 5) {
       newErrors.code = 'Code must be at least 5 characters long';
     }
+    const normalizedType = normalizeCouponType(formData.type);
+
     if (
-      formData.type === 'percentage' &&
+      normalizedType === 'percentage' &&
       parseFloat(formData.value) > 100
     ) {
       newErrors.value = 'Max discount cannot exceed 100%';
@@ -167,8 +254,10 @@ const DiscountCoupons = () => {
       newErrors.valid_to = 'End Date must be after Start Date';
     }
 
-    if (!formData.type) {
+    if (!normalizedType) {
       newErrors.type = 'Discount type is required';
+    } else if (!['percentage', 'fixed'].includes(normalizedType)) {
+      newErrors.type = 'Discount type must be percentage or fixed';
     }
 
     if (formData.value === '' || formData.value === null) {
@@ -204,14 +293,6 @@ const DiscountCoupons = () => {
     return newErrors;
   };
 
-  const transformDates = (data) => {
-    return {
-      ...data,
-      valid_from: data.valid_from ? new Date(data.valid_from).getTime() : null,
-      valid_to: data.valid_to ? new Date(data.valid_to).getTime() : null
-    };
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
@@ -220,18 +301,25 @@ const DiscountCoupons = () => {
       return;
     }
 
-    const transformedData = transformDates(formData);
-    const { _id, createdAt, updatedAt, isDeleted, ...createData } = transformedData;
+    const apiData = toCouponApiPayload(normalizeCouponPayload(formData));
 
     try {
       if (isEditMode) {
         setIsLoading(true)
-        await dispatch(editDiscountCoupons({ ...transformedData, _id: formData._id })).unwrap();
+        await dispatch(editDiscountCoupons({ ...apiData, couponId: formData._id })).unwrap();
         setIsLoading(false)
         toast.success('Discount coupon updated successfully');
       } else {
         setIsLoading(true)
-        await dispatch(createDiscountCoupons(createData)).unwrap();
+        const created = await dispatch(createDiscountCoupons(apiData)).unwrap();
+        const createdCoupon = normalizeCouponRecord(created?.data || created?.raw?.data || created);
+        if (createdCoupon?._id) {
+          setApiRes((prev) => ({
+            ...prev,
+            list: [createdCoupon, ...(prev?.list || []).filter((coupon) => coupon?._id !== createdCoupon._id)],
+            total: Number(prev?.total || 0) + 1,
+          }));
+        }
         setIsLoading(false)
         toast.success('Discount coupon created successfully');
       }
@@ -252,30 +340,16 @@ const DiscountCoupons = () => {
   };
 
   const applyFilters = () => {
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: filters?.search,
-      searchFields: "title,code,description",
-      populate: '',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true);
-    dispatch(getDiscountCoupons(query))
-      .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
-      })
-      .catch((err) => {
-        toast.error("Failed to fetch discount coupons");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    if (pageNo !== 1) {
+      setPageNo(1);
+      return;
+    }
+    fetchDiscounts({ page: 1, search: filters?.search });
   }
   const handleDelete = async (data) => {
 
     const apiPayload = {
-      _id: [data?._id],
+      couponId: data?._id,
     };
     try {
       setIsLoading(true)
@@ -312,10 +386,10 @@ const DiscountCoupons = () => {
     <CustomCheckbox checked={selectedRow.includes(ele._id)} onChange={(e) => handleRowCheckboxChange(e, ele._id)} />,
     <span key={`title-${ele._id}`} className='capitalize'>{ele?.title}</span>,
     <span key={`code-${ele._id}`}>{ele?.code}</span>,
-    <span key={`type-${ele._id}`}>{ele?.type}</span>,
-    <span key={`value-${ele._id}`}>{ele?.value}{ele?.type === "percentage" ? '%' : ""}</span>,
-    <span key={`value-${ele._id}`}>{moment(ele?.valid_from).format('DD/MM/YYYY')}</span>,
-    <span key={`value-${ele._id}`}>{moment(ele?.valid_to).format('DD/MM/YYYY')}</span>,
+    <span key={`type-${ele._id}`}>{formatCouponType(ele?.type)}</span>,
+    <span key={`discount-${ele._id}`}>{normalizeCouponType(ele?.type) === "fixed" ? '₹' : ''}{ele?.value}{normalizeCouponType(ele?.type) === "percentage" ? '%' : ""}</span>,
+    <span key={`valid-from-${ele._id}`}>{moment(ele?.valid_from).format('DD/MM/YYYY')}</span>,
+    <span key={`valid-to-${ele._id}`}>{moment(ele?.valid_to).format('DD/MM/YYYY')}</span>,
     getDiscountStatus(ele?.valid_from, ele?.valid_to),
     <div key={`toggle-${ele._id}`} className='flex flex-col'>
       <ToggleButton isToggle={!ele?.isDisable} handleClick={() => handleToggle(ele)} />
@@ -323,12 +397,13 @@ const DiscountCoupons = () => {
     <ActionButtons
       key={`action-${ele._id}`}
       onEdit={() => {
+        const coupon = normalizeCouponRecord(ele);
         setFormData({
-          title: ele?.title, isDisable: ele?.isDisable, type: ele?.type, description: ele?.description,
-          max_discount_value: ele?.max_discount_value, min_order_value: ele?.min_order_value, code: ele?.code,
-          uses_per_coupon: ele?.uses_per_coupon, uses_per_customer: ele?.uses_per_customer, value: ele?.value,
-          valid_from: ele.valid_from ? new Date(ele.valid_from).toISOString().split('T')[0] : '',
-          valid_to: ele.valid_to ? new Date(ele.valid_to).toISOString().split('T')[0] : '', _id: ele?._id
+          title: coupon?.title, isDisable: coupon?.isDisable, type: coupon?.type, description: coupon?.description,
+          max_discount_value: coupon?.max_discount_value, min_order_value: coupon?.min_order_value, code: coupon?.code,
+          uses_per_coupon: coupon?.uses_per_coupon, uses_per_customer: coupon?.uses_per_customer, value: coupon?.value,
+          valid_from: toDateInputValue(coupon?.valid_from),
+          valid_to: toDateInputValue(coupon?.valid_to), _id: coupon?._id
         });
         setIsEditMode(true);
         setIsAddModal(true);
@@ -346,15 +421,12 @@ const DiscountCoupons = () => {
     }
 
     if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true
-      };
+      const active = action === "Active";
       try {
-        const res = await dispatch(enableDisableDiscountCoupons(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message||"Status Update Successfully!");
-        }
+        await Promise.all(selectedRow.map((couponId) =>
+          dispatch(enableDisableDiscountCoupons({ couponId, active })).unwrap()
+        ));
+        toast.success("Status Update Successfully!");
         fetchDiscounts();
         setSelectedRow([]);
       } catch (error) {
@@ -367,32 +439,19 @@ const DiscountCoupons = () => {
   };
 
   const handleSearchRemove = () => {
-    setFilters({ search: "" });
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: "",
-      searchFields: "title,code,description",
-      populate: '',
-      query: JSON.stringify(filters?.country?.value ? { country_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true);
-    dispatch(getDiscountCoupons(query))
-      .then((res) => {
-        setApiRes(res?.payload?.data || { list: [], total: 0 });
-      })
-      .catch((err) => {
-        toast.error("Failed to fetch discount coupons");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    const clearedFilters = { search: "", country: "" };
+    setFilters(clearedFilters);
+    if (pageNo !== 1) {
+      setPageNo(1);
+      return;
+    }
+    fetchDiscounts({ page: 1, filters: clearedFilters, search: "" });
   };
 
   const handleConfirmToggle = async () => {
     let apiPayload = {
-      _id: [rowData?._id],
-      isDisable: rowData?.isDisable ? false : true
+      couponId: rowData?._id,
+      active: rowData?.isDisable
     };
     try {
       const res = await dispatch(enableDisableDiscountCoupons(apiPayload)).unwrap();
@@ -430,6 +489,12 @@ const DiscountCoupons = () => {
             handleSearchRemove={handleSearchRemove}
 
           />
+
+          {listError && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {listError}
+            </div>
+          )}
 
           <TableData
             Heading='Manage Discount Coupons'

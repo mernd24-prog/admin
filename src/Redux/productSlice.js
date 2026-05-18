@@ -194,6 +194,10 @@ export const create = createApiThunkPrivate('product/createCategoryLegacy', ENDP
             attributesSchema: payload.attributesSchema || {},
             active: payload.active ?? payload.isDisable !== true,
             sortOrder: Number(payload.sortOrder || payload.priority || 0),
+            imageUrl: payload.imageUrl || payload.thumbnails || payload.seoUrl || '',
+            bannerUrl: payload.bannerUrl || '',
+            iconUrl: payload.iconUrl || '',
+            isDashboardVisible: Boolean(payload.isDashboardVisible),
         };
     },
 })
@@ -203,6 +207,14 @@ export const update = createApiThunkPrivate('product/updateCategoryLegacy', (pay
         if (payload.name || payload.title || payload.categoryName) body.title = payload.name || payload.title || payload.categoryName;
         if (payload.active !== undefined || payload.isDisable !== undefined) body.active = payload.active ?? payload.isDisable !== true;
         if (payload.sortOrder !== undefined || payload.priority !== undefined) body.sortOrder = Number(payload.sortOrder ?? payload.priority ?? 0);
+        if (payload.parentKey !== undefined) body.parentKey = payload.parentKey || null;
+        if (payload.level !== undefined) body.level = Number(payload.level || 0);
+        if (payload.imageUrl !== undefined || payload.thumbnails !== undefined || payload.seoUrl !== undefined) {
+            body.imageUrl = payload.imageUrl || payload.thumbnails || payload.seoUrl || '';
+        }
+        if (payload.bannerUrl !== undefined) body.bannerUrl = payload.bannerUrl || '';
+        if (payload.iconUrl !== undefined) body.iconUrl = payload.iconUrl || '';
+        if (payload.isDashboardVisible !== undefined) body.isDashboardVisible = Boolean(payload.isDashboardVisible);
         if (payload.attributeSchema) body.attributeSchema = payload.attributeSchema;
         if (payload.attributesSchema) body.attributesSchema = payload.attributesSchema;
         return body;
@@ -221,6 +233,10 @@ export const createCategory = createApiThunkPrivate('product/createCategory', EN
             attributesSchema: payload.attributesSchema || {},
             active: payload.active ?? payload.isDisable !== true,
             sortOrder: Number(payload.sortOrder || payload.priority || 0),
+            imageUrl: payload.imageUrl || payload.thumbnails || payload.seoUrl || '',
+            bannerUrl: payload.bannerUrl || '',
+            iconUrl: payload.iconUrl || '',
+            isDashboardVisible: Boolean(payload.isDashboardVisible),
         };
     },
 })
