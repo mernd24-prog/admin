@@ -66,6 +66,12 @@ const INITIAL_FORM_HSN = {
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
 
+const getListPayload = (sliceData) => {
+  const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
+  if (Array.isArray(data)) return data;
+  return data.list || data.items || [];
+};
+
 export default function BasicDetailsTab({
   formData,
   handleChange,
@@ -83,9 +89,9 @@ export default function BasicDetailsTab({
   const navigate = useNavigate();
   const selector = useSelector(state => state);
 
-  const modifiedCountry = transformArray(selector?.country?.getAllCountryListData?.data?.data?.list || []);
-  const modifiedState = transformArray(selector?.state?.getAllStateListData?.data?.data?.list || []);
-  const modifiedCity = transformArray(selector?.city?.getAllCityListData?.data?.data?.list || []);
+  const modifiedCountry = transformArray(getListPayload(selector?.country?.getAllCountryListData));
+  const modifiedState = transformArray(getListPayload(selector?.state?.getAllStateListData));
+  const modifiedCity = transformArray(getListPayload(selector?.city?.getAllCityListData));
   const modifiedSellerList = transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
   const selectedCategoryOption = useMemo(() => {
     const currentCategory = String(formData.category_id || formData.categoryId || formData.category || formData.category_key || '');
@@ -118,8 +124,18 @@ export default function BasicDetailsTab({
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
+  const [customColor, setCustomColor] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const selectedColorOption = useMemo(() => {
+    const currentColor = String(formData.color || '').trim();
+    if (!currentColor) return null;
+    return (
+      (formattedColorList || []).find((opt) => String(opt.value) === currentColor) ||
+      { value: currentColor, label: currentColor }
+    );
+  }, [formattedColorList, formData.color]);
 
   useEffect(() => {
     dispatch(getAllSellerList())
@@ -280,6 +296,17 @@ export default function BasicDetailsTab({
     if (action === 'PRODUCT_STATE' && selectedOption?.value) {
       dispatch(getAllCityList({ stateId: selectedOption.value }));
     }
+  };
+
+  const handleAddCustomColor = () => {
+    const nextColor = customColor.trim();
+    if (!nextColor) {
+      toast.error("Enter a color name first");
+      return;
+    }
+
+    handleSelectChange({ value: nextColor, label: nextColor }, 'PRODUCT_COLOR');
+    setCustomColor("");
   };
 
   const handleFileUploadCategory = async (file) => {
@@ -621,12 +648,40 @@ export default function BasicDetailsTab({
             />
             <FilterSelect
               label="Color"
-              value={(formattedColorList || []).find((opt) => String(opt.value) === String(formData.color || '')) || null}
+              value={selectedColorOption}
               onChange={(e) => handleSelectChange(e, 'PRODUCT_COLOR')}
               options={formattedColorList || []}
               placeholder="Select color"
               error={errors?.color}
             />
+            <div className="space-y-2">
+              <label className="label block text-sm font-medium text-gray-700 mb-3">
+                Add Custom Color
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customColor}
+                  onChange={(e) => setCustomColor(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomColor();
+                    }
+                  }}
+                  placeholder="Example: Navy Blue"
+                  className="min-h-[42px] w-full rounded-md bg-[#F7FAFC] px-3 text-sm text-gray-700 outline-none focus:ring-1 focus:ring-[#3E4094]"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomColor}
+                  className="h-[42px] shrink-0 rounded-md bg-[#3E4094] px-3 text-sm text-white hover:bg-[#2e3074]"
+                >
+                  Add
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">Custom color is saved with this product.</p>
+            </div>
             <FilterSelect
               label="Product Family Code"
               value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}

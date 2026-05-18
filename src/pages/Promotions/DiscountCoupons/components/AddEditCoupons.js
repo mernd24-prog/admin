@@ -110,7 +110,7 @@ const AddEditCoupons = ({ isOpen, onClose }) => {
               type="select"
               value={formData.discountType}
               onChange={handleChange}
-              options={['percentage', 'flat']}
+              options={['percentage', 'fixed']}
             />
 
             <FormInput

@@ -527,6 +527,14 @@ const Sellers = () => {
             </span>
         );
     };
+
+    const getGoLiveStatus = (user = {}) => {
+        if (user?.accountStatus === 'active' || user?.sellerProfile?.goLiveStatus === 'live') {
+            return 'live';
+        }
+        return user?.onboarding?.goLiveStatus || user?.sellerProfile?.goLiveStatus || 'pending';
+    };
+
     // Table data preparation
     const tableRows = getListData?.list?.map((user) => [
         // <input
@@ -566,13 +574,13 @@ const Sellers = () => {
             {statusPill(user?.onboarding?.status || user?.sellerProfile?.onboardingStatus, 'ready_for_go_live')}
         </span>,
         <span key={`kyc-${user._id}`}>
-            {statusPill(user?.sellerProfile?.kycStatus || user?.onboarding?.kycStatus || 'pending', 'verified')}
+            {statusPill(user?.onboarding?.kycStatus || user?.sellerProfile?.kycStatus || 'pending', 'verified')}
         </span>,
         <span key={`bank-${user._id}`}>
-            {statusPill(user?.sellerProfile?.bankVerificationStatus || 'not_submitted', 'verified')}
+            {statusPill(user?.onboarding?.bankVerificationStatus || user?.sellerProfile?.bankVerificationStatus || 'not_submitted', 'verified')}
         </span>,
         <span key={`go-live-${user._id}`}>
-            {statusPill(user?.sellerProfile?.goLiveStatus || 'pending', 'live')}
+            {statusPill(getGoLiveStatus(user), 'live')}
         </span>,
         // <div key={`status-${user._id}`} className="flex flex-col">
         //     <label className="relative inline-flex" title="Enable/Disable">

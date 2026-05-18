@@ -11,11 +11,12 @@ import {
 } from './authSession';
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
+const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
 
 const configuredApiBase =
     process.env.REACT_APP_API_BASE_URL ||
     process.env.VITE_API_BASE_URL ||
-    "http://192.168.16.42:4000";
+    "http://localhost:4000";
 
 const normalizedApiBase = trimTrailingSlash(configuredApiBase);
 
@@ -141,7 +142,12 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
     }
 
     if (!error.response) {
-        return Promise.reject({ message: "Network error. Please try again." });
+        const baseURL = trimTrailingSlash(error?.config?.baseURL || apiUrl);
+        const requestPath = trimLeadingSlash(error?.config?.url || "");
+        const requestUrl = requestPath ? `${baseURL}/${requestPath}` : baseURL;
+        return Promise.reject({
+            message: `Network error. API not reachable: ${requestUrl}`,
+        });
     }
 
     const data = error.response.data || {};

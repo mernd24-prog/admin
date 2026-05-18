@@ -114,6 +114,7 @@ const UserDetails = () => {
     bankReviewOverride?.bankRejectionReason ?? sellerProfile.bankRejectionReason;
   const bankStatus =
     bankReviewOverride?.bankVerificationStatus ||
+    onboarding.bankVerificationStatus ||
     (bankRejectionReason
       ? 'rejected'
       : sellerProfile.bankVerificationStatus &&
@@ -123,10 +124,9 @@ const UserDetails = () => {
           ? 'submitted'
           : 'not_submitted');
   const goLiveStatus =
-    sellerProfile.goLiveStatus ||
-    (user.accountStatus === 'active' && (onboarding.status || sellerProfile.onboardingStatus) === 'ready_for_go_live'
+    user.accountStatus === 'active' || sellerProfile.goLiveStatus === 'live'
       ? 'live'
-      : 'pending');
+      : onboarding.goLiveStatus || sellerProfile.goLiveStatus || 'pending';
 
   // KYC lazy-load state
   const [kycData, setKycData]       = useState(null);
