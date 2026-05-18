@@ -16,6 +16,7 @@ import { CiSettings } from 'react-icons/ci';
 import { HiOutlineReceiptTax } from "react-icons/hi";
 import { isSellerPanel } from '../../_helpers/panelConfig';
 import { getModuleRoute } from '../../_helpers/rbacRoutes';
+import { CONTENT_SIDEBAR_ROUTES } from '../../pages/CMS/ContentManagement/contentTypes';
 
 export const SUPPORTED_ADMIN_ROUTES = new Set([
   'home',
@@ -42,7 +43,7 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'product-event-weightages',
   'recommended-product-tag-weightages',
   'referral-commerce',
-  'content-pages',
+  'content-management',
   'product-variants',
   'product-families',
   'product-dimensions',
@@ -64,12 +65,6 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'tax',
   'subTax',
   'tax-rule',
-  'return-policy',
-  'holidays',
-  'payment-policy',
-  'privacy-policies',
-  'terms-and-conditions',
-  'help-and-support',
   'profile',
   'changePassword',
   'settings',
@@ -90,7 +85,8 @@ const getTabName = (slug) => {
     'rbac': 'Settings',
     'carts': 'Orders',
     'payments': 'Orders',
-    'platform': 'Settings',
+    'platform': 'Content',
+    'content': 'Content',
     'notifications': 'Settings',
     'wallets': 'Orders',
     'subscriptions': 'Settings',
@@ -118,6 +114,8 @@ const SELLER_SIDEBAR_SECTIONS = [
 ];
 
 const MODULE_ROUTE_EXPANSIONS = {
+  content: CONTENT_SIDEBAR_ROUTES,
+  platform: CONTENT_SIDEBAR_ROUTES,
   orders: [
     { label: 'Orders', route: 'orders' },
     { label: 'Order Status', route: 'order-status' },
@@ -164,7 +162,10 @@ const MODULE_ROUTE_EXPANSIONS = {
   ],
 };
 
-const isSupportedRoute = (route) => SUPPORTED_ADMIN_ROUTES.has(String(route || '').trim());
+const isSupportedRoute = (route) => {
+  const r = String(route || '').trim();
+  return SUPPORTED_ADMIN_ROUTES.has(r) || r === 'content-management' || r.startsWith('content-management/');
+};
 
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {
   const dispatch = useDispatch();
@@ -213,10 +214,15 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
   }, [windowWidth, setNavbarOpen]);
 
   useEffect(() => {
-    const currentPath = location.pathname.split('/')[2];
+    const parts = location.pathname.split('/');
+    const currentPath = parts.slice(2).join('/');
     if (currentPath) {
       const matchingTab = getSidebarData().find(tab =>
-        tab.subItems.some(item => item.module_code === currentPath)
+        tab.subItems.some(item =>
+          item.module_code === currentPath ||
+          currentPath.startsWith(item.module_code + '/') ||
+          item.module_code.startsWith(currentPath + '/')
+        )
       );
       if (matchingTab) {
         setActiveTab(matchingTab.label);
@@ -348,7 +354,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
       return acc;
     }, {});
 
-    return Object.entries(groupedByTab).map(([tabName, modules]) => {
+    const computedTabs = Object.entries(groupedByTab).map(([tabName, modules]) => {
       const uniqueModules = Array.from(
         new Map((modules || []).map((item) => [item.module_code, item])).values(),
       );
@@ -368,6 +374,25 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         };
       }
     }).filter((tab) => Array.isArray(tab.subItems) && tab.subItems.length > 0);
+
+    // Fallback: keep CMS/Content visible for admin roles even if RBAC payload is incomplete.
+    const role = String(userData?.role || "").toLowerCase();
+    const canFallbackContent = role === "super-admin" || role === "admin";
+    const hasContentTab = computedTabs.some((tab) => String(tab.label || "").toLowerCase() === "content");
+    if (canFallbackContent && !hasContentTab) {
+      computedTabs.push({
+        label: "Content",
+        icon: getIconForTab("content"),
+        isSingleItem: false,
+        subItems: CONTENT_SIDEBAR_ROUTES.map((item) => ({
+          name: item.label,
+          label: item.label,
+          module_code: item.route,
+        })),
+      });
+    }
+
+    return computedTabs;
   };
 
   const getIconForTab = (tabName) => {
@@ -383,6 +408,7 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
       'blog': FaBlog,
       'shipping/pickup': BsTruckFlatbed,
       'cms': RiChatSmile2Fill,
+      'content': RiChatSmile2Fill,
       'settings': CiSettings,
       "tax":HiOutlineReceiptTax
     };

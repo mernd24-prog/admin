@@ -15,29 +15,15 @@ import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/Pro
 import Badge from "../../pages/Admin/Badge/Badge";
 import QtyHead from "../../pages/Admin/QTY/QtyHead";
 import Batch from "../../pages/ProductManagement/Batch/Batch";
-import FAQ from "../../pages/CMS/FAQ/FAQ";
-import FAQList from "../../pages/CMS/FAQ/FAQList";
-import ReturnPolicy from "../../pages/CMS/ReturnPolicy/ReturnPolicy";
-import ReturnPolicyList from "../../pages/CMS/ReturnPolicy/ReturnPolicyList";
-import Holidays from "../../pages/CMS/Holidays/Holidays";
-import HolidaysList from "../../pages/CMS/Holidays/HolidaysList";
-import PaymentPolicy from "../../pages/CMS/PaymentPolicy/PaymentPolicy";
-import PaymentPolicyList from "../../pages/CMS/PaymentPolicy/PaymentPolicyList";
-import PrivacyPolicyCategory from "../../pages/CMS/PrivacyPolicy/PrivacyPolicy";
-import PrivacyPolicyList from "../../pages/CMS/PrivacyPolicy/PrivacyPolicyList";
 import Tax from "../../pages/Tax/Tax";
 import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
 import ShippingDurations from "../../pages/ShippingPickup/ShippingDurations/ShippingDurations";
-import TermsConditionsList from "../../pages/CMS/Terms&Conditions/Terms&ConditionsList";
-import TermsConditions from "../../pages/CMS/Terms&Conditions/Terms&Conditions";
 import PromotionsBanner from "../../pages/Admin/PromotionsBanner/PromotionsBanner";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
 import Settings from "../../pages/Setting/Setting";
 import BulkUploadProduct from "../../pages/ProductManagement/BulkUploadProduct";
-import HelpAndSupport from '../../pages/CMS/Help&Support/HelpAndSupport.js';
-import HelpSupportList from '../../pages/CMS/Help&Support/HelpSupportList.js';
 import DeliveryStaff from '../../pages/UserManagement/DeliveryStaff/DeliveryStaff.js';
 import CircularMenu from '../../pages/Admin/Orbit/Orbit.js';
 
@@ -221,17 +207,8 @@ const ManageState = React.lazy(() =>
 const ManageCity = React.lazy(() =>
   import("../../pages/UserManagement/ManageCity/ManageCity")
 );
-const HomepageSlides = React.lazy(() =>
-  import("../../pages/CMS/HomepageSlides/HomepageSlides")
-);
-const BannerLocations = React.lazy(() =>
-  import("../../pages/CMS/BannerLocations/BannerLocations")
-);
-const ContentPages = React.lazy(() =>
-  import("../../pages/CMS/ContentPages/ContentPages")
-);
-const Banners = React.lazy(() =>
-  import("../../pages/CMS/BannerLocations/components/Banners")
+const ContentManagement = React.lazy(() =>
+  import("../../pages/CMS/ContentManagement/ContentManagement")
 );
 const GiftCardOrder = React.lazy(() =>
   import("../../pages/OrdersManagement/GiftCardOrder/GiftCardOrder")
@@ -566,14 +543,12 @@ function Layout() {
               <Route path="/categories" element={renderRoute('/categories', <ProductCategories />)} />
               <Route path="/category-attributes" element={renderRoute('/category-attributes', <CategoryAttributes />)} />
               <Route path="/subscription-orders" element={renderRoute('/subscription-orders', <SubscriptionOrders />)} />
-              <Route path="/homepage-slides" element={renderRoute('/homepage-slides', <HomepageSlides />)} />
-              <Route path="/banners" element={renderRoute('/banners', <BannerLocations />)} />
-              <Route path="/content-pages" element={renderRoute('/content-pages', <ContentPages />)} />
+              <Route path="/content-management" element={renderRoute('/content-management', <ContentManagement />)} />
+              <Route path="/content-management/:type" element={renderRoute('/content-management', <ContentManagement />)} />
               <Route path="/view-orders" element={renderRoute('/view-orders', <OrderSummary />)} />
               <Route path="/product-catalog/form/:id?" element={renderRoute('/product-catalog/form', <AddEditProductPopup />)} />
               <Route path="/product-catalog/view/:id" element={renderRoute('/product-catalog', <ProductAdminDetails />)} />
               <Route path="/view-subscription-orders" element={renderRoute('/view-subscription-orders', <ViewSubscriptionOrders />)} />
-              <Route path="/inner-banners" element={renderRoute('/inner-banners', <Banners />)} />
               <Route path="/profile" element={renderRoute('/profile', <Profile />)} />
               <Route path="/changePassword" element={renderRoute('/changePassword', <ChangePassword />)} />
               <Route path="/settings" element={renderRoute('/settings', <Setting />)} />
@@ -610,28 +585,6 @@ function Layout() {
               <Route path="/badges" element={renderRoute('/badge', <Badge />)} />
               <Route path="/qty-head" element={renderRoute('/qty-head', <QtyHead />)} />
               <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
-              <Route path='/faqs' element={renderRoute('/faqs', <FAQ />)} />
-              <Route path="/faqsList/:id" element={renderRoute('/faqs', <FAQList />)} />
-              <Route path='/return-policy' element={renderRoute('/return-policy', <ReturnPolicy />)} />
-              <Route
-                path='/return-policy-list/:id'
-                element={renderSupportedRoute('/return-policy', <ReturnPolicyList setModuleName={setModuleName} />)}
-              />
-              <Route path='/holidays' element={renderRoute('/holidays', <Holidays />)} />
-              <Route
-                path='/holidays-list/:id'
-                element={renderSupportedRoute('/holidays', <HolidaysList setModuleName={setModuleName} />)}
-              />
-              <Route path='/payment-policy' element={renderRoute('/payment-policy', <PaymentPolicy />)} />
-              <Route
-                path='/payment-policy-list/:id'
-                element={renderSupportedRoute('/payment-policy', <PaymentPolicyList setModuleName={setModuleName} />)}
-              />
-              <Route path='/privacy-policies' element={renderRoute('/privacy-policies', <PrivacyPolicyCategory />)} />
-              <Route
-                path='/privacy-policies-list/:id'
-                element={renderSupportedRoute('/privacy-policies', <PrivacyPolicyList setModuleName={setModuleName} />)}
-              />
               <Route path="/tax" element={renderRoute('/tax', <Tax />)} />
               <Route
                 path='/subTax'
@@ -647,15 +600,6 @@ function Layout() {
               />
               <Route path="/shipping-duration" element={renderSupportedRoute('/shipping-duration', <ShippingDurations />)} />
               <Route path="/discount-coupons" element={renderRoute('/discount-coupons', <DiscountCoupons />)} />
-              <Route path="/terms-and-conditions" element={renderRoute('/terms-and-conditions', <TermsConditions />)} />
-              <Route
-                path='/terms-and-conditions/:id'
-                element={renderSupportedRoute('/terms-and-conditions', <TermsConditionsList setModuleName={setModuleName} />)}
-              />
-              <Route
-                path='/help-and-support/:id'
-                element={renderSupportedRoute('/help-and-support', <HelpSupportList setModuleName={setModuleName} />)}
-              />
 
               <Route path="/promotions-banners" element={renderRoute('/promotions-banners', <PromotionsBanner />)} />
               <Route path="/bar-code" element={renderRoute('/barcode', <BarcodePage />)} />
@@ -716,7 +660,6 @@ function Layout() {
 
               <Route path="/setting" element={renderRoute("/setting", <Settings />)} />
               <Route path="/upload-file" element={renderRoute("/upload-file", <BulkUploadProduct />)} />
-              <Route path="/help-and-support" element={renderRoute("/help-and-support", <HelpAndSupport />)} />
               <Route path="/delivery-staff" element={renderRoute("/delivery-staff", <DeliveryStaff />)} />
 
 

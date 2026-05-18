@@ -344,7 +344,7 @@
         ]
     },
     {
-        "label": "CMS",
+        "label": "Content",
         "icon": "GoCodeSquare",
         "key": "cms",
         "subItems": [
