@@ -78,12 +78,20 @@ const Profile = () => {
         try {
             setLoading(true);
             const uploadedImage = await uploadFile(file, "PROFILES");
+            const res = await dispatch(updateProfile({
+                user_image: uploadedImage,
+                full_name: formData?.full_name,
+            })).unwrap();
+            const nextProfile = res?.data ? profileToForm(res.data) : {
+                ...formData,
+                user_image: uploadedImage,
+            };
             setFormData(prev => ({
                 ...prev,
-                user_image: uploadedImage
+                ...nextProfile,
             }));
+            window.dispatchEvent(new CustomEvent('profile:updated', { detail: res?.data || nextProfile }));
             toast.success('Profile picture updated successfully!');
-            setIsEditing(true);
         } catch (error) {
             console.error('File upload failed:', error);
             toast.error('File upload failed. Please try again.');
@@ -102,6 +110,7 @@ const Profile = () => {
             const res = await dispatch(updateProfile(apiPayload)).unwrap();
             if (res?.data) {
                 setFormData(profileToForm(res.data));
+                window.dispatchEvent(new CustomEvent('profile:updated', { detail: res.data }));
             }
             setShowSuccess(true);
             setIsEditing(false);
