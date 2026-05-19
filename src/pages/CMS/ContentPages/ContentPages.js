@@ -22,11 +22,49 @@ const PAGE_SIZE = 10;
 const emptyForm = {
   slug: "",
   title: "",
-  pageType: "",
+  pageType: "static_page",
+  status: "draft",
+  description: "",
   body: "",
   excerpt: "",
   category: "",
   tags: [],
+  image: {
+    url: "",
+    alt: "",
+    title: "",
+    caption: "",
+    type: "hero",
+  },
+  gallery: [],
+  sections: [],
+  cta: {
+    label: "",
+    url: "",
+    target: "_self",
+  },
+  seo: {
+    metaTitle: "",
+    metaDescription: "",
+    keywords: [],
+    focusKeyword: "",
+    canonicalUrl: "",
+    robots: "index,follow",
+    ogTitle: "",
+    ogDescription: "",
+    ogImage: { url: "", alt: "" },
+    twitterTitle: "",
+    twitterDescription: "",
+    twitterImage: { url: "", alt: "" },
+    schemaType: "WebPage",
+    schemaJson: {},
+    breadcrumbs: [],
+  },
+  visibility: {
+    channels: ["web", "app"],
+    roles: ["public"],
+  },
+  sortOrder: 0,
   coverImage: "",
   thumbnailUrl: "",
   heroImage: "",
@@ -92,7 +130,9 @@ const ContentPages = () => {
     if (!formData.title.trim()) nextErrors.title = 'Title is required';
     if (!formData.slug.trim()) nextErrors.slug = 'Slug is required';
     if (!formData.pageType.trim()) nextErrors.pageType = 'Page type is required';
-    if (!formData.body.trim()) nextErrors.body = 'Body is required';
+    if (!formData.description.trim() && !formData.body.trim()) {
+      nextErrors.description = 'Description or body is required';
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -105,10 +145,17 @@ const ContentPages = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // if (!validate()) return;
+    if (!validate()) return;
 
     const body = {
-      ...formData
+      ...formData,
+      published: formData.status === 'published' || Boolean(formData.published),
+      heroImage: formData.heroImage || formData.image?.url || '',
+      coverImage: formData.coverImage || formData.image?.url || '',
+      thumbnailUrl: formData.thumbnailUrl || formData.image?.url || '',
+      galleryImages: Array.isArray(formData.gallery)
+        ? formData.gallery.map((item) => item?.url).filter(Boolean)
+        : formData.galleryImages || [],
     };
 
     try {
@@ -128,10 +175,42 @@ const ContentPages = () => {
 
   const openEdit = (page) => {
     setFormData({
+      ...emptyForm,
+      ...page,
       recordSlug: pageSlug(page),
       slug: page.slug || pageSlug(page),
       title: page.title || '',
       pageType: page.pageType || 'content',
+      status: page.status || (page.published ? 'published' : 'draft'),
+      description: page.description || page.excerpt || '',
+      excerpt: page.excerpt || page.description || '',
+      category: page.category || '',
+      tags: page.tags || [],
+      image: page.image || {
+        url: page.heroImage || page.coverImage || '',
+        alt: page.title || '',
+        title: '',
+        caption: '',
+        type: 'hero',
+      },
+      gallery: page.gallery || (page.galleryImages || []).map((url) => ({ url, alt: page.title || '' })),
+      sections: page.sections || [],
+      cta: page.cta || emptyForm.cta,
+      seo: {
+        ...emptyForm.seo,
+        ...(page.seo || {}),
+      },
+      visibility: {
+        ...emptyForm.visibility,
+        ...(page.visibility || {}),
+      },
+      sortOrder: page.sortOrder || 0,
+      coverImage: page.coverImage || page.image?.url || '',
+      thumbnailUrl: page.thumbnailUrl || page.image?.url || '',
+      heroImage: page.heroImage || page.image?.url || '',
+      galleryImages: page.galleryImages || [],
+      author: page.author || emptyForm.author,
+      readTime: page.readTime || 0,
       language: page.language || 'en',
       body: page.body || '',
       published: Boolean(page.published),
@@ -157,6 +236,7 @@ const ContentPages = () => {
       await dispatch(updateContentPage({
         slug: pageSlug(page),
         published: !page.published,
+        status: !page.published ? 'published' : 'draft',
       })).unwrap();
       toast.success('Status updated successfully');
       setIsRefresh(value => !value);
