@@ -8,6 +8,17 @@ const normalizeMode = (value) =>
     .trim()
     .toLowerCase();
 
+const resolvePanelMode = (value) => {
+  const mode = normalizeMode(value);
+  if (["seller", "sellers", "seller-panel", "seller_panel"].includes(mode)) {
+    return PANEL_MODES.SELLER;
+  }
+  if (["admin", "administrator", "admin-panel", "admin_panel"].includes(mode)) {
+    return PANEL_MODES.ADMIN;
+  }
+  return "";
+};
+
 const detectModeFromRuntime = () => {
   if (typeof window === "undefined") {
     return "";
@@ -23,17 +34,14 @@ const detectModeFromRuntime = () => {
 };
 
 const configuredMode =
-  normalizeMode(process.env.REACT_APP_PANEL_MODE) ||
-  normalizeMode(process.env.VITE_PANEL_MODE) ||
-  normalizeMode(process.env.REACT_APP_APP_MODE) ||
-  normalizeMode(process.env.VITE_APP_MODE) ||
+  resolvePanelMode(process.env.REACT_APP_PANEL_MODE) ||
+  resolvePanelMode(process.env.VITE_PANEL_MODE) ||
+  resolvePanelMode(process.env.REACT_APP_APP_MODE) ||
+  resolvePanelMode(process.env.VITE_APP_MODE) ||
   detectModeFromRuntime() ||
-  PANEL_MODES.ADMIN;
+  PANEL_MODES.SELLER;
 
-export const getPanelMode = () =>
-  configuredMode === PANEL_MODES.SELLER
-    ? PANEL_MODES.SELLER
-    : PANEL_MODES.ADMIN;
+export const getPanelMode = () => configuredMode;
 
 export const isSellerPanel = () => getPanelMode() === PANEL_MODES.SELLER;
 export const isAdminPanel = () => getPanelMode() === PANEL_MODES.ADMIN;
