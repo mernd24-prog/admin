@@ -130,8 +130,18 @@ const ContentPages = () => {
     if (!formData.title.trim()) nextErrors.title = 'Title is required';
     if (!formData.slug.trim()) nextErrors.slug = 'Slug is required';
     if (!formData.pageType.trim()) nextErrors.pageType = 'Page type is required';
-    if (!formData.description.trim() && !formData.body.trim()) {
-      nextErrors.description = 'Description or body is required';
+    const hasSectionContent = (formData.sections || []).some(
+      (section) =>
+        String(section?.title || '').trim() ||
+        String(section?.description || '').trim() ||
+        (section?.points || []).some(
+          (point) =>
+            String(point?.title || '').trim() ||
+            String(point?.description || '').trim(),
+        ),
+    );
+    if (!formData.description.trim() && !formData.body.trim() && !hasSectionContent) {
+      nextErrors.description = 'Description, body, or at least one section is required';
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
