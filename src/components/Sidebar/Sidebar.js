@@ -1,10 +1,9 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { MdChevronRight, MdOutlineDashboard, MdRequestPage } from 'react-icons/md';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
-import { hasModuleAccess } from '../../_helpers/authStorage';
+import { getStoredRole, getStoredUser, hasModuleAccess } from '../../_helpers/authStorage';
 import { IoIosMenu } from 'react-icons/io';
 import { RxCross2 } from 'react-icons/rx';
 import { FaBlog, FaProductHunt, FaUserGear } from 'react-icons/fa6';
@@ -166,6 +165,65 @@ const isSupportedRoute = (route) => {
   return SUPPORTED_ADMIN_ROUTES.has(r) || r === 'content-management' || r.startsWith('content-management/');
 };
 
+const getStoredSidebarState = () => {
+  try {
+    const expandedState = sessionStorage.getItem('sidebarExpandedState');
+    const permanentState = sessionStorage.getItem('sidebarPermanentState');
+    return Boolean(JSON.parse(expandedState ?? permanentState ?? 'false'));
+  } catch {
+    return false;
+  }
+};
+
+const getSessionUser = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem('EcomAdmin') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const getCurrentSidebarUser = () => {
+  const sessionUser = getSessionUser() || {};
+  const storedUser = getStoredUser() || {};
+  const role = sessionUser.role || sessionUser.roleSlug || getStoredRole() || storedUser.role;
+  const userId =
+    sessionUser.userId ||
+    sessionUser.id ||
+    sessionUser._id ||
+    storedUser.userId ||
+    storedUser.id ||
+    storedUser._id;
+
+  if (!userId && !role) return null;
+
+  return {
+    ...storedUser,
+    ...sessionUser,
+    userId,
+    role,
+  };
+};
+
+const getIconForTab = (tabName) => {
+  const normalizedTabName = String(tabName || "").toLowerCase();
+  const iconMap = {
+    'home': MdOutlineDashboard,
+    'product management': FaProductHunt,
+    'requests': MdRequestPage,
+    'users': FaUserGear,
+    'orders': GrOrderedList,
+    'promotions': PiBroomThin,
+    'marketing': PiBroomThin,
+    'blog': FaBlog,
+    'shipping/pickup': BsTruckFlatbed,
+    'cms': RiChatSmile2Fill,
+    'settings': CiSettings,
+    "tax":HiOutlineReceiptTax
+  };
+  return iconMap[normalizedTabName] || MdOutlineDashboard;
+};
+
 const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen }) => {
   const dispatch = useDispatch();
   const selector = useSelector(state => state.user);
@@ -173,132 +231,14 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
   const sellerPanel = isSellerPanel();
   const [activeTab, setActiveTab] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(() => {
-    return JSON.parse(sessionStorage.getItem('sidebarPermanentState')) || false;
-  });
+  const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(getStoredSidebarState);
   const location = useLocation();
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const sidebarRef = useRef(null);
   const [heights, setHeights] = useState({});
   const [visibleSubItems, setVisibleSubItems] = useState({});
 
-  useEffect(() => {
-    const userDataString = sessionStorage.getItem('EcomAdmin');
-    if (userDataString) {
-      try {
-        const parsedData = JSON.parse(userDataString);
-        setUserData(parsedData);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!sellerPanel && userData?.userId) {
-      dispatch(getMyModulePermission({ _id: userData.userId, role: userData.role }));
-    }
-  }, [userData, dispatch, isRefreshConfig, sellerPanel]);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (windowWidth < 1300) {
-      setNavbarOpen(false);
-    }
-  }, [windowWidth, setNavbarOpen]);
-
-  useEffect(() => {
-    const parts = location.pathname.split('/');
-    const currentPath = parts.slice(2).join('/');
-    if (currentPath) {
-      const matchingTab = getSidebarData().find(tab =>
-        tab.subItems.some(item =>
-          item.module_code === currentPath ||
-          currentPath.startsWith(item.module_code + '/') ||
-          item.module_code.startsWith(currentPath + '/')
-        )
-      );
-      if (matchingTab) {
-        setActiveTab(matchingTab.label);
-      }
-    }
-  }, [location.pathname, permissions, sellerPanel]);
-
-  useEffect(() => {
-    const data = getSidebarData();
-    const newHeights = {};
-    data.forEach(item => {
-      if (!item.isSingleItem) {
-        newHeights[item.label] = item.subItems.length * 40;
-      }
-    });
-    setHeights(newHeights);
-  }, [permissions, sellerPanel]);
-
-  useEffect(() => {
-    if (activeTab && isExpanded) {
-      setVisibleSubItems(prev => ({ ...prev, [activeTab]: 0 }));
-      
-      const subItemsCount = getSidebarData().find(item => item.label === activeTab)?.subItems.length || 0;
-      const delays = Array.from({ length: subItemsCount }, (_, i) => i * 100);
-      
-      delays.forEach((delay, index) => {
-        setTimeout(() => {
-          setVisibleSubItems(prev => ({ 
-            ...prev, 
-            [activeTab]: Math.max(prev[activeTab] || 0, index + 1) 
-          }));
-        }, delay);
-      });
-    }
-  }, [activeTab, isExpanded]);
-
-  const handleMouseEnter = () => {
-    if (!isPermanentlyOpen) setIsExpanded(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isPermanentlyOpen) {
-      setIsExpanded(false);
-      setVisibleSubItems({});
-    }
-  };
-  
-
-  const handleMenuClick = () => {
-    const newState = !isPermanentlyOpen;
-    setHasPermanentOpen(newState);
-    setIsPermanentlyOpen(newState);
-    setIsExpanded(newState);
-    if (newState) {
-      setNavbarOpen(true);
-    }
-    sessionStorage.setItem('sidebarPermanentState', JSON.stringify(newState));
-  };
-
-  const handleNavClick = (moduleCode, shouldCloseNavbar = true) => {
-    setModuleName(moduleCode);
-    if (shouldCloseNavbar) {
-      setNavbarOpen(false);
-    }
-  };
-
-  const toggleTab = (tabName) => {
-    if (activeTab === tabName) {
-      setVisibleSubItems(prev => ({ ...prev, [tabName]: 0 }));
-      setActiveTab(null);
-    } else {
-      setActiveTab(tabName);
-      setVisibleSubItems(prev => ({ ...prev, [tabName]: 0 }));
-    }
-  };
-
-  const getSidebarData = () => {
+  const sidebarData = useMemo(() => {
     if (sellerPanel) {
       const sellerItems = SELLER_SIDEBAR_SECTIONS.filter((entry) =>
         hasModuleAccess(entry.module)
@@ -373,45 +313,114 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         };
       }
     }).filter((tab) => Array.isArray(tab.subItems) && tab.subItems.length > 0);
+  }, [permissions, sellerPanel]);
 
-    // Fallback: keep CMS/Content visible for admin roles even if RBAC payload is incomplete.
-    const role = String(userData?.role || "").toLowerCase();
-    const canFallbackContent = role === "super-admin" || role === "admin";
-    const hasContentTab = computedTabs.some((tab) => String(tab.label || "").toLowerCase() === "content");
-    if (canFallbackContent && !hasContentTab) {
-      computedTabs.push({
-        label: "Content",
-        icon: getIconForTab("content"),
-        isSingleItem: false,
-        subItems: CONTENT_SIDEBAR_ROUTES.map((item) => ({
-          name: item.label,
-          label: item.label,
-          module_code: item.route,
-        })),
-      });
+  useEffect(() => {
+    const syncUserData = () => {
+      setUserData(getCurrentSidebarUser());
+    };
+
+    syncUserData();
+    window.addEventListener('auth:changed', syncUserData);
+    window.addEventListener('focus', syncUserData);
+
+    return () => {
+      window.removeEventListener('auth:changed', syncUserData);
+      window.removeEventListener('focus', syncUserData);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sellerPanel && (userData?.userId || userData?.role)) {
+      dispatch(getMyModulePermission({ _id: userData.userId, role: userData.role }));
     }
+  }, [userData, dispatch, isRefreshConfig, sellerPanel]);
 
-    return computedTabs;
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (windowWidth < 1300 && !isPermanentlyOpen) {
+      setNavbarOpen(false);
+    }
+  }, [isPermanentlyOpen, windowWidth, setNavbarOpen]);
+
+  useEffect(() => {
+    const currentPath = location.pathname.split('/')[2];
+    if (currentPath) {
+      const matchingTab = sidebarData.find(tab =>
+        tab.subItems.some(item => item.module_code === currentPath)
+      );
+      if (matchingTab) {
+        setActiveTab(matchingTab.label);
+      }
+    }
+  }, [location.pathname, sidebarData]);
+
+  useEffect(() => {
+    const newHeights = {};
+    sidebarData.forEach(item => {
+      if (!item.isSingleItem) {
+        newHeights[item.label] = item.subItems.length * 40;
+      }
+    });
+    setHeights(newHeights);
+  }, [sidebarData]);
+
+  useEffect(() => {
+    if (activeTab && isExpanded) {
+      const timeoutIds = [];
+      setVisibleSubItems(prev => ({ ...prev, [activeTab]: 0 }));
+      
+      const subItemsCount = sidebarData.find(item => item.label === activeTab)?.subItems.length || 0;
+      const delays = Array.from({ length: subItemsCount }, (_, i) => i * 100);
+      
+      delays.forEach((delay, index) => {
+        const timeoutId = setTimeout(() => {
+          setVisibleSubItems(prev => ({ 
+            ...prev, 
+            [activeTab]: Math.max(prev[activeTab] || 0, index + 1) 
+          }));
+        }, delay);
+        timeoutIds.push(timeoutId);
+      });
+
+      return () => {
+        timeoutIds.forEach(id => clearTimeout(id));
+      };
+    }
+  }, [activeTab, isExpanded, sidebarData]);
+
+  const handleMenuClick = () => {
+    const newState = !isPermanentlyOpen;
+    setHasPermanentOpen(newState);
+    setIsPermanentlyOpen(newState);
+    setIsExpanded(newState);
+    if (newState) {
+      setNavbarOpen(true);
+    }
+    sessionStorage.setItem('sidebarPermanentState', JSON.stringify(newState));
+    sessionStorage.setItem('sidebarExpandedState', JSON.stringify(newState));
   };
 
-  const getIconForTab = (tabName) => {
-    const normalizedTabName = String(tabName || "").toLowerCase();
-    const iconMap = {
-      'home': MdOutlineDashboard,
-      'product management': FaProductHunt,
-      'requests': MdRequestPage,
-      'users': FaUserGear,
-      'orders': GrOrderedList,
-      'promotions': PiBroomThin,
-      'marketing': PiBroomThin,
-      'blog': FaBlog,
-      'shipping/pickup': BsTruckFlatbed,
-      'cms': RiChatSmile2Fill,
-      'content': RiChatSmile2Fill,
-      'settings': CiSettings,
-      "tax":HiOutlineReceiptTax
-    };
-    return iconMap[normalizedTabName] || MdOutlineDashboard;
+  const handleNavClick = (moduleCode, shouldCloseNavbar = true) => {
+    setModuleName(moduleCode);
+    if (shouldCloseNavbar && !isPermanentlyOpen) {
+      setNavbarOpen(false);
+    }
+  };
+
+  const toggleTab = (tabName) => {
+    if (activeTab === tabName) {
+      setVisibleSubItems(prev => ({ ...prev, [tabName]: 0 }));
+      setActiveTab(null);
+    } else {
+      setActiveTab(tabName);
+      setVisibleSubItems(prev => ({ ...prev, [tabName]: 0 }));
+    }
   };
 
   const sidebarWidth = isExpanded ? 'w-64' : 'w-16';
@@ -421,8 +430,6 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
     <div
       ref={sidebarRef}
       className={`fixed lg:static inset-y-0 bg-white ${sidebarWidth} h-full z-[9999] xl:flex flex-col ${sidebarTransition} ${navbarOpen ? "" : "hidden lg:flex"} shadow-lg`}
-      // onMouseEnter={handleMouseEnter}
-      // onMouseLeave={handleMouseLeave}
     >
       <div className='sticky top-0 z-10 flex items-center justify-center h-20 px-2 bg-white text-black w-full mt-3 mb-3'>
         {isExpanded ? (
@@ -453,10 +460,10 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         )}
       </div>
 
-      <div className='flex-1 overflow-y-auto  '>
-        <nav className={`w-full bg-white ${isExpanded ? 'p-4' : 'p-2'} overflow-hidden overflow-y-auto`}>
+      <div className="flex-1 overflow-y-auto sidebar-scrollbar">
+        <nav className={`w-full bg-white ${isExpanded ? 'p-4' : 'p-2'} overflow-hidden overflow-y-auto sidebar-scrollbar`}>
           <ul>
-            {getSidebarData().map((item, index) => {
+            {sidebarData.map((item, index) => {
               const IconComponent = item.icon;
               const isTabActive = activeTab === item.label;
               const hasActiveChild = item.subItems.some(
@@ -491,12 +498,12 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ''}
                   >
-                    <IconComponent size={isExpanded ? 22 : 18} className="bg-white text-[#989AFF]" />
+                    <IconComponent size={isExpanded ? 22 : 18} className="bg-white text-[#CE9F2D]" />
                     {isExpanded && (
                       <>
                         <span className='text-xs'>{item.label}</span>
                         <MdChevronRight
-                          className={`ml-auto transition-transform duration-200 ${isTabActive ? 'rotate-90' : ''}`}
+                          className={`ml-auto transition-transform duration-200 text-[#CE9F2D] ${isTabActive ? 'rotate-90' : ''}`}
                         />
                       </>
                     )}

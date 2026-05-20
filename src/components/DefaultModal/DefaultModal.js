@@ -11,6 +11,7 @@ const Modal = ({
   heading = '',
   transparentButtonClassName = "",
   buttonClassName = "",
+  buttonStyle = {},
   modalClassName = "",
   headingClassName = "",
   childrenClassName = "",
@@ -22,6 +23,14 @@ const Modal = ({
   cancelButtonChildren = "Cancel",closeButton=false
 }) => {
   if (!isOpen) return null
+
+  const handleSubmit = () => {
+    if (typeof onSubmit === 'function') {
+      onSubmit()
+      return
+    }
+    closeModal()
+  }
  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
@@ -52,7 +61,8 @@ const Modal = ({
               {showSubmitButton && (
                 <Button
                   className={`px-6 py-2 text-sm md:text-base w-full ${buttonClassName}`}
-                  onClick={closeModal}
+                  style={buttonStyle}
+                  onClick={handleSubmit}
                 >
                   {submitButtonChildren}
                 </Button>

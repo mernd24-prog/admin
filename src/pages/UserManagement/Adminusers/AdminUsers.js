@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import {
   getAdminUsers, deactivateAdminUser,
   getPlatformSubAdmins, createPlatformSubAdmin, createAdmin,
+  getAccessModules, updateAdminUser, updatePlatformSubAdminModules,
 } from '../../../Redux/adminCoreSlice';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
@@ -51,29 +52,99 @@ const MODULE_LABELS = {
   admin: 'Admin Dashboard',
 };
 
-const ModuleSelector = ({ selected, onChange, disabled = false }) => {
+const MODULE_TABS = {
+  admin: 'Home',
+  users: 'Users',
+  rbac: 'Settings',
+  sellers: 'Seller Management',
+  products: 'Product Management',
+  recommendations: 'Product Management',
+  warranty: 'Product Management',
+  orders: 'Orders',
+  carts: 'Orders',
+  payments: 'Orders',
+  wallets: 'Orders',
+  returns: 'Orders',
+  pricing: 'Promotions',
+  referral: 'Promotions',
+  loyalty: 'Promotions',
+  'dynamic-pricing': 'Promotions',
+  delivery: 'Shipping/Pickup',
+  tax: 'Tax',
+  platform: 'Settings',
+  notifications: 'Settings',
+  subscriptions: 'Settings',
+  fraud: 'Settings',
+  analytics: 'Analytics',
+};
+
+const toModuleOption = (module) => {
+  if (typeof module === 'string') {
+    return {
+      slug: module,
+      name: MODULE_LABELS[module] || module,
+      tab: MODULE_TABS[module] || 'Settings',
+    };
+  }
+
+  const slug = module?.slug || module?.module || module?.module_code || module?.id;
+  return {
+    slug,
+    name: module?.name || MODULE_LABELS[slug] || slug,
+    tab: module?.tab || module?.metadata?.tab || MODULE_TABS[slug] || 'Settings',
+  };
+};
+
+const hasAssignedModuleAccess = (module = {}) => {
+  if (module.assigned) return true;
+  return (module.permissions || []).some((permission) => permission?.assigned);
+};
+
+const groupModuleOptions = (modules = DEFAULT_PLATFORM_MODULES) => {
+  const groups = modules
+    .map(toModuleOption)
+    .filter((module) => module.slug)
+    .reduce((acc, module) => {
+      if (!acc[module.tab]) acc[module.tab] = [];
+      acc[module.tab].push(module);
+      return acc;
+    }, {});
+
+  return Object.entries(groups);
+};
+
+const ModuleSelector = ({ selected, onChange, modules = DEFAULT_PLATFORM_MODULES, disabled = false }) => {
   const toggle = (mod) => {
     if (disabled) return;
     const next = selected.includes(mod) ? selected.filter((m) => m !== mod) : [...selected, mod];
     if (next.length === 0) return;
     onChange(next);
   };
+  const groupedModules = groupModuleOptions(modules);
+
   return (
-    <div className="grid grid-cols-2 gap-1.5 max-h-52 overflow-y-auto pr-1">
-      {DEFAULT_PLATFORM_MODULES.map((mod) => (
-        <button
-          key={mod}
-          type="button"
-          disabled={disabled}
-          onClick={() => toggle(mod)}
-          className={`text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
-            selected.includes(mod)
-              ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094] font-medium'
-              : 'border-gray-200 text-gray-600 hover:border-gray-300'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          {MODULE_LABELS[mod] || mod}
-        </button>
+    <div className="max-h-64 overflow-y-auto pr-1 space-y-3">
+      {groupedModules.map(([tabName, tabModules]) => (
+        <div key={tabName} className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{tabName}</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {tabModules.map((module) => (
+              <button
+                key={module.slug}
+                type="button"
+                disabled={disabled}
+                onClick={() => toggle(module.slug)}
+                className={`text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
+                  selected.includes(module.slug)
+                    ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094] font-medium'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {module.name}
+              </button>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -81,6 +152,18 @@ const ModuleSelector = ({ selected, onChange, disabled = false }) => {
 
 const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '' };
 const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: ['products', 'orders'] };
+
+const getUserDisplayName = (user = {}) => {
+  const profile = user.profile || {};
+  return (
+    user.fullName ||
+    user.full_name ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
+    user.userName ||
+    user.email ||
+    ''
+  );
+};
 
 const extractListPayload = (sliceData = {}) => {
   const candidates = [
@@ -135,10 +218,19 @@ const filterUsers = (users = [], query = '') => {
   });
 };
 
+const isUserActive = (user = {}) => {
+  if (!user) return false;
+  const status = String(user.accountStatus || user.status || '').toLowerCase();
+  if (status) return status === 'active';
+  if (typeof user.isDisable === 'boolean') return !user.isDisable;
+  return true;
+};
+
 const AdminUsers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector((s) => s.adminCore);
+  const userSelector = useSelector((s) => s.user);
 
   const storedRole = normalizeRole(getStoredRole());
   const isSuperAdmin = storedRole === 'super-admin';
@@ -153,6 +245,9 @@ const AdminUsers = () => {
   // Modals
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [addSubAdminOpen, setAddSubAdminOpen] = useState(false);
+  const [editAdminOpen, setEditAdminOpen] = useState(false);
+  const [editSubAdminOpen, setEditSubAdminOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -165,6 +260,36 @@ const AdminUsers = () => {
 
   const { list: admins, total: adminsTotal } = extractListPayload(selector?.adminUsersData);
   const { list: allSubAdmins } = extractListPayload(selector?.platformSubAdminsData);
+  const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
+  const sidebarModuleSlugs = useMemo(
+    () => new Set(
+      (Array.isArray(sidebarModules) ? sidebarModules : [])
+        .filter(hasAssignedModuleAccess)
+        .map((module) => module.slug || module.module || module.module_code?.module_code || module.module_code)
+        .filter(Boolean)
+    ),
+    [sidebarModules],
+  );
+  const accessModulesPayload = selector?.accessModulesData?.data?.data || selector?.accessModulesData?.normalized?.data || {};
+  const accessModules = Array.isArray(accessModulesPayload?.modules) ? accessModulesPayload.modules : [];
+  const moduleOptions = useMemo(() => {
+    const fromApi = accessModules
+      .filter((module) => module?.assignable !== false)
+      .map(toModuleOption)
+      .filter((module) => module.slug)
+      .filter((module) => !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug));
+    return fromApi.length
+      ? Array.from(new Map(fromApi.map((module) => [module.slug, module])).values())
+      : DEFAULT_PLATFORM_MODULES.filter((module) => !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module));
+  }, [accessModules, sidebarModuleSlugs]);
+  const moduleOptionSlugs = useMemo(
+    () => moduleOptions.map((module) => typeof module === 'string' ? module : module.slug),
+    [moduleOptions],
+  );
+  const defaultSubAdminModules = useMemo(() => {
+    const preferred = moduleOptionSlugs.filter((mod) => ['products', 'orders'].includes(mod));
+    return preferred.length ? preferred : moduleOptionSlugs.slice(0, 1);
+  }, [moduleOptionSlugs]);
   const filteredSubAdmins = useMemo(
     () => filterUsers(allSubAdmins, filters.search),
     [allSubAdmins, filters.search]
@@ -190,6 +315,22 @@ const AdminUsers = () => {
       dispatch(getPlatformSubAdmins({ page: pageSubAdmin, limit: PAGE_SIZE, q: filters.search }));
     }
   }, [tab, pageSubAdmin, refresh, filters.search]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      dispatch(getAccessModules({ role: 'sub-admin', includePermissions: false }));
+    }
+  }, [dispatch, isAdmin]);
+
+  useEffect(() => {
+    setSubAdminForm((form) => {
+      const allowedModules = form.allowedModules?.filter((mod) => moduleOptionSlugs.includes(mod));
+      return {
+        ...form,
+        allowedModules: allowedModules?.length ? allowedModules : defaultSubAdminModules,
+      };
+    });
+  }, [defaultSubAdminModules, moduleOptionSlugs]);
 
   // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -233,11 +374,87 @@ const AdminUsers = () => {
       await dispatch(createPlatformSubAdmin(subAdminForm)).unwrap();
       toast.success('Sub-admin created successfully');
       setAddSubAdminOpen(false);
-      setSubAdminForm(emptySubAdmin);
+      setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules });
       setErrors({});
       setRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || 'Failed to create sub-admin');
+    }
+  };
+
+  const openEditAdmin = (user) => {
+    setEditingTarget(user);
+    setErrors({});
+    setAdminForm({
+      ...emptyUser,
+      fullName: getUserDisplayName(user),
+      email: user.email || '',
+      phone: user.phone || '',
+    });
+    setEditAdminOpen(true);
+  };
+
+  const openEditSubAdmin = (user) => {
+    const selectedModules = (user.allowedModules || []).filter((mod) => moduleOptionSlugs.includes(mod));
+    setEditingTarget(user);
+    setErrors({});
+    setSubAdminForm({
+      ...emptySubAdmin,
+      fullName: getUserDisplayName(user),
+      email: user.email || '',
+      phone: user.phone || '',
+      allowedModules: selectedModules.length ? selectedModules : defaultSubAdminModules,
+    });
+    setEditSubAdminOpen(true);
+  };
+
+  const handleUpdateAdmin = async (e) => {
+    e.preventDefault();
+    if (!editingTarget) return;
+    const errs = validateUserForm(adminForm, false);
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    try {
+      await dispatch(updateAdminUser({
+        userId: editingTarget._id || editingTarget.id,
+        fullName: adminForm.fullName,
+        phone: adminForm.phone,
+      })).unwrap();
+      toast.success('Admin updated successfully');
+      setEditAdminOpen(false);
+      setEditingTarget(null);
+      setAdminForm(emptyUser);
+      setErrors({});
+      setRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update admin');
+    }
+  };
+
+  const handleUpdateSubAdmin = async (e) => {
+    e.preventDefault();
+    if (!editingTarget) return;
+    const errs = validateUserForm(subAdminForm, false);
+    const allowedModules = subAdminForm.allowedModules.filter((mod) => moduleOptionSlugs.includes(mod));
+    if (!allowedModules.length) errs.allowedModules = 'Select at least one module';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    try {
+      await dispatch(updateAdminUser({
+        userId: editingTarget._id || editingTarget.id,
+        fullName: subAdminForm.fullName,
+        phone: subAdminForm.phone,
+      })).unwrap();
+      await dispatch(updatePlatformSubAdminModules({
+        userId: editingTarget._id || editingTarget.id,
+        allowedModules,
+      })).unwrap();
+      toast.success('Sub-admin modules updated successfully');
+      setEditSubAdminOpen(false);
+      setEditingTarget(null);
+      setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules });
+      setErrors({});
+      setRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update sub-admin');
     }
   };
 
@@ -248,9 +465,14 @@ const AdminUsers = () => {
 
   const confirmToggle = async () => {
     if (!toggleTarget) return;
-    const isActive = toggleTarget.accountStatus === 'active' || !toggleTarget.isDisable;
+    const userId = toggleTarget._id || toggleTarget.id;
+    const isActive = isUserActive(toggleTarget);
     try {
-      await dispatch(deactivateAdminUser({ userId: toggleTarget._id || toggleTarget.id, reason: isActive ? 'deactivated by admin' : undefined })).unwrap();
+      if (isActive) {
+        await dispatch(deactivateAdminUser({ userId, reason: 'deactivated by admin' })).unwrap();
+      } else {
+        await dispatch(updateAdminUser({ userId, accountStatus: 'active' })).unwrap();
+      }
       toast.success('Status updated');
       setConfirmOpen(false);
       setToggleTarget(null);
@@ -268,7 +490,7 @@ const AdminUsers = () => {
   const buildRows = (list, showModules = false) =>
     (Array.isArray(list) ? list : []).map((user) => {
       const name = user.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : user.full_name || user.email;
-      const isActive = user.accountStatus === 'active' || !user.isDisable;
+      const isActive = isUserActive(user);
       const userId = user._id || user.id;
       return [
         <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
@@ -286,6 +508,7 @@ const AdminUsers = () => {
         <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
         <ActionButtons
           key={`actions-${userId}`}
+          onEdit={() => showModules ? openEditSubAdmin(user) : openEditAdmin(user)}
           showDeleteButton={false}
           showPasswordButton={false}
           showLinkButton={false}
@@ -317,7 +540,7 @@ const AdminUsers = () => {
               </AddButton>
             )}
             {tab === 'subadmins' && isAdmin && (
-              <AddButton onClick={() => { setErrors({}); setSubAdminForm(emptySubAdmin); setAddSubAdminOpen(true); }}>
+              <AddButton onClick={() => { setErrors({}); setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules }); setAddSubAdminOpen(true); }}>
                 + Add Sub-Admin
               </AddButton>
             )}
@@ -424,6 +647,31 @@ const AdminUsers = () => {
         </div>
       </DefaultModal>
 
+      {/* Edit Admin modal */}
+      <DefaultModal
+        isOpen={editAdminOpen}
+        onClose={() => { setEditAdminOpen(false); setEditingTarget(null); }}
+        onSubmit={handleUpdateAdmin}
+        isButtonView={true}
+        submitButtonText="Update Admin"
+        closeButtonText="Cancel"
+        title="Edit Admin"
+        titleClassName="mt-5 font-medium"
+      >
+        <div className="p-4 space-y-4">
+          <FormInput label="Full Name *" name="fullName" value={adminForm.fullName}
+            onChange={(e) => setAdminForm((f) => ({ ...f, fullName: e.target.value }))}
+            error={errors.fullName} maxLength={60} required />
+          <FormInput label="Email" name="email" type="email" value={adminForm.email}
+            onChange={() => {}}
+            disabled
+            maxLength={80} />
+          <FormInput label="Phone" name="phone" value={adminForm.phone}
+            onChange={(e) => setAdminForm((f) => ({ ...f, phone: e.target.value }))}
+            maxLength={15} />
+        </div>
+      </DefaultModal>
+
       {/* Create Sub-Admin modal */}
       <DefaultModal
         isOpen={addSubAdminOpen}
@@ -464,11 +712,56 @@ const AdminUsers = () => {
             <ModuleSelector
               selected={subAdminForm.allowedModules}
               onChange={(mods) => setSubAdminForm((f) => ({ ...f, allowedModules: mods }))}
+              modules={moduleOptions}
             />
             {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
             <p className="text-xs text-gray-400 mt-1">
               {subAdminForm.allowedModules.length} module{subAdminForm.allowedModules.length !== 1 ? 's' : ''} selected.{' '}
               Click a module to toggle it.
+            </p>
+          </div>
+        </div>
+      </DefaultModal>
+
+      {/* Edit Sub-Admin modal */}
+      <DefaultModal
+        isOpen={editSubAdminOpen}
+        onClose={() => { setEditSubAdminOpen(false); setEditingTarget(null); }}
+        onSubmit={handleUpdateSubAdmin}
+        isButtonView={true}
+        submitButtonText="Update Modules"
+        closeButtonText="Cancel"
+        title="Edit Sub-Admin"
+        titleClassName="mt-5 font-medium"
+      >
+        <div className="p-4 space-y-4">
+          <FormInput label="Full Name" name="fullName" value={subAdminForm.fullName}
+            onChange={(e) => setSubAdminForm((f) => ({ ...f, fullName: e.target.value }))}
+            error={errors.fullName}
+            maxLength={60} />
+          <FormInput label="Email" name="email" type="email" value={subAdminForm.email}
+            onChange={() => {}}
+            disabled
+            maxLength={80} />
+          <FormInput label="Phone" name="phone" value={subAdminForm.phone}
+            onChange={(e) => setSubAdminForm((f) => ({ ...f, phone: e.target.value }))}
+            maxLength={15} />
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">
+              Assign Modules <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-400">
+              Only modules available in your admin/sidebar access can be assigned.
+            </p>
+            <ModuleSelector
+              selected={subAdminForm.allowedModules}
+              onChange={(mods) => setSubAdminForm((f) => ({ ...f, allowedModules: mods }))}
+              modules={moduleOptions}
+            />
+            {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              {subAdminForm.allowedModules.length} module{subAdminForm.allowedModules.length !== 1 ? 's' : ''} selected.
             </p>
           </div>
         </div>
@@ -480,7 +773,7 @@ const AdminUsers = () => {
         onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
         onConfirm={confirmToggle}
         heading={`Are you sure you want to ${
-          toggleTarget?.accountStatus === 'active' || !toggleTarget?.isDisable ? 'deactivate' : 'activate'
+          isUserActive(toggleTarget) ? 'deactivate' : 'activate'
         } this user?`}
       />
     </>

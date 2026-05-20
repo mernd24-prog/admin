@@ -179,6 +179,9 @@ export const toUserUpdateBody = (payload = {}) => {
   if (payload.role) {
     body.role = payload.role;
   }
+  if (payload.phone !== undefined) {
+    body.phone = payload.phone || null;
+  }
   const hasProfile = payload.profile || payload.full_name || payload.fullName || payload.name || payload.userName;
   if (hasProfile) {
     body.profile = toProfile(payload);
