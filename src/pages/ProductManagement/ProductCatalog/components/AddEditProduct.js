@@ -8,7 +8,7 @@ import {
   createProducts, getAllProducts, getList,
   getProductById, updateProductsById, getAllHsn, getCategoryAttributes, getAllBrandList, getAllWarrantyList,
 } from '../../../../Redux/productSlice';
-import { getProductFamilies } from '../../../../Redux/adminCoreSlice';
+import { getProductFamilies, getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
 import Loader from '../../../../components/Loader/Loader';
 import { getAllCountryList } from '../../../../Redux/CountrySlice';
@@ -127,6 +127,9 @@ export default function ProductManagementUI() {
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
   const [variantsData, setVariantsData] = useState([]);
   const [variantAxes, setVariantAxes] = useState([]);
+  const [platformOptions, setPlatformOptions] = useState([]);
+  const [platformValues, setPlatformValues] = useState({});
+  const fetchedOptionIds = useRef(new Set());
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -316,6 +319,43 @@ export default function ProductManagementUI() {
       dispatch(getAllCityList({ stateId: originState }));
     }
   }, [dispatch, formData?.origin?.country, formData?.origin?.state]);
+
+  // Load platform attribute options once on mount
+  useEffect(() => {
+    dispatch(getPlatformOptions({ limit: 200, active: true }))
+      .unwrap()
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+        setPlatformOptions(list);
+      })
+      .catch(() => {});
+  }, [dispatch]);
+
+  // When a platform-linked axis is added to variantAxes, load its values
+  useEffect(() => {
+    variantAxes.forEach((axis) => {
+      const optId = axis.platformOptionId;
+      if (!optId || fetchedOptionIds.current.has(optId)) return;
+      fetchedOptionIds.current.add(optId);
+      dispatch(getPlatformOptionValues({ optionId: optId, limit: 200 }))
+        .unwrap()
+        .then((res) => {
+          const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+          setPlatformValues((prev) => ({ ...prev, [optId]: list }));
+        })
+        .catch(() => { fetchedOptionIds.current.delete(optId); });
+    });
+  }, [dispatch, variantAxes]);
+
+  const handleOptionSearch = useCallback((query) => {
+    dispatch(getPlatformOptions({ limit: 200, active: true, q: query || undefined }))
+      .unwrap()
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+        setPlatformOptions(list);
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     const container = mainContainerRef.current;
@@ -1025,6 +1065,9 @@ export default function ProductManagementUI() {
             baseMrp={Number(formData?.mrp || 0)}
             onChange={setVariantsData}
             onOptionsChange={setVariantAxes}
+            platformOptions={platformOptions}
+            platformValues={platformValues}
+            onOptionSearch={handleOptionSearch}
           />
         </div>
       ) : (

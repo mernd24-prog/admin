@@ -1,502 +1,319 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react'
-import TableData from '../../../components/Atoms/TableData/TableData'
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import Pagination from '../../../components/Pagination/Pagination';
+import {
+  getPlatformOptions,
+  createPlatformOption,
+  updatePlatformOption,
+  deletePlatformOption,
+} from '../../../Redux/adminCoreSlice';
 import Loader from '../../../components/Loader/Loader';
-import Input from '../../../components/Atoms/Input/Input';
-import {createProduct, deleteProduct, enableDisableProduct, getListProduct, updateProduct } from '../../../Redux/productSlice';
+import Pagination from '../../../components/Pagination/Pagination';
 import AddButton from '../../../components/Button/AddButton';
-import { useNavigate } from 'react-router';
+import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
+import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 
-const ProductOptions = () => {
+const PAGE_SIZE = 15;
+
+const DISPLAY_TYPE_META = {
+  button:       { label: 'Button',       color: 'bg-blue-100 text-blue-700' },
+  dropdown:     { label: 'Dropdown',     color: 'bg-gray-100 text-gray-600' },
+  color_swatch: { label: 'Color Swatch', color: 'bg-pink-100 text-pink-700' },
+  radio:        { label: 'Radio',        color: 'bg-purple-100 text-purple-700' },
+  thumbnail:    { label: 'Thumbnail',    color: 'bg-yellow-100 text-yellow-700' },
+};
+
+const DISPLAY_TYPES = Object.entries(DISPLAY_TYPE_META).map(([value, meta]) => ({ value, label: meta.label }));
+
+const emptyForm = { name: '', displayType: 'button', description: '', active: true };
+
+const idOf = (r) => r?._id || r?.id || '';
+
+export default function ProductOptions() {
   const dispatch = useDispatch();
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    _id: '',
-    name: '',
-    isDisable: false
-  });
+  const navigate = useNavigate();
+  const selector = useSelector((s) => s.adminCore);
+
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
-  const [keyword, setKeyword] = useState('');
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [deleteData, setDeleteData] = useState("")
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-  
-  const size = 10
-  const navigate=useNavigate()
-  useEffect(() => {
-    const reqData = {
-      page: pageNo,
-      size: size,
-      keyWord: filters.search,
-      searchFields: 'name',
-      select: 'name isDisable'
-    };
-    dispatch(getListProduct(reqData));
-  }, [size, pageNo, isRefresh, filters.search]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const selector = useSelector(state => state.product);
+  const raw = selector?.platformOptionsData?.data;
+  const items = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
+  const total = selector?.platformOptionsData?.meta?.total || raw?.total || items.length;
+  const loading = selector?.loading;
 
-  const listResponse = selector?.getListProductData?.data?.data || {};
-  const getListData = listResponse?.list || [];
-    console.log("sele",getListData)
-  const handleInputChange = e => {
-    const { name, value } = e.target;
-    setForm(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
+  const load = useCallback(() => {
+    dispatch(getPlatformOptions({ page, limit: PAGE_SIZE, q: search || undefined }));
+  }, [dispatch, page, search]);
 
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
-    }
-  }; 
-  const validateAddUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
+  useEffect(() => { load(); }, [load]);
 
-    if (!formData?.name) {
-      newErrors.name = 'Name is required';
-      isValid = false;
-    } else if (formData?.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters';
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  };
-  
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      name: "",
-      isDisable: false
-    });
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
     setErrors({});
+    setModalOpen(true);
   };
 
-  const handleAddUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateAddUserForm()) return;
-
-    const reqData = {
-      name: formData.name,
-      isDisable: formData.isDisable
-    };
-
-    dispatch(createProduct(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return
-        } else {
-          toast.success(res.message || "Item created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error)
-        toast.error(error || "Error in creating Item");
-      });
-  };
-  
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow(prev =>
-      e.target.checked
-        ? [...prev, rowId]
-        : prev.filter(id => id !== rowId)
-    );
-  };
-  const tableRows = getListData?.map((user) => [
-    <input
-      type='checkbox'
-      checked={selectedRow.includes(user._id)}
-      onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    />,
-    <span key={`name-${user._id}`} className="capitalize">
-      {user?.name}
-    </span>,
-    <div key={`status-${user._id}`} className="flex flex-col">
-      <label className="relative inline-flex" title="Enable/Disable">
-        <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={!user?.isDisable}
-          readOnly
-        />
-        <div
-          onClick={() => handleToggle(user)}
-          className="cursor-pointer w-9 h-5 bg-gray-200 hover:bg-red-600 peer-focus:outline-0 peer-focus:ring-transparent rounded-full peer transition-all ease-in-out duration-500 peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-600 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-400 hover:peer-checked:bg-green-200"
-          title="Enable/Disable"
-        ></div>
-      </label>
-    </div>,
-    <span key={`actions-${user._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: user._id,
-            name: user.name,
-            isDisable: user.isDisable 
-          });
-          setIsEditModal(true);
-        }}
-        onDelete={() => {
-          setDeleteData({ _id: [user._id] })
-          setShowDeleteConfirmation(true)
-        }}
-        onListing={()=>{
-          navigate(`/app/product-option-value/${user._id}`)
-
-        }}
-        showLinkButton={false}
-        showListing={true}
-      />
-    </span>,
-  ]);
-
-  const confirmDelete = () => {
-    dispatch(deleteProduct(deleteData)).unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error)
-          return
-        }
-        else {
-          toast.success(res.message || "Item Deleted Successfully")
-          setShowDeleteConfirmation(false);
-          setIsRefresh(!isRefresh)
-        }
-      }).catch((error) => {
-        console.log("error", error)
-        toast.error(error || "Error in Deleting ITem")
-      })
+  const openEdit = (row) => {
+    setEditing(row);
+    setForm({ name: row.name || '', displayType: row.displayType || 'button', description: row.description || '', active: row.active !== false });
+    setErrors({});
+    setModalOpen(true);
   };
 
-  const handleDisableFunc = () => {
-    if (!toggleStates) return;
-    const obj = {
-      _id: [toggleStates._id],
-      isDisable: !toggleStates.isDisable
-    };
+  const closeModal = () => { setModalOpen(false); setEditing(null); };
 
-    dispatch(enableDisableProduct(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim()) e.name = 'Name is required';
+    setErrors(e);
+    return !Object.keys(e).length;
   };
 
-  const handleToggle = (user) => {
-    setToggleStates(user);
-    setIsConfirmModalOpen(true);
-  };
-  
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true
-      };
-      try {
-        const res = await dispatch(enableDisableProduct(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setIsRefresh(!isRefresh)
-        }
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        if (error.errors) {
-          setErrors(error.errors);
-        }
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      if (editing) {
+        await dispatch(updatePlatformOption({ id: idOf(editing), ...form })).unwrap();
+        toast.success('Attribute updated');
+      } else {
+        await dispatch(createPlatformOption(form)).unwrap();
+        toast.success('Attribute created');
       }
+      closeModal();
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      _id: '',
-      name: '',
-      isDisable: false
-    });
-    setErrors({});
-  };
-
-  const handleToggleAdd = () => {
-    setForm(prev => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-  
-  const validateEditUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!formData?.name) {
-      newErrors.name = 'Name is required';
-      isValid = false;
-    } else if (formData?.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters';
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  }
-  
-  const handleEditUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateEditUserForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      name: formData.name,
-      isDisable: formData.isDisable,
-    };
-    
-    dispatch(updateProduct(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Finish Updated Successfully");
-          setIsEditModal(false);
-          setForm({
-            name:"",
-            isDisable:false
-          })
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        toast.error(error.message || "Error in Updating Finish");
-      });
-  };
-
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.map(user => user._id) || [];
-      setSelectedRow(allIds);
-    } else {
-      setSelectedRow([]);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
+      toast.success('Attribute deleted');
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Delete failed');
     }
   };
 
-  const handleApplySearchFilters = () => {
-    const reqData = {
-      page: pageNo,
-      size: size,
-      keyWord: filters.search,
-      searchFields: 'name',
-      select: 'name isDisable'
-    };
-    dispatch(getListProduct(reqData));
-    setIsRefresh(!isRefresh)
-  }
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters(prev => ({ ...prev, search: "" }));
-    setKeyword("");
-    setPageNo(1);
-    setIsRefresh(!isRefresh)
-  }, [dispatch, size, isRefresh]);
+  const handleToggleActive = async (row) => {
+    try {
+      await dispatch(updatePlatformOption({ id: idOf(row), active: !row.active })).unwrap();
+      toast.success(row.active ? 'Disabled' : 'Enabled');
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Failed');
+    }
+  };
 
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className='max-w-7xl mx-auto'>
-        <div className=' overflow-hidden overflow-y-auto py-6'>
-          <div className="flex justify-between items-center">
-            <h3>Home / <b>Product Options</b></h3>
-            <AddButton
-              className="border-[#3E4094] text-[#3E4094] mb-3"
-              onClick={() => {
-                setIsOpenAddModal(true);
-              }}
-            >
-              Add
-            </AddButton>
-          </div>
-          <div className='overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    placeholder="Search By Full Name"
-                    handleSearchRemove={handleSearchRemove}
-                    applyFilters={handleApplySearchFilters}
-                  />
-                </div>
-              </div>
-            </div>
-            <TableData
-              Heading='Admin Users'
-              tableHeadings={[
-                <input
-                  type="checkbox"
-                  checked={selectedRow.length > 0 && selectedRow.length === (getListData?.length || 0)}
-                  onChange={handleSelectAllChange}
-                  ref={el => {
-                    if (el) {
-                      el.indeterminate =
-                        selectedRow.length > 0 &&
-                        selectedRow.length < (getListData?.length || 0);
-                    }
-                  }}
-                />, "Option Name", "Status", "Actions"]}
-              data={tableRows}
-              showSearch={true}
-              placeholder='Search by...'
-              showFilter={false}
-              showSummary={false}
-              totalData={listResponse?.total || 0}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              searchTerm={keyword}
-              setSearchTerm={setKeyword}
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {listResponse?.total && size && Math.ceil(listResponse.total / size) > 1 && (
-              <Pagination
-                totalPages={Math.ceil(listResponse.total / size)}
-                currentPage={pageNo}
-                onPageChange={onPageChange}
-              />
-            )}
-          </div>
+    <div className="p-6 max-w-7xl mx-auto space-y-4">
+      <Loader loading={loading} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800">Product Attributes</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            Define attributes like Color, Size, RAM, Material — and their selectable values.
+          </p>
         </div>
+        <AddButton onClick={openAdd} />
+      </div>
 
-        {/* Add User Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddUserSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Reset"
-          title="Add Finish Products"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className='p-4 flex space-x-4'>
-            <div className="w-full">
-              <Input
-                labelName="Product Option Name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
-                maxLength={50}
-                required
-              />
-            </div>
-          </div>
-
-          <div className='flex justify-between items-center border p-3'>
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton isToggle={!formData.isDisable} handleClick={handleToggleAdd} />
-          </div>
-        </DefaultModal>
-
-        {/* Edit User Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditUserSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Finish Product"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className='p-4'>
-            <div className="w-full">
-              <Input
-                labelName="Name"
-                name="name"
-                type="text"
-                placeholder="Enter Name"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
-                maxLength={50}
-                required
-              />
-            </div>
-          </div>
-
-          <div className='flex justify-between items-center border p-3'>
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton 
-              isToggle={!formData.isDisable} 
-              handleClick={handleToggleAdd} 
-            />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={'Are you sure you want to delete the Item?'}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this user?`}
+      {/* Search */}
+      <div className="flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Search attributes…"
+          className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
       </div>
-    </>
-  )
-}
 
-export default ProductOptions
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              {['Attribute Name', 'Display Type', 'Description', 'Status', 'Actions'].map((h) => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {items.length === 0 && !loading ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-16 text-center text-sm text-gray-400">
+                  No attributes yet. Click "Add" to create your first one.
+                </td>
+              </tr>
+            ) : (
+              items.map((row) => {
+                const dtMeta = DISPLAY_TYPE_META[row.displayType] || DISPLAY_TYPE_META.button;
+                return (
+                  <tr key={idOf(row)} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-800">{row.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dtMeta.color}`}>
+                        {dtMeta.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">
+                      {row.description || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ToggleButton
+                        isToggle={row.active !== false}
+                        handleClick={() => handleToggleActive(row)}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/product-option-value/${idOf(row)}`)}
+                          className="px-3 py-1 text-xs font-medium text-green-600 border border-green-200 rounded hover:bg-green-50"
+                        >
+                          Manage Values →
+                        </button>
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(row)}
+                          className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {total > PAGE_SIZE && (
+        <Pagination totalPages={Math.ceil(total / PAGE_SIZE)} currentPage={page} onPageChange={setPage} />
+      )}
+
+      {/* Add / Edit Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-5">
+              {editing ? 'Edit Attribute' : 'New Attribute'}
+            </h2>
+
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Attribute Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  autoFocus
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Color, Size, RAM, Material"
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
+                />
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              </div>
+
+              {/* Display Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
+                <p className="text-xs text-gray-400 mb-2">How this attribute appears to customers on the product page</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {DISPLAY_TYPES.map((dt) => (
+                    <button
+                      key={dt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, displayType: dt.value }))}
+                      className={`px-3 py-2 text-sm rounded-lg border text-left transition-colors ${
+                        form.displayType === dt.value
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {dt.value === 'button' && '⬜ '}
+                      {dt.value === 'dropdown' && '▾ '}
+                      {dt.value === 'color_swatch' && '🎨 '}
+                      {dt.value === 'radio' && '◉ '}
+                      {dt.value === 'thumbnail' && '🖼 '}
+                      {dt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <input
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="e.g. Available color options for this product"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+
+              {/* Active */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.active}
+                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+                <span className="text-sm text-gray-700">Active (visible to sellers)</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {saving ? 'Saving…' : editing ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <DeletePopup
+        isDeleteModalOpen={Boolean(deleteTarget)}
+        closeDeleteModal={() => setDeleteTarget(null)}
+        confirmDelete={handleDelete}
+        DeleteHeading={`Delete "${deleteTarget?.name}"?`}
+      />
+    </div>
+  );
+}

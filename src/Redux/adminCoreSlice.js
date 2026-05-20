@@ -91,6 +91,14 @@ const initialState = {
   createContentPageData: {},
   updateContentPageData: {},
   deleteContentPageData: {},
+  platformOptionsData: {},
+  createPlatformOptionData: {},
+  updatePlatformOptionData: {},
+  deletePlatformOptionData: {},
+  platformOptionValuesData: {},
+  createPlatformOptionValueData: {},
+  updatePlatformOptionValueData: {},
+  deletePlatformOptionValueData: {},
   productReviewsData: {},
   updateProductReviewData: {},
   deleteProductReviewData: {},
@@ -553,13 +561,25 @@ export const deleteGeography = createApiThunkPrivate("adminCore/deleteGeography"
 
 export const getContentPages = createApiThunkPrivate("adminCore/getContentPages", ENDPOINTS.platform.contentPages, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "pageType", "language", "published"]) });
 export const getContentPage = createApiThunkPrivate("adminCore/getContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "GET");
-export const createContentPage = createApiThunkPrivate("adminCore/createContentPage", ENDPOINTS.platform.contentPages, "POST", false, { transformBody: toContentPageBody });
-export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (payload = {}) => toContentPageBody(omitPayload(payload, ["id"])) });
+export const createContentPage = createApiThunkPrivate("adminCore/createContentPage", ENDPOINTS.platform.contentPages, "POST", false, { transformBody: (_, payload) => toContentPageBody(payload) });
+export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (_, payload) => toContentPageBody(omitPayload(payload, ["id"])) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status"]) });
 export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status"]) });
 export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "DELETE", false, { transformParams: noParams });
+
+// Platform attribute options (admin-managed: Color, Size, RAM, etc.)
+export const getPlatformOptions = createApiThunkPrivate("adminCore/getPlatformOptions", ENDPOINTS.platform.productOptions, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "active"]) });
+export const createPlatformOption = createApiThunkPrivate("adminCore/createPlatformOption", ENDPOINTS.platform.productOptions, "POST", false, { transformBody: (_, p) => pickPayload(p, ["name", "displayType", "description", "active"]) });
+export const updatePlatformOption = createApiThunkPrivate("adminCore/updatePlatformOption", (p) => ENDPOINTS.platform.productOption(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["name", "displayType", "description", "active"]) });
+export const deletePlatformOption = createApiThunkPrivate("adminCore/deletePlatformOption", (p) => ENDPOINTS.platform.productOption(p.id || p._id), "DELETE", false, { transformParams: noParams });
+
+// Platform attribute values (Red/Blue for Color, S/M/L for Size, etc.)
+export const getPlatformOptionValues = createApiThunkPrivate("adminCore/getPlatformOptionValues", ENDPOINTS.platform.productOptionValues, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "optionId", "option_id", "active"]) });
+export const createPlatformOptionValue = createApiThunkPrivate("adminCore/createPlatformOptionValue", ENDPOINTS.platform.productOptionValues, "POST", false, { transformBody: (_, p) => pickPayload(p, ["optionId", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
+export const updatePlatformOptionValue = createApiThunkPrivate("adminCore/updatePlatformOptionValue", (p) => ENDPOINTS.platform.productOptionValue(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["optionId", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
+export const deletePlatformOptionValue = createApiThunkPrivate("adminCore/deletePlatformOptionValue", (p) => ENDPOINTS.platform.productOptionValue(p.id || p._id), "DELETE", false, { transformParams: noParams });
 
 export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {
   transformParams: (params = {}) => ({
@@ -679,6 +699,14 @@ const adminCoreSlice = createSlice({
       [getProductReviews, "productReviewsData"],
       [updateProductReview, "updateProductReviewData"],
       [deleteProductReview, "deleteProductReviewData"],
+      [getPlatformOptions, "platformOptionsData"],
+      [createPlatformOption, "createPlatformOptionData"],
+      [updatePlatformOption, "updatePlatformOptionData"],
+      [deletePlatformOption, "deletePlatformOptionData"],
+      [getPlatformOptionValues, "platformOptionValuesData"],
+      [createPlatformOptionValue, "createPlatformOptionValueData"],
+      [updatePlatformOptionValue, "updatePlatformOptionValueData"],
+      [deletePlatformOptionValue, "deletePlatformOptionValueData"],
       [getRbacPermissionManagementModules, "rbacPermissionManagementModulesData"],
       [getRbacModules, "rbacModulesData"],
       [createRbacModule, "createRbacModuleData"],
