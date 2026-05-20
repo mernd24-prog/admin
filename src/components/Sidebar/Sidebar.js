@@ -313,6 +313,8 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         };
       }
     }).filter((tab) => Array.isArray(tab.subItems) && tab.subItems.length > 0);
+
+    return computedTabs;
   }, [permissions, sellerPanel]);
 
   useEffect(() => {
