@@ -1,392 +1,404 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { RxCross2 } from 'react-icons/rx';
-import { toast } from 'sonner';
-import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
-import { uploadFile } from '../../../../_helpers/globalFunctions';
+import React from "react";
+import { MdOutlineClose } from "react-icons/md";
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
+import ButtonTransparent from "../../../../components/ButtonTransparent/button";
+import NewButton from "../../../../components/Button/NewButton";
+import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
+import { TextEditor } from "../../../../components/Atoms/FormInput/TextEditor";
 
-const INITIAL = {
-  slug: '',
-  title: '',
-  pageType: '',
-  body: '',
-  description: '',
-  coverImage: '',
-  points: [],
-  language: 'en',
-  published: false,
+const emptyImage = {
+  url: "",
+  alt: "",
+  title: "",
+  caption: "",
+  type: "",
 };
 
-const ContentPageSetup = (props = {}) => {
-  const {
-    isOpen,
-    onClose,
-    onSubmit,
-    initialData = null,
-    pageType = '',
-    lockedFields = [],
-    bodyHint = 'Write the page body here.',
-    isLoading = false,
-  } = props || {};
-  const [form, setForm] = useState({ ...INITIAL });
-  const [errors, setErrors] = useState({});
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingPointIndex, setUploadingPointIndex] = useState(null);
-  const coverInputRef = useRef(null);
-  const pointInputRefs = useRef({});
+const emptyCta = {
+  label: "",
+  url: "",
+  target: "_self",
+};
 
-  const safeLockedFields = Array.isArray(lockedFields) ? lockedFields : [];
-  const isLocked = (field) => safeLockedFields.includes(field);
+const emptyPoint = {
+  title: "",
+  description: "",
+  image: { ...emptyImage },
+  cta: { ...emptyCta },
+  sortOrder: 0,
+};
 
-  useEffect(() => {
-    if (isOpen) {
-      const source = initialData && typeof initialData === 'object' ? initialData : null;
-      if (source) {
-        setForm({
-          slug: source?.slug || '',
-          title: source?.title || '',
-          pageType: source?.pageType || pageType || '',
-          body: source?.body || '',
-          description: source?.description || '',
-          coverImage: source?.coverImage || '',
-          points: Array.isArray(source?.points)
-            ? source.points.map((p) => ({
-                title: p?.title || '',
-                description: p?.description || '',
-                image: p?.image || '',
-              }))
-            : [],
-          language: source?.language || 'en',
-          published: Boolean(source?.published),
-        });
-      } else {
-        setForm({ ...INITIAL, pageType: pageType || '' });
-      }
-      setErrors({});
-    }
-  }, [isOpen, initialData, pageType]);
+const emptySection = {
+  type: "content",
+  title: "",
+  description: "",
+  image: { ...emptyImage },
+  gallery: [],
+  points: [],
+  cta: { ...emptyCta },
+  sortOrder: 0,
+};
 
-  const validate = () => {
-    const current = form && typeof form === 'object' ? form : INITIAL;
-    const e = {};
-    if (!String(current.title || '').trim()) e.title = 'Title is required';
-    if (!String(current.slug || '').trim()) e.slug = 'Slug is required';
-    else if (!/^[a-z0-9-]+$/.test(current.slug)) e.slug = 'Slug must be lowercase letters, numbers, and hyphens only';
-    if (!String(current.pageType || '').trim()) e.pageType = 'Page type is required';
-    return e;
-  };
+const toCsv = (value = []) => (Array.isArray(value) ? value.join(", ") : "");
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    if ((errors && typeof errors === 'object' ? errors[name] : undefined)) {
-      setErrors((prev) => ({ ...(prev && typeof prev === 'object' ? prev : {}), [name]: '' }));
-    }
-  };
+const fromCsv = (value = "") =>
+  String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
-  const handleSlugify = () => {
-    const current = form && typeof form === 'object' ? form : INITIAL;
-    if (!isLocked('slug') && current.title && !current.slug) {
-      const slug = current.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      setForm((prev) => ({ ...prev, slug }));
-    }
-  };
+const withUpdatedItem = (items = [], index, updater) =>
+  items.map((item, itemIndex) => (itemIndex === index ? updater(item) : item));
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    const current = form && typeof form === 'object' ? form : INITIAL;
-    const sanitizedPoints = (Array.isArray(current.points) ? current.points : [])
-      .map((p) => ({
-        title: String(p?.title || '').trim(),
-        description: String(p?.description || '').trim(),
-        image: String(p?.image || '').trim(),
-      }))
-      .filter((p) => p.title || p.description || p.image)
-      .filter((p) => p.title);
-    const payload = { ...current, points: sanitizedPoints };
-    if (typeof onSubmit === 'function') onSubmit(payload);
-  };
-
-  const updatePoint = (index, key, value) => {
-    setForm((prev) => {
-      const base = prev && typeof prev === 'object' ? prev : INITIAL;
-      const points = Array.isArray(base.points) ? [...base.points] : [];
-      points[index] = { ...(points[index] || { title: '', description: '', image: '' }), [key]: value };
-      return { ...base, points };
-    });
-  };
-
-  const addPoint = () => {
-    setForm((prev) => {
-      const base = prev && typeof prev === 'object' ? prev : INITIAL;
-      const points = Array.isArray(base.points) ? [...base.points] : [];
-      points.push({ title: '', description: '', image: '' });
-      return { ...base, points };
-    });
-  };
-
-  const removePoint = (index) => {
-    setForm((prev) => {
-      const base = prev && typeof prev === 'object' ? prev : INITIAL;
-      const points = (Array.isArray(base.points) ? base.points : []).filter((_, i) => i !== index);
-      return { ...base, points };
-    });
-  };
-
-  const isValidImage = (file) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-    if (!file) return false;
-    if (!allowed.includes(file.type)) {
-      toast.error('Only JPG, PNG, WEBP files are allowed');
-      return false;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be under 5MB');
-      return false;
-    }
-    return true;
-  };
-
-  const handleCoverUpload = async (event) => {
-    const file = event?.target?.files?.[0];
-    if (!isValidImage(file)) return;
-    try {
-      setUploadingCover(true);
-      const imageUrl = await uploadFile(file, 'CMS');
-      setForm((prev) => ({ ...(prev && typeof prev === 'object' ? prev : INITIAL), coverImage: imageUrl }));
-      toast.success('Cover image uploaded');
-    } catch (err) {
-      toast.error(err?.message || 'Cover image upload failed');
-    } finally {
-      setUploadingCover(false);
-      if (event?.target) event.target.value = '';
-    }
-  };
-
-  const handlePointUpload = async (index, event) => {
-    const file = event?.target?.files?.[0];
-    if (!isValidImage(file)) return;
-    try {
-      setUploadingPointIndex(index);
-      const imageUrl = await uploadFile(file, 'CMS');
-      updatePoint(index, 'image', imageUrl);
-      toast.success('Point image uploaded');
-    } catch (err) {
-      toast.error(err?.message || 'Point image upload failed');
-    } finally {
-      setUploadingPointIndex(null);
-      if (event?.target) event.target.value = '';
-    }
-  };
-
+const ContentPageSetup = ({
+  errors = {},
+  formData,
+  isOpen,
+  onChange,
+  onClose,
+  onSubmit,
+}) => {
   if (!isOpen) return null;
 
-  const safeForm = form && typeof form === 'object' ? form : INITIAL;
-  const safeErrors = errors && typeof errors === 'object' ? errors : {};
+  const setField = (name, value) => {
+    onChange({ target: { name, value } });
+  };
+
+  const setNested = (parent, key, value) => {
+    setField(parent, {
+      ...(formData[parent] || {}),
+      [key]: value,
+    });
+  };
+
+  const setImage = (parent, key, value) => {
+    if (parent === "image") {
+      setField("image", {
+        ...(formData.image || emptyImage),
+        [key]: value,
+      });
+      return;
+    }
+
+    setNested(parent, "image", {
+      ...((formData[parent] || {}).image || emptyImage),
+      [key]: value,
+    });
+  };
+
+  const setSeoImage = (field, key, value) => {
+    setField("seo", {
+      ...(formData.seo || {}),
+      [field]: {
+        ...((formData.seo || {})[field] || emptyImage),
+        [key]: value,
+      },
+    });
+  };
+
+  const updateSection = (index, updater) => {
+    setField("sections", withUpdatedItem(formData.sections || [], index, updater));
+  };
+
+  const updatePoint = (sectionIndex, pointIndex, updater) => {
+    updateSection(sectionIndex, (section) => ({
+      ...section,
+      points: withUpdatedItem(section.points || [], pointIndex, updater),
+    }));
+  };
+
+  const updateGallery = (name, value) => {
+    setField(
+      name,
+      fromCsv(value).map((url) => ({ url, alt: formData.title || "" })),
+    );
+  };
+
+  const addSection = () => {
+    setField("sections", [...(formData.sections || []), { ...emptySection }]);
+  };
+
+  const removeSection = (index) => {
+    setField("sections", (formData.sections || []).filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const addPoint = (sectionIndex) => {
+    updateSection(sectionIndex, (section) => ({
+      ...section,
+      points: [...(section.points || []), { ...emptyPoint }],
+    }));
+  };
+
+  const removePoint = (sectionIndex, pointIndex) => {
+    updateSection(sectionIndex, (section) => ({
+      ...section,
+      points: (section.points || []).filter((_, itemIndex) => itemIndex !== pointIndex),
+    }));
+  };
+
+  const sections = formData.sections || [];
+  const seo = formData.seo || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-white border-b">
-          <h2 className="text-lg font-semibold text-gray-800">
-            {initialData ? 'Edit Page' : 'Add Page'}
-          </h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
-            <RxCross2 size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-11/12 max-w-6xl max-h-[95vh] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              {formData?.recordSlug ? "Edit Content Page" : "Create Content Page"}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Manage page content, media, sections, points, CTA, visibility, and SEO.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 transition hover:bg-gray-100"
+          >
+            <MdOutlineClose size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Title *</label>
-            <input
-              name="title"
-              value={safeForm.title || ''}
-              onChange={handleChange}
-              onBlur={handleSlugify}
-              placeholder="Page title"
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${safeErrors.title ? 'border-red-400' : 'border-gray-300'}`}
-            />
-            {safeErrors.title && <p className="mt-1 text-xs text-red-500">{safeErrors.title}</p>}
-          </div>
-
-          {/* Slug */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Slug *</label>
-            <input
-              name="slug"
-              value={safeForm.slug || ''}
-              onChange={handleChange}
-              placeholder="page-slug"
-              disabled={isLocked('slug')}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${isLocked('slug') ? 'bg-amber-50 border-amber-300 text-amber-700 cursor-not-allowed' : safeErrors.slug ? 'border-red-400' : 'border-gray-300'}`}
-            />
-            {isLocked('slug') && (
-              <p className="mt-1 text-xs text-amber-600">Slug is locked — changing it would break the customer page that fetches this content.</p>
-            )}
-            {safeErrors.slug && <p className="mt-1 text-xs text-red-500">{safeErrors.slug}</p>}
-          </div>
-
-          {/* Page Type */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Page Type *</label>
-            <input
-              name="pageType"
-              value={safeForm.pageType || ''}
-              onChange={handleChange}
-              placeholder="content-type"
-              disabled={isLocked('pageType')}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${isLocked('pageType') ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : safeErrors.pageType ? 'border-red-400' : 'border-gray-300'}`}
-            />
-            {safeErrors.pageType && <p className="mt-1 text-xs text-red-500">{safeErrors.pageType}</p>}
-          </div>
-
-          {/* Body */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Body</label>
-            <TextEditor
-              value={safeForm.body || ''}
-              onChange={(content) => setForm((prev) => ({ ...(prev && typeof prev === 'object' ? prev : INITIAL), body: content }))}
-              placeholder={bodyHint}
-              height="220px"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              name="description"
-              value={safeForm.description || ''}
-              onChange={handleChange}
-              placeholder="Short summary"
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Cover Image URL</label>
-              <button
-                type="button"
-                onClick={() => coverInputRef.current?.click()}
-                disabled={uploadingCover}
-                className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50 disabled:opacity-60"
-              >
-                {uploadingCover ? 'Uploading...' : 'Upload Image'}
-              </button>
-              <input ref={coverInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" className="hidden" onChange={handleCoverUpload} />
+        <form onSubmit={onSubmit} className="space-y-6 pt-6">
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">Basic Information</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="Title" name="title" value={formData.title || ""} onChange={onChange} error={errors.title} placeholder="About Us" required />
+              <FormInput label="Slug" name="slug" value={formData.slug || ""} onChange={onChange} error={errors.slug} placeholder="about-us" required />
+              <FormInput label="Page Type" name="pageType" value={formData.pageType || ""} onChange={onChange} error={errors.pageType} placeholder="static_page" required />
+              <FormInput label="Category" name="category" value={formData.category || ""} onChange={onChange} error={errors.category} placeholder="company / support / legal" />
+              <FormInput label="Language" name="language" value={formData.language || "en"} onChange={onChange} error={errors.language} placeholder="en" />
+              <FormInput label="Sort Order" name="sortOrder" type="number" value={formData.sortOrder || 0} onChange={onChange} error={errors.sortOrder} placeholder="0" />
             </div>
-            <input
-              name="coverImage"
-              value={safeForm.coverImage || ''}
-              onChange={handleChange}
-              placeholder="https://..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-            {safeForm.coverImage ? (
-              <img src={safeForm.coverImage} alt="cover-preview" className="w-28 h-16 mt-2 object-cover border border-gray-200 rounded" />
-            ) : null}
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="Description" name="description" value={formData.description || ""} onChange={onChange} error={errors.description} placeholder="Short customer-facing page description" />
+              <FormInput label="Excerpt" name="excerpt" value={formData.excerpt || ""} onChange={onChange} error={errors.excerpt} placeholder="Listing summary" />
+            </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Points</label>
-              <button type="button" onClick={addPoint} className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50">Add Point</button>
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">Main Image & Gallery</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="Image URL" value={formData.image?.url || ""} onChange={(e) => setImage("image", "url", e.target.value)} placeholder="https://example.com/hero.jpg" />
+              <FormInput label="Image Alt" value={formData.image?.alt || ""} onChange={(e) => setImage("image", "alt", e.target.value)} placeholder="About Sam Global" />
+              <FormInput label="Image Title" value={formData.image?.title || ""} onChange={(e) => setImage("image", "title", e.target.value)} placeholder="Hero image title" />
+              <FormInput label="Image Caption" value={formData.image?.caption || ""} onChange={(e) => setImage("image", "caption", e.target.value)} placeholder="Optional caption" />
+              <FormInput label="Image Type" value={formData.image?.type || ""} onChange={(e) => setImage("image", "type", e.target.value)} placeholder="hero" />
+              <FormInput label="Gallery URLs" value={(formData.gallery || []).map((item) => item.url).join(", ")} onChange={(e) => updateGallery("gallery", e.target.value)} placeholder="url1, url2, url3" />
             </div>
-            <div className="space-y-2">
-              {(Array.isArray(safeForm.points) ? safeForm.points : []).map((p, idx) => (
-                <div key={`point-${idx}`} className="p-3 border border-gray-200 rounded-lg space-y-2">
-                  <input
-                    value={p?.title || ''}
-                    onChange={(e) => updatePoint(idx, 'title', e.target.value)}
-                    placeholder="Point title"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                  />
-                  <textarea
-                    value={p?.description || ''}
-                    onChange={(e) => updatePoint(idx, 'description', e.target.value)}
-                    placeholder="Point description"
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                  />
-                  <input
-                    value={p?.image || ''}
-                    onChange={(e) => updatePoint(idx, 'image', e.target.value)}
-                    placeholder="Point image URL"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => pointInputRefs.current[idx]?.click()}
-                      disabled={uploadingPointIndex === idx}
-                      className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50 disabled:opacity-60"
-                    >
-                      {uploadingPointIndex === idx ? 'Uploading...' : 'Upload Point Image'}
-                    </button>
-                    <input
-                      ref={(el) => { pointInputRefs.current[idx] = el; }}
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      className="hidden"
-                      onChange={(e) => handlePointUpload(idx, e)}
+          </div>
+
+          <div className="rounded-lg border p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Sections</h3>
+              <NewButton type="button" onClick={addSection}>Add Section</NewButton>
+            </div>
+
+            <div className="space-y-5">
+              {sections.map((section, sectionIndex) => (
+                <div key={`section-${sectionIndex}`} className="rounded-lg border bg-gray-50 p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="font-semibold text-gray-800">Section {sectionIndex + 1}</p>
+                    <ButtonTransparent type="button" onClick={() => removeSection(sectionIndex)}>Remove</ButtonTransparent>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormInput label="Section Type" value={section.type || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, type: e.target.value }))} placeholder="hero / feature_grid / faq" />
+                    <FormInput label="Sort Order" type="number" value={section.sortOrder || 0} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, sortOrder: Number(e.target.value || 0) }))} placeholder="0" />
+                    <FormInput label="Section Title" value={section.title || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, title: e.target.value }))} placeholder="Our Story" />
+                    <FormInput label="Section Image URL" value={section.image?.url || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, image: { ...(item.image || emptyImage), url: e.target.value } }))} placeholder="https://example.com/section.jpg" />
+                    <FormInput label="Section Image Alt" value={section.image?.alt || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, image: { ...(item.image || emptyImage), alt: e.target.value } }))} placeholder="Section image alt" />
+                    <FormInput label="Section Gallery URLs" value={(section.gallery || []).map((item) => item.url).join(", ")} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, gallery: fromCsv(e.target.value).map((url) => ({ url, alt: item.title || "" })) }))} placeholder="url1, url2" />
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Section Description</label>
+                    <textarea
+                      rows={3}
+                      className="w-full rounded-md border p-3 text-sm outline-none focus:border-black"
+                      value={section.description || ""}
+                      onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, description: e.target.value }))}
+                      placeholder="Section description"
                     />
                   </div>
-                  {p?.image ? <img src={p.image} alt={`point-${idx}`} className="w-24 h-14 object-cover border border-gray-200 rounded" /> : null}
-                  <div className="text-right">
-                    <button type="button" onClick={() => removePoint(idx)} className="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded hover:bg-red-50">Remove</button>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <FormInput label="Section CTA Label" value={section.cta?.label || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, cta: { ...(item.cta || emptyCta), label: e.target.value } }))} placeholder="Shop Now" />
+                    <FormInput label="Section CTA URL" value={section.cta?.url || ""} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, cta: { ...(item.cta || emptyCta), url: e.target.value } }))} placeholder="/products" />
+                    <FormInput label="Section CTA Target" value={section.cta?.target || "_self"} onChange={(e) => updateSection(sectionIndex, (item) => ({ ...item, cta: { ...(item.cta || emptyCta), target: e.target.value } }))} placeholder="_self" />
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="font-semibold text-gray-700">Points</p>
+                      <ButtonTransparent type="button" onClick={() => addPoint(sectionIndex)}>Add Point</ButtonTransparent>
+                    </div>
+
+                    <div className="space-y-3">
+                      {(section.points || []).map((point, pointIndex) => (
+                        <div key={`point-${sectionIndex}-${pointIndex}`} className="rounded-md border bg-white p-3">
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-700">Point {pointIndex + 1}</p>
+                            <button type="button" className="text-sm text-red-600" onClick={() => removePoint(sectionIndex, pointIndex)}>Remove</button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <FormInput label="Point Title" value={point.title || ""} onChange={(e) => updatePoint(sectionIndex, pointIndex, (item) => ({ ...item, title: e.target.value }))} placeholder="Fast Delivery" />
+                            <FormInput label="Point Image URL" value={point.image?.url || ""} onChange={(e) => updatePoint(sectionIndex, pointIndex, (item) => ({ ...item, image: { ...(item.image || emptyImage), url: e.target.value } }))} placeholder="https://example.com/icon.png" />
+                            <FormInput label="Point Image Alt" value={point.image?.alt || ""} onChange={(e) => updatePoint(sectionIndex, pointIndex, (item) => ({ ...item, image: { ...(item.image || emptyImage), alt: e.target.value } }))} placeholder="Fast delivery icon" />
+                            <FormInput label="Point Sort Order" type="number" value={point.sortOrder || 0} onChange={(e) => updatePoint(sectionIndex, pointIndex, (item) => ({ ...item, sortOrder: Number(e.target.value || 0) }))} placeholder="0" />
+                          </div>
+                          <div className="mt-3">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Point Description</label>
+                            <textarea
+                              rows={2}
+                              className="w-full rounded-md border p-3 text-sm outline-none focus:border-black"
+                              value={point.description || ""}
+                              onChange={(e) => updatePoint(sectionIndex, pointIndex, (item) => ({ ...item, description: e.target.value }))}
+                              placeholder="Point description"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
+
+              {!sections.length && (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+                  Add sections for rich CMS layouts.
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Language + Published */}
-          <div className="flex items-center gap-6">
-            <div className="flex-1">
-              <label className="block mb-1 text-sm font-medium text-gray-700">Language</label>
-              <select
-                name="language"
-                value={safeForm.language || 'en'}
-                onChange={handleChange}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="mr">Marathi</option>
-              </select>
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">Body Content</h3>
+            <TextEditor
+              label="Body"
+              value={formData.body || ""}
+              onChange={(val) => setField("body", val)}
+              placeholder="Optional long-form page content..."
+              height="280px"
+              error={errors.body}
+            />
+          </div>
+
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">CTA, Tags & Visibility</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <FormInput label="CTA Label" value={formData.cta?.label || ""} onChange={(e) => setNested("cta", "label", e.target.value)} placeholder="Start Shopping" />
+              <FormInput label="CTA URL" value={formData.cta?.url || ""} onChange={(e) => setNested("cta", "url", e.target.value)} placeholder="/products" />
+              <FormInput label="CTA Target" value={formData.cta?.target || "_self"} onChange={(e) => setNested("cta", "target", e.target.value)} placeholder="_self" />
+              <FormInput label="Tags" value={toCsv(formData.tags)} onChange={(e) => setField("tags", fromCsv(e.target.value))} error={errors.tags} placeholder="policy, ecommerce, support" />
+              <FormInput label="Channels" value={toCsv(formData.visibility?.channels)} onChange={(e) => setField("visibility", { ...(formData.visibility || {}), channels: fromCsv(e.target.value) })} placeholder="web, app" />
+              <FormInput label="Roles" value={toCsv(formData.visibility?.roles)} onChange={(e) => setField("visibility", { ...(formData.visibility || {}), roles: fromCsv(e.target.value) })} placeholder="public, buyer" />
             </div>
-            <label className="flex items-center gap-2 mt-5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                name="published"
-                checked={Boolean(safeForm.published)}
-                onChange={handleChange}
-                className="w-4 h-4 accent-indigo-600"
+          </div>
+
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">SEO</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="Meta Title" value={seo.metaTitle || ""} onChange={(e) => setNested("seo", "metaTitle", e.target.value)} placeholder="About Sam Global" />
+              <FormInput label="Focus Keyword" value={seo.focusKeyword || ""} onChange={(e) => setNested("seo", "focusKeyword", e.target.value)} placeholder="online marketplace" />
+              <FormInput label="Canonical URL" value={seo.canonicalUrl || ""} onChange={(e) => setNested("seo", "canonicalUrl", e.target.value)} placeholder="https://example.com/about-us" />
+              <FormInput label="Robots" value={seo.robots || "index,follow"} onChange={(e) => setNested("seo", "robots", e.target.value)} placeholder="index,follow" />
+              <FormInput label="SEO Keywords" value={toCsv(seo.keywords)} onChange={(e) => setNested("seo", "keywords", fromCsv(e.target.value))} placeholder="shopping, marketplace, sellers" />
+              <FormInput label="Schema Type" value={seo.schemaType || "WebPage"} onChange={(e) => setNested("seo", "schemaType", e.target.value)} placeholder="WebPage" />
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">Meta Description</label>
+              <textarea rows={3} className="w-full rounded-md border p-3 text-sm outline-none focus:border-black" value={seo.metaDescription || ""} onChange={(e) => setNested("seo", "metaDescription", e.target.value)} placeholder="Search result description" />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="OG Title" value={seo.ogTitle || ""} onChange={(e) => setNested("seo", "ogTitle", e.target.value)} placeholder="Social title" />
+              <FormInput label="OG Image URL" value={seo.ogImage?.url || ""} onChange={(e) => setSeoImage("ogImage", "url", e.target.value)} placeholder="https://example.com/og.jpg" />
+              <FormInput label="Twitter Title" value={seo.twitterTitle || ""} onChange={(e) => setNested("seo", "twitterTitle", e.target.value)} placeholder="Twitter title" />
+              <FormInput label="Twitter Image URL" value={seo.twitterImage?.url || ""} onChange={(e) => setSeoImage("twitterImage", "url", e.target.value)} placeholder="https://example.com/twitter.jpg" />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">OG Description</label>
+                <textarea rows={3} className="w-full rounded-md border p-3 text-sm outline-none focus:border-black" value={seo.ogDescription || ""} onChange={(e) => setNested("seo", "ogDescription", e.target.value)} placeholder="Social description" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Twitter Description</label>
+                <textarea rows={3} className="w-full rounded-md border p-3 text-sm outline-none focus:border-black" value={seo.twitterDescription || ""} onChange={(e) => setNested("seo", "twitterDescription", e.target.value)} placeholder="Twitter description" />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">Schema JSON</label>
+              <textarea
+                rows={5}
+                className="w-full rounded-md border p-3 font-mono text-sm outline-none focus:border-black"
+                value={JSON.stringify(seo.schemaJson || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    setNested("seo", "schemaJson", JSON.parse(e.target.value || "{}"));
+                  } catch (error) {}
+                }}
+                placeholder='{"@type":"WebPage"}'
               />
-              <span className="text-sm font-medium text-gray-700">Published</span>
-            </label>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => (typeof onClose === 'function' ? onClose() : null)}
-              className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {isLoading ? 'Saving...' : initialData ? 'Update' : 'Create'}
-            </button>
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">Author & Compatibility Media</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput label="Author Name" value={formData.author?.name || ""} onChange={(e) => setNested("author", "name", e.target.value)} placeholder="Sam Global Team" />
+              <FormInput label="Author Avatar" value={formData.author?.avatar || ""} onChange={(e) => setNested("author", "avatar", e.target.value)} placeholder="https://example.com/avatar.jpg" />
+              <FormInput label="Read Time" name="readTime" type="number" value={formData.readTime || 0} onChange={onChange} placeholder="5" />
+              <FormInput label="Published At" name="publishedAt" type="datetime-local" value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ""} onChange={onChange} error={errors.publishedAt} />
+              <FormInput label="Cover Image" name="coverImage" value={formData.coverImage || ""} onChange={onChange} placeholder="Legacy cover image" />
+              <FormInput label="Hero Image" name="heroImage" value={formData.heroImage || ""} onChange={onChange} placeholder="Legacy hero image" />
+              <FormInput label="Thumbnail URL" name="thumbnailUrl" value={formData.thumbnailUrl || ""} onChange={onChange} placeholder="Legacy thumbnail URL" />
+              <FormInput label="Gallery Image URLs" value={(formData.galleryImages || []).join(", ")} onChange={(e) => setField("galleryImages", fromCsv(e.target.value))} placeholder="Legacy url1, url2" />
+            </div>
+          </div>
+
+          <div className="rounded-lg border p-5">
+            <h3 className="mb-4 text-lg font-semibold">Metadata JSON</h3>
+            <textarea
+              rows={5}
+              className="w-full rounded-md border p-3 font-mono text-sm outline-none focus:border-black"
+              placeholder='{"cmsKey":"about-us"}'
+              value={JSON.stringify(formData.metadata || {}, null, 2)}
+              onChange={(e) => {
+                try {
+                  setField("metadata", JSON.parse(e.target.value || "{}"));
+                } catch (error) {}
+              }}
+            />
+          </div>
+
+          <div className="rounded-lg border p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-800">Publish Content</h3>
+                <p className="text-sm text-gray-500">Published pages are publicly visible.</p>
+              </div>
+
+              <ToggleButton
+                isToggle={formData.status === "published" || !!formData.published}
+                handleClick={() => {
+                  const isPublished = formData.status === "published" || !!formData.published;
+                  setField("status", isPublished ? "draft" : "published");
+                  setField("published", !isPublished);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 border-t pt-5">
+            <ButtonTransparent type="button" onClick={onClose}>Cancel</ButtonTransparent>
+            <NewButton type="submit">{formData?.recordSlug ? "Update Page" : "Create Page"}</NewButton>
           </div>
         </form>
       </div>
