@@ -297,28 +297,26 @@ const Supplier = UnavailableRoute;
 const AddSupplier = UnavailableRoute;
 const MedPharama = UnavailableRoute;
 
+const getStoredSidebarState = () => {
+  try {
+    const expandedState = sessionStorage.getItem("sidebarExpandedState");
+    const permanentState = sessionStorage.getItem("sidebarPermanentState");
+    return Boolean(JSON.parse(expandedState ?? permanentState ?? "false"));
+  } catch {
+    return false;
+  }
+};
+
 function Layout() {
-  const [navbarOpen, setNavbarOpen] = useState(false);
+  const [navbarOpen, setNavbarOpen] = useState(getStoredSidebarState);
   const [moduleName, setModuleName] = useState("");
-  const [isExpanded, setIsExpanded] = useState(() => {
-    try {
-      return Boolean(JSON.parse(sessionStorage.getItem("sidebarPermanentState") || "false"));
-    } catch {
-      return false;
-    }
-  });
+  const [isExpanded, setIsExpanded] = useState(getStoredSidebarState);
   const [isRefreshConfig, setIsRefreshConfig] = useState(false);
   const socket = socketConnection();
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
-  const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
-    try {
-      return Boolean(JSON.parse(sessionStorage.getItem("sidebarPermanentState") || "false"));
-    } catch {
-      return false;
-    }
-  });
+  const [hasPermanentOpen, setHasPermanentOpen] = useState(getStoredSidebarState);
 
   const modulePermissions = useMemo(() => {
     const permMap = {};
@@ -413,7 +411,7 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
         />
 
-        <main className="flex-1 bg-[#f1edf0] overflow-y-auto pt-16">
+        <main className="flex-1 bg-[#f1edf0] overflow-y-auto pt-16 sidebar-scrollbar">
           <Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route

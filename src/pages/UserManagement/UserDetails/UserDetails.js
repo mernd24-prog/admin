@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import Loader from '../../../components/Loader/Loader';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import {
@@ -11,11 +11,14 @@ import {
   updateSellerBankStatus,
   updateSellerGoLive,
 } from '../../../Redux/userManagementSlice';
+import { getAdminUser as getAdminCoreUser, getPlatformSubAdmins } from '../../../Redux/adminCoreSlice';
 import { toast } from 'sonner';
 import VerificationDecisionModal from '../../../components/Seller/VerificationDecisionModal';
 import OnboardingChecklist from '../../../components/Seller/OnboardingChecklist';
 import SellerKycCard from '../../../components/Seller/SellerKycCard';
 import { uploadFile } from '../../../_helpers/globalFunctions';
+import { apiRequest } from '../../../_helpers/apiConfig';
+import { ENDPOINTS } from '../../../_helpers/endpoints';
 
 // ─── small display helpers ────────────────────────────────────────────────────
 
@@ -25,6 +28,58 @@ const Row = ({ label, value }) => (
     <p className="text-sm text-gray-900 break-words">{value || '—'}</p>
   </div>
 );
+
+const getPayload = (sliceData) =>
+  sliceData?.data?.data ||
+  sliceData?.data?.normalized?.data ||
+  sliceData?.normalized?.data ||
+  sliceData?.data ||
+  {};
+
+const getListItems = (sliceData) => {
+  const payload = getPayload(sliceData);
+  if (Array.isArray(payload)) return payload;
+  return payload?.list || payload?.items || payload?.results || [];
+};
+
+const isSameId = (record, id) =>
+  String(record?._id || record?.id || record?.userId || '') === String(id || '');
+
+const getDisplayName = (user = {}) => {
+  const profile = user.profile || {};
+  return (
+    user.full_name ||
+    user.fullName ||
+    user.userName ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
+    user.email ||
+    ''
+  );
+};
+
+const ACTION_LABELS = {
+  view: 'View',
+  add: 'Add',
+  create: 'Add',
+  update: 'Update',
+  edit: 'Update',
+  delete: 'Delete',
+  action: 'Action',
+};
+
+const formatModuleName = (value = '') =>
+  String(value || '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getAssignedModulePermissions = (module = {}) =>
+  (module.permissions || [])
+    .filter((permission) => permission?.assigned)
+    .map((permission) => ACTION_LABELS[permission.action] || formatModuleName(permission.action))
+    .filter(Boolean);
+
+const moduleHasAccess = (module = {}) =>
+  module.assigned || (module.permissions || []).some((permission) => permission?.assigned);
 
 const STATUS_COLORS = {
   active:              'bg-green-100 text-green-700',
@@ -102,9 +157,22 @@ const BANK_OPTIONS = [
 const UserDetails = () => {
   const dispatch = useDispatch();
   const { id } = useParams();
+  const location = useLocation();
   const selector = useSelector((state) => state.user);
+  const adminSelector = useSelector((state) => state.adminCore);
+  const isSellerRoute = location.pathname.includes('/seller/');
 
-  const user     = selector?.getAdminUserDetailsData?.data?.data || {};
+  const detailUser = getPayload(selector?.getAdminUserDetailsData);
+  const adminCoreUser = getPayload(adminSelector?.adminUserData);
+  const listFallback = [
+    ...getListItems(adminSelector?.platformSubAdminsData),
+    ...getListItems(adminSelector?.adminUsersData),
+  ].find((item) => isSameId(item, id));
+  const user = isSameId(detailUser, id)
+    ? detailUser
+    : isSameId(adminCoreUser, id)
+      ? adminCoreUser
+      : listFallback || {};
   const profile  = user.profile || {};
   const sellerProfile = user.sellerProfile || {};
   const onboarding    = user.onboarding || {};
@@ -127,6 +195,7 @@ const UserDetails = () => {
     user.accountStatus === 'active' || sellerProfile.goLiveStatus === 'live'
       ? 'live'
       : onboarding.goLiveStatus || sellerProfile.goLiveStatus || 'pending';
+  const accountStatus = user.accountStatus || (user.isDisable ? 'suspended' : user._id || user.id ? 'active' : '');
 
   // KYC lazy-load state
   const [kycData, setKycData]       = useState(null);
@@ -136,6 +205,8 @@ const UserDetails = () => {
   // modal state
   const [kycModal, setKycModal]   = useState({ open: false, defaultDecision: 'verified' });
   const [bankModal, setBankModal] = useState({ open: false, defaultDecision: 'verified' });
+  const [accessModules, setAccessModules] = useState([]);
+  const [accessModulesLoading, setAccessModulesLoading] = useState(false);
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
@@ -148,10 +219,71 @@ const UserDetails = () => {
   });
 
   const isSeller = user.role === 'seller';
+  const shouldShowAdminAccess = !isSellerRoute && !isSeller;
+  const assignedModuleCards = useMemo(() => {
+    if (!shouldShowAdminAccess) return [];
+
+    const modulesFromApi = (Array.isArray(accessModules) ? accessModules : [])
+      .filter(moduleHasAccess)
+      .map((module) => ({
+        id: module.slug,
+        name: module.name || formatModuleName(module.slug),
+        tab: module.tab || module.metadata?.tab || 'Access',
+        permissions: getAssignedModulePermissions(module),
+      }));
+
+    if (modulesFromApi.length) return modulesFromApi;
+
+    return (user.allowedModules || []).map((moduleSlug) => ({
+      id: moduleSlug,
+      name: formatModuleName(moduleSlug),
+      tab: 'Assigned',
+      permissions: ['View'],
+    }));
+  }, [accessModules, shouldShowAdminAccess, user.allowedModules]);
 
   useEffect(() => {
-    if (id) dispatch(getAdminUserDetails({ _id: id }));
-  }, [dispatch, id]);
+    if (id) {
+      dispatch(getAdminUserDetails({ _id: id }));
+      if (!isSellerRoute) {
+        dispatch(getAdminCoreUser({ userId: id }));
+        dispatch(getPlatformSubAdmins({ limit: 100 }));
+      }
+    }
+  }, [dispatch, id, isSellerRoute]);
+
+  useEffect(() => {
+    if (!shouldShowAdminAccess) {
+      setAccessModules([]);
+      setAccessModulesLoading(false);
+      return;
+    }
+    if (!id || !user.role) return;
+
+    let isMounted = true;
+    setAccessModulesLoading(true);
+    apiRequest('GET', ENDPOINTS.adminAccess.modules, {
+      userId: id,
+      role: user.role,
+      includePermissions: true,
+    })
+      .then((response) => {
+        if (!isMounted) return;
+        const payload = response?.data?.data || response?.normalized?.data || response?.data || {};
+        setAccessModules(Array.isArray(payload?.modules) ? payload.modules : []);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setAccessModules([]);
+      })
+      .finally(() => {
+        if (isMounted) setAccessModulesLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, shouldShowAdminAccess, user.role]);
 
   useEffect(() => {
     setEditSeller({
@@ -165,7 +297,12 @@ const UserDetails = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerProfile.displayName, sellerProfile.legalBusinessName, user.email, user.phone, profile.avatarUrl]);
 
-  const refresh = useCallback(() => dispatch(getAdminUserDetails({ _id: id })), [dispatch, id]);
+  const refresh = useCallback(() => {
+    dispatch(getAdminUserDetails({ _id: id }));
+    if (!isSellerRoute) {
+      dispatch(getAdminCoreUser({ userId: id }));
+    }
+  }, [dispatch, id, isSellerRoute]);
 
   // ── KYC lazy load when card is expanded ──────────────────────────────────
   const handleLoadKyc = useCallback(async () => {
@@ -331,30 +468,88 @@ const UserDetails = () => {
           <h3 className="text-sm text-gray-500">
             <Link to="/app/home" className="hover:underline">Home</Link> / <b className="text-gray-800">User Details</b>
           </h3>
-          <StatusBadge value={user.accountStatus} />
+          <StatusBadge value={accountStatus} />
         </div>
 
         {/* ── Account & Access ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-2">
+          <section className={`bg-white border border-gray-200 rounded-lg p-5 ${shouldShowAdminAccess ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
             <h2 className="text-base font-semibold text-gray-800 mb-3">Account</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-              <Row label="Full Name" value={[profile.firstName, profile.lastName].filter(Boolean).join(' ')} />
+              <Row label="User ID" value={user._id || user.id || user.userId} />
+              <Row label="Full Name" value={getDisplayName(user)} />
               <Row label="Email"     value={user.email} />
               <Row label="Phone"     value={user.phone} />
               <Row label="Role"      value={user.role} />
+              <Row label="Status"    value={accountStatus} />
               <Row label="Created At"  value={user.createdAt  ? new Date(user.createdAt).toLocaleString()  : ''} />
               <Row label="Last Login"  value={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : ''} />
             </div>
           </section>
 
-          <section className="bg-white border border-gray-200 rounded-lg p-5">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">Access</h2>
-            <Row label="Allowed Modules" value={(user.allowedModules || []).join(', ')} />
-            <Row label="Owner Admin"  value={user.ownerAdminId} />
-            <Row label="Owner Seller" value={user.ownerSellerId} />
-          </section>
+          {shouldShowAdminAccess && (
+            <section className="bg-white border border-gray-200 rounded-lg p-5">
+              <h2 className="text-base font-semibold text-gray-800 mb-3">Access</h2>
+              <Row label="Assigned Modules" value={assignedModuleCards.map((module) => module.name).join(', ')} />
+              <Row label="Module Count" value={assignedModuleCards.length ? `${assignedModuleCards.length}` : ''} />
+              <Row label="Owner Admin"  value={user.ownerAdminId} />
+              <Row label="Owner Seller" value={user.ownerSellerId} />
+            </section>
+          )}
         </div>
+
+        {shouldShowAdminAccess && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-800">Module Access List</h2>
+            {accessModulesLoading && <span className="text-xs text-gray-400">Loading access...</span>}
+          </div>
+          {assignedModuleCards.length ? (
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Module</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Section</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Access</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Permissions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {assignedModuleCards.map((module) => (
+                    <tr key={module.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{module.name}</p>
+                        <p className="text-xs text-gray-400">{module.id}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{module.tab}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                          Active
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(module.permissions.length ? module.permissions : ['View']).map((permission) => (
+                            <span
+                              key={`${module.id}-${permission}`}
+                              className="rounded-full border border-[#CE9F2D] bg-[#CE9F2D]/10 px-2.5 py-1 text-xs text-[#8A5A1F]"
+                            >
+                              {permission}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No assigned modules found for this user.</p>
+          )}
+          </section>
+        )}
 
         {/* ── Seller Section ───────────────────────────────────────────────── */}
         {isSeller && (

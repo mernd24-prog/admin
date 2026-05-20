@@ -400,6 +400,7 @@ const Login = () => {
       allowedModules: auth.allowedModules || [],
     });
     sessionStorage.setItem("EcomAdmin", JSON.stringify(sessionUser));
+    window.dispatchEvent(new Event("auth:changed"));
 
     if (sellerPanel) {
       dispatch(
