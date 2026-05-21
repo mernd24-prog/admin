@@ -14,39 +14,45 @@ const FormLayout = ({
   onLinkClick,
   logoSrc = "/logo.png",
   showLogo = true,
+  topContent = null,
   className = "",
+  shellClassName = "",
   formClassName = "",
   cardClassName = "",
   childrenClassName = "",
+  footerClassName = "",
+  titleClassName = "",
+  subTitleClassName = "",
 }) => {
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f0ec] px-4 py-8">
+    <div className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f0ec] px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}>
       <div
         className={`relative z-10 flex w-full max-w-[390px] flex-col items-center ${className}`}
       >
         {showLogo && (
-          <div className="mb-[22px] flex h-[92px] w-[118px] items-center justify-center rounded-[8px] border border-[#e7d8c3] bg-[#f7f5f2] p-[6px] shadow-[0_6px_10px_rgba(78,53,23,0.14)]">
+          <div className="mb-[26px] flex h-[134px] w-[174px] items-center justify-center rounded-[8px] border border-[#e6cda9] bg-[#f7f5f2] p-[9px] shadow-[0_7px_12px_rgba(78,53,23,0.16)]">
             <img
               src={logoSrc}
               alt="Sam Global"
-              className="h-full w-full object-contain object-center"
+              className="h-full w-full rounded-[6px] border border-[#eadbc8] object-contain object-center p-[7px]"
             />
           </div>
         )}
+        {topContent}
 
-        <div className="mb-[18px] text-center">
-          <h2 className="text-[30px] font-bold leading-[1.14] tracking-normal text-[#082f91] sm:text-[34px]">
+        <div className="mb-[22px] text-center">
+          <h2 className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#082f91] sm:text-[31px] ${titleClassName}`}>
             {title}
           </h2>
           {subTitle && (
-            <p className="mt-[10px] text-[13px] leading-5 text-[#4f5565]">
+            <p className={`mt-[10px] text-[12px] leading-[18px] text-[#4f5565] ${subTitleClassName}`}>
               {subTitle}
             </p>
           )}
         </div>
 
         <div
-          className={`w-full max-w-[344px] rounded-[12px] border border-[#e4dfd9] bg-[#f7f5f2] px-[22px] py-[39px] shadow-[0_24px_44px_rgba(35,31,27,0.08)] ${cardClassName}`}
+          className={`max-w-[334px] sm:max-w-[420px] md:max-w-[500px] lg:max-w-[553px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-[22px] py-[42px] shadow-[0_24px_44px_rgba(35,31,27,0.08)] ${cardClassName}`}
         >
           <form onSubmit={onSubmit} className={`space-y-0 ${formClassName}`}>
             <div className={childrenClassName}>{children}</div>
@@ -60,7 +66,7 @@ const FormLayout = ({
         </div>
 
         {(bottomText || linkText) && (
-          <p className="mt-[30px] text-center text-[11px] font-semibold text-[#031b52]">
+          <p className={`mt-[28px] text-center text-[12px] font-semibold text-[#031b52] ${footerClassName}`}>
             {bottomText && <span>{bottomText} </span>}
             {linkText &&
               (onLinkClick ? (

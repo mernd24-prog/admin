@@ -1,73 +1,109 @@
-import React from "react";
-import { FaStar } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { IoStarSharp } from "react-icons/io5";
+import { userDetails } from "../../data/userDetail";
 
 const AuthLayout = ({
   children,
-  illustration = "/Img/auth-img/auth-illustration.png",
-  backgroundImage = "/Rectangle 401.png",
+  backgroundImg = "/Img/auth-img/backgroundImg.png",
+  overlayImg = "/Img/auth-img/overlayImg.png",
+  userData = userDetails,
 }) => {
+  const [currentUserIndex, setCurrentUserIndex] = useState(0);
+  const activeUser = userData[currentUserIndex] || userDetails[0];
+
+  useEffect(() => {
+    if (userData.length <= 1) return undefined;
+
+    const intervalId = setInterval(() => {
+      setCurrentUserIndex((prevIndex) => (prevIndex + 1) % userData.length);
+    }, 4000);
+
+    return () => clearInterval(intervalId);
+  }, [userData.length]);
+
   return (
-    <div className="h-screen overflow-hidden bg-white">
-      <div className="grid h-full grid-cols-1 lg:grid-cols-2">
-        <div className="relative hidden overflow-hidden bg-[#fff8f0] lg:block">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url('${backgroundImage}')`,
-            }}
-          />
+    <div className="min-h-screen flex justify-center bg-white lg:items-center">
+      <div className="w-full bg-white shadow-2xl lg:min-h-screen">
+        <div className="grid grid-cols-1 lg:h-screen lg:grid-cols-[40%_60%]">
+          {/* Left Panel - Dynamic Welcome Section */}
+          <div className="relative h-[460px] overflow-hidden sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
+            <img
+              src={backgroundImg}
+              alt="Background"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div
+              className="absolute inset-0  flex flex-col items-center justify-evenly bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url('${overlayImg}')`,
+              }}
+            ></div>
+            <div className="absolute inset-x-4 bottom-4 z-50 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center sm:bottom-6 md:bottom-8 lg:bottom-[6rem]">
+              <div className="h-12 w-12 sm:h-14 sm:w-14">
+                <img
+                  src={activeUser.profileImg}
+                  alt={activeUser.name}
+                  className="w-full h-full rounded-full object-cover border-2 border-white"
+                />
+              </div>
+              <h4 className="mt-2 max-w-full truncate font-inter text-lg font-bold sm:text-xl">
+                {activeUser.name}
+              </h4>
+              <div className="mt-2 flex flex-row justify-center gap-1.5 md:mt-0 md:gap-2">
+                {Array.from({ length: Math.round(activeUser.rating) }).map(
+                  (_, index) => (
+                    <IoStarSharp
+                      key={`star-${index}`}
+                      className="h-4 w-4 text-primary xl:h-6 xl:w-6"
+                    />
+                  ),
+                )}
+              </div>
+              <p className="mt-2 max-w-sm px-3 py-2 text-center font-inter text-xs leading-relaxed text-black sm:px-4 md:text-sm xl:mt-5 xl:max-w-lg xl:text-base">
+                "{activeUser.description}"
+              </p>
 
-          <div className="relative z-10 flex h-full flex-col items-center justify-center px-10">
-            <div className="relative flex w-full max-w-[470px] flex-col items-center">
-              <img
-                src={illustration}
-                alt="Sam Global growth illustration"
-                className="mb-[-18px] w-full max-w-[430px] object-contain"
-              />
-
-              <div className="relative z-20 flex flex-col items-center text-center">
-                <div className="mb-2 h-9 w-9 overflow-hidden rounded-full border-2 border-white shadow-[0_5px_14px_rgba(25,25,25,0.16)]">
+              {/* ratings */}
+              <div className="mt-3 sm:mt-5 md:mt-6">
+                <p className="text-sm font-medium sm:text-base">
+                  500+ 5 star reviews
+                </p>
+                <div>
                   <img
-                    src="/Img/1.jpeg"
-                    alt="Samantha Green"
-                    className="h-full w-full object-cover"
+                    src="/Img/auth-img/rating.png"
+                    alt="rating"
+                    className="mx-auto h-auto max-w-[150px] sm:max-w-none"
                   />
                 </div>
-                <p className="text-[12px] font-semibold leading-none text-[#0f172a]">
-                  Samantha Green
-                </p>
-                <div className="mt-2 flex items-center gap-[2px] text-[#f5b521]">
-                  {[0, 1, 2, 3, 4].map((star) => (
-                    <FaStar key={star} size={12} />
+              </div>
+
+              {/* bottom multiple users */}
+              <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:mt-6 xl:mt-4 xl:flex-row xl:gap-3">
+                <div className="flex flex-row items-center justify-center">
+                  {userData.map((ele, index) => (
+                    <div
+                      key={`${ele.name}-${index}`}
+                      className={index === 0 ? "" : "-ml-3"}
+                    >
+                      <img
+                        src={ele.profileImg}
+                        alt={ele.name}
+                        className="h-8 w-8 rounded-full object-cover xl:h-10 xl:w-10"
+                      />
+                    </div>
                   ))}
                 </div>
-                <p className="mt-4 max-w-[330px] text-center text-[13px] leading-[19px] text-[#4f5565]">
-                  Sam Global truly exceeded my expectations. I started by
-                  exploring a few products, and soon I found myself shopping
-                  across multiple categories with ease. The platform feels
-                  smooth, reliable, and convenient, and it's great knowing that
-                  Sam Global connects buyers with quality products and trusted
-                  sellers in one place.
-                </p>
-                <div className="mt-4 rounded-md bg-white px-3 py-1 shadow-[0_8px_20px_rgba(25,25,25,0.08)]">
-                  <span className="text-[10px] font-semibold text-[#4285f4]">
-                    G
-                  </span>
-                  <span className="ml-1 text-[9px] font-medium text-[#555]">
-                    Google rating
-                  </span>
-                </div>
-                <p className="mt-7 text-[11px] font-medium text-[#111827]">
-                  Supporting over 3,000,000 users worldwide
+                <p className=" text-sm  sm:text-base">
+                  Supporting over <span className="font-bold">3,000,000</span>{" "}
+                  users worldwide
                 </p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex h-full items-center justify-center overflow-hidden bg-[#f3f0ec]">
-          <div className="h-full w-full">
-            {children}
+          {/* Right Panel - Form Container */}
+          <div className="flex justify-center bg-[#F4F1ED]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
+            <div className="w-full max-w-[760px]">{children}</div>
           </div>
         </div>
       </div>

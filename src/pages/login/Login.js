@@ -212,7 +212,7 @@ const Login = () => {
     }
 
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -482,8 +482,7 @@ const Login = () => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -519,8 +518,7 @@ const Login = () => {
   const handleSellerLoginOtpSubmit = async (e) => {
     e.preventDefault();
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -541,8 +539,7 @@ const Login = () => {
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -564,8 +561,7 @@ const Login = () => {
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -590,8 +586,7 @@ const Login = () => {
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     if (!validateLoginFields()) {
-      setFormAnimation("shake");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
+      setFormAnimation("slide-in");
       return;
     }
 
@@ -657,8 +652,6 @@ const Login = () => {
         return "animate-slide-in opacity-100 transform translate-x-0";
       case "slide-out":
         return "animate-slide-out opacity-0 transform -translate-x-full";
-      case "shake":
-        return "animate-shake";
       case "loading":
         return "animate-pulse";
       case "success-animation":
@@ -685,10 +678,19 @@ const Login = () => {
             }
             onSubmit={handleLoginSubmit}
             className={`${animationClasses} transition-all duration-300`}
+            cardClassName={sellerPanel ? "min-h-[190px]" : "min-h-[286px]"}
+            bottomText="Don't have an account?"
+            linkText="Register"
+            onLinkClick={() => {
+              if (sellerPanel) {
+                setFormState("register");
+                return;
+              }
+              toast.info("Please contact your administrator to create an account.");
+            }}
+            showLogo
           >
             <div className="relative z-10 flex flex-col">
-
-              {/* EMAIL */}
               <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
                 <EmailInput
                   id="email"
@@ -698,11 +700,11 @@ const Login = () => {
                   icon={MdEmail}
                   onChange={handleInputChange}
                   errorMessage={formErrors.email}
+                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
                   autoFocus
                 />
               </div>
 
-              {/* PASSWORD */}
               {!sellerPanel && (
                 <div className="mb-[8px]">
                   <PasswordInput
@@ -713,23 +715,22 @@ const Login = () => {
                     icon={CiLock}
                     onChange={handleInputChange}
                     errorMessage={formErrors.password}
+                    inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
                   />
                 </div>
               )}
 
-              {/* ERROR */}
               {loginError && (
                 <div className="mb-[10px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 animate-fade-in">
                   {loginError}
                 </div>
               )}
 
-              {/* FORGOT */}
-              <div
-                className="mb-[24px] flex min-h-[13px] items-center justify-end"
-                style={{ animationDelay: "0.3s" }}
-              >
-                {!sellerPanel && (
+              {!sellerPanel && (
+                <div
+                  className="mb-[24px] flex min-h-[13px] items-center justify-end"
+                  style={{ animationDelay: "0.3s" }}
+                >
                   <button
                     type="button"
                     onClick={toggleForgotPassword}
@@ -744,10 +745,9 @@ const Login = () => {
                   >
                     Forgot password?
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* BUTTON */}
               <div>
                 <FormSubmitButton
                   buttonLabel={
@@ -762,7 +762,6 @@ const Login = () => {
                 />
               </div>
 
-              {/* AGREEMENT */}
               <label className="mt-[20px] flex cursor-pointer items-start gap-[10px]">
                 <Checkbox
                   id="remember_me"
@@ -779,28 +778,6 @@ const Login = () => {
                   </span>
                 </span>
               </label>
-
-              {/* FOOTER */}
-              {sellerPanel && (
-                <div
-                  className="pt-2 text-center animate-fade-in"
-                  style={{ animationDelay: "0.5s" }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setFormState("register")}
-                    className="
-            text-xs
-            font-medium
-            text-[#c89a3c]
-            hover:underline
-            transition-all
-          "
-                  >
-                    New seller? Register with OTP
-                  </button>
-                </div>
-              )}
             </div>
           </FormLayout>
         );
@@ -872,10 +849,17 @@ const Login = () => {
             title="Password Recovery"
             subTitle="Enter your email to recover your password."
             onSubmit={handleForgotPasswordSubmit}
-            bottomText="Remember your password?"
-            linkText="Back to Login"
-            onLinkClick={toggleForgotPassword}
+            bottomText="Don't have an account?"
+            linkText="Register"
+            onLinkClick={() => {
+              if (sellerPanel) {
+                setFormState("register");
+                return;
+              }
+              toast.info("Please contact your administrator to create an account.");
+            }}
             className={`${animationClasses} transition-all duration-300`}
+            cardClassName="min-h-[210px] py-[38px]"
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
@@ -887,6 +871,7 @@ const Login = () => {
                   icon={MdEmail}
                   onChange={handleInputChange}
                   errorMessage={formErrors.forgotEmail}
+                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
                   autoFocus
                 />
               </div>
@@ -1036,6 +1021,7 @@ const Login = () => {
               setFormState("login");
             }}
             className={`${animationClasses} transition-all duration-300`}
+            showLogo
           >
             <div className="relative z-10 flex flex-col gap-3">
 
@@ -1127,59 +1113,79 @@ const Login = () => {
       case "registerVerification":
         return (
           <FormLayout
-            title="Verify Registration"
-            subTitle={`Enter the 6-digit OTP sent to ${formFields.registerEmail}`}
+            title="Verify Your Account"
+            subTitle="We’ve sent a verification code to your registered mobile number. Please enter the code below to confirm your identity and continue the verification process."
             onSubmit={handleRegisterOtpSubmit}
-            className={`${animationClasses} transition-all duration-300`}
-          >
-            <div className="relative z-10 flex flex-col gap-4">
-
-              <div className="flex justify-center space-x-2">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <input
-                    key={index}
-                    ref={codeInputRefs[index]}
-                    type="text"
-                    maxLength={1}
-                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
-                    value={verificationCode[index]}
-                    onChange={(e) =>
-                      handleCodeChange(index, e.target.value)
-                    }
-                    onKeyDown={(e) =>
-                      handleCodeKeyDown(index, e)
-                    }
-                    onPaste={
-                      index === 0 ? handleCodePaste : undefined
-                    }
-                  />
+            showLogo={false}
+            className={`${animationClasses} !max-w-[720px] transition-all duration-300`}
+            titleClassName="text-[18px] sm:text-[20px]"
+            subTitleClassName="mx-auto max-w-[590px] text-[14px] leading-[24px]"
+            cardClassName="flex w-full min-h-[320px] sm:min-h-[380px] md:min-h-[460px] lg:min-h-[540px] max-w-[98%] sm:max-w-[900px] md:!max-w-[1200px] lg:!max-w-[1450px] xl:!max-w-[1650px] 2xl:!max-w-[1800px] items-center justify-center px-4 sm:px-8 md:px-10 lg:px-14 py-8 sm:py-10 md:py-14 lg:py-16 rounded-[24px]"
+            topContent={
+              <div className="mb-[42px] flex w-full max-w-[360px] items-start justify-between">
+                {["Account", "Business", "Verified"].map((step, index) => (
+                  <React.Fragment key={step}>
+                    <div className="flex flex-col items-center">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8a52e] text-[13px] font-bold text-white shadow-[0_4px_10px_rgba(232,165,46,0.22)]">
+                        ✓
+                      </span>
+                      <span className="mt-1 text-[9px] font-semibold text-[#d99211]">
+                        {step}
+                      </span>
+                    </div>
+                    {index < 2 && (
+                      <span className="mt-4 h-px flex-1 bg-[#e8a52e]" />
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
+            }
+          >
+       <div className="relative z-10 mx-auto flex w-full max-w-full flex-col items-center justify-center overflow-hidden px-2 py-4 sm:px-6 md:px-8">
+  <p className="text-center text-[11px] sm:text-[14px] md:text-[15px] font-medium text-[#222]">
+    Phone Number : <span className="font-semibold text-[#082f91]">**** **** 1234</span>
+  </p>
 
-              {formErrors.verificationCode && (
-                <div className="p-2 text-sm text-center text-red-800 rounded-md bg-red-50">
-                  {formErrors.verificationCode}
-                </div>
-              )}
+  <div className="mt-4 grid w-full max-w-[270px] grid-cols-6 gap-1.5 min-[360px]:max-w-[320px] min-[360px]:gap-2 sm:max-w-[420px] sm:gap-3 md:max-w-[520px]">
+    {[0, 1, 2, 3, 4, 5].map((index) => (
+      <input
+        key={index}
+        ref={codeInputRefs[index]}
+        type="text"
+        maxLength={1}
+        className="aspect-square w-full rounded-[5px] border border-[#eeeeee] bg-white text-center text-[13px] sm:text-[17px] md:text-[20px] text-[#9a9a9a] shadow-[0_4px_8px_rgba(0,0,0,0.12)] outline-none transition-all duration-300 focus:border-[#082f91] focus:ring-2 focus:ring-[#dbe3ff]"
+        value={verificationCode[index]}
+        onChange={(e) => handleCodeChange(index, e.target.value)}
+        onKeyDown={(e) => handleCodeKeyDown(index, e)}
+        onPaste={index === 0 ? handleCodePaste : undefined}
+      />
+    ))}
+  </div>
 
-              <div className="mt-4">
-                <FormSubmitButton
-                  buttonLabel={
-                    loading ? "Verifying..." : "Verify & Complete Registration"
-                  }
-                />
-              </div>
+  {formErrors.verificationCode && (
+    <div className="mt-4 w-full max-w-[270px] rounded-md bg-red-50 px-3 py-2 text-center text-xs text-red-800 sm:max-w-[420px]">
+      {formErrors.verificationCode}
+    </div>
+  )}
 
-              <p
-                className="cursor-pointer text-center text-xs font-medium text-[#031b52] hover:text-[#082f91] hover:underline"
-                onClick={() => {
-                  resetForm();
-                  setFormState("login");
-                }}
-              >
-                Back to Login
-              </p>
-            </div>
+  <div className="mt-6 w-full max-w-[270px] min-[360px]:max-w-[320px] sm:max-w-[420px] md:max-w-[520px]">
+    <FormSubmitButton
+      buttonLabel={loading ? "Verifying..." : "Verify & Continue"}
+      className="h-[40px] w-full rounded-[8px] text-[12px] sm:h-[46px] sm:text-[14px] md:h-[52px] md:text-[15px]"
+    />
+  </div>
+
+  <p className="mt-3 text-center text-[11px] sm:text-[13px] md:text-[14px] font-medium text-[#555]">
+    Didn’t receive code?{" "}
+    <button
+      type="button"
+      className="font-semibold text-[#082f91] hover:underline"
+      onClick={handleResendOtp}
+    >
+      Resend OTP
+    </button>
+  </p>
+</div>
           </FormLayout>
         );
       default:
@@ -1201,12 +1207,6 @@ const Login = () => {
         @keyframes slide-out {
           0% { opacity: 1; transform: translateX(0); }
           100% { opacity: 0; transform: translateX(20px); }
-        }
-        
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-          20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
         
         @keyframes success-bounce {
@@ -1234,7 +1234,6 @@ const Login = () => {
         
         .animate-slide-in { animation: slide-in 0.4s ease-out forwards; }
         .animate-slide-out { animation: slide-out 0.4s ease-in forwards; }
-        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         .animate-success-bounce { animation: success-bounce 1s; }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
         .animate-pop-in { animation: pop-in 0.4s ease-out forwards; }
