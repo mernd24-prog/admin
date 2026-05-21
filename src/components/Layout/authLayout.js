@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { IoStarSharp } from "react-icons/io5";
 import { userDetails } from "../../data/userDetail";
+import { useAuthLayout } from "../../context/AuthLayoutContext";
 
-const AuthLayout = ({
-  children,
-  backgroundImg = "/Img/auth-img/backgroundImg.png",
-  overlayImg = "/Img/auth-img/overlayImg.png",
-  userData = userDetails,
-}) => {
+const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const activeUser = userData[currentUserIndex] || userDetails[0];
+  const { layoutConfig } = useAuthLayout();
+
+  const authBackgroundImg =
+    backgroundImg ||
+    layoutConfig.backgroundImg ||
+    "/Img/auth-img/backgroundImg.png";
 
   useEffect(() => {
     if (userData.length <= 1) return undefined;
@@ -26,19 +28,16 @@ const AuthLayout = ({
       <div className="w-full bg-white shadow-2xl lg:min-h-screen">
         <div className="grid grid-cols-1 lg:h-screen lg:grid-cols-[40%_60%]">
           {/* Left Panel - Dynamic Welcome Section */}
-          <div className="relative h-[460px] overflow-hidden sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
+          <div className="relative h-[460px] overflow-hidden bg-white sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
             <img
-              src={backgroundImg}
+              src={authBackgroundImg}
               alt="Background"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-x-0 -top-[14%] z-0 h-[84%] w-full object-cover object-top"
             />
-            <div
-              className="absolute inset-0  flex flex-col items-center justify-evenly bg-cover bg-center bg-no-repeat"
-              style={{
-                backgroundImage: `url('${overlayImg}')`,
-              }}
-            ></div>
-            <div className="absolute inset-x-4 bottom-4 z-50 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center sm:bottom-6 md:bottom-8 lg:bottom-[6rem]">
+            <div className="absolute inset-x-0 bottom-[20%] z-10 h-[45%] bg-gradient-to-b from-transparent via-white/90 to-white" />
+            <div className="absolute inset-x-0 bottom-0 z-10 h-[22%] bg-white" />
+
+            <div className="absolute inset-x-4 bottom-4 z-20 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center sm:bottom-6 md:bottom-8 lg:bottom-[6rem]">
               <div className="h-12 w-12 sm:h-14 sm:w-14">
                 <img
                   src={activeUser.profileImg}
@@ -46,15 +45,15 @@ const AuthLayout = ({
                   className="w-full h-full rounded-full object-cover border-2 border-white"
                 />
               </div>
-              <h4 className="mt-2 max-w-full truncate font-inter text-lg font-bold sm:text-xl">
+              <h4 className="mt-2 max-w-full text-blue truncate font-inter text-lg font-bold sm:text-xl">
                 {activeUser.name}
               </h4>
-              <div className="mt-2 flex flex-row justify-center gap-1.5 md:mt-0 md:gap-2">
+              <div className="mt-2 flex flex-row justify-center  md:mt-0 gap-1">
                 {Array.from({ length: Math.round(activeUser.rating) }).map(
                   (_, index) => (
                     <IoStarSharp
                       key={`star-${index}`}
-                      className="h-4 w-4 text-primary xl:h-6 xl:w-6"
+                      className="h-6 w-6 text-primary "
                     />
                   ),
                 )}
@@ -64,17 +63,13 @@ const AuthLayout = ({
               </p>
 
               {/* ratings */}
+
               <div className="mt-3 sm:mt-5 md:mt-6">
-                <p className="text-sm font-medium sm:text-base">
-                  500+ 5 star reviews
-                </p>
-                <div>
-                  <img
-                    src="/Img/auth-img/rating.png"
-                    alt="rating"
-                    className="mx-auto h-auto max-w-[150px] sm:max-w-none"
-                  />
-                </div>
+                <img
+                  src="/Img/auth-img/rating.png"
+                  alt="rating"
+                  className="mx-auto h-auto max-w-[150px] sm:max-w-none"
+                />
               </div>
 
               {/* bottom multiple users */}

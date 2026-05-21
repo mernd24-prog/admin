@@ -11,9 +11,12 @@ import {
   registerWithOtp,
   verifyRegistration,
   resendOtp,
-  sendOtp
+  sendOtp,
 } from "../../Redux/auth-Slice";
-import { startAuthenticatedSession, startSellerOnboarding } from "../../Redux/seller-slice";
+import {
+  startAuthenticatedSession,
+  startSellerOnboarding,
+} from "../../Redux/seller-slice";
 import { showError } from "../../Redux/alertSlice";
 import FormLayout from "../../components/FormLayout/FormLayout";
 import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
@@ -31,18 +34,26 @@ import {
   isAllowedRoleForPanel,
   setStoredAuth,
 } from "../../_helpers/authStorage";
+import { useAuthLayout } from "../../context/AuthLayoutContext";
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { formType: formState, setFormType: setFormState } = useAuthLayout();
   const { authSlice } = useSelector((state) => state);
   const { loading } = authSlice || {};
   const sellerPanel = isSellerPanel();
   const panelMode = sellerPanel ? PANEL_MODES.SELLER : PANEL_MODES.ADMIN;
   const [loginError, setLoginError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [formState, setFormState] = useState("login");
-  const [verificationCode, setVerificationCode] = useState(["", "", "", "", "", ""]);
+  const [verificationCode, setVerificationCode] = useState([
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
   const [formFields, setFormFields] = useState({
     email: "",
     password: "",
@@ -56,7 +67,7 @@ const Login = () => {
     phone: "",
     registerEmail: "",
     registerPassword: "",
-    referralCode: ""
+    referralCode: "",
   });
   const [formErrors, setFormErrors] = useState({
     firstName: null,
@@ -66,8 +77,10 @@ const Login = () => {
     registerPassword: null,
   });
   const [formAnimation, setFormAnimation] = useState("slide-in");
-  const [isLoading, setIsLoading] = useState(false)
-  const codeInputRefs = Array(6).fill().map(() => React.createRef());
+  const [isLoading, setIsLoading] = useState(false);
+  const codeInputRefs = Array(6)
+    .fill()
+    .map(() => React.createRef());
 
   useEffect(() => {
     clearStoredAuth();
@@ -75,7 +88,7 @@ const Login = () => {
     if (savedCredentials) {
       try {
         const { email } = JSON.parse(savedCredentials);
-        setFormFields(prev => ({ ...prev, email }));
+        setFormFields((prev) => ({ ...prev, email }));
         setRememberMe(true);
       } catch (e) {
         console.error("Invalid stored credentials:", e);
@@ -96,7 +109,8 @@ const Login = () => {
     let isValid = true;
     const errors = {};
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 
     if (formState === "login") {
       if (!formFields.email.trim()) {
@@ -117,7 +131,8 @@ const Login = () => {
     } else if (formState === "sellerLoginVerification") {
       const code = verificationCode.join("");
       if (code.length !== 6) {
-        errors.verificationCode = "Please enter the complete verification code.";
+        errors.verificationCode =
+          "Please enter the complete verification code.";
         isValid = false;
       }
     } else if (formState === "forgotPassword") {
@@ -131,7 +146,8 @@ const Login = () => {
     } else if (formState === "verificationCode") {
       const code = verificationCode.join("");
       if (code.length !== 6) {
-        errors.verificationCode = "Please enter the complete verification code.";
+        errors.verificationCode =
+          "Please enter the complete verification code.";
         isValid = false;
       }
     } else if (formState === "resetPassword") {
@@ -157,7 +173,8 @@ const Login = () => {
       }
     } else if (formState === "register") {
       if (!sellerPanel) {
-        errors.registerEmail = "Registration is available only on the seller panel.";
+        errors.registerEmail =
+          "Registration is available only on the seller panel.";
         isValid = false;
       }
       if (!formFields.firstName.trim()) {
@@ -179,7 +196,10 @@ const Login = () => {
       if (!formFields.phone.trim()) {
         errors.phone = "Phone is required";
         isValid = false;
-      } else if (formFields.phone.trim().length < 10 || formFields.phone.trim().length > 15) {
+      } else if (
+        formFields.phone.trim().length < 10 ||
+        formFields.phone.trim().length > 15
+      ) {
         errors.phone = "Phone must be between 10 and 15 digits";
         isValid = false;
       }
@@ -207,7 +227,9 @@ const Login = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!sellerPanel) {
-      toast.error("Admin accounts are created by a super admin. Please use admin login.");
+      toast.error(
+        "Admin accounts are created by a super admin. Please use admin login.",
+      );
       return;
     }
 
@@ -227,12 +249,16 @@ const Login = () => {
             firstName: formFields.firstName,
             lastName: formFields.lastName,
           },
-          referralCode: formFields.referralCode || ""
-        })
+          referralCode: formFields.referralCode || "",
+        }),
       );
 
       if (!response?.error) {
-        toast.success(response.payload?.data?.message || response.payload?.message || "OTP sent successfully");
+        toast.success(
+          response.payload?.data?.message ||
+            response.payload?.message ||
+            "OTP sent successfully",
+        );
         setFormState("registerVerification");
       } else {
         toast.error(response.payload);
@@ -256,8 +282,8 @@ const Login = () => {
       const response = await dispatch(
         verifyRegistration({
           email: formFields.registerEmail,
-          otp: code
-        })
+          otp: code,
+        }),
       );
 
       if (!response?.error) {
@@ -268,7 +294,7 @@ const Login = () => {
               onboardingToken: auth.onboardingToken,
               user: auth.user || null,
               flowState: auth.flowState || null,
-            })
+            }),
           );
           toast.success("Verification complete. Continue seller onboarding.");
           navigate("/seller/onboarding");
@@ -286,56 +312,67 @@ const Login = () => {
   };
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormFields(prev => ({ ...prev, [name]: value.trim() }));
-    setFormErrors(prev => ({ ...prev, [name]: null }));
+    setFormFields((prev) => ({ ...prev, [name]: value.trim() }));
+    setFormErrors((prev) => ({ ...prev, [name]: null }));
     setLoginError("");
   }, []);
 
-  const handleCodeChange = useCallback((index, value) => {
-    if (!/^\d*$/.test(value)) return;
+  const handleCodeChange = useCallback(
+    (index, value) => {
+      if (!/^\d*$/.test(value)) return;
 
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-    setFormErrors(prev => ({ ...prev, verificationCode: null }));
+      const newCode = [...verificationCode];
+      newCode[index] = value;
+      setVerificationCode(newCode);
+      setFormErrors((prev) => ({ ...prev, verificationCode: null }));
 
-    if (value !== "" && index < 5 && codeInputRefs[index + 1]?.current) {
-      codeInputRefs[index + 1].current.focus();
-    }
-  }, [verificationCode, codeInputRefs, setFormErrors]);
+      if (value !== "" && index < 5 && codeInputRefs[index + 1]?.current) {
+        codeInputRefs[index + 1].current.focus();
+      }
+    },
+    [verificationCode, codeInputRefs, setFormErrors],
+  );
 
+  const handleCodeKeyDown = useCallback(
+    (index, e) => {
+      if (
+        e.key === "Backspace" &&
+        verificationCode[index] === "" &&
+        index > 0
+      ) {
+        codeInputRefs[index - 1].current.focus();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [verificationCode, codeInputRefs],
+  );
 
-  const handleCodeKeyDown = useCallback((index, e) => {
-    if (e.key === "Backspace" && verificationCode[index] === "" && index > 0) {
-      codeInputRefs[index - 1].current.focus();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verificationCode]);
+  const handleCodePaste = useCallback(
+    (e) => {
+      e.preventDefault();
+      const pastedData = e.clipboardData.getData("text").trim();
+      if (!/^\d+$/.test(pastedData)) return;
 
-  const handleCodePaste = useCallback((e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").trim();
-    if (!/^\d+$/.test(pastedData)) return;
+      const digits = pastedData.split("").slice(0, 6);
+      const newCode = [...verificationCode];
 
-    const digits = pastedData.split("").slice(0, 6);
-    const newCode = [...verificationCode];
+      digits.forEach((digit, i) => {
+        if (i < 6) newCode[i] = digit;
+      });
 
-    digits.forEach((digit, i) => {
-      if (i < 6) newCode[i] = digit;
-    });
+      setVerificationCode(newCode);
 
-    setVerificationCode(newCode);
-
-    const nextEmptyIndex = newCode.findIndex(val => val === "");
-    if (nextEmptyIndex !== -1 && codeInputRefs[nextEmptyIndex]?.current) {
-      codeInputRefs[nextEmptyIndex].current.focus();
-    } else if (digits.length < 6 && codeInputRefs[digits.length]?.current) {
-      codeInputRefs[digits.length].current.focus();
-    } else if (codeInputRefs[5]?.current) {
-      codeInputRefs[5].current.focus();
-    }
-  }, [verificationCode, codeInputRefs]);
-
+      const nextEmptyIndex = newCode.findIndex((val) => val === "");
+      if (nextEmptyIndex !== -1 && codeInputRefs[nextEmptyIndex]?.current) {
+        codeInputRefs[nextEmptyIndex].current.focus();
+      } else if (digits.length < 6 && codeInputRefs[digits.length]?.current) {
+        codeInputRefs[digits.length].current.focus();
+      } else if (codeInputRefs[5]?.current) {
+        codeInputRefs[5].current.focus();
+      }
+    },
+    [verificationCode, codeInputRefs],
+  );
 
   const resetForm = useCallback(() => {
     setFormFields({
@@ -350,7 +387,7 @@ const Login = () => {
       phone: "",
       registerEmail: "",
       registerPassword: "",
-      referralCode: ""
+      referralCode: "",
     });
     setVerificationCode(["", "", "", "", "", ""]);
     setRememberMe(false);
@@ -369,115 +406,142 @@ const Login = () => {
     });
   }, []);
 
-  const storeOrClearCredentials = useCallback((email) => {
-    if (rememberMe && email) {
-      localStorage.setItem("EcomAdminRemember", JSON.stringify({ email }));
-    } else {
-      localStorage.removeItem("EcomAdminRemember");
-    }
-  }, [rememberMe]);
+  const storeOrClearCredentials = useCallback(
+    (email) => {
+      if (rememberMe && email) {
+        localStorage.setItem("EcomAdminRemember", JSON.stringify({ email }));
+      } else {
+        localStorage.removeItem("EcomAdminRemember");
+      }
+    },
+    [rememberMe],
+  );
 
-  const persistAuthenticatedSession = useCallback((auth) => {
-    const user = auth.user || {};
-    const role = auth.role;
-    const legacyRoleId = getLegacyRoleId(role);
-    const sessionUser = {
-      ...user,
-      userId: user.id || user._id || user.userId,
-      token: auth.accessToken,
-      refreshToken: auth.refreshToken,
-      role,
-      roleSlug: role,
-      roleId: legacyRoleId,
-      role_id: legacyRoleId,
-      allowedModules: auth.allowedModules || [],
-    };
+  const persistAuthenticatedSession = useCallback(
+    (auth) => {
+      const user = auth.user || {};
+      const role = auth.role;
+      const legacyRoleId = getLegacyRoleId(role);
+      const sessionUser = {
+        ...user,
+        userId: user.id || user._id || user.userId,
+        token: auth.accessToken,
+        refreshToken: auth.refreshToken,
+        role,
+        roleSlug: role,
+        roleId: legacyRoleId,
+        role_id: legacyRoleId,
+        allowedModules: auth.allowedModules || [],
+      };
 
-    setStoredAuth({
-      accessToken: auth.accessToken,
-      refreshToken: auth.refreshToken,
-      user,
-      role,
-      allowedModules: auth.allowedModules || [],
-    });
-    sessionStorage.setItem("EcomAdmin", JSON.stringify(sessionUser));
-    window.dispatchEvent(new Event("auth:changed"));
+      setStoredAuth({
+        accessToken: auth.accessToken,
+        refreshToken: auth.refreshToken,
+        user,
+        role,
+        allowedModules: auth.allowedModules || [],
+      });
+      sessionStorage.setItem("EcomAdmin", JSON.stringify(sessionUser));
+      window.dispatchEvent(new Event("auth:changed"));
 
-    if (sellerPanel) {
-      dispatch(
-        startAuthenticatedSession({
-          accessToken: auth.accessToken,
-          refreshToken: auth.refreshToken,
-          flowState: auth.flowState,
-        })
-      );
-    }
-  }, [dispatch, sellerPanel]);
+      if (sellerPanel) {
+        dispatch(
+          startAuthenticatedSession({
+            accessToken: auth.accessToken,
+            refreshToken: auth.refreshToken,
+            flowState: auth.flowState,
+          }),
+        );
+      }
+    },
+    [dispatch, sellerPanel],
+  );
 
-  const handleApiResponse = useCallback((res, currentFormState) => {
-    if (res?.error) {
-      toast.error(res.payload || res?.error?.message)
-      setFormAnimation("error");
-      setTimeout(() => setFormAnimation("slide-in"), 500);
-      return false;
-    }
-    setFormAnimation("success-animation");
-    if (currentFormState !== "login") {
-      toast.success(res.payload?.data?.message || res.payload?.message || res.payload?.raw?.message || "Success");
-    }
-    setTimeout(() => {
-      if (currentFormState === "login") {
-        const auth = normalizeAuthPayload(res?.payload);
-        if (auth.requiresOnboarding && auth.onboardingToken) {
-          if (!sellerPanel) {
-            clearStoredAuth();
-            toast.error("Seller onboarding belongs in the seller panel.");
+  const handleApiResponse = useCallback(
+    (res, currentFormState) => {
+      if (res?.error) {
+        toast.error(res.payload || res?.error?.message);
+        setFormAnimation("error");
+        setTimeout(() => setFormAnimation("slide-in"), 500);
+        return false;
+      }
+      setFormAnimation("success-animation");
+      if (currentFormState !== "login") {
+        toast.success(
+          res.payload?.data?.message ||
+            res.payload?.message ||
+            res.payload?.raw?.message ||
+            "Success",
+        );
+      }
+      setTimeout(() => {
+        if (currentFormState === "login") {
+          const auth = normalizeAuthPayload(res?.payload);
+          if (auth.requiresOnboarding && auth.onboardingToken) {
+            if (!sellerPanel) {
+              clearStoredAuth();
+              toast.error("Seller onboarding belongs in the seller panel.");
+              return;
+            }
+            dispatch(
+              startSellerOnboarding({
+                onboardingToken: auth.onboardingToken,
+                user: auth.user || null,
+                flowState: auth.flowState || null,
+              }),
+            );
+            toast.success("Continue seller onboarding.");
+            navigate("/seller/onboarding");
             return;
           }
-          dispatch(
-            startSellerOnboarding({
-              onboardingToken: auth.onboardingToken,
-              user: auth.user || null,
-              flowState: auth.flowState || null,
-            })
-          );
-          toast.success("Continue seller onboarding.");
-          navigate("/seller/onboarding");
-          return;
+
+          if (!auth.accessToken) {
+            toast.error("Login did not return an access token.");
+            return;
+          }
+
+          if (!isAllowedRoleForPanel(auth.role, panelMode)) {
+            clearStoredAuth();
+            toast.error(
+              sellerPanel
+                ? "Please use a seller account for this panel."
+                : "Please use an admin account for this panel.",
+            );
+            return;
+          }
+
+          persistAuthenticatedSession(auth);
+          toast.success("Login successful");
+          resetForm();
+          navigate("/app/home");
+        } else if (currentFormState === "forgotPassword") {
+          setFormState("verificationCode");
+        } else if (currentFormState === "verificationCode") {
+          setFormFields((prev) => ({
+            ...prev,
+            forgotOtp: verificationCode.join(""),
+          }));
+          setFormState("resetPassword");
+        } else if (currentFormState === "resetPassword") {
+          resetForm();
+          setFormState("login");
         }
+      }, 600);
 
-        if (!auth.accessToken) {
-          toast.error("Login did not return an access token.");
-          return;
-        }
-
-        if (!isAllowedRoleForPanel(auth.role, panelMode)) {
-          clearStoredAuth();
-          toast.error(sellerPanel ? "Please use a seller account for this panel." : "Please use an admin account for this panel.");
-          return;
-        }
-
-        persistAuthenticatedSession(auth);
-        toast.success("Login successful");
-        resetForm();
-        navigate("/app/home");
-      } else if (currentFormState === "forgotPassword") {
-        setFormState("verificationCode");
-      } else if (currentFormState === "verificationCode") {
-        setFormFields((prev) => ({
-          ...prev,
-          forgotOtp: verificationCode.join(""),
-        }));
-        setFormState("resetPassword");
-      } else if (currentFormState === "resetPassword") {
-        resetForm();
-        setFormState("login");
-      }
-    }, 600);
-
-    return true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, navigate, panelMode, persistAuthenticatedSession, resetForm, sellerPanel, verificationCode]);
+      return true;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [
+      dispatch,
+      navigate,
+      panelMode,
+      persistAuthenticatedSession,
+      resetForm,
+      setFormState,
+      sellerPanel,
+      verificationCode,
+    ],
+  );
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -500,19 +564,25 @@ const Login = () => {
           setTimeout(() => setFormAnimation("slide-in"), 500);
           return;
         }
-        toast.success(response?.payload?.data?.message || response?.payload?.message || "OTP sent successfully");
+        toast.success(
+          response?.payload?.data?.message ||
+            response?.payload?.message ||
+            "OTP sent successfully",
+        );
         setVerificationCode(["", "", "", "", "", ""]);
         setFormState("sellerLoginVerification");
         return;
       }
 
-      const response = await dispatch(adminLogin({
-        email,
-        password
-      }));
+      const response = await dispatch(
+        adminLogin({
+          email,
+          password,
+        }),
+      );
       handleApiResponse(response, "login");
     } catch (error) {
-      toast.error("Login failed. Please try again.")
+      toast.error("Login failed. Please try again.");
     }
   };
 
@@ -530,7 +600,7 @@ const Login = () => {
         verifySellerLoginOtp({
           email: formFields.email,
           otp: verificationCode.join(""),
-        })
+        }),
       );
       handleApiResponse(response, "login");
     } catch (error) {
@@ -548,16 +618,18 @@ const Login = () => {
 
     try {
       setFormAnimation("loading");
-      setIsLoading(true)
-      const response = await dispatch(forgotPassword({ email: formFields.forgotEmail }));
-      setIsLoading(false)
+      setIsLoading(true);
+      const response = await dispatch(
+        forgotPassword({ email: formFields.forgotEmail }),
+      );
+      setIsLoading(false);
       handleApiResponse(response, "forgotPassword");
     } catch (error) {
       dispatch(showError("Failed to process request. Please try again."));
       console.error("Forgot password error:", error);
-      setIsLoading(false)
+      setIsLoading(false);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
@@ -577,7 +649,7 @@ const Login = () => {
           email: formFields.forgotEmail,
           otp: code,
           purpose: "forgot_password",
-        })
+        }),
       );
 
       handleApiResponse(response, "verificationCode");
@@ -602,8 +674,8 @@ const Login = () => {
         resetPassword({
           email: forgotEmail,
           otp: forgotOtp || verificationCode.join(""),
-          newPassword
-        })
+          newPassword,
+        }),
       );
       handleApiResponse(response, "resetPassword");
     } catch (error) {
@@ -615,41 +687,52 @@ const Login = () => {
   const toggleForgotPassword = useCallback(() => {
     setFormAnimation("slide-out");
     setTimeout(() => {
-      setFormState(prev => prev === "login" ? "forgotPassword" : "login");
+      setFormState((prev) => (prev === "login" ? "forgotPassword" : "login"));
       resetForm();
     }, 300);
-  }, [resetForm]);
+  }, [resetForm, setFormState]);
 
-  const handleResendOtp = useCallback(async (e) => {
-    e.preventDefault();
-    try {
-      setFormAnimation("loading");
-      const isSellerLoginOtp = formState === "sellerLoginVerification";
-      const isRegistrationOtp = formState === "registerVerification";
-      const email = isRegistrationOtp
-        ? formFields.registerEmail
-        : isSellerLoginOtp
-          ? formFields.email
-          : formFields.forgotEmail;
-      const purpose = isRegistrationOtp
-        ? "registration"
-        : isSellerLoginOtp
-          ? "login"
-          : "forgot_password";
-      const response = await dispatch(
-        resendOtp({ email, purpose })
-      );
-      if (!response?.error) {
-        toast.success(response?.payload?.data?.message || response?.payload?.message || "OTP resent successfully");
-        setVerificationCode(["", "", "", "", "", ""]);
-      } else {
-        toast.error(response?.payload || "Failed to resend OTP");
+  const handleResendOtp = useCallback(
+    async (e) => {
+      e.preventDefault();
+      try {
+        setFormAnimation("loading");
+        const isSellerLoginOtp = formState === "sellerLoginVerification";
+        const isRegistrationOtp = formState === "registerVerification";
+        const email = isRegistrationOtp
+          ? formFields.registerEmail
+          : isSellerLoginOtp
+            ? formFields.email
+            : formFields.forgotEmail;
+        const purpose = isRegistrationOtp
+          ? "registration"
+          : isSellerLoginOtp
+            ? "login"
+            : "forgot_password";
+        const response = await dispatch(resendOtp({ email, purpose }));
+        if (!response?.error) {
+          toast.success(
+            response?.payload?.data?.message ||
+              response?.payload?.message ||
+              "OTP resent successfully",
+          );
+          setVerificationCode(["", "", "", "", "", ""]);
+        } else {
+          toast.error(response?.payload || "Failed to resend OTP");
+        }
+      } catch (error) {
+        dispatch(showError("Failed to resend code. Please try again."));
+        console.error("Resend OTP error:", error);
       }
-    } catch (error) {
-      dispatch(showError("Failed to resend code. Please try again."));
-      console.error("Resend OTP error:", error);
-    }
-  }, [dispatch, formFields.email, formFields.forgotEmail, formFields.registerEmail, formState]);
+    },
+    [
+      dispatch,
+      formFields.email,
+      formFields.forgotEmail,
+      formFields.registerEmail,
+      formState,
+    ],
+  );
 
   const getAnimationClasses = useCallback(() => {
     switch (formAnimation) {
@@ -687,7 +770,6 @@ const Login = () => {
             className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col">
-
               {/* EMAIL */}
               <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
                 <EmailInput
@@ -837,13 +919,19 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.7s" }}>
+              <div
+                className="mt-6 animate-fade-in"
+                style={{ animationDelay: "0.7s" }}
+              >
                 <FormSubmitButton
                   buttonLabel={loading ? "Verifying..." : "Verify & Login"}
                 />
               </div>
 
-              <div className="flex justify-between mt-4 text-sm animate-fade-in" style={{ animationDelay: "0.8s" }}>
+              <div
+                className="flex justify-between mt-4 text-sm animate-fade-in"
+                style={{ animationDelay: "0.8s" }}
+              >
                 <button
                   type="button"
                   className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
@@ -897,12 +985,14 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="pt-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+              <div
+                className="pt-4 animate-fade-in"
+                style={{ animationDelay: "0.2s" }}
+              >
                 <FormSubmitButton
                   buttonLabel={loading ? "Submitting..." : "Send Reset Link"}
                 />
               </div>
-
             </div>
           </FormLayout>
         );
@@ -939,13 +1029,19 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.7s" }}>
+              <div
+                className="mt-6 animate-fade-in"
+                style={{ animationDelay: "0.7s" }}
+              >
                 <FormSubmitButton
                   buttonLabel={loading ? "Verifying..." : "Verify Code"}
                 />
               </div>
 
-              <div className="flex justify-between mt-4 text-sm animate-fade-in" style={{ animationDelay: "0.8s" }}>
+              <div
+                className="flex justify-between mt-4 text-sm animate-fade-in"
+                style={{ animationDelay: "0.8s" }}
+              >
                 <p className="text-gray-500">
                   Didn't receive the code?{" "}
                   <button
@@ -1007,7 +1103,10 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="pt-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+              <div
+                className="pt-4 animate-fade-in"
+                style={{ animationDelay: "0.3s" }}
+              >
                 <FormSubmitButton
                   buttonLabel={loading ? "Resetting..." : "Reset Password"}
                 />
@@ -1038,7 +1137,6 @@ const Login = () => {
             className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-3">
-
               <EmailInput
                 id="firstName"
                 name="firstName"
@@ -1123,7 +1221,6 @@ const Login = () => {
           </FormLayout>
         );
 
-
       case "registerVerification":
         return (
           <FormLayout
@@ -1133,7 +1230,6 @@ const Login = () => {
             className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
-
               <div className="flex justify-center space-x-2">
                 {[0, 1, 2, 3, 4, 5].map((index) => (
                   <input
@@ -1143,15 +1239,9 @@ const Login = () => {
                     maxLength={1}
                     className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
                     value={verificationCode[index]}
-                    onChange={(e) =>
-                      handleCodeChange(index, e.target.value)
-                    }
-                    onKeyDown={(e) =>
-                      handleCodeKeyDown(index, e)
-                    }
-                    onPaste={
-                      index === 0 ? handleCodePaste : undefined
-                    }
+                    onChange={(e) => handleCodeChange(index, e.target.value)}
+                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                    onPaste={index === 0 ? handleCodePaste : undefined}
                   />
                 ))}
               </div>
@@ -1194,51 +1284,122 @@ const Login = () => {
 
       <style jsx global>{`
         @keyframes slide-in {
-          0% { opacity: 0; transform: translateX(-20px); }
-          100% { opacity: 1; transform: translateX(0); }
+          0% {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
-        
+
         @keyframes slide-out {
-          0% { opacity: 1; transform: translateX(0); }
-          100% { opacity: 0; transform: translateX(20px); }
+          0% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(20px);
+          }
         }
-        
+
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-          20%, 40%, 60%, 80% { transform: translateX(5px); }
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          10%,
+          30%,
+          50%,
+          70%,
+          90% {
+            transform: translateX(-5px);
+          }
+          20%,
+          40%,
+          60%,
+          80% {
+            transform: translateX(5px);
+          }
         }
-        
+
         @keyframes success-bounce {
-          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-20px); }
-          60% { transform: translateY(-10px); }
+          0%,
+          20%,
+          50%,
+          80%,
+          100% {
+            transform: translateY(0);
+          }
+          40% {
+            transform: translateY(-20px);
+          }
+          60% {
+            transform: translateY(-10px);
+          }
         }
-        
+
         @keyframes fade-in {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        
+
         @keyframes pop-in {
-          0% { transform: scale(0.8); opacity: 0; }
-          70% { transform: scale(1.1); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
+          0% {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          70% {
+            transform: scale(1.1);
+            opacity: 0.7;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
         }
-        
+
         @keyframes float {
-          0% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
-          100% { transform: translateY(0) rotate(0deg); }
+          0% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
         }
-        
-        .animate-slide-in { animation: slide-in 0.4s ease-out forwards; }
-        .animate-slide-out { animation: slide-out 0.4s ease-in forwards; }
-        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        .animate-success-bounce { animation: success-bounce 1s; }
-        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        .animate-pop-in { animation: pop-in 0.4s ease-out forwards; }
-        .animate-float { animation: float 6s ease-in-out infinite; }
+
+        .animate-slide-in {
+          animation: slide-in 0.4s ease-out forwards;
+        }
+        .animate-slide-out {
+          animation: slide-out 0.4s ease-in forwards;
+        }
+        .animate-shake {
+          animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        .animate-success-bounce {
+          animation: success-bounce 1s;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out forwards;
+        }
+        .animate-pop-in {
+          animation: pop-in 0.4s ease-out forwards;
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );

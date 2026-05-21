@@ -12,6 +12,10 @@ import ResetPassword from "../pages/ResetPassword/ResetPassword";
 import { useLoader } from "../context/LoaderContext";
 import Loader from "./Loader/Loader";
 import AuthLayout from "./Layout/authLayout";
+import {
+  AuthLayoutProvider,
+  AUTH_FORM_TYPES,
+} from "../context/AuthLayoutContext";
 import SellerOnboarding from "../pages/SellerOnboarding/SellerOnboarding";
 import { fetchAuthStatus } from "../Redux/seller-slice";
 import KYCStatusLayout from "./Layout/kycLayout";
@@ -75,7 +79,14 @@ const App = () => {
           element={
             <>
               <LoaderWrapper />
-              <ForgetPassword />
+              <AuthLayoutProvider
+                initialFormType={AUTH_FORM_TYPES.FORGOT_PASSWORD}
+                sellerPanel={isSellerPanel()}
+              >
+                <AuthLayout>
+                  <ForgetPassword />
+                </AuthLayout>
+              </AuthLayoutProvider>
             </>
           }
         />
@@ -84,7 +95,14 @@ const App = () => {
           element={
             <>
               <LoaderWrapper />
-              <VerifyOtp />
+              <AuthLayoutProvider
+                initialFormType={AUTH_FORM_TYPES.VERIFICATION_CODE}
+                sellerPanel={isSellerPanel()}
+              >
+                <AuthLayout>
+                  <VerifyOtp />
+                </AuthLayout>
+              </AuthLayoutProvider>
             </>
           }
         />
@@ -93,7 +111,14 @@ const App = () => {
           element={
             <>
               <LoaderWrapper />
-              <ResetPassword />
+              <AuthLayoutProvider
+                initialFormType={AUTH_FORM_TYPES.RESET_PASSWORD}
+                sellerPanel={isSellerPanel()}
+              >
+                <AuthLayout>
+                  <ResetPassword />
+                </AuthLayout>
+              </AuthLayoutProvider>
             </>
           }
         />
@@ -135,6 +160,8 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
 };
 
 const PublicRoute = ({ component: Component, flowState, ...rest }) => {
+  const { currentSection } = useKYC();
+
   const isAuthenticated = localStorage.getItem("accessToken");
   const hasOnboardingToken = localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
@@ -151,16 +178,14 @@ const PublicRoute = ({ component: Component, flowState, ...rest }) => {
     return <Navigate to="/app/home" />;
   }
   return (
-    <AuthLayout
-      title={sellerPanel ? "Welcome Back, Seller" : "Admin Portal"}
-      subtitle={
-        sellerPanel
-          ? "Login to manage onboarding, products, and orders"
-          : "Login to manage platform operations"
-      }
+    <AuthLayoutProvider
+      initialFormType={AUTH_FORM_TYPES.LOGIN}
+      sellerPanel={sellerPanel}
     >
-      <Component {...rest} />
-    </AuthLayout>
+      <AuthLayout>
+        <Component {...rest} />
+      </AuthLayout>
+    </AuthLayoutProvider>
   );
 };
 
