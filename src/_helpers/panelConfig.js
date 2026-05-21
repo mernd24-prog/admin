@@ -51,10 +51,10 @@ export const PANEL_ROLE_RULES = {
     allowedRoles: ["super-admin", "admin", "sub-admin"],
     fullAccessRoles: ["super-admin", "admin"],
     restrictedRole: "sub-admin",
-    blockedRoles: ["seller", "seller-sub-admin", "buyer"],
+    blockedRoles: ["seller", "seller-admin", "seller-sub-admin", "buyer"],
   },
   [PANEL_MODES.SELLER]: {
-    allowedRoles: ["seller", "seller-sub-admin"],
+    allowedRoles: ["seller", "seller-admin", "seller-sub-admin"],
     fullAccessRoles: ["seller"],
     restrictedRole: "seller-sub-admin",
     blockedRoles: ["super-admin", "admin", "sub-admin", "buyer"],

@@ -57,6 +57,16 @@ const getDisplayName = (user = {}) => {
   );
 };
 
+const getLastLoginValue = (user = {}) =>
+  user.lastLoginAt || user.last_login_at || user.lastLogin || user.last_login || '';
+
+const formatDateTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString();
+};
+
 const ACTION_LABELS = {
   view: 'View',
   add: 'Add',
@@ -71,6 +81,74 @@ const formatModuleName = (value = '') =>
   String(value || '')
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const MODULE_TABS = {
+  rbac: 'Access Control',
+  admin: 'Admin',
+  users: 'Users & Sellers',
+  sellers: 'Users & Sellers',
+  'sellers/commissions': 'Users & Sellers',
+  products: 'Catalog',
+  platform: 'Catalog',
+  cms: 'Content',
+  warranty: 'Catalog',
+  carts: 'Shopping',
+  orders: 'Shopping',
+  returns: 'Shopping',
+  delivery: 'Shopping',
+  payments: 'Payments & Finance',
+  wallets: 'Payments & Finance',
+  tax: 'Payments & Finance',
+  subscriptions: 'Payments & Finance',
+  pricing: 'Marketing',
+  'dynamic-pricing': 'Marketing',
+  loyalty: 'Marketing',
+  referral: 'Marketing',
+  recommendations: 'Marketing',
+  notifications: 'Marketing',
+  analytics: 'Insights & Risk',
+  fraud: 'Insights & Risk',
+};
+
+const TAB_ORDER = [
+  'Access Control',
+  'Admin',
+  'Users & Sellers',
+  'Catalog',
+  'Content',
+  'Shopping',
+  'Payments & Finance',
+  'Marketing',
+  'Insights & Risk',
+  'Assigned',
+  'Access',
+];
+
+const getModuleTab = (module = {}) =>
+  module.tab || module.metadata?.tab || MODULE_TABS[module.slug || module.id] || 'Access';
+
+const groupModulesByTab = (modules = []) => {
+  const groups = modules.reduce((acc, module) => {
+    const tabName = module.tab || 'Access';
+    if (!acc[tabName]) acc[tabName] = [];
+    acc[tabName].push(module);
+    return acc;
+  }, {});
+
+  return Object.entries(groups)
+    .map(([tabName, items]) => ({
+      tabName,
+      items: [...items].sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id))),
+    }))
+    .sort((a, b) => {
+      const indexA = TAB_ORDER.indexOf(a.tabName);
+      const indexB = TAB_ORDER.indexOf(b.tabName);
+      const safeA = indexA === -1 ? TAB_ORDER.length : indexA;
+      const safeB = indexB === -1 ? TAB_ORDER.length : indexB;
+      if (safeA !== safeB) return safeA - safeB;
+      return a.tabName.localeCompare(b.tabName);
+    });
+};
 
 const getAssignedModulePermissions = (module = {}) =>
   (module.permissions || [])
@@ -177,6 +255,7 @@ const UserDetails = () => {
   const sellerProfile = user.sellerProfile || {};
   const onboarding    = user.onboarding || {};
   const [bankReviewOverride, setBankReviewOverride] = useState(null);
+  const [ownerAdmin, setOwnerAdmin] = useState(null);
   const bankDetails = normalizeBankDetails(sellerProfile.bankDetails || user.bankDetails || {});
   const bankRejectionReason =
     bankReviewOverride?.bankRejectionReason ?? sellerProfile.bankRejectionReason;
@@ -220,6 +299,10 @@ const UserDetails = () => {
 
   const isSeller = user.role === 'seller';
   const shouldShowAdminAccess = !isSellerRoute && !isSeller;
+  const ownerAdminId = user.ownerAdminId || user.owner_admin_id || '';
+  const ownerAdminDisplayName = getDisplayName(ownerAdmin || user.ownerAdmin || user.ownerAdminUser || {});
+  const ownerAdminDisplay = ownerAdminDisplayName || ownerAdmin?.email || ownerAdminId;
+  const lastLoginDisplay = formatDateTime(getLastLoginValue(user));
   const assignedModuleCards = useMemo(() => {
     if (!shouldShowAdminAccess) return [];
 
@@ -228,7 +311,7 @@ const UserDetails = () => {
       .map((module) => ({
         id: module.slug,
         name: module.name || formatModuleName(module.slug),
-        tab: module.tab || module.metadata?.tab || 'Access',
+        tab: getModuleTab(module),
         permissions: getAssignedModulePermissions(module),
       }));
 
@@ -237,15 +320,21 @@ const UserDetails = () => {
     return (user.allowedModules || []).map((moduleSlug) => ({
       id: moduleSlug,
       name: formatModuleName(moduleSlug),
-      tab: 'Assigned',
+      tab: MODULE_TABS[moduleSlug] || 'Assigned',
       permissions: ['View'],
     }));
   }, [accessModules, shouldShowAdminAccess, user.allowedModules]);
+  const assignedModuleGroups = useMemo(
+    () => groupModulesByTab(assignedModuleCards),
+    [assignedModuleCards],
+  );
 
   useEffect(() => {
     if (id) {
       dispatch(getAdminUserDetails({ _id: id }));
-      if (!isSellerRoute) {
+      if (isSellerRoute) {
+        return;
+      } else {
         dispatch(getAdminCoreUser({ userId: id }));
         dispatch(getPlatformSubAdmins({ limit: 100 }));
       }
@@ -303,6 +392,33 @@ const UserDetails = () => {
       dispatch(getAdminCoreUser({ userId: id }));
     }
   }, [dispatch, id, isSellerRoute]);
+
+  useEffect(() => {
+    if (!shouldShowAdminAccess || !ownerAdminId) {
+      setOwnerAdmin(null);
+      return;
+    }
+
+    const embeddedOwner = user.ownerAdmin || user.ownerAdminUser;
+    if (embeddedOwner) {
+      setOwnerAdmin(embeddedOwner);
+      return;
+    }
+
+    let isMounted = true;
+    apiRequest('GET', ENDPOINTS.users.adminUser(ownerAdminId))
+      .then((response) => {
+        if (!isMounted) return;
+        setOwnerAdmin(getPayload(response));
+      })
+      .catch(() => {
+        if (isMounted) setOwnerAdmin(null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [ownerAdminId, shouldShowAdminAccess, user.ownerAdmin, user.ownerAdminUser]);
 
   // ── KYC lazy load when card is expanded ──────────────────────────────────
   const handleLoadKyc = useCallback(async () => {
@@ -482,18 +598,18 @@ const UserDetails = () => {
               <Row label="Phone"     value={user.phone} />
               <Row label="Role"      value={user.role} />
               <Row label="Status"    value={accountStatus} />
-              <Row label="Created At"  value={user.createdAt  ? new Date(user.createdAt).toLocaleString()  : ''} />
-              <Row label="Last Login"  value={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : ''} />
+              <Row label="Created At"  value={formatDateTime(user.createdAt)} />
+              <Row label="Last Login"  value={lastLoginDisplay || 'N/A'} />
             </div>
           </section>
 
           {shouldShowAdminAccess && (
             <section className="bg-white border border-gray-200 rounded-lg p-5">
               <h2 className="text-base font-semibold text-gray-800 mb-3">Access</h2>
-              <Row label="Assigned Modules" value={assignedModuleCards.map((module) => module.name).join(', ')} />
+              <Row label="Assigned Groups" value={assignedModuleGroups.map((group) => group.tabName).join(', ')} />
               <Row label="Module Count" value={assignedModuleCards.length ? `${assignedModuleCards.length}` : ''} />
-              <Row label="Owner Admin"  value={user.ownerAdminId} />
-              <Row label="Owner Seller" value={user.ownerSellerId} />
+              <Row label="Owner Admin"  value={ownerAdminDisplay} />
+              {user.ownerSellerId && <Row label="Owner Seller" value={user.ownerSellerId} />}
             </section>
           )}
         </div>
@@ -504,46 +620,43 @@ const UserDetails = () => {
             <h2 className="text-base font-semibold text-gray-800">Module Access List</h2>
             {accessModulesLoading && <span className="text-xs text-gray-400">Loading access...</span>}
           </div>
-          {assignedModuleCards.length ? (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Module</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Section</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Access</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Permissions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {assignedModuleCards.map((module) => (
-                    <tr key={module.id}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{module.name}</p>
-                        <p className="text-xs text-gray-400">{module.id}</p>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{module.tab}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                          Active
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
+          {assignedModuleGroups.length ? (
+            <div className="space-y-4">
+              {assignedModuleGroups.map((group) => (
+                <div key={group.tabName} className="rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">{group.tabName}</h3>
+                      <p className="text-xs text-gray-400">
+                        {group.items.length} sub-module{group.items.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                      Active
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {group.items.map((module) => (
+                      <div key={module.id} className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(180px,260px),1fr]">
+                        <div>
+                          <p className="font-medium text-gray-900">{module.name}</p>
+                          <p className="text-xs text-gray-400">{module.id}</p>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
                           {(module.permissions.length ? module.permissions : ['View']).map((permission) => (
                             <span
                               key={`${module.id}-${permission}`}
-                              className="rounded-full border border-[#CE9F2D] bg-[#CE9F2D]/10 px-2.5 py-1 text-xs text-[#8A5A1F]"
+                              className="inline-flex items-center rounded-md border border-[#CE9F2D]/40 bg-[#CE9F2D]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#8A5A1F]"
                             >
                               {permission}
                             </span>
                           ))}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-sm text-gray-400">No assigned modules found for this user.</p>

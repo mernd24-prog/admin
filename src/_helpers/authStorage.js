@@ -7,12 +7,13 @@ const ROLE_KEY = "role";
 const ALLOWED_MODULES_KEY = "allowedModules";
 
 export const ADMIN_ROLES = ["super-admin", "admin", "sub-admin"];
-export const BLOCKED_ADMIN_ROLES = ["seller", "seller-sub-admin", "buyer"];
+export const BLOCKED_ADMIN_ROLES = ["seller", "seller-admin", "seller-sub-admin", "buyer"];
 export const LEGACY_ROLE_IDS = {
   "super-admin": 1,
   admin: 1,
   "sub-admin": 2,
   seller: 3,
+  "seller-admin": 8,
   "seller-sub-admin": 9,
   buyer: 5,
 };
@@ -22,6 +23,7 @@ const LEGACY_ROLE_BY_ID = {
   2: "sub-admin",
   3: "seller",
   5: "buyer",
+  8: "seller-admin",
   9: "seller-sub-admin",
 };
 
@@ -75,7 +77,7 @@ export const extractAllowedModules = (...sources) => {
 
 export const isAllowedAdminRole = (role) => ADMIN_ROLES.includes(normalizeRole(role));
 export const isBlockedAdminRole = (role) => BLOCKED_ADMIN_ROLES.includes(normalizeRole(role));
-export const SELLER_ROLES = ["seller", "seller-sub-admin"];
+export const SELLER_ROLES = ["seller", "seller-admin", "seller-sub-admin"];
 export const BLOCKED_SELLER_ROLES = ["super-admin", "admin", "sub-admin", "buyer"];
 export const isAllowedSellerRole = (role) => SELLER_ROLES.includes(normalizeRole(role));
 export const isBlockedSellerRole = (role) => BLOCKED_SELLER_ROLES.includes(normalizeRole(role));
@@ -150,7 +152,8 @@ export const hasModuleAccess = (moduleCode) => {
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
     delivery: ["delivery", "shipping_packages", "shipping_profile", "pickup_addresses", "delivery-staff"],
-    sellers: ["sellers", "seller", "vendors", "profile"],
+    sellers: ["sellers", "seller", "vendors", "profile", "seller-management"],
+    "seller-management": ["seller-management", "seller-admins", "seller-sub-admins", "seller-hierarchy"],
     "sellers/commissions": ["sellers/commissions", "commissions", "transactions"],
     notifications: ["notifications", "messages"],
     returns: ["returns", "order_return_reasons"],
@@ -173,6 +176,7 @@ export const hasModuleAccess = (moduleCode) => {
     "notifications",
     "analytics",
     "sellers",
+    "seller-management",
     "sellers/commissions",
     "returns",
     "delivery",
@@ -194,9 +198,8 @@ export const hasModuleAccess = (moduleCode) => {
     return true;
   }
 
-  if (role !== restrictedRole) return false;
-
   const allowedModules = getAllowedModules().map(String);
+  if (role !== restrictedRole && !allowedModules.length) return false;
 
   return expandedModuleCodes.some((code) => {
     if (panelMode === PANEL_MODES.SELLER && !isSellerOwnedCode(code)) {

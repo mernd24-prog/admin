@@ -64,7 +64,7 @@ const INITIAL_FORM_HSN = {
   isDisable: true
 }
 
-const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
+const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
 
 const getListPayload = (sliceData) => {
   const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};

@@ -270,6 +270,9 @@ const Sellers = React.lazy(() =>
 const UserPermissions = React.lazy(() =>
   import("../../pages/UserManagement/Adminusers/UserPermissions")
 );
+const SellerSubAdminManagement = React.lazy(() =>
+  import("../../pages/SellerManagement/SellerSubAdminManagement")
+);
 const Supplier = UnavailableRoute;
 const AddSupplier = UnavailableRoute;
 const MedPharama = UnavailableRoute;
@@ -398,6 +401,10 @@ function Layout() {
               <Route
                 path="/admin-users"
                 element={renderRoute("/admin-users", <AdminUsers />)}
+              />
+              <Route
+                path="/seller-management"
+                element={renderRoute("/seller-management", <SellerSubAdminManagement />)}
               />
               <Route path="/users" element={renderRoute("/users", <Users />)} />
               <Route path="/users/view/:id" element={renderRoute("/users", <UserDetails />)} />

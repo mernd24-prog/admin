@@ -7,12 +7,74 @@ const trimRoute = (value = "") =>
 
 export const SELF_SERVICE_ROUTES = ["/profile", "/changePassword"];
 
+export const MODULE_CATALOG = {
+  admin: { label: "Admin Dashboard", tab: "Home", route: "home", order: 10 },
+  analytics: { label: "Analytics", tab: "Home", route: "home", order: 20 },
+  rbac: { label: "Access Control", tab: "Access Control", route: "admin-users", order: 30 },
+  users: { label: "User Management", tab: "Users & Sellers", route: "users", order: 40 },
+  sellers: { label: "Seller Management", tab: "Users & Sellers", route: "seller", order: 50 },
+  "seller-management": { label: "Seller Admin Management", tab: "Seller Management", route: "seller-management", order: 55 },
+  "sellers/commissions": { label: "Seller Commissions", tab: "Users & Sellers", route: "transactions", order: 60 },
+  products: { label: "Product Management", tab: "Catalog", route: "product-catalog", order: 70 },
+  platform: { label: "Platform Catalog", tab: "Catalog", route: "content-pages", order: 80 },
+  cms: { label: "CMS Management", tab: "Content", route: "content-pages", order: 90 },
+  warranty: { label: "Warranty", tab: "Catalog", route: "warranty", order: 100 },
+  carts: { label: "Cart Management", tab: "Shopping", route: "orders", order: 110 },
+  orders: { label: "Order Management", tab: "Shopping", route: "orders", order: 120 },
+  returns: { label: "Return Management", tab: "Shopping", route: "order-return-reasons", order: 130 },
+  delivery: { label: "Delivery Management", tab: "Shopping", route: "shipping-packages", order: 140 },
+  payments: { label: "Payment Management", tab: "Payments & Finance", route: "orders", order: 150 },
+  wallets: { label: "Wallet Management", tab: "Payments & Finance", route: "transactions", order: 160 },
+  tax: { label: "Tax Management", tab: "Payments & Finance", route: "tax", order: 170 },
+  subscriptions: { label: "Subscriptions", tab: "Payments & Finance", route: "settings", order: 180 },
+  pricing: { label: "Pricing & Promotions", tab: "Marketing", route: "discount-coupons", order: 190 },
+  "dynamic-pricing": { label: "Dynamic Pricing", tab: "Marketing", route: "special-price", order: 200 },
+  loyalty: { label: "Loyalty", tab: "Marketing", route: "reward-purchase", order: 210 },
+  referral: { label: "Referral Commerce", tab: "Marketing", route: "referral-commerce", order: 220 },
+  recommendations: { label: "Recommendations", tab: "Marketing", route: "similar-products", order: 230 },
+  notifications: { label: "Notifications", tab: "Settings", route: "messages", order: 240 },
+  fraud: { label: "Fraud Management", tab: "Insights & Risk", route: "settings", order: 250 },
+};
+
+export const MODULE_TAB_ORDER = [
+  "Home",
+  "Access Control",
+  "Users & Sellers",
+  "Seller Management",
+  "Catalog",
+  "Content",
+  "Shopping",
+  "Payments & Finance",
+  "Marketing",
+  "Insights & Risk",
+  "Product Management",
+  "Orders",
+  "Promotions",
+  "Shipping/Pickup",
+  "Tax",
+  "Settings",
+];
+
+export const getModuleMeta = (moduleSlug) => {
+  const slug = String(moduleSlug || "").trim().toLowerCase();
+  return MODULE_CATALOG[slug] || {
+    label: slug,
+    tab: "Settings",
+    route: slug,
+    order: 999,
+  };
+};
+
+export const getModuleLabel = (moduleSlug) => getModuleMeta(moduleSlug).label;
+export const getModuleTab = (moduleSlug) => getModuleMeta(moduleSlug).tab;
+
 export const MODULE_DEFAULT_ROUTES = {
   admin: "home",
   analytics: "home",
   rbac: "admin-users",
   users: "users",
   sellers: "seller",
+  "seller-management": "seller-management",
   "sellers/commissions": "transactions",
   products: "product-catalog",
   platform: "content-management",
@@ -38,6 +100,7 @@ export const MODULE_DEFAULT_ROUTES = {
 const ROUTE_MODULES = [
   [["/home"], ["admin", "analytics"]],
   [["/admin-users", "/user-permissions"], ["rbac", "users"]],
+  [["/seller-management"], ["seller-management", "sellers"]],
   [["/users", "/users-addresses", "/messages"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller"], ["sellers"]],
@@ -104,6 +167,7 @@ const ROUTE_MODULES = [
 
 export const getModuleRoute = (moduleSlug) =>
   MODULE_DEFAULT_ROUTES[String(moduleSlug || "").trim().toLowerCase()] ||
+  getModuleMeta(moduleSlug).route ||
   String(moduleSlug || "").trim();
 
 export const isSelfServiceRoute = (path) => {
