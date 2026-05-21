@@ -9,6 +9,7 @@ import {
   getPlatformSubAdmins, createPlatformSubAdmin, createAdmin,
   getAccessModules, updateAdminUser, updatePlatformSubAdminModules,
 } from '../../../Redux/adminCoreSlice';
+import { getMyModulePermission } from '../../../Redux/userManagementSlice';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import Loader from '../../../components/Loader/Loader';
@@ -19,8 +20,9 @@ import { ActionButtons } from '../../../components/Atoms/TableActionButton/Table
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
-import { getStoredRole, normalizeRole } from '../../../_helpers/authStorage';
+import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/authStorage';
 import { DEFAULT_PLATFORM_MODULES } from '../../../_helpers/adminApi';
+import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
 
 const PAGE_SIZE = 10;
 
@@ -30,6 +32,7 @@ const MODULE_LABELS = {
   orders: 'Order Management',
   payments: 'Payment Management',
   sellers: 'Seller Management',
+  'seller-management': 'Seller Admin Management',
   'sellers/commissions': 'Seller Commissions',
   platform: 'Platform Catalog',
   cms: 'CMS Management',
@@ -53,30 +56,38 @@ const MODULE_LABELS = {
 };
 
 const MODULE_TABS = {
-  admin: 'Home',
-  users: 'Users',
-  rbac: 'Settings',
-  sellers: 'Seller Management',
-  products: 'Product Management',
-  recommendations: 'Product Management',
-  warranty: 'Product Management',
-  orders: 'Orders',
-  carts: 'Orders',
-  payments: 'Orders',
-  wallets: 'Orders',
-  returns: 'Orders',
-  pricing: 'Promotions',
-  referral: 'Promotions',
-  loyalty: 'Promotions',
-  'dynamic-pricing': 'Promotions',
-  delivery: 'Shipping/Pickup',
-  tax: 'Tax',
-  platform: 'Settings',
-  notifications: 'Settings',
-  subscriptions: 'Settings',
-  fraud: 'Settings',
-  analytics: 'Analytics',
+  rbac: 'Access Control',
+  admin: 'Admin',
+  users: 'Users & Sellers',
+  sellers: 'Users & Sellers',
+  'seller-management': 'Seller Management',
+  'sellers/commissions': 'Users & Sellers',
+  products: 'Catalog',
+  platform: 'Catalog',
+  cms: 'Content',
+  warranty: 'Catalog',
+  carts: 'Shopping',
+  orders: 'Shopping',
+  returns: 'Shopping',
+  delivery: 'Shopping',
+  payments: 'Payments & Finance',
+  wallets: 'Payments & Finance',
+  tax: 'Payments & Finance',
+  subscriptions: 'Payments & Finance',
+  pricing: 'Marketing',
+  'dynamic-pricing': 'Marketing',
+  loyalty: 'Marketing',
+  referral: 'Marketing',
+  recommendations: 'Marketing',
+  notifications: 'Marketing',
+  analytics: 'Insights & Risk',
+  fraud: 'Insights & Risk',
 };
+
+const TAB_ORDER = MODULE_TAB_ORDER;
+
+const getModuleSlug = (module = {}) =>
+  module?.slug || module?.module || module?.module_code?.module_code || module?.module_code || module?.id;
 
 const toModuleOption = (module) => {
   if (typeof module === 'string') {
@@ -87,11 +98,11 @@ const toModuleOption = (module) => {
     };
   }
 
-  const slug = module?.slug || module?.module || module?.module_code || module?.id;
+  const slug = getModuleSlug(module);
   return {
     slug,
-    name: module?.name || MODULE_LABELS[slug] || slug,
-    tab: module?.tab || module?.metadata?.tab || MODULE_TABS[slug] || 'Settings',
+    name: module?.name || getModuleLabel(slug) || MODULE_LABELS[slug] || slug,
+    tab: module?.tab || module?.metadata?.tab || getModuleMeta(slug).tab || MODULE_TABS[slug] || 'Settings',
   };
 };
 
@@ -113,44 +124,66 @@ const groupModuleOptions = (modules = DEFAULT_PLATFORM_MODULES) => {
   return Object.entries(groups);
 };
 
+const getSelectedModuleOptions = (modules = [], selected = []) => {
+  const selectedSet = new Set(selected || []);
+  return (modules || []).filter((module) => selectedSet.has(module.slug));
+};
+
 const ModuleSelector = ({ selected, onChange, modules = DEFAULT_PLATFORM_MODULES, disabled = false }) => {
-  const toggle = (mod) => {
+  const groupedModules = groupModuleOptions(modules)
+    .map(([tabName, tabModules]) => [
+      tabName,
+      tabModules.map((module) => ({
+        ...module,
+        selected: selected.includes(module.slug),
+      })),
+    ])
+    .sort(([tabA], [tabB]) => {
+      const indexA = TAB_ORDER.indexOf(tabA);
+      const indexB = TAB_ORDER.indexOf(tabB);
+      const safeA = indexA === -1 ? TAB_ORDER.length : indexA;
+      const safeB = indexB === -1 ? TAB_ORDER.length : indexB;
+      if (safeA !== safeB) return safeA - safeB;
+      return tabA.localeCompare(tabB);
+    });
+
+  const toggleGroup = (tabModules) => {
     if (disabled) return;
-    const next = selected.includes(mod) ? selected.filter((m) => m !== mod) : [...selected, mod];
+    const groupSlugs = tabModules.map((module) => module.slug);
+    const allSelected = groupSlugs.every((slug) => selected.includes(slug));
+    const next = allSelected
+      ? selected.filter((slug) => !groupSlugs.includes(slug))
+      : Array.from(new Set([...selected, ...groupSlugs]));
     if (next.length === 0) return;
     onChange(next);
   };
-  const groupedModules = groupModuleOptions(modules);
 
   return (
     <div className="max-h-64 overflow-y-auto pr-1 space-y-3">
       {groupedModules.map(([tabName, tabModules]) => (
         <div key={tabName} className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{tabName}</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {tabModules.map((module) => (
-              <button
-                key={module.slug}
-                type="button"
-                disabled={disabled}
-                onClick={() => toggle(module.slug)}
-                className={`text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
-                  selected.includes(module.slug)
-                    ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094] font-medium'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {module.name}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => toggleGroup(tabModules)}
+            className={`w-full rounded-md border px-3 py-2.5 text-left text-xs transition-colors ${
+              tabModules.some((module) => module.selected)
+                ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094]'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className="block text-sm font-semibold">{tabName}</span>
+            <span className="mt-1 block text-[11px] text-gray-500">
+              {tabModules.length} access area{tabModules.length !== 1 ? 's' : ''} included
+            </span>
+          </button>
         </div>
       ))}
     </div>
   );
 };
 
-const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '' };
+const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: [] };
 const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: ['products', 'orders'] };
 
 const getUserDisplayName = (user = {}) => {
@@ -265,7 +298,7 @@ const AdminUsers = () => {
     () => new Set(
       (Array.isArray(sidebarModules) ? sidebarModules : [])
         .filter(hasAssignedModuleAccess)
-        .map((module) => module.slug || module.module || module.module_code?.module_code || module.module_code)
+        .map(getModuleSlug)
         .filter(Boolean)
     ),
     [sidebarModules],
@@ -278,18 +311,36 @@ const AdminUsers = () => {
       .map(toModuleOption)
       .filter((module) => module.slug)
       .filter((module) => !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug));
-    return fromApi.length
-      ? Array.from(new Map(fromApi.map((module) => [module.slug, module])).values())
-      : DEFAULT_PLATFORM_MODULES.filter((module) => !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module));
+    const fallback = DEFAULT_PLATFORM_MODULES
+      .map(toModuleOption)
+      .filter((module) => !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug));
+    const options = fromApi.length ? fromApi : fallback;
+    return Array.from(new Map(options.map((module) => [module.slug, module])).values());
   }, [accessModules, sidebarModuleSlugs]);
   const moduleOptionSlugs = useMemo(
     () => moduleOptions.map((module) => typeof module === 'string' ? module : module.slug),
     [moduleOptions],
   );
+  const selectedModuleOptions = useMemo(
+    () => getSelectedModuleOptions(moduleOptions, subAdminForm.allowedModules),
+    [moduleOptions, subAdminForm.allowedModules],
+  );
+  const selectedGroupCount = useMemo(
+    () => groupModuleOptions(selectedModuleOptions).length,
+    [selectedModuleOptions],
+  );
+  const getAllowedModuleGroups = (allowedModules = []) => {
+    const selectedOptions = getSelectedModuleOptions(moduleOptions, allowedModules);
+    return groupModuleOptions(selectedOptions).map(([tabName]) => tabName);
+  };
   const defaultSubAdminModules = useMemo(() => {
     const preferred = moduleOptionSlugs.filter((mod) => ['products', 'orders'].includes(mod));
     return preferred.length ? preferred : moduleOptionSlugs.slice(0, 1);
   }, [moduleOptionSlugs]);
+  const defaultAdminModules = useMemo(
+    () => moduleOptionSlugs.length ? moduleOptionSlugs : DEFAULT_PLATFORM_MODULES,
+    [moduleOptionSlugs],
+  );
   const filteredSubAdmins = useMemo(
     () => filterUsers(allSubAdmins, filters.search),
     [allSubAdmins, filters.search]
@@ -323,6 +374,13 @@ const AdminUsers = () => {
   }, [dispatch, isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin || sidebarModules.length) return;
+    const currentUser = getStoredUser() || {};
+    const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+    dispatch(getMyModulePermission({ _id: currentUserId, role: storedRole }));
+  }, [dispatch, isAdmin, sidebarModules.length, storedRole]);
+
+  useEffect(() => {
     setSubAdminForm((form) => {
       const allowedModules = form.allowedModules?.filter((mod) => moduleOptionSlugs.includes(mod));
       return {
@@ -352,9 +410,11 @@ const AdminUsers = () => {
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
     const errs = validateUserForm(adminForm);
+    const allowedModules = (adminForm.allowedModules || []).filter((mod) => defaultAdminModules.includes(mod));
+    if (!allowedModules.length) errs.allowedModules = 'Select at least one module';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try {
-      await dispatch(createAdmin(adminForm)).unwrap();
+      await dispatch(createAdmin({ ...adminForm, allowedModules })).unwrap();
       toast.success('Admin created successfully');
       setAddAdminOpen(false);
       setAdminForm(emptyUser);
@@ -368,10 +428,11 @@ const AdminUsers = () => {
   const handleCreateSubAdmin = async (e) => {
     e.preventDefault();
     const errs = validateUserForm(subAdminForm);
-    if (!subAdminForm.allowedModules?.length) errs.allowedModules = 'Select at least one module';
+    const allowedModules = subAdminForm.allowedModules.filter((mod) => moduleOptionSlugs.includes(mod));
+    if (!allowedModules.length) errs.allowedModules = 'Select at least one module';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try {
-      await dispatch(createPlatformSubAdmin(subAdminForm)).unwrap();
+      await dispatch(createPlatformSubAdmin({ ...subAdminForm, allowedModules })).unwrap();
       toast.success('Sub-admin created successfully');
       setAddSubAdminOpen(false);
       setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules });
@@ -390,6 +451,7 @@ const AdminUsers = () => {
       fullName: getUserDisplayName(user),
       email: user.email || '',
       phone: user.phone || '',
+      allowedModules: (user.allowedModules || []).filter((mod) => defaultAdminModules.includes(mod)),
     });
     setEditAdminOpen(true);
   };
@@ -497,11 +559,11 @@ const AdminUsers = () => {
         <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
         ...(showModules ? [
           <div key={`mods-${userId}`} className="flex flex-wrap gap-1">
-            {(user.allowedModules || []).slice(0, 3).map((m) => (
-              <span key={m} className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded">{MODULE_LABELS[m] || m}</span>
+            {getAllowedModuleGroups(user.allowedModules || []).slice(0, 3).map((groupName) => (
+              <span key={groupName} className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded">{groupName}</span>
             ))}
-            {(user.allowedModules || []).length > 3 && (
-              <span className="text-xs text-gray-400">+{user.allowedModules.length - 3} more</span>
+            {getAllowedModuleGroups(user.allowedModules || []).length > 3 && (
+              <span className="text-xs text-gray-400">+{getAllowedModuleGroups(user.allowedModules || []).length - 3} more</span>
             )}
           </div>,
         ] : []),
@@ -521,7 +583,7 @@ const AdminUsers = () => {
     });
 
   const adminRows = useMemo(() => buildRows(admins, false), [admins]);
-  const subAdminRows = useMemo(() => buildRows(subAdmins, true), [subAdmins]);
+  const subAdminRows = useMemo(() => buildRows(subAdmins, true), [subAdmins, moduleOptions]);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -535,7 +597,7 @@ const AdminUsers = () => {
           </h3>
           <div className="flex gap-2">
             {tab === 'admins' && isSuperAdmin && (
-              <AddButton onClick={() => { setErrors({}); setAdminForm(emptyUser); setAddAdminOpen(true); }}>
+              <AddButton onClick={() => { setErrors({}); setAdminForm({ ...emptyUser, allowedModules: defaultAdminModules }); setAddAdminOpen(true); }}>
                 + Add Admin
               </AddButton>
             )}
@@ -644,6 +706,20 @@ const AdminUsers = () => {
               onChange={(e) => setAdminForm((f) => ({ ...f, confirmPassword: e.target.value }))}
               error={errors.confirmPassword} maxLength={64} required />
           </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">
+              Assign Modules <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-400">
+              Admin will only see and manage the modules selected here.
+            </p>
+            <ModuleSelector
+              selected={adminForm.allowedModules}
+              onChange={(mods) => setAdminForm((f) => ({ ...f, allowedModules: mods }))}
+              modules={defaultAdminModules.map(toModuleOption)}
+            />
+            {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
+          </div>
         </div>
       </DefaultModal>
 
@@ -716,8 +792,7 @@ const AdminUsers = () => {
             />
             {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
             <p className="text-xs text-gray-400 mt-1">
-              {subAdminForm.allowedModules.length} module{subAdminForm.allowedModules.length !== 1 ? 's' : ''} selected.{' '}
-              Click a module to toggle it.
+              {selectedGroupCount} sidebar group{selectedGroupCount !== 1 ? 's' : ''} selected. Click a group to toggle it.
             </p>
           </div>
         </div>
@@ -761,7 +836,7 @@ const AdminUsers = () => {
             />
             {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
             <p className="text-xs text-gray-400 mt-1">
-              {subAdminForm.allowedModules.length} module{subAdminForm.allowedModules.length !== 1 ? 's' : ''} selected.
+              {selectedGroupCount} sidebar group{selectedGroupCount !== 1 ? 's' : ''} selected.
             </p>
           </div>
         </div>

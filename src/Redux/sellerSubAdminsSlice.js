@@ -7,12 +7,30 @@ const initialState = {
   listSubAdminsData: {},
   createSubAdminData: {},
   updateSubAdminModulesData: {},
+  updateSubAdminStatusData: {},
+  deleteSubAdminData: {},
+  hierarchyData: {},
 };
 
 export const listSellerSubAdmins = createApiThunkPrivate(
   "sellerSubAdmins/listSellerSubAdmins",
   ENDPOINTS.sellers.subAdmins,
-  "GET"
+  "GET",
+  true
+);
+
+export const getSellerSubAdminHierarchy = createApiThunkPrivate(
+  "sellerSubAdmins/getSellerSubAdminHierarchy",
+  ENDPOINTS.sellers.subAdmins,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => ({
+      hierarchy: true,
+      ...(params.limit ? { limit: params.limit } : {}),
+      ...(params.q || params.search ? { q: params.q || params.search } : {}),
+    }),
+  }
 );
 
 export const createSellerSubAdmin = createApiThunkPrivate(
@@ -38,6 +56,25 @@ export const updateSellerSubAdminModules = createApiThunkPrivate(
   }
 );
 
+export const updateSellerSubAdminStatus = createApiThunkPrivate(
+  "sellerSubAdmins/updateSellerSubAdminStatus",
+  (payload) => ENDPOINTS.sellers.subAdminStatus(firstId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      accountStatus: payload.accountStatus || payload.status,
+    }),
+  }
+);
+
+export const deleteSellerSubAdmin = createApiThunkPrivate(
+  "sellerSubAdmins/deleteSellerSubAdmin",
+  (payload) => ENDPOINTS.sellers.subAdmin(firstId(payload)),
+  "DELETE",
+  false
+);
+
 const sellerSubAdminsSlice = createSlice({
   name: "sellerSubAdmins",
   initialState,
@@ -49,6 +86,13 @@ const sellerSubAdminsSlice = createSlice({
       updateSellerSubAdminModules,
       "updateSubAdminModulesData"
     );
+    createExtraReducersForThunk(
+      builder,
+      updateSellerSubAdminStatus,
+      "updateSubAdminStatusData"
+    );
+    createExtraReducersForThunk(builder, deleteSellerSubAdmin, "deleteSubAdminData");
+    createExtraReducersForThunk(builder, getSellerSubAdminHierarchy, "hierarchyData");
   },
 });
 

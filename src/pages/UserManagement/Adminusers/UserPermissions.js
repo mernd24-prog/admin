@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,6 +12,7 @@ import { isSellerPanel } from '../../../_helpers/panelConfig';
 import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
 import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/authStorage';
+import { MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
 
 const ACTION_ALIASES = {
     create: 'add',
@@ -98,18 +98,7 @@ const normalizeActionsForBackend = (actions = []) => {
 
 const ASSIGNMENT_ACTIONS = ['update', 'action', 'add', 'delete', 'view'];
 
-const SIDEBAR_TAB_ORDER = [
-    'Home',
-    'Users',
-    'Product Management',
-    'Orders',
-    'Seller Management',
-    'Analytics',
-    'Promotions',
-    'Shipping/Pickup',
-    'Tax',
-    'Settings',
-];
+const SIDEBAR_TAB_ORDER = MODULE_TAB_ORDER;
 
 const getModuleCode = (module) =>
     module?.slug || module?.module || module?.module_code?.module_code || module?.module_code;
@@ -261,7 +250,7 @@ const UserPermissions = ({ setModuleName }) => {
             : getPayload(selector?.getAdminUserDetailsData);
         const modules = modulePayload?.modules || modulePayload?.list || [];
         const allowedModules = Array.isArray(user?.allowedModules) ? user.allowedModules : [];
-        const userUsesModuleScope = ['sub-admin', 'seller-sub-admin'].includes(user?.role);
+        const userUsesModuleScope = ['sub-admin', 'seller-admin', 'seller-sub-admin'].includes(user?.role);
         const label = user?.full_name || user?.userName || user?.email || '';
 
         setUserName(label);
@@ -399,9 +388,35 @@ const UserPermissions = ({ setModuleName }) => {
     const filteredPermissions = useMemo(() => {
         return permissions.filter(permission =>
             String(permission.module || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            String(permission.tab || '').toLowerCase().includes(filters.search.toLowerCase())
+            String(permission.tab || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            String(permission.id || '').toLowerCase().includes(filters.search.toLowerCase())
         );
     }, [permissions, filters.search]);
+
+    const groupedPermissions = useMemo(() => {
+        const grouped = filteredPermissions.reduce((acc, permission) => {
+            const tabName = permission.tab || 'Other';
+            if (!acc[tabName]) acc[tabName] = [];
+            acc[tabName].push(permission);
+            return acc;
+        }, {});
+
+        return Object.entries(grouped)
+            .map(([tabName, items]) => ({
+                tabName,
+                items: [...items].sort((a, b) =>
+                    String(a.module || a.id).localeCompare(String(b.module || b.id))
+                ),
+            }))
+            .sort((a, b) => {
+                const indexA = SIDEBAR_TAB_ORDER.indexOf(a.tabName);
+                const indexB = SIDEBAR_TAB_ORDER.indexOf(b.tabName);
+                const safeA = indexA === -1 ? SIDEBAR_TAB_ORDER.length : indexA;
+                const safeB = indexB === -1 ? SIDEBAR_TAB_ORDER.length : indexB;
+                if (safeA !== safeB) return safeA - safeB;
+                return a.tabName.localeCompare(b.tabName);
+            });
+    }, [filteredPermissions]);
 
     const selectableFilteredPermissions = useMemo(
         () => filteredPermissions.filter((permission) => permission.canAssign),
@@ -432,6 +447,18 @@ const UserPermissions = ({ setModuleName }) => {
         );
     }, [selectableFilteredPermissions]);
 
+    const handleGroupSelection = useCallback((items = [], checked) => {
+        const selectableIds = items
+            .filter((permission) => permission.canAssign)
+            .map((permission) => permission.id);
+        if (!selectableIds.length) return;
+
+        setSelectedModules((prev = []) => {
+            if (checked) return Array.from(new Set([...prev, ...selectableIds]));
+            return prev.filter((id) => !selectableIds.includes(id));
+        });
+    }, []);
+
     const applyBulkPermissionUpdate = useCallback(() => {
         if (!selectedModules.length || !pendingBulkAction) return;
         const selectedSet = new Set(selectedModules);
@@ -461,30 +488,6 @@ const UserPermissions = ({ setModuleName }) => {
         if (!selectedModules.length) return;
         setPendingBulkAction(action);
     }, [selectedModules.length]);
-
-    const tableData = useMemo(() => {
-        return filteredPermissions.map((permission) => [
-            <AccessCheckbox
-                key={`select-${permission.id}`}
-                checked={selectedModuleSet.has(permission.id)}
-                disabled={!permission.canAssign}
-                onChange={(checked) => handleModuleSelection(permission.id, checked)}
-                ariaLabel={`Select ${permission.module}`}
-            />,
-            <div key={`module-${permission.id}`}>
-                <div className="font-medium capitalize">{permission.module}</div>
-                <div className="text-xs text-gray-500">{permission.tab}</div>
-            </div>,
-            <PermissionsSelector
-                key={`perm-${permission.id}`}
-                module={permission.module}
-                selected={permission.permissions}
-                availablePermissions={permission.canAssign ? permission.assignablePermissions : permission.availablePermissions}
-                disabled={!permission.canAssign}
-                onChange={(value) => handlePermissionChange(permission.id, value)}
-            />,
-        ]);
-    }, [filteredPermissions, handleModuleSelection, handlePermissionChange, selectedModuleSet]);
 
     const storedRole = normalizeRole(getStoredRole());
     const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin' || storedRole === 'sub-admin');
@@ -575,14 +578,69 @@ const UserPermissions = ({ setModuleName }) => {
                         </button>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <TableData
-                        tableHeadings={['', 'Module', 'Permissions']}
-                        data={tableData}
-                        className="min-w-full"
-                    />
+                <div className="divide-y divide-gray-100">
+                    {groupedPermissions.map(({ tabName, items }) => {
+                        const selectableItems = items.filter((permission) => permission.canAssign);
+                        const selectedInGroup = selectableItems.filter((permission) => selectedModuleSet.has(permission.id)).length;
+                        const allGroupSelected = selectableItems.length > 0 && selectedInGroup === selectableItems.length;
+
+                        return (
+                            <section key={tabName} className="p-4">
+                                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <AccessCheckbox
+                                            checked={allGroupSelected}
+                                            disabled={!selectableItems.length}
+                                            onChange={(checked) => handleGroupSelection(items, checked)}
+                                            ariaLabel={`Select ${tabName}`}
+                                        />
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-gray-900">{tabName}</h3>
+                                            <p className="text-xs text-gray-500">
+                                                {items.length} sub-module{items.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {!!selectableItems.length && (
+                                        <span className="text-xs text-gray-400">
+                                            {selectedInGroup}/{selectableItems.length} selected
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    {items.map((permission) => (
+                                        <div
+                                            key={permission.id}
+                                            className="grid grid-cols-1 gap-3 rounded-md border border-gray-100 p-3 md:grid-cols-[minmax(180px,260px),1fr]"
+                                        >
+                                            <div className="flex items-start gap-2">
+                                                <AccessCheckbox
+                                                    checked={selectedModuleSet.has(permission.id)}
+                                                    disabled={!permission.canAssign}
+                                                    onChange={(checked) => handleModuleSelection(permission.id, checked)}
+                                                    ariaLabel={`Select ${permission.module}`}
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-medium capitalize text-gray-900">{permission.module}</p>
+                                                    <p className="text-xs text-gray-400">{permission.id}</p>
+                                                </div>
+                                            </div>
+                                            <PermissionsSelector
+                                                module={permission.module}
+                                                selected={permission.permissions}
+                                                availablePermissions={permission.canAssign ? permission.assignablePermissions : permission.availablePermissions}
+                                                disabled={!permission.canAssign}
+                                                onChange={(value) => handlePermissionChange(permission.id, value)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        );
+                    })}
                 </div>
-                {!permissions.length && (
+                {!groupedPermissions.length && (
                     <p className="p-6 text-sm text-gray-400 text-center">No modules found for this user.</p>
                 )}
             </div>

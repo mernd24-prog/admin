@@ -14,12 +14,13 @@ import { RiChatSmile2Fill } from 'react-icons/ri';
 import { CiSettings } from 'react-icons/ci';
 import { HiOutlineReceiptTax } from "react-icons/hi";
 import { isSellerPanel } from '../../_helpers/panelConfig';
-import { getModuleRoute } from '../../_helpers/rbacRoutes';
+import { getModuleMeta, getModuleRoute, MODULE_TAB_ORDER } from '../../_helpers/rbacRoutes';
 
 export const SUPPORTED_ADMIN_ROUTES = new Set([
   'home',
   'admin-users',
   'user-permissions',
+  'seller-management',
   'users',
   'seller',
   'orders',
@@ -75,37 +76,11 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   'setting',
 ]);
 
-const getTabName = (slug) => {
-  const tabMap = {
-    'admin': 'Home',
-    'users': 'Users',
-    'products': 'Product Management',
-    'orders': 'Orders',
-    'sellers': 'Seller Management',
-    'analytics': 'Analytics',
-    'pricing': 'Promotions',
-    'referral': 'Promotions',
-    'tax': 'Tax',
-    'rbac': 'Settings',
-    'carts': 'Orders',
-    'payments': 'Orders',
-    'platform': 'Settings',
-    'notifications': 'Settings',
-    'wallets': 'Orders',
-    'subscriptions': 'Settings',
-    'warranty': 'Product Management',
-    'loyalty': 'Promotions',
-    'recommendations': 'Product Management',
-    'returns': 'Orders',
-    'fraud': 'Settings',
-    'dynamic-pricing': 'Promotions',
-    'delivery': 'Shipping/Pickup',
-  };
-  return tabMap[slug] || 'Settings';
-};
+const getTabName = (slug) => getModuleMeta(slug).tab || 'Settings';
 
 const SELLER_SIDEBAR_SECTIONS = [
   { module: "analytics", tab: "Home", label: "Dashboard", route: "home" },
+  { module: "seller-management", tab: "Seller Management", label: "Sub-Sellers", route: "seller-management" },
   { module: "products", tab: "Product Management", label: "Products", route: "product-catalog" },
   { module: "orders", tab: "Orders", label: "Orders", route: "orders" },
   { module: "pricing", tab: "Promotions", label: "Coupons", route: "discount-coupons" },
@@ -212,6 +187,9 @@ const getIconForTab = (tabName) => {
     'product management': FaProductHunt,
     'requests': MdRequestPage,
     'users': FaUserGear,
+    'users & sellers': FaUserGear,
+    'seller management': FaUserGear,
+    'access control': FaUserGear,
     'orders': GrOrderedList,
     'promotions': PiBroomThin,
     'marketing': PiBroomThin,
@@ -253,7 +231,16 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
         return acc;
       }, {});
 
-      return Object.entries(groupedByTab).map(([tabName, modules]) => ({
+      return Object.entries(groupedByTab)
+      .sort(([tabA], [tabB]) => {
+        const indexA = MODULE_TAB_ORDER.indexOf(tabA);
+        const indexB = MODULE_TAB_ORDER.indexOf(tabB);
+        const safeA = indexA === -1 ? MODULE_TAB_ORDER.length : indexA;
+        const safeB = indexB === -1 ? MODULE_TAB_ORDER.length : indexB;
+        if (safeA !== safeB) return safeA - safeB;
+        return tabA.localeCompare(tabB);
+      })
+      .map(([tabName, modules]) => ({
         label: tabName,
         icon: getIconForTab(tabName.toLowerCase()),
         subItems: modules,
@@ -293,7 +280,14 @@ const Sidebar = ({ navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isEx
       return acc;
     }, {});
 
-    return Object.entries(groupedByTab).map(([tabName, modules]) => {
+    return Object.entries(groupedByTab).sort(([tabA], [tabB]) => {
+      const indexA = MODULE_TAB_ORDER.indexOf(tabA);
+      const indexB = MODULE_TAB_ORDER.indexOf(tabB);
+      const safeA = indexA === -1 ? MODULE_TAB_ORDER.length : indexA;
+      const safeB = indexB === -1 ? MODULE_TAB_ORDER.length : indexB;
+      if (safeA !== safeB) return safeA - safeB;
+      return tabA.localeCompare(tabB);
+    }).map(([tabName, modules]) => {
       const uniqueModules = Array.from(
         new Map((modules || []).map((item) => [item.module_code, item])).values(),
       );

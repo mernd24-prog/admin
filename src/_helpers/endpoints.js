@@ -71,6 +71,8 @@ export const ENDPOINTS = {
     dashboard: "/sellers/me/dashboard",
     subAdmins: "/sellers/me/sub-admins",
     subAdminModules: (userId) => `/sellers/me/sub-admins/${userId}/modules`,
+    subAdminStatus: (userId) => `/sellers/me/sub-admins/${userId}/status`,
+    subAdmin: (userId) => `/sellers/me/sub-admins/${userId}`,
   },
   products: {
     list: byPanel("/admin/products", "/products"),

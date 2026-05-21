@@ -49,7 +49,7 @@ const API_CALL_OBJECT = {
 
 }
 
-const SELLER_PANEL_ROLES = new Set(['seller', 'seller-sub-admin']);
+const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
 const DEFAULT_COLOR_OPTIONS = [
   'Black',
   'White',

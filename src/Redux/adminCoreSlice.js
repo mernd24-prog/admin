@@ -150,7 +150,7 @@ const pickQuery = (keys = []) => (params = {}) =>
   }, {});
 
 const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "userId", "active", "includePermissions"];
-const listOrderQueryKeys = ["status", "fromDate", "toDate", "limit", "offset"];
+const listOrderQueryKeys = ["status", "sellerId", "fromDate", "toDate", "limit", "offset"];
 const moderationQueueQueryKeys = ["status", "category", "page", "limit"];
 const updateModerationKeys = ["status", "rejectionReason", "checklist"];
 
@@ -369,7 +369,7 @@ export const createAdmin = createApiThunkPrivate(
   ENDPOINTS.adminAccess.admins,
   "POST",
   false,
-  { transformBody: (payload = {}) => toManagedUserCreateBody(payload) }
+  { transformBody: (payload = {}) => toManagedUserCreateBody(payload, { allowedModules: DEFAULT_PLATFORM_MODULES }) }
 );
 
 export const createPlatformSubAdmin = createApiThunkPrivate(
