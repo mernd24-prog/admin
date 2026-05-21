@@ -4,6 +4,7 @@ const KYCContext = createContext();
 
 export const KYCProvider = ({ children }) => {
   const [step, setStep] = useState(0);
+  const [formState, setFormState] = useState("login");
 
   const stepToSection = (step) => {
     switch (step) {
@@ -25,7 +26,9 @@ export const KYCProvider = ({ children }) => {
   const currentSection = stepToSection(step);
 
   return (
-    <KYCContext.Provider value={{ step, setStep, currentSection }}>
+    <KYCContext.Provider
+      value={{ step, setStep, currentSection, formState, setFormState }}
+    >
       {children}
     </KYCContext.Provider>
   );

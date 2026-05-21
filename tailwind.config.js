@@ -11,6 +11,7 @@ export default {
         band: "#f7efde",
         accent: "#a76616",
         ink: "#2E2E2E",
+        darkInk: "#484555",
         gray: {
           ...colors.gray,
           DEFAULT: "#A6A6A6",
@@ -101,4 +102,3 @@ export default {
     },
   ],
 };
- 
