@@ -1,63 +1,74 @@
 import React from "react";
+import { FaStar } from "react-icons/fa";
 
 const AuthLayout = ({
   children,
-  title = "Welcome Back, Seller",
-  subtitle = "Login to manage your store and orders",
-  logo = "/logo.png",
   illustration = "/Img/auth-img/auth-illustration.png",
   backgroundImage = "/Rectangle 401.png",
 }) => {
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-200 flex items-center justify-center">
-      <div className="w-full h-full bg-white shadow-2xl overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 h-full">
-
-          {/* Left Panel - Dynamic Welcome Section */}
+    <div className="h-screen overflow-hidden bg-white">
+      <div className="grid h-full grid-cols-1 lg:grid-cols-2">
+        <div className="relative hidden overflow-hidden bg-[#fff8f0] lg:block">
           <div
-            className="p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col items-center justify-evenly bg-cover bg-center bg-no-repeat ml-0 sm:ml-6 md:ml-10 lg:ml-16"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
               backgroundImage: `url('${backgroundImage}')`,
             }}
-          >
-            {/* Logo Section */}
-            <div className="text-center mb-4 sm:mb-6">
-              <div className="flex items-center justify-center ">
-                <img
-                  src={logo}
-                  alt="Logo"
-                  className="w-28 sm:w-36 md:w-44 lg:w-52 h-auto mb-4 object-contain"
-                />
-              </div>
-            {/* Dynamic Welcome Message */}
-            <div className="text-center mb-6 sm:mb-8 px-2">
-              <h3 className="text-lg sm:text-1xl md:text-2xl font-semibold text-gray-800 mb-3 mt-5">
-                {title}
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600">
-                {subtitle}
-              </p>
-            </div>
-            </div>
+          />
 
-
-            {/* Dynamic Illustration */}
-            <div className="w-full max-w-[280px] sm:max-w-sm md:max-w-md">
+          <div className="relative z-10 flex h-full flex-col items-center justify-center px-10">
+            <div className="relative flex w-full max-w-[470px] flex-col items-center">
               <img
                 src={illustration}
-                alt="Authentication Illustration"
-                className="w-full h-auto max-h-[350px] object-contain"
+                alt="Sam Global growth illustration"
+                className="mb-[-18px] w-full max-w-[430px] object-contain"
               />
+
+              <div className="relative z-20 flex flex-col items-center text-center">
+                <div className="mb-2 h-9 w-9 overflow-hidden rounded-full border-2 border-white shadow-[0_5px_14px_rgba(25,25,25,0.16)]">
+                  <img
+                    src="/Img/1.jpeg"
+                    alt="Samantha Green"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <p className="text-[12px] font-semibold leading-none text-[#0f172a]">
+                  Samantha Green
+                </p>
+                <div className="mt-2 flex items-center gap-[2px] text-[#f5b521]">
+                  {[0, 1, 2, 3, 4].map((star) => (
+                    <FaStar key={star} size={12} />
+                  ))}
+                </div>
+                <p className="mt-4 max-w-[330px] text-center text-[13px] leading-[19px] text-[#4f5565]">
+                  Sam Global truly exceeded my expectations. I started by
+                  exploring a few products, and soon I found myself shopping
+                  across multiple categories with ease. The platform feels
+                  smooth, reliable, and convenient, and it's great knowing that
+                  Sam Global connects buyers with quality products and trusted
+                  sellers in one place.
+                </p>
+                <div className="mt-4 rounded-md bg-white px-3 py-1 shadow-[0_8px_20px_rgba(25,25,25,0.08)]">
+                  <span className="text-[10px] font-semibold text-[#4285f4]">
+                    G
+                  </span>
+                  <span className="ml-1 text-[9px] font-medium text-[#555]">
+                    Google rating
+                  </span>
+                </div>
+                <p className="mt-7 text-[11px] font-medium text-[#111827]">
+                  Supporting over 3,000,000 users worldwide
+                </p>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Right Panel - Form Container */}
-          <div className="bg-white p-6 sm:p-8 md:p-10 lg:p-12 flex items-center justify-center overflow-hidden">
-            <div className="w-full max-w-md">
-              {children}
-            </div>
+        <div className="flex h-full items-center justify-center overflow-hidden bg-[#f3f0ec]">
+          <div className="h-full w-full">
+            {children}
           </div>
-
         </div>
       </div>
     </div>

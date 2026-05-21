@@ -52,9 +52,8 @@ const PasswordInput = React.memo(
             value={value}
             autoComplete={autoComplete}
             required={required}
-            className={`bg-[#f3f6f9] text-[#474747] h-[2.625rem] w-full px-4 py-[0.6rem] text-[0.85rem] leading-[1.5] 
-                   rounded-[3px] border border-transparent transition-all duration-300 ease-in-out 
-                   appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400
+            className={`h-[38px] w-full rounded-md border border-transparent bg-white px-3 py-[0.5rem] pr-10 text-[12px] leading-[1.5] text-[#101828] placeholder:text-[#9a9a9a] transition-all duration-300 ease-in-out
+                   appearance-none focus:border-[#d8d4cf] focus:outline-none focus:ring-2 focus:ring-[#e8e3dd]
               ${inputClassName}
               ${errorMessage ? 'border-[#fe3c6a]/50' : ''}
             `}
@@ -63,15 +62,15 @@ const PasswordInput = React.memo(
           />
           {type === 'password' ? (
             <FiEye
-              size={15}
-              className={`absolute right-3 top-3.5 text-lg  cursor-pointer text-gray-600 ${iconClassName}`}
+              size={14}
+              className={`absolute right-[14px] top-1/2 -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
               onClick={clickEyeButton}
             />
           ) : (
             <FaEyeSlash
-              size={15}
+              size={14}
 
-              className={`absolute right-3 top-3.5  cursor-pointer text-gray-600 ${iconClassName}`}
+              className={`absolute right-[14px] top-1/2 -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
               onClick={clickEyeButton}
             />
           )}
