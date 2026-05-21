@@ -1,7 +1,7 @@
-import React from 'react'
+import React from "react";
 
 const FormSubmitButton = ({
-  buttonLabel = 'Log In',
+  buttonLabel = "Log In",
   type = "submit",
   onClick,
 }) => {
@@ -10,12 +10,12 @@ const FormSubmitButton = ({
       <button
         type={type}
         onClick={onClick}
-        className="w-full px-4 py-2 text-black bg-white  hover:bg-[#418dcf] outline-none"
+        className="w-full px-4 py-2 text-black bg-white  hover:bg-[#ed7dd1] outline-none"
       >
         {buttonLabel}
       </button>
     </div>
-  )
-}
+  );
+};
 
-export default FormSubmitButton
+export default FormSubmitButton;
