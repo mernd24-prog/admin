@@ -1,109 +1,156 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { LuAsterisk } from 'react-icons/lu'
-import { AiOutlineUser } from 'react-icons/ai'
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { LuAsterisk } from "react-icons/lu";
+import { AiOutlineUser } from "react-icons/ai";
 
 const EmailInput = React.memo(
   ({
-    id = 'email',
-    name = 'email',
-    value = '',
-    placeholder = '',
+    id = "email",
+    name = "email",
+    value = "",
+    placeholder = "",
     onChange,
     onBlur,
     icon: Icon = AiOutlineUser,
-    className = '',
-    containerClassName = '',
-    inputClassName = '',
-    label = '',
-    labelClassName = '',
+    className = "",
+    containerClassName = "",
+    inputClassName = "",
+    label = "",
+    labelClassName = "",
     errorMessage,
-    iconClassName = '',
+    iconClassName = "",
     isDisable = false,
     autoFocus = false,
     ...rest
   }) => {
-    const [email, setEmail] = useState(value)
-    const [, setIsValid] = useState(true)
-    const MIN_EMAIL_LENGTH = 3
+    const [email, setEmail] = useState(value);
+    const [, setIsValid] = useState(true);
+
+    const MIN_EMAIL_LENGTH = 3;
 
     const handleChange = useCallback(
-      event => {
-        const newEmail = event.target.value
-        setEmail(newEmail)
-        setIsValid(newEmail.length >= MIN_EMAIL_LENGTH)
+      (event) => {
+        const newEmail = event.target.value;
+
+        setEmail(newEmail);
+        setIsValid(newEmail.length >= MIN_EMAIL_LENGTH);
+
         if (onChange) {
-          onChange(event)
+          onChange(event);
         }
       },
       [onChange]
-    )
+    );
 
     const handleBlur = useCallback(
-      event => {
-        setIsValid(email.length >= MIN_EMAIL_LENGTH)
+      (event) => {
+        setIsValid(email.length >= MIN_EMAIL_LENGTH);
+
         if (onBlur) {
-          onBlur(event)
+          onBlur(event);
         }
       },
       [email, onBlur]
-    )
+    );
 
     useEffect(() => {
-      setEmail(value)
-      setIsValid(value.length >= MIN_EMAIL_LENGTH)
-    }, [value])
+      setEmail(value);
+      setIsValid(value.length >= MIN_EMAIL_LENGTH);
+    }, [value]);
 
-    const inputRef = useRef()
+    const inputRef = useRef();
+
     useEffect(() => {
       if (autoFocus && inputRef.current) {
-        inputRef.current.focus()
+        inputRef.current.focus();
       }
-    }, [autoFocus])
+    }, [autoFocus]);
 
     return (
-      <div className={containerClassName}>
+      <div className={`w-full ${containerClassName}`}>
+
+        {/* LABEL */}
         {label && (
           <label
             htmlFor={id}
-            className={`${labelClassName} label`}
+            className={`
+              mb-2 flex items-start gap-1
+              text-sm font-medium text-[#1E1E1E]
+              ${labelClassName}
+            `}
           >
             {label}
-            <LuAsterisk className='inline text-[#8B0A1A]  absolute' />
+
+            <LuAsterisk className="text-[#B42318] text-[10px] mt-[2px]" />
           </label>
         )}
-        <div className='relative mt-1'>
-          {/* <Icon
-            className={`absolute left-3 top-3 text-black text-[1.3rem] ${iconClassName}`}
-          /> */}
+
+        {/* INPUT WRAPPER */}
+        <div className="relative">
+
+          {/* ICON */}
+          <Icon
+            className={`
+              absolute right-[14px] top-1/2 -translate-y-1/2
+              text-[#9a9a9a] text-[15px]
+              ${iconClassName}
+            `}
+          />
+
+          {/* INPUT */}
           <input
+            ref={inputRef}
             disabled={isDisable}
             id={id}
             name={name}
-            type='text'
+            type="text"
             value={email}
-            autoComplete='off'
+            autoComplete="off"
             onChange={handleChange}
             onBlur={handleBlur}
-            className={`
-              bg-[#f3f6f9] text-[#474747] h-[2.625rem] w-full px-4 py-[0.6rem] text-[0.85rem] leading-[1.5] 
-                   rounded-[3px] border border-transparent transition-all duration-300 ease-in-out 
-                   appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400
-              ${inputClassName}
-              ${errorMessage ? 'border-[#fe3c6a]/50' : ''}
-            `}
             placeholder={placeholder}
-            ref={inputRef}
+            className={`
+              w-full h-[38px]
+              rounded-md
+              border border-transparent
+              bg-white
+              pl-3 pr-10
+              text-[12px]
+              text-[#101828]
+              placeholder:text-[#9a9a9a]
+              outline-none
+              transition-all duration-300
+
+              focus:bg-white
+              focus:border-[#d8d4cf]
+              focus:ring-2
+              focus:ring-[#e8e3dd]
+
+              disabled:cursor-not-allowed
+              disabled:opacity-70
+
+              ${
+                errorMessage
+                  ? "border-red-400 focus:ring-red-100"
+                  : ""
+              }
+
+              ${inputClassName}
+              ${className}
+            `}
             {...rest}
           />
-          {errorMessage && (
-            <div className='text-[#8B0A1A] text-[12px] mt-1'>
-              {errorMessage}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-)
 
-export default EmailInput
+        </div>
+
+        {/* ERROR MESSAGE */}
+        {errorMessage && (
+          <p className="mt-2 text-sm text-[#B42318]">
+            {errorMessage}
+          </p>
+        )}
+      </div>
+    );
+  }
+);
+
+export default EmailInput;

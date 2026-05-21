@@ -24,7 +24,7 @@ const AuthLayout = ({
   return (
     <div className="min-h-screen flex justify-center bg-white lg:items-center">
       <div className="w-full bg-white shadow-2xl lg:min-h-screen">
-        <div className="grid grid-cols-1 lg:h-screen lg:grid-cols-2">
+        <div className="grid grid-cols-1 lg:h-screen lg:grid-cols-[40%_60%]">
           {/* Left Panel - Dynamic Welcome Section */}
           <div className="relative h-[460px] overflow-hidden sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
             <img
@@ -102,7 +102,7 @@ const AuthLayout = ({
           </div>
 
           {/* Right Panel - Form Container */}
-          <div className="flex justify-center bg-white p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
+          <div className="flex justify-center bg-[#F4F1ED]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
             <div className="w-full max-w-md">{children}</div>
           </div>
         </div>

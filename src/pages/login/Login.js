@@ -21,6 +21,7 @@ import EmailInput from "../../components/Atoms/EmailInput";
 import PasswordInput from "../../components/Atoms/password/PasswordInput";
 import Loader from "../../components/Loader/Loader";
 import { CiUser, CiLock } from "react-icons/ci";
+import { MdEmail } from "react-icons/md";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
 import { toast } from "sonner";
 import { isSellerPanel, PANEL_MODES } from "../../_helpers/panelConfig";
@@ -669,13 +670,6 @@ const Login = () => {
     }
   }, [formAnimation]);
 
-  const FloatingElement = ({ delay, size, position }) => (
-    <div
-      className={`absolute rounded-full bg-gradient-to-r from-blue-200 to-blue-400 opacity-20 animate-float ${size} ${position}`}
-      style={{ animationDelay: delay }}
-    ></div>
-  );
-
   const renderForm = () => {
     const animationClasses = getAnimationClasses();
 
@@ -683,34 +677,39 @@ const Login = () => {
       case "login":
         return (
           <FormLayout
-            title={sellerPanel ? "Seller Login" : "Admin Sign in"}
-            subTitle={sellerPanel ? "Enter your seller email to receive a login OTP" : "Please enter your admin login credentials"}
+            title={sellerPanel ? "Seller Login" : "Welcome back!"}
+            subTitle={
+              sellerPanel
+                ? "Enter your seller email to receive a login OTP"
+                : "Enter your credentials to access your account"
+            }
             onSubmit={handleLoginSubmit}
             className={`${animationClasses} transition-all duration-300`}
           >
-            <div className="relative z-10 flex flex-col gap-3">
-              <div className="transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md rounded-lg">
+            <div className="relative z-10 flex flex-col">
+
+              {/* EMAIL */}
+              <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
                 <EmailInput
                   id="email"
                   name="email"
-                  label="Email"
                   value={formFields.email}
-                  placeholder="Enter your email"
-                  icon={CiUser}
+                  placeholder="Email address"
+                  icon={MdEmail}
                   onChange={handleInputChange}
                   errorMessage={formErrors.email}
                   autoFocus
-                  className="animate-fade-in"
                 />
               </div>
+
+              {/* PASSWORD */}
               {!sellerPanel && (
-                <div className="transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md rounded-lg mt-2 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+                <div className="mb-[8px]">
                   <PasswordInput
                     id="password"
                     name="password"
-                    label="Password"
                     value={formFields.password}
-                    placeholder="***********"
+                    placeholder="Password*"
                     icon={CiLock}
                     onChange={handleInputChange}
                     errorMessage={formErrors.password}
@@ -718,53 +717,90 @@ const Login = () => {
                 </div>
               )}
 
+              {/* ERROR */}
               {loginError && (
-                <div className="p-2 text-sm text-red-800 rounded-md animate-fade-in bg-red-50">
+                <div className="mb-[10px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 animate-fade-in">
                   {loginError}
                 </div>
               )}
 
-              <div className="flex justify-start mt-2 mb-2 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-                <label className="flex items-center text-sm cursor-pointer gap-x-2">
-                  <Checkbox
-                    id="remember_me"
-                    name="remember_me"
-                    className="w-4 h-4 transition-transform rounded hover:scale-110"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <span className="text-[#000000AB]">Remember Me</span>
-                </label>
-              </div>
-
-
-              <div className="animate-fade-in" style={{ animationDelay: "0.4s" }}>
-                <FormSubmitButton
-                  buttonLabel={loading ? (sellerPanel ? "Sending OTP..." : "Logging in...") : (sellerPanel ? "Send Login OTP" : "Login")}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-95"
-                />
-              </div>
-              <div className="flex justify-between items-center">
+              {/* FORGOT */}
+              <div
+                className="mb-[24px] flex min-h-[13px] items-center justify-end"
+                style={{ animationDelay: "0.3s" }}
+              >
                 {!sellerPanel && (
-                  <p
-                    className="mt-4 text-xs text-center text-[#0A73CF] cursor-pointer transition-all duration-300 hover:text-blue-700 hover:underline animate-fade-in"
+                  <button
+                    type="button"
                     onClick={toggleForgotPassword}
-                    style={{ animationDelay: "0.5s" }}
+                    className="
+            text-[11px]
+            font-medium
+            text-[#031b52]
+            transition-all
+            hover:text-[#082f91]
+            hover:underline
+          "
                   >
                     Forgot password?
-                  </p>
-                )}
-                {sellerPanel && (
-                  <p
-                    className="mt-4 text-center text-xs text-[#0A73CF] cursor-pointer transition-all duration-300 hover:text-blue-700 hover:underline animate-fade-in"
-                    onClick={() => setFormState("register")}
-                    style={{ animationDelay: "0.5s" }}
-                  >
-                    New seller? Register with OTP
-                  </p>
+                  </button>
                 )}
               </div>
 
+              {/* BUTTON */}
+              <div>
+                <FormSubmitButton
+                  buttonLabel={
+                    loading
+                      ? sellerPanel
+                        ? "Sending OTP..."
+                        : "Signing in..."
+                      : sellerPanel
+                        ? "Send Login OTP"
+                        : "Login"
+                  }
+                />
+              </div>
+
+              {/* AGREEMENT */}
+              <label className="mt-[20px] flex cursor-pointer items-start gap-[10px]">
+                <Checkbox
+                  id="remember_me"
+                  name="remember_me"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
+                />
+
+                <span className="text-[8px] leading-[14px] text-[#667085]">
+                  I agree to all{" "}
+                  <span className="font-semibold text-[#031b52]">
+                    Terms, Privacy, and Cancellation Policies.
+                  </span>
+                </span>
+              </label>
+
+              {/* FOOTER */}
+              {sellerPanel && (
+                <div
+                  className="pt-2 text-center animate-fade-in"
+                  style={{ animationDelay: "0.5s" }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setFormState("register")}
+                    className="
+            text-xs
+            font-medium
+            text-[#c89a3c]
+            hover:underline
+            transition-all
+          "
+                  >
+                    New seller? Register with OTP
+                  </button>
+                </div>
+              )}
             </div>
           </FormLayout>
         );
@@ -785,7 +821,7 @@ const Login = () => {
                     ref={codeInputRefs[index]}
                     type="text"
                     maxLength={1}
-                    className="w-12 h-12 text-lg text-center transition-all duration-300 border rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:shadow-md focus:shadow-md animate-pop-in"
+                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd] animate-pop-in"
                     style={{ animationDelay: `${index * 0.1}s` }}
                     value={verificationCode[index]}
                     onChange={(e) => handleCodeChange(index, e.target.value)}
@@ -804,21 +840,20 @@ const Login = () => {
               <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.7s" }}>
                 <FormSubmitButton
                   buttonLabel={loading ? "Verifying..." : "Verify & Login"}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-95"
                 />
               </div>
 
               <div className="flex justify-between mt-4 text-sm animate-fade-in" style={{ animationDelay: "0.8s" }}>
                 <button
                   type="button"
-                  className="text-[#0A73CF] font-medium hover:text-blue-700 hover:underline transition-colors"
+                  className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
                   onClick={handleResendOtp}
                 >
                   Resend OTP
                 </button>
                 <button
                   type="button"
-                  className="text-[#0A73CF] hover:text-blue-700 hover:underline transition-colors"
+                  className="text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
                   onClick={() => {
                     setVerificationCode(["", "", "", "", "", ""]);
                     setFormState("login");
@@ -834,23 +869,22 @@ const Login = () => {
       case "forgotPassword":
         return (
           <FormLayout
-            title="Forgot Password?"
-            subTitle="Enter the email address associated with your account."
+            title="Password Recovery"
+            subTitle="Enter your email to recover your password."
             onSubmit={handleForgotPasswordSubmit}
             bottomText="Remember your password?"
             linkText="Back to Login"
             onLinkClick={toggleForgotPassword}
             className={`${animationClasses} transition-all duration-300`}
           >
-            <div className="relative z-10 flex flex-col gap-3">
-              <div className="transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md rounded-lg animate-fade-in">
+            <div className="relative z-10 flex flex-col gap-4">
+              <div>
                 <EmailInput
                   id="forgotEmail"
                   name="forgotEmail"
-                  label="Email Address"
                   value={formFields.forgotEmail}
-                  placeholder="Enter your email"
-                  icon={CiUser}
+                  placeholder="Email address"
+                  icon={MdEmail}
                   onChange={handleInputChange}
                   errorMessage={formErrors.forgotEmail}
                   autoFocus
@@ -863,20 +897,12 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="mt-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+              <div className="pt-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
                 <FormSubmitButton
-                  buttonLabel={loading ? "Submitting..." : "Send Reset Code"}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-95 "
+                  buttonLabel={loading ? "Submitting..." : "Send Reset Link"}
                 />
               </div>
 
-              <p
-                className="mt-4 text-center text-[#0A73CF] cursor-pointer transition-all duration-300 hover:text-blue-700 hover:underline animate-fade-in"
-                onClick={toggleForgotPassword}
-                style={{ animationDelay: "0.3s" }}
-              >
-                Back to Login
-              </p>
             </div>
           </FormLayout>
         );
@@ -897,7 +923,7 @@ const Login = () => {
                     ref={codeInputRefs[index]}
                     type="text"
                     maxLength={1}
-                    className="w-12 h-12 text-lg text-center transition-all duration-300 border rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:shadow-md focus:shadow-md animate-pop-in"
+                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd] animate-pop-in"
                     style={{ animationDelay: `${index * 0.1}s` }}
                     value={verificationCode[index]}
                     onChange={(e) => handleCodeChange(index, e.target.value)}
@@ -916,7 +942,6 @@ const Login = () => {
               <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.7s" }}>
                 <FormSubmitButton
                   buttonLabel={loading ? "Verifying..." : "Verify Code"}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-95"
                 />
               </div>
 
@@ -925,14 +950,14 @@ const Login = () => {
                   Didn't receive the code?{" "}
                   <button
                     type="button"
-                    className="text-[#0A73CF] font-medium hover:text-blue-700 hover:underline transition-colors"
+                    className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
                     onClick={handleResendOtp}
                   >
                     Resend
                   </button>
                 </p>
                 <p
-                  className="text-center text-[#0A73CF] cursor-pointer hover:text-blue-700 hover:underline transition-colors"
+                  className="cursor-pointer text-center text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
                   onClick={toggleForgotPassword}
                 >
                   Back to Login
@@ -950,14 +975,13 @@ const Login = () => {
             onSubmit={handleResetPasswordSubmit}
             className={`${animationClasses} transition-all duration-300`}
           >
-            <div className="relative z-10 flex flex-col gap-3">
-              <div className="transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md rounded-lg animate-fade-in">
+            <div className="relative z-10 flex flex-col gap-4">
+              <div>
                 <PasswordInput
                   id="newPassword"
                   name="newPassword"
-                  label="New Password"
                   value={formFields.newPassword}
-                  placeholder="Enter your new password"
+                  placeholder="New password"
                   icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.newPassword}
@@ -965,13 +989,12 @@ const Login = () => {
                 />
               </div>
 
-              <div className="transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md rounded-lg mt-2 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+              <div>
                 <PasswordInput
                   id="confirmNewPassword"
                   name="confirmNewPassword"
-                  label="Confirm New Password"
                   value={formFields.confirmNewPassword}
-                  placeholder="Confirm your new password"
+                  placeholder="Confirm new password"
                   icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.confirmNewPassword}
@@ -984,15 +1007,14 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+              <div className="pt-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
                 <FormSubmitButton
                   buttonLabel={loading ? "Resetting..." : "Reset Password"}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-95"
                 />
               </div>
 
               <p
-                className="mt-4 text-center text-[#0A73CF] cursor-pointer transition-all duration-300 hover:text-blue-700 hover:underline animate-fade-in"
+                className="mt-3 cursor-pointer text-center text-xs font-medium text-[#031b52] transition-all duration-300 hover:text-[#082f91] hover:underline animate-fade-in"
                 onClick={toggleForgotPassword}
                 style={{ animationDelay: "0.4s" }}
               >
@@ -1056,7 +1078,7 @@ const Login = () => {
                 // label="Email Address"
                 value={formFields.registerEmail}
                 placeholder="Enter email"
-                icon={CiUser}
+                icon={MdEmail}
                 onChange={handleInputChange}
                 errorMessage={formErrors.registerEmail}
               />
@@ -1085,12 +1107,11 @@ const Login = () => {
               <div className="mt-4">
                 <FormSubmitButton
                   buttonLabel={loading ? "Registering..." : "Register"}
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
                 />
               </div>
 
               <p
-                className="mt-4 text-xs text-center text-[#0A73CF] cursor-pointer transition-all duration-300 hover:text-blue-700 hover:underline animate-fade-in"
+                className="mt-4 cursor-pointer text-center text-xs font-medium text-[#031b52] transition-all duration-300 hover:text-[#082f91] hover:underline animate-fade-in"
                 onClick={() => {
                   resetForm();
                   setFormState("login");
@@ -1120,7 +1141,7 @@ const Login = () => {
                     ref={codeInputRefs[index]}
                     type="text"
                     maxLength={1}
-                    className="w-12 h-12 text-lg text-center border rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
                     value={verificationCode[index]}
                     onChange={(e) =>
                       handleCodeChange(index, e.target.value)
@@ -1146,12 +1167,11 @@ const Login = () => {
                   buttonLabel={
                     loading ? "Verifying..." : "Verify & Complete Registration"
                   }
-                  className="transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
                 />
               </div>
 
               <p
-                className="text-center text-[#0A73CF] cursor-pointer hover:underline"
+                className="cursor-pointer text-center text-xs font-medium text-[#031b52] hover:text-[#082f91] hover:underline"
                 onClick={() => {
                   resetForm();
                   setFormState("login");
@@ -1169,11 +1189,6 @@ const Login = () => {
 
   return (
     <div className="relative overflow-hidden">
-      <FloatingElement delay="0s" size="h-32 w-32" position="top-10 left-10" />
-      <FloatingElement delay="2s" size="h-24 w-24" position="bottom-10 right-20" />
-      <FloatingElement delay="4s" size="h-16 w-16" position="top-40 right-10" />
-      <FloatingElement delay="6s" size="h-40 w-40" position="bottom-20 left-20" />
-
       <Loader loading={loading || isLoading || false} />
       {renderForm()}
 

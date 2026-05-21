@@ -16,6 +16,10 @@ body {
   border: 2px solid red;
 }
 
+.d {
+  border: 2px solid red;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

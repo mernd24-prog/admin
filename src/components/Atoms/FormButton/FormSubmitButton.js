@@ -4,13 +4,16 @@ const FormSubmitButton = ({
   buttonLabel = "Log In",
   type = "submit",
   onClick,
+  className = "",
+  disabled = false,
 }) => {
   return (
-    <div>
+    <div className="w-full">
       <button
         type={type}
         onClick={onClick}
-        className="w-full px-4 py-2 text-black bg-white  hover:bg-[#ed7dd1] outline-none"
+        disabled={disabled}
+        className={`flex h-[38px] w-full items-center justify-center gap-[10px] rounded-[7px] bg-[#082f91] px-4 text-[11px] font-semibold text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] outline-none transition-all duration-300 hover:bg-[#062779] hover:shadow-[0_10px_18px_rgba(8,47,145,0.32)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${className}`}
       >
         {buttonLabel}
       </button>
