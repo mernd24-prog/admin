@@ -1,408 +1,139 @@
 [
-    {
-        "label": "Home",
-        "icon": "MdOutlineDashboard",
-        "key": "dashboard"
-    },
-    {
-        "label": "Product Management",
-        "icon": "MdInventory",
-        "key": "product-management",
+  {
+    "label": "Dashboard",
+    "icon": "MdOutlineDashboard",
+    "key": "dashboard",
+    "module": "admin"
+  },
+  {
+    "label": "Catalog Management",
+    "icon": "MdInventory",
+    "key": "catalog-management",
+    "module": "products",
+    "subItems": [
+      {
+        "label": "Products",
+        "icon": "MdListAlt",
+        "key": "products",
         "subItems": [
-            {
-                "label": "Product Catalog",
-                "icon": "MdListAlt",
-                "key": "product-catalog"
-            },
-            {
-                "label": "Collections",
-                "icon": "MdListAlt",
-                "key": "collections"
-            },
-            {
-                "label": "Pattern",
-                "icon": "MdListAlt",
-                "key": "pattern"
-            },
-            {
-                "label": "Seller Product Inventory",
-                "icon": "MdStore",
-                "key": "seller-inventory"
-            },
-            {
-                "label": "Categories",
-                "icon": "MdCategory",
-                "key": "categories"
-            },
-            {
-                "label": "Category Attributes",
-                "icon": "MdTune",
-                "key": "category-attributes"
-            },
-            {
-                "label": "Brands",
-                "icon": "MdBrandingWatermark",
-                "key": "brands"
-            },
-            {
-                "label": "Shops",
-                "icon": "MdShop",
-                "key": "shops"
-            },
-            {
-                "label": "Product Options",
-                "icon": "MdTune",
-                "key": "product-options"
-            },
-            {
-                "label": "Product Tags",
-                "icon": "MdLocalOffer",
-                "key": "product-tags"
-            },
-            {
-                "label": "Threshold Products",
-                "icon": "MdWarning",
-                "key": "threshold-products"
-            },
-            {
-                "label": "Product Variants",
-                "icon": "MdWarning",
-                "key": "products-variants"
-            },
-            {
-                "label": "Product Dimensions",
-                "icon": "MdWarning",
-                "key": "products-dimensions"
-            },
-            {
-                "label": "Finish",
-                "icon": "MdWarning",
-                "key": "finish"
-            },
-            {
-                "label": "Product Warranty",
-                "icon": "MdWarning",
-                "key": "product-warranty"
-            }
+          { "label": "All Products",       "icon": "MdViewList",        "key": "product-catalog",    "route": "product-catalog"   },
+          { "label": "Add Product",        "icon": "MdAddBox",          "key": "add-product",        "route": "add-product"       },
+          { "label": "Draft Products",     "icon": "MdDrafts",          "key": "draft-products",     "route": "draft-products"    },
+          { "label": "Pending Approval",   "icon": "MdPendingActions",  "key": "pending-products",   "route": "pending-products"  },
+          { "label": "Rejected Products",  "icon": "MdCancel",          "key": "rejected-products",  "route": "rejected-products" }
         ]
-    },
-    {
-        "label": "Orders",
-        "icon": "MdShoppingCart",
-        "key": "orders",
+      },
+      {
+        "label": "Categories",
+        "icon": "MdCategory",
+        "key": "categories",
         "subItems": [
-            {
-                "label": "Orders",
-                "icon": "MdReceipt",
-                "key": "orders-list"
-            },
-            {
-                "label": "Gift Card Orders",
-                "icon": "MdReceipt",
-                "key": "gift-card-orders"
-            },
-            {
-                "label": "Order Cancellation Reasons",
-                "icon": "MdReceipt",
-                "key": "order-cancel-reasons"
-            },
-            {
-                "label": "Order Return Reasons",
-                "icon": "MdReceipt",
-                "key": "order-return-reasons"
-            },
-            {
-                "label": "Subscription Orders",
-                "icon": "MdSubscriptions",
-                "key": "subscription-orders"
-            },
-            {
-                "label": "Order Status",
-                "icon": "MdTimeline",
-                "key": "order-status"
-            },
-            {
-                "label": "Product Reviews",
-                "icon": "MdReviews",
-                "key": "product-reviews"
-            },
-            {
-                "label": "Abandoned Cart",
-                "icon": "MdReviews",
-                "key": "abandoned-cart"
-            }
+          { "label": "Category Tree",       "icon": "MdAccountTree",    "key": "categories",         "route": "categories"          },
+          { "label": "Category Attributes", "icon": "MdTune",           "key": "category-attributes","route": "category-attributes" }
         ]
-    },
-    {
-        "label": "Users",
-        "icon": "MdPeople",
-        "key": "users",
+      },
+      { "label": "Brands",            "icon": "MdBrandingWatermark", "key": "brands",           "route": "brands"            },
+      {
+        "label": "Product Options",
+        "icon": "MdTune",
+        "key": "product-options",
         "subItems": [
-            {
-                "label": "Admin Users",
-                "icon": "MdAdminPanelSettings",
-                "key": "admin-users"
-            },
-            {
-                "label": "Users",
-                "icon": "MdPerson",
-                "key": "users-list"
-            },
-            {
-                "label": "Transactions",
-                "icon": "MdPayments",
-                "key": "transactions"
-            },
-            {
-                "label": "Users Addresses",
-                "icon": "MdLocationOn",
-                "key": "user-addresses"
-            },
-            {
-                "label": "Messages",
-                "icon": "MdMessage",
-                "key": "messages"
-            },
-            {
-                "label": "Manage Country",
-                "icon": "FaGlobe",
-                "key": "manage-country"
-            },
-            {
-                "label": "Manage State",
-                "icon": "FaMapLocation",
-                "key": "manage-state"
-            },
-            {
-                "label": "Manage City",
-                "icon": "FaCity",
-                "key": "manage-city"
-            },
-            {
-                "label": "Manage ZipCode",
-                "icon": "FaCity",
-                "key": "manage-zipcode"
-            },
-            {
-                "label": "Interest Management",
-                "icon": "FaCity",
-                "key": "interest-management"
-            },
-            {
-                "label": "Sellers",
-                "icon": "FaCity",
-                "key": "sellers"
-            }
+          { "label": "Option Masters", "icon": "MdSettings",  "key": "product-options",       "route": "product-options"       },
+          { "label": "Option Values",  "icon": "MdListAlt",   "key": "product-option-values", "route": "product-option-values" }
         ]
-    },
-    {
-        "label": "Promotions",
-        "icon": "MdLocalOffer",
-        "key": "promotions",
-        "subItems": [
-            {
-                "label": "Special Price",
-                "icon": "MdAttachMoney",
-                "key": "special-price"
-            },
-            {
-                "label": "Volume Discounts",
-                "icon": "MdDiscount",
-                "key": "volume-discounts"
-            },
-            {
-                "label": "Similar Products",
-                "icon": "MdCompare",
-                "key": "similar-products"
-            },
-            {
-                "label": "Frequently Bought Together",
-                "icon": "MdShoppingBasket",
-                "key": "frequently-bought"
-            },
-            {
-                "label": "PPC Promotions Management",
-                "icon": "MdPaid",
-                "key": "ppc-promotions"
-            },
-            {
-                "label": "Reward on Purchase",
-                "icon": "MdCardGiftcard",
-                "key": "reward-purchase"
-            },
-            {
-                "label": "Product Event Weightages",
-                "icon": "MdEventNote",
-                "key": "event-weightages"
-            },
-            {
-                "label": "Recommended Product Tag Weightages",
-                "icon": "MdLocalOffer",
-                "key": "tag-weightages"
-            },
-            {
-                "label": "Discount Coupons",
-                "icon": "MdConfirmationNumber",
-                "key": "discount-coupons"
-            },
-            {
-                "label": "Referral Commerce",
-                "icon": "MdShare",
-                "key": "referral-commerce"
-            },
-            {
-                "label": "Badges",
-                "icon": "MdVerified",
-                "key": "badges"
-            },
-            {
-                "label": "Ribbons",
-                "icon": "MdRedeem",
-                "key": "ribbons"
-            }
-        ]
-    },
-    {
-        "label": "Blog",
-        "icon": "MdArticle",
-        "key": "blog",
-        "subItems": [
-            {
-                "label": "Blog Posts Categories",
-                "icon": "MdCategory",
-                "key": "blog-categories"
-            },
-            {
-                "label": "Blog Posts",
-                "icon": "MdPostAdd",
-                "key": "blog-posts"
-            },
-            {
-                "label": "Blog Contribution Requests",
-                "icon": "MdAssignmentInd",
-                "key": "blog-contributions"
-            },
-            {
-                "label": "Blog Comments",
-                "icon": "MdComment",
-                "key": "blog-comments"
-            }
-        ]
-    },
-    {
-        "label": "Tax",
-        "icon": "MdArticle",
-        "key": "tax",
-        "subItems": [
-            {
-                "label": "Tax Structure",
-                "icon": "MdCategory",
-                "key": "tax-structure"
-            },
-            {
-                "label": "Tax Category",
-                "icon": "MdPostAdd",
-                "key": "tax-category"
-            },
-            {
-                "label": "Tax Category Rules",
-                "icon": "MdAssignmentInd",
-                "key": "Tax-rules"
-            }
-        ]
-    },
-    {
-        "label": "Shipping/Pickup",
-        "icon": "MdLocalShipping",
-        "key": "shipping",
-        "subItems": [
-            {
-                "label": "Shipping Company Users",
-                "icon": "MdPeopleAlt",
-                "key": "shipping-users"
-            },
-            {
-                "label": "Shipping Packages",
-                "icon": "MdInventory2",
-                "key": "shipping-packages"
-            },
-            {
-                "label": "Shipping Profile",
-                "icon": "MdAccountCircle",
-                "key": "shipping-profile"
-            },
-            {
-                "label": "Pickup Addresses",
-                "icon": "MdPlace",
-                "key": "pickup-addresses"
-            },
-            {
-                "label": "Shipped Products",
-                "icon": "MdCheckCircle",
-                "key": "shipped-products"
-            }
-        ]
-    },
-    {
-        "label": "Content",
-        "icon": "GoCodeSquare",
-        "key": "cms",
-        "subItems": [
-            {
-                "label": "Homepage Slides",
-                "icon": "GoCodeSquare",
-                "key": "homepage-slides"
-            },
-            {
-                "label": "Banners",
-                "icon": "MdWeb",
-                "key": "banners"
-            },
-            {
-                "label": "Content Pages",
-                "icon": "MdWeb",
-                "key": "content-pages"
-            },
-            {
-                "label": "Content Blocks",
-                "icon": "MdWeb",
-                "key": "content-blocks"
-            },
-            {
-                "label": "Import Instructions",
-                "icon": "MdImportExport",
-                "key": "import-instructions"
-            },
-            {
-                "label": "FAQs",
-                "icon": "MdHelp",
-                "key": "faqs"
-            },
-            {
-                "label": "Testimonials",
-                "icon": "MdStar",
-                "key": "testimonials"
-            },
-            {
-                "label": "Navigations",
-                "icon": "MdNavigation",
-                "key": "navigations"
-            },
-            {
-                "label": "Collections",
-                "icon": "MdCollections",
-                "key": "collections"
-            }
-        ]
-    },
-    {
-        "label": "Colors",
-        "icon": "IoColorPaletteOutline",
-        "key": "color"
-    },
-    {
-        "label": "Settings",
-        "icon": "CiSettings",
-        "key": "settings"
-    }
+      },
+      { "label": "Product Families",  "icon": "MdFamilyRestroom",    "key": "product-families", "route": "product-families"  },
+      { "label": "Product Reviews",   "icon": "MdReviews",           "key": "product-reviews",  "route": "product-reviews"   },
+      { "label": "SEO & Media",       "icon": "MdLanguage",          "key": "seo-media",        "route": "seo-media"         }
+    ]
+  },
+  {
+    "label": "Inventory Management",
+    "icon": "MdWarehouse",
+    "key": "inventory-management",
+    "module": "inventory",
+    "subItems": [
+      { "label": "Stock Overview",       "icon": "MdDashboard",       "key": "inventory-overview",    "route": "inventory-overview"    },
+      { "label": "Variant Inventory",    "icon": "MdGridView",        "key": "variant-inventory",     "route": "variant-inventory"     },
+      { "label": "Inventory Adjustment", "icon": "MdTune",            "key": "inventory-adjustment",  "route": "inventory-adjustment"  },
+      { "label": "Warehouse Management", "icon": "MdWarehouse",       "key": "warehouse",             "route": "warehouse"             },
+      { "label": "Low Stock Alerts",     "icon": "MdNotifications",   "key": "low-stock-alerts",      "route": "low-stock-alerts"      }
+    ]
+  },
+  {
+    "label": "Orders Management",
+    "icon": "MdShoppingCart",
+    "key": "orders-management",
+    "module": "orders",
+    "subItems": [
+      { "label": "Orders",            "icon": "MdReceipt",         "key": "orders",            "route": "orders"            },
+      { "label": "Returns",           "icon": "MdUndo",            "key": "returns",           "route": "order-return-reasons" },
+      { "label": "Refunds",           "icon": "MdCurrencyRupee",   "key": "refunds",           "route": "refunds"           },
+      { "label": "Transactions",      "icon": "MdPayments",        "key": "transactions",      "route": "transactions"      },
+      { "label": "Shipment Tracking", "icon": "MdLocalShipping",   "key": "shipment-tracking", "route": "shipment-tracking" }
+    ]
+  },
+  {
+    "label": "Users & Access",
+    "icon": "MdPeople",
+    "key": "users-access",
+    "module": "users",
+    "subItems": [
+      { "label": "Customers",          "icon": "MdPerson",              "key": "users",             "route": "users"              },
+      { "label": "Sellers",            "icon": "MdStorefront",          "key": "sellers",           "route": "seller"             },
+      { "label": "Admin Users",        "icon": "MdAdminPanelSettings",  "key": "admin-users",       "route": "admin-users"        },
+      { "label": "Seller Staff",       "icon": "MdGroup",               "key": "seller-staff",      "route": "seller-staff"       },
+      { "label": "Roles & Permissions","icon": "MdSecurity",            "key": "roles-permissions", "route": "roles-permissions"  },
+      { "label": "Activity Logs",      "icon": "MdHistory",             "key": "activity-logs",     "route": "activity-logs"      }
+    ]
+  },
+  {
+    "label": "Marketing",
+    "icon": "MdCampaign",
+    "key": "marketing",
+    "module": "pricing",
+    "subItems": [
+      { "label": "Coupons",       "icon": "MdConfirmationNumber", "key": "discount-coupons", "route": "discount-coupons" },
+      { "label": "Campaigns",     "icon": "MdCampaign",           "key": "campaigns",        "route": "campaigns"        },
+      { "label": "Banners",       "icon": "MdWeb",                "key": "banners",          "route": "promotions-banners" },
+      { "label": "Notifications", "icon": "MdNotifications",      "key": "notifications",    "route": "messages"         }
+    ]
+  },
+  {
+    "label": "Tax & Compliance",
+    "icon": "MdAccountBalance",
+    "key": "tax-compliance",
+    "module": "tax",
+    "subItems": [
+      { "label": "HSN Codes",          "icon": "MdQrCode",           "key": "hsn-code",        "route": "hsn-code"        },
+      { "label": "Taxes",              "icon": "MdReceiptLong",      "key": "tax",             "route": "tax"             },
+      { "label": "Tax Rules",          "icon": "MdRule",             "key": "tax-rule",        "route": "tax-rule"        },
+      { "label": "Shipping Rules",     "icon": "MdLocalShipping",    "key": "shipping-rules",  "route": "shipping-packages" },
+      { "label": "Warranty Templates", "icon": "MdVerified",         "key": "warranty",        "route": "warranty"        }
+    ]
+  },
+  {
+    "label": "Reports & Analytics",
+    "icon": "MdBarChart",
+    "key": "reports-analytics",
+    "module": "analytics",
+    "subItems": [
+      { "label": "Sales Reports",       "icon": "MdTrendingUp",   "key": "reports-sales",      "route": "reports-sales"      },
+      { "label": "Product Analytics",   "icon": "MdInventory",    "key": "reports-products",   "route": "reports-products"   },
+      { "label": "Inventory Analytics", "icon": "MdWarehouse",    "key": "reports-inventory",  "route": "reports-inventory"  },
+      { "label": "Seller Analytics",    "icon": "MdStorefront",   "key": "reports-sellers",    "route": "reports-sellers"    }
+    ]
+  },
+  {
+    "label": "Settings",
+    "icon": "CiSettings",
+    "key": "settings",
+    "module": "admin",
+    "subItems": [
+      { "label": "General Settings",  "icon": "MdSettings",       "key": "settings",          "route": "settings"          },
+      { "label": "Payment Settings",  "icon": "MdPayment",        "key": "payment-settings",  "route": "payment-settings"  },
+      { "label": "Delivery Settings", "icon": "MdLocalShipping",  "key": "delivery-settings", "route": "shipping-packages" },
+      { "label": "SEO Settings",      "icon": "MdLanguage",       "key": "seo-settings",      "route": "seo-settings"      }
+    ]
+  }
 ]

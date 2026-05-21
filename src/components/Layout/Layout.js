@@ -277,6 +277,24 @@ const Supplier = UnavailableRoute;
 const AddSupplier = UnavailableRoute;
 const MedPharama = UnavailableRoute;
 
+// ── Inventory Management ────────────────────────────────────────────────────
+const InventoryOverview    = React.lazy(() => import('../../pages/Inventory/InventoryOverview'));
+const VariantInventory     = React.lazy(() => import('../../pages/Inventory/VariantInventory'));
+const InventoryAdjustment  = React.lazy(() => import('../../pages/Inventory/InventoryAdjustment'));
+const WarehouseManagement  = React.lazy(() => import('../../pages/Inventory/WarehouseManagement'));
+const LowStockAlerts       = React.lazy(() => import('../../pages/Inventory/LowStockAlerts'));
+
+// ── Reports & Analytics ─────────────────────────────────────────────────────
+const SalesReport       = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.SalesReport })));
+const ProductAnalytics  = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.ProductAnalytics })));
+const InventoryAnalytics= React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.InventoryAnalytics })));
+const SellerAnalytics   = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.SellerAnalytics })));
+
+// ── RBAC Management Pages ───────────────────────────────────────────────────
+const RolesPermissions = React.lazy(() => import('../../pages/UserManagement/RolesPermissions/RolesPermissions'));
+const ActivityLogs     = React.lazy(() => import('../../pages/UserManagement/ActivityLogs/ActivityLogs'));
+
+
 const getStoredSidebarState = () => {
   try {
     const expandedState = sessionStorage.getItem("sidebarExpandedState");
@@ -666,9 +684,43 @@ function Layout() {
               <Route path="/setting" element={renderRoute("/setting", <Settings />)} />
               <Route path="/upload-file" element={renderRoute("/upload-file", <BulkUploadProduct />)} />
               <Route path="/delivery-staff" element={renderRoute("/delivery-staff", <DeliveryStaff />)} />
-
-
               <Route path="/rotate" element={renderRoute("/rotate", <CircularMenu />)} />
+
+              {/* ── Catalog Management — filtered product views ─────────── */}
+              <Route path="/add-product"           element={renderRoute("/add-product",           <ProductCatalog />)} />
+              <Route path="/draft-products"        element={renderRoute("/draft-products",        <ProductCatalog />)} />
+              <Route path="/pending-products"      element={renderRoute("/pending-products",      <ProductCatalog />)} />
+              <Route path="/rejected-products"     element={renderRoute("/rejected-products",     <ProductCatalog />)} />
+              <Route path="/product-option-values" element={renderRoute("/product-option-values", <ProductOptions />)} />
+
+              {/* ── Inventory Management ────────────────────────────────── */}
+              <Route path="/inventory-overview"   element={renderRoute("/inventory-overview",   <InventoryOverview />)} />
+              <Route path="/variant-inventory"    element={renderRoute("/variant-inventory",    <VariantInventory />)} />
+              <Route path="/inventory-adjustment" element={renderRoute("/inventory-adjustment", <InventoryAdjustment />)} />
+              <Route path="/warehouse"            element={renderRoute("/warehouse",            <WarehouseManagement />)} />
+              <Route path="/low-stock-alerts"     element={renderRoute("/low-stock-alerts",     <LowStockAlerts />)} />
+
+              {/* ── Orders Management — new routes ──────────────────────── */}
+              <Route path="/refunds"           element={renderRoute("/refunds",           <UsersTransactions />)} />
+              <Route path="/shipment-tracking" element={renderRoute("/shipment-tracking", <UnavailableRoute />)} />
+
+              {/* ── Users & Access — new routes ─────────────────────────── */}
+              <Route path="/seller-staff"      element={renderRoute("/seller-staff",      <Sellers />)} />
+              <Route path="/roles-permissions" element={renderRoute("/roles-permissions", <RolesPermissions />)} />
+              <Route path="/activity-logs"     element={renderRoute("/activity-logs",     <ActivityLogs />)} />
+
+              {/* ── Marketing — new routes ──────────────────────────────── */}
+              <Route path="/campaigns" element={renderRoute("/campaigns", <UnavailableRoute />)} />
+
+              {/* ── Settings — new routes ───────────────────────────────── */}
+              <Route path="/payment-settings" element={renderRoute("/payment-settings", <Setting />)} />
+              <Route path="/seo-settings"     element={renderRoute("/seo-settings",     <Setting />)} />
+
+              {/* ── Reports & Analytics ─────────────────────────────────── */}
+              <Route path="/reports-sales"     element={renderRoute("/reports-sales",     <SalesReport />)} />
+              <Route path="/reports-products"  element={renderRoute("/reports-products",  <ProductAnalytics />)} />
+              <Route path="/reports-inventory" element={renderRoute("/reports-inventory", <InventoryAnalytics />)} />
+              <Route path="/reports-sellers"   element={renderRoute("/reports-sellers",   <SellerAnalytics />)} />
 
 
 

@@ -7,162 +7,169 @@ const trimRoute = (value = "") =>
 
 export const SELF_SERVICE_ROUTES = ["/profile", "/changePassword"];
 
-export const MODULE_CATALOG = {
-  admin: { label: "Admin Dashboard", tab: "Home", route: "home", order: 10 },
-  analytics: { label: "Analytics", tab: "Home", route: "home", order: 20 },
-  rbac: { label: "Access Control", tab: "Access Control", route: "admin-users", order: 30 },
-  users: { label: "User Management", tab: "Users & Sellers", route: "users", order: 40 },
-  sellers: { label: "Seller Management", tab: "Users & Sellers", route: "seller", order: 50 },
-  "seller-management": { label: "Seller Admin Management", tab: "Seller Management", route: "seller-management", order: 55 },
-  "sellers/commissions": { label: "Seller Commissions", tab: "Users & Sellers", route: "transactions", order: 60 },
-  products: { label: "Product Management", tab: "Catalog", route: "product-catalog", order: 70 },
-  platform: { label: "Platform Catalog", tab: "Catalog", route: "content-pages", order: 80 },
-  cms: { label: "CMS Management", tab: "Content", route: "content-pages", order: 90 },
-  warranty: { label: "Warranty", tab: "Catalog", route: "warranty", order: 100 },
-  carts: { label: "Cart Management", tab: "Shopping", route: "orders", order: 110 },
-  orders: { label: "Order Management", tab: "Shopping", route: "orders", order: 120 },
-  returns: { label: "Return Management", tab: "Shopping", route: "order-return-reasons", order: 130 },
-  delivery: { label: "Delivery Management", tab: "Shopping", route: "shipping-packages", order: 140 },
-  payments: { label: "Payment Management", tab: "Payments & Finance", route: "orders", order: 150 },
-  wallets: { label: "Wallet Management", tab: "Payments & Finance", route: "transactions", order: 160 },
-  tax: { label: "Tax Management", tab: "Payments & Finance", route: "tax", order: 170 },
-  subscriptions: { label: "Subscriptions", tab: "Payments & Finance", route: "settings", order: 180 },
-  pricing: { label: "Pricing & Promotions", tab: "Marketing", route: "discount-coupons", order: 190 },
-  "dynamic-pricing": { label: "Dynamic Pricing", tab: "Marketing", route: "special-price", order: 200 },
-  loyalty: { label: "Loyalty", tab: "Marketing", route: "reward-purchase", order: 210 },
-  referral: { label: "Referral Commerce", tab: "Marketing", route: "referral-commerce", order: 220 },
-  recommendations: { label: "Recommendations", tab: "Marketing", route: "similar-products", order: 230 },
-  notifications: { label: "Notifications", tab: "Settings", route: "messages", order: 240 },
-  fraud: { label: "Fraud Management", tab: "Insights & Risk", route: "settings", order: 250 },
-};
-
-export const MODULE_TAB_ORDER = [
-  "Home",
-  "Access Control",
-  "Users & Sellers",
-  "Seller Management",
-  "Catalog",
-  "Content",
-  "Shopping",
-  "Payments & Finance",
-  "Marketing",
-  "Insights & Risk",
-  "Product Management",
-  "Orders",
-  "Promotions",
-  "Shipping/Pickup",
-  "Tax",
-  "Settings",
-];
-
-export const getModuleMeta = (moduleSlug) => {
-  const slug = String(moduleSlug || "").trim().toLowerCase();
-  return MODULE_CATALOG[slug] || {
-    label: slug,
-    tab: "Settings",
-    route: slug,
-    order: 999,
-  };
-};
-
-export const getModuleLabel = (moduleSlug) => getModuleMeta(moduleSlug).label;
-export const getModuleTab = (moduleSlug) => getModuleMeta(moduleSlug).tab;
-
+// ─── Default landing route per module ────────────────────────────────────────
 export const MODULE_DEFAULT_ROUTES = {
-  admin: "home",
-  analytics: "home",
-  rbac: "admin-users",
-  users: "users",
-  sellers: "seller",
-  "seller-management": "seller-management",
-  "sellers/commissions": "transactions",
+  // Core
+  admin:    "home",
+  analytics:"home",
+  rbac:     "admin-users",
+  // Catalog
   products: "product-catalog",
-  platform: "content-management",
-  cms: "content-management",
+  platform: "categories",
   warranty: "warranty",
-  carts: "orders",
-  orders: "orders",
-  returns: "order-return-reasons",
+  // Inventory
+  inventory:"inventory-overview",
+  // Orders
+  carts:        "orders",
+  orders:       "orders",
+  returns:      "order-return-reasons",
+  payments:     "orders",
+  wallets:      "transactions",
+  subscriptions:"settings",
+  // Users
+  users:              "users",
+  sellers:            "seller",
+  "sellers/commissions":"transactions",
+  // Marketing
+  pricing:        "discount-coupons",
+  "dynamic-pricing":"special-price",
+  referral:       "referral-commerce",
+  loyalty:        "reward-on-purchase",
+  recommendations:"similar-products",
+  notifications:  "messages",
+  // Tax & Compliance
+  tax:      "tax",
   delivery: "shipping-packages",
-  payments: "orders",
-  wallets: "transactions",
-  tax: "tax",
-  subscriptions: "settings",
-  pricing: "discount-coupons",
-  "dynamic-pricing": "special-price",
-  referral: "referral-commerce",
-  loyalty: "reward-purchase",
-  recommendations: "similar-products",
-  notifications: "messages",
+  // Settings / misc
   fraud: "settings",
+  cms:   "content-management",
 };
 
+// ─── Route → modules mapping (for permission checks) ─────────────────────────
 const ROUTE_MODULES = [
+  // Core
   [["/home"], ["admin", "analytics"]],
-  [["/admin-users", "/user-permissions"], ["rbac", "users"]],
-  [["/seller-management"], ["seller-management", "sellers"]],
+
+  // Users & Access
+  [["/admin-users", "/user-permissions", "/roles-permissions"], ["rbac", "users"]],
+  [["/activity-logs"], ["rbac"]],
   [["/users", "/users-addresses", "/messages"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
-  [["/seller"], ["sellers"]],
+  [["/seller", "/seller-staff"], ["sellers"]],
+
+  // Catalog Management — products
   [
     [
-      "/product-catalog",
-      "/product-families",
-      "/product-option-value",
-      "/product-options",
-      "/product-tags",
-      "/threshold-products",
-      "/brands",
-      "/store",
-      "/pattern",
-      "/finish",
-      "/colors",
-      "/batch",
-      "/bar-code",
-      "/hsn-code",
-      "/qty-head",
+      "/product-catalog", "/add-product", "/draft-products",
+      "/pending-products", "/rejected-products",
+      "/product-families", "/product-option-value", "/product-option-values",
+      "/product-options", "/product-tags", "/threshold-products",
+      "/brands", "/store", "/finish", "/batch", "/bar-code", "/hsn-code", "/qty-head",
+      "/seo-media",
     ],
     ["products"],
   ],
+
+  // Catalog Management — platform
   [
     [
-      "/categories",
-      "/category-attributes",
-      "/collections",
-      "/product-variants",
-      "/product-dimensions",
-      "/tax-structure",
-      "/tax-category",
-      "/tax-category-rules",
-      "/state",
-      "/city",
-      "/country",
-      "/zipcode",
-      "/shipping-duration",
+      "/categories", "/category-attributes", "/collections",
+      "/product-variants", "/product-dimensions",
+      "/tax-structure", "/tax-category", "/tax-category-rules",
+      "/state", "/city", "/country", "/zipcode", "/shipping-duration",
     ],
     ["platform", "products"],
   ],
+
+  // Inventory Management
   [
     [
-      "/orders",
-      "/view-orders",
-      "/order-status",
-      "/gift-card-orders",
-      "/order-cancellation-reasons",
-      "/product-reviews",
+      "/inventory-overview", "/variant-inventory",
+      "/inventory-adjustment", "/warehouse", "/low-stock-alerts",
+    ],
+    ["inventory", "products"],
+  ],
+
+  // Orders Management
+  [
+    [
+      "/orders", "/view-orders", "/order-status",
+      "/gift-card-orders", "/order-cancellation-reasons", "/product-reviews",
+      "/refunds", "/shipment-tracking",
     ],
     ["orders"],
   ],
   [["/order-return-reasons"], ["returns", "orders"]],
   [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
-  [["/discount-coupons", "/special-price", "/volume-discounts", "/similar-products", "/frequently-bought-together", "/PPC-promotions-management", "/reward-on-purchase", "/product-event-weightages", "/recommended-product-tag-weightages", "/badges", "/ribbons"], ["pricing"]],
+
+  // Marketing
+  [
+    [
+      "/discount-coupons", "/special-price", "/volume-discounts",
+      "/similar-products", "/frequently-bought-together",
+      "/PPC-promotions-management", "/reward-on-purchase",
+      "/product-event-weightages", "/recommended-product-tag-weightages",
+      "/badges", "/ribbons", "/campaigns",
+    ],
+    ["pricing"],
+  ],
   [["/referral-commerce"], ["referral", "pricing"]],
-  [["/shipping-company-users", "/shipping-packages", "/shipping-profile", "/pickup-addresses", "/delivery-staff"], ["delivery"]],
-  [["/content-management", "/content-management/all", "/content-management/content", "/content-management/faq", "/content-management/homepage-slide", "/content-management/banner-location", "/content-management/promotion-banner", "/content-management/holiday", "/content-management/privacy-policy", "/content-management/return-policy", "/content-management/payment-policy", "/content-management/terms-and-conditions", "/content-management/help-and-support", "/promotions-banners", "/privacy-policy"], ["cms", "platform"]],
+  [["/promotions-banners"], ["cms", "pricing"]],
+
+  // Tax & Compliance
   [["/tax", "/subTax", "/tax-rule"], ["tax"]],
   [["/warranty"], ["warranty", "products"]],
-  [["/settings", "/setting", "/rotate"], ["admin", "platform", "fraud"]],
-  [["/supplier", "/goods-receive", "/stoks", "/inventory", "/store/store-page", "/product", "/purchase", "/sale", "/ledger", "/upload-file"], ["admin", "products"]],
+  [
+    [
+      "/shipping-company-users", "/shipping-packages",
+      "/shipping-profile", "/pickup-addresses", "/delivery-staff",
+      "/shipping-duration",
+    ],
+    ["delivery"],
+  ],
+
+  // Reports & Analytics
+  [
+    [
+      "/reports-sales", "/reports-products",
+      "/reports-inventory", "/reports-sellers",
+    ],
+    ["analytics"],
+  ],
+
+  // CMS / Content
+  [
+    [
+      "/content-management", "/content-management/all",
+      "/content-management/content", "/content-management/faq",
+      "/content-management/homepage-slide", "/content-management/banner-location",
+      "/content-management/promotion-banner", "/content-management/holiday",
+      "/content-management/privacy-policy", "/content-management/return-policy",
+      "/content-management/payment-policy", "/content-management/terms-and-conditions",
+      "/content-management/help-and-support",
+      "/privacy-policy",
+    ],
+    ["cms", "platform"],
+  ],
+
+  // Settings
+  [
+    ["/settings", "/setting", "/payment-settings", "/seo-settings", "/rotate"],
+    ["admin", "platform", "fraud"],
+  ],
+
+  // Notifications
+  [["/messages"], ["notifications", "users"]],
+
+  // Misc legacy
+  [
+    [
+      "/supplier", "/goods-receive", "/stoks", "/inventory",
+      "/store/store-page", "/product", "/purchase", "/sale",
+      "/ledger", "/upload-file",
+    ],
+    ["admin", "products"],
+  ],
 ];
 
 export const getModuleRoute = (moduleSlug) =>
@@ -172,14 +179,13 @@ export const getModuleRoute = (moduleSlug) =>
 
 export const isSelfServiceRoute = (path) => {
   const route = trimRoute(path);
-  return SELF_SERVICE_ROUTES.some((selfRoute) => route === selfRoute);
+  return SELF_SERVICE_ROUTES.some((r) => route === r);
 };
 
 export const getRouteModuleCandidates = (path) => {
   const route = trimRoute(path);
-  const matched = ROUTE_MODULES.find(([routePrefixes]) =>
-    routePrefixes.some((prefix) => route === prefix || route.startsWith(`${prefix}/`)),
+  const matched = ROUTE_MODULES.find(([prefixes]) =>
+    prefixes.some((p) => route === p || route.startsWith(`${p}/`))
   );
-
   return matched ? matched[1] : [];
 };
