@@ -146,12 +146,12 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   const isAuthenticated = localStorage.getItem("accessToken");
   const hasOnboardingToken = localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
-  if (
-    isSellerPanel() &&
-    (flowState?.requiresOnboarding || hasOnboardingToken)
-  ) {
-    return <Navigate to="/seller/onboarding" />;
-  }
+  // if (
+  //   isSellerPanel() &&
+  //   (flowState?.requiresOnboarding || hasOnboardingToken)
+  // ) {
+  //   return <Navigate to="/seller/onboarding" />;
+  // }
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
     clearStoredAuth();
     return <Navigate to="/login" />;
@@ -166,9 +166,9 @@ const PublicRoute = ({ component: Component, flowState, ...rest }) => {
   const hasOnboardingToken = localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   const sellerPanel = isSellerPanel();
-  if (sellerPanel && (flowState?.requiresOnboarding || hasOnboardingToken)) {
-    return <Navigate to="/seller/onboarding" />;
-  }
+  // if (sellerPanel && (flowState?.requiresOnboarding || hasOnboardingToken)) {
+  //   return <Navigate to="/seller/onboarding" />;
+  // }
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
     clearStoredAuth();
   } else if (

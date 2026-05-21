@@ -6,7 +6,7 @@ import { useAuthLayout } from "../../context/AuthLayoutContext";
 const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const activeUser = userData[currentUserIndex] || userDetails[0];
-  const { layoutConfig } = useAuthLayout();
+  const { formType, layoutConfig } = useAuthLayout();
 
   const authBackgroundImg =
     backgroundImg ||
@@ -98,7 +98,15 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
 
           {/* Right Panel - Form Container */}
           <div className="flex justify-center bg-[#F4F1ED]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
-            <div className="w-full max-w-md">{children}</div>
+            <div
+              className={
+                formType === "verificationComplete"
+                  ? "w-full max-w-[58rem]"
+                  : "w-full max-w-md"
+              }
+            >
+              {children}
+            </div>
           </div>
         </div>
       </div>

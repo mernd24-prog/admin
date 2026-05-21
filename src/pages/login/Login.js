@@ -297,7 +297,8 @@ const Login = () => {
             }),
           );
           toast.success("Verification complete. Continue seller onboarding.");
-          navigate("/seller/onboarding");
+          // navigate("/seller/onboarding");
+          setFormState("verificationComplete");
           return;
         }
         toast.success(response.payload?.message);
@@ -491,7 +492,9 @@ const Login = () => {
               }),
             );
             toast.success("Continue seller onboarding.");
-            navigate("/seller/onboarding");
+            // navigate("/seller/onboarding");
+            setFormState("verificationComplete");
+
             return;
           }
 
@@ -1006,7 +1009,7 @@ const Login = () => {
             className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex justify-center space-x-2 animate-fade-in">
+              <div className="flex space-x-2 ">
                 {[0, 1, 2, 3, 4, 5].map((index) => (
                   <input
                     key={index}
@@ -1271,6 +1274,36 @@ const Login = () => {
               </p>
             </div>
           </FormLayout>
+        );
+
+      case "verificationComplete":
+        return (
+          <div className="h-[45rem] w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)]">
+            <div className="flex flex-col items-center justify-center gap-6 p-8">
+              <img
+                src="/Img/auth-img/completed.png"
+                alt="Verification Complete"
+                className=""
+              />
+              <div>
+                <h1 className="font-extrabold text-blue text-4xl font-inter text-center leading-[50px]">
+                  Verification Complete!
+                  <br />
+                  <span className="text-ink font-semibold">
+                    You're One Step Closer to Selling
+                  </span>
+                </h1>
+                <h5 className="font-inter text-xl text-darkInk text-center max-w-2xl mt-8">
+                  Complete your KYC verification to activate your seller account
+                  and start listing products on the marketplace.
+                </h5>
+                <FormSubmitButton
+                  buttonLabel="Continue to KYC Verification"
+                  className="mt-8"
+                />
+              </div>
+            </div>
+          </div>
         );
       default:
         return null;

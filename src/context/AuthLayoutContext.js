@@ -8,6 +8,7 @@ export const AUTH_FORM_TYPES = {
   RESET_PASSWORD: "resetPassword",
   REGISTER: "register",
   REGISTER_VERIFICATION: "registerVerification",
+  VERIFICATION_COMPLETE: "verificationComplete",
 };
 
 const AUTH_LAYOUT_CONFIG = {
@@ -35,6 +36,9 @@ const AUTH_LAYOUT_CONFIG = {
   },
   [AUTH_FORM_TYPES.REGISTER_VERIFICATION]: {
     backgroundImg: "/Img/auth-img/verficationCodeBg.png",
+  },
+  [AUTH_FORM_TYPES.VERIFICATION_COMPLETE]: {
+    backgroundImg: "/Img/auth-img/verificationCompleteBg.png",
   },
 };
 
