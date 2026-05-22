@@ -28,16 +28,15 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
       <div className="w-full bg-white shadow-2xl lg:min-h-screen">
         <div className="grid grid-cols-1 lg:h-screen lg:grid-cols-[40%_60%]">
           {/* Left Panel - Dynamic Welcome Section */}
-          <div className="relative h-[460px] overflow-hidden bg-white sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
+          <div className=" lg:block hidden relative h-[460px] overflow-hidden bg-white sm:h-[560px] md:h-[640px] lg:h-auto lg:min-h-0">
             <img
               src={authBackgroundImg}
               alt="Background"
               className="absolute inset-x-0 -top-[14%] z-0 h-[84%] w-full object-cover object-top"
             />
-            <div className="absolute inset-x-0 bottom-[20%] z-10 h-[45%] bg-gradient-to-b from-transparent via-white/90 to-white" />
-            <div className="absolute inset-x-0 bottom-0 z-10 h-[22%] bg-white" />
+            <div className="absolute inset-x-0  bottom-[20%] z-10 h-[60%] xl:h-[45%] bg-gradient-to-b from-transparent via-white/90 to-white" />
 
-            <div className="absolute inset-x-4 bottom-4 z-20 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center sm:bottom-6 md:bottom-8 lg:bottom-[6rem]">
+            <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center  bottom-4  xl:bottom-[6rem]">
               <div className="h-12 w-12 sm:h-14 sm:w-14">
                 <img
                   src={activeUser.profileImg}
