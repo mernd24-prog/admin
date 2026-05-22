@@ -44,7 +44,6 @@ const VariantBuilder = ({
   const [optionSearch, setOptionSearch] = useState('');
   const [showOptionDropdown, setShowOptionDropdown] = useState(false);
   const [activeOptionIdx, setActiveOptionIdx] = useState(null);
-  const [valueInputs, setValueInputs] = useState({});    // { optIdx: string }
   const [expandedVariants, setExpandedVariants] = useState(new Set());
   const [uploadingVariant, setUploadingVariant] = useState(null);
   const optionSearchRef = useRef(null);
@@ -64,7 +63,7 @@ const VariantBuilder = ({
       (!optionSearch || (po.name || '').toLowerCase().includes(optionSearch.toLowerCase())),
   );
 
-  // ── Add option from platform or custom ─────────────────────────────────
+  // ── Add option from platform master ─────────────────────────────────────
 
   const addOptionFromPlatform = (po) => {
     onOptionsChange([
@@ -78,18 +77,6 @@ const VariantBuilder = ({
         required: false,
         sortOrder: options.length,
       },
-    ]);
-    setOptionSearch('');
-    setShowOptionDropdown(false);
-  };
-
-  const addCustomOption = () => {
-    const name = optionSearch.trim();
-    if (!name) return;
-    if (options.some((o) => o.name.toLowerCase() === name.toLowerCase())) return;
-    onOptionsChange([
-      ...options,
-      { name, displayType: 'button', values: [], valueCodes: {}, required: false, sortOrder: options.length },
     ]);
     setOptionSearch('');
     setShowOptionDropdown(false);
@@ -109,7 +96,6 @@ const VariantBuilder = ({
     const updatedCodes = { ...(opt.valueCodes || {}) };
     if (colorHex) updatedCodes[label] = colorHex;
     onOptionsChange(options.map((o, i) => (i !== optIdx ? o : { ...o, values: updatedValues, valueCodes: updatedCodes })));
-    setValueInputs((prev) => ({ ...prev, [optIdx]: '' }));
   };
 
   const removeValueFromOption = (optIdx, val) => {
@@ -226,7 +212,7 @@ const VariantBuilder = ({
       <div>
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-semibold text-gray-800">Variant Options</h4>
-          <p className="text-xs text-gray-400">Search or type to add · Drag to reorder</p>
+          <p className="text-xs text-gray-400">Search option masters and drag to reorder</p>
         </div>
 
         {/* Option rows */}
@@ -333,48 +319,11 @@ const VariantBuilder = ({
                       </div>
                     )}
 
-                    {/* Custom value input */}
-                    <div>
-                      {pValues.length > 0 && (
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Or add a custom value</p>
-                      )}
-                      <div className="flex gap-2 items-center">
-                        {option.displayType === 'color_swatch' && (
-                          <input
-                            type="color"
-                            className="w-8 h-7 rounded border border-gray-300 cursor-pointer p-0.5"
-                            defaultValue="#000000"
-                            id={`colorpicker-${optIdx}`}
-                          />
-                        )}
-                        <input
-                          type="text"
-                          className="flex-1 border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3E4094]"
-                          placeholder={`Custom ${option.name} value…`}
-                          value={valueInputs[optIdx] || ''}
-                          onChange={(e) => setValueInputs((prev) => ({ ...prev, [optIdx]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const colorEl = document.getElementById(`colorpicker-${optIdx}`);
-                              const hex = option.displayType === 'color_swatch' && colorEl ? colorEl.value : '';
-                              addValueToOption(optIdx, (valueInputs[optIdx] || '').trim(), hex);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const colorEl = document.getElementById(`colorpicker-${optIdx}`);
-                            const hex = option.displayType === 'color_swatch' && colorEl ? colorEl.value : '';
-                            addValueToOption(optIdx, (valueInputs[optIdx] || '').trim(), hex);
-                          }}
-                          className="px-3 py-1 bg-[#3E4094] text-white text-xs rounded-md whitespace-nowrap"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
+                    {!pValues.length && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded px-3 py-2">
+                        No active values found for this option master. Add values in Product Option Values first.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -388,21 +337,12 @@ const VariantBuilder = ({
             <input
               type="text"
               className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
-              placeholder="Search or type attribute name (Color, Size, RAM…)"
+              placeholder="Search option master (Color, Size, RAM...)"
               value={optionSearch}
               onChange={(e) => { setOptionSearch(e.target.value); setShowOptionDropdown(true); }}
               onFocus={() => setShowOptionDropdown(true)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (filteredPlatformOptions.length === 1) addOptionFromPlatform(filteredPlatformOptions[0]); else if (!filteredPlatformOptions.length && optionSearch.trim()) addCustomOption(); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (filteredPlatformOptions.length === 1) addOptionFromPlatform(filteredPlatformOptions[0]); } }}
             />
-            {optionSearch.trim() && !filteredPlatformOptions.some((p) => p.name.toLowerCase() === optionSearch.toLowerCase()) && (
-              <button
-                type="button"
-                onClick={addCustomOption}
-                className="px-4 py-2 border border-[#3E4094] text-[#3E4094] text-sm rounded-md hover:bg-[#3E4094]/5 whitespace-nowrap"
-              >
-                + Custom
-              </button>
-            )}
           </div>
 
           {/* Dropdown */}
@@ -419,15 +359,10 @@ const VariantBuilder = ({
                   <span className="text-xs text-gray-400 capitalize">{(po.displayType || 'button').replace('_', ' ')}</span>
                 </button>
               ))}
-              {optionSearch.trim() && !filteredPlatformOptions.some((p) => p.name.toLowerCase() === optionSearch.toLowerCase()) && (
-                <button
-                  type="button"
-                  onClick={addCustomOption}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#3E4094] hover:bg-indigo-50 font-medium"
-                >
-                  <span>+</span>
-                  <span>Add "{optionSearch.trim()}" as custom attribute</span>
-                </button>
+              {optionSearch.trim() && !filteredPlatformOptions.length && (
+                <div className="px-3 py-2 text-sm text-gray-400">
+                  No active option master found.
+                </div>
               )}
             </div>
           )}

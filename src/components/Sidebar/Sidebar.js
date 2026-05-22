@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   MdChevronRight, MdOutlineDashboard, MdInventory, MdWarehouse,
   MdShoppingCart, MdPeople, MdCampaign, MdAccountBalance,
-  MdBarChart, MdSettings, MdStorefront, MdSecurity,
+  MdBarChart, MdSettings, MdStorefront, MdSecurity, MdLocationOn,
 } from 'react-icons/md';
 import { CiSettings } from 'react-icons/ci';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
@@ -55,7 +55,7 @@ export const SUPPORTED_ADMIN_ROUTES = new Set([
   // Misc (keep backward-compat)
   'batch', 'finish', 'product-variants', 'product-dimensions', 'product-tags',
   'threshold-products', 'hsn-code', 'bar-code', 'qty-head', 'colors',
-  'country', 'state', 'city', 'zipcode',
+  'country', 'state', 'city', 'zipcode', 'zip-codes', 'locations',
 ]);
 
 // ─── Tab groupings (module slug → sidebar section label) ─────────────────────
@@ -95,6 +95,8 @@ const getTabName = (slug) => {
     // Settings
     fraud: 'Settings',
     cms:   'Settings',
+    // Location Management
+    locations: 'Location Management',
   };
   return map[slug] || 'Settings';
 };
@@ -187,6 +189,13 @@ const MODULE_ROUTE_EXPANSIONS = {
   ],
   // Content (legacy alias)
   content: CONTENT_SIDEBAR_ROUTES,
+  // Location Management
+  locations: [
+    { label: 'Countries',         route: 'country'    },
+    { label: 'States',            route: 'state'      },
+    { label: 'Cities',            route: 'city'       },
+    { label: 'Zip / Pin Codes',   route: 'zip-codes'  },
+  ],
 };
 
 // ─── Seller panel sections ────────────────────────────────────────────────────
@@ -213,6 +222,7 @@ const SECTION_ICONS = {
   'tax & compliance':    MdAccountBalance,
   'reports & analytics': MdBarChart,
   'settings':            CiSettings,
+  'location management': MdLocationOn,
 };
 
 const getIconForTab = (tabName) =>

@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { firstId, toListParams, unsupportedThunk } from '../_helpers/adminApi';
+import { firstId, toListParams } from '../_helpers/adminApi';
 
 const initialState = {
     getCityListData: {},
@@ -9,10 +9,6 @@ const initialState = {
     editData: {},
     enableDisableCityData: {},
     getAllCityListData: {},
-    getRibbonsListData: {},
-    deleteRibbonData: {},
-    updateRibbonData: {},
-    createRibbonData: {},
 };
 
 const getStateId = (payload = {}) =>
@@ -100,14 +96,6 @@ export const getAllCityList = createApiThunkPrivate(
     }
 );
 
-//////////Ribbons/////////////
-const RIBBON_UNSUPPORTED_MESSAGE =
-    'Ribbon API is not exposed by the current backend.';
-export const getRibbonsList = unsupportedThunk('getRibbonsList', RIBBON_UNSUPPORTED_MESSAGE)
-export const enableDisableRibbon = unsupportedThunk('enableDisableRibbon', RIBBON_UNSUPPORTED_MESSAGE)
-export const deleteRibbon = unsupportedThunk('deleteRibbon', RIBBON_UNSUPPORTED_MESSAGE)
-export const updateRibbon = unsupportedThunk('updateRibbon', RIBBON_UNSUPPORTED_MESSAGE)
-export const createRibbon = unsupportedThunk('createRibbon', RIBBON_UNSUPPORTED_MESSAGE)
 
 const citySlice = createSlice({
     name: 'city',
@@ -118,11 +106,6 @@ const citySlice = createSlice({
         createExtraReducersForThunk(builder, edit, 'editData')
         createExtraReducersForThunk(builder, enableDisableCity, 'enableDisableCityData')
         createExtraReducersForThunk(builder, getAllCityList, 'getAllCityListData')
-        createExtraReducersForThunk(builder, getRibbonsList, 'getRibbonsListData')
-        createExtraReducersForThunk(builder, enableDisableRibbon, 'enableDisableRibbonData')
-        createExtraReducersForThunk(builder, deleteRibbon, 'deleteRibbonData')
-        createExtraReducersForThunk(builder, updateRibbon, 'updateRibbonData')
-        createExtraReducersForThunk(builder, createRibbon, 'createRibbonData')
     }
 });
 

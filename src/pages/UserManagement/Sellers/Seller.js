@@ -5,7 +5,7 @@ import { ActionButtons } from '../../../components/Atoms/TableActionButton/Table
 import { useDispatch, useSelector } from 'react-redux';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { createSeller, enableDisableSeller, getSellerList, reviewSellerKyc, updatePasswordSeller, updateSeller, updateSellerBankStatus, updateSellerGoLive } from '../../../Redux/userManagementSlice';
+import { createSeller, enableDisableSeller, getSellerList, reviewSellerKyc, updateSeller, updateSellerBankStatus, updateSellerGoLive } from '../../../Redux/userManagementSlice';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
@@ -36,12 +36,7 @@ const Sellers = () => {
     const [isRefresh, setIsRefresh] = useState(false);
     const [isOpenAddModal, setIsOpenAddModal] = useState(false);
     const [isOpenEditModal, setIsEditModal] = useState(false);
-    const [isOpenPassword, setIsOpenPassword] = useState(false);
     const [selectedRow, setSelectedRow] = useState([]);
-    const [passwordForm, setPasswordForm] = useState({
-        password: '',
-        confirmPassword: ''
-    });
     const [isKycReviewOpen, setIsKycReviewOpen] = useState(false);
     const [isBankReviewOpen, setIsBankReviewOpen] = useState(false);
     const [kycForm, setKycForm] = useState({
@@ -53,10 +48,6 @@ const Sellers = () => {
         sellerId: '',
         bankVerificationStatus: 'verified',
         bankRejectionReason: ''
-    });
-    const [passwordErrors, setPasswordErrors] = useState({
-        password: '',
-        confirmPassword: ''
     });
     const size = 10;
 
@@ -230,22 +221,6 @@ const Sellers = () => {
             }
         }
     };
-    const handlePasswordChange = e => {
-        const { name, value } = e.target;
-        setPasswordForm(prevData => ({
-            ...prevData,
-            [name]: value
-        }));
-
-        // Clear error when user types
-        if (passwordErrors[name]) {
-            setPasswordErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
-        }
-    };
-
     const handleEditUserSubmit = async (e) => {
         e.preventDefault();
 
@@ -374,85 +349,6 @@ const Sellers = () => {
         setPageNo(1);
         setIsRefresh(!isRefresh);
     }, [isRefresh]);
-    const closeUpdatePassword = () => {
-        setIsOpenPassword(false);
-        setPasswordForm({
-            password: '',
-            confirmPassword: ''
-        });
-        setPasswordErrors({
-            password: '',
-            confirmPassword: ''
-        });
-    };
-    const validatePasswordForm = () => {
-        const newErrors = {};
-        let isValid = true;
-
-        if (!passwordForm.password.trim()) {
-            newErrors.password = 'Password is required';
-            isValid = false;
-        } else if (passwordForm.password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters long';
-            isValid = false;
-        } else if (passwordForm.password.length > 15) {
-            newErrors.password = 'Password should be maximum 15 characters long';
-            isValid = false;
-        }
-        else if (!/[A-Z]/.test(passwordForm.password)) {
-            newErrors.password = 'Password must contain at least one uppercase letter';
-            isValid = false;
-        } else if (!/[a-z]/.test(passwordForm.password)) {
-            newErrors.password = 'Password must contain at least one lowercase letter';
-            isValid = false;
-        } else if (!/[0-9]/.test(passwordForm.password)) {
-            newErrors.password = 'Password must contain at least one number';
-            isValid = false;
-        } else if (!/[^A-Za-z0-9]/.test(passwordForm.password)) {
-            newErrors.password = 'Password must contain at least one special character';
-            isValid = false;
-        }
-
-        // Confirm password validation
-        if (!passwordForm.confirmPassword.trim()) {
-            newErrors.confirmPassword = 'Please confirm your password';
-            isValid = false;
-        } else if (passwordForm.password !== passwordForm.confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
-            isValid = false;
-        }
-
-        setPasswordErrors(newErrors);
-        return isValid;
-    };
-    const handleSubmitUpdatePassword = (e) => {
-        e.preventDefault();
-
-        if (!validatePasswordForm()) return;
-
-        const reqData = {
-            _id: formData._id,
-            password: passwordForm.password,
-            confirmPassword: passwordForm.confirmPassword
-        };
-
-        dispatch(updatePasswordSeller(reqData))
-            .unwrap()
-            .then((res) => {
-                if (res.error) {
-                    toast.error(res.error);
-                } else {
-                    toast.success(res.message || "Password updated successfully");
-                    closeUpdatePassword();
-                    setIsRefresh(!isRefresh);
-                }
-            })
-            .catch((error) => {
-                console.log("error", error);
-                toast.error(error.message || "Error in updating password");
-            });
-    };
-
     const handleOpenKycReview = (user, nextStatus) => {
         setKycForm({
             sellerId: user._id,
@@ -621,16 +517,9 @@ const Sellers = () => {
                         });
                         setIsEditModal(true);
                     }}
-                    onPasswordChange={() => {
-                        setForm({
-                            _id: user._id,
-                            full_name: user.full_name
-                        });
-                        setIsOpenPassword(true);
-                    }}
                     showDeleteButton={false}
                     showLinkButton={false}
-                    showPasswordButton={true}
+                    showPasswordButton={false}
                     showEditButton={true}
                     viewButton={true}
                     onViewClick={() => navigate(`/app/seller/view/${user._id}`)}
@@ -990,42 +879,6 @@ const Sellers = () => {
                     onConfirm={handleDisableFunc}
                     heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this seller?`}
                 />
-                <DefaultMiddleModal
-                    isOpen={isOpenPassword}
-                    onClose={closeUpdatePassword}
-                    onSubmit={handleSubmitUpdatePassword}
-                    isButtonView={true}
-                    submitButtonText="Update"
-                    closeButtonText="Cancel"
-                    title="Update Password"
-                >
-                    <div className='pb-4'>
-                        <div className="mb-4">
-                            <FormInput
-                                label="New Password"
-                                name="password"
-                                type="password"
-                                value={passwordForm.password}
-                                onChange={handlePasswordChange}
-                                error={passwordErrors.password}
-                                maxLength={15}
-                                required
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <FormInput
-                                label="Confirm Password"
-                                name="confirmPassword"
-                                type="password"
-                                value={passwordForm.confirmPassword}
-                                onChange={handlePasswordChange}
-                                error={passwordErrors.confirmPassword}
-                                maxLength={15}
-                                required
-                            />
-                        </div>
-                    </div>
-                </DefaultMiddleModal>
             </div>
         </>
     )

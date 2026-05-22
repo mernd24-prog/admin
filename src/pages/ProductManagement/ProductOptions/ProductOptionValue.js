@@ -8,7 +8,6 @@ import {
   createPlatformOptionValue,
   updatePlatformOptionValue,
   deletePlatformOptionValue,
-  updatePlatformOption,
 } from '../../../Redux/adminCoreSlice';
 import Loader from '../../../components/Loader/Loader';
 import Pagination from '../../../components/Pagination/Pagination';
@@ -21,6 +20,23 @@ const idOf = (r) => r?._id || r?.id || '';
 
 const emptyForm = { name: '', valueCode: '', colorHex: '', imageUrl: '', sortOrder: 0, active: true };
 
+const getListPayload = (sliceData = {}) => {
+  const payload =
+    sliceData?.data?.data ||
+    sliceData?.data?.normalized?.data ||
+    sliceData?.normalized?.data ||
+    sliceData?.data ||
+    {};
+  if (Array.isArray(payload)) return payload;
+  return payload.list || payload.items || [];
+};
+
+const getTotal = (sliceData = {}, fallback = 0) =>
+  sliceData?.data?.meta?.total ||
+  sliceData?.data?.data?.total ||
+  sliceData?.data?.total ||
+  fallback;
+
 export default function ProductOptionValue() {
   const { id: optionId } = useParams();
   const dispatch = useDispatch();
@@ -30,6 +46,8 @@ export default function ProductOptionValue() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [parentOption, setParentOption] = useState(null);
+  const [optionFilter, setOptionFilter] = useState(optionId || '');
+  const [optionMasters, setOptionMasters] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -37,31 +55,37 @@ export default function ProductOptionValue() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const raw = selector?.platformOptionValuesData?.data;
-  const items = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
-  const total = selector?.platformOptionValuesData?.meta?.total || raw?.total || items.length;
+  const items = getListPayload(selector?.platformOptionValuesData);
+  const total = getTotal(selector?.platformOptionValuesData, items.length);
   const loading = selector?.loading;
 
+  const selectedOptionId = optionId || optionFilter;
   const isColorSwatch = parentOption?.displayType === 'color_swatch';
   const isThumbnail = parentOption?.displayType === 'thumbnail';
 
   // Load parent option info
   useEffect(() => {
-    if (!optionId) return;
-    dispatch(getPlatformOptions({ limit: 200 }))
+    dispatch(getPlatformOptions({ limit: 100 }))
       .unwrap()
       .then((res) => {
         const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
-        const found = list.find((o) => idOf(o) === optionId);
+        setOptionMasters(list);
+        const found = list.find((o) => idOf(o) === selectedOptionId);
         if (found) setParentOption(found);
+        if (!optionId && !optionFilter && list[0]) setOptionFilter(idOf(list[0]));
       })
       .catch(() => {});
-  }, [dispatch, optionId]);
+  }, [dispatch, optionId, optionFilter, selectedOptionId]);
+
+  useEffect(() => {
+    const found = optionMasters.find((o) => idOf(o) === selectedOptionId);
+    setParentOption(found || null);
+  }, [optionMasters, selectedOptionId]);
 
   const load = useCallback(() => {
-    if (!optionId) return;
-    dispatch(getPlatformOptionValues({ optionId, page, limit: PAGE_SIZE, q: search || undefined }));
-  }, [dispatch, optionId, page, search]);
+    if (!selectedOptionId) return;
+    dispatch(getPlatformOptionValues({ optionId: selectedOptionId, page, limit: PAGE_SIZE, q: search || undefined }));
+  }, [dispatch, selectedOptionId, page, search]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -100,10 +124,10 @@ export default function ProductOptionValue() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(updatePlatformOptionValue({ id: idOf(editing), optionId, ...form })).unwrap();
+        await dispatch(updatePlatformOptionValue({ id: idOf(editing), optionId: selectedOptionId, optionName: parentOption?.name || '', ...form })).unwrap();
         toast.success('Value updated');
       } else {
-        await dispatch(createPlatformOptionValue({ optionId, ...form })).unwrap();
+        await dispatch(createPlatformOptionValue({ optionId: selectedOptionId, optionName: parentOption?.name || '', ...form })).unwrap();
         toast.success('Value created');
       }
       closeModal();
@@ -129,7 +153,7 @@ export default function ProductOptionValue() {
 
   const handleToggleActive = async (row) => {
     try {
-      await dispatch(updatePlatformOptionValue({ id: idOf(row), optionId, active: !row.active })).unwrap();
+      await dispatch(updatePlatformOptionValue({ id: idOf(row), optionId: selectedOptionId, active: !row.active })).unwrap();
       toast.success(row.active ? 'Disabled' : 'Enabled');
       load();
     } catch (err) {
@@ -154,14 +178,14 @@ export default function ProductOptionValue() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/product-options')}
+            onClick={() => navigate('/app/product-options')}
             className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
-            ← Attributes
+            ← Option Masters
           </button>
           <div>
             <h1 className="text-xl font-semibold text-gray-800">
-              {parentOption?.name || 'Attribute'} Values
+              {parentOption?.name || 'Option'} Values
             </h1>
             {parentOption?.displayType && (
               <p className="text-xs text-gray-400 mt-0.5">
@@ -177,6 +201,17 @@ export default function ProductOptionValue() {
 
       {/* Search */}
       <div className="flex gap-2">
+        {!optionId && (
+          <select
+            value={selectedOptionId}
+            onChange={(e) => { setOptionFilter(e.target.value); setPage(1); }}
+            className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            {optionMasters.map((option) => (
+              <option key={idOf(option)} value={idOf(option)}>{option.name}</option>
+            ))}
+          </select>
+        )}
         <input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -202,7 +237,7 @@ export default function ProductOptionValue() {
             {items.length === 0 && !loading ? (
               <tr>
                 <td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-400">
-                  No values yet. Click "Add" to create the first value for this attribute.
+                  No values yet. Click "Add" to create the first reusable value for this option.
                 </td>
               </tr>
             ) : (
@@ -256,7 +291,7 @@ export default function ProductOptionValue() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-5">
-              {editing ? `Edit "${editing.name}"` : `Add value to "${parentOption?.name || 'Attribute'}"`}
+              {editing ? `Edit "${editing.name}"` : `Add value to "${parentOption?.name || 'Option'}"`}
             </h2>
 
             <div className="space-y-4">

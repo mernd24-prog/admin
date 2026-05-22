@@ -13,7 +13,6 @@ import storeReducer from './StoreSlice'
 import badgeReducer from './badgeSlice'
 import cmsReducer from './cmsSlice'
 import promotionsReducer from './promotionsSlice'
-import erpReducer from './erpSlice'
 import orderReducer from './orderSlice'
 import sellerReducer from './seller-slice'
 import adminCoreReducer from './adminCoreSlice'
@@ -46,7 +45,6 @@ export const store = configureStore({
     badge: badgeReducer,
     cms: cmsReducer,
     promotions: promotionsReducer,
-    erp:erpReducer,
     order: orderReducer
     ,
     seller: sellerReducer,

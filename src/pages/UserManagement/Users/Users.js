@@ -6,10 +6,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { createUser, enableDisableUser, getUserList, update, updatePasswordUser } from '../../../Redux/userManagementSlice';
+import { createUser, enableDisableUser, getUserList, update } from '../../../Redux/userManagementSlice';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
-import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 import { toast } from 'sonner';
 import Pagination from '../../../components/Pagination/Pagination';
@@ -38,17 +37,8 @@ const Users = () => {
   const [errors, setErrors] = useState({});
   const [filters, setFilters] = useState({ search: "" });
   const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenPassword, setIsOpenPassword] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    password: '',
-    confirmPassword: ''
-  });
   const [isOpenAddModal, setIsOpenAddModal] = useState(false);
   const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState({
-    password: '',
-    confirmPassword: ''
-  });
   const [selectedRow, setSelectedRow] = useState([]);
 
   const onPageChange = (newPageNo) => {
@@ -124,103 +114,6 @@ const Users = () => {
     return isValid;
   };
 
-
-  const closeUpdatePassword = () => {
-    setIsOpenPassword(false);
-    setPasswordForm({
-      password: '',
-      confirmPassword: ''
-    });
-    setPasswordErrors({
-      password: '',
-      confirmPassword: ''
-    });
-  };
-
-  const handlePasswordChange = e => {
-    const { name, value } = e.target;
-    setPasswordForm(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-
-    // Clear error when user types
-    if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validatePasswordForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!passwordForm.password.trim()) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (passwordForm.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-      isValid = false;
-    } else if (passwordForm.password.length > 15) {
-      newErrors.password = 'Password should be maximum 15 characters long';
-      isValid = false;
-    }
-    else if (!/[A-Z]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter';
-      isValid = false;
-    } else if (!/[a-z]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one lowercase letter';
-      isValid = false;
-    } else if (!/[0-9]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one number';
-      isValid = false;
-    } else if (!/[^A-Za-z0-9]/.test(passwordForm.password)) {
-      newErrors.password = 'Password must contain at least one special character';
-      isValid = false;
-    }
-
-    // Confirm password validation
-    if (!passwordForm.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
-      isValid = false;
-    } else if (passwordForm.password !== passwordForm.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-      isValid = false;
-    }
-
-    setPasswordErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmitUpdatePassword = (e) => {
-    e.preventDefault();
-
-    if (!validatePasswordForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      password: passwordForm.password,
-      confirmPassword: passwordForm.confirmPassword
-    };
-
-    dispatch(updatePasswordUser(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Password updated successfully");
-          closeUpdatePassword();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in updating password");
-      });
-  };
 
   const handleClose = () => {
     setIsOpenAddModal(false);
@@ -344,13 +237,6 @@ const Users = () => {
             isDisable: user.isDisable
           });
           setIsEditModal(true);
-        }}
-        onPasswordChange={() => {
-          setForm({
-            _id: user._id,
-            full_name: user.full_name
-          });
-          setIsOpenPassword(true);
         }}
         showEditButton={false}
         showDeleteButton={false}
@@ -812,42 +698,6 @@ const Users = () => {
           heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this user?`}
         />
 
-        <DefaultMiddleModal
-          isOpen={isOpenPassword}
-          onClose={closeUpdatePassword}
-          onSubmit={handleSubmitUpdatePassword}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Update Password"
-        >
-          <div className='pb-4'>
-            <div className="mb-4">
-              <FormInput
-                label="New Password"
-                name="password"
-                type="password"
-                value={passwordForm.password}
-                onChange={handlePasswordChange}
-                error={passwordErrors.password}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <FormInput
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={handlePasswordChange}
-                error={passwordErrors.confirmPassword}
-                maxLength={15}
-                required
-              />
-            </div>
-          </div>
-        </DefaultMiddleModal>
       </div>
     </>
   )

@@ -571,14 +571,14 @@ export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProduc
 
 // Platform attribute options (admin-managed: Color, Size, RAM, etc.)
 export const getPlatformOptions = createApiThunkPrivate("adminCore/getPlatformOptions", ENDPOINTS.platform.productOptions, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "active"]) });
-export const createPlatformOption = createApiThunkPrivate("adminCore/createPlatformOption", ENDPOINTS.platform.productOptions, "POST", false, { transformBody: (_, p) => pickPayload(p, ["name", "displayType", "description", "active"]) });
-export const updatePlatformOption = createApiThunkPrivate("adminCore/updatePlatformOption", (p) => ENDPOINTS.platform.productOption(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["name", "displayType", "description", "active"]) });
+export const createPlatformOption = createApiThunkPrivate("adminCore/createPlatformOption", ENDPOINTS.platform.productOptions, "POST", false, { transformBody: (_, p) => pickPayload(p, ["name", "slug", "displayType", "description", "active"]) });
+export const updatePlatformOption = createApiThunkPrivate("adminCore/updatePlatformOption", (p) => ENDPOINTS.platform.productOption(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["name", "slug", "displayType", "description", "active"]) });
 export const deletePlatformOption = createApiThunkPrivate("adminCore/deletePlatformOption", (p) => ENDPOINTS.platform.productOption(p.id || p._id), "DELETE", false, { transformParams: noParams });
 
 // Platform attribute values (Red/Blue for Color, S/M/L for Size, etc.)
 export const getPlatformOptionValues = createApiThunkPrivate("adminCore/getPlatformOptionValues", ENDPOINTS.platform.productOptionValues, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "optionId", "option_id", "active"]) });
-export const createPlatformOptionValue = createApiThunkPrivate("adminCore/createPlatformOptionValue", ENDPOINTS.platform.productOptionValues, "POST", false, { transformBody: (_, p) => pickPayload(p, ["optionId", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
-export const updatePlatformOptionValue = createApiThunkPrivate("adminCore/updatePlatformOptionValue", (p) => ENDPOINTS.platform.productOptionValue(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["optionId", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
+export const createPlatformOptionValue = createApiThunkPrivate("adminCore/createPlatformOptionValue", ENDPOINTS.platform.productOptionValues, "POST", false, { transformBody: (_, p) => pickPayload(p, ["optionId", "optionName", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
+export const updatePlatformOptionValue = createApiThunkPrivate("adminCore/updatePlatformOptionValue", (p) => ENDPOINTS.platform.productOptionValue(p.id || p._id), "PATCH", false, { transformBody: (_, p) => pickPayload(omitPayload(p, ["id", "_id"]), ["optionId", "optionName", "name", "valueCode", "colorHex", "imageUrl", "sortOrder", "active"]) });
 export const deletePlatformOptionValue = createApiThunkPrivate("adminCore/deletePlatformOptionValue", (p) => ENDPOINTS.platform.productOptionValue(p.id || p._id), "DELETE", false, { transformParams: noParams });
 
 export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/getPermissionManagementModules", ENDPOINTS.rbac.permissionManagementModules, "GET", true, {

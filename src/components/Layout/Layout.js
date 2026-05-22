@@ -12,63 +12,16 @@ import {
   isSelfServiceRoute,
 } from "../../_helpers/rbacRoutes";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
-import Badge from "../../pages/Admin/Badge/Badge";
-import QtyHead from "../../pages/Admin/QTY/QtyHead";
-import Batch from "../../pages/ProductManagement/Batch/Batch";
+ 
 import Tax from "../../pages/Tax/Tax";
 import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
-import ShippingDurations from "../../pages/ShippingPickup/ShippingDurations/ShippingDurations";
-import PromotionsBanner from "../../pages/Admin/PromotionsBanner/PromotionsBanner";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
-import Settings from "../../pages/Setting/Setting";
-import BulkUploadProduct from "../../pages/ProductManagement/BulkUploadProduct";
-import DeliveryStaff from '../../pages/UserManagement/DeliveryStaff/DeliveryStaff.js';
-import CircularMenu from '../../pages/Admin/Orbit/Orbit.js';
 
-const UnavailableRoute = () => (
-  <div className="m-6 bg-white p-6 text-sm text-gray-600">
-    This module is not available in the current admin build.
-  </div>
-);
+ 
 
-const MaterialStatus = UnavailableRoute;
-const Reconciliation = UnavailableRoute;
-const ReturnNote = UnavailableRoute;
-const ReturnNotePreview = UnavailableRoute;
-const StorePage = UnavailableRoute;
-const Product = UnavailableRoute;
-const CategoryPage = UnavailableRoute;
-const SubCategoryPage = UnavailableRoute;
-const ProductStorePage = UnavailableRoute;
-const ProductSupplierPage = UnavailableRoute;
-const WarningPage = UnavailableRoute;
-const BrandPage = UnavailableRoute;
-const QtyheadPage = UnavailableRoute;
-const WarrantyPage = UnavailableRoute;
-const HsnCodePage = UnavailableRoute;
-const BarCodePage = UnavailableRoute;
-const AddNewProduct = UnavailableRoute;
-const Purchase = UnavailableRoute;
-const AddNewPurchase = UnavailableRoute;
-const PurchaseOrderPreview = UnavailableRoute;
-const PurchaseDetails = UnavailableRoute;
-const GoodsReceivedDetails = UnavailableRoute;
-const SalePage = UnavailableRoute;
-const AddNewSale = UnavailableRoute;
-const SalesInvoicePage = UnavailableRoute;
-const SaleDetailPage = UnavailableRoute;
-const Ledger = UnavailableRoute;
-const VenderLedger = UnavailableRoute;
-const MaterialReceived = UnavailableRoute;
-const ReturnNoteLedger = UnavailableRoute;
-const SupplierViewPage = UnavailableRoute;
-const CreateInventory = UnavailableRoute;
-const Inventory = UnavailableRoute;
-const ViewInventory = UnavailableRoute;
-const Stocks = UnavailableRoute;
-const ReceiveOrderDetails = UnavailableRoute;
+
 const Dashboard = React.lazy(() => import("../../pages/dashboard/Dashboard"));
 const AdminUsers = React.lazy(() =>
   import("../../pages/UserManagement/Adminusers/AdminUsers")
@@ -82,12 +35,9 @@ const UserDetails = React.lazy(() =>
 const UsersTransactions = React.lazy(() =>
   import("../../pages/UserManagement/UsersTransactions/UsersTransactions")
 );
-const UsersAddresses = React.lazy(() =>
-  import("../../pages/UserManagement/UsersAddresses/UsersAddresses")
-);
-const UserMessages = React.lazy(() =>
-  import("../../pages/UserManagement/UserMessages/UserMessages")
-);
+ 
+
+ 
 const ProductCatalog = React.lazy(() =>
   import("../../pages/ProductManagement/ProductCatalog/ProductCatalog")
 );
@@ -156,9 +106,7 @@ const DiscountCoupons = React.lazy(() =>
 const ReferralCommerce = React.lazy(() =>
   import("../../pages/ReferralCommerce/ReferralCommerce")
 );
-const Ribbons = React.lazy(() =>
-  import("../../pages/Promotions/Ribbons/Ribbons")
-);
+ 
 const ShippingCompanyUsers = React.lazy(() =>
   import("../../pages/ShippingPickup/ShippingCompanyUsers/ShippingCompanyUsers")
 );
@@ -168,9 +116,7 @@ const ShippingPackages = React.lazy(() =>
 const ShippingProfiles = React.lazy(() =>
   import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles")
 );
-const PickupAddresses = React.lazy(() =>
-  import("../../pages/ShippingPickup/PickupAddresses/PickupAddresses")
-);
+ 
 const AddEditProductPopup = React.lazy(() =>
   import(
     "../../pages/ProductManagement/ProductCatalog/components/AddEditProduct"
@@ -207,6 +153,9 @@ const ManageState = React.lazy(() =>
 const ManageCity = React.lazy(() =>
   import("../../pages/UserManagement/ManageCity/ManageCity")
 );
+const ManageZipCode = React.lazy(() =>
+  import("../../pages/UserManagement/ManageZipCode/ManageZipCode")
+);
 const ContentManagement = React.lazy(() =>
   import("../../pages/CMS/ContentManagement/ContentManagement")
 );
@@ -225,10 +174,7 @@ const Profile = React.lazy(() => import("../../pages/My Profile/Profile"));
 const ChangePassword = React.lazy(() =>
   import("../../pages/Change Password/ChangePassword")
 );
-const Setting = React.lazy(() => import("../../pages/Setting/Setting"));
-const ManageZipcode = React.lazy(() =>
-  import("../../pages/UserManagement/ManageZipCode/ManageZipCode")
-);
+ 
 const TaxStructure = React.lazy(() =>
   import("../../pages/Admin/Tax/TaxStructure")
 );
@@ -236,9 +182,8 @@ const TaxCategory = React.lazy(() =>
   import("../../pages/Admin/Tax/TaxCategory")
 );
 const TaxRules = React.lazy(() => import("../../pages/Admin/Tax/TaxRules"));
-const Collections = React.lazy(() =>
-  import("../../pages/Admin/Collection/Collections")
-);
+ 
+ 
 const ProductVariants = React.lazy(() =>
   import("../../pages/ProductManagement/ProductVariants/ProductVariants")
 );
@@ -251,16 +196,11 @@ const ProductFlow = React.lazy(() =>
 const ProductDimensions = React.lazy(() =>
   import("../../pages/ProductManagement/ProductDimensions/ProductDimensions")
 );
-const Pattern = React.lazy(() => import("../../pages/Admin/Pattern/Pattern"));
 const FinishProducts = React.lazy(() =>
   import("../../pages/ProductManagement/FinishProduct/FinishProduct")
 );
-const ColorManagement = React.lazy(() =>
-  import("../../pages/Admin/Colors/ColorManagement")
-);
-const PrivacyPolicy = React.lazy(() =>
-  import("../../pages/Setting/Components/PrivacyPolicy")
-);
+ 
+ 
 const ProductWarranty = React.lazy(() =>
   import("../../pages/ProductManagement/ProductWarranty/ProductWarranty")
 );
@@ -273,10 +213,7 @@ const UserPermissions = React.lazy(() =>
 const SellerSubAdminManagement = React.lazy(() =>
   import("../../pages/SellerManagement/SellerSubAdminManagement")
 );
-const Supplier = UnavailableRoute;
-const AddSupplier = UnavailableRoute;
-const MedPharama = UnavailableRoute;
-
+ 
 // ── Inventory Management ────────────────────────────────────────────────────
 const InventoryOverview    = React.lazy(() => import('../../pages/Inventory/InventoryOverview'));
 const VariantInventory     = React.lazy(() => import('../../pages/Inventory/VariantInventory'));
@@ -295,6 +232,9 @@ const RolesPermissions = React.lazy(() => import('../../pages/UserManagement/Rol
 const ActivityLogs     = React.lazy(() => import('../../pages/UserManagement/ActivityLogs/ActivityLogs'));
 
 
+ 
+
+ 
 const getStoredSidebarState = () => {
   try {
     const expandedState = sessionStorage.getItem("sidebarExpandedState");
@@ -310,11 +250,15 @@ function Layout() {
   const [moduleName, setModuleName] = useState("");
   const [isExpanded, setIsExpanded] = useState(getStoredSidebarState);
   const [isRefreshConfig, setIsRefreshConfig] = useState(false);
-  const socket = socketConnection();
+  const [socket, setSocket] = useState(null);
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
   const [hasPermanentOpen, setHasPermanentOpen] = useState(getStoredSidebarState);
+
+  useEffect(() => {
+    setSocket(socketConnection());
+  }, []);
 
   const modulePermissions = useMemo(() => {
     const permMap = {};
@@ -349,13 +293,13 @@ function Layout() {
   useEffect(() => {
     socket?.on("refreshed-configurations", (data) => {
       setIsPermissionShow(true);
-      setIsRefreshConfig(!isRefreshConfig);
+      setIsRefreshConfig((value) => !value);
     });
 
     return () => {
       socket?.off("refreshed-configurations");
     };
-  }, [isRefreshConfig, socket]);
+  }, [socket]);
 
   const hasPermission = (path) => {
     if (isSelfServiceRoute(path)) return true;
@@ -432,14 +376,8 @@ function Layout() {
                 path="/transactions"
                 element={renderRoute("/transactions", <UsersTransactions />)}
               />
-              <Route
-                path="/users-addresses"
-                element={renderRoute("/users-addresses", <UsersAddresses />)}
-              />
-              <Route
-                path="/messages"
-                element={renderRoute("/messages", <UserMessages />)}
-              />
+             
+             
               <Route
                 path="/product-flow"
                 element={renderRoute("/product-flow", <ProductFlow />)}
@@ -557,12 +495,11 @@ function Layout() {
                 path="/referral-commerce"
                 element={renderRoute("/referral-commerce", <ReferralCommerce />)}
               />
-              {/* <Route path="/badges" element={renderRoute('/badges', <Badges />)} /> */}
-              <Route path="/ribbons" element={renderSupportedRoute('/ribbons', <Ribbons />)} />
+               
               <Route path="/shipping-company-users" element={renderRoute('/shipping-company-users', <ShippingCompanyUsers />)} />
               <Route path="/shipping-packages" element={renderRoute('/shipping-packages', <ShippingPackages />)} />
               <Route path="/shipping-profile" element={renderRoute('/shipping-profile', <ShippingProfiles />)} />
-              <Route path="/pickup-addresses" element={renderRoute('/pickup-addresses', <PickupAddresses />)} />
+             
               <Route path="/categories" element={renderRoute('/categories', <ProductCategories />)} />
               <Route path="/category-attributes" element={renderRoute('/category-attributes', <CategoryAttributes />)} />
               <Route path="/subscription-orders" element={renderRoute('/subscription-orders', <SubscriptionOrders />)} />
@@ -574,39 +511,32 @@ function Layout() {
               <Route path="/view-subscription-orders" element={renderRoute('/view-subscription-orders', <ViewSubscriptionOrders />)} />
               <Route path="/profile" element={renderRoute('/profile', <Profile />)} />
               <Route path="/changePassword" element={renderRoute('/changePassword', <ChangePassword />)} />
-              <Route path="/settings" element={renderRoute('/settings', <Setting />)} />
               <Route path="/state" element={renderRoute('/state', <ManageState />)} />
               <Route path="/city" element={renderRoute('/city', <ManageCity />)} />
               <Route path="/country" element={renderRoute('/country', <ManageCountry />)} />
-              <Route path="/state" element={renderRoute('/state', <ManageState />)} />
-              <Route path="/city" element={renderRoute('/city', <ManageCity />)} />
-              <Route path="/zipcode" element={renderSupportedRoute('/zipcode', <ManageZipcode />)} />
-              <Route path="/zipCode" element={renderSupportedRoute('/zipCode', <ManageZipcode />)} />
+              <Route path="/zip-codes" element={renderRoute('/zip-codes', <ManageZipCode />)} />
+              
               <Route path="/tax-structure" element={renderRoute('/tax-structure', <TaxStructure />)} />
               <Route path="/tax-category" element={renderRoute('/tax-category', <TaxCategory />)} />
               <Route path="/tax-category-rules" element={renderRoute('/tax-category-rules', <TaxRules />)} />
-              <Route path="/collections" element={renderSupportedRoute('/collections', <Collections />)} />
+               
               <Route path="/product-variants" element={renderRoute('/product-variants', <ProductVariants />)} />
               <Route path="/product-families" element={renderRoute('/product-families', <ProductFamilies />)} />
               <Route path='/product-dimensions' element={renderRoute('/product-dimensions', <ProductDimensions />)} />
-              <Route path="/pattern" element={renderSupportedRoute('/pattern', <Pattern />)} />
+              
               <Route path='/finish' element={renderRoute('/finish', <FinishProducts />)} />
-              <Route path='/colors' element={renderSupportedRoute('/colors', <ColorManagement />)} />
-              <Route path='/privacy-policy' element={renderRoute('/privacy-policy', <PrivacyPolicy />)} />
+             
               <Route
                 path='/user-permissions/:id'
                 element={renderSupportedRoute('/user-permissions', <UserPermissions setModuleName={setModuleName} />)}
               />
               <Route path='/seller' element={renderRoute('/seller', <Sellers />)} />
-              <Route path='/batch' element={renderRoute('/batch', <Batch />)} />
+              
               <Route
                 path='/product-option-value/:id'
                 element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
               />
-              {/* <Route path="/interests" element={renderRoute('/interests', <InterestManagement />)} /> */}
-              {/* <Route path="/preferences" element={renderRoute('/preferences', <Preferences />)} /> */}
-              <Route path="/badges" element={renderRoute('/badge', <Badge />)} />
-              <Route path="/qty-head" element={renderRoute('/qty-head', <QtyHead />)} />
+              
               <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
               <Route path="/tax" element={renderRoute('/tax', <Tax />)} />
               <Route
@@ -621,77 +551,24 @@ function Layout() {
                 path='/tax-rule'
                 element={renderSupportedRoute('/tax-rule', <TaxRule setModuleName={setModuleName} />)}
               />
-              <Route path="/shipping-duration" element={renderSupportedRoute('/shipping-duration', <ShippingDurations />)} />
               <Route path="/discount-coupons" element={renderRoute('/discount-coupons', <DiscountCoupons />)} />
 
-              <Route path="/promotions-banners" element={renderRoute('/promotions-banners', <PromotionsBanner />)} />
               <Route path="/bar-code" element={renderRoute('/barcode', <BarcodePage />)} />
               <Route path="/hsn-code" element={renderRoute('/hsn-code', <HsnCode />)} />
-              <Route path="/setting" element={renderRoute('/setting', <Settings />)} />
-              <Route path="/product-catalog/bulk-history" element={renderRoute('/product-catalog/bulk-history', <BulkUploadProduct />)} />
               <Route path="/orders/view/:id" element={renderRoute('/orders/view', <OrderSummary />)} />
 
 
+ 
 
-              <Route path="/supplier" element={renderRoute("/supplier", <Supplier />)} />
-              <Route path="/supplier/form/:id?" element={renderRoute("/supplier/form/:id?", <AddSupplier />)} />
-              <Route path="/supplier/view/:id" element={renderRoute("/supplier/view/:id", <SupplierViewPage />)} />
-              <Route path="/supplier/med-pharma/:id" element={renderRoute("/supplier/med-pharma/:id", <MedPharama />)} />
-
-              <Route path="/goods-receive" element={renderRoute("/goods-receive/:id", <Stocks />)} />
-              <Route path="/stoks/material-receipt" element={renderRoute("/stoks/material-receipt", <MaterialStatus />)} />
-              <Route path="/stoks/reconciliation" element={renderRoute("/stoks/reconciliation", <Reconciliation />)} />
-              <Route path="/stoks/return-note" element={renderRoute("/stoks/return-note", <ReturnNote />)} />
-              <Route path="/stoks/return-note/preview" element={renderRoute("/stoks/return-note/preview", <ReturnNotePreview />)} />
-
-              <Route path="/inventory" element={renderRoute("/inventory", <Inventory />)} />
-              <Route path="/inventory/form/:id?" element={renderRoute("/inventory/form/:id?", <CreateInventory />)} />
-              <Route path="/inventory/view/:id" element={renderRoute("/inventory/view/:id", <ViewInventory />)} />
-
-              <Route path="/store/store-page" element={renderRoute("/store/store-page", <StorePage />)} />
-
-              <Route path="/product" element={renderRoute("/product", <Product />)} />
-              <Route path="/product/form/:id?" element={renderRoute("/product/form/:id?", <AddNewProduct />)} />
-              {/* <Route path="/product/batch-page" element={renderRoute("/product/batch", <BatchPage />)} /> */}
-              <Route path="/product/category-page" element={renderRoute("/product/category-page", <CategoryPage />)} />
-              <Route path="/product/sub-category-page" element={renderRoute("/product/sub-category-page", <SubCategoryPage />)} />
-              <Route path="/product/store-page" element={renderRoute("/product/store/page", <ProductStorePage />)} />
-              <Route path="/product/supplier-page" element={renderRoute("/product/supplier-page", <ProductSupplierPage />)} />
-              <Route path="/product/warning-page" element={renderRoute("/product/warning-page", <WarningPage />)} />
-              <Route path="/product/brand-page" element={renderRoute("/product/brand-page", <BrandPage />)} />
-              <Route path="/product/qtyhead-page" element={renderRoute("/product/qtyhead-page", <QtyheadPage />)} />
-              <Route path="/product/warranty-page" element={renderRoute("/product/warranty-page", <WarrantyPage />)} />
-              <Route path="/product/hsn-code-page" element={renderRoute("/product/hsn-code-page", <HsnCodePage />)} />
-              <Route path="/product/barcode-page" element={renderRoute("/product/barcode-page", <BarCodePage />)} />
-
-              <Route path="/purchase" element={renderRoute("/purchase", <Purchase />)} />
-              <Route path="/purchase/form/:id?" element={renderRoute("/purchase/form/:id?", <AddNewPurchase />)} />
-              <Route path="/purchase/purchase-preview/:id" element={renderRoute("/purchase/purchase-preview/:id", <PurchaseOrderPreview />)} />
-              <Route path="/purchase/purchase-details/:id" element={renderRoute("/purchase/purchase-details/:id", <PurchaseDetails />)} />
-              <Route path="/purchase/goodrecieve-details/:id" element={renderRoute("/purchase/goodrecieve-details/:id", <GoodsReceivedDetails />)} />
-              <Route path="/sale" element={renderRoute("/sale", <SalePage />)} />
-              <Route path="/sale/form" element={renderRoute("/sale/form", <AddNewSale />)} />
-              <Route path="/sale/sale-preview/:id" element={renderRoute("/sale/sale-preview/:id", <SalesInvoicePage />)} />
-              <Route path="/sale/view/:id" element={renderRoute("/sale/view/:id", <SaleDetailPage />)} />
-              <Route path="/ledger" element={renderRoute("/ledger", <Ledger />)} />
-
-              <Route path="/ledger/vender-ledger" element={renderRoute("/ledger/vender-ledger", <VenderLedger />)} />
-              <Route path="/ledger/return-note" element={renderRoute("/ledger/return-note", <ReturnNoteLedger />)} />
-              <Route path="/ledger/material-received" element={renderRoute("/ledger/material-received", <MaterialReceived />)} />
-
-              <Route path="/purchase/receive-order-details" element={renderRoute("/purchase/receive-order-details", <ReceiveOrderDetails />)} />
-
-              <Route path="/setting" element={renderRoute("/setting", <Settings />)} />
-              <Route path="/upload-file" element={renderRoute("/upload-file", <BulkUploadProduct />)} />
-              <Route path="/delivery-staff" element={renderRoute("/delivery-staff", <DeliveryStaff />)} />
-              <Route path="/rotate" element={renderRoute("/rotate", <CircularMenu />)} />
+            
+ 
 
               {/* ── Catalog Management — filtered product views ─────────── */}
               <Route path="/add-product"           element={renderRoute("/add-product",           <ProductCatalog />)} />
               <Route path="/draft-products"        element={renderRoute("/draft-products",        <ProductCatalog />)} />
               <Route path="/pending-products"      element={renderRoute("/pending-products",      <ProductCatalog />)} />
               <Route path="/rejected-products"     element={renderRoute("/rejected-products",     <ProductCatalog />)} />
-              <Route path="/product-option-values" element={renderRoute("/product-option-values", <ProductOptions />)} />
+              <Route path="/product-option-values" element={renderRoute("/product-option-values", <ProductOptionValue setModuleName={setModuleName} />)} />
 
               {/* ── Inventory Management ────────────────────────────────── */}
               <Route path="/inventory-overview"   element={renderRoute("/inventory-overview",   <InventoryOverview />)} />
@@ -702,7 +579,7 @@ function Layout() {
 
               {/* ── Orders Management — new routes ──────────────────────── */}
               <Route path="/refunds"           element={renderRoute("/refunds",           <UsersTransactions />)} />
-              <Route path="/shipment-tracking" element={renderRoute("/shipment-tracking", <UnavailableRoute />)} />
+            
 
               {/* ── Users & Access — new routes ─────────────────────────── */}
               <Route path="/seller-staff"      element={renderRoute("/seller-staff",      <Sellers />)} />
@@ -710,11 +587,9 @@ function Layout() {
               <Route path="/activity-logs"     element={renderRoute("/activity-logs",     <ActivityLogs />)} />
 
               {/* ── Marketing — new routes ──────────────────────────────── */}
-              <Route path="/campaigns" element={renderRoute("/campaigns", <UnavailableRoute />)} />
+             
 
-              {/* ── Settings — new routes ───────────────────────────────── */}
-              <Route path="/payment-settings" element={renderRoute("/payment-settings", <Setting />)} />
-              <Route path="/seo-settings"     element={renderRoute("/seo-settings",     <Setting />)} />
+
 
               {/* ── Reports & Analytics ─────────────────────────────────── */}
               <Route path="/reports-sales"     element={renderRoute("/reports-sales",     <SalesReport />)} />

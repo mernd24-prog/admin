@@ -13,14 +13,12 @@ import {
     toSubAdminCreateBody,
     toUserUpdateBody,
     toVendorStatusBody,
-    unsupportedThunk,
 } from '../_helpers/adminApi';
 import { isSellerPanel } from '../_helpers/panelConfig';
 
 const initialState = {
     getListData: {},
     enableDisableData: {},
-    updatePasswordData: {},
     createData: {},
     updateData: {},
     getAdminUserDetailsData: {},
@@ -32,13 +30,10 @@ const initialState = {
     enableDisableSellerData: {},
     createSellerData: {},
     updateSellerData: {},
-    updatePasswordSellerData: {},
     changePasswordData: {},
     getUserListData: {},
     createUserData: {},
     enableDisableUserData: {},
-    updatePasswordUserData: {},
-    getUserAddressListData: {},
     getListCategoryData: {},
     getAllUserListData: {},
     reviewSellerKycData: {},
@@ -64,10 +59,6 @@ export const enableDisable = patchMany(
     'Status updated successfully'
 );
 
-export const updatePassword = unsupportedThunk(
-    'updatePassword',
-    'Admin password reset for another user is not available in the backend. Use the forgot/reset password flow.'
-);
 
 export const create = createApiThunkPrivate(
     'create',
@@ -187,10 +178,6 @@ export const updateSeller = createApiThunkPrivate(
     { transformBody: toUserUpdateBody }
 );
 
-export const updatePasswordSeller = unsupportedThunk(
-    'updatePasswordSeller',
-    'Seller password reset is not available from admin APIs. Use the forgot/reset password flow.'
-);
 
 export const reviewSellerKyc = createApiThunkPrivate(
     'reviewSellerKyc',
@@ -268,15 +255,6 @@ export const enableDisableUser = patchMany(
     'Status updated successfully'
 );
 
-export const updatePasswordUser = unsupportedThunk(
-    'updatePasswordUser',
-    'User password reset is not available from admin APIs. Use the forgot/reset password flow.'
-);
-
-export const getUserAddressList = unsupportedThunk(
-    'getUserAddressList',
-    'Admin user-address listing is not exposed by the backend API.'
-);
 
 export const getListCategory = createApiThunkPrivate(
     'getListCategory',
@@ -300,8 +278,7 @@ const userManagementSlice = createSlice({
     extraReducers: builder => {
         createExtraReducersForThunk(builder, getList, 'getListData')
         createExtraReducersForThunk(builder, enableDisable, 'enableDisableData')
-        createExtraReducersForThunk(builder, updatePassword, 'updatePasswordData')
-        createExtraReducersForThunk(builder, create, 'createData')
+createExtraReducersForThunk(builder, create, 'createData')
         createExtraReducersForThunk(builder, update, 'updateData')
         createExtraReducersForThunk(builder, getAdminUserDetails, 'getAdminUserDetailsData')
         createExtraReducersForThunk(builder, getAllModulePermission, 'getAllModulePermissionData')
@@ -312,8 +289,7 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, createSeller, 'createSellerData')
         createExtraReducersForThunk(builder, updateSeller, 'updateSellerData')
         createExtraReducersForThunk(builder, getAllModulePermissionForUser, 'getAllModulePermissionForUserData')
-        createExtraReducersForThunk(builder, updatePasswordSeller, 'updatePasswordSellerData')
-        createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
+createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
         createExtraReducersForThunk(builder, updateSellerBankStatus, 'updateSellerBankStatusData')
         createExtraReducersForThunk(builder, updateSellerGoLive, 'updateSellerGoLiveData')
         createExtraReducersForThunk(builder, getSellerKyc, 'getSellerKycData')
@@ -321,9 +297,7 @@ const userManagementSlice = createSlice({
         createExtraReducersForThunk(builder, getUserList, 'getUserListData')
         createExtraReducersForThunk(builder, createUser, 'createUserData')
         createExtraReducersForThunk(builder, enableDisableUser, 'enableDisableUserData')
-        createExtraReducersForThunk(builder, updatePasswordUser, 'updatePasswordUserData')
-        createExtraReducersForThunk(builder, getUserAddressList, 'getUserAddressListData')
-        createExtraReducersForThunk(builder, getListCategory, 'getListCategoryData')
+createExtraReducersForThunk(builder, getListCategory, 'getListCategoryData')
         createExtraReducersForThunk(builder, getAllUserList, 'getAllUserListData')
     }
 })

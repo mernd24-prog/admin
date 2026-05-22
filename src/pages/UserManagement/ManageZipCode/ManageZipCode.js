@@ -1,148 +1,145 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react'
-import TableData from '../../../components/Atoms/TableData/TableData'
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton'
-import { useDispatch, useSelector } from 'react-redux'
-import { toast } from 'sonner'
-import Loader from '../../../components/Loader/Loader'
-import Button from '../../../components/Atoms/buttons/button'
-import SearchComponent from '../../../components/Atoms/New Table/NewTable'
-import Pagination from '../../../components/Pagination/Pagination'
-import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal'
-import Input from '../../../components/Atoms/Input/Input'
-import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect'
-import { create, edit, enableDisableZipCode, getZipCodeList } from '../../../Redux/zipCodeSlice'
-import { getAllCityList } from '../../../Redux/citySlice'
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
-import { getAllCountryList } from '../../../Redux/CountrySlice'
-import { getAllStateList } from '../../../Redux/stateSlice'
-import { transformArray } from '../../../_helpers/globalFunctions'
-import { Link } from 'react-router-dom'
+import React, { useCallback, useEffect, useState } from 'react';
+import TableData from '../../../components/Atoms/TableData/TableData';
+import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'sonner';
+import Loader from '../../../components/Loader/Loader';
+import Button from '../../../components/Atoms/buttons/button';
+import SearchComponent from '../../../components/Atoms/New Table/NewTable';
+import Pagination from '../../../components/Pagination/Pagination';
+import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
+import Input from '../../../components/Atoms/Input/Input';
+import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
+import { create, edit, enableDisableZipCode, getZipCodeList } from '../../../Redux/zipCodeSlice';
+import { getAllCountryList } from '../../../Redux/CountrySlice';
+import { getAllStateList } from '../../../Redux/stateSlice';
+import { getAllCityList } from '../../../Redux/citySlice';
+import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { Link } from 'react-router-dom';
 
+const size = 10;
 
-const size = 10
-const ManageZipcode = () => {
+const extractListPayload = (payload = {}) => {
+  const data = payload?.data || payload;
+  const nestedData = data?.data || data;
+  const list = nestedData?.list || nestedData?.items || [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: Number(nestedData?.total || list.length || 0),
+  };
+};
+
+const initialFormState = {
+  _id: null,
+  zipCode: '',
+  areaName: '',
+  countryId: null,
+  stateId: null,
+  cityId: null,
+  serviceable: true,
+  codAvailable: true,
+  expressDelivery: false,
+  deliveryCharge: 0,
+  minOrderAmount: 0,
+  estimatedDeliveryDays: 5,
+};
+
+const ManageZipCode = () => {
   const dispatch = useDispatch();
-  const selector = useSelector(state => state)
+  const selector = useSelector(state => state);
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedRow, setSelectedRow] = useState([]);
   const [isAddModal, setIsAddModal] = useState(false);
   const [pageNo, setPageNo] = useState(1);
-  const [filters, setFilters] = useState({ search: "", country: "" });
-  const [isLoading, setIsLoading] = useState(false)
-  const initialFormState = {
-    country_code: "",
-    state_code: "",
-    city_code: "",
-    name: "",
-    _id: null
-  };
-
-  const [formData, setFormData] = useState(initialFormState)
+  const [filters, setFilters] = useState({ search: '', country: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
 
-  const modifiedCountry = transformArray(selector?.country?.getAllCountryListData?.data?.data?.list || [])
-  const modifiedState = transformArray(selector?.state?.getAllStateListData?.data?.data?.list || [])
-  const modifiedCity = transformArray(selector?.city?.getAllCityListData?.data?.data?.list || [])
+  const [filteredStates, setFilteredStates] = useState([]);
+  const [filteredCities, setFilteredCities] = useState([]);
 
-  const fetchCountryList = useCallback(() => {
+  const allCountries = selector?.country?.getAllCountryListData?.data?.data?.list?.map(e => ({
+    value: e?._id,
+    label: e?.name,
+  })) || [];
+
+  const allStates = selector?.state?.getAllStateListData?.data?.data?.list || [];
+  const allCities = selector?.city?.getAllCityListData?.data?.data?.list || [];
+
+  useEffect(() => {
+    dispatch(getAllCountryList());
+    dispatch(getAllStateList());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (formData.countryId) {
+      const states = allStates
+        .filter(s => s.countryId === formData.countryId || s.countryId?._id === formData.countryId)
+        .map(s => ({ value: s._id, label: s.name }));
+      setFilteredStates(states);
+    } else {
+      setFilteredStates(allStates.map(s => ({ value: s._id, label: s.name })));
+    }
+  }, [formData.countryId, allStates.length]);
+
+  useEffect(() => {
+    if (formData.stateId) {
+      dispatch(getAllCityList({ stateId: formData.stateId })).then(res => {
+        const cities = extractListPayload(res?.payload).list.map(c => ({
+          value: c._id,
+          label: c.name,
+        }));
+        setFilteredCities(cities);
+      });
+    } else {
+      setFilteredCities([]);
+    }
+  }, [formData.stateId]);
+
+  const fetchList = useCallback(() => {
     const query = {
       page: pageNo,
-      size: size,
+      size,
       keyWord: filters?.search,
-      searchFields: "name",
-      populate: 'city_code:name|country_code:name|state_code:name',
     };
-    setIsLoading(true)
+    setIsLoading(true);
     dispatch(getZipCodeList(query))
-      .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching cities:", err);
-        setApiRes({ list: [], total: 0 });
-      }).finally(() => {
-        setIsLoading(false)
-      })
+      .then(res => setApiRes(extractListPayload(res?.payload)))
+      .catch(() => setApiRes({ list: [], total: 0 }))
+      .finally(() => setIsLoading(false));
   }, [dispatch, pageNo, filters.search]);
 
   useEffect(() => {
-    fetchCountryList();
-    dispatch(getAllCountryList())
-  }, [fetchCountryList]);
+    fetchList();
+  }, [fetchList]);
 
-  // Load states when country changes in form
-  useEffect(() => {
-    if (formData.country_code) {
-      dispatch(getAllStateList({ query: JSON.stringify({ country_code: formData.country_code }) }));
-    }
-  }, [formData.country_code, dispatch]);
+  const onPageChange = newPage => setPageNo(newPage);
 
-  // Load cities when state changes in form
-  useEffect(() => {
-    if (formData.state_code) {
-      dispatch(getAllCityList({ query: JSON.stringify({ state_code: formData.state_code }) }));
-    }
-  }, [formData.state_code, dispatch]);
+  const getAllRowIds = useCallback(() => apiRes?.list?.map(r => r?._id) || [], [apiRes?.list]);
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-
-  const getAllRowIds = useCallback(() => {
-    return apiRes?.list?.map(row => row?._id) || [];
-  }, [apiRes?.list]);
-
-  const handleHeaderCheckboxChange = (e) => {
+  const handleHeaderCheckboxChange = e => {
     setSelectedRow(e.target.checked ? getAllRowIds() : []);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
+  const handleInputChange = e => {
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
-  const handleSelectChange = (selectedOption, action) => {
-    switch (action) {
-      case 'COUNTRY':
-        setFormData(prev => ({
-          ...prev,
-          country_code: selectedOption?.value || "",
-          state_code: "",
-          city_code: "",
-        }));
-        break;
-
-      case 'STATE':
-        setFormData(prev => ({
-          ...prev,
-          state_code: selectedOption?.value || "",
-          city_code: "",
-        }));
-        break;
-
-      case 'CITY':
-        setFormData(prev => ({
-          ...prev,
-          city_code: selectedOption?.value || "",
-        }));
-        break;
-      default:
-        break;
-    }
-
-    setErrors({})
+  const handleSelectChange = (option, { name }) => {
+    const val = option?.value || null;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: val };
+      if (name === 'countryId') { updated.stateId = null; updated.cityId = null; }
+      if (name === 'stateId') { updated.cityId = null; }
+      return updated;
+    });
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
   const closeModal = () => {
@@ -150,223 +147,148 @@ const ManageZipcode = () => {
     setIsEditMode(false);
     setFormData(initialFormState);
     setErrors({});
+    setFilteredStates([]);
+    setFilteredCities([]);
   };
 
   const handleRowCheckboxChange = (e, rowId) => {
     setSelectedRow(prev =>
-      e.target.checked
-        ? [...prev, rowId]
-        : prev.filter(id => id !== rowId)
+      e.target.checked ? [...prev, rowId] : prev.filter(id => id !== rowId)
     );
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    const zipTrimmed = formData.name?.trim();
-    if (!zipTrimmed) {
-      newErrors.name = 'Zip Code is required';
-    }
-    else if (!/^[a-zA-Z0-9]{4,10}$/.test(zipTrimmed)) {
-      newErrors.name = 'Zip Code must be 4–10 letters or numbers (no symbols or spaces)';
-    }
-    if (!formData.city_code) {
-      newErrors.city_code = 'City is required';
-    }
-    if (!formData?.country_code) {
-      newErrors.country_code = 'Country is required';
-    }
-     if (!formData?.state_code) {
-      newErrors.state_code = 'state is required';
-    }
-
-    return newErrors;
+    const errs = {};
+    if (!formData.zipCode) errs.zipCode = 'Zip/Pin code is required';
+    if (!formData.countryId) errs.countryId = 'Country is required';
+    if (!formData.stateId) errs.stateId = 'State is required';
+    if (!formData.cityId) errs.cityId = 'City is required';
+    return errs;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-
-    const payload = {
-      name: formData.name,
-      city_code: formData.city_code,
-      country_code: formData?.country_code,
-      state_code: formData?.state_code
-    };
-
     try {
       if (isEditMode) {
-        await dispatch(edit({ ...payload, _id: formData._id })).unwrap();
-        toast.success('Zipcode updated successfully');
+        await dispatch(edit({ ...formData })).unwrap();
+        toast.success('Zip code updated successfully');
       } else {
-        await dispatch(create(payload)).unwrap();
-        toast.success('Zipcode created successfully');
+        await dispatch(create(formData)).unwrap();
+        toast.success('Zip code created successfully');
       }
       closeModal();
-      fetchCountryList();
+      fetchList();
     } catch (error) {
-      toast.error(error || 'Failed to save zipcode');
-      if (error.errors) {
-        setErrors(error.errors);
-      }
+      toast.error(error || 'Failed to save zip code');
+      if (error.errors) setErrors(error.errors);
     }
   };
 
-  const handleToggle = async (city) => {
-    let apiPayload = {
-      _id: [city?._id],
-      isDisable: city?.isDisable ? false : true
-    }
+  const isRowActive = (row = {}) =>
+    row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
+
+  const handleToggle = async row => {
     try {
-      const res = await dispatch(enableDisableZipCode(apiPayload)).unwrap();
-      if (res) {
-        toast.success(res?.message)
-      }
-      fetchCountryList();
+      const res = await dispatch(enableDisableZipCode({
+        _id: [row?._id],
+        isDisable: isRowActive(row),
+      })).unwrap();
+      if (res) toast.success(res?.message);
+      fetchList();
     } catch (error) {
-      toast.error(error?.message || error || "Failed...!")
-      if (error.errors) {
-        setErrors(error.errors);
-      }
+      toast.error(error?.message || error || 'Failed');
     }
   };
 
   const applyFilters = useCallback(() => {
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: filters?.search,
-      searchFields: "name",
-      populate: 'city_code:name',
-      query: JSON.stringify(filters?.country?.value ? { city_code: filters?.country?.value } : {})
-    };
-    setIsLoading(true)
-    dispatch(getZipCodeList(query))
-      .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching cities:", err);
-        setApiRes({ list: [], total: 0 });
-      }).finally(() => {
-        setIsLoading(false)
-      })
-  }, [dispatch, pageNo, filters]);
+    setPageNo(1);
+    fetchList();
+  }, [fetchList]);
 
-  const tableHeadings = ["ZipCode", "City Name", "Status", "Action"];
+  const handleSearchRemove = () => {
+    setFilters({ search: '', country: '' });
+    setPageNo(1);
+  };
 
-  const tableRows = apiRes?.list?.map((ele) => [
+  const handleBulkAction = async action => {
+    if (action === 'Active' || action === 'Inactive') {
+      try {
+        const res = await dispatch(enableDisableZipCode({
+          _id: selectedRow,
+          isDisable: action === 'Inactive',
+        })).unwrap();
+        if (res) toast.success(res?.message);
+        setSelectedRow([]);
+        fetchList();
+      } catch (error) {
+        toast.error(error?.message || error || 'Failed');
+        setSelectedRow([]);
+      }
+    }
+  };
+
+  const tableHeadings = ['Zip/Pin Code', 'Area Name', 'City', 'State', 'Serviceable', 'COD', 'Status', 'Action'];
+
+  const tableRows = apiRes?.list?.map(ele => [
     <input
-      type='checkbox'
+      type="checkbox"
       checked={selectedRow.includes(ele._id)}
-      onChange={(e) => handleRowCheckboxChange(e, ele._id)}
+      onChange={e => handleRowCheckboxChange(e, ele._id)}
     />,
-    <span className='capitalize'>{ele?.name}</span>,
-    ele?.city_code?.name,
-    <div className='flex flex-col'>
-      <ToggleButton isToggle={!ele?.isDisable} handleClick={() => handleToggle(ele)} />
+    <span className="font-mono font-medium">{ele?.zipCode}</span>,
+    <span>{ele?.areaName || '—'}</span>,
+    <span className="capitalize">{ele?.cityId?.name || '—'}</span>,
+    <span className="capitalize">{ele?.stateId?.name || '—'}</span>,
+    <span className={`text-xs px-2 py-0.5 rounded-full ${ele?.serviceable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+      {ele?.serviceable ? 'Yes' : 'No'}
+    </span>,
+    <span className={`text-xs px-2 py-0.5 rounded-full ${ele?.codAvailable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+      {ele?.codAvailable ? 'Yes' : 'No'}
+    </span>,
+    <div className="flex flex-col">
+      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
     </div>,
     <ActionButtons
-      onEdit={async () => {
-        // Set form data with the selected item's values
+      onEdit={() => {
         setFormData({
-          name: ele.name,
-          state_code: ele?.state_code?._id,
-          country_code: ele?.country_code?._id,
-          city_code: ele.city_code?._id,
-          _id: ele._id
+          _id: ele._id,
+          zipCode: ele.zipCode,
+          areaName: ele.areaName || '',
+          countryId: ele.countryId?._id || ele.countryId || null,
+          stateId: ele.stateId?._id || ele.stateId || null,
+          cityId: ele.cityId?._id || ele.cityId || null,
+          serviceable: ele.serviceable ?? true,
+          codAvailable: ele.codAvailable ?? true,
+          expressDelivery: ele.expressDelivery ?? false,
+          deliveryCharge: ele.deliveryCharge ?? 0,
+          minOrderAmount: ele.minOrderAmount ?? 0,
+          estimatedDeliveryDays: ele.estimatedDeliveryDays ?? 5,
         });
-
-        // Load states for the selected country if not already loaded
-        if (ele?.country_code?._id) {
-          await dispatch(getAllStateList({ query: JSON.stringify({ country_code: ele.country_code._id }) }));
-        }
-
-        // Load cities for the selected state if not already loaded
-        if (ele?.state_code?._id) {
-          await dispatch(getAllCityList({ query: JSON.stringify({ state_code: ele.state_code._id }) }));
-        }
-
         setIsEditMode(true);
         setIsAddModal(true);
       }}
       showLinkButton={false}
       showDeleteButton={false}
-    />
+    />,
   ]);
-
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true
-      };
-      try {
-        const res = await dispatch(enableDisableZipCode(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setSelectedRow([])
-        }
-        fetchCountryList();
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        setSelectedRow([])
-        if (error.errors) {
-          setErrors(error.errors);
-        }
-      }
-    }
-  };
-
-  const handleSearchRemove = () => {
-    setFilters({ search: "", country: "" })
-    const query = {
-      page: pageNo,
-      size: size,
-      keyWord: "",
-      searchFields: "name",
-      populate: 'city_code:name',
-    };
-    setIsLoading(true)
-    dispatch(getZipCodeList(query))
-      .then((res) => {
-        if (res?.payload?.data) {
-          setApiRes(res.payload.data);
-        } else {
-          setApiRes({ list: [], total: 0 });
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching cities:", err);
-        setApiRes({ list: [], total: 0 });
-      }).finally(() => {
-        setIsLoading(false)
-      })
-  }
 
   return (
     <>
-      <div className='p-6 overflow-hidden max-w-7xl mx-auto overflow-x-auto overflow-y-auto space-y-3'>
+      <div className="p-6 overflow-hidden max-w-7xl mx-auto overflow-x-auto overflow-y-auto space-y-3">
         <Loader loading={isLoading} />
-        <div className='flex justify-between items-center'>
-          <h3>Home / <Link to="/app/setting">Settings</Link> / Zipcode</h3>
-          <Button onClick={() => {
-            setFormData(initialFormState);
-            setIsEditMode(false);
-            setIsAddModal(true);
-          }}>
+        <div className="flex justify-between items-center">
+          <h3>Home / <Link to="/app/setting">Settings</Link> / Zip Codes</h3>
+          <Button onClick={() => { setFormData(initialFormState); setIsEditMode(false); setIsAddModal(true); }}>
             Add
           </Button>
         </div>
 
-        <div className='p-4 overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
+        <div className="p-4 overflow-auto bg-white rounded-lg border border-[#E6E6E6]">
           <SearchComponent
             isSearchShow={true}
             isActionButton={true}
@@ -375,16 +297,14 @@ const ManageZipcode = () => {
             isStatusAction={true}
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
-            placeholder={`Search by name`}
+            placeholder="Search by zip code or area"
             handleAction={handleBulkAction}
-            countryOptions={modifiedCity}
-            isSelectNearSearch={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
           />
 
           <TableData
-            Heading='Manage Zipcodes'
+            Heading="Manage Zip Codes"
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
@@ -393,9 +313,10 @@ const ManageZipcode = () => {
             totalData={apiRes?.total}
             totalSize={size}
             currentPage={pageNo}
+            onPageChange={onPageChange}
             isHeaderCheckbox={true}
             handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            allRowsSelected={selectedRow.length === apiRes?.list?.length}
+            allRowsSelected={selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0}
           />
           {apiRes?.total > size && (
             <Pagination
@@ -407,64 +328,154 @@ const ManageZipcode = () => {
         </div>
 
         <DefaultModal
-          title={isEditMode ? 'Edit Zipcode' : 'Add Zipcode'}
+          title={isEditMode ? 'Edit Zip Code' : 'Add Zip Code'}
           isOpen={isAddModal}
           onClose={closeModal}
           onSubmit={handleSubmit}
         >
-          <div className='space-y-3 gap-4 p-3'>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3">
             <div>
-              <FilterSelect
-                label="Country *"
-                name="country_code"
-                value={modifiedCountry.find(c => c.value === formData.country_code) || null}
-                onChange={(e) => handleSelectChange(e, 'COUNTRY')}
-                options={modifiedCountry}
-                placeholder="Select Country"
-                error={errors.country_code}
-              />
-            </div>
-            <div>
-              <FilterSelect
-                label="State *"
-                name="state_code"
-                value={modifiedState.find(s => s.value === formData.state_code) || null}
-                onChange={(e) => handleSelectChange(e, 'STATE')}
-                options={modifiedState}
-                placeholder="Select State"
-                disabled={!formData.country_code}
-                error={errors.state_code}
-              />
-            </div>
-            <div>
-              <FilterSelect
-                label="City *"
-                name="city_code"
-                value={modifiedCity.find(c => c.value === formData.city_code) || null}
-                onChange={(e) => handleSelectChange(e, 'CITY')}
-                options={modifiedCity}
-                placeholder="Select City"
-                disabled={!formData.state_code}
-                error={errors.city_code}
-              />
-            </div>
-            <div className='col-span-2'>
               <Input
-                labelName='Zipcode'
-                type='text'
-                value={formData.name}
-                name='name'
+                labelName="Zip / Pin Code"
+                type="text"
+                value={formData.zipCode}
+                name="zipCode"
                 onChange={handleInputChange}
-                error={errors.name}
+                error={errors.zipCode}
                 required
-                disable={!formData?.city_code}
+                maxLength={10}
               />
+            </div>
+            <div>
+              <Input
+                labelName="Area Name"
+                type="text"
+                value={formData.areaName}
+                name="areaName"
+                onChange={handleInputChange}
+                error={errors.areaName}
+                maxLength={100}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country <span className="text-red-500">*</span>
+              </label>
+              <FilterSelect
+                options={allCountries}
+                value={allCountries.find(o => o.value === formData.countryId) || null}
+                onChange={handleSelectChange}
+                name="countryId"
+                isSearchable
+                placeholder="Select Country"
+              />
+              {errors.countryId && <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                State <span className="text-red-500">*</span>
+              </label>
+              <FilterSelect
+                options={filteredStates}
+                value={filteredStates.find(o => o.value === formData.stateId) || null}
+                onChange={handleSelectChange}
+                name="stateId"
+                isSearchable
+                placeholder="Select State"
+                isDisabled={!formData.countryId}
+              />
+              {errors.stateId && <p className="mt-1 text-sm text-red-600">{errors.stateId}</p>}
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <FilterSelect
+                options={filteredCities}
+                value={filteredCities.find(o => o.value === formData.cityId) || null}
+                onChange={handleSelectChange}
+                name="cityId"
+                isSearchable
+                placeholder="Select City"
+                isDisabled={!formData.stateId}
+              />
+              {errors.cityId && <p className="mt-1 text-sm text-red-600">{errors.cityId}</p>}
+            </div>
+
+            <div>
+              <Input
+                labelName="Delivery Charge (₹)"
+                type="number"
+                value={formData.deliveryCharge}
+                name="deliveryCharge"
+                onChange={handleInputChange}
+                error={errors.deliveryCharge}
+                min={0}
+              />
+            </div>
+            <div>
+              <Input
+                labelName="Min Order Amount (₹)"
+                type="number"
+                value={formData.minOrderAmount}
+                name="minOrderAmount"
+                onChange={handleInputChange}
+                error={errors.minOrderAmount}
+                min={0}
+              />
+            </div>
+            <div>
+              <Input
+                labelName="Est. Delivery Days"
+                type="number"
+                value={formData.estimatedDeliveryDays}
+                name="estimatedDeliveryDays"
+                onChange={handleInputChange}
+                error={errors.estimatedDeliveryDays}
+                min={1}
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-wrap gap-6 pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="serviceable"
+                  checked={!!formData.serviceable}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm font-medium text-gray-700">Serviceable</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="codAvailable"
+                  checked={!!formData.codAvailable}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm font-medium text-gray-700">COD Available</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="expressDelivery"
+                  checked={!!formData.expressDelivery}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm font-medium text-gray-700">Express Delivery</span>
+              </label>
             </div>
           </div>
         </DefaultModal>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default ManageZipcode
+export default ManageZipCode;

@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { firstId, toListParams, toSellerRegisterBody, toUserUpdateBody, toVendorStatusBody, unsupportedThunk } from '../_helpers/adminApi';
+import { firstId, toListParams, toSellerRegisterBody, toUserUpdateBody, toVendorStatusBody } from '../_helpers/adminApi';
 
 const initialState = {
-    getShopListData: {}, createData: {}, editData: {}, enableDisableData: {}, getAllSellerListData: {},updatePasswordData:{}
+    getShopListData: {}, createData: {}, editData: {}, enableDisableData: {}, getAllSellerListData: {}
 }
 
 export const getShopList = createApiThunkPrivate(
@@ -43,11 +43,6 @@ export const getAllSellerList = createApiThunkPrivate(
     { transformParams: (params = {}) => toListParams(params, { limit: 100 }) }
 )
 
-export const updatePassword = unsupportedThunk(
-    'store/updatePassword',
-    'Store password update API is not exposed by the current backend. Use forgot/reset password flow.',
-)
-
 
 const storeSlice = createSlice({
     name: 'store',
@@ -60,7 +55,6 @@ const storeSlice = createSlice({
         // createExtraReducersForThunk(builder, getAllCountryList, 'getAllCountryListData')
 
         createExtraReducersForThunk(builder, getAllSellerList, 'getAllSellerListData')
-        createExtraReducersForThunk(builder, updatePassword, 'updatePasswordData')
 
     }
 })

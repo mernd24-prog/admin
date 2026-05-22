@@ -57,6 +57,18 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route
+          path="/product-option-value/:id"
+          element={<Navigate to={`/app${window.location.pathname}`} replace />}
+        />
+        <Route
+          path="/product-option-values"
+          element={<Navigate to="/app/product-option-values" replace />}
+        />
+        <Route
+          path="/product-options"
+          element={<Navigate to="/app/product-options" replace />}
+        />
+        <Route
           path="/app/*"
           element={
             <>

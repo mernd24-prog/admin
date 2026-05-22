@@ -9,7 +9,8 @@ export default function VariantsOptionsTab({
     options,
     setVariantRows,
     setFormData,
-    selectJson
+    selectJson,
+    platformOptions = [],
 }) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [errors, setErrors] = useState({});
@@ -180,8 +181,15 @@ export default function VariantsOptionsTab({
 
     const getSelectedOption = (row) => {
         if (!row.type) return null;
-        return selectJson?.HEADS_TYPE?.find(option => option.value === row.type) || null;
+        const optionChoices = platformOptions.length
+            ? platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }))
+            : (selectJson?.HEADS_TYPE || []);
+        return optionChoices.find(option => option.value === row.type || option.label === row.type) || null;
     };
+
+    const optionChoices = platformOptions.length
+        ? platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }))
+        : (selectJson?.HEADS_TYPE || []);
 
     return (
         <div className="w-full bg-white">
@@ -216,7 +224,7 @@ export default function VariantsOptionsTab({
                                         <div>
                                             <FilterSelect
                                                 label="Options"
-                                                options={selectJson?.HEADS_TYPE || []}
+                                                options={optionChoices}
                                                 value={getSelectedOption(row)}
                                                 onChange={(val) => handleOptionSelect(index, val)}
                                                 placeholder="Select option"

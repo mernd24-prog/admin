@@ -1,19 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
+import { MdArrowBack, MdAdd, MdDelete, MdEdit } from 'react-icons/md';
 import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../components/Atoms/Input/Input';
-import Button from '../../../components/Atoms/buttons/button';
 import Loader from '../../../components/Loader/Loader';
 import { useNavigate } from 'react-router-dom';
 import { getCategoryAttributes, getList, updateCategoryAttributes } from '../../../Redux/productSlice';
+import { getPlatformOptions, getPlatformOptionValues } from '../../../Redux/adminCoreSlice';
 
 const EMPTY_ATTRIBUTE = {
   key: '',
   label: '',
   type: 'text',
   required: false,
-  options: '',
+  options: [],
+  platformOptionId: '',
+  allowCustomOptions: false,
+  customOptionsText: '',
   unit: '',
   isVariantAttribute: false,
   isFilterable: false,
@@ -28,6 +32,16 @@ const typeOptions = [
   'boolean',
   'date',
 ].map((value) => ({ value, label: value.replace('_', ' ') }));
+
+const CHECKBOX_FIELDS = [
+  { key: 'required', label: 'Required' },
+  { key: 'isVariantAttribute', label: 'Variant' },
+  { key: 'isFilterable', label: 'Filterable' },
+  { key: 'isSearchable', label: 'Searchable' },
+];
+
+const idOf = (record = {}) => record?._id || record?.id || '';
+const valueName = (record = {}) => record.name || record.label || record.value || '';
 
 const toCategoryOptions = (categories = []) => {
   const options = [];
@@ -78,26 +92,231 @@ const toCategoryOptions = (categories = []) => {
   return options;
 };
 
+/* ─── Attribute Row (edit mode) ─────────────────────────────────────────── */
+const AttributeRow = ({
+  attribute,
+  index,
+  onUpdate,
+  onRemove,
+  platformOptionChoices,
+  optionValues,
+  onLoadOptionValues,
+}) => (
+  <div className="border border-gray-200 rounded-lg p-4 bg-white">
+    <div className="flex items-start justify-between mb-3">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+        Attribute #{index + 1}
+      </span>
+      <button
+        type="button"
+        onClick={() => onRemove(index)}
+        className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
+      >
+        <MdDelete size={14} /> Remove
+      </button>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Input
+        labelName="Key"
+        value={attribute.key}
+        onChange={(e) => onUpdate(index, 'key', e.target.value)}
+        placeholder="e.g. color"
+      />
+      <Input
+        labelName="Label"
+        value={attribute.label}
+        onChange={(e) => onUpdate(index, 'label', e.target.value)}
+        placeholder="e.g. Color"
+      />
+      <FilterSelect
+        label="Type"
+        options={typeOptions}
+        value={typeOptions.find((item) => item.value === attribute.type)}
+        onChange={(option) => {
+          const nextType = option?.value || 'text';
+          onUpdate(index, 'type', nextType);
+          if (nextType !== 'select' && nextType !== 'multi_select') {
+            onUpdate(index, 'platformOptionId', '');
+            onUpdate(index, 'options', []);
+            onUpdate(index, 'allowCustomOptions', false);
+            onUpdate(index, 'customOptionsText', '');
+          }
+        }}
+      />
+      {(attribute.type === 'select' || attribute.type === 'multi_select') && (
+        <>
+          <FilterSelect
+            label="Product Option Master"
+            options={platformOptionChoices}
+            value={platformOptionChoices.find((item) => item.value === attribute.platformOptionId) || null}
+            onChange={(option) => {
+              const optionId = option?.value || '';
+              onUpdate(index, 'platformOptionId', optionId);
+              onUpdate(index, 'options', []);
+              if (optionId) onLoadOptionValues(optionId);
+            }}
+            placeholder="Select Size, Color, Storage..."
+          />
+          <div className="md:col-span-2">
+            <FilterSelect
+              label="Allowed Values"
+              isMulti
+              options={(optionValues[attribute.platformOptionId] || []).map((item) => ({
+                value: valueName(item),
+                label: valueName(item),
+              }))}
+              value={(optionValues[attribute.platformOptionId] || [])
+                .filter((item) => (attribute.options || []).includes(valueName(item)))
+                .map((item) => ({ value: valueName(item), label: valueName(item) }))}
+              onChange={(selected) => onUpdate(index, 'options', (selected || []).map((item) => item.value))}
+              placeholder={attribute.platformOptionId ? 'Search and select reusable values...' : 'Select an option master first'}
+              isDisabled={!attribute.platformOptionId}
+            />
+            <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={Boolean(attribute.allowCustomOptions)}
+                onChange={(e) => onUpdate(index, 'allowCustomOptions', e.target.checked)}
+                className="w-3.5 h-3.5 accent-[#3E4094]"
+              />
+              Allow custom category-specific values
+            </label>
+            {attribute.allowCustomOptions && (
+              <Input
+                labelName="Custom Values (comma separated)"
+                value={attribute.customOptionsText || ''}
+                onChange={(e) => onUpdate(index, 'customOptionsText', e.target.value)}
+                placeholder="Use only for exceptional values"
+              />
+            )}
+          </div>
+        </>
+      )}
+      {attribute.type === 'number' && (
+        <Input
+          labelName="Unit"
+          value={attribute.unit}
+          onChange={(e) => onUpdate(index, 'unit', e.target.value)}
+          placeholder="e.g. kg, cm"
+        />
+      )}
+    </div>
+
+    <div className="mt-3 flex flex-wrap gap-4">
+      {CHECKBOX_FIELDS.map(({ key, label }) => (
+        <label key={key} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={Boolean(attribute[key])}
+            onChange={(e) => onUpdate(index, key, e.target.checked)}
+            className="w-4 h-4 accent-[#3E4094] rounded"
+          />
+          {label}
+        </label>
+      ))}
+    </div>
+  </div>
+);
+
+/* ─── Category Listing Row ───────────────────────────────────────────────── */
+const CategoryRow = ({ option, attrCount, onEdit, loadingKey }) => {
+  const parts = option.label.split(' > ');
+  const depth = parts.length - 1;
+  const name = parts[parts.length - 1];
+  const path = parts.slice(0, -1).join(' > ');
+
+  return (
+    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+      <td className="px-4 py-3">
+        <div style={{ paddingLeft: `${depth * 16}px` }} className="flex items-center gap-2">
+          {depth > 0 && <span className="text-gray-300 text-xs">└</span>}
+          <div>
+            <p className="text-sm font-medium text-gray-800 capitalize">{name}</p>
+            {path && <p className="text-xs text-gray-400 mt-0.5">{path}</p>}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+          attrCount > 0 ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'
+        }`}>
+          {attrCount != null ? attrCount : '—'}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <button
+          type="button"
+          onClick={() => onEdit(option)}
+          disabled={loadingKey === option.value}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#3E4094] border border-[#3E4094] rounded hover:bg-[#3E4094] hover:text-white transition-colors disabled:opacity-50"
+        >
+          <MdEdit size={13} />
+          {loadingKey === option.value ? 'Loading…' : 'Edit Attributes'}
+        </button>
+      </td>
+    </tr>
+  );
+};
+
+/* ─── Main Component ─────────────────────────────────────────────────────── */
 const CategoryAttributes = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.product);
+
   const categories = useMemo(() => {
     const payload = selector?.getListData?.data?.data || {};
     if (Array.isArray(payload)) return payload;
     return payload?.list || payload?.items || [];
   }, [selector?.getListData?.data?.data]);
+
   const categoryOptions = useMemo(() => toCategoryOptions(categories), [categories]);
+
+  // view: 'list' | 'edit'
+  const [view, setView] = useState('list');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [attributes, setAttributes] = useState([]);
+  const [loadingKey, setLoadingKey] = useState(null);
+  const [saving, setSaving] = useState(false);
+  // Cache attribute counts per category key after first load
+  const [attrCounts, setAttrCounts] = useState({});
+  const [platformOptions, setPlatformOptions] = useState([]);
+  const [optionValues, setOptionValues] = useState({});
 
   useEffect(() => {
     dispatch(getList({ limit: 100 }));
+    dispatch(getPlatformOptions({ limit: 100, active: true }))
+      .unwrap()
+      .then((res) => {
+        const raw = res?.data;
+        setPlatformOptions(Array.isArray(raw) ? raw : (raw?.list || raw?.items || []));
+      })
+      .catch(() => {});
   }, [dispatch]);
 
-  const handleSelectCategory = (option) => {
-    setSelectedCategory(option);
-    dispatch(getCategoryAttributes({ categoryKey: option?.value }))
+  const platformOptionChoices = useMemo(
+    () => platformOptions.map((item) => ({ value: String(idOf(item)), label: item.name || item.slug || String(idOf(item)) })),
+    [platformOptions],
+  );
+
+  const loadOptionValues = (optionId) => {
+    if (!optionId || optionValues[optionId]) return;
+    dispatch(getPlatformOptionValues({ optionId, limit: 100, active: true }))
+      .unwrap()
+      .then((res) => {
+        const raw = res?.data;
+        setOptionValues((prev) => ({
+          ...prev,
+          [optionId]: Array.isArray(raw) ? raw : (raw?.list || raw?.items || []),
+        }));
+      })
+      .catch(() => {});
+  };
+
+  const openEditor = (option) => {
+    setLoadingKey(option.value);
+    dispatch(getCategoryAttributes({ categoryKey: option.value }))
       .unwrap()
       .then((res) => {
         const schema = res?.data?.attributeSchema || [];
@@ -105,26 +324,43 @@ const CategoryAttributes = () => {
           schema.map((item) => ({
             ...EMPTY_ATTRIBUTE,
             ...item,
-            options: Array.isArray(item.options) ? item.options.join(', ') : '',
+            options: Array.isArray(item.options) ? item.options : String(item.options || '').split(',').map((o) => o.trim()).filter(Boolean),
           })),
         );
+        schema.forEach((item) => {
+          if (item.platformOptionId) loadOptionValues(item.platformOptionId);
+        });
+        setAttrCounts((prev) => ({ ...prev, [option.value]: schema.length }));
+        setSelectedCategory(option);
+        setView('edit');
       })
       .catch(() => {
         setAttributes([]);
-      });
+        setSelectedCategory(option);
+        setView('edit');
+      })
+      .finally(() => setLoadingKey(null));
+  };
+
+  const handleBack = () => {
+    setView('list');
+    setSelectedCategory(null);
+    setAttributes([]);
   };
 
   const updateAttribute = (index, field, value) => {
     setAttributes((prev) =>
-      prev.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
-      ),
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
+  };
+
+  const removeAttribute = (index) => {
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     if (!selectedCategory?.value) {
-      toast.error('Please select a category');
+      toast.error('No category selected');
       return;
     }
 
@@ -137,10 +373,17 @@ const CategoryAttributes = () => {
         label: item.label.trim(),
         type: item.type,
         required: Boolean(item.required),
-        options: String(item.options || '')
-          .split(',')
-          .map((option) => option.trim())
-          .filter(Boolean),
+        platformOptionId: item.platformOptionId || '',
+        options: [
+          ...(Array.isArray(item.options) ? item.options : []),
+          ...(item.allowCustomOptions
+            ? String(item.customOptionsText || '')
+              .split(',')
+              .map((o) => o.trim())
+              .filter(Boolean)
+            : []),
+        ],
+        allowCustomOptions: Boolean(item.allowCustomOptions),
         unit: item.unit || null,
         isVariantAttribute: Boolean(item.isVariantAttribute),
         isFilterable: Boolean(item.isFilterable),
@@ -156,92 +399,198 @@ const CategoryAttributes = () => {
       return;
     }
 
-    const invalidSelectAttributes = payload.filter(
-      (item) => (item.type === 'select' || item.type === 'multi_select') && !item.options.length,
+    const invalidSelect = payload.filter(
+      (item) => (item.type === 'select' || item.type === 'multi_select') && (!item.platformOptionId || !item.options.length),
     );
-    if (invalidSelectAttributes.length) {
-      toast.error('Select/multi-select attributes must have at least one option.');
+    if (invalidSelect.length) {
+      toast.error('Select / multi-select attributes must use an option master and at least one value.');
       return;
     }
 
+    setSaving(true);
     try {
-      await dispatch(updateCategoryAttributes({
-        categoryKey: selectedCategory.value,
-        attributeSchema: payload,
-      })).unwrap();
-      toast.success('Category attributes updated');
+      await dispatch(
+        updateCategoryAttributes({ categoryKey: selectedCategory.value, attributeSchema: payload }),
+      ).unwrap();
+      toast.success('Category attributes saved');
+      setAttrCounts((prev) => ({ ...prev, [selectedCategory.value]: payload.length }));
       dispatch(getList({ limit: 100 }));
     } catch (error) {
-      toast.error(error?.message || error || 'Failed to update category attributes');
+      toast.error(error?.message || 'Failed to save category attributes');
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto p-6">
-      <Loader loading={selector.loading} />
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Category Attributes</h1>
-        <Button className="bg-white text-black" onClick={handleSave}>Save Attributes</Button>
-      </div>
-      <div className="bg-white border border-[#E6E6E6] p-4 space-y-5">
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-          <p className="text-xs text-blue-900">This schema controls which attributes appear in Product Catalog for this category.</p>
-          <button type="button" className="mt-2 rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-catalog')}>Open Product Catalog</button>
-        </div>
-        <FilterSelect
-          label="Category"
-          options={categoryOptions}
-          value={selectedCategory}
-          onChange={handleSelectCategory}
-          placeholder="Select Category"
-        />
-        <div className="flex justify-end">
+  /* ── LIST VIEW ────────────────────────────────────────────────────────── */
+  if (view === 'list') {
+    return (
+      <div className="max-w-5xl mx-auto p-6">
+        <Loader loading={selector.loading} />
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">Category Attributes</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Configure which attributes appear in Product Catalog per category
+            </p>
+          </div>
           <button
             type="button"
-            className="px-3 py-2 rounded bg-[#3E4094] text-white text-sm"
-            onClick={() => setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])}
+            className="text-xs text-[#3E4094] border border-[#3E4094] px-3 py-1.5 rounded hover:bg-[#3E4094] hover:text-white transition-colors"
+            onClick={() => navigate('/app/product-catalog')}
           >
-            Add Attribute
+            Open Product Catalog
           </button>
         </div>
-        <div className="space-y-4">
-          {attributes.map((attribute, index) => (
-            <div key={`${attribute.key}-${index}`} className="border border-gray-200 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input labelName="Key" value={attribute.key} onChange={(e) => updateAttribute(index, 'key', e.target.value)} />
-                <Input labelName="Label" value={attribute.label} onChange={(e) => updateAttribute(index, 'label', e.target.value)} />
-                <FilterSelect
-                  label="Type"
-                  options={typeOptions}
-                  value={typeOptions.find((item) => item.value === attribute.type)}
-                  onChange={(option) => updateAttribute(index, 'type', option?.value || 'text')}
-                />
-                <Input labelName="Options (comma separated)" value={attribute.options} onChange={(e) => updateAttribute(index, 'options', e.target.value)} />
-                <Input labelName="Unit" value={attribute.unit} onChange={(e) => updateAttribute(index, 'unit', e.target.value)} />
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                {['required', 'isVariantAttribute', 'isFilterable', 'isSearchable'].map((field) => (
-                  <label key={field} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(attribute[field])}
-                      onChange={(e) => updateAttribute(index, field, e.target.checked)}
-                    />
-                    <span>{field}</span>
-                  </label>
-                ))}
-                <button
-                  type="button"
-                  className="ml-auto text-red-600"
-                  onClick={() => setAttributes((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  Remove
-                </button>
-              </div>
+
+        <div className="bg-white border border-[#E6E6E6] rounded-lg overflow-hidden">
+          {categoryOptions.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 text-sm">
+              {selector.loading ? 'Loading categories…' : 'No categories found'}
             </div>
-          ))}
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">
+                    Attributes
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-40">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryOptions.map((option) => (
+                  <CategoryRow
+                    key={option.value}
+                    option={option}
+                    attrCount={attrCounts[option.value]}
+                    onEdit={openEditor}
+                    loadingKey={loadingKey}
+                  />
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
+    );
+  }
+
+  /* ── EDIT VIEW ────────────────────────────────────────────────────────── */
+  const categoryName = selectedCategory?.label?.split(' > ').pop() || selectedCategory?.label;
+  const categoryPath = selectedCategory?.label?.split(' > ').slice(0, -1).join(' > ');
+
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <Loader loading={selector.loading || saving} />
+
+      {/* Header */}
+      <div className="mb-5">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-3 transition-colors"
+        >
+          <MdArrowBack size={16} /> Back to Categories
+        </button>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 capitalize">{categoryName}</h1>
+            {categoryPath && (
+              <p className="text-xs text-gray-400 mt-0.5">{categoryPath}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-2 rounded bg-[#3E4094] text-white text-sm hover:bg-[#2f3070] transition-colors disabled:opacity-50"
+              onClick={() => setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])}
+            >
+              <MdAdd size={15} /> Add Attribute
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save Attributes'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Info banner */}
+      <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 flex items-start gap-2">
+        <span className="text-blue-500 mt-0.5">ℹ</span>
+        <p className="text-xs text-blue-800">
+          These attributes control which fields appear when adding/editing products under{' '}
+          <strong>{categoryName}</strong>. Only filled attributes (key + label) will be saved.
+        </p>
+      </div>
+
+      {/* Attribute editor */}
+      {attributes.length === 0 ? (
+        <div className="bg-white border border-dashed border-gray-300 rounded-lg py-14 text-center">
+          <p className="text-gray-400 text-sm mb-3">No attributes defined for this category yet.</p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-[#3E4094] text-white text-sm hover:bg-[#2f3070]"
+            onClick={() => setAttributes([{ ...EMPTY_ATTRIBUTE }])}
+          >
+            <MdAdd size={15} /> Add First Attribute
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {attributes.map((attribute, index) => (
+            <AttributeRow
+              key={`attr-${index}`}
+              attribute={attribute}
+              index={index}
+              onUpdate={updateAttribute}
+              onRemove={removeAttribute}
+              platformOptionChoices={platformOptionChoices}
+              optionValues={optionValues}
+              onLoadOptionValues={loadOptionValues}
+            />
+          ))}
+
+          <button
+            type="button"
+            className="w-full border border-dashed border-[#3E4094] text-[#3E4094] rounded-lg py-3 text-sm hover:bg-[#f0f0ff] transition-colors flex items-center justify-center gap-1.5"
+            onClick={() => setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])}
+          >
+            <MdAdd size={15} /> Add Another Attribute
+          </button>
+        </div>
+      )}
+
+      {/* Bottom save */}
+      {attributes.length > 0 && (
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save Attributes'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -26,9 +26,33 @@ const DISPLAY_TYPE_META = {
 
 const DISPLAY_TYPES = Object.entries(DISPLAY_TYPE_META).map(([value, meta]) => ({ value, label: meta.label }));
 
-const emptyForm = { name: '', displayType: 'button', description: '', active: true };
+const slugify = (value = '') =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const emptyForm = { name: '', slug: '', displayType: 'dropdown', description: '', active: true };
 
 const idOf = (r) => r?._id || r?.id || '';
+
+const getListPayload = (sliceData = {}) => {
+  const payload =
+    sliceData?.data?.data ||
+    sliceData?.data?.normalized?.data ||
+    sliceData?.normalized?.data ||
+    sliceData?.data ||
+    {};
+  if (Array.isArray(payload)) return payload;
+  return payload.list || payload.items || [];
+};
+
+const getTotal = (sliceData = {}, fallback = 0) =>
+  sliceData?.data?.meta?.total ||
+  sliceData?.data?.data?.total ||
+  sliceData?.data?.total ||
+  fallback;
 
 export default function ProductOptions() {
   const dispatch = useDispatch();
@@ -44,9 +68,8 @@ export default function ProductOptions() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const raw = selector?.platformOptionsData?.data;
-  const items = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
-  const total = selector?.platformOptionsData?.meta?.total || raw?.total || items.length;
+  const items = getListPayload(selector?.platformOptionsData);
+  const total = getTotal(selector?.platformOptionsData, items.length);
   const loading = selector?.loading;
 
   const load = useCallback(() => {
@@ -64,7 +87,13 @@ export default function ProductOptions() {
 
   const openEdit = (row) => {
     setEditing(row);
-    setForm({ name: row.name || '', displayType: row.displayType || 'button', description: row.description || '', active: row.active !== false });
+    setForm({
+      name: row.name || '',
+      slug: row.slug || slugify(row.name),
+      displayType: row.displayType || 'dropdown',
+      description: row.description || '',
+      active: row.active !== false,
+    });
     setErrors({});
     setModalOpen(true);
   };
@@ -84,10 +113,10 @@ export default function ProductOptions() {
     try {
       if (editing) {
         await dispatch(updatePlatformOption({ id: idOf(editing), ...form })).unwrap();
-        toast.success('Attribute updated');
+        toast.success('Option master updated');
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
-        toast.success('Attribute created');
+        toast.success('Option master created');
       }
       closeModal();
       load();
@@ -102,7 +131,7 @@ export default function ProductOptions() {
     if (!deleteTarget) return;
     try {
       await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
-      toast.success('Attribute deleted');
+      toast.success('Option master deleted');
       setDeleteTarget(null);
       load();
     } catch (err) {
@@ -127,9 +156,9 @@ export default function ProductOptions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-800">Product Attributes</h1>
+          <h1 className="text-xl font-semibold text-gray-800">Product Option Masters</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            Define attributes like Color, Size, RAM, Material — and their selectable values.
+            Define reusable option masters like Size, Color, RAM, Material, Warranty, Country, State, and City.
           </p>
         </div>
         <AddButton onClick={openAdd} />
@@ -161,7 +190,7 @@ export default function ProductOptions() {
             {items.length === 0 && !loading ? (
               <tr>
                 <td colSpan={5} className="px-4 py-16 text-center text-sm text-gray-400">
-                  No attributes yet. Click "Add" to create your first one.
+                  No option masters yet. Click "Add" to create your first one.
                 </td>
               </tr>
             ) : (
@@ -169,7 +198,10 @@ export default function ProductOptions() {
                 const dtMeta = DISPLAY_TYPE_META[row.displayType] || DISPLAY_TYPE_META.button;
                 return (
                   <tr key={idOf(row)} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold text-gray-800">{row.name}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-gray-800">{row.name}</p>
+                      <p className="font-mono text-xs text-gray-400">{row.slug || '—'}</p>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dtMeta.color}`}>
                         {dtMeta.label}
@@ -187,7 +219,7 @@ export default function ProductOptions() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => navigate(`/product-option-value/${idOf(row)}`)}
+                          onClick={() => navigate(`/app/product-option-value/${idOf(row)}`)}
                           className="px-3 py-1 text-xs font-medium text-green-600 border border-green-200 rounded hover:bg-green-50"
                         >
                           Manage Values →
@@ -223,29 +255,39 @@ export default function ProductOptions() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-5">
-              {editing ? 'Edit Attribute' : 'New Attribute'}
+              {editing ? 'Edit Option Master' : 'New Option Master'}
             </h2>
 
             <div className="space-y-4">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Attribute Name <span className="text-red-500">*</span>
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   autoFocus
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: f.slug || slugify(e.target.value) }))}
                   placeholder="e.g. Color, Size, RAM, Material"
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <input
+                  value={form.slug}
+                  onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
+                  placeholder="e.g. size, color, storage"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+
               {/* Display Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
-                <p className="text-xs text-gray-400 mb-2">How this attribute appears to customers on the product page</p>
+                <p className="text-xs text-gray-400 mb-2">How values from this option appear on product and variant forms</p>
                 <div className="grid grid-cols-2 gap-2">
                   {DISPLAY_TYPES.map((dt) => (
                     <button
@@ -258,11 +300,6 @@ export default function ProductOptions() {
                           : 'border-gray-200 text-gray-600 hover:border-gray-300'
                       }`}
                     >
-                      {dt.value === 'button' && '⬜ '}
-                      {dt.value === 'dropdown' && '▾ '}
-                      {dt.value === 'color_swatch' && '🎨 '}
-                      {dt.value === 'radio' && '◉ '}
-                      {dt.value === 'thumbnail' && '🖼 '}
                       {dt.label}
                     </button>
                   ))}

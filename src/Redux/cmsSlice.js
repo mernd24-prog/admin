@@ -1,16 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany, toListParams, unsupportedThunk } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
 
 const initialState = {
-    getCategoryListData: {},
-    createCategory: {},
-    updateCategoryData: {},
-    deleteCategoryData: {},
-    updateCMSCategoryData: {},
-    enableDisableCityData: {},
-    getAllCityListData: {},
     getCMSContentListData: {},
     createCMSContentListData: {},
     enableDisableCMSData: {},
@@ -31,11 +24,6 @@ const initialState = {
     updateTaxRuleData: {},
     enableDisableTaxRuleData: {},
     softDeleteTaxRuleData: {},
-    getListShippingData: {},
-    softDeleteShippingData: {},
-    enableDisableShippingData: {},
-    createShippingData: {},
-    updateShippingData: {},
 };
 
 const parseLegacyQuery = (payload = {}) => {
@@ -115,17 +103,6 @@ const toTaxRuleBody = (payload = {}) => ({
     ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
 });
 
-const CMS_CATEGORY_UNSUPPORTED_MESSAGE =
-  'Legacy CMS category API is not exposed by the current backend.';
-const SHIPPING_DURATION_UNSUPPORTED_MESSAGE =
-  'Store shipping duration API is not exposed by the current backend.';
-
-export const getCategoryList = unsupportedThunk('getCategoryList', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
-export const createCategory = unsupportedThunk('createCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
-export const updateCategory = unsupportedThunk('updateCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
-export const deleteCategory = unsupportedThunk('deleteCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
-export const updateCMSCategory = unsupportedThunk('updateCMSCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
-export const enableDisableCategory = unsupportedThunk('enableDisableCategory', CMS_CATEGORY_UNSUPPORTED_MESSAGE);
 
 export const getCMSContentList = createApiThunkPrivate(
     'getCMSContentList',
@@ -324,23 +301,12 @@ export const softDeleteTaxRule = deleteMany(
     'Tax rule deleted successfully'
 );
 
-export const getListShipping = unsupportedThunk('getListShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
-export const softDeleteShipping = unsupportedThunk('softDeleteShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
-export const enableDisableShipping = unsupportedThunk('enableDisableShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
-export const createShipping = unsupportedThunk('createShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
-export const updateShipping = unsupportedThunk('updateShipping', SHIPPING_DURATION_UNSUPPORTED_MESSAGE);
 
 const cmsSlice = createSlice({
     name: 'cms',
     initialState,
     extraReducers: builder => {
-        createExtraReducersForThunk(builder, getCategoryList, 'getCategoryListData')
-        createExtraReducersForThunk(builder, createCategory, 'createCategoryData')
-        createExtraReducersForThunk(builder, updateCategory, 'updateCategoryData')
-        createExtraReducersForThunk(builder, deleteCategory, 'deleteCategoryData')
-        createExtraReducersForThunk(builder, updateCMSCategory, 'updateCMSCategoryData')
-        createExtraReducersForThunk(builder, enableDisableCategory, 'enableDisableCategoryData')
-        createExtraReducersForThunk(builder, getCMSContentList, 'getCMSContentListData')
+createExtraReducersForThunk(builder, getCMSContentList, 'getCMSContentListData')
         createExtraReducersForThunk(builder, createCMSContentList, 'createCMSContentListData')
         createExtraReducersForThunk(builder, enableDisableCMS, 'enableDisableCMSData')
         createExtraReducersForThunk(builder, updateCMSList, 'updateCMSListData')
@@ -361,11 +327,6 @@ const cmsSlice = createSlice({
         createExtraReducersForThunk(builder, updateTaxRule, 'updateTaxRuleData')
         createExtraReducersForThunk(builder, enableDisableTaxRule, 'enableDisableTaxRuleData')
         createExtraReducersForThunk(builder, softDeleteTaxRule, 'softDeleteTaxRuleData')
-        createExtraReducersForThunk(builder, getListShipping, 'getListShippingData')
-        createExtraReducersForThunk(builder, softDeleteShipping, 'softDeleteShippingData')
-        createExtraReducersForThunk(builder, enableDisableShipping, 'enableDisableShippingData')
-        createExtraReducersForThunk(builder, createShipping, 'createShippingData')
-        createExtraReducersForThunk(builder, updateShipping, 'updateShippingData')
     }
 });
 

@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany, toListParams, unsupportedThunk } from '../_helpers/adminApi';
+import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
 
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
@@ -141,25 +141,22 @@ const toHsnBody = (payload = {}) => ({
 });
 
 const initialState = {
-    getListData: {}, softDeleteData: {}, enableDisableData: {}, createData: {}, updateData: {}, getCollectionListData: {},
-    createCollectionData: {}, updateCollectionData: {}, deleteCollectionData: {}, enableDisableCollectionData: {}, FinishGetListData: {},
+    getListData: {}, softDeleteData: {}, enableDisableData: {}, createData: {}, updateData: {},
+    FinishGetListData: {},
     CreateFinishData: {}, softDeleteFinishData: {}, enableDisableFinishData: {}, getListDimensionData: {}, createDimensionData: {},
     enableDisableDimensionData: {}, softDeleteDimensionData: {}, updateDimensionData: {}, getBrandListData: {}, createBrandData: {},
     updateBrandData: {}, deleteBrandData: {}, enableDisableBrandData: {}, getWarrantyListData: {}, enableDisableWarrantyData: {},
     softDeleteWarrantyData: {}, createWarrantyData: {}, getListProductData: {}, enableDisableProductData: {}, updateProductData: {},
     createProductData: {}, deleteProductData: {}, getListProductOptionData: {}, enableDisableProductOptionData: {}, deleteProductOptionData: {},
     createProductOptionData: {}, updateProductOptionData: {},
-    getAllBrandListData: {}, getAllCollectionListData: {}, getAllPatternListData: {}, getAllListDimensionData: {}, getAllFinishListData: {}, getAllColorListData: {},
-    getAllWarrantyListData: {}, getAllPrivacyPolicyListData: {}, getAllStoreListData: {}, getAllTaxListData: {}, getAllStoreShippingDurationListData: {}, getAllBatchListData: {}, getAllQtyHeadListData: {},
-    productOptionListData: {}, createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
-    deleteProductsData: {}, approveDisapproveData: {}, getAllTaxRulesListData: {}, getAllProductsData: {}, createCategoryData: {},
-    getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, downloadSampleCsvData: {},
-    uploadHistoryData: {}, getProductsForPurchaseData: {}, getProductStocksData: {}, productModerationQueueData: {},
+    getAllBrandListData: {}, getAllColorListData: {},
+    getAllWarrantyListData: {}, getAllTaxListData: {}, getAllBatchListData: {},
+    createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
+    deleteProductsData: {}, approveDisapproveData: {}, getAllProductsData: {}, createCategoryData: {},
+    getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, productModerationQueueData: {},
     getCategoryAttributesData: {}, updateCategoryAttributesData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
 }
-const PRODUCT_LEGACY_UNSUPPORTED_MESSAGE =
-    'This legacy product management API is not exposed by the current backend.';
 
 export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
     transformParams: (params = {}) => ({
@@ -243,14 +240,6 @@ export const createCategory = createApiThunkPrivate('product/createCategory', EN
 
 
 
-//collection->>>>>>>>>>>>>
-export const getCollectionList = unsupportedThunk('collections/getList', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const createCollection = unsupportedThunk('collections/create', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const updateCollection = unsupportedThunk('collections/update', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const deleteCollection = unsupportedThunk('collections/delete', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const enableDisableCollection = unsupportedThunk('collections/enableDisable', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllCollectionList = unsupportedThunk('collections/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
 
 ////Finish->>>>>>>>>>>
 export const FinishGetList = createApiThunkPrivate('finish/getList', ENDPOINTS.platform.finishes, 'GET', true, {
@@ -275,7 +264,6 @@ export const updateFinish = createApiThunkPrivate('finish/update', (payload) => 
         ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
     }),
 })
-export const getAllFinishList = unsupportedThunk('finish/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 ////Dimension--->>>>>>>>>>
 export const getListDimension = createApiThunkPrivate('dimension/getList', ENDPOINTS.platform.dimensions, 'GET', true, {
@@ -300,8 +288,6 @@ export const updateDimension = createApiThunkPrivate('dimension/update', (payloa
         ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
     }),
 })
-export const getAllListDimension = unsupportedThunk('dimension/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
 
 /// brand functions===>>>>>>>>>>>>>>>>>
 
@@ -365,9 +351,6 @@ export const enableDisableBatch = patchMany(
 export const getAllBatchList = createApiThunkPrivate('batch/getAllDocuments', ENDPOINTS.platform.batches, 'GET', true, {
     transformParams: (params = {}) => toListParams(params, { limit: 100 }),
 })
-export const getAllQtyHeadList = unsupportedThunk('qtyHead/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
-
 
 /// product Warranty===>>>>>>>>>>>>>>>>>
 export const getWarrantyList = createApiThunkPrivate('warranty/getList', ENDPOINTS.platform.warrantyTemplates, 'GET', true, {
@@ -447,12 +430,6 @@ export const updateProductOption = createApiThunkPrivate('product-option-value/u
     }),
 })
 
-export const getAllPatternList = unsupportedThunk('pattern/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllPrivacyPolicyList = unsupportedThunk('replace-policy/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllStoreList = unsupportedThunk('store/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllStoreShippingDurationList = unsupportedThunk('store-shipping-duration/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const getAllTaxRulesList = unsupportedThunk('taxRule/getAllDocuments', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
 
 export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST', false, {
     transformBody: toProductBody,
@@ -510,12 +487,6 @@ export const updateCategoryAttributes = createApiThunkPrivate(
 export const getAllBrandList = createApiThunkPrivate('brands/getAllDocuments', ENDPOINTS.platform.brands, 'GET', true, {
     transformParams: (params = {}) => toListParams(params, { limit: 100 }),
 })
-export const getProductsForPurchase = unsupportedThunk('erp/product/get-products-for-purchase-order', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
-export const getProductStocks = unsupportedThunk('erp/product/get-product-stocks', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-
-
-
 
 
 /// hsn code==============>>>>>>>>>>>>>>>
@@ -547,9 +518,6 @@ export const updateHsn = createApiThunkPrivate('updateHsn', (payload) => ENDPOIN
 export const getAllHsn = createApiThunkPrivate('getAllHsn', ENDPOINTS.platform.hsnCodes, 'GET', true, {
     transformParams: (params = {}) => toHsnListParams({ ...params, limit: params.limit || params.size || 100 }),
 })
-export const downloadSampleCsv = unsupportedThunk('product/downLoad-sample-csv', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const uploadHistory = unsupportedThunk('product/bulk-upload-history', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
-export const productOptionList = unsupportedThunk('product-option/getOptionsWithValues', PRODUCT_LEGACY_UNSUPPORTED_MESSAGE)
 
 export const bulkUpdateProducts = createApiThunkPrivate('bulkUpdateProducts', ENDPOINTS.products.bulkUpdate, 'POST', false, {
     transformBody: (payload = {}) => ({
@@ -594,12 +562,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, create, 'createData')
         createExtraReducersForThunk(builder, update, 'updateData')
 
-        // collection ==>>>>>>>>>>>>>
-        createExtraReducersForThunk(builder, getCollectionList, 'getCollectionListData')
-        createExtraReducersForThunk(builder, createCollection, 'createCollectionData')
-        createExtraReducersForThunk(builder, updateCollection, 'updateCollectionData')
-        createExtraReducersForThunk(builder, deleteCollection, 'deleteCollectionData')
-        createExtraReducersForThunk(builder, enableDisableCollection, 'enableDisableCollectionData')
         // Finish  =====>>>>>>>>>>>
         createExtraReducersForThunk(builder, FinishGetList, 'FinishGetListData')
         createExtraReducersForThunk(builder, CreateFinish, 'CreateFinishData')
@@ -640,13 +602,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, updateProductOption, 'updateProductOptionData')
 
         createExtraReducersForThunk(builder, getAllBrandList, 'getAllBrandListData')
-        createExtraReducersForThunk(builder, getAllCollectionList, 'getAllCollectionListData')
-        createExtraReducersForThunk(builder, getAllPatternList, 'getAllPatternListData')
-        createExtraReducersForThunk(builder, getAllListDimension, 'getAllListDimensionData')
-        createExtraReducersForThunk(builder, getAllFinishList, 'getAllFinishListData')
-        createExtraReducersForThunk(builder, getAllPrivacyPolicyList, 'getAllPrivacyPolicyListData')
-        createExtraReducersForThunk(builder, getAllStoreList, 'getAllStoreListData')
-        createExtraReducersForThunk(builder, getAllStoreShippingDurationList, 'getAllStoreShippingDurationListData')
         createExtraReducersForThunk(builder, createProducts, 'createProductsData')
         createExtraReducersForThunk(builder, getProducts, 'getProductsData')
         createExtraReducersForThunk(builder, getProductById, 'updateProductsData')
@@ -655,8 +610,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, deleteProducts, 'deleteProductsData')
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
         createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')
-        createExtraReducersForThunk(builder, getAllQtyHeadList, 'getAllQtyHeadListData')
-        createExtraReducersForThunk(builder, getAllTaxRulesList, 'getAllTaxRulesListData')
         createExtraReducersForThunk(builder, getAllWarrantyList, 'getAllWarrantyListData')
         createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
         createExtraReducersForThunk(builder, getProductModerationQueue, 'productModerationQueueData')
@@ -670,12 +623,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, enableDisableHsn, 'enableDisableHsnData')
         createExtraReducersForThunk(builder, softDeleteHsn, 'softDeleteHsnData')
         createExtraReducersForThunk(builder, getAllHsn, 'getAllHsnData')
-        createExtraReducersForThunk(builder, downloadSampleCsv, 'downloadSampleCsvData')
-        createExtraReducersForThunk(builder, uploadHistory, 'uploadHistoryData')
-        createExtraReducersForThunk(builder, productOptionList, 'productOptionListData')
-        createExtraReducersForThunk(builder, getProductsForPurchase, 'getProductsForPurchaseData')
-
-        createExtraReducersForThunk(builder, getProductStocks, 'getProductStocksData')
         createExtraReducersForThunk(builder, bulkUpdateProducts, 'bulkUpdateProductsData')
         createExtraReducersForThunk(builder, adjustProductInventory, 'adjustProductInventoryData')
         createExtraReducersForThunk(builder, getInventoryStats, 'getInventoryStatsData')

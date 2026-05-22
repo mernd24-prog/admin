@@ -2,10 +2,24 @@ import React from 'react';
 import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../../components/Atoms/Input/Input';
 
-const optionList = (field) =>
-  (field.options || []).map((option) => ({ value: option, label: option }));
+const valueName = (record = {}) => record.name || record.label || record.value || '';
 
-const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, errors = {} }) => {
+const optionList = (field, optionValues = {}) => {
+  if (field.platformOptionId && optionValues[field.platformOptionId]) {
+    const allowed = new Set(field.options || []);
+    return optionValues[field.platformOptionId]
+      .filter((item) => item.active !== false)
+      .filter((item) => !allowed.size || allowed.has(valueName(item)))
+      .map((item) => ({
+        value: valueName(item),
+        label: valueName(item),
+        item,
+      }));
+  }
+  return (field.options || []).map((option) => ({ value: option, label: option }));
+};
+
+const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, errors = {}, optionValues = {} }) => {
   const attributes = formData?.attributes || {};
 
   const updateAttribute = (key, value) => {
@@ -39,7 +53,7 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
           const label = `${field.label || field.key}${field.unit ? ` (${field.unit})` : ''}`;
 
           if (field.type === 'select') {
-            const options = optionList(field);
+            const options = optionList(field, optionValues);
             return (
               <FilterSelect
                 key={field.key}
@@ -54,7 +68,7 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
           }
 
           if (field.type === 'multi_select') {
-            const options = optionList(field);
+            const options = optionList(field, optionValues);
             const selectedValues = Array.isArray(value) ? value : [];
             return (
               <FilterSelect

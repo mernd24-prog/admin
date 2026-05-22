@@ -124,7 +124,6 @@ export default function BasicDetailsTab({
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
-  const [customColor, setCustomColor] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -296,17 +295,6 @@ export default function BasicDetailsTab({
     if (action === 'PRODUCT_STATE' && selectedOption?.value) {
       dispatch(getAllCityList({ stateId: selectedOption.value }));
     }
-  };
-
-  const handleAddCustomColor = () => {
-    const nextColor = customColor.trim();
-    if (!nextColor) {
-      toast.error("Enter a color name first");
-      return;
-    }
-
-    handleSelectChange({ value: nextColor, label: nextColor }, 'PRODUCT_COLOR');
-    setCustomColor("");
   };
 
   const handleFileUploadCategory = async (file) => {
@@ -654,34 +642,6 @@ export default function BasicDetailsTab({
               placeholder="Select color"
               error={errors?.color}
             />
-            <div className="space-y-2">
-              <label className="label block text-sm font-medium text-gray-700 mb-3">
-                Add Custom Color
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customColor}
-                  onChange={(e) => setCustomColor(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCustomColor();
-                    }
-                  }}
-                  placeholder="Example: Navy Blue"
-                  className="min-h-[42px] w-full rounded-md bg-[#F7FAFC] px-3 text-sm text-gray-700 outline-none focus:ring-1 focus:ring-[#3E4094]"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCustomColor}
-                  className="h-[42px] shrink-0 rounded-md bg-[#3E4094] px-3 text-sm text-white hover:bg-[#2e3074]"
-                >
-                  Add
-                </button>
-              </div>
-              <p className="text-xs text-gray-500">Custom color is saved with this product.</p>
-            </div>
             <FilterSelect
               label="Product Family Code"
               value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}

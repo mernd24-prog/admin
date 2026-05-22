@@ -38,7 +38,7 @@ const API_CALLS = [
 { action: getAllHsn, name: 'Hsn code List' },
 { action: getAllBrandList, name: 'Brand List' },
 { action: getAllWarrantyList, name: 'Warranty List' },
-{ action: () => getProductFamilies({ page: 1, limit: 500 }), name: 'Product Families List' },
+{ action: () => getProductFamilies({ page: 1, limit: 100 }), name: 'Product Families List' },
 { action: getAllProducts, name: 'Products List' },
 ];
 
@@ -50,22 +50,6 @@ const API_CALL_OBJECT = {
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
-const DEFAULT_COLOR_OPTIONS = [
-  'Black',
-  'White',
-  'Red',
-  'Blue',
-  'Green',
-  'Yellow',
-  'Orange',
-  'Pink',
-  'Purple',
-  'Brown',
-  'Grey',
-  'Silver',
-  'Gold',
-  'Multicolor',
-];
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
@@ -225,8 +209,14 @@ export default function ProductManagementUI() {
               setVariantsData(productData.variants);
             }
           }
-          if (Array.isArray(productData?.variantAxes) && productData.variantAxes.length) {
-            setVariantAxes(productData.variantAxes);
+          if (Array.isArray(productData?.options) && productData.options.length) {
+            setVariantAxes(productData.options);
+          } else if (Array.isArray(productData?.variantAxes) && productData.variantAxes.length) {
+            setVariantAxes(productData.variantAxes.map((axis, index) => ({
+              name: String(axis || ''),
+              values: [],
+              sortOrder: index,
+            })));
           }
 
           if (res?.data?.hsnCode || res?.data?.hsn_code) {
@@ -302,7 +292,21 @@ export default function ProductManagementUI() {
       .unwrap()
       .then((res) => {
         const data = res?.data || {};
-        setCategoryAttributeSchema(data.attributeSchema || []);
+        const schema = data.attributeSchema || [];
+        setCategoryAttributeSchema(schema);
+        schema.forEach((field) => {
+          const optId = field.platformOptionId;
+          if (!optId || fetchedOptionIds.current.has(optId)) return;
+          fetchedOptionIds.current.add(optId);
+          dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
+            .unwrap()
+            .then((valueRes) => {
+              const raw = valueRes?.data;
+              const list = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
+              setPlatformValues((prev) => ({ ...prev, [optId]: list }));
+            })
+            .catch(() => { fetchedOptionIds.current.delete(optId); });
+        });
       })
       .catch(() => {
         setCategoryAttributeSchema([]);
@@ -322,7 +326,7 @@ export default function ProductManagementUI() {
 
   // Load platform attribute options once on mount
   useEffect(() => {
-    dispatch(getPlatformOptions({ limit: 200, active: true }))
+    dispatch(getPlatformOptions({ limit: 100, active: true }))
       .unwrap()
       .then((res) => {
         const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
@@ -331,13 +335,29 @@ export default function ProductManagementUI() {
       .catch(() => {});
   }, [dispatch]);
 
+  useEffect(() => {
+    platformOptions.forEach((option) => {
+      const optId = option._id || option.id;
+      if (!optId || fetchedOptionIds.current.has(optId)) return;
+      fetchedOptionIds.current.add(optId);
+      dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
+        .unwrap()
+        .then((res) => {
+          const raw = res?.data;
+          const list = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
+          setPlatformValues((prev) => ({ ...prev, [optId]: list }));
+        })
+        .catch(() => { fetchedOptionIds.current.delete(optId); });
+    });
+  }, [dispatch, platformOptions]);
+
   // When a platform-linked axis is added to variantAxes, load its values
   useEffect(() => {
     variantAxes.forEach((axis) => {
       const optId = axis.platformOptionId;
       if (!optId || fetchedOptionIds.current.has(optId)) return;
       fetchedOptionIds.current.add(optId);
-      dispatch(getPlatformOptionValues({ optionId: optId, limit: 200 }))
+      dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
         .unwrap()
         .then((res) => {
           const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
@@ -348,7 +368,7 @@ export default function ProductManagementUI() {
   }, [dispatch, variantAxes]);
 
   const handleOptionSearch = useCallback((query) => {
-    dispatch(getPlatformOptions({ limit: 200, active: true, q: query || undefined }))
+    dispatch(getPlatformOptions({ limit: 100, active: true, q: query || undefined }))
       .unwrap()
       .then((res) => {
         const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
@@ -383,15 +403,13 @@ export default function ProductManagementUI() {
       value: item?.period || item?._id || item?.id,
       label: item?.period || item?.name || String(item?._id || item?.id || ''),
     })),
-    colorList: Array.from(
-      new Set([
-        ...DEFAULT_COLOR_OPTIONS,
-        ...(getListPayload(selector?.getAllProductsData) || [])
-          .map((item) => item?.color)
-          .filter(Boolean)
-          .map((color) => String(color).trim()),
-      ])
-    ).map((color) => ({ value: color, label: color })),
+    colorList: (() => {
+      const colorOption = platformOptions.find((item) => String(item.name || item.slug || '').toLowerCase() === 'color');
+      const colorValues = colorOption ? (platformValues[colorOption._id || colorOption.id] || []) : [];
+      return colorValues
+        .filter((item) => item.active !== false)
+        .map((item) => ({ value: item.name, label: item.name }));
+    })(),
     productFamilyList: getListPayload(adminCoreSelector?.productFamiliesData)
       .map((item) => String(item?.familyCode || item?.code || '').trim())
       .filter(Boolean)
@@ -404,7 +422,7 @@ export default function ProductManagementUI() {
       label: `${item.code || item._id || item.id} | GST: ${Number(item.gstRate || item.IGST || 0)}%`,
     })),
 
-  }), [selector, adminCoreSelector?.productFamiliesData]);
+  }), [selector, adminCoreSelector?.productFamiliesData, platformOptions, platformValues]);
 
   const createSelectOptions = useMemo(() => {
     const categorySource = getListPayload(selector?.getListData);
@@ -783,8 +801,7 @@ export default function ProductManagementUI() {
     }
   };
 
-
-
+  const productType = formData?.productType || 'simple';
 
   const handleSaveSubmit = useCallback(async () => {
     const catalogsUrlsArray = typeof formData.catalogsUrls === 'string'
@@ -804,6 +821,16 @@ export default function ProductManagementUI() {
       stock: Number(option.stock || 0),
       ...(option._id && { _id: option._id })
     }));
+    const variableOptionAxes = variantAxes.map((axis, index) => ({
+      name: axis.name,
+      slug: axis.slug,
+      platformOptionId: axis.platformOptionId,
+      displayType: axis.displayType,
+      values: Array.isArray(axis.values) ? axis.values : [],
+      valueCodes: axis.valueCodes || {},
+      required: Boolean(axis.required),
+      sortOrder: axis.sortOrder ?? index,
+    })).filter((axis) => axis.name && axis.values.length);
 
     const primaryOption = formattedOptions[0] || {};
     const origin = compactObject(updatedFormData.origin || {});
@@ -871,7 +898,8 @@ export default function ProductManagementUI() {
       ...(updatedFormData.subscription && Object.keys(updatedFormData.subscription).length ? { subscription: updatedFormData.subscription } : {}),
       ...(Array.isArray(updatedFormData.bundleItems) && updatedFormData.bundleItems.length ? { bundleItems: updatedFormData.bundleItems } : {}),
       ...(typeof updatedFormData.bundleDiscount === 'number' ? { bundleDiscount: updatedFormData.bundleDiscount } : {}),
-      ...(variantAxes.length ? { variantAxes } : {}),
+      options: productType === 'variable' ? variableOptionAxes : formattedOptions,
+      ...(variableOptionAxes.length ? { variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name) } : {}),
       ...(variantsData.length ? {
         variants: variantsData,
         hasVariants: true,
@@ -904,7 +932,7 @@ export default function ProductManagementUI() {
     } catch (err) {
       toast.error(err || "Failed to save product.");
     }
-  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, userData, id, navigate]);
+  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, userData, id, navigate, productType, variantAxes, variantsData]);
 
 
   const handleProductDetailChange = (field, content) => {
@@ -929,10 +957,6 @@ export default function ProductManagementUI() {
       }));
     }
   }, []);
-
-
-
-  const productType = formData?.productType || 'simple';
 
   const tabs = useMemo(() => [
     {
@@ -1044,6 +1068,7 @@ export default function ProductManagementUI() {
           formData={formData}
           setFormData={setFormData}
           errors={error}
+          optionValues={platformValues}
         />
       )
     },
@@ -1079,6 +1104,7 @@ export default function ProductManagementUI() {
           handleChange={handleChange}
           selectJson={selectJson}
           setFormData={setFormData}
+          platformOptions={platformOptions}
         />
       )
     },

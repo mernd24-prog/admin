@@ -11,7 +11,7 @@ import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import AddButton from '../../../components/Button/AddButton';
 
 // Redux
-import { approveDisapprove, deleteProducts, downloadSampleCsv, enableDisableProductCatalogs, getProducts } from '../../../Redux/productSlice';
+import { approveDisapprove, deleteProducts, enableDisableProductCatalogs, getProducts } from '../../../Redux/productSlice';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
 import Loader from '../../../components/Loader/Loader';
 import { toast } from 'sonner';
@@ -20,9 +20,8 @@ import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox';
 import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
 import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
 import { getAllSellerList } from '../../../Redux/StoreSlice';
-import { generateCSV, transformArray, uploadCsvFile } from '../../../_helpers/globalFunctions';
+import { transformArray, uploadCsvFile } from '../../../_helpers/globalFunctions';
 import UploadFile from '../../../components/Atoms/UploadFile/UploadFile';
-import DownloadButton from '../../../components/Button/DownloadButton';
 import Button from '../../../components/Atoms/buttons/button';
 import ProductReviewModal from '../../../components/Product/ProductReviewModal';
 import ProductStatusBadge from '../../../components/Product/ProductStatusBadge';
@@ -411,19 +410,6 @@ const ProductCatalog = () => {
     }
   }
 
-  const handleDownloadSample = () => {
-    dispatch(downloadSampleCsv())
-      .unwrap()
-      .then((res) => {
-        generateCSV(res?.data, {
-          filename: 'products_sample.csv',
-        });
-
-      })
-      .catch((error) => {
-        console.error('Error downloading sample CSV:', error);
-      });
-  };
 
 
   const handleFileUpload = async (file) => {
@@ -556,7 +542,6 @@ const ProductCatalog = () => {
             </>
           )}
 
-          <DownloadButton onClick={handleDownloadSample} />
           <UploadFile onFileSelect={handleFileUpload} />
 
         </div>
