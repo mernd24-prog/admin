@@ -34,7 +34,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
               alt="Background"
               className="absolute inset-x-0 -top-[14%] z-0 h-[84%] w-full object-cover object-top"
             />
-            <div className="absolute inset-x-0  bottom-[20%] z-10 h-[60%] xl:h-[45%] bg-gradient-to-b from-transparent via-white/90 to-white" />
+            <div className="absolute inset-x-0  bottom-[20%] z-10 h-[60%] xl:h-[48%] bg-gradient-to-b from-transparent via-white/90 to-white" />
 
             <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center  bottom-4  xl:bottom-[6rem]">
               <div className="h-12 w-12 sm:h-14 sm:w-14">
@@ -100,7 +100,8 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
             <div
               className={
                 formType === "verificationComplete" ||
-                formType === "registerVerification" || formType === "register"
+                formType === "registerVerification" ||
+                formType === "register"
                   ? "w-full max-w-[58rem]"
                   : "w-full max-w-[480px]"
               }

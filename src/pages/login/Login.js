@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
-import { GoArrowRight } from "react-icons/go";
-import { GoDotFill } from "react-icons/go";
 import {
   adminLogin,
   forgotPassword,
@@ -23,8 +21,6 @@ import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
 import EmailInput from "../../components/Atoms/EmailInput";
 import PasswordInput from "../../components/Atoms/password/PasswordInput";
 import Loader from "../../components/Loader/Loader";
-import { CiLock } from "react-icons/ci";
-import { MdEmail } from "react-icons/md";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
 import AuthProgressSteps from "../../components/AuthVerification/AuthProgressSteps";
 import OtpVerificationCard from "../../components/AuthVerification/OtpVerificationCard";
@@ -37,14 +33,9 @@ import {
   setStoredAuth,
 } from "../../_helpers/authStorage";
 import { useAuthLayout } from "../../context/AuthLayoutContext";
-import IconButton from "../../components/Atoms/buttons/iconButton";
-import TransparentButton from "../../components/Atoms/buttons/TransParentButton";
+import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen";
 
 const RESEND_COOLDOWN_SECONDS = 30;
-const authInputClassName =
-  "h-[31px] rounded-[6px] border-[#dcd8ee] bg-[#fbfaff] px-3 text-[11px] text-[#344054] placeholder:text-[#8f8aa3] focus:border-[#082f91] focus:ring-[#dce3ff]";
-const authLabelClassName =
-  "mb-[4px] text-[11px] font-medium leading-[16px] text-[#333142]";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -104,7 +95,6 @@ const Login = () => {
       try {
         const { email } = JSON.parse(savedCredentials);
         setFormFields((prev) => ({ ...prev, email }));
-        setRememberMe(true);
       } catch (e) {
         console.error("Invalid stored credentials:", e);
       }
@@ -149,8 +139,13 @@ const Login = () => {
       if (!formFields.password.trim()) {
         errors.password = "Password is required.";
         isValid = false;
-      } else if (formFields.password.length < 6) {
-        errors.password = "Password must be at least 6 characters long.";
+      } else if (
+        !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+          formFields.password,
+        )
+      ) {
+        errors.password =
+          "Use 8+ characters with uppercase, number & special character.";
         isValid = false;
       }
     } else if (formState === "forgotPassword") {
@@ -172,9 +167,13 @@ const Login = () => {
       if (!formFields.newPassword.trim()) {
         errors.newPassword = "New password is required.";
         isValid = false;
-      } else if (!passwordRegex.test(formFields.newPassword)) {
+      } else if (
+        !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+          formFields.newPassword,
+        )
+      ) {
         errors.newPassword =
-          "Password must be at least 8 characters long, include at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @$!%*?&).";
+          "Use 8+ characters with uppercase, number & special character.";
         isValid = false;
       }
 
@@ -206,11 +205,8 @@ const Login = () => {
       if (!formFields.phone.trim()) {
         errors.phone = "Phone is required";
         isValid = false;
-      } else if (
-        formFields.phone.trim().length < 10 ||
-        formFields.phone.trim().length > 15
-      ) {
-        errors.phone = "Phone must be between 10 and 15 digits";
+      } else if (!/^\d{10}$/.test(formFields.phone.trim())) {
+        errors.phone = "Phone number must be exactly 10 digits";
         isValid = false;
       }
 
@@ -227,6 +223,10 @@ const Login = () => {
         isValid = false;
       } else if (formFields.registerPassword.length < 8) {
         errors.registerPassword = "Minimum 8 characters required";
+        isValid = false;
+      } else if (!/^(?=.*[A-Z])(?=.*\d).+$/.test(formFields.registerPassword)) {
+        errors.registerPassword =
+          "Password must contain at least one uppercase letter and one number";
         isValid = false;
       }
 
@@ -254,12 +254,12 @@ const Login = () => {
       return;
     }
 
-    if (!requireTermsAgreement()) {
+    if (!validateLoginFields()) {
+      setFormAnimation("slide-in");
       return;
     }
 
-    if (!validateLoginFields()) {
-      setFormAnimation("slide-in");
+    if (!requireTermsAgreement()) {
       return;
     }
 
@@ -603,12 +603,12 @@ const Login = () => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!requireTermsAgreement()) {
+    if (!validateLoginFields()) {
+      setFormAnimation("slide-in");
       return;
     }
 
-    if (!validateLoginFields()) {
-      setFormAnimation("slide-in");
+    if (!requireTermsAgreement()) {
       return;
     }
 
@@ -631,12 +631,12 @@ const Login = () => {
 
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!requireTermsAgreement()) {
+    if (!validateLoginFields()) {
+      setFormAnimation("slide-in");
       return;
     }
 
-    if (!validateLoginFields()) {
-      setFormAnimation("slide-in");
+    if (!requireTermsAgreement()) {
       return;
     }
 
@@ -690,12 +690,12 @@ const Login = () => {
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!requireTermsAgreement()) {
+    if (!validateLoginFields()) {
+      setFormAnimation("slide-in");
       return;
     }
 
-    if (!validateLoginFields()) {
-      setFormAnimation("slide-in");
+    if (!requireTermsAgreement()) {
       return;
     }
 
@@ -718,16 +718,12 @@ const Login = () => {
   };
 
   const toggleForgotPassword = useCallback(() => {
-    if (!requireTermsAgreement()) {
-      return;
-    }
-
     setFormAnimation("slide-out");
     setTimeout(() => {
       setFormState((prev) => (prev === "login" ? "forgotPassword" : "login"));
       resetForm();
     }, 300);
-  }, [requireTermsAgreement, resetForm, setFormState]);
+  }, [resetForm, setFormState]);
 
   const handleResendOtp = useCallback(
     async (e) => {
@@ -813,10 +809,6 @@ const Login = () => {
             bottomText="Don't have an account?"
             linkText="Register"
             onLinkClick={() => {
-              if (!requireTermsAgreement()) {
-                return;
-              }
-
               if (sellerPanel) {
                 setFormState("register");
                 return;
@@ -859,7 +851,7 @@ const Login = () => {
               </div>
 
               {loginError && (
-                <div className="mb-[10px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 animate-fade-in">
+                <div className="mb-[10px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-700 animate-fade-in">
                   {loginError}
                 </div>
               )}
@@ -910,10 +902,6 @@ const Login = () => {
             bottomText="Don't have an account?"
             linkText="Register"
             onLinkClick={() => {
-              if (!requireTermsAgreement()) {
-                return;
-              }
-
               if (sellerPanel) {
                 setFormState("register");
                 return;
@@ -942,7 +930,7 @@ const Login = () => {
               </div>
 
               {loginError && (
-                <div className="p-2 text-sm text-red-800 rounded-md animate-fade-in bg-red-50">
+                <div className="p-2 text-[11px] leading-[15px] text-red-800 rounded-md animate-fade-in bg-red-50">
                   {loginError}
                 </div>
               )}
@@ -986,7 +974,7 @@ const Login = () => {
               </div>
 
               {formErrors.verificationCode && (
-                <div className="p-2 text-sm text-center text-red-800 rounded-md animate-fade-in bg-red-50">
+                <div className="p-2 text-center text-[11px] leading-[15px] text-red-800 rounded-md animate-fade-in bg-red-50">
                   {formErrors.verificationCode}
                 </div>
               )}
@@ -1001,10 +989,10 @@ const Login = () => {
               </div>
 
               <div
-                className="flex justify-between mt-4 text-sm animate-fade-in"
+                className="mt-4 flex items-center justify-between gap-4 text-sm animate-fade-in"
                 style={{ animationDelay: "0.8s" }}
               >
-                <p className="text-gray-500">
+                <p className="min-w-0 text-gray-500">
                   Didn't receive the code?{" "}
                   <button
                     type="button"
@@ -1015,12 +1003,13 @@ const Login = () => {
                     {resendOtpLabel}
                   </button>
                 </p>
-                <p
-                  className="cursor-pointer text-center text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
+                <button
+                  type="button"
+                  className="shrink-0 whitespace-nowrap text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
                   onClick={toggleForgotPassword}
                 >
                   Back to Login
-                </p>
+                </button>
               </div>
             </div>
           </FormLayout>
@@ -1033,6 +1022,16 @@ const Login = () => {
             subTitle="Create a new password to secure your account"
             onSubmit={handleResetPasswordSubmit}
             bottomText="Don't have an account?"
+            linkText="Register"
+            onLinkClick={() => {
+              if (sellerPanel) {
+                setFormState("register");
+                return;
+              }
+              toast.info(
+                "Please contact your administrator to create an account.",
+              );
+            }}
             // className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
@@ -1066,7 +1065,7 @@ const Login = () => {
               </div>
 
               {loginError && (
-                <div className="p-2 text-sm text-red-800 rounded-md animate-fade-in bg-red-50">
+                <div className="p-2 text-[11px] leading-[15px] text-red-800 rounded-md animate-fade-in bg-red-50">
                   {loginError}
                 </div>
               )}
@@ -1131,10 +1130,13 @@ const Login = () => {
                 <EmailInput
                   id="phone"
                   name="phone"
+                  type="tel"
+                  onlyNumber={true}
+                  maxLength={10}
+                  inputMode="numeric"
                   label="Phone Number"
                   value={formFields.phone}
-                  placeholder="+1 (555) 000-0000"
-                  onChange={handleInputChange}
+                  placeholder="Enter 10 digit number"
                   errorMessage={formErrors.phone}
                   inputClassName={authInputClassName}
                   labelClassName={authLabelClassName}
@@ -1171,7 +1173,14 @@ const Login = () => {
               </div>
 
               <div className=" grid grid-cols-1 gap-3 md:grid-cols-[150px_1fr]">
-                <button className="px-6 py-2 rounded-lg border border-blue text-blue font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setFormState("login");
+                  }}
+                  className="px-6 py-2 rounded-lg border border-blue text-blue font-semibold"
+                >
                   Back
                 </button>
                 <FormSubmitButton
@@ -1219,49 +1228,12 @@ const Login = () => {
 
       case "verificationComplete":
         return (
-          <div className="  h-full w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)]">
-            <div className="flex justify-center pt-12 ">
-              <AuthProgressSteps activeStep={2} className="!mb-3 sm:!mb-4" />
-            </div>
-            <div className="flex flex-col items-center justify-center px-8 pb-12 pt-1">
-              <img
-                src="/Img/auth-img/completed.png"
-                alt="Verification Complete"
-                className="w-[11rem] lg:w-[10rem] h-[8rem] object-cover"
-              />
-              <div className="mb-6 flex justify-center items-center mx-auto w-fit  ">
-                <IconButton label="Account Verified" icon={<GoDotFill />} />
-              </div>
-
-              <div>
-                <h1 className="font-extrabold text-blue text-2xl  xl:text-4xl font-inter text-center xl:leading-[50px]">
-                  Verification Complete!
-                  <br />
-                  <span className="text-ink font-semibold">
-                    You're One Step Closer to Selling
-                  </span>
-                </h1>
-                <h5 className="font-inter text-xl text-darkInk text-center max-w-2xl mt-8">
-                  Complete your KYC verification to activate your seller account
-                  and start listing products on the marketplace.
-                </h5>
-                <div className="my-6 flex justify-center items-center mx-auto w-fit  ">
-                  <IconButton
-                    label="Next Step: KYC Verification"
-                    className="rounded-lg bg-golden/30"
-                    icon={<GoArrowRight />}
-                  />
-                </div>
-                <FormSubmitButton
-                  onClick={() => {
-                    navigate("/seller/onboarding");
-                  }}
-                  buttonLabel="Continue to KYC Verification"
-                  className="mt-8"
-                />
-              </div>
-            </div>
-          </div>
+          <SellerStatusScreen
+            variant="verificationComplete"
+            onButtonClick={() => {
+              navigate("/seller/onboarding");
+            }}
+          />
         );
       default:
         return null;
