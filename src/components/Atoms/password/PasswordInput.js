@@ -68,10 +68,10 @@ const PasswordInput = React.memo(
               onClick={clickEyeButton}
             />
           )}
-          {errorMessage && (
-            <div className='text-[#8B0A1A] text-xs mt-1'>{errorMessage}</div>
-          )}
         </div>
+        {errorMessage && (
+          <div className='mt-1 text-[11px] leading-[15px] text-[#8B0A1A]'>{errorMessage}</div>
+        )}
       </div>
     )
   }

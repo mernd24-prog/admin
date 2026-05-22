@@ -20,6 +20,8 @@ const EmailInput = React.memo(
     isDisable = false,
     autoFocus = false,
     required = false,
+    type = "text",
+    onlyNumber = false,
     ...rest
   }) => {
     const [email, setEmail] = useState(value);
@@ -29,16 +31,25 @@ const EmailInput = React.memo(
 
     const handleChange = useCallback(
       (event) => {
-        const newEmail = event.target.value;
+        const newEmail = onlyNumber
+          ? event.target.value.replace(/\D/g, "")
+          : event.target.value;
 
         setEmail(newEmail);
         setIsValid(newEmail.length >= MIN_EMAIL_LENGTH);
 
         if (onChange) {
-          onChange(event);
+          onChange({
+            ...event,
+            target: {
+              ...event.target,
+              name: event.target.name,
+              value: newEmail,
+            },
+          });
         }
       },
-      [onChange]
+      [onChange, onlyNumber]
     );
 
     const handleBlur = useCallback(
@@ -53,8 +64,9 @@ const EmailInput = React.memo(
     );
 
     useEffect(() => {
-      setEmail(value);
-      setIsValid(value.length >= MIN_EMAIL_LENGTH);
+      const nextValue = String(value ?? "");
+      setEmail(nextValue);
+      setIsValid(nextValue.length >= MIN_EMAIL_LENGTH);
     }, [value]);
 
     const inputRef = useRef();
@@ -108,7 +120,7 @@ const EmailInput = React.memo(
             disabled={isDisable}
             id={id}
             name={name}
-            type="text"
+            type={type}
             value={email}
             required={required}
             autoComplete="off"
@@ -151,7 +163,7 @@ const EmailInput = React.memo(
 
         {/* ERROR MESSAGE */}
         {errorMessage && (
-          <p className="mt-2 text-sm text-[#B42318]">
+          <p className="mt-1 text-[11px] leading-[15px] text-[#B42318]">
             {errorMessage}
           </p>
         )}
