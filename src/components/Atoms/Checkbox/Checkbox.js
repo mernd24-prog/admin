@@ -1,7 +1,5 @@
 import React from "react";
 
-
-
 const CustomCheckbox = ({
   checked,
   onChange,
@@ -19,7 +17,7 @@ const CustomCheckbox = ({
         onChange={onChange}
       />
 
-      <span className="w-4 h-4 border border-[#4a4a4f] rounded bg-transparent peer-checked:bg-[#0055ff] peer-checked:border-[#0055ff] transition-all duration-300" />
+      <span className="w-4 h-4 border border-[#4a4a4f] rounded bg-transparent  transition-all duration-300" />
 
       <svg
         className="absolute left-[2px] top-[3px] w-3 h-3 text-black opacity-0 peer-checked:opacity-100 transition-opacity duration-300 pointer-events-none"
@@ -32,7 +30,6 @@ const CustomCheckbox = ({
       >
         <polyline points="20 6 9 17 4 12" />
       </svg>
-      
     </label>
   );
 };

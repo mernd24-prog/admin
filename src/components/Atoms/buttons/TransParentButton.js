@@ -1,6 +1,8 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
-const TransparentButton = React.memo(({
+const TransparentButton = React.memo(
+  ({
     type = "button",
     onClick,
     label = "Button",
@@ -8,19 +10,22 @@ const TransparentButton = React.memo(({
     style = {},
     isDisable = false,
     ...rest
-}) => {
+  }) => {
     return (
-        <button
-            type={type}
-            onClick={onClick}
-            disabled={isDisable}
-            className={` button-outline-primary transition-all duration-300 ease-in-out transform hover:scale-[1.01] border-2 border-[#0A73CF] bg-transparent px-4 py-2  ${className}`}
-            style={style}
-            {...rest}
-        >
-            {label}
-        </button>
+      <button
+        type={type}
+        onClick={onClick}
+        disabled={isDisable}
+        className={twMerge(
+          ` button-outline-primary transition-all duration-300 ease-in-out transform hover:scale-[1.01] border-2 border-[#0A73CF] bg-transparent px-4 py-2  ${className}`,
+        )}
+        style={style}
+        {...rest}
+      >
+        {label}
+      </button>
     );
-});
+  },
+);
 
 export default TransparentButton;
