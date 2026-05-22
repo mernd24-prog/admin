@@ -6,6 +6,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        golden: "#FFBB00",
         primary: "#CE9F2D",
         surface: "#FAF6EE",
         band: "#f7efde",

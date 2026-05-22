@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
+import { GoArrowRight } from "react-icons/go";
+import { GoDotFill } from "react-icons/go";
 import {
   adminLogin,
   forgotPassword,
   normalizeAuthPayload,
   verifyOtp,
-  verifySellerLoginOtp,
   resetPassword,
   registerWithOtp,
   verifyRegistration,
   resendOtp,
-  sendOtp,
 } from "../../Redux/auth-Slice";
 import {
   startAuthenticatedSession,
@@ -23,9 +23,9 @@ import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
 import EmailInput from "../../components/Atoms/EmailInput";
 import PasswordInput from "../../components/Atoms/password/PasswordInput";
 import Loader from "../../components/Loader/Loader";
-import { CiUser, CiLock } from "react-icons/ci";
-import { MdEmail } from "react-icons/md";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
+import AuthProgressSteps from "../../components/AuthVerification/AuthProgressSteps";
+import OtpVerificationCard from "../../components/AuthVerification/OtpVerificationCard";
 import { toast } from "sonner";
 import { isSellerPanel, PANEL_MODES } from "../../_helpers/panelConfig";
 import {
@@ -35,6 +35,9 @@ import {
   setStoredAuth,
 } from "../../_helpers/authStorage";
 import { useAuthLayout } from "../../context/AuthLayoutContext";
+import IconButton from "../../components/Atoms/buttons/iconButton";
+
+const RESEND_COOLDOWN_SECONDS = 30;
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -76,8 +79,9 @@ const Login = () => {
     registerEmail: null,
     registerPassword: null,
   });
-  const [formAnimation, setFormAnimation] = useState("slide-in");
+  const [, setFormAnimation] = useState("slide-in");
   const [isLoading, setIsLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const codeInputRefs = Array(6)
     .fill()
     .map(() => React.createRef());
@@ -105,6 +109,16 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [formState]);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+
+    const timer = setTimeout(() => {
+      setResendCooldown((seconds) => Math.max(seconds - 1, 0));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
   const validateLoginFields = useCallback(() => {
     let isValid = true;
     const errors = {};
@@ -121,18 +135,11 @@ const Login = () => {
         isValid = false;
       }
 
-      if (!sellerPanel && !formFields.password.trim()) {
+      if (!formFields.password.trim()) {
         errors.password = "Password is required.";
         isValid = false;
-      } else if (!sellerPanel && formFields.password.length < 6) {
+      } else if (formFields.password.length < 6) {
         errors.password = "Password must be at least 6 characters long.";
-        isValid = false;
-      }
-    } else if (formState === "sellerLoginVerification") {
-      const code = verificationCode.join("");
-      if (code.length !== 6) {
-        errors.verificationCode =
-          "Please enter the complete verification code.";
         isValid = false;
       }
     } else if (formState === "forgotPassword") {
@@ -259,6 +266,8 @@ const Login = () => {
             response.payload?.message ||
             "OTP sent successfully",
         );
+        setVerificationCode(["", "", "", "", "", ""]);
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
         setFormState("registerVerification");
       } else {
         toast.error(response.payload);
@@ -287,6 +296,7 @@ const Login = () => {
       );
 
       if (!response?.error) {
+        setResendCooldown(0);
         const auth = normalizeAuthPayload(response?.payload);
         if (auth.requiresOnboarding && auth.onboardingToken) {
           dispatch(
@@ -305,7 +315,9 @@ const Login = () => {
         resetForm();
         setFormState("login");
       } else {
-        toast.error(response.payload);
+        const message = response.payload || "Invalid or expired OTP.";
+        setFormErrors((prev) => ({ ...prev, verificationCode: message }));
+        toast.error(message);
       }
     } catch (error) {
       toast.error("Verification failed");
@@ -391,6 +403,7 @@ const Login = () => {
       referralCode: "",
     });
     setVerificationCode(["", "", "", "", "", ""]);
+    setResendCooldown(0);
     setRememberMe(false);
     setFormErrors({
       email: null,
@@ -467,7 +480,10 @@ const Login = () => {
         return false;
       }
       setFormAnimation("success-animation");
-      if (currentFormState !== "login") {
+      if (
+        currentFormState !== "login" &&
+        currentFormState !== "resetPassword"
+      ) {
         toast.success(
           res.payload?.data?.message ||
             res.payload?.message ||
@@ -518,14 +534,18 @@ const Login = () => {
           resetForm();
           navigate("/app/home");
         } else if (currentFormState === "forgotPassword") {
+          setVerificationCode(["", "", "", "", "", ""]);
+          setResendCooldown(RESEND_COOLDOWN_SECONDS);
           setFormState("verificationCode");
         } else if (currentFormState === "verificationCode") {
           setFormFields((prev) => ({
             ...prev,
             forgotOtp: verificationCode.join(""),
           }));
+          setResendCooldown(0);
           setFormState("resetPassword");
         } else if (currentFormState === "resetPassword") {
+          toast.success("Password reset successful. Please log in.");
           resetForm();
           setFormState("login");
         }
@@ -558,24 +578,6 @@ const Login = () => {
 
     try {
       setFormAnimation("loading");
-      if (sellerPanel) {
-        const response = await dispatch(sendOtp({ email, purpose: "login" }));
-        if (response?.error) {
-          toast.error(response.payload || "Failed to send login OTP");
-          setFormAnimation("error");
-          setTimeout(() => setFormAnimation("slide-in"), 500);
-          return;
-        }
-        toast.success(
-          response?.payload?.data?.message ||
-            response?.payload?.message ||
-            "OTP sent successfully",
-        );
-        setVerificationCode(["", "", "", "", "", ""]);
-        setFormState("sellerLoginVerification");
-        return;
-      }
-
       const response = await dispatch(
         adminLogin({
           email,
@@ -585,27 +587,6 @@ const Login = () => {
       handleApiResponse(response, "login");
     } catch (error) {
       toast.error("Login failed. Please try again.");
-    }
-  };
-
-  const handleSellerLoginOtpSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateLoginFields()) {
-      setFormAnimation("slide-in");
-      return;
-    }
-
-    try {
-      setFormAnimation("loading");
-      const response = await dispatch(
-        verifySellerLoginOtp({
-          email: formFields.email,
-          otp: verificationCode.join(""),
-        }),
-      );
-      handleApiResponse(response, "login");
-    } catch (error) {
-      toast.error("OTP login failed. Please try again.");
     }
   };
 
@@ -651,6 +632,12 @@ const Login = () => {
         }),
       );
 
+      if (response?.error) {
+        setFormErrors((prev) => ({
+          ...prev,
+          verificationCode: response.payload || "Invalid or expired OTP.",
+        }));
+      }
       handleApiResponse(response, "verificationCode");
     } catch (error) {
       dispatch(showError("Verification failed. Please try again."));
@@ -673,6 +660,7 @@ const Login = () => {
           email: forgotEmail,
           otp: forgotOtp || verificationCode.join(""),
           newPassword,
+          password: newPassword,
         }),
       );
       handleApiResponse(response, "resetPassword");
@@ -693,20 +681,15 @@ const Login = () => {
   const handleResendOtp = useCallback(
     async (e) => {
       e.preventDefault();
+      if (resendCooldown > 0) return;
+
       try {
         setFormAnimation("loading");
-        const isSellerLoginOtp = formState === "sellerLoginVerification";
         const isRegistrationOtp = formState === "registerVerification";
         const email = isRegistrationOtp
           ? formFields.registerEmail
-          : isSellerLoginOtp
-            ? formFields.email
-            : formFields.forgotEmail;
-        const purpose = isRegistrationOtp
-          ? "registration"
-          : isSellerLoginOtp
-            ? "login"
-            : "forgot_password";
+          : formFields.forgotEmail;
+        const purpose = isRegistrationOtp ? "registration" : "forgot_password";
         const response = await dispatch(resendOtp({ email, purpose }));
         if (!response?.error) {
           toast.success(
@@ -715,6 +698,7 @@ const Login = () => {
               "OTP resent successfully",
           );
           setVerificationCode(["", "", "", "", "", ""]);
+          setResendCooldown(RESEND_COOLDOWN_SECONDS);
         } else {
           toast.error(response?.payload || "Failed to resend OTP");
         }
@@ -725,46 +709,52 @@ const Login = () => {
     },
     [
       dispatch,
-      formFields.email,
       formFields.forgotEmail,
       formFields.registerEmail,
       formState,
+      resendCooldown,
     ],
   );
 
-  const getAnimationClasses = useCallback(() => {
-    switch (formAnimation) {
-      case "slide-in":
-        return "animate-slide-in opacity-100 transform translate-x-0";
-      case "slide-out":
-        return "animate-slide-out opacity-0 transform -translate-x-full";
-      case "loading":
-        return "animate-pulse";
-      case "success-animation":
-        return "animate-success-bounce";
-      case "error":
-        return "animate-error";
-      default:
-        return "";
-    }
-  }, [formAnimation]);
+  const resendOtpLabel =
+    resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP";
+
+  // const getAnimationClasses = useCallback(() => {
+  //   switch (formAnimation) {
+  //     case "slide-in":
+  //       return "animate-slide-in opacity-100 transform translate-x-0";
+  //     case "slide-out":
+  //       return "animate-slide-out opacity-0 transform -translate-x-full";
+  //     case "loading":
+  //       return "animate-pulse";
+  //     case "success-animation":
+  //       return "animate-success-bounce";
+  //     case "error":
+  //       return "animate-error";
+  //     default:
+  //       return "";
+  //   }
+  // }, [formAnimation]);
 
   const renderForm = () => {
-    const animationClasses = getAnimationClasses();
+    // const animationClasses = getAnimationClasses();const animationClasses = getAnimationClasses();
+    const authInputClassName =
+      "h-[38px] border-[#ded9f0] bg-[#fbf9ff] text-[12px] focus:border-[#d7cdea] focus:ring-[#eee8f8] sm:h-[40px] sm:text-[13px]";
+    const authLabelClassName = "text-[#344054]";
 
     switch (formState) {
       case "login":
         return (
           <FormLayout
-            title={sellerPanel ? "Seller Login" : "Welcome back!"}
+            title={"Welcome back!"}
             subTitle={
               sellerPanel
-                ? "Enter your seller email to receive a login OTP"
+                ? "Enter your seller email and password to continue"
                 : "Enter your credentials to access your account"
             }
             onSubmit={handleLoginSubmit}
-            className={`${animationClasses} transition-all duration-300`}
-            cardClassName={sellerPanel ? "min-h-[190px]" : "min-h-[286px]"}
+            // className={`${animationClasses} transition-all duration-300`}
+            cardClassName="min-h-[286px]"
             bottomText="Don't have an account?"
             linkText="Register"
             onLinkClick={() => {
@@ -772,40 +762,42 @@ const Login = () => {
                 setFormState("register");
                 return;
               }
-              toast.info("Please contact your administrator to create an account.");
+              toast.info(
+                "Please contact your administrator to create an account.",
+              );
             }}
             showLogo
           >
             <div className="relative z-10 flex flex-col">
               {/* EMAIL */}
               <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
-                <EmailInput
+                 <EmailInput
                   id="email"
                   name="email"
+                  label="Email Address"
                   value={formFields.email}
-                  placeholder="Email address"
-                  icon={MdEmail}
+                  placeholder="e.g. John Doe"
                   onChange={handleInputChange}
                   errorMessage={formErrors.email}
-                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
 
-              {!sellerPanel && (
-                <div className="mb-[8px]">
-                  <PasswordInput
+              <div className="mb-[8px]">
+               <PasswordInput
                     id="password"
                     name="password"
+                    label="Password"
                     value={formFields.password}
-                    placeholder="Password*"
-                    icon={CiLock}
+                    placeholder="••••••••"
                     onChange={handleInputChange}
                     errorMessage={formErrors.password}
-                    inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
+                    inputClassName={authInputClassName}
+                    labelClassName={authLabelClassName}
                   />
-                </div>
-              )}
+              </div>
 
               {loginError && (
                 <div className="mb-[10px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 animate-fade-in">
@@ -813,15 +805,14 @@ const Login = () => {
                 </div>
               )}
 
-              {!sellerPanel && (
-                <div
-                  className="mb-[24px] flex min-h-[13px] items-center justify-end"
-                  style={{ animationDelay: "0.3s" }}
-                >
-                  <button
-                    type="button"
-                    onClick={toggleForgotPassword}
-                    className="
+              <div
+                className="mb-[24px] flex min-h-[13px] items-center justify-end"
+                style={{ animationDelay: "0.3s" }}
+              >
+                <button
+                  type="button"
+                  onClick={toggleForgotPassword}
+                  className="
             text-[11px]
             font-medium
             text-[#031b52]
@@ -829,21 +820,18 @@ const Login = () => {
             hover:text-[#082f91]
             hover:underline
           "
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
+                >
+                  Forgot password?
+                </button>
+              </div>
 
               <div>
                 <FormSubmitButton
                   buttonLabel={
                     loading
-                      ? sellerPanel
-                        ? "Sending OTP..."
-                        : "Signing in..."
+                      ? "Signing in..."
                       : sellerPanel
-                        ? "Send Login OTP"
+                        ? "Seller Login"
                         : "Login"
                   }
                 />
@@ -858,80 +846,13 @@ const Login = () => {
                   className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
                 />
 
-                <span className="text-[8px] leading-[14px] text-[#667085]">
+               <span className="w-full max-w-[398px] font-[Inter] text-[12px] font-medium leading-[16px] align-middle text-[#667085] opacity-100">
                   I agree to all{" "}
                   <span className="font-semibold text-[#031b52]">
                     Terms, Privacy, and Cancellation Policies.
                   </span>
                 </span>
               </label>
-            </div>
-          </FormLayout>
-        );
-
-      case "sellerLoginVerification":
-        return (
-          <FormLayout
-            title="Seller Login OTP"
-            subTitle={`Enter the 6-digit OTP sent to ${formFields.email}`}
-            onSubmit={handleSellerLoginOtpSubmit}
-            className={`${animationClasses} transition-all duration-300`}
-          >
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex justify-center space-x-2 animate-fade-in">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <input
-                    key={index}
-                    ref={codeInputRefs[index]}
-                    type="text"
-                    maxLength={1}
-                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd] animate-pop-in"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                    value={verificationCode[index]}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                    onPaste={index === 0 ? handleCodePaste : undefined}
-                  />
-                ))}
-              </div>
-
-              {formErrors.verificationCode && (
-                <div className="p-2 text-sm text-center text-red-800 rounded-md animate-fade-in bg-red-50">
-                  {formErrors.verificationCode}
-                </div>
-              )}
-
-              <div
-                className="mt-6 animate-fade-in"
-                style={{ animationDelay: "0.7s" }}
-              >
-                <FormSubmitButton
-                  buttonLabel={loading ? "Verifying..." : "Verify & Login"}
-                />
-              </div>
-
-              <div
-                className="flex justify-between mt-4 text-sm animate-fade-in"
-                style={{ animationDelay: "0.8s" }}
-              >
-                <button
-                  type="button"
-                  className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
-                  onClick={handleResendOtp}
-                >
-                  Resend OTP
-                </button>
-                <button
-                  type="button"
-                  className="text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
-                  onClick={() => {
-                    setVerificationCode(["", "", "", "", "", ""]);
-                    setFormState("login");
-                  }}
-                >
-                  Back to Login
-                </button>
-              </div>
             </div>
           </FormLayout>
         );
@@ -949,22 +870,25 @@ const Login = () => {
                 setFormState("register");
                 return;
               }
-              toast.info("Please contact your administrator to create an account.");
+              toast.info(
+                "Please contact your administrator to create an account.",
+              );
             }}
-            className={`${animationClasses} transition-all duration-300`}
+            // className={`${animationClasses} transition-all duration-300`}
             cardClassName="min-h-[210px] py-[38px]"
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-                <EmailInput
+               <EmailInput
                   id="forgotEmail"
                   name="forgotEmail"
+                  label="Email Address"
                   value={formFields.forgotEmail}
-                  placeholder="Email address"
-                  icon={MdEmail}
+                  placeholder="john@example.com"
                   onChange={handleInputChange}
                   errorMessage={formErrors.forgotEmail}
-                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
@@ -980,7 +904,7 @@ const Login = () => {
                 style={{ animationDelay: "0.2s" }}
               >
                 <FormSubmitButton
-                  buttonLabel={loading ? "Submitting..." : "Send Reset Link"}
+                  buttonLabel={loading ? "Sending OTP..." : "Send OTP"}
                 />
               </div>
             </div>
@@ -993,7 +917,7 @@ const Login = () => {
             title="Verification Code"
             subTitle={`Enter the 6-digit code sent to ${formFields.forgotEmail}`}
             onSubmit={handleVerificationSubmit}
-            className={`${animationClasses} transition-all duration-300`}
+            // className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div className="flex space-x-2 ">
@@ -1036,10 +960,11 @@ const Login = () => {
                   Didn't receive the code?{" "}
                   <button
                     type="button"
-                    className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline"
+                    className="font-medium text-[#031b52] transition-colors hover:text-[#082f91] hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
                     onClick={handleResendOtp}
+                    disabled={resendCooldown > 0 || loading}
                   >
-                    Resend
+                    {resendOtpLabel}
                   </button>
                 </p>
                 <p
@@ -1059,31 +984,35 @@ const Login = () => {
             title="Reset Password"
             subTitle="Please create a new password for your account"
             onSubmit={handleResetPasswordSubmit}
-            className={`${animationClasses} transition-all duration-300`}
+            // className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-                <PasswordInput
+                 <PasswordInput
                   id="newPassword"
                   name="newPassword"
+                  label="New Password"
                   value={formFields.newPassword}
                   placeholder="New password"
-                  icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.newPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
 
               <div>
-                <PasswordInput
+               <PasswordInput
                   id="confirmNewPassword"
                   name="confirmNewPassword"
+                  label="Confirm Password"
                   value={formFields.confirmNewPassword}
                   placeholder="Confirm new password"
-                  icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.confirmNewPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                 />
               </div>
 
@@ -1124,73 +1053,78 @@ const Login = () => {
               resetForm();
               setFormState("login");
             }}
-            className={`${animationClasses} transition-all duration-300`}
+            //className={`${animationClasses} transition-all duration-300`}
             showLogo
           >
             <div className="relative z-10 flex flex-col gap-3">
-              <EmailInput
+               <EmailInput
                 id="firstName"
                 name="firstName"
-                // label="First Name"
+                label="First Name"
                 value={formFields.firstName}
                 placeholder="Enter first name"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.firstName}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <EmailInput
                 id="lastName"
                 name="lastName"
-                // label="Last Name"
+                label="Last Name"
                 value={formFields.lastName}
                 placeholder="Enter last name"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.lastName}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
-              <EmailInput
+               <EmailInput
                 id="phone"
                 name="phone"
-                // label="Phone Number"
+                label="Phone Number"
                 value={formFields.phone}
                 placeholder="Enter phone number"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.phone}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
-
               <EmailInput
                 id="registerEmail"
                 name="registerEmail"
-                // label="Email Address"
+                label="Email Address"
                 value={formFields.registerEmail}
                 placeholder="Enter email"
-                icon={MdEmail}
                 onChange={handleInputChange}
                 errorMessage={formErrors.registerEmail}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <PasswordInput
                 id="registerPassword"
                 name="registerPassword"
-                // label="Password"
+                label="Password"
                 value={formFields.registerPassword}
                 placeholder="Enter password"
-                icon={CiLock}
                 onChange={handleInputChange}
                 errorMessage={formErrors.registerPassword}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <EmailInput
                 id="referralCode"
                 name="referralCode"
-                // label="Referral Code (Optional)"
+                label="Referral Code"
                 value={formFields.referralCode}
                 placeholder="Enter referral code"
-                icon={CiUser}
                 onChange={handleInputChange}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <div className="mt-4">
@@ -1217,86 +1151,46 @@ const Login = () => {
           <FormLayout
             title="Verify Your Account"
             subTitle="We’ve sent a verification code to your registered mobile number. Please enter the code below to confirm your identity and continue the verification process."
+            subTitleClassName = " text-center font-inter !text-[19px] font-normal !leading-[35px] tracking-[0%] text-[#484555]"
             onSubmit={handleRegisterOtpSubmit}
-            className={`${animationClasses} transition-all duration-300`}
+            showLogo={false}
+            shellClassName="items-start pt-10 pb-8 sm:pt-[58px] lg:pt-[54px]"
+            className="!max-w-[812px]"
+           titleClassName="!text-[29px] sm:!text-[29px] font-medium"
+            // subTitleClassName="max-w-[720px] text-[16px] leading-[28px] text-[#484557] sm:text-[20px] sm:leading-[34px]"
+            cardClassName="mt-[24px] min-h-[380px] !max-w-[812px] justify-center rounded-[10px] px-5 py-9 sm:min-h-[454px] sm:px-10 sm:py-10"
+            topContent={<AuthProgressSteps />}
           >
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex justify-center space-x-2">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <input
-                    key={index}
-                    ref={codeInputRefs[index]}
-                    type="text"
-                    maxLength={1}
-                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
-                    value={verificationCode[index]}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                    onPaste={index === 0 ? handleCodePaste : undefined}
-                  />
-                ))}
-              </div>
-            
-          </div>
-       <div className="relative z-10 mx-auto flex w-full max-w-full flex-col items-center justify-center overflow-hidden px-2 py-4 sm:px-6 md:px-8">
-  <p className="text-center text-[11px] sm:text-[14px] md:text-[15px] font-medium text-[#222]">
-    Phone Number : <span className="font-semibold text-[#082f91]">**** **** 1234</span>
-  </p>
-
-  <div className="mt-4 grid w-full max-w-[270px] grid-cols-6 gap-1.5 min-[360px]:max-w-[320px] min-[360px]:gap-2 sm:max-w-[420px] sm:gap-3 md:max-w-[520px]">
-    {[0, 1, 2, 3, 4, 5].map((index) => (
-      <input
-        key={index}
-        ref={codeInputRefs[index]}
-        type="text"
-        maxLength={1}
-        className="aspect-square w-full rounded-[5px] border border-[#eeeeee] bg-white text-center text-[13px] sm:text-[17px] md:text-[20px] text-[#9a9a9a] shadow-[0_4px_8px_rgba(0,0,0,0.12)] outline-none transition-all duration-300 focus:border-[#082f91] focus:ring-2 focus:ring-[#dbe3ff]"
-        value={verificationCode[index]}
-        onChange={(e) => handleCodeChange(index, e.target.value)}
-        onKeyDown={(e) => handleCodeKeyDown(index, e)}
-        onPaste={index === 0 ? handleCodePaste : undefined}
-      />
-    ))}
-  </div>
-
-  {formErrors.verificationCode && (
-    <div className="mt-4 w-full max-w-[270px] rounded-md bg-red-50 px-3 py-2 text-center text-xs text-red-800 sm:max-w-[420px]">
-      {formErrors.verificationCode}
-    </div>
-  )}
-
-  <div className="mt-6 w-full max-w-[270px] min-[360px]:max-w-[320px] sm:max-w-[420px] md:max-w-[520px]">
-    <FormSubmitButton
-      buttonLabel={loading ? "Verifying..." : "Verify & Continue"}
-      className="h-[40px] w-full rounded-[8px] text-[12px] sm:h-[46px] sm:text-[14px] md:h-[52px] md:text-[15px]"
-    />
-  </div>
-
-  <p className="mt-3 text-center text-[11px] sm:text-[13px] md:text-[14px] font-medium text-[#555]">
-    Didn’t receive code?{" "}
-    <button
-      type="button"
-      className="font-semibold text-[#082f91] hover:underline"
-      onClick={handleResendOtp}
-    >
-      Resend OTP
-    </button>
-  </p>
-</div>
+            <OtpVerificationCard
+              codeInputRefs={codeInputRefs}
+              verificationCode={verificationCode}
+              onCodeChange={handleCodeChange}
+              onCodeKeyDown={handleCodeKeyDown}
+              onCodePaste={handleCodePaste}
+              errorMessage={formErrors.verificationCode}
+              loading={loading}
+              resendCooldown={resendCooldown}
+              resendOtpLabel={resendOtpLabel}
+              onResendOtp={handleResendOtp}
+            />
           </FormLayout>
         );
 
       case "verificationComplete":
         return (
-          <div className="h-[45rem] w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)]">
-            <div className="flex flex-col items-center justify-center gap-6 p-8">
+          <div className="  h-full w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)]">
+            <div className="flex flex-col items-center justify-center  p-8">
               <img
                 src="/Img/auth-img/completed.png"
                 alt="Verification Complete"
-                className=""
+                className="w-[11rem] lg:w-[10rem] h-[8rem] object-cover"
               />
+              <div className="mb-6 flex justify-center items-center mx-auto w-fit  ">
+                <IconButton label="Account Verified" icon={<GoDotFill />} />
+              </div>
+
               <div>
-                <h1 className="font-extrabold text-blue text-4xl font-inter text-center leading-[50px]">
+                <h1 className="font-extrabold text-blue text-2xl  xl:text-4xl font-inter text-center xl:leading-[50px]">
                   Verification Complete!
                   <br />
                   <span className="text-ink font-semibold">
@@ -1307,7 +1201,17 @@ const Login = () => {
                   Complete your KYC verification to activate your seller account
                   and start listing products on the marketplace.
                 </h5>
+                <div className="my-6 flex justify-center items-center mx-auto w-fit  ">
+                  <IconButton
+                    label="Next Step: KYC Verification"
+                    className="rounded-lg bg-golden/30"
+                    icon={<GoArrowRight />}
+                  />
+                </div>
                 <FormSubmitButton
+                  onClick={() => {
+                    navigate("/seller/onboarding");
+                  }}
                   buttonLabel="Continue to KYC Verification"
                   className="mt-8"
                 />
@@ -1324,126 +1228,6 @@ const Login = () => {
     <div className="relative overflow-hidden">
       <Loader loading={loading || isLoading || false} />
       {renderForm()}
-
-      <style jsx global>{`
-        @keyframes slide-in {
-          0% {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes slide-out {
-          0% {
-            opacity: 1;
-            transform: translateX(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-        }
-
-        @keyframes shake {
-          0%,
-          100% {
-            transform: translateX(0);
-          }
-          10%,
-          30%,
-          50%,
-          70%,
-          90% {
-            transform: translateX(-5px);
-          }
-          20%,
-          40%,
-          60%,
-          80% {
-            transform: translateX(5px);
-          }
-        }
-
-        @keyframes success-bounce {
-          0%,
-          20%,
-          50%,
-          80%,
-          100% {
-            transform: translateY(0);
-          }
-          40% {
-            transform: translateY(-20px);
-          }
-          60% {
-            transform: translateY(-10px);
-          }
-        }
-
-        @keyframes fade-in {
-          0% {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes pop-in {
-          0% {
-            transform: scale(0.8);
-            opacity: 0;
-          }
-          70% {
-            transform: scale(1.1);
-            opacity: 0.7;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-
-        @keyframes float {
-          0% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-20px) rotate(5deg);
-          }
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-        }
-
-        .animate-slide-in {
-          animation: slide-in 0.4s ease-out forwards;
-        }
-        .animate-slide-out {
-          animation: slide-out 0.4s ease-in forwards;
-        }
-        .animate-shake {
-          animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-        }
-        .animate-success-bounce {
-          animation: success-bounce 1s;
-        }
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-out forwards;
-        }
-        .animate-pop-in {
-          animation: pop-in 0.4s ease-out forwards;
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };

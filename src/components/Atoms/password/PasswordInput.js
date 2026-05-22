@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { LuAsterisk } from 'react-icons/lu'
 import { FaEyeSlash } from 'react-icons/fa'
-import { MdOutlineLock } from 'react-icons/md'
 import { FiEye } from 'react-icons/fi';
 
 
@@ -11,7 +10,6 @@ const PasswordInput = React.memo(
     name = 'default-name',
     placeholder = 'Enter password',
     label = '',
-    icon: Icon = MdOutlineLock,
     inputClassName = '',
     iconClassName = '',
     containerClassName = '',
@@ -32,19 +30,15 @@ const PasswordInput = React.memo(
         {label && (
           <label
             htmlFor={id}
-            className={`label ${labelClassName}`}
+            className={`mb-[6px] flex items-start gap-1 text-[13px] font-medium leading-[18px] text-[#344054] sm:text-[14px] sm:leading-[20px] ${labelClassName}`}
           >
             {label}
-            <LuAsterisk className='inline text-[#8B0A1A]  absolute' />
             {required && (
-              <LuAsterisk className='inline ml-1 text-[#8B0A1A]' size={12} />
+              <LuAsterisk className='mt-[2px] text-[#B42318]' size={10} />
             )}
           </label>
         )}
-        <div className='relative mt-1'>
-          {/* <Icon
-            className={`absolute left-3 top-3 text-black text-[1.3rem] ${iconClassName}`}
-          /> */}
+        <div className='relative'>
           <input
             id={id}
             name={name}

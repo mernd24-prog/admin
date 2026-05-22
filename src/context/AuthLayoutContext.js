@@ -2,7 +2,6 @@ import { createContext, useContext, useMemo, useState } from "react";
 
 export const AUTH_FORM_TYPES = {
   LOGIN: "login",
-  SELLER_LOGIN_VERIFICATION: "sellerLoginVerification",
   FORGOT_PASSWORD: "forgotPassword",
   VERIFICATION_CODE: "verificationCode",
   RESET_PASSWORD: "resetPassword",
@@ -18,9 +17,6 @@ const AUTH_LAYOUT_CONFIG = {
     adminSubtitle: "Login to manage platform operations",
     sellerSubtitle: "Login to manage onboarding, products, and orders",
     backgroundImg: "/Img/auth-img/backgroundImg.png",
-  },
-  [AUTH_FORM_TYPES.SELLER_LOGIN_VERIFICATION]: {
-    backgroundImg: "/Img/auth-img/verficationCodeBg.png",
   },
   [AUTH_FORM_TYPES.FORGOT_PASSWORD]: {
     backgroundImg: "/Img/auth-img/forgotPasswordBg.png",
