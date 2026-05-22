@@ -254,6 +254,10 @@ const Login = () => {
       return;
     }
 
+    if (!requireTermsAgreement()) {
+      return;
+    }
+
     if (!validateLoginFields()) {
       setFormAnimation("slide-in");
       return;
@@ -454,6 +458,14 @@ const Login = () => {
     [rememberMe],
   );
 
+  const requireTermsAgreement = useCallback(() => {
+    if (rememberMe) return true;
+    toast.error(
+      "Please agree to the terms, privacy, and cancellation policies.",
+    );
+    return false;
+  }, [rememberMe]);
+
   const persistAuthenticatedSession = useCallback(
     (auth) => {
       const user = auth.user || {};
@@ -591,6 +603,10 @@ const Login = () => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    if (!requireTermsAgreement()) {
+      return;
+    }
+
     if (!validateLoginFields()) {
       setFormAnimation("slide-in");
       return;
@@ -615,6 +631,10 @@ const Login = () => {
 
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
+    if (!requireTermsAgreement()) {
+      return;
+    }
+
     if (!validateLoginFields()) {
       setFormAnimation("slide-in");
       return;
@@ -670,6 +690,10 @@ const Login = () => {
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
+    if (!requireTermsAgreement()) {
+      return;
+    }
+
     if (!validateLoginFields()) {
       setFormAnimation("slide-in");
       return;
@@ -694,12 +718,16 @@ const Login = () => {
   };
 
   const toggleForgotPassword = useCallback(() => {
+    if (!requireTermsAgreement()) {
+      return;
+    }
+
     setFormAnimation("slide-out");
     setTimeout(() => {
       setFormState((prev) => (prev === "login" ? "forgotPassword" : "login"));
       resetForm();
     }, 300);
-  }, [resetForm, setFormState]);
+  }, [requireTermsAgreement, resetForm, setFormState]);
 
   const handleResendOtp = useCallback(
     async (e) => {
@@ -785,6 +813,10 @@ const Login = () => {
             bottomText="Don't have an account?"
             linkText="Register"
             onLinkClick={() => {
+              if (!requireTermsAgreement()) {
+                return;
+              }
+
               if (sellerPanel) {
                 setFormState("register");
                 return;
@@ -798,7 +830,7 @@ const Login = () => {
             <div className="relative z-10 flex flex-col">
               {/* EMAIL */}
               <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
-                 <EmailInput
+                <EmailInput
                   id="email"
                   name="email"
                   label="Email Address"
@@ -813,17 +845,17 @@ const Login = () => {
               </div>
 
               <div className="mb-[8px]">
-               <PasswordInput
-                    id="password"
-                    name="password"
-                    label="Password"
-                    value={formFields.password}
-                    placeholder="••••••••"
-                    onChange={handleInputChange}
-                    errorMessage={formErrors.password}
-                    inputClassName={authInputClassName}
-                    labelClassName={authLabelClassName}
-                  />
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  label="Password"
+                  value={formFields.password}
+                  placeholder="••••••••"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.password}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                />
               </div>
 
               {loginError && (
@@ -878,6 +910,10 @@ const Login = () => {
             bottomText="Don't have an account?"
             linkText="Register"
             onLinkClick={() => {
+              if (!requireTermsAgreement()) {
+                return;
+              }
+
               if (sellerPanel) {
                 setFormState("register");
                 return;
@@ -891,7 +927,7 @@ const Login = () => {
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-               <EmailInput
+                <EmailInput
                   id="forgotEmail"
                   name="forgotEmail"
                   label="Email Address"
@@ -1001,7 +1037,7 @@ const Login = () => {
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-                 <PasswordInput
+                <PasswordInput
                   id="newPassword"
                   name="newPassword"
                   label="New Password"
@@ -1016,7 +1052,7 @@ const Login = () => {
               </div>
 
               <div>
-               <PasswordInput
+                <PasswordInput
                   id="confirmNewPassword"
                   name="confirmNewPassword"
                   label="Confirm Password"
@@ -1051,6 +1087,9 @@ const Login = () => {
       case "register":
         return (
           <div className="w-full">
+            <div className="flex justify-center ">
+              <AuthProgressSteps activeStep={0} />
+            </div>
             <div className="mb-10 text-center">
               <h2 className="font-inter text-3xl font-extrabold  text-blue ">
                 Create Your Vendor Account
@@ -1153,15 +1192,15 @@ const Login = () => {
           <FormLayout
             title="Verify Your Account"
             subTitle="We’ve sent a verification code to your registered mobile number. Please enter the code below to confirm your identity and continue the verification process."
-            subTitleClassName = " text-center font-inter !text-[19px] font-normal !leading-[35px] tracking-[0%] text-[#484555]"
+            subTitleClassName=" text-center font-inter !text-[19px] font-normal !leading-[35px] tracking-[0%] text-[#484555]"
             onSubmit={handleRegisterOtpSubmit}
             showLogo={false}
             shellClassName="items-start pt-10 pb-8 sm:pt-[58px] lg:pt-[54px]"
             className="!max-w-[812px]"
-           titleClassName="!text-[29px] sm:!text-[29px] font-medium"
+            titleClassName="!text-[29px] sm:!text-[29px] font-medium"
             // subTitleClassName="max-w-[720px] text-[16px] leading-[28px] text-[#484557] sm:text-[20px] sm:leading-[34px]"
             cardClassName="mt-[24px] min-h-[380px] !max-w-[812px] justify-center rounded-[10px] px-5 py-9 sm:min-h-[454px] sm:px-10 sm:py-10"
-            topContent={<AuthProgressSteps />}
+            topContent={<AuthProgressSteps activeStep={1} />}
           >
             <OtpVerificationCard
               codeInputRefs={codeInputRefs}
@@ -1181,7 +1220,10 @@ const Login = () => {
       case "verificationComplete":
         return (
           <div className="  h-full w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)]">
-            <div className="flex flex-col items-center justify-center  p-8">
+            <div className="flex justify-center pt-12 ">
+              <AuthProgressSteps activeStep={2} className="!mb-3 sm:!mb-4" />
+            </div>
+            <div className="flex flex-col items-center justify-center px-8 pb-12 pt-1">
               <img
                 src="/Img/auth-img/completed.png"
                 alt="Verification Complete"
