@@ -997,6 +997,7 @@ const Login = () => {
             subTitle="Create a new password to secure your account"
             onSubmit={handleResetPasswordSubmit}
             bottomText="Don't have an account?"
+            linkText="Register"
             // className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
