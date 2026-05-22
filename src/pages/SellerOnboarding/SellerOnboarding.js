@@ -1,8 +1,1242 @@
+// import React, { useEffect, useMemo, useRef, useState } from "react";
+// import { useDispatch, useSelector } from "react-redux";
+// import { Navigate, useNavigate } from "react-router-dom";
+// import { toast } from "sonner";
+// import { ChevronDown, UploadCloud, Edit2 } from "lucide-react";
+// import { FaCalendarAlt } from "react-icons/fa";
+// import { AiOutlineShoppingCart } from "react-icons/ai";
+// import { RiEditBoxFill } from "react-icons/ri";
+// import {
+//   clearSellerOnboarding,
+//   fetchAuthStatus,
+//   submitSellerKyc,
+//   updateSellerOnboardingProfile,
+// } from "../../Redux/seller-slice";
+// import { useKYC } from "../../context/KycContext";
+
+// const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+// const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+// const AADHAAR_REGEX = /^[0-9]{12}$/;
+
+// const ERROR_CLASS = "mt-1 text-xs text-red-600";
+// const STEP_ONE_INPUT_CLASS =
+//   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-amber-600 focus:ring-2 focus:ring-amber-100";
+// const DATE_FIELD_CLASS =
+//   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] pl-4 pr-3 text-[13px] outline-none transition hover:border-[#d8d8d8] focus:border-[#c99528] focus:ring-2 focus:ring-amber-100";
+// const STEP_ONE_REQUIRED = <span className="text-[#c99528]">*</span>;
+// const SECONDARY_BUTTON_CLASS =
+//   "h-8 min-w-[106px] rounded-full bg-[#e5e5e5] px-7 text-sm font-semibold text-gray-600 transition hover:bg-[#d2d2d2] flex items-center justify-center leading-none";
+// const PRIMARY_BUTTON_CLASS =
+//   "h-8 min-w-[120px] rounded-full bg-[#b27a25] px-7 text-sm font-semibold text-white transition hover:bg-[#9f6c1f] disabled:cursor-not-allowed disabled:bg-[#d6b678] flex items-center justify-center leading-none";
+// const REVIEW_CARD_CLASS =
+//   "rounded-md border border-[#e5e5e5] bg-[#faf8f6] px-6 py-4";
+// const DISPLAY_FIELD_CLASS =
+//   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
+
+// const parseApiError = (error, fallbackMessage) => {
+//   if (!error) return { message: fallbackMessage, details: [] };
+//   if (typeof error === "string") return { message: error, details: [] };
+//   return {
+//     message: error.message || fallbackMessage,
+//     details: Array.isArray(error.details) ? error.details : [],
+//   };
+// };
+
+// const formatDateForDisplay = (value) => {
+//   if (!value) return "";
+//   const [year, month, day] = value.split("-");
+//   if (!year || !month || !day) return value;
+//   return `${day}/${month}/${year}`;
+// };
+
+// const SellerOnboarding = () => {
+//   const dispatch = useDispatch();
+//   const navigate = useNavigate();
+//   const { setStep, step } = useKYC();
+//   const { seller } = useSelector((state) => state);
+//   const onboardingToken =
+//     seller?.onboardingToken || localStorage.getItem("sellerOnboardingToken");
+//   const loading = seller?.loading;
+//   const flowState = seller?.flowState;
+
+//   const [kycSubmittedApi, setKycSubmittedApi] = useState(false);
+//   const [kycErrors, setKycErrors] = useState({});
+//   const [profileErrors, setProfileErrors] = useState({});
+//   const dateOfBirthRef = useRef(null);
+
+//   const [kycForm, setKycForm] = useState({
+//     panNumber: "",
+//     gstNumber: "",
+//     aadhaarNumber: "",
+//     legalName: "",
+//     businessType: "individual",
+//     dateOfBirth: "",
+//     city: "",
+//     zipCode: "",
+//     panCardFile: null,
+//   });
+
+//   const [profileForm, setProfileForm] = useState({
+//     businessType: "",
+//     businessName: "",
+//     gstNumber: "",
+//     gstCertificateFile: null,
+//     displayName: "",
+//     legalBusinessName: "",
+//     supportEmail: "",
+//     supportPhone: "",
+//   });
+//   const [bankForm, setBankForm] = useState({
+//     accountHolderName: "",
+//     accountNumber: "",
+//     ifscCode: "",
+//     bankName: "",
+//     branchName: "",
+//   });
+
+//   const canAccess = useMemo(() => !!onboardingToken, [onboardingToken]);
+
+//   useEffect(() => {
+//     dispatch(fetchAuthStatus({ token: onboardingToken }));
+//   }, [dispatch, onboardingToken]);
+
+//   useEffect(() => {
+//     if (!flowState) return;
+//     const profileCompleted =
+//       !!flowState?.checklist?.profileCompleted ||
+//       !!flowState?.requirements?.profile?.completed;
+//     const bankLinked =
+//       !!flowState?.checklist?.bankLinked ||
+//       !!flowState?.requirements?.bankDetails?.completed;
+//     const kycSubmitted =
+//       !!flowState?.checklist?.kycSubmitted ||
+//       ["submitted", "under_review", "verified"].includes(flowState?.kycStatus);
+//     const statusMeansReview =
+//       flowState?.kycStatus === "submitted" ||
+//       flowState?.kycStatus === "under_review" ||
+//       flowState?.onboardingStatus === "under_review";
+
+//     if (
+//       flowState?.accountStatus === "active" &&
+//       !flowState?.requiresOnboarding
+//     ) {
+//       navigate("/app/home");
+//       return;
+//     }
+//     if (flowState?.kycStatus === "rejected") {
+//       setStep(1);
+//       return;
+//     }
+//     if (statusMeansReview && profileCompleted && bankLinked) {
+//       setStep(5);
+//       return;
+//     }
+//     if (profileCompleted && kycSubmitted && bankLinked) {
+//       setStep(5);
+//       return;
+//     }
+//     if (profileCompleted && kycSubmitted) {
+//       setStep(3);
+//       return;
+//     }
+//     if (kycSubmitted) {
+//       setStep(2);
+//       return;
+//     }
+
+//     setStep(1);
+//   }, [flowState, navigate, setStep]);
+
+//   if (!canAccess) return <Navigate to="/login" />;
+
+//   const setBackendFieldErrors = (details, setErrors) => {
+//     const nextErrors = {};
+//     details.forEach((detail) => {
+//       const path = detail?.path || [];
+//       const field = path[path.length - 1];
+//       if (field) nextErrors[field] = detail.message;
+//     });
+//     setErrors(nextErrors);
+//   };
+
+//   const onKycChange = (event) => {
+//     const { name, value } = event.target;
+//     const normalized =
+//       name === "panNumber" || name === "gstNumber"
+//         ? value.toUpperCase()
+//         : value;
+//     setKycForm((prev) => ({ ...prev, [name]: normalized }));
+//     setKycErrors((prev) => ({ ...prev, [name]: null }));
+//   };
+
+//   const onPanCardFileChange = (event) => {
+//     const file = event.target.files?.[0] || null;
+//     setKycForm((prev) => ({ ...prev, panCardFile: file }));
+//     setKycErrors((prev) => ({ ...prev, panCardFile: null }));
+//   };
+
+//   const onPanCardDrop = (event) => {
+//     event.preventDefault();
+//     const file = event.dataTransfer.files?.[0] || null;
+//     if (!file) return;
+//     setKycForm((prev) => ({ ...prev, panCardFile: file }));
+//     setKycErrors((prev) => ({ ...prev, panCardFile: null }));
+//   };
+
+//   const onGstCertificateFileChange = (event) => {
+//     const file = event.target.files?.[0] || null;
+//     setProfileForm((prev) => ({ ...prev, gstCertificateFile: file }));
+//     setProfileErrors((prev) => ({ ...prev, gstCertificateFile: null }));
+//   };
+
+//   const onGstCertificateDrop = (event) => {
+//     event.preventDefault();
+//     const file = event.dataTransfer.files?.[0] || null;
+//     if (!file) return;
+//     setProfileForm((prev) => ({ ...prev, gstCertificateFile: file }));
+//     setProfileErrors((prev) => ({ ...prev, gstCertificateFile: null }));
+//   };
+
+//   const onProfileChange = (event) => {
+//     const { name, value } = event.target;
+//     const normalized = name === "gstNumber" ? value.toUpperCase() : value;
+//     setProfileForm((prev) => ({ ...prev, [name]: normalized }));
+//     setProfileErrors((prev) => ({ ...prev, [name]: null }));
+//   };
+//   const onBankChange = (event) => {
+//     const { name, value } = event.target;
+//     const normalized = name === "ifscCode" ? value.toUpperCase() : value;
+//     setBankForm((prev) => ({ ...prev, [name]: normalized }));
+//     setProfileErrors((prev) => ({ ...prev, [name]: null }));
+//   };
+
+//   const validateKyc = () => {
+//     const errors = {};
+//     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
+//     if (!kycForm.dateOfBirth.trim())
+//       errors.dateOfBirth = "Date of birth is required";
+//     if (!kycForm.city.trim()) errors.city = "City is required";
+//     if (!kycForm.zipCode.trim()) errors.zipCode = "Zip code is required";
+//     if (!PAN_REGEX.test(kycForm.panNumber.trim()))
+//       errors.panNumber = "PAN format should be like ABCDE1234F";
+//     if (!kycForm.panCardFile) errors.panCardFile = "PAN card file is required";
+//     if (kycForm.gstNumber.trim() && !GST_REGEX.test(kycForm.gstNumber.trim())) {
+//       errors.gstNumber = "GST format is invalid";
+//     }
+//     if (
+//       kycForm.aadhaarNumber.trim() &&
+//       !AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())
+//     ) {
+//       errors.aadhaarNumber = "Aadhaar must be 12 digits";
+//     }
+//     setKycErrors(errors);
+//     return Object.keys(errors).length === 0;
+//   };
+
+//   const validateProfile = () => {
+//     const errors = {};
+//     if (!profileForm.businessType.trim())
+//       errors.businessType = "Business type is required";
+//     if (!profileForm.businessName.trim())
+//       errors.businessName = "Business name is required";
+//     if (!GST_REGEX.test(profileForm.gstNumber.trim()))
+//       errors.gstNumber = "GST format is invalid";
+//     if (!profileForm.gstCertificateFile)
+//       errors.gstCertificateFile = "GST certificate is required";
+//     setProfileErrors(errors);
+//     return Object.keys(errors).length === 0;
+//   };
+
+//   const submitKycStep = async (event) => {
+//     event.preventDefault();
+//     if (!validateKyc()) return;
+//     try {
+//       const kycPayload = {
+//         panNumber: kycForm.panNumber,
+//         gstNumber: kycForm.gstNumber,
+//         aadhaarNumber: kycForm.aadhaarNumber,
+//         legalName: kycForm.legalName,
+//         businessType: kycForm.businessType,
+//         dateOfBirth: kycForm.dateOfBirth,
+//       };
+//       await dispatch(submitSellerKyc(kycPayload)).unwrap();
+//       setKycSubmittedApi(true);
+//       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+//       setStep(2);
+//     } catch (error) {
+//       const parsed = parseApiError(error, "Unable to submit KYC");
+//       setBackendFieldErrors(parsed.details, setKycErrors);
+//       toast.error(parsed.message);
+//     }
+//   };
+
+//   const submitBusinessStep = async (event) => {
+//     event.preventDefault();
+//     if (!validateProfile()) return;
+//     setStep(3);
+//   };
+
+//   const submitBankStep = async (event) => {
+//     event.preventDefault();
+//     const errors = {};
+//     if (!bankForm.accountHolderName.trim())
+//       errors.accountHolderName = "Account holder name is required";
+//     if (!bankForm.accountNumber.trim())
+//       errors.accountNumber = "Account number is required";
+//     if (!bankForm.ifscCode.trim()) errors.ifscCode = "IFSC code is required";
+//     if (!bankForm.bankName.trim()) errors.bankName = "Bank name is required";
+//     if (!bankForm.branchName.trim())
+//       errors.branchName = "Branch name is required";
+//     if (Object.keys(errors).length > 0) {
+//       setProfileErrors((prev) => ({ ...prev, ...errors }));
+//       return;
+//     }
+//     setStep(4);
+//   };
+
+//   const submitFinalOnboarding = async () => {
+//     if (!validateProfile()) return;
+//     try {
+//       if (!kycSubmittedApi) {
+//         const kycPayload = {
+//           panNumber: kycForm.panNumber,
+//           gstNumber: kycForm.gstNumber,
+//           aadhaarNumber: kycForm.aadhaarNumber,
+//           legalName: kycForm.legalName,
+//           businessType: kycForm.businessType,
+//           dateOfBirth: kycForm.dateOfBirth,
+//         };
+//         await dispatch(submitSellerKyc(kycPayload)).unwrap();
+//       }
+//       const payload = {
+//         displayName: profileForm.businessName,
+//         legalBusinessName: profileForm.businessName,
+//         supportEmail: profileForm.supportEmail,
+//         supportPhone: profileForm.supportPhone,
+//         pickupAddress: {
+//           line1: profileForm.pickupLine1,
+//           city: profileForm.pickupCity,
+//           state: profileForm.pickupState,
+//           postalCode: profileForm.pickupPostalCode,
+//         },
+//         bankDetails: {
+//           accountHolderName: bankForm.accountHolderName,
+//           accountNumber: bankForm.accountNumber,
+//           ifscCode: bankForm.ifscCode,
+//           bankName: bankForm.bankName,
+//           branchName: bankForm.branchName,
+//         },
+//       };
+//       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
+//       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+//       setStep(5);
+//       toast.success("Onboarding submitted for approval");
+//     } catch (error) {
+//       const parsed = parseApiError(error, "Unable to submit business profile");
+//       const detailKeys = (parsed.details || []).map(
+//         (d) => d?.path?.[d?.path?.length - 1]
+//       );
+//       const isKycError = detailKeys.some((key) =>
+//         ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key)
+//       );
+//       setBackendFieldErrors(
+//         parsed.details,
+//         isKycError ? setKycErrors : setProfileErrors
+//       );
+//       toast.error(parsed.message);
+//     }
+//   };
+
+//   if (step === 5) {
+//     return (
+//       <div className="w-full min-h-screen bg-white p-6">
+//         <div className="max-w-4xl mx-auto">
+//           <h1 className="text-2xl font-semibold text-[#2d2d2d] mb-8">
+//             Personal / Owner Details
+//           </h1>
+
+//           {/* KYC Details Section */}
+//           <div className="mb-8">
+//             <div className={`${REVIEW_CARD_CLASS} relative mb-6`}>
+//               <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e5e5e5]">
+//                 <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                   Personal / Owner Details
+//                 </h3>
+//                 <button type="button" onClick={() => setStep(1)} title="Edit">
+//                   <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+//                 </button>
+//               </div>
+
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Full Name
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{kycForm.legalName}</div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Date of Birth
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {formatDateForDisplay(kycForm.dateOfBirth)}
+//                   </div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     City
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{kycForm.city}</div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Zip Code
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{kycForm.zipCode}</div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     PAN Number
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{kycForm.panNumber}</div>
+//                 </div>
+
+//                 {kycForm.gstNumber && (
+//                   <div className="md:col-span-2">
+//                     <label className="block text-xs text-gray-500 mb-2">
+//                       GST Number
+//                     </label>
+//                     <div className={DISPLAY_FIELD_CLASS}>
+//                       {kycForm.gstNumber}
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 {kycForm.aadhaarNumber && (
+//                   <div className="md:col-span-2">
+//                     <label className="block text-xs text-gray-500 mb-2">
+//                       Aadhaar Number
+//                     </label>
+//                     <div className={DISPLAY_FIELD_CLASS}>
+//                       {kycForm.aadhaarNumber}
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 {kycForm.panCardFile && (
+//                   <div className="md:col-span-2">
+//                     <label className="block text-xs text-gray-500 mb-2">
+//                       PAN Card File
+//                     </label>
+//                     <div className="flex items-center gap-2 text-sm text-gray-600">
+//                       <svg
+//                         className="w-4 h-4"
+//                         fill="currentColor"
+//                         viewBox="0 0 20 20"
+//                       >
+//                         <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+//                         <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+//                       </svg>
+//                       {kycForm.panCardFile.name}
+//                     </div>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Business Details Section */}
+//           <div className="mb-8">
+//             <h2 className="text-xl font-semibold text-[#2d2d2d] mb-4">
+//               Business Details
+//             </h2>
+//             <div className={`${REVIEW_CARD_CLASS} relative mb-6`}>
+//               <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e5e5e5]">
+//                 <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                   Business Details
+//                 </h3>
+//                 <button type="button" onClick={() => setStep(2)} title="Edit">
+//                   <Edit2 size={18} className="text-[#b27a25]" />
+//                 </button>
+//               </div>
+
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Business Type
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {profileForm.businessType || "-"}
+//                   </div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Business Name
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {profileForm.businessName || "-"}
+//                   </div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     GST Number
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {profileForm.gstNumber || "-"}
+//                   </div>
+//                 </div>
+
+//                 {profileForm.gstCertificateFile && (
+//                   <div className="md:col-span-2">
+//                     <label className="block text-xs text-gray-500 mb-2">
+//                       GST Certificate
+//                     </label>
+//                     <div className="flex items-center gap-2 text-sm text-gray-600">
+//                       <AiOutlineShoppingCart
+//                         size={18}
+//                         className="text-[#c99528]"
+//                       />
+//                       {profileForm.gstCertificateFile.name}
+//                     </div>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Bank Details Section */}
+//           <div className="mb-8">
+//             <h2 className="text-xl font-semibold text-[#2d2d2d] mb-4">
+//               Bank Details
+//             </h2>
+//             <div className={`${REVIEW_CARD_CLASS} relative mb-6`}>
+//               <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e5e5e5]">
+//                 <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                   Bank Details
+//                 </h3>
+//                 <button type="button" onClick={() => setStep(3)} title="Edit">
+//                   <Edit2 size={18} className="text-[#b27a25]" />
+//                 </button>
+//               </div>
+
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Account Holder Name
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {bankForm.accountHolderName}
+//                   </div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Bank Name
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{bankForm.bankName}</div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Account Number
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {bankForm.accountNumber}
+//                   </div>
+//                 </div>
+//                 <div>
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     IFSC Code
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>{bankForm.ifscCode}</div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="block text-xs text-gray-500 mb-2">
+//                     Branch Name
+//                   </label>
+//                   <div className={DISPLAY_FIELD_CLASS}>
+//                     {bankForm.branchName}
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Submission Status or Submit Button */}
+//           {flowState?.kycStatus === "rejected" ? (
+//             <div className="bg-red-50 border border-red-200 rounded-md p-6 mb-8">
+//               <h3 className="text-red-800 font-semibold mb-2">KYC Rejected</h3>
+//               <p className="text-red-700 text-sm mb-4">
+//                 {flowState?.kycRejectionReason ||
+//                   "Your KYC was rejected. Please update details and submit again."}
+//               </p>
+//               <button
+//                 type="button"
+//                 className={SECONDARY_BUTTON_CLASS}
+//                 onClick={() => setStep(1)}
+//               >
+//                 Update Details
+//               </button>
+//             </div>
+//           ) : (
+//             <div className="bg-blue-50 border border-blue-200 rounded-md p-6 mb-8">
+//               <h3 className="text-blue-800 font-semibold mb-2">
+//                 Verification In Progress
+//               </h3>
+//               <p className="text-blue-700 text-sm">
+//                 Your verification is in progress. KYC status:{" "}
+//                 <strong>
+//                   {flowState?.kycStatus === "submitted"
+//                     ? "Submitted"
+//                     : flowState?.kycStatus === "under_review"
+//                     ? "Under Review"
+//                     : flowState?.kycStatus || "Under Review"}
+//                 </strong>
+//                 . We'll notify you once the verification is complete.
+//               </p>
+//             </div>
+//           )}
+
+//           {/* Action Buttons */}
+//           <div className="flex justify-end gap-3 pt-6 border-t border-[#e5e5e5]">
+//             <button
+//               type="button"
+//               className={SECONDARY_BUTTON_CLASS}
+//               onClick={() => {
+//                 dispatch(clearSellerOnboarding());
+//                 navigate("/login");
+//               }}
+//             >
+//               Back To Login
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="w-full bg-white min-h-screen flex items-center justify-center p-6">
+//       <div className="max-w-4xl w-full">
+//         {step === 0 && (
+//           <div>
+//             <h2 className="text-2xl font-semibold text-[#2d2d2d] mb-4">
+//               Mobile/Email Verification Complete
+//             </h2>
+//             <p className="text-gray-600 mb-6">
+//               Next, submit KYC and business details. After that, your account
+//               goes under review.
+//             </p>
+//             <button
+//               type="button"
+//               className={PRIMARY_BUTTON_CLASS}
+//               onClick={() => setStep(1)}
+//             >
+//               Start KYC Verification
+//             </button>
+//           </div>
+//         )}
+
+//         {step === 1 && (
+//           <form onSubmit={submitKycStep} className="w-full">
+//             <h2 className="mb-8 text-lg font-semibold text-[#2d2d2d]">
+//               KYC Verification
+//             </h2>
+
+//             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
+//               {/* Full Name */}
+//               <div>
+//                 <input
+//                   id="legalName"
+//                   name="legalName"
+//                   placeholder="Full Name*"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={kycForm.legalName}
+//                   onChange={onKycChange}
+//                 />
+//                 {kycErrors.legalName && (
+//                   <p className={ERROR_CLASS}>{kycErrors.legalName}</p>
+//                 )}
+//               </div>
+
+//               {/* Date of Birth */}
+//               <div>
+//                 <div className="relative">
+//                   <div
+//                     className={`${DATE_FIELD_CLASS} pointer-events-none flex items-center justify-between gap-3 ${
+//                       kycForm.dateOfBirth ? "text-gray-800" : "text-gray-400"
+//                     }`}
+//                   >
+//                     <span>
+//                       {kycForm.dateOfBirth
+//                         ? formatDateForDisplay(kycForm.dateOfBirth)
+//                         : "Date of Birth*"}
+//                     </span>
+//                     <FaCalendarAlt className="shrink-0 text-[18px] text-[#c99528]" />
+//                   </div>
+//                   <input
+//                     ref={dateOfBirthRef}
+//                     id="dateOfBirth"
+//                     name="dateOfBirth"
+//                     type="date"
+//                     className="absolute inset-0 h-[35px] w-full cursor-pointer opacity-0"
+//                     value={kycForm.dateOfBirth}
+//                     onChange={onKycChange}
+//                     aria-label="Date of Birth"
+//                   />
+//                 </div>
+//                 {kycErrors.dateOfBirth && (
+//                   <p className={ERROR_CLASS}>{kycErrors.dateOfBirth}</p>
+//                 )}
+//               </div>
+
+//               {/* City */}
+//               <div>
+//                 <div className="relative">
+//                   <select
+//                     id="city"
+//                     name="city"
+//                     className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
+//                     value={kycForm.city}
+//                     onChange={onKycChange}
+//                   >
+//                     <option value="">City*</option>
+//                     <option value="Ahmedabad">Ahmedabad</option>
+//                     <option value="Bengaluru">Bengaluru</option>
+//                     <option value="Delhi">Delhi</option>
+//                     <option value="Hyderabad">Hyderabad</option>
+//                     <option value="Mumbai">Mumbai</option>
+//                     <option value="Pune">Pune</option>
+//                     <option value="Jaipur">Jaipur</option>
+//                     <option value="Kolkata">Kolkata</option>
+//                   </select>
+//                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#c99528] text-white">
+//                     <ChevronDown size={12} />
+//                   </span>
+//                 </div>
+//                 {kycErrors.city && (
+//                   <p className={ERROR_CLASS}>{kycErrors.city}</p>
+//                 )}
+//               </div>
+
+//               {/* Zip Code */}
+//               <div>
+//                 <input
+//                   id="zipCode"
+//                   name="zipCode"
+//                   placeholder="Zip Code*"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={kycForm.zipCode}
+//                   onChange={onKycChange}
+//                 />
+//                 {kycErrors.zipCode && (
+//                   <p className={ERROR_CLASS}>{kycErrors.zipCode}</p>
+//                 )}
+//               </div>
+
+//               {/* PAN Number */}
+//               <div className="md:col-span-2">
+//                 <input
+//                   id="panNumber"
+//                   name="panNumber"
+//                   placeholder="PAN Number*"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={kycForm.panNumber}
+//                   onChange={onKycChange}
+//                   maxLength="10"
+//                 />
+//                 {kycErrors.panNumber && (
+//                   <p className={ERROR_CLASS}>{kycErrors.panNumber}</p>
+//                 )}
+//               </div>
+
+//               {/* Upload PAN Card */}
+//               <div className="md:col-span-2">
+//                 <p className="mb-3 text-[13px] text-gray-600">
+//                   Upload PAN Card*
+//                 </p>
+//                 <div
+//                   className="min-h-[120px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
+//                   onDragOver={(event) => event.preventDefault()}
+//                   onDrop={onPanCardDrop}
+//                 >
+//                   {kycForm.panCardFile ? (
+//                     <div className="flex items-center gap-2 text-sm text-gray-700">
+//                       <AiOutlineShoppingCart
+//                         size={18}
+//                         className="text-[#c99528]"
+//                       />
+//                       {kycForm.panCardFile.name}
+//                     </div>
+//                   ) : (
+//                     <>
+//                       <UploadCloud size={20} className="mb-2 text-[#3b3b3b]" />
+//                       <p className="text-[13px] text-gray-600 mb-2">
+//                         {kycForm.panCardFile?.name || "Drag Your File Here"}
+//                       </p>
+//                       <p className="text-[11px] text-gray-400 mb-2 uppercase">
+//                         OR
+//                       </p>
+//                       <label
+//                         htmlFor="panCardFile"
+//                         className="px-4 py-1.5 rounded-full bg-[#d9d9d9] text-gray-600 text-xs font-medium cursor-pointer hover:bg-[#cccccc] transition inline-flex items-center h-[23px]"
+//                       >
+//                         Browser
+//                       </label>
+//                     </>
+//                   )}
+//                   <input
+//                     id="panCardFile"
+//                     name="panCardFile"
+//                     type="file"
+//                     className="hidden"
+//                     accept=".jpg,.jpeg,.png,.pdf"
+//                     onChange={onPanCardFileChange}
+//                   />
+//                 </div>
+//                 {kycErrors.panCardFile && (
+//                   <p className={ERROR_CLASS}>{kycErrors.panCardFile}</p>
+//                 )}
+//               </div>
+//             </div>
+
+//             <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+//               <button
+//                 className={SECONDARY_BUTTON_CLASS}
+//                 type="button"
+//                 onClick={() => setStep(0)}
+//               >
+//                 Back
+//               </button>
+//               <button
+//                 disabled={loading}
+//                 className={PRIMARY_BUTTON_CLASS}
+//                 type="submit"
+//               >
+//                 {loading ? "Submitting..." : "Continue"}
+//               </button>
+//             </div>
+//           </form>
+//         )}
+
+//         {step === 2 && (
+//           <form onSubmit={submitBusinessStep} className="w-full">
+//             <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+//               Business Details
+//             </h2>
+
+//             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+//               <div className="relative">
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Business Type {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <div className="relative">
+//                   <select
+//                     name="businessType"
+//                     className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
+//                     value={profileForm.businessType}
+//                     onChange={onProfileChange}
+//                   >
+//                     <option value="">Select Business Type</option>
+//                     <option value="individual">Individual</option>
+//                     <option value="proprietorship">Proprietorship</option>
+//                     <option value="partnership">Partnership</option>
+//                     <option value="private_limited">Private Limited</option>
+//                   </select>
+//                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#c99528] text-white">
+//                     <ChevronDown size={12} />
+//                   </span>
+//                 </div>
+//                 {profileErrors.businessType && (
+//                   <p className={ERROR_CLASS}>{profileErrors.businessType}</p>
+//                 )}
+//               </div>
+
+//               <div>
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Business Name {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="businessName"
+//                   placeholder="Business Name"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={profileForm.businessName}
+//                   onChange={onProfileChange}
+//                 />
+//                 {profileErrors.businessName && (
+//                   <p className={ERROR_CLASS}>{profileErrors.businessName}</p>
+//                 )}
+//               </div>
+
+//               <div className="md:col-span-2">
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   GST Number {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="gstNumber"
+//                   placeholder="GST Number"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={profileForm.gstNumber}
+//                   onChange={onProfileChange}
+//                 />
+//                 {profileErrors.gstNumber && (
+//                   <p className={ERROR_CLASS}>{profileErrors.gstNumber}</p>
+//                 )}
+//               </div>
+
+//               <div className="md:col-span-2">
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Upload GST Certificate {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <div
+//                   className="min-h-[122px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
+//                   onDragOver={(event) => event.preventDefault()}
+//                   onDrop={onGstCertificateDrop}
+//                 >
+//                   {profileForm.gstCertificateFile ? (
+//                     <div className="flex items-center gap-2 text-sm text-gray-700">
+//                       <AiOutlineShoppingCart
+//                         size={18}
+//                         className="text-[#c99528]"
+//                       />
+//                       {profileForm.gstCertificateFile.name}
+//                     </div>
+//                   ) : (
+//                     <>
+//                       <UploadCloud size={24} className="mb-2 text-[#c99528]" />
+//                       <p className="text-sm text-gray-600 mb-2">
+//                         Drag Your File Here
+//                       </p>
+//                       <p className="text-xs text-gray-400 mb-2">OR</p>
+//                       <label
+//                         htmlFor="gstCertificateFile"
+//                         className="px-4 py-2 rounded-full bg-[#c99528] text-white text-xs font-medium cursor-pointer hover:bg-[#b27a25] transition"
+//                       >
+//                         Browse
+//                       </label>
+//                     </>
+//                   )}
+//                   <input
+//                     id="gstCertificateFile"
+//                     name="gstCertificateFile"
+//                     type="file"
+//                     className="hidden"
+//                     accept=".jpg,.jpeg,.png,.pdf"
+//                     onChange={onGstCertificateFileChange}
+//                   />
+//                 </div>
+//                 {profileErrors.gstCertificateFile && (
+//                   <p className={ERROR_CLASS}>
+//                     {profileErrors.gstCertificateFile}
+//                   </p>
+//                 )}
+//               </div>
+//             </div>
+
+//             <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+//               <button
+//                 className={SECONDARY_BUTTON_CLASS}
+//                 type="button"
+//                 onClick={() => setStep(1)}
+//               >
+//                 Back
+//               </button>
+//               <button
+//                 disabled={loading}
+//                 className={PRIMARY_BUTTON_CLASS}
+//                 type="submit"
+//               >
+//                 Continue
+//               </button>
+//             </div>
+//           </form>
+//         )}
+
+//         {step === 3 && (
+//           <form onSubmit={submitBankStep} className="w-full">
+//             <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+//               Bank Details
+//             </h2>
+
+//             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+//               <div>
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Account Holder Name {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="accountHolderName"
+//                   placeholder="Account Holder Name"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={bankForm.accountHolderName}
+//                   onChange={onBankChange}
+//                 />
+//                 {profileErrors.accountHolderName && (
+//                   <p className={ERROR_CLASS}>
+//                     {profileErrors.accountHolderName}
+//                   </p>
+//                 )}
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Bank Name {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="bankName"
+//                   placeholder="Bank Name"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={bankForm.bankName}
+//                   onChange={onBankChange}
+//                 />
+//                 {profileErrors.bankName && (
+//                   <p className={ERROR_CLASS}>{profileErrors.bankName}</p>
+//                 )}
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Account Number {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="accountNumber"
+//                   placeholder="Account Number"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={bankForm.accountNumber}
+//                   onChange={onBankChange}
+//                 />
+//                 {profileErrors.accountNumber && (
+//                   <p className={ERROR_CLASS}>{profileErrors.accountNumber}</p>
+//                 )}
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   IFSC Code {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="ifscCode"
+//                   placeholder="IFSC Code"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={bankForm.ifscCode}
+//                   onChange={onBankChange}
+//                 />
+//                 {profileErrors.ifscCode && (
+//                   <p className={ERROR_CLASS}>{profileErrors.ifscCode}</p>
+//                 )}
+//               </div>
+//               <div className="md:col-span-2">
+//                 <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
+//                   Branch Name {STEP_ONE_REQUIRED}
+//                 </label>
+//                 <input
+//                   name="branchName"
+//                   placeholder="Branch Name"
+//                   className={STEP_ONE_INPUT_CLASS}
+//                   value={bankForm.branchName}
+//                   onChange={onBankChange}
+//                 />
+//                 {profileErrors.branchName && (
+//                   <p className={ERROR_CLASS}>{profileErrors.branchName}</p>
+//                 )}
+//               </div>
+//             </div>
+
+//             <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+//               <button
+//                 className={SECONDARY_BUTTON_CLASS}
+//                 type="button"
+//                 onClick={() => setStep(2)}
+//               >
+//                 Back
+//               </button>
+//               <button
+//                 disabled={loading}
+//                 className={PRIMARY_BUTTON_CLASS}
+//                 type="submit"
+//               >
+//                 Continue
+//               </button>
+//             </div>
+//           </form>
+//         )}
+
+//         {step === 4 && (
+//           <div className="w-full">
+//             <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+//               Review All Details
+//             </h2>
+
+//             <div className="space-y-6">
+//               {/* KYC Details */}
+//               <div className={REVIEW_CARD_CLASS}>
+//                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+//                   <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                     Personal / Owner Details
+//                   </h3>
+//                   <button type="button" onClick={() => setStep(1)} title="Edit">
+//                     <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+//                   </button>
+//                 </div>
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Full Name</p>
+//                     <p className="text-sm text-gray-800">{kycForm.legalName}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Date of Birth</p>
+//                     <p className="text-sm text-gray-800">
+//                       {formatDateForDisplay(kycForm.dateOfBirth)}
+//                     </p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">City</p>
+//                     <p className="text-sm text-gray-800">{kycForm.city}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Zip Code</p>
+//                     <p className="text-sm text-gray-800">{kycForm.zipCode}</p>
+//                   </div>
+//                   <div className="md:col-span-2">
+//                     <p className="text-xs text-gray-500 mb-1">PAN Number</p>
+//                     <p className="text-sm text-gray-800">{kycForm.panNumber}</p>
+//                   </div>
+//                   {kycForm.gstNumber && (
+//                     <div className="md:col-span-2">
+//                       <p className="text-xs text-gray-500 mb-1">GST Number</p>
+//                       <p className="text-sm text-gray-800">
+//                         {kycForm.gstNumber}
+//                       </p>
+//                     </div>
+//                   )}
+//                   {kycForm.panCardFile && (
+//                     <div className="md:col-span-2">
+//                       <p className="text-xs text-gray-500 mb-1">
+//                         PAN Card File
+//                       </p>
+//                       <div className="flex items-center gap-2 text-sm text-gray-600">
+//                         <AiOutlineShoppingCart
+//                           size={18}
+//                           className="text-[#c99528]"
+//                         />
+//                         {kycForm.panCardFile.name}
+//                       </div>
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+
+//               {/* Business Details */}
+//               <div className={REVIEW_CARD_CLASS}>
+//                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+//                   <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                     Business Details
+//                   </h3>
+//                   <button type="button" onClick={() => setStep(2)} title="Edit">
+//                     <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+//                   </button>
+//                 </div>
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Business Type</p>
+//                     <p className="text-sm text-gray-800">
+//                       {profileForm.businessType || "-"}
+//                     </p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Business Name</p>
+//                     <p className="text-sm text-gray-800">
+//                       {profileForm.businessName || "-"}
+//                     </p>
+//                   </div>
+//                   <div className="md:col-span-2">
+//                     <p className="text-xs text-gray-500 mb-1">GST Number</p>
+//                     <p className="text-sm text-gray-800">
+//                       {profileForm.gstNumber || "-"}
+//                     </p>
+//                   </div>
+//                   {profileForm.gstCertificateFile && (
+//                     <div className="md:col-span-2">
+//                       <p className="text-xs text-gray-500 mb-1">
+//                         GST Certificate
+//                       </p>
+//                       <div className="flex items-center gap-2 text-sm text-gray-600">
+//                         <AiOutlineShoppingCart
+//                           size={18}
+//                           className="text-[#c99528]"
+//                         />
+//                         {profileForm.gstCertificateFile.name}
+//                       </div>
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+
+//               {/* Bank Details */}
+//               <div className={REVIEW_CARD_CLASS}>
+//                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+//                   <h3 className="text-lg font-semibold text-[#2d2d2d]">
+//                     Bank Details
+//                   </h3>
+//                   <button type="button" onClick={() => setStep(3)} title="Edit">
+//                     <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+//                   </button>
+//                 </div>
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Account Holder</p>
+//                     <p className="text-sm text-gray-800">
+//                       {bankForm.accountHolderName}
+//                     </p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Bank Name</p>
+//                     <p className="text-sm text-gray-800">{bankForm.bankName}</p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">Account Number</p>
+//                     <p className="text-sm text-gray-800">
+//                       {bankForm.accountNumber}
+//                     </p>
+//                   </div>
+//                   <div>
+//                     <p className="text-xs text-gray-500 mb-1">IFSC Code</p>
+//                     <p className="text-sm text-gray-800">{bankForm.ifscCode}</p>
+//                   </div>
+//                   <div className="md:col-span-2">
+//                     <p className="text-xs text-gray-500 mb-1">Branch Name</p>
+//                     <p className="text-sm text-gray-800">
+//                       {bankForm.branchName}
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end border-t border-[#e5e5e5] pt-6">
+//               <button
+//                 className={SECONDARY_BUTTON_CLASS}
+//                 type="button"
+//                 onClick={() => setStep(3)}
+//               >
+//                 Back
+//               </button>
+//               <button
+//                 disabled={loading}
+//                 className={PRIMARY_BUTTON_CLASS}
+//                 type="button"
+//                 onClick={submitFinalOnboarding}
+//               >
+//                 {loading ? "Submitting..." : "Submit For Verification"}
+//               </button>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default SellerOnboarding;
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronDown, FileText, UploadCloud } from "lucide-react";
+import { ChevronDown, FileText, Hourglass, UploadCloud } from "lucide-react";
 import { FaCalendarAlt } from "react-icons/fa";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { RiEditBoxFill } from "react-icons/ri";
@@ -15,7 +1249,6 @@ import {
 import { useKYC } from "../../context/KycContext";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
@@ -28,120 +1261,18 @@ const MIN_SELLER_AGE = 18;
 
 const ERROR_CLASS = "mt-1 text-xs text-red-600";
 const STEP_ONE_INPUT_CLASS =
-  "h-[40px] w-full rounded-[6px] border border-[#dcd8ee] bg-[#fbfaff] px-3 text-[12px] text-[#344054] outline-none transition placeholder:text-[#8f8aa3] focus:border-[#082f91] focus:ring-2 focus:ring-[#dce3ff]";
+  "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-amber-600 focus:ring-2 focus:ring-amber-100";
 const DATE_FIELD_CLASS =
-  "h-[40px] w-full rounded-[6px] border border-[#dcd8ee] bg-[#fbfaff] pl-3 pr-3 text-[12px] outline-none transition hover:border-[#c8c3df] focus:border-[#082f91] focus:ring-2 focus:ring-[#dce3ff]";
-const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
+  "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] pl-4 pr-3 text-[13px] outline-none transition hover:border-[#d8d8d8] focus:border-[#c99528] focus:ring-2 focus:ring-amber-100";
+const STEP_ONE_REQUIRED = <span className="text-[#c99528]">*</span>;
 const SECONDARY_BUTTON_CLASS =
-  "flex h-[40px] min-w-[130px] items-center justify-center rounded-[7px] border border-[#082f91] bg-transparent px-6 text-[12px] font-bold leading-none text-[#031b52] transition hover:bg-[#eef2ff]";
+  "h-8 min-w-[106px] rounded-full bg-[#e5e5e5] px-7 text-sm font-semibold text-gray-600 transition hover:bg-[#d2d2d2] flex items-center justify-center leading-none";
 const PRIMARY_BUTTON_CLASS =
-  "flex h-[40px] min-w-[150px] items-center justify-center rounded-[7px] bg-[#082f91] px-7 text-[12px] font-bold leading-none text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#062779] disabled:cursor-not-allowed disabled:opacity-70";
+  "h-8 min-w-[120px] rounded-full bg-[#b27a25] px-7 text-sm font-semibold text-white transition hover:bg-[#9f6c1f] disabled:cursor-not-allowed disabled:bg-[#d6b678] flex items-center justify-center leading-none";
 const REVIEW_CARD_CLASS =
-  "rounded-[10px] border border-[#e7e1d7] bg-[#fbfaf8] px-6 py-5";
-const ONBOARDING_CARD_CLASS =
-  "w-full rounded-[14px] border border-[#e4dfd9] bg-white px-5 py-7 shadow-[0_24px_44px_rgba(35,31,27,0.10)] sm:px-8 md:px-10";
+  "rounded-md border border-[#e5e5e5] bg-[#faf8f6] px-6 py-4";
 // const DISPLAY_FIELD_CLASS =
 //   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
-
-const ONBOARDING_STEP_META = {
-  0: {
-    badge: "KYC VERIFICATION",
-    title: "Mobile/Email Verification Complete",
-    subtitle:
-      "Next, submit KYC and business details. After that, your account goes under review.",
-  },
-  1: {
-    badge: "KYC VERIFICATION",
-    title: "Personal / Owner Details",
-    subtitle:
-      "Complete your basic identity details to continue your vendor verification.",
-  },
-  2: {
-    badge: "BUSINESS VERIFICATION",
-    title: "Business Details",
-    subtitle:
-      "Add your business, support, and address details for seller onboarding.",
-  },
-  3: {
-    badge: "BANK VERIFICATION",
-    title: "Bank Details",
-    subtitle: "Add payout bank information for marketplace settlements.",
-  },
-  4: {
-    badge: "REVIEW",
-    title: "Review Details",
-    subtitle: "Check all seller onboarding details before final submission.",
-  },
-  5: {
-    badge: "STATUS",
-    title: "Status Status",
-    subtitle: "Track your seller verification status.",
-  },
-};
-
-const getOnboardingStepMeta = (step) =>
-  ONBOARDING_STEP_META[step] || ONBOARDING_STEP_META[1];
-
-const OnboardingScreen = ({ step, children }) => {
-  const meta = getOnboardingStepMeta(step);
-  const progress = Math.min(Math.max(step, 1), 5) * 20;
-
-  return (
-    <div className="mx-auto w-full max-w-6xl">
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <span className="inline-flex rounded-[4px] bg-[#fff1cf] px-3 py-1 text-[10px]  font-bold uppercase tracking-[0.08em] text-[#c98f12]">
-            {meta.badge}
-          </span>
-          <h1 className="mt-3 text-[24px] font-extrabold leading-tight text-[#082f91] sm:text-[28px]">
-            {meta.title}
-          </h1>
-          <p className="mt-1 max-w-2xl text-[13px] leading-6 text-[#596172]">
-            {meta.subtitle}
-          </p>
-        </div>
-        <div className="min-w-[150px]">
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#9aa0ad]">
-            Progress
-          </p>
-          <div className="flex items-center gap-3">
-            <span className="whitespace-nowrap text-[12px] font-bold text-[#17213a]">
-              Step {Math.min(Math.max(step, 1), 5)} / 5
-            </span>
-            <div className="h-[4px] w-24 overflow-hidden rounded-full bg-[#d7d4cf]">
-              <span
-                className="block h-full rounded-full bg-[#f2a900]"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-};
-
-const OnboardingSection = ({ number, title, children }) => (
-  <section className="space-y-5">
-    <div className="flex items-center gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2a900] text-[12px] font-bold text-white">
-        {number}
-      </span>
-      <h2 className="whitespace-nowrap text-[16px] font-bold text-[#082f91]">
-        {title}
-      </h2>
-      <span className="h-px flex-1 bg-[#f2a900]/70" />
-    </div>
-    {children}
-  </section>
-);
-
-const OnboardingActions = ({ children }) => (
-  <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#eee7dd] pt-6 sm:flex-row sm:justify-end">
-    {children}
-  </div>
-);
 
 const parseApiError = (error, fallbackMessage) => {
   if (!error) return { message: fallbackMessage, details: [] };
@@ -169,7 +1300,11 @@ const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
 
 const detectDocumentMimeType = (bytes) => {
   if (!bytes?.length) return "";
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+  if (
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
     return "image/jpeg";
   }
   if (
@@ -239,10 +1374,7 @@ const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
     const name = pathname.split("/").filter(Boolean).pop();
     return name ? decodeURIComponent(name) : fallback;
   } catch {
-    const name = String(url || "")
-      .split("/")
-      .filter(Boolean)
-      .pop();
+    const name = String(url || "").split("/").filter(Boolean).pop();
     return name || fallback;
   }
 };
@@ -284,11 +1416,11 @@ const DocumentUploadField = ({
 
   return (
     <div>
-      <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+      <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
         {label} {required && STEP_ONE_REQUIRED}
       </label>
       <div
-        className="flex min-h-[150px] flex-col items-center justify-center rounded-[8px] border border-dashed border-[#f2b84b] bg-[#fbfaf8] px-4 py-3 transition hover:border-[#082f91]"
+        className="min-h-[150px] rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 py-3 flex flex-col items-center justify-center"
         onDragOver={(event) => event.preventDefault()}
         onDrop={onDrop}
       >
@@ -298,11 +1430,11 @@ const DocumentUploadField = ({
               <img
                 src={previewUrl || existingUrl}
                 alt={label}
-                className="h-24 max-w-full rounded-md border border-[#dcd8ee] bg-white object-contain"
+                className="h-24 max-w-full rounded-md border border-[#e5e5e5] bg-white object-contain"
               />
             ) : (
               <div className="flex max-w-full items-center gap-2 text-sm text-gray-700">
-                <FileText size={18} className="shrink-0 text-[#082f91]" />
+                <FileText size={18} className="shrink-0 text-[#c99528]" />
                 <span className="truncate">
                   {file?.name || getFileNameFromUrl(existingUrl, label)}
                 </span>
@@ -314,7 +1446,7 @@ const DocumentUploadField = ({
               </span>
               <label
                 htmlFor={id}
-                className="shrink-0 cursor-pointer rounded-[7px] bg-[#082f91] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#062779]"
+                className="shrink-0 rounded-full bg-[#c99528] px-4 py-2 text-xs font-medium text-white cursor-pointer transition hover:bg-[#b27a25]"
               >
                 Change
               </label>
@@ -322,16 +1454,12 @@ const DocumentUploadField = ({
           </div>
         ) : (
           <>
-            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#ead9bf] bg-white text-[#f2a900]">
-              <UploadCloud size={20} />
-            </span>
-            <p className="mb-1 text-[12px] text-[#333142]">{emptyText}</p>
-            <p className="mb-3 text-[10px] text-[#8f8aa3]">
-              PNG, JPG or PDF · Max 5 MB
-            </p>
+            <UploadCloud size={24} className="mb-2 text-[#c99528]" />
+            <p className="text-sm text-gray-600 mb-2">{emptyText}</p>
+            <p className="text-xs text-gray-400 mb-2">OR</p>
             <label
               htmlFor={id}
-              className="cursor-pointer rounded-[7px] bg-[#082f91] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#062779]"
+              className="px-4 py-2 rounded-full bg-[#c99528] text-white text-xs font-medium cursor-pointer hover:bg-[#b27a25] transition"
             >
               Browse
             </label>
@@ -423,7 +1551,7 @@ const SellerOnboarding = () => {
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
-    [accessToken, onboardingToken],
+    [accessToken, onboardingToken]
   );
 
   useEffect(() => {
@@ -447,9 +1575,7 @@ const SellerOnboarding = () => {
         const pickupAddress = sellerProfile?.pickupAddress || {};
         const onboarding = user?.onboarding || {};
         const kycStatus =
-          onboarding?.kycStatus ||
-          kyc?.verificationStatus ||
-          sellerProfile?.kycStatus;
+          onboarding?.kycStatus || kyc?.verificationStatus || sellerProfile?.kycStatus;
         const kycDocuments = kyc?.documents || {};
         const hasSubmittedKyc =
           onboarding?.checklist?.kycSubmitted ||
@@ -467,27 +1593,21 @@ const SellerOnboarding = () => {
 
         setRequiresKycRefresh(shouldRefreshKyc);
         setKycSubmittedApi(
-          Boolean(
-            hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc,
-          ),
+          Boolean(hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc)
         );
         setDocumentUrls((prev) => ({
           ...prev,
-          panDocumentUrl:
-            prev.panDocumentUrl || kycDocuments?.panDocumentUrl || "",
+          panDocumentUrl: prev.panDocumentUrl || kycDocuments?.panDocumentUrl || "",
           gstCertificateUrl:
             prev.gstCertificateUrl || kycDocuments?.gstCertificateUrl || "",
           aadhaarFrontUrl:
             prev.aadhaarFrontUrl || kycDocuments?.aadhaarFrontUrl || "",
-          aadhaarBackUrl:
-            prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
+          aadhaarBackUrl: prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
         }));
         setKycForm((prev) => ({
           ...prev,
-          panNumber:
-            prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
-          gstNumber:
-            prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
+          panNumber: prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+          gstNumber: prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
           aadhaarNumber:
             prev.aadhaarNumber ||
             kyc?.aadhaarNumber ||
@@ -500,45 +1620,26 @@ const SellerOnboarding = () => {
             sellerProfile?.displayName ||
             "",
           businessType:
-            prev.businessType ||
-            kyc?.businessType ||
-            sellerProfile?.businessType ||
-            "individual",
+            prev.businessType || kyc?.businessType || sellerProfile?.businessType || "individual",
           dateOfBirth:
-            prev.dateOfBirth ||
-            sellerProfile?.dateOfBirth ||
-            MAX_DOB_FOR_SELLER,
+            prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
         }));
         setProfileForm((prev) => ({
           ...prev,
-          businessType:
-            prev.businessType ||
-            sellerProfile?.businessType ||
-            kyc?.businessType ||
-            "",
+          businessType: prev.businessType || sellerProfile?.businessType || kyc?.businessType || "",
           businessName:
             prev.businessName ||
             sellerProfile?.businessName ||
             sellerProfile?.displayName ||
             "",
-          gstNumber:
-            prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
+          gstNumber: prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
           displayName: prev.displayName || sellerProfile?.displayName || "",
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
-          supportEmail:
-            prev.supportEmail ||
-            sellerProfile?.supportEmail ||
-            user?.email ||
-            "",
-          supportPhone:
-            prev.supportPhone ||
-            sellerProfile?.supportPhone ||
-            user?.phone ||
-            "",
+          supportEmail: prev.supportEmail || sellerProfile?.supportEmail || user?.email || "",
+          supportPhone: prev.supportPhone || sellerProfile?.supportPhone || user?.phone || "",
           description: prev.description || sellerProfile?.description || "",
-          businessWebsite:
-            prev.businessWebsite || sellerProfile?.businessWebsite || "",
+          businessWebsite: prev.businessWebsite || sellerProfile?.businessWebsite || "",
           registrationNumber:
             prev.registrationNumber || sellerProfile?.registrationNumber || "",
           primaryContactName:
@@ -559,10 +1660,8 @@ const SellerOnboarding = () => {
           pickupLine2: prev.pickupLine2 || pickupAddress?.line2 || "",
           pickupCity: prev.pickupCity || pickupAddress?.city || "",
           pickupState: prev.pickupState || pickupAddress?.state || "",
-          pickupCountry:
-            prev.pickupCountry || pickupAddress?.country || "India",
-          pickupPostalCode:
-            prev.pickupPostalCode || pickupAddress?.postalCode || "",
+          pickupCountry: prev.pickupCountry || pickupAddress?.country || "India",
+          pickupPostalCode: prev.pickupPostalCode || pickupAddress?.postalCode || "",
         }));
         setBankForm((prev) => ({
           ...prev,
@@ -593,9 +1692,7 @@ const SellerOnboarding = () => {
     const businessAddress = sellerProfile?.businessAddress || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
     const kycStatus =
-      flowState?.kycStatus ||
-      kyc?.verificationStatus ||
-      sellerProfile?.kycStatus;
+      flowState?.kycStatus || kyc?.verificationStatus || sellerProfile?.kycStatus;
     const kycDocuments = kyc?.documents || {};
     const hasSubmittedKyc =
       flowState?.checklist?.kycSubmitted ||
@@ -613,28 +1710,21 @@ const SellerOnboarding = () => {
 
     setRequiresKycRefresh(shouldRefreshKyc);
     setKycSubmittedApi(
-      Boolean(hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc),
+      Boolean(hasSubmittedKyc && kycStatus !== "rejected" && !shouldRefreshKyc)
     );
     setDocumentUrls((prev) => ({
       ...prev,
       panDocumentUrl: prev.panDocumentUrl || kycDocuments?.panDocumentUrl || "",
-      gstCertificateUrl:
-        prev.gstCertificateUrl || kycDocuments?.gstCertificateUrl || "",
-      aadhaarFrontUrl:
-        prev.aadhaarFrontUrl || kycDocuments?.aadhaarFrontUrl || "",
+      gstCertificateUrl: prev.gstCertificateUrl || kycDocuments?.gstCertificateUrl || "",
+      aadhaarFrontUrl: prev.aadhaarFrontUrl || kycDocuments?.aadhaarFrontUrl || "",
       aadhaarBackUrl: prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
     }));
     setKycForm((prev) => ({
       ...prev,
-      panNumber:
-        prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
-      gstNumber:
-        prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
+      panNumber: prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+      gstNumber: prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
       aadhaarNumber:
-        prev.aadhaarNumber ||
-        kyc?.aadhaarNumber ||
-        sellerProfile?.aadhaarNumber ||
-        "",
+        prev.aadhaarNumber || kyc?.aadhaarNumber || sellerProfile?.aadhaarNumber || "",
       legalName:
         prev.legalName ||
         kyc?.legalName ||
@@ -642,49 +1732,28 @@ const SellerOnboarding = () => {
         sellerProfile?.displayName ||
         "",
       businessType:
-        prev.businessType ||
-        kyc?.businessType ||
-        sellerProfile?.businessType ||
-        "individual",
-      dateOfBirth:
-        prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
+        prev.businessType || kyc?.businessType || sellerProfile?.businessType || "individual",
+      dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
     }));
     setProfileForm((prev) => ({
       ...prev,
-      businessType:
-        prev.businessType ||
-        sellerProfile?.businessType ||
-        kyc?.businessType ||
-        "",
+      businessType: prev.businessType || sellerProfile?.businessType || kyc?.businessType || "",
       businessName:
-        prev.businessName ||
-        sellerProfile?.businessName ||
-        sellerProfile?.displayName ||
-        "",
-      gstNumber:
-        prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
+        prev.businessName || sellerProfile?.businessName || sellerProfile?.displayName || "",
+      gstNumber: prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
       displayName: prev.displayName || sellerProfile?.displayName || "",
-      legalBusinessName:
-        prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
+      legalBusinessName: prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
       supportEmail: prev.supportEmail || sellerProfile?.supportEmail || "",
       supportPhone: prev.supportPhone || sellerProfile?.supportPhone || "",
       description: prev.description || sellerProfile?.description || "",
-      businessWebsite:
-        prev.businessWebsite || sellerProfile?.businessWebsite || "",
-      registrationNumber:
-        prev.registrationNumber || sellerProfile?.registrationNumber || "",
-      primaryContactName:
-        prev.primaryContactName || sellerProfile?.primaryContactName || "",
-      businessAddressLine1:
-        prev.businessAddressLine1 || businessAddress?.line1 || "",
-      businessAddressLine2:
-        prev.businessAddressLine2 || businessAddress?.line2 || "",
-      businessAddressCity:
-        prev.businessAddressCity || businessAddress?.city || "",
-      businessAddressState:
-        prev.businessAddressState || businessAddress?.state || "",
-      businessAddressCountry:
-        prev.businessAddressCountry || businessAddress?.country || "India",
+      businessWebsite: prev.businessWebsite || sellerProfile?.businessWebsite || "",
+      registrationNumber: prev.registrationNumber || sellerProfile?.registrationNumber || "",
+      primaryContactName: prev.primaryContactName || sellerProfile?.primaryContactName || "",
+      businessAddressLine1: prev.businessAddressLine1 || businessAddress?.line1 || "",
+      businessAddressLine2: prev.businessAddressLine2 || businessAddress?.line2 || "",
+      businessAddressCity: prev.businessAddressCity || businessAddress?.city || "",
+      businessAddressState: prev.businessAddressState || businessAddress?.state || "",
+      businessAddressCountry: prev.businessAddressCountry || businessAddress?.country || "India",
       businessAddressPostalCode:
         prev.businessAddressPostalCode || businessAddress?.postalCode || "",
       pickupLine1: prev.pickupLine1 || pickupAddress?.line1 || "",
@@ -692,13 +1761,11 @@ const SellerOnboarding = () => {
       pickupCity: prev.pickupCity || pickupAddress?.city || "",
       pickupState: prev.pickupState || pickupAddress?.state || "",
       pickupCountry: prev.pickupCountry || pickupAddress?.country || "India",
-      pickupPostalCode:
-        prev.pickupPostalCode || pickupAddress?.postalCode || "",
+      pickupPostalCode: prev.pickupPostalCode || pickupAddress?.postalCode || "",
     }));
     setBankForm((prev) => ({
       ...prev,
-      accountHolderName:
-        prev.accountHolderName || bankDetails?.accountHolderName || "",
+      accountHolderName: prev.accountHolderName || bankDetails?.accountHolderName || "",
       accountNumber: prev.accountNumber || bankDetails?.accountNumber || "",
       ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
       bankName: prev.bankName || bankDetails?.bankName || "",
@@ -721,23 +1788,19 @@ const SellerOnboarding = () => {
     const kycSubmitted =
       !requiresKycRefresh &&
       (!!flowState?.checklist?.kycSubmitted ||
-        ["submitted", "under_review", "verified"].includes(
-          flowState?.kycStatus,
-        ));
+        ["submitted", "under_review", "verified"].includes(flowState?.kycStatus));
     const statusMeansReview =
       flowState?.kycStatus === "submitted" ||
       flowState?.kycStatus === "under_review" ||
       flowState?.onboardingStatus === "under_review";
 
-    setKycSubmittedApi(
-      Boolean(kycSubmitted && flowState?.kycStatus !== "rejected"),
-    );
+    setKycSubmittedApi(Boolean(kycSubmitted && flowState?.kycStatus !== "rejected"));
 
     if (
       flowState?.accountStatus === "active" &&
       !flowState?.requiresOnboarding
     ) {
-      setStep(5);
+      navigate("/app/home");
       return;
     }
     if (flowState?.kycStatus === "rejected") {
@@ -920,19 +1983,19 @@ const SellerOnboarding = () => {
     documents: {
       panDocumentUrl: await getDocumentUploadValue(
         kycForm.panDocumentFile,
-        documentUrls.panDocumentUrl,
+        documentUrls.panDocumentUrl
       ),
       gstCertificateUrl: await getDocumentUploadValue(
         profileForm.gstCertificateFile,
-        documentUrls.gstCertificateUrl,
+        documentUrls.gstCertificateUrl
       ),
       aadhaarFrontUrl: await getDocumentUploadValue(
         kycForm.aadhaarFrontFile,
-        documentUrls.aadhaarFrontUrl,
+        documentUrls.aadhaarFrontUrl
       ),
       aadhaarBackUrl: await getDocumentUploadValue(
         kycForm.aadhaarBackFile,
-        documentUrls.aadhaarBackUrl,
+        documentUrls.aadhaarBackUrl
       ),
     },
   });
@@ -1025,10 +2088,7 @@ const SellerOnboarding = () => {
     const bankRejected =
       flowState?.bankVerificationStatus === "rejected" ||
       flowState?.sellerProfile?.bankVerificationStatus === "rejected" ||
-      Boolean(
-        flowState?.bankRejectionReason ||
-        flowState?.sellerProfile?.bankRejectionReason,
-      );
+      Boolean(flowState?.bankRejectionReason || flowState?.sellerProfile?.bankRejectionReason);
     if (bankRejected) {
       await submitFinalOnboarding();
       return;
@@ -1057,8 +2117,7 @@ const SellerOnboarding = () => {
         displayName:
           profileForm.displayName.trim() || profileForm.businessName.trim(),
         legalBusinessName:
-          profileForm.legalBusinessName.trim() ||
-          profileForm.businessName.trim(),
+          profileForm.legalBusinessName.trim() || profileForm.businessName.trim(),
         description: profileForm.description.trim(),
         supportEmail: profileForm.supportEmail.trim(),
         supportPhone: profileForm.supportPhone.trim(),
@@ -1092,8 +2151,7 @@ const SellerOnboarding = () => {
           branchName: bankForm.branchName.trim(),
         },
       };
-      if (kycForm.panNumber.trim())
-        payload.panNumber = kycForm.panNumber.trim();
+      if (kycForm.panNumber.trim()) payload.panNumber = kycForm.panNumber.trim();
       if (kycForm.aadhaarNumber.trim())
         payload.aadhaarNumber = kycForm.aadhaarNumber.trim();
       if (shouldSubmitKyc && kycForm.dateOfBirth)
@@ -1105,14 +2163,14 @@ const SellerOnboarding = () => {
     } catch (error) {
       const parsed = parseApiError(error, "Unable to submit business profile");
       const detailKeys = (parsed.details || []).map(
-        (d) => d?.path?.[d?.path?.length - 1],
+        (d) => d?.path?.[d?.path?.length - 1]
       );
       const isKycError = detailKeys.some((key) =>
-        ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key),
+        ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key)
       );
       setBackendFieldErrors(
         parsed.details,
-        isKycError ? setKycErrors : setProfileErrors,
+        isKycError ? setKycErrors : setProfileErrors
       );
       toast.error(parsed.message);
     }
@@ -1120,63 +2178,87 @@ const SellerOnboarding = () => {
 
   if (step === 5) {
     const isRejected = flowState?.kycStatus === "rejected";
-    const isApproved =
-      flowState?.kycStatus === "verified" ||
-      flowState?.kycStatus === "approved" ||
-      flowState?.onboardingStatus === "approved" ||
-      (flowState?.accountStatus === "active" && !flowState?.requiresOnboarding);
-    const statusVariant = isRejected
-      ? "rejected"
-      : isApproved
-        ? "approved"
-        : "underReview";
-
     return (
-      <OnboardingScreen step={5}>
-        <div className="w-full max-w-[58rem]">
-          <SellerStatusScreen
-            variant={statusVariant}
-            description={
-              isRejected
-                ? flowState?.kycRejectionReason ||
-                  "Your KYC was rejected. Please update details and submit again."
-                : undefined
-            }
-            onButtonClick={() => {
-              if (isRejected) {
-                setStep(1);
-                return;
-              }
-              if (isApproved) {
-                navigate("/app/home");
-                return;
-              }
-              dispatch(clearSellerOnboarding());
-              navigate("/login");
-            }}
-          />
+      <div className="min-h-screen w-full bg-white flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div
+            className={`mx-auto mb-5 flex h-[110px] w-[110px] items-center justify-center rounded-full ${
+              isRejected ? "bg-red-700" : "bg-[#30318d]"
+            }`}
+          >
+            <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full border border-[#d09a2b]">
+              <Hourglass
+                size={54}
+                strokeWidth={2.6}
+                className="text-white"
+              />
+            </div>
+          </div>
+
+          <h2 className="mb-5 text-center font-montserrat text-[24px] leading-[40px] tracking-normal text-[#2E2E2E]">
+            {isRejected ? (
+              <span className="font-bold">KYC Rejected</span>
+            ) : (
+              <>
+                <span className="font-semibold">
+                  Your Account is Under Review
+                </span>
+                <br />
+                <span className="font-bold">(24-48 hrs)</span>
+              </>
+            )}
+          </h2>
+
+          {isRejected && (
+            <p className="mx-auto mb-5 max-w-sm text-sm text-gray-600">
+              {flowState?.kycRejectionReason ||
+                "Your KYC was rejected. Please update details and submit again."}
+            </p>
+          )}
+
+<button
+  type="button"
+  className="rounded-full bg-gradient-to-r from-[#d7ab4a] to-[#b8831f] px-7 py-3 text-[14px] font-semibold text-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] transition-all duration-200 hover:from-[#c99a35] hover:to-[#a87416]"
+  onClick={() => {
+    dispatch(clearSellerOnboarding());
+    navigate("/login");
+  }}
+>
+  Return To Main Page
+</button>
         </div>
-      </OnboardingScreen>
+      </div>
     );
   }
 
   return (
-    <OnboardingScreen step={step}>
-      {step === 0 && (
-        <div className={ONBOARDING_CARD_CLASS}>
-          <button
-            type="button"
-            className={PRIMARY_BUTTON_CLASS}
-            onClick={() => setStep(1)}
-          >
-            Start KYC Verification
-          </button>
-        </div>
-      )}
+    <div className="w-full bg-white min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-4xl w-full">
+        {step === 0 && (
+          <div>
+            <h2 className="text-2xl font-semibold text-[#2d2d2d] mb-4">
+              Mobile/Email Verification Complete
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Next, submit KYC and business details. After that, your account
+              goes under review.
+            </p>
+            <button
+              type="button"
+              className={PRIMARY_BUTTON_CLASS}
+              onClick={() => setStep(1)}
+            >
+              Start KYC Verification
+            </button>
+          </div>
+        )}
 
-      {step === 1 && (
-        <form onSubmit={submitKycStep} className={ONBOARDING_CARD_CLASS}>
-          <OnboardingSection number="01" title="Personal Information">
+        {step === 1 && (
+          <form onSubmit={submitKycStep} className="w-full">
+            <h2 className="mb-8 text-lg font-semibold text-[#2d2d2d]">
+              KYC Verification
+            </h2>
+
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
               {/* Full Name */}
               <div>
@@ -1217,7 +2299,7 @@ const SellerOnboarding = () => {
                     </span>
                     <button
                       type="button"
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-[#082f91] transition hover:bg-[#eef2ff]"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-[#c99528] transition hover:bg-amber-100"
                       onClick={(event) => {
                         event.stopPropagation();
                         openDatePicker();
@@ -1232,7 +2314,7 @@ const SellerOnboarding = () => {
                     id="dateOfBirth"
                     name="dateOfBirth"
                     type="date"
-                    className="pointer-events-none absolute inset-0 h-[40px] w-full opacity-0"
+                    className="pointer-events-none absolute inset-0 h-[35px] w-full opacity-0"
                     value={kycForm.dateOfBirth}
                     max={MAX_DOB_FOR_SELLER}
                     onChange={onKycChange}
@@ -1260,7 +2342,7 @@ const SellerOnboarding = () => {
                     <option value="partnership">Partnership</option>
                     <option value="private_limited">Private Limited</option>
                   </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#082f91] text-white">
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#c99528] text-white">
                     <ChevronDown size={12} />
                   </span>
                 </div>
@@ -1283,13 +2365,9 @@ const SellerOnboarding = () => {
                   <p className={ERROR_CLASS}>{kycErrors.gstNumber}</p>
                 )}
               </div>
-            </div>
-          </OnboardingSection>
 
-          <OnboardingSection number="02" title="Identity Number">
-            <div className="mt-8 grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
               {/* PAN Number */}
-              <div>
+              <div className="md:col-span-2">
                 <input
                   id="panNumber"
                   name="panNumber"
@@ -1305,7 +2383,7 @@ const SellerOnboarding = () => {
               </div>
 
               {/* Aadhaar Number */}
-              <div>
+              <div className="md:col-span-2">
                 <input
                   id="aadhaarNumber"
                   name="aadhaarNumber"
@@ -1319,11 +2397,7 @@ const SellerOnboarding = () => {
                   <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>
                 )}
               </div>
-            </div>
-          </OnboardingSection>
 
-          <OnboardingSection number="03" title="Identity Documents">
-            <div className="mt-8 grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
               <DocumentUploadField
                 id="aadhaarFrontFile"
                 label="Upload Aadhaar Front Image"
@@ -1364,34 +2438,37 @@ const SellerOnboarding = () => {
                   emptyText="Drag PAN file here"
                 />
               </div>
+
             </div>
-          </OnboardingSection>
 
-          <OnboardingActions>
-            <button
-              className={SECONDARY_BUTTON_CLASS}
-              type="button"
-              onClick={() => setStep(0)}
-            >
-              Back
-            </button>
-            <button
-              disabled={loading}
-              className={PRIMARY_BUTTON_CLASS}
-              type="submit"
-            >
-              {loading ? "Submitting..." : "Continue"}
-            </button>
-          </OnboardingActions>
-        </form>
-      )}
+            <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                className={SECONDARY_BUTTON_CLASS}
+                type="button"
+                onClick={() => setStep(0)}
+              >
+                Back
+              </button>
+              <button
+                disabled={loading}
+                className={PRIMARY_BUTTON_CLASS}
+                type="submit"
+              >
+                {loading ? "Submitting..." : "Continue"}
+              </button>
+            </div>
+          </form>
+        )}
 
-      {step === 2 && (
-        <form onSubmit={submitBusinessStep} className={ONBOARDING_CARD_CLASS}>
-          <OnboardingSection number="01" title="Business Information">
+        {step === 2 && (
+          <form onSubmit={submitBusinessStep} className="w-full">
+            <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+              Business Details
+            </h2>
+
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
               <div className="relative">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Type {STEP_ONE_REQUIRED}
                 </label>
                 <div className="relative">
@@ -1407,7 +2484,7 @@ const SellerOnboarding = () => {
                     <option value="partnership">Partnership</option>
                     <option value="private_limited">Private Limited</option>
                   </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#082f91] text-white">
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#c99528] text-white">
                     <ChevronDown size={12} />
                   </span>
                 </div>
@@ -1417,7 +2494,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1433,7 +2510,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   GST Number {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1464,7 +2541,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Support Email {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1480,7 +2557,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Support Phone {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1496,7 +2573,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Display Name
                 </label>
                 <input
@@ -1509,7 +2586,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Legal Business Name
                 </label>
                 <input
@@ -1522,7 +2599,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Registration Number
                 </label>
                 <input
@@ -1535,7 +2612,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Primary Contact Name
                 </label>
                 <input
@@ -1548,7 +2625,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Website (Optional)
                 </label>
                 <input
@@ -1564,7 +2641,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Description
                 </label>
                 <input
@@ -1577,7 +2654,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup Address Line 1 {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1593,7 +2670,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup Address Line 2
                 </label>
                 <input
@@ -1606,7 +2683,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup City {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1622,7 +2699,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup State {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1638,7 +2715,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup Country
                 </label>
                 <input
@@ -1651,7 +2728,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Pickup Postal Code {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1669,7 +2746,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Address Line 1
                 </label>
                 <input
@@ -1682,7 +2759,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Address Line 2
                 </label>
                 <input
@@ -1695,7 +2772,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business City
                 </label>
                 <input
@@ -1708,7 +2785,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business State
                 </label>
                 <input
@@ -1721,7 +2798,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Country
                 </label>
                 <input
@@ -1734,7 +2811,7 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Business Postal Code
                 </label>
                 <input
@@ -1751,33 +2828,34 @@ const SellerOnboarding = () => {
                 )}
               </div>
             </div>
-          </OnboardingSection>
 
-          <OnboardingActions>
-            <button
-              className={SECONDARY_BUTTON_CLASS}
-              type="button"
-              onClick={() => setStep(1)}
-            >
-              Back
-            </button>
-            <button
-              disabled={loading}
-              className={PRIMARY_BUTTON_CLASS}
-              type="submit"
-            >
-              Continue
-            </button>
-          </OnboardingActions>
-        </form>
-      )}
+            <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                className={SECONDARY_BUTTON_CLASS}
+                type="button"
+                onClick={() => setStep(1)}
+              >
+                Back
+              </button>
+              <button
+                disabled={loading}
+                className={PRIMARY_BUTTON_CLASS}
+                type="submit"
+              >
+                Continue
+              </button>
+            </div>
+          </form>
+        )}
 
-      {step === 3 && (
-        <form onSubmit={submitBankStep} className={ONBOARDING_CARD_CLASS}>
-          <OnboardingSection number="01" title="Bank Information">
+        {step === 3 && (
+          <form onSubmit={submitBankStep} className="w-full">
+            <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+              Bank Details
+            </h2>
+
             {(flowState?.bankVerificationStatus === "rejected" ||
-              flowState?.sellerProfile?.bankVerificationStatus ===
-                "rejected") &&
+              flowState?.sellerProfile?.bankVerificationStatus === "rejected") &&
               (flowState?.bankRejectionReason ||
                 flowState?.sellerProfile?.bankRejectionReason) && (
                 <div className="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3">
@@ -1796,7 +2874,7 @@ const SellerOnboarding = () => {
 
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Account Holder Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1813,7 +2891,7 @@ const SellerOnboarding = () => {
                 )}
               </div>
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Bank Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1828,7 +2906,7 @@ const SellerOnboarding = () => {
                 )}
               </div>
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Account Number {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1843,7 +2921,7 @@ const SellerOnboarding = () => {
                 )}
               </div>
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   IFSC Code {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1858,7 +2936,7 @@ const SellerOnboarding = () => {
                 )}
               </div>
               <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                <label className="block text-sm font-medium text-[#2d2d2d] mb-2">
                   Branch Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
@@ -1873,222 +2951,224 @@ const SellerOnboarding = () => {
                 )}
               </div>
             </div>
-          </OnboardingSection>
 
-          <OnboardingActions>
-            <button
-              className={SECONDARY_BUTTON_CLASS}
-              type="button"
-              onClick={() => setStep(2)}
-            >
-              Back
-            </button>
-            <button
-              disabled={loading}
-              className={PRIMARY_BUTTON_CLASS}
-              type="submit"
-            >
-              Continue
-            </button>
-          </OnboardingActions>
-        </form>
-      )}
-
-      {step === 4 && (
-        <div className={ONBOARDING_CARD_CLASS}>
-          <div className="space-y-6">
-            {/* KYC Details */}
-            <div className={REVIEW_CARD_CLASS}>
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
-                <h3 className="text-lg font-semibold text-[#2d2d2d]">
-                  Personal / Owner Details
-                </h3>
-                <button type="button" onClick={() => setStep(1)} title="Edit">
-                  <RiEditBoxFill size={20} className="text-[#082f91]" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                  <p className="text-sm text-gray-800">{kycForm.legalName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Date of Birth</p>
-                  <p className="text-sm text-gray-800">
-                    {formatDateForDisplay(kycForm.dateOfBirth)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Business Type</p>
-                  <p className="text-sm text-gray-800">
-                    {kycForm.businessType}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Aadhaar Number</p>
-                  <p className="text-sm text-gray-800">
-                    {kycForm.aadhaarNumber || "-"}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">PAN Number</p>
-                  <p className="text-sm text-gray-800">{kycForm.panNumber}</p>
-                </div>
-                {kycForm.gstNumber && (
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">GST Number</p>
-                    <p className="text-sm text-gray-800">{kycForm.gstNumber}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">PAN Document</p>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText size={18} className="text-[#082f91]" />
-                    <span className="truncate">
-                      {kycForm.panDocumentFile?.name ||
-                        getFileNameFromUrl(documentUrls.panDocumentUrl, "-")}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">
-                    Aadhaar Front Image
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText size={18} className="text-[#082f91]" />
-                    <span className="truncate">
-                      {kycForm.aadhaarFrontFile?.name ||
-                        getFileNameFromUrl(documentUrls.aadhaarFrontUrl, "-")}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">
-                    Aadhaar Back Image
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText size={18} className="text-[#082f91]" />
-                    <span className="truncate">
-                      {kycForm.aadhaarBackFile?.name ||
-                        getFileNameFromUrl(documentUrls.aadhaarBackUrl, "-")}
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                className={SECONDARY_BUTTON_CLASS}
+                type="button"
+                onClick={() => setStep(2)}
+              >
+                Back
+              </button>
+              <button
+                disabled={loading}
+                className={PRIMARY_BUTTON_CLASS}
+                type="submit"
+              >
+                Continue
+              </button>
             </div>
+          </form>
+        )}
 
-            {/* Business Details */}
-            <div className={REVIEW_CARD_CLASS}>
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
-                <h3 className="text-lg font-semibold text-[#2d2d2d]">
-                  Business Details
-                </h3>
-                <button type="button" onClick={() => setStep(2)} title="Edit">
-                  <RiEditBoxFill size={20} className="text-[#082f91]" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Business Type</p>
-                  <p className="text-sm text-gray-800">
-                    {profileForm.businessType || "-"}
-                  </p>
+        {step === 4 && (
+          <div className="w-full">
+            <h2 className="mb-8 text-2xl font-semibold text-[#2d2d2d]">
+              Review All Details
+            </h2>
+
+            <div className="space-y-6">
+              {/* KYC Details */}
+              <div className={REVIEW_CARD_CLASS}>
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+                  <h3 className="text-lg font-semibold text-[#2d2d2d]">
+                    Personal / Owner Details
+                  </h3>
+                  <button type="button" onClick={() => setStep(1)} title="Edit">
+                    <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+                  </button>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Business Name</p>
-                  <p className="text-sm text-gray-800">
-                    {profileForm.businessName || "-"}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">GST Number</p>
-                  <p className="text-sm text-gray-800">
-                    {profileForm.gstNumber || "-"}
-                  </p>
-                </div>
-                {(profileForm.gstCertificateFile ||
-                  documentUrls.gstCertificateUrl) && (
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">
-                      GST Certificate
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Full Name</p>
+                    <p className="text-sm text-gray-800">{kycForm.legalName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Date of Birth</p>
+                    <p className="text-sm text-gray-800">
+                      {formatDateForDisplay(kycForm.dateOfBirth)}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Business Type</p>
+                    <p className="text-sm text-gray-800">{kycForm.businessType}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Aadhaar Number</p>
+                    <p className="text-sm text-gray-800">
+                      {kycForm.aadhaarNumber || "-"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">PAN Number</p>
+                    <p className="text-sm text-gray-800">{kycForm.panNumber}</p>
+                  </div>
+                  {kycForm.gstNumber && (
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">GST Number</p>
+                      <p className="text-sm text-gray-800">
+                        {kycForm.gstNumber}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">PAN Document</p>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <AiOutlineShoppingCart
-                        size={18}
-                        className="text-[#082f91]"
-                      />
+                      <FileText size={18} className="text-[#c99528]" />
                       <span className="truncate">
-                        {profileForm.gstCertificateFile?.name ||
-                          getFileNameFromUrl(
-                            documentUrls.gstCertificateUrl,
-                            "-",
-                          )}
+                        {kycForm.panDocumentFile?.name ||
+                          getFileNameFromUrl(documentUrls.panDocumentUrl, "-")}
                       </span>
                     </div>
                   </div>
-                )}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Aadhaar Front Image
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <FileText size={18} className="text-[#c99528]" />
+                      <span className="truncate">
+                        {kycForm.aadhaarFrontFile?.name ||
+                          getFileNameFromUrl(documentUrls.aadhaarFrontUrl, "-")}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Aadhaar Back Image
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <FileText size={18} className="text-[#c99528]" />
+                      <span className="truncate">
+                        {kycForm.aadhaarBackFile?.name ||
+                          getFileNameFromUrl(documentUrls.aadhaarBackUrl, "-")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Details */}
+              <div className={REVIEW_CARD_CLASS}>
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+                  <h3 className="text-lg font-semibold text-[#2d2d2d]">
+                    Business Details
+                  </h3>
+                  <button type="button" onClick={() => setStep(2)} title="Edit">
+                    <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Business Type</p>
+                    <p className="text-sm text-gray-800">
+                      {profileForm.businessType || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Business Name</p>
+                    <p className="text-sm text-gray-800">
+                      {profileForm.businessName || "-"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">GST Number</p>
+                    <p className="text-sm text-gray-800">
+                      {profileForm.gstNumber || "-"}
+                    </p>
+                  </div>
+                  {(profileForm.gstCertificateFile || documentUrls.gstCertificateUrl) && (
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">
+                        GST Certificate
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <AiOutlineShoppingCart
+                          size={18}
+                          className="text-[#c99528]"
+                        />
+                        <span className="truncate">
+                          {profileForm.gstCertificateFile?.name ||
+                            getFileNameFromUrl(documentUrls.gstCertificateUrl, "-")}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div className={REVIEW_CARD_CLASS}>
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
+                  <h3 className="text-lg font-semibold text-[#2d2d2d]">
+                    Bank Details
+                  </h3>
+                  <button type="button" onClick={() => setStep(3)} title="Edit">
+                    <RiEditBoxFill size={20} className="text-[#CE9F2D]" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Account Holder</p>
+                    <p className="text-sm text-gray-800">
+                      {bankForm.accountHolderName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Bank Name</p>
+                    <p className="text-sm text-gray-800">{bankForm.bankName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Account Number</p>
+                    <p className="text-sm text-gray-800">
+                      {bankForm.accountNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">IFSC Code</p>
+                    <p className="text-sm text-gray-800">{bankForm.ifscCode}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-500 mb-1">Branch Name</p>
+                    <p className="text-sm text-gray-800">
+                      {bankForm.branchName}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Bank Details */}
-            <div className={REVIEW_CARD_CLASS}>
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#e5e5e5]">
-                <h3 className="text-lg font-semibold text-[#2d2d2d]">
-                  Bank Details
-                </h3>
-                <button type="button" onClick={() => setStep(3)} title="Edit">
-                  <RiEditBoxFill size={20} className="text-[#082f91]" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Account Holder</p>
-                  <p className="text-sm text-gray-800">
-                    {bankForm.accountHolderName}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Bank Name</p>
-                  <p className="text-sm text-gray-800">{bankForm.bankName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Account Number</p>
-                  <p className="text-sm text-gray-800">
-                    {bankForm.accountNumber}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">IFSC Code</p>
-                  <p className="text-sm text-gray-800">{bankForm.ifscCode}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-xs text-gray-500 mb-1">Branch Name</p>
-                  <p className="text-sm text-gray-800">{bankForm.branchName}</p>
-                </div>
-              </div>
+            <div className="mt-9 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end border-t border-[#e5e5e5] pt-6">
+              <button
+                className={SECONDARY_BUTTON_CLASS}
+                type="button"
+                onClick={() => setStep(3)}
+              >
+                Back
+              </button>
+              <button
+                disabled={loading}
+                className={PRIMARY_BUTTON_CLASS}
+                type="button"
+                onClick={submitFinalOnboarding}
+              >
+                {loading ? "Submitting..." : "Submit For Verification"}
+              </button>
             </div>
           </div>
-
-          <OnboardingActions>
-            <button
-              className={SECONDARY_BUTTON_CLASS}
-              type="button"
-              onClick={() => setStep(3)}
-            >
-              Back
-            </button>
-            <button
-              disabled={loading}
-              className={PRIMARY_BUTTON_CLASS}
-              type="button"
-              onClick={submitFinalOnboarding}
-            >
-              {loading ? "Submitting..." : "Submit For Verification"}
-            </button>
-          </OnboardingActions>
-        </div>
-      )}
-    </OnboardingScreen>
+        )}
+      </div>
+    </div>
   );
 };
 
