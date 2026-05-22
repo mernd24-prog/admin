@@ -1,130 +1,87 @@
 import React from "react";
-import { Bell, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 const KYCStatusLayout = ({
   children,
   currentSection = "status",
+  backgroundImage = "/Rectangle 401.png",
   logo = "/logo.png",
+  illustration = "/Img/auth-img/auth-illustration.png",
 }) => {
   const menuItems = [
-    { id: "personal", label: "Personal / Owner Details" },
-    { id: "business", label: "Business Details" },
-    { id: "bank", label: "Bank Details" },
-    { id: "review", label: "Review Details" },
-    { id: "status", label: "Status Status" },
+    { id: "personal", label: "Personal / Owner Details", active: false },
+    { id: "business", label: "Business Details", active: false },
+    { id: "bank", label: "Bank Details", active: false },
+    { id: "review", label: "Review Details", active: false },
+    { id: "status", label: "Status States", active: true },
   ];
   const currentIndex = menuItems.findIndex(
-    (item) => item.id === currentSection,
+    (item) => item.id === currentSection
   );
-
   return (
-    <div className="min-h-screen bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[270px_minmax(0,1fr)]">
-      <aside className="border-r border-[#e8dfd1] bg-[#f4eee4] shadow-[8px_0_24px_rgba(35,31,27,0.06)]">
-        <div className="flex h-full flex-col">
-          <div className="flex justify-center border-b border-[#e4d7c5] px-6 py-7">
-            <div className="flex h-[88px] w-[118px] items-center justify-center rounded-[8px] border border-[#ead9bf] bg-white shadow-[0_8px_22px_rgba(35,31,27,0.08)]">
-              <img
-                src={logo}
-                alt="Sam Global"
-                className="max-h-[62px] max-w-[92px] object-contain"
-              />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 lg:flex lg:h-screen lg:items-center lg:justify-center lg:overflow-hidden">
+      <div className="min-h-screen w-full bg-white shadow-2xl lg:h-full lg:min-h-0 lg:overflow-hidden">
+        <div className="grid min-h-screen grid-cols-1 lg:grid-cols-3">
+          <div
+            className="w-full bg-cover bg-center bg-no-repeat px-4 py-4 sm:px-6 lg:col-span-1 lg:ml-16 lg:flex lg:w-1/2 lg:flex-col lg:items-center lg:justify-evenly lg:px-0 lg:py-0"
+            style={{
+              backgroundImage: `url('${backgroundImage}')`,
+            }}
+          >
+            {/* Logo Section */}
+            <div className="mb-4 border-b border-amber-200 pb-4 lg:mb-8 lg:pb-6">
+              <div className="mb-0 flex items-center justify-center gap-3 lg:mb-2 lg:justify-start">
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="h-auto w-28 object-contain sm:w-36 md:w-44 lg:mb-4 lg:w-52"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="border-b border-[#e4d7c5] px-7 py-5">
-            <h2 className="text-[17px] font-bold tracking-[0.08em] text-[#082f91]">
-              Verification Steps
-            </h2>
-          </div>
-
-          <div className="flex-1 px-6 py-6">
-            <nav className="flex gap-3 overflow-x-auto pb-3 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
+            {/* Navigation Menu */}
+            <nav className="flex w-full gap-2 overflow-x-auto pb-2 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
               {menuItems.map((item, index) => (
                 <div
                   key={item.id}
-                  className="relative min-w-[190px] lg:min-w-0"
+                  className={`min-w-[180px] px-3 py-2 text-left transition-all sm:min-w-[210px] lg:w-full lg:min-w-0 lg:px-4 lg:py-3 ${
+                    item.id === currentSection
+                      ? "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg"
+                      : "bg-white text-gray-700 hover:bg-white hover:shadow-md"
+                  }`}
                 >
-                  {index < menuItems.length - 1 && (
-                    <span className="absolute left-[15px] top-8 hidden h-8 w-px bg-[#9db2e4] lg:block" />
-                  )}
-                  <div
-                    className={`relative flex items-center gap-3 rounded-[8px] px-3 py-3 transition ${
-                      item.id === currentSection
-                        ? "bg-[#082f91] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)]"
-                        : "text-[#082f91] hover:bg-white"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${
-                        index < currentIndex
-                          ? "border-[#082f91] bg-white text-[#082f91]"
-                          : item.id === currentSection
-                            ? "border-[#f2b01e] bg-[#f2b01e] text-white"
-                            : "border-[#082f91] bg-white text-[#082f91]"
-                      }`}
-                    >
-                      {index < currentIndex ? (
-                        <Check size={14} />
-                      ) : (
-                        String(index + 1).padStart(2, "0")
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.08em]">
-                        Step {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[11px] font-semibold leading-tight">
-                        {item.label}
-                      </span>
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium sm:text-sm">{item.label}</span>
+
+                    {/* Show check only for completed steps */}
+                    {index < currentIndex && (
+                      <Check size={16} className="text-green-600" />
+                    )}
                   </div>
                 </div>
               ))}
             </nav>
 
-            <div className="mt-8 rounded-[8px] border border-[#ead9bf] bg-[#fff5df] p-4">
-              <p className="text-[12px] font-bold uppercase tracking-[0.04em] text-[#082f91]">
-                Need Help?
+            {/* Info Box */}
+            <div className="mt-4 hidden rounded-xl border border-amber-200 bg-white/60 p-4 sm:block lg:mt-8">
+              <p className="text-xs text-gray-600">
+                <strong className="text-indigo-800">Need Help?</strong>
+                <br />
+                Contact our support team for assistance with your KYC
+                verification.
               </p>
-              <p className="mt-2 text-[11px] leading-5 text-[#43506a]">
-                Our verification team is available 24/7 to help you complete KYC.
-              </p>
-              <button
-                type="button"
-                className="mt-4 h-[32px] w-full rounded-[4px] bg-[#082f91] text-[11px] font-bold text-white transition hover:bg-[#062779]"
-              >
-                Contact Support
-              </button>
+            </div>
+          </div>
+
+          {/* Right Panel - Form Container */}
+          <div className="min-w-0 bg-white px-3 sm:px-4 lg:col-span-2 lg:-ml-16 lg:flex lg:h-screen lg:items-start lg:justify-start lg:overflow-hidden lg:px-2 xl:-ml-24">
+            {/* Child perfectly centered */}
+            <div className="hide-scrollbar flex w-full items-start justify-start lg:h-screen lg:max-w-6xl lg:overflow-y-auto lg:pr-2">
+              {children}
             </div>
           </div>
         </div>
-      </aside>
-
-      <main className="min-w-0 bg-[#f8f6f3]">
-        <header className="flex h-[58px] items-center justify-between bg-[#082f91] px-4 text-white shadow-[0_8px_24px_rgba(8,47,145,0.16)] sm:px-8">
-          <div className="flex items-center gap-2 text-[12px] font-medium">
-            <span>Onboarding</span>
-            <span className="text-white/50">›</span>
-            <span className="text-white/90">
-              {menuItems[currentIndex]?.label || "Status Status"}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Bell size={16} className="text-white/90" />
-            <div className="hidden text-right sm:block">
-              <p className="text-[12px] font-bold leading-none">Seller Account</p>
-              <p className="mt-1 text-[9px] text-white/70">Vendor Applicant</p>
-            </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#082f91]">
-              SG
-            </span>
-          </div>
-        </header>
-
-        <div className="hide-scrollbar h-[calc(100vh-58px)] overflow-y-auto px-4 py-6 sm:px-8 lg:px-10">
-          {children}
-        </div>
-      </main>
+      </div>
     </div>
   );
 };

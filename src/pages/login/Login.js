@@ -15,7 +15,6 @@ import {
   startAuthenticatedSession,
   startSellerOnboarding,
 } from "../../Redux/seller-slice";
-import { showError } from "../../Redux/alertSlice";
 import FormLayout from "../../components/FormLayout/FormLayout";
 import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
 import EmailInput from "../../components/Atoms/EmailInput";
@@ -36,6 +35,13 @@ import { useAuthLayout } from "../../context/AuthLayoutContext";
 import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen";
 
 const RESEND_COOLDOWN_SECONDS = 30;
+
+const getApiErrorMessage = (error, fallback = "Something went wrong. Please try again.") =>
+  error?.payload ||
+  error?.error?.message ||
+  error?.message ||
+  (typeof error === "string" ? error : "") ||
+  fallback;
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -245,12 +251,20 @@ const Login = () => {
     setFormErrors(errors);
     return isValid;
   }, [formState, formFields, sellerPanel, verificationCode]);
+
+  const setInlineError = useCallback((targetFormState, message) => {
+    const safeMessage = message || "Something went wrong. Please try again.";
+    if (targetFormState === "verificationCode" || targetFormState === "registerVerification") {
+      setFormErrors((prev) => ({ ...prev, verificationCode: safeMessage }));
+      return;
+    }
+    setLoginError(safeMessage);
+  }, []);
+
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!sellerPanel) {
-      toast.error(
-        "Admin accounts are created by a super admin. Please use admin login.",
-      );
+      setInlineError("register", "Admin accounts are created by a super admin. Please use admin login.");
       return;
     }
 
@@ -293,11 +307,11 @@ const Login = () => {
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
         setFormState("registerVerification");
       } else {
-        toast.error(response.payload);
+        setInlineError("register", getApiErrorMessage(response, "Registration failed. Please check the form and try again."));
       }
     } catch (error) {
       console.log(error);
-      // toast.error("Registration failed");
+      setInlineError("register", getApiErrorMessage(error, "Registration failed. Please try again."));
     }
   };
   const handleRegisterOtpSubmit = async (e) => {
@@ -306,7 +320,7 @@ const Login = () => {
     const code = verificationCode.join("");
 
     if (code.length !== 6) {
-      toast.error("Enter complete OTP");
+      setInlineError("registerVerification", "Enter complete OTP");
       return;
     }
 
@@ -340,10 +354,9 @@ const Login = () => {
       } else {
         const message = response.payload || "Invalid or expired OTP.";
         setFormErrors((prev) => ({ ...prev, verificationCode: message }));
-        toast.error(message);
       }
     } catch (error) {
-      toast.error("Verification failed");
+      setInlineError("registerVerification", getApiErrorMessage(error, "Verification failed. Please try again."));
     }
   };
   const handleInputChange = useCallback((e) => {
@@ -460,11 +473,9 @@ const Login = () => {
 
   const requireTermsAgreement = useCallback(() => {
     if (rememberMe) return true;
-    toast.error(
-      "Please agree to the terms, privacy, and cancellation policies.",
-    );
+    setInlineError(formState, "Please agree to the terms, privacy, and cancellation policies.");
     return false;
-  }, [rememberMe]);
+  }, [formState, rememberMe, setInlineError]);
 
   const persistAuthenticatedSession = useCallback(
     (auth) => {
@@ -509,7 +520,7 @@ const Login = () => {
   const handleApiResponse = useCallback(
     (res, currentFormState) => {
       if (res?.error) {
-        toast.error(res.payload || res?.error?.message);
+        setInlineError(currentFormState, getApiErrorMessage(res));
         setFormAnimation("error");
         setTimeout(() => setFormAnimation("slide-in"), 500);
         return false;
@@ -532,7 +543,7 @@ const Login = () => {
           if (auth.requiresOnboarding && auth.onboardingToken) {
             if (!sellerPanel) {
               clearStoredAuth();
-              toast.error("Seller onboarding belongs in the seller panel.");
+              setInlineError("login", "Seller onboarding belongs in the seller panel.");
               return;
             }
             dispatch(
@@ -550,13 +561,14 @@ const Login = () => {
           }
 
           if (!auth.accessToken) {
-            toast.error("Login did not return an access token.");
+            setInlineError("login", "Login did not return an access token.");
             return;
           }
 
           if (!isAllowedRoleForPanel(auth.role, panelMode)) {
             clearStoredAuth();
-            toast.error(
+            setInlineError(
+              "login",
               sellerPanel
                 ? "Please use a seller account for this panel."
                 : "Please use an admin account for this panel.",
@@ -591,6 +603,7 @@ const Login = () => {
     },
     [
       dispatch,
+      setInlineError,
       navigate,
       panelMode,
       persistAuthenticatedSession,
@@ -625,7 +638,7 @@ const Login = () => {
       );
       handleApiResponse(response, "login");
     } catch (error) {
-      toast.error("Login failed. Please try again.");
+      setInlineError("login", getApiErrorMessage(error, "Login failed. Please try again."));
     }
   };
 
@@ -649,7 +662,7 @@ const Login = () => {
       setIsLoading(false);
       handleApiResponse(response, "forgotPassword");
     } catch (error) {
-      dispatch(showError("Failed to process request. Please try again."));
+      setInlineError("forgotPassword", getApiErrorMessage(error, "Failed to process request. Please try again."));
       console.error("Forgot password error:", error);
       setIsLoading(false);
     } finally {
@@ -683,7 +696,7 @@ const Login = () => {
       }
       handleApiResponse(response, "verificationCode");
     } catch (error) {
-      dispatch(showError("Verification failed. Please try again."));
+      setInlineError("verificationCode", getApiErrorMessage(error, "Verification failed. Please try again."));
       console.error("Verification error:", error);
     }
   };
@@ -712,7 +725,7 @@ const Login = () => {
       );
       handleApiResponse(response, "resetPassword");
     } catch (error) {
-      dispatch(showError("Password reset failed. Please try again."));
+      setInlineError("resetPassword", getApiErrorMessage(error, "Password reset failed. Please try again."));
       console.error("Password reset error:", error);
     }
   };
@@ -747,10 +760,10 @@ const Login = () => {
           setVerificationCode(["", "", "", "", "", ""]);
           setResendCooldown(RESEND_COOLDOWN_SECONDS);
         } else {
-          toast.error(response?.payload || "Failed to resend OTP");
+          setInlineError(formState, response?.payload || "Failed to resend OTP");
         }
       } catch (error) {
-        dispatch(showError("Failed to resend code. Please try again."));
+        setInlineError(formState, getApiErrorMessage(error, "Failed to resend code. Please try again."));
         console.error("Resend OTP error:", error);
       }
     },
@@ -760,6 +773,7 @@ const Login = () => {
       formFields.registerEmail,
       formState,
       resendCooldown,
+      setInlineError,
     ],
   );
 
@@ -1137,6 +1151,7 @@ const Login = () => {
                   label="Phone Number"
                   value={formFields.phone}
                   placeholder="Enter 10 digit number"
+                  onChange={handleInputChange}
                   errorMessage={formErrors.phone}
                   inputClassName={authInputClassName}
                   labelClassName={authLabelClassName}
@@ -1171,6 +1186,12 @@ const Login = () => {
               <div className="my-8">
                 <BootmCheckBox />
               </div>
+
+              {loginError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-700 md:col-span-2">
+                  {loginError}
+                </div>
+              )}
 
               <div className=" grid grid-cols-1 gap-3 md:grid-cols-[150px_1fr]">
                 <button
