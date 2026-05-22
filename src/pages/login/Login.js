@@ -23,9 +23,9 @@ import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
 import EmailInput from "../../components/Atoms/EmailInput";
 import PasswordInput from "../../components/Atoms/password/PasswordInput";
 import Loader from "../../components/Loader/Loader";
-import { CiUser, CiLock } from "react-icons/ci";
-import { MdEmail } from "react-icons/md";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
+import AuthProgressSteps from "../../components/AuthVerification/AuthProgressSteps";
+import OtpVerificationCard from "../../components/AuthVerification/OtpVerificationCard";
 import { toast } from "sonner";
 import { isSellerPanel, PANEL_MODES } from "../../_helpers/panelConfig";
 import {
@@ -737,13 +737,16 @@ const Login = () => {
   // }, [formAnimation]);
 
   const renderForm = () => {
-    // const animationClasses = getAnimationClasses();
+    // const animationClasses = getAnimationClasses();const animationClasses = getAnimationClasses();
+    const authInputClassName =
+      "h-[38px] border-[#ded9f0] bg-[#fbf9ff] text-[12px] focus:border-[#d7cdea] focus:ring-[#eee8f8] sm:h-[40px] sm:text-[13px]";
+    const authLabelClassName = "text-[#344054]";
 
     switch (formState) {
       case "login":
         return (
           <FormLayout
-            title={sellerPanel ? "Seller Login" : "Welcome back!"}
+            title={"Welcome back!"}
             subTitle={
               sellerPanel
                 ? "Enter your seller email and password to continue"
@@ -768,30 +771,32 @@ const Login = () => {
             <div className="relative z-10 flex flex-col">
               {/* EMAIL */}
               <div className={sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
-                <EmailInput
+                 <EmailInput
                   id="email"
                   name="email"
+                  label="Email Address"
                   value={formFields.email}
-                  placeholder="Email address"
-                  icon={MdEmail}
+                  placeholder="e.g. John Doe"
                   onChange={handleInputChange}
                   errorMessage={formErrors.email}
-                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
 
               <div className="mb-[8px]">
-                <PasswordInput
-                  id="password"
-                  name="password"
-                  value={formFields.password}
-                  placeholder="Password*"
-                  icon={CiLock}
-                  onChange={handleInputChange}
-                  errorMessage={formErrors.password}
-                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
-                />
+               <PasswordInput
+                    id="password"
+                    name="password"
+                    label="Password"
+                    value={formFields.password}
+                    placeholder="••••••••"
+                    onChange={handleInputChange}
+                    errorMessage={formErrors.password}
+                    inputClassName={authInputClassName}
+                    labelClassName={authLabelClassName}
+                  />
               </div>
 
               {loginError && (
@@ -841,7 +846,7 @@ const Login = () => {
                   className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
                 />
 
-                <span className="text-[8px] leading-[14px] text-[#667085]">
+               <span className="w-full max-w-[398px] font-[Inter] text-[12px] font-medium leading-[16px] align-middle text-[#667085] opacity-100">
                   I agree to all{" "}
                   <span className="font-semibold text-[#031b52]">
                     Terms, Privacy, and Cancellation Policies.
@@ -874,15 +879,16 @@ const Login = () => {
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-                <EmailInput
+               <EmailInput
                   id="forgotEmail"
                   name="forgotEmail"
+                  label="Email Address"
                   value={formFields.forgotEmail}
-                  placeholder="Email address"
-                  icon={MdEmail}
+                  placeholder="john@example.com"
                   onChange={handleInputChange}
                   errorMessage={formErrors.forgotEmail}
-                  inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
@@ -982,27 +988,31 @@ const Login = () => {
           >
             <div className="relative z-10 flex flex-col gap-4">
               <div>
-                <PasswordInput
+                 <PasswordInput
                   id="newPassword"
                   name="newPassword"
+                  label="New Password"
                   value={formFields.newPassword}
                   placeholder="New password"
-                  icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.newPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                   autoFocus
                 />
               </div>
 
               <div>
-                <PasswordInput
+               <PasswordInput
                   id="confirmNewPassword"
                   name="confirmNewPassword"
+                  label="Confirm Password"
                   value={formFields.confirmNewPassword}
                   placeholder="Confirm new password"
-                  icon={CiLock}
                   onChange={handleInputChange}
                   errorMessage={formErrors.confirmNewPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                 />
               </div>
 
@@ -1047,69 +1057,74 @@ const Login = () => {
             showLogo
           >
             <div className="relative z-10 flex flex-col gap-3">
-              <EmailInput
+               <EmailInput
                 id="firstName"
                 name="firstName"
-                // label="First Name"
+                label="First Name"
                 value={formFields.firstName}
                 placeholder="Enter first name"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.firstName}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <EmailInput
                 id="lastName"
                 name="lastName"
-                // label="Last Name"
+                label="Last Name"
                 value={formFields.lastName}
                 placeholder="Enter last name"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.lastName}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
-              <EmailInput
+               <EmailInput
                 id="phone"
                 name="phone"
-                // label="Phone Number"
+                label="Phone Number"
                 value={formFields.phone}
                 placeholder="Enter phone number"
-                icon={CiUser}
                 onChange={handleInputChange}
                 errorMessage={formErrors.phone}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
-
               <EmailInput
                 id="registerEmail"
                 name="registerEmail"
-                // label="Email Address"
+                label="Email Address"
                 value={formFields.registerEmail}
                 placeholder="Enter email"
-                icon={MdEmail}
                 onChange={handleInputChange}
                 errorMessage={formErrors.registerEmail}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <PasswordInput
                 id="registerPassword"
                 name="registerPassword"
-                // label="Password"
+                label="Password"
                 value={formFields.registerPassword}
                 placeholder="Enter password"
-                icon={CiLock}
                 onChange={handleInputChange}
                 errorMessage={formErrors.registerPassword}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <EmailInput
                 id="referralCode"
                 name="referralCode"
-                // label="Referral Code (Optional)"
+                label="Referral Code"
                 value={formFields.referralCode}
                 placeholder="Enter referral code"
-                icon={CiUser}
                 onChange={handleInputChange}
+                inputClassName={authInputClassName}
+                labelClassName={authLabelClassName}
               />
 
               <div className="mt-4">
@@ -1136,75 +1151,28 @@ const Login = () => {
           <FormLayout
             title="Verify Your Account"
             subTitle="We’ve sent a verification code to your registered mobile number. Please enter the code below to confirm your identity and continue the verification process."
+            subTitleClassName = " text-center font-inter !text-[19px] font-normal !leading-[35px] tracking-[0%] text-[#484555]"
             onSubmit={handleRegisterOtpSubmit}
-            // className={`${animationClasses} transition-all duration-300`}
+            showLogo={false}
+            shellClassName="items-start pt-10 pb-8 sm:pt-[58px] lg:pt-[54px]"
+            className="!max-w-[812px]"
+           titleClassName="!text-[29px] sm:!text-[29px] font-medium"
+            // subTitleClassName="max-w-[720px] text-[16px] leading-[28px] text-[#484557] sm:text-[20px] sm:leading-[34px]"
+            cardClassName="mt-[24px] min-h-[380px] !max-w-[812px] justify-center rounded-[10px] px-5 py-9 sm:min-h-[454px] sm:px-10 sm:py-10"
+            topContent={<AuthProgressSteps />}
           >
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex justify-center space-x-2">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <input
-                    key={index}
-                    ref={codeInputRefs[index]}
-                    type="text"
-                    maxLength={1}
-                    className="h-12 w-12 rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
-                    value={verificationCode[index]}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                    onPaste={index === 0 ? handleCodePaste : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="relative z-10 mx-auto flex w-full max-w-full flex-col items-center justify-center overflow-hidden px-2 py-4 sm:px-6 md:px-8">
-              <p className="text-center text-[11px] sm:text-[14px] md:text-[15px] font-medium text-[#222]">
-                Phone Number :{" "}
-                <span className="font-semibold text-[#082f91]">
-                  **** **** 1234
-                </span>
-              </p>
-
-              <div className="mt-4 grid w-full max-w-[270px] grid-cols-6 gap-1.5 min-[360px]:max-w-[320px] min-[360px]:gap-2 sm:max-w-[420px] sm:gap-3 md:max-w-[520px]">
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <input
-                    key={index}
-                    ref={codeInputRefs[index]}
-                    type="text"
-                    maxLength={1}
-                    className="aspect-square w-full rounded-[5px] border border-[#eeeeee] bg-white text-center text-[13px] sm:text-[17px] md:text-[20px] text-[#9a9a9a] shadow-[0_4px_8px_rgba(0,0,0,0.12)] outline-none transition-all duration-300 focus:border-[#082f91] focus:ring-2 focus:ring-[#dbe3ff]"
-                    value={verificationCode[index]}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                    onPaste={index === 0 ? handleCodePaste : undefined}
-                  />
-                ))}
-              </div>
-
-              {formErrors.verificationCode && (
-                <div className="mt-4 w-full max-w-[270px] rounded-md bg-red-50 px-3 py-2 text-center text-xs text-red-800 sm:max-w-[420px]">
-                  {formErrors.verificationCode}
-                </div>
-              )}
-
-              <div className="mt-6 w-full max-w-[270px] min-[360px]:max-w-[320px] sm:max-w-[420px] md:max-w-[520px]">
-                <FormSubmitButton
-                  buttonLabel={loading ? "Verifying..." : "Verify & Continue"}
-                  className="h-[40px] w-full rounded-[8px] text-[12px] sm:h-[46px] sm:text-[14px] md:h-[52px] md:text-[15px]"
-                />
-              </div>
-
-              <p className="mt-3 text-center text-[11px] sm:text-[13px] md:text-[14px] font-medium text-[#555]">
-                Didn’t receive code?{" "}
-                <button
-                  type="button"
-                  className="font-semibold text-[#082f91] hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
-                  onClick={handleResendOtp}
-                  disabled={resendCooldown > 0 || loading}
-                >
-                  {resendOtpLabel}
-                </button>
-              </p>
-            </div>
+            <OtpVerificationCard
+              codeInputRefs={codeInputRefs}
+              verificationCode={verificationCode}
+              onCodeChange={handleCodeChange}
+              onCodeKeyDown={handleCodeKeyDown}
+              onCodePaste={handleCodePaste}
+              errorMessage={formErrors.verificationCode}
+              loading={loading}
+              resendCooldown={resendCooldown}
+              resendOtpLabel={resendOtpLabel}
+              onResendOtp={handleResendOtp}
+            />
           </FormLayout>
         );
 

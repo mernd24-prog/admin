@@ -46,7 +46,7 @@ const FormLayout = ({
           </h2>
           {subTitle && (
             <p
-              className={`mt-[10px] w-full max-w-[553.5px] text-center font-[Inter] text-[13px] font-normal leading-[20px] tracking-normal text-[#4f5565] opacity-100 sm:text-[14px] sm:leading-[24px] ${subTitleClassName}`}
+              className={`mt-[10px] w-full max-w-3xl text-center font-[Inter] text-[13px] font-normal leading-[20px] tracking-normal text-[#4f5565] opacity-100 sm:text-[14px] sm:leading-[24px] ${subTitleClassName}`}
             >
               {subTitle}
             </p>
@@ -54,7 +54,7 @@ const FormLayout = ({
         </div>
 
         <div
-          className={`flex w-full max-w-[720px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
+          className={`flex w-full max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
         >
           <form onSubmit={onSubmit} className={`space-y-0 ${formClassName}`}>
             <div className={childrenClassName}>{children}</div>
