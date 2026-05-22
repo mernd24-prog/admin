@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { LuAsterisk } from "react-icons/lu";
-import { AiOutlineUser } from "react-icons/ai";
 
 const EmailInput = React.memo(
   ({
@@ -10,7 +9,7 @@ const EmailInput = React.memo(
     placeholder = "",
     onChange,
     onBlur,
-    icon: Icon = AiOutlineUser,
+    icon: Icon,
     className = "",
     containerClassName = "",
     inputClassName = "",
@@ -20,6 +19,7 @@ const EmailInput = React.memo(
     iconClassName = "",
     isDisable = false,
     autoFocus = false,
+    required = false,
     ...rest
   }) => {
     const [email, setEmail] = useState(value);
@@ -72,15 +72,19 @@ const EmailInput = React.memo(
         {label && (
           <label
             htmlFor={id}
-            className={`
-              mb-2 flex items-start gap-1
-              text-sm font-medium text-[#1E1E1E]
-              ${labelClassName}
-            `}
+           className={`
+  mb-[6px] flex items-start gap-1
+  font-[Inter] text-[13px] font-medium leading-[17px]
+  tracking-[0.14px] align-middle text-[#484555]
+  opacity-100
+  ${labelClassName}
+`}
           >
             {label}
 
-            <LuAsterisk className="text-[#B42318] text-[10px] mt-[2px]" />
+            {required && (
+              <LuAsterisk className="mt-[2px] text-[10px] text-[#B42318]" />
+            )}
           </label>
         )}
 
@@ -88,13 +92,15 @@ const EmailInput = React.memo(
         <div className="relative">
 
           {/* ICON */}
-          <Icon
-            className={`
-              absolute right-[14px] top-1/2 -translate-y-1/2
-              text-[#9a9a9a] text-[15px]
-              ${iconClassName}
-            `}
-          />
+          {Icon && (
+            <Icon
+              className={`
+                absolute right-[14px] top-1/2 -translate-y-1/2
+                text-[#9a9a9a] text-[15px]
+                ${iconClassName}
+              `}
+            />
+          )}
 
           {/* INPUT */}
           <input
@@ -104,6 +110,7 @@ const EmailInput = React.memo(
             name={name}
             type="text"
             value={email}
+            required={required}
             autoComplete="off"
             onChange={handleChange}
             onBlur={handleBlur}
@@ -113,7 +120,7 @@ const EmailInput = React.memo(
               rounded-md
               border border-transparent
               bg-white
-              pl-3 pr-10
+              pl-3 ${Icon ? "pr-10" : "pr-3"}
               text-[12px]
               text-[#101828]
               placeholder:text-[#9a9a9a]

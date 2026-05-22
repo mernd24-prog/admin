@@ -101,7 +101,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
               className={
                 formType === "verificationComplete"
                   ? "w-full max-w-[58rem]"
-                  : "w-full max-w-md"
+                  : "w-full max-w-[600px]"
               }
             >
               {children}

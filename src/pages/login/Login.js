@@ -480,7 +480,10 @@ const Login = () => {
         return false;
       }
       setFormAnimation("success-animation");
-      if (currentFormState !== "login" && currentFormState !== "resetPassword") {
+      if (
+        currentFormState !== "login" &&
+        currentFormState !== "resetPassword"
+      ) {
         toast.success(
           res.payload?.data?.message ||
             res.payload?.message ||
