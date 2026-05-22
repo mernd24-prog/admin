@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { MdHistory, MdFilterList, MdSearch } from 'react-icons/md';
-import { PageHeader, DataTable, StatusBadge } from '../../../components/Shared';
+import { PageHeader, DataTable } from '../../../components/Shared';
 import { axiosPrivate as axiosProvider } from '../../../_helpers/axiosProvider';
-import { toast } from 'react-toastify';
 
 const ACTION_BADGE = {
   create: 'bg-green-100 text-green-700',
@@ -63,15 +61,15 @@ const ActivityLogs = () => {
     const fetch = async () => {
       setLoading(true);
       try {
-        const res = await axiosProvider.get('/rbac/activity-logs', {
+        const res = await axiosProvider.get('/admin/access/activity-logs', {
           params: {
             page, limit: 30, search,
             action: actionFilter !== 'all' ? actionFilter : undefined,
           },
         });
         const data = res.data?.data;
-        setLogs(data?.logs || data || []);
-        setTotal(data?.total || 0);
+        setLogs(Array.isArray(data) ? data : data?.logs || []);
+        setTotal(res.data?.meta?.total || data?.total || 0);
       } catch {
         // Endpoint may not exist yet — show empty state gracefully
         setLogs([]);
@@ -97,7 +95,7 @@ const ActivityLogs = () => {
           <button
             key={f}
             onClick={() => { setActionFilter(f); setPage(1); }}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${actionFilter === f ? 'bg-[#989AFF] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-[#989AFF]'}`}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${actionFilter === f ? 'bg-[#082f91] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-[#082f91]'}`}
           >
             {f}
           </button>

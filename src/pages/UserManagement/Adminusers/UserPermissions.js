@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { MdAdd, MdCheck, MdInfoOutline } from 'react-icons/md';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAdminUserDetails, updateModulePermission } from '../../../Redux/userManagementSlice';
 import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import Loader from '../../../components/Loader/Loader';
 import PermissionsSelector from '../../../components/Atoms/PermissionsTab/PermissionsSelector';
 import DefaultModal from '../../../components/DefaultModal/DefaultModal';
+import { PageHeader } from '../../../components/Shared';
 import { isSellerPanel } from '../../../_helpers/panelConfig';
 import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
@@ -33,9 +35,9 @@ const ACTION_ALIASES_TO_STANDARD = {
     manage: 'action',
 };
 const BACKEND_PERMISSION_ACTIONS = ['view', 'add', 'update', 'delete', 'action'];
-const GOLD_GRADIENT = 'linear-gradient(90deg, #A26D27 0%, #CE9F2D 100%)';
-const PRIMARY_BUTTON_CLASS = 'px-3 py-1.5 text-xs text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed';
-const SECONDARY_BUTTON_CLASS = 'px-3 py-1.5 text-xs border border-[#CE9F2D] text-[#8A5A1F] rounded-md hover:bg-[#CE9F2D]/10 disabled:opacity-50 disabled:cursor-not-allowed';
+const SEARCH_ACCENT = '#082f91';
+const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#082f91] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+const SECONDARY_BUTTON_CLASS = 'px-4 py-2 text-sm font-medium border border-[#082f91] text-[#082f91] rounded-lg hover:bg-[#eef3ff] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
 
 const AccessCheckbox = ({ checked, disabled, onChange, ariaLabel }) => (
     <button
@@ -53,11 +55,10 @@ const AccessCheckbox = ({ checked, disabled, onChange, ariaLabel }) => (
         className={`inline-flex h-4 w-4 items-center justify-center bg-transparent p-0 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
     >
         <span
-            className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${checked ? 'border-transparent' : 'border-[#CE9F2D] bg-white'}`}
-            style={checked ? { background: GOLD_GRADIENT } : undefined}
+            className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${checked ? 'border-[#082f91] bg-[#082f91]' : 'border-[#082f91] bg-white'}`}
         >
             {checked && (
-                <span className="h-1.5 w-2.5 -translate-y-px rotate-[-45deg] border-b-2 border-l-2 border-white" />
+                <MdCheck size={13} className="text-white" />
             )}
         </span>
     </button>
@@ -98,8 +99,6 @@ const normalizeActionsForBackend = (actions = []) => {
 
 const ASSIGNMENT_ACTIONS = ['update', 'action', 'add', 'delete', 'view'];
 
-const SIDEBAR_TAB_ORDER = MODULE_TAB_ORDER;
-
 const getModuleCode = (module) =>
     module?.slug || module?.module || module?.module_code?.module_code || module?.module_code;
 
@@ -136,6 +135,7 @@ const UserPermissions = ({ setModuleName }) => {
     const [actorPermissionMap, setActorPermissionMap] = useState({});
     const [canAssignPermissions, setCanAssignPermissions] = useState(false);
     const [selectedModules, setSelectedModules] = useState([]);
+    const [selectedTabName, setSelectedTabName] = useState('');
     const [pendingBulkAction, setPendingBulkAction] = useState(null);
     const hasActorPermissionCeiling = useMemo(
         () => Object.keys(actorPermissionMap || {}).length > 0,
@@ -151,6 +151,7 @@ const UserPermissions = ({ setModuleName }) => {
         ),
         [sidebarModules],
     );
+    const sidebarTabOrder = MODULE_TAB_ORDER;
 
     useEffect(() => {
         if (id) {
@@ -266,10 +267,10 @@ const UserPermissions = ({ setModuleName }) => {
             .sort((a, b) => {
                 const tabA = a.tab || a.metadata?.tab || '';
                 const tabB = b.tab || b.metadata?.tab || '';
-                const tabIndexA = SIDEBAR_TAB_ORDER.indexOf(tabA);
-                const tabIndexB = SIDEBAR_TAB_ORDER.indexOf(tabB);
-                const normalizedIndexA = tabIndexA === -1 ? SIDEBAR_TAB_ORDER.length : tabIndexA;
-                const normalizedIndexB = tabIndexB === -1 ? SIDEBAR_TAB_ORDER.length : tabIndexB;
+                const tabIndexA = sidebarTabOrder.indexOf(tabA);
+                const tabIndexB = sidebarTabOrder.indexOf(tabB);
+                const normalizedIndexA = tabIndexA === -1 ? sidebarTabOrder.length : tabIndexA;
+                const normalizedIndexB = tabIndexB === -1 ? sidebarTabOrder.length : tabIndexB;
                 if (normalizedIndexA !== normalizedIndexB) return normalizedIndexA - normalizedIndexB;
                 return String(a.name || a.slug).localeCompare(String(b.name || b.slug));
             });
@@ -310,6 +311,7 @@ const UserPermissions = ({ setModuleName }) => {
         hasActorPermissionCeiling,
         canAssignPermissions,
         sidebarModuleSlugs,
+        sidebarTabOrder,
     ]);
 
     useEffect(() => {
@@ -318,9 +320,12 @@ const UserPermissions = ({ setModuleName }) => {
         );
     }, [permissions]);
 
-    const assignedModules = (items) => items
-        .filter((item) => item.permissions.length && !item.permissions.includes('none'))
-        .map((item) => item.id);
+    const assignedModules = (items) => Array.from(new Set(
+        items
+            .filter((item) => item.permissions.length && !item.permissions.includes('none'))
+            .map((item) => item.id)
+            .filter(Boolean)
+    ));
 
     const assignedModulePermissions = (items) => items
         .filter((item) => item.permissions.length && !item.permissions.includes('none'))
@@ -409,24 +414,38 @@ const UserPermissions = ({ setModuleName }) => {
                 ),
             }))
             .sort((a, b) => {
-                const indexA = SIDEBAR_TAB_ORDER.indexOf(a.tabName);
-                const indexB = SIDEBAR_TAB_ORDER.indexOf(b.tabName);
-                const safeA = indexA === -1 ? SIDEBAR_TAB_ORDER.length : indexA;
-                const safeB = indexB === -1 ? SIDEBAR_TAB_ORDER.length : indexB;
+                const indexA = sidebarTabOrder.indexOf(a.tabName);
+                const indexB = sidebarTabOrder.indexOf(b.tabName);
+                const safeA = indexA === -1 ? sidebarTabOrder.length : indexA;
+                const safeB = indexB === -1 ? sidebarTabOrder.length : indexB;
                 if (safeA !== safeB) return safeA - safeB;
                 return a.tabName.localeCompare(b.tabName);
             });
-    }, [filteredPermissions]);
+    }, [filteredPermissions, sidebarTabOrder]);
 
-    const selectableFilteredPermissions = useMemo(
-        () => filteredPermissions.filter((permission) => permission.canAssign),
-        [filteredPermissions],
+    useEffect(() => {
+        if (!groupedPermissions.length) {
+            setSelectedTabName('');
+            return;
+        }
+        const selectedExists = groupedPermissions.some((group) => group.tabName === selectedTabName);
+        if (!selectedExists) {
+            setSelectedTabName(groupedPermissions[0].tabName);
+        }
+    }, [groupedPermissions, selectedTabName]);
+
+    const activeGroup = useMemo(
+        () => groupedPermissions.find((group) => group.tabName === selectedTabName) || groupedPermissions[0],
+        [groupedPermissions, selectedTabName],
+    );
+
+    const activeItems = useMemo(() => activeGroup?.items || [], [activeGroup]);
+    const activeSelectableItems = useMemo(
+        () => activeItems.filter((permission) => permission.canAssign),
+        [activeItems],
     );
 
     const selectedModuleSet = useMemo(() => new Set(selectedModules), [selectedModules]);
-
-    const allFilteredSelected = selectableFilteredPermissions.length > 0 &&
-        selectableFilteredPermissions.every((permission) => selectedModuleSet.has(permission.id));
 
     const handleModuleSelection = useCallback((moduleId, checked) => {
         setSelectedModules((prev = []) => {
@@ -434,18 +453,6 @@ const UserPermissions = ({ setModuleName }) => {
             return prev.filter((id) => id !== moduleId);
         });
     }, []);
-
-    const handleSelectAll = useCallback((checked) => {
-        if (!checked) {
-            setSelectedModules((prev = []) =>
-                prev.filter((moduleId) => !selectableFilteredPermissions.some((permission) => permission.id === moduleId))
-            );
-            return;
-        }
-        setSelectedModules((prev = []) =>
-            Array.from(new Set([...prev, ...selectableFilteredPermissions.map((permission) => permission.id)]))
-        );
-    }, [selectableFilteredPermissions]);
 
     const handleGroupSelection = useCallback((items = [], checked) => {
         const selectableIds = items
@@ -493,38 +500,34 @@ const UserPermissions = ({ setModuleName }) => {
     const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin' || storedRole === 'sub-admin');
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-6">
             <Loader loading={selector?.loading} />
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <nav className="flex space-x-1 text-sm text-gray-500 items-center">
-                    <Link to="/app/home" className="hover:underline text-[#3E4094]">Home</Link>
-                    <span>/</span>
-                    <Link to="/app/admin-users" className="hover:underline text-[#3E4094]">Admin Users</Link>
-                    <span>/</span>
-                    <span className="text-gray-700 font-medium">Permissions</span>
-                    {userName && <><span>/</span><span className="text-gray-800 font-semibold">{userName}</span></>}
-                </nav>
-                {canCreateSubSubAdmin && !sellerPanel && (
+            <PageHeader
+                title="User Permissions"
+                subtitle={userName ? `Manage module access for ${userName}` : 'Manage user module access'}
+                breadcrumbs={[
+                    { label: 'Users & Access' },
+                    { label: 'Admin Users', to: '/app/admin-users' },
+                    { label: 'Permissions' },
+                ]}
+                actions={canCreateSubSubAdmin && !sellerPanel && (
                     <button
                         type="button"
                         onClick={() => navigate('/app/admin-users')}
                         className={PRIMARY_BUTTON_CLASS}
-                        style={{ background: GOLD_GRADIENT }}
                     >
-                        + Add Sub-Admin
+                        <MdAdd size={16} /> Add Sub-Admin
                     </button>
                 )}
-            </div>
+            />
 
             {/* Info banner showing what this user can access */}
             {userName && (
-                <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#b7c5e6] bg-white p-4 shadow-sm">
+                    <MdInfoOutline size={18} className="mt-0.5 flex-shrink-0 text-[#082f91]" />
                     <div>
-                        <p className="text-sm font-medium text-blue-800">{userName}</p>
-                        <p className="text-xs text-blue-600 mt-0.5">
+                        <p className="text-sm font-semibold text-gray-800">{userName}</p>
+                        <p className="mt-0.5 text-xs text-gray-500">
                             {canAssignPermissions
                                 ? 'You can update access for modules you are allowed to manage.'
                                 : 'You can view this user\'s module permissions. Contact an admin to make changes.'}
@@ -533,116 +536,142 @@ const UserPermissions = ({ setModuleName }) => {
                 </div>
             )}
 
-            <div className="bg-white overflow-hidden border border-gray-200 rounded-lg">
-                <div className="p-4 border-b">
-                    <SearchComponent
-                        filters={filters}
-                        setFilters={setFilters}
-                        placeholder="Search modules or tabs..."
-                    />
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <div className="inline-flex items-center gap-2 text-sm text-gray-700">
-                            <AccessCheckbox
-                                checked={allFilteredSelected}
-                                disabled={!selectableFilteredPermissions.length}
-                                onChange={handleSelectAll}
-                                ariaLabel="Select all modules"
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <div className="overflow-hidden rounded-xl border border-[#b7c5e6] bg-white shadow-sm">
+                    <div className="border-b border-[#b7c5e6] px-4 py-3">
+                        <h3 className="text-sm font-semibold text-gray-700">Modules</h3>
+                        <div className="mt-3">
+                            <SearchComponent
+                                filters={filters}
+                                setFilters={setFilters}
+                                placeholder="Search modules..."
                             />
-                            Select All
                         </div>
-                        <span className="text-xs text-gray-500">Selected: {selectedModules.length} modules</span>
-                        <button
-                            type="button"
-                            onClick={() => handleBulkPermissionUpdate('grant')}
-                            disabled={!selectedModules.length}
-                            className={PRIMARY_BUTTON_CLASS}
-                            style={{ background: GOLD_GRADIENT }}
-                        >
-                            Allow ({selectedModules.length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleBulkPermissionUpdate('revoke')}
-                            disabled={!selectedModules.length}
-                            className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Remove
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSelectedModules([])}
-                            disabled={!selectedModules.length}
-                            className={SECONDARY_BUTTON_CLASS}
-                        >
-                            Clear Selection
-                        </button>
                     </div>
-                </div>
-                <div className="divide-y divide-gray-100">
-                    {groupedPermissions.map(({ tabName, items }) => {
-                        const selectableItems = items.filter((permission) => permission.canAssign);
-                        const selectedInGroup = selectableItems.filter((permission) => selectedModuleSet.has(permission.id)).length;
-                        const allGroupSelected = selectableItems.length > 0 && selectedInGroup === selectableItems.length;
+                    {groupedPermissions.length ? (
+                        <ul className="divide-y divide-[#eef3ff]">
+                            {groupedPermissions.map(({ tabName, items }) => {
+                                const selectableItems = items.filter((permission) => permission.canAssign);
+                                const selectedInGroup = selectableItems.filter((permission) => selectedModuleSet.has(permission.id)).length;
+                                const assignedInGroup = items.filter((permission) =>
+                                    permission.permissions.length && !permission.permissions.includes('none')
+                                ).length;
+                                const isActive = activeGroup?.tabName === tabName;
 
-                        return (
-                            <section key={tabName} className="p-4">
-                                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <AccessCheckbox
-                                            checked={allGroupSelected}
-                                            disabled={!selectableItems.length}
-                                            onChange={(checked) => handleGroupSelection(items, checked)}
-                                            ariaLabel={`Select ${tabName}`}
-                                        />
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-gray-900">{tabName}</h3>
-                                            <p className="text-xs text-gray-500">
-                                                {items.length} sub-module{items.length !== 1 ? 's' : ''}
+                                return (
+                                    <li
+                                        key={tabName}
+                                        onClick={() => setSelectedTabName(tabName)}
+                                        className={`flex cursor-pointer items-center justify-between gap-3 border-l-2 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'border-l-[#082f91] bg-[#eef3ff]' : 'border-l-transparent'}`}
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-gray-700">{tabName}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {assignedInGroup}/{items.length} access
                                             </p>
                                         </div>
-                                    </div>
-                                    {!!selectableItems.length && (
-                                        <span className="text-xs text-gray-400">
-                                            {selectedInGroup}/{selectableItems.length} selected
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    {items.map((permission) => (
-                                        <div
-                                            key={permission.id}
-                                            className="grid grid-cols-1 gap-3 rounded-md border border-gray-100 p-3 md:grid-cols-[minmax(180px,260px),1fr]"
-                                        >
-                                            <div className="flex items-start gap-2">
-                                                <AccessCheckbox
-                                                    checked={selectedModuleSet.has(permission.id)}
-                                                    disabled={!permission.canAssign}
-                                                    onChange={(checked) => handleModuleSelection(permission.id, checked)}
-                                                    ariaLabel={`Select ${permission.module}`}
-                                                />
-                                                <div>
-                                                    <p className="text-sm font-medium capitalize text-gray-900">{permission.module}</p>
-                                                    <p className="text-xs text-gray-400">{permission.id}</p>
-                                                </div>
-                                            </div>
-                                            <PermissionsSelector
-                                                module={permission.module}
-                                                selected={permission.permissions}
-                                                availablePermissions={permission.canAssign ? permission.assignablePermissions : permission.availablePermissions}
-                                                disabled={!permission.canAssign}
-                                                onChange={(value) => handlePermissionChange(permission.id, value)}
-                                            />
+                                        <div className="flex items-center gap-2">
+                                            {!!selectedInGroup && (
+                                                <span className="rounded-full bg-[#eef3ff] px-2 py-0.5 text-xs font-medium text-[#082f91]">
+                                                    {selectedInGroup}
+                                                </span>
+                                            )}
+                                            {isActive && <MdCheck size={16} className="text-[#082f91]" />}
                                         </div>
-                                    ))}
-                                </div>
-                            </section>
-                        );
-                    })}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        <p className="p-6 text-center text-sm text-gray-400">No modules found.</p>
+                    )}
                 </div>
-                {!groupedPermissions.length && (
-                    <p className="p-6 text-sm text-gray-400 text-center">No modules found for this user.</p>
-                )}
+
+                <div className="lg:col-span-3">
+                    {activeGroup ? (
+                        <div className="overflow-hidden rounded-xl border border-[#b7c5e6] bg-white shadow-sm">
+                            <div className="border-b border-[#b7c5e6] px-4 py-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-800">{activeGroup.tabName}</h3>
+                                        <p className="mt-0.5 text-xs text-gray-400">
+                                            {activeItems.length} module{activeItems.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                            <AccessCheckbox
+                                                checked={activeSelectableItems.length > 0 && activeSelectableItems.every((permission) => selectedModuleSet.has(permission.id))}
+                                                disabled={!activeSelectableItems.length}
+                                                onChange={(checked) => handleGroupSelection(activeItems, checked)}
+                                                ariaLabel={`Select ${activeGroup.tabName}`}
+                                            />
+                                            Select Module
+                                        </div>
+                                        <span className="text-xs text-gray-500">Selected: {selectedModules.length}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleBulkPermissionUpdate('grant')}
+                                            disabled={!selectedModules.length}
+                                            className={PRIMARY_BUTTON_CLASS}
+                                        >
+                                            Allow ({selectedModules.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleBulkPermissionUpdate('revoke')}
+                                            disabled={!selectedModules.length}
+                                            className="px-4 py-2 text-sm font-medium border border-red-200 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Remove
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedModules([])}
+                                            disabled={!selectedModules.length}
+                                            className={SECONDARY_BUTTON_CLASS}
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 p-4">
+                                {activeItems.map((permission) => (
+                                    <div
+                                        key={permission.id}
+                                        className="grid grid-cols-1 gap-3 rounded-lg border border-[#b7c5e6] p-3 transition-colors hover:bg-[#eef3ff]/60 md:grid-cols-[minmax(180px,260px),1fr]"
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <AccessCheckbox
+                                                checked={selectedModuleSet.has(permission.id)}
+                                                disabled={!permission.canAssign}
+                                                onChange={(checked) => handleModuleSelection(permission.id, checked)}
+                                                ariaLabel={`Select ${permission.module}`}
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium capitalize text-gray-700">{permission.module}</p>
+                                                <p className="text-xs text-gray-400">{permission.id}</p>
+                                            </div>
+                                        </div>
+                                        <PermissionsSelector
+                                            module={permission.module}
+                                            selected={permission.permissions}
+                                            availablePermissions={permission.canAssign ? permission.assignablePermissions : permission.availablePermissions}
+                                            disabled={!permission.canAssign}
+                                            onChange={(value) => handlePermissionChange(permission.id, value)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex h-80 items-center justify-center rounded-xl border border-[#b7c5e6] bg-white text-sm text-gray-300 shadow-sm">
+                            Select a section to view modules
+                        </div>
+                    )}
+                </div>
             </div>
 
             <DefaultModal
@@ -654,7 +683,7 @@ const UserPermissions = ({ setModuleName }) => {
                 modalClassName="max-w-md"
                 childrenClassName="text-sm text-gray-600"
                 buttonClassName={pendingBulkAction === 'revoke' ? '!bg-red-600 !text-white hover:!bg-red-700' : '!text-white'}
-                buttonStyle={pendingBulkAction === 'grant' ? { background: GOLD_GRADIENT } : undefined}
+                buttonStyle={pendingBulkAction === 'grant' ? { background: SEARCH_ACCENT } : undefined}
                 onSubmit={applyBulkPermissionUpdate}
                 closeButton
             >
