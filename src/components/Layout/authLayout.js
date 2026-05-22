@@ -99,7 +99,8 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
           <div className="flex justify-center bg-[#F4F1ED]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
             <div
               className={
-                formType === "verificationComplete" || formType === "register"
+                formType === "verificationComplete" ||
+                formType === "registerVerification" || formType === "register"
                   ? "w-full max-w-[58rem]"
                   : "w-full max-w-[480px]"
               }
