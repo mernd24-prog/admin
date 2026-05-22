@@ -237,6 +237,49 @@ const isSupportedRoute = (route) => {
   );
 };
 
+export const buildAdminSidebarData = (permissions = []) => {
+  const grouped = (Array.isArray(permissions) ? permissions : []).reduce((acc, curr) => {
+    const hasAny = (curr.permissions || []).some((p) => p.assigned) || curr.assigned;
+    if (!hasAny) return acc;
+
+    const tabName = curr.tab || curr.metadata?.tab || getTabName(curr.slug);
+    if (!acc[tabName]) acc[tabName] = [];
+
+    const expanded = MODULE_ROUTE_EXPANSIONS[curr.slug];
+    if (Array.isArray(expanded) && expanded.length) {
+      expanded.forEach((item) => {
+        if (!isSupportedRoute(item.route)) return;
+        acc[tabName].push({
+          name: item.label,
+          label: item.label,
+          module_code: item.route,
+          module: curr.slug,
+        });
+      });
+    } else {
+      const moduleCode = getModuleRoute(curr.slug);
+      if (!isSupportedRoute(moduleCode)) return acc;
+      acc[tabName].push({
+        name: curr.name,
+        label: curr.name,
+        module_code: moduleCode,
+        module: curr.slug,
+      });
+    }
+    return acc;
+  }, {});
+
+  return Object.entries(grouped).map(([tab, mods]) => {
+    const unique = Array.from(new Map(mods.map((m) => [m.module_code, m])).values());
+    return {
+      label: tab,
+      icon: getIconForTab(tab),
+      subItems: unique,
+      isSingleItem: tab.toLowerCase() === 'dashboard' && unique.length === 1,
+    };
+  }).filter((t) => t.subItems.length > 0);
+};
+
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -298,36 +341,7 @@ const Sidebar = ({
 
     if (!permissions) return [];
 
-    const grouped = permissions.reduce((acc, curr) => {
-      const hasAny = (curr.permissions || []).some((p) => p.assigned) || curr.assigned;
-      if (!hasAny) return acc;
-
-      const tabName = curr.tab || curr.metadata?.tab || getTabName(curr.slug);
-      if (!acc[tabName]) acc[tabName] = [];
-
-      const expanded = MODULE_ROUTE_EXPANSIONS[curr.slug];
-      if (Array.isArray(expanded) && expanded.length) {
-        expanded.forEach((item) => {
-          if (!isSupportedRoute(item.route)) return;
-          acc[tabName].push({ name: item.label, label: item.label, module_code: item.route });
-        });
-      } else {
-        const moduleCode = getModuleRoute(curr.slug);
-        if (!isSupportedRoute(moduleCode)) return acc;
-        acc[tabName].push({ name: curr.name, label: curr.name, module_code: moduleCode });
-      }
-      return acc;
-    }, {});
-
-    return Object.entries(grouped).map(([tab, mods]) => {
-      const unique = Array.from(new Map(mods.map((m) => [m.module_code, m])).values());
-      return {
-        label: tab,
-        icon: getIconForTab(tab),
-        subItems: unique,
-        isSingleItem: tab.toLowerCase() === 'dashboard' && unique.length === 1,
-      };
-    }).filter((t) => t.subItems.length > 0);
+    return buildAdminSidebarData(permissions);
   }, [permissions, sellerPanel]);
 
   // ── Effects ──────────────────────────────────────────────────────────────
@@ -422,7 +436,7 @@ const Sidebar = ({
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
-            <IoIosMenu className="text-2xl cursor-pointer text-[#989AFF]" onClick={handleMenuClick} />
+            <IoIosMenu className="text-2xl cursor-pointer text-[#082f91]" onClick={handleMenuClick} />
           </div>
         )}
         {isExpanded && (
@@ -457,7 +471,7 @@ const Sidebar = ({
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ''}
                     >
-                      <Icon size={isExpanded ? 22 : 18} className="text-[#989AFF]" />
+                      <Icon size={isExpanded ? 22 : 18} className="text-[#082f91]" />
                       {isExpanded && <span className="text-xs">{item.label}</span>}
                     </Link>
                   </li>
@@ -472,11 +486,11 @@ const Sidebar = ({
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
-                    <Icon size={isExpanded ? 22 : 18} className="text-[#CE9F2D]" />
+                    <Icon size={isExpanded ? 22 : 18} className="text-[#082f91]" />
                     {isExpanded && (
                       <>
                         <span className="text-xs">{item.label}</span>
-                        <MdChevronRight className={`ml-auto transition-transform duration-200 text-[#CE9F2D] ${isTabActive ? 'rotate-90' : ''}`} />
+                        <MdChevronRight className={`ml-auto transition-transform duration-200 text-[#082f91] ${isTabActive ? 'rotate-90' : ''}`} />
                       </>
                     )}
                   </div>
@@ -513,7 +527,7 @@ const Sidebar = ({
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#989AFF] flex-shrink-0" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#082f91] flex-shrink-0" />
                                 <span className="text-xs capitalize">{sub.label}</span>
                               </Link>
                             </li>
