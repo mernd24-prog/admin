@@ -1236,8 +1236,8 @@ const Login = () => {
                   />
                 ))}
               </div>
-            }
-          >
+            
+          </div>
        <div className="relative z-10 mx-auto flex w-full max-w-full flex-col items-center justify-center overflow-hidden px-2 py-4 sm:px-6 md:px-8">
   <p className="text-center text-[11px] sm:text-[14px] md:text-[15px] font-medium text-[#222]">
     Phone Number : <span className="font-semibold text-[#082f91]">**** **** 1234</span>

@@ -7,6 +7,87 @@ const trimRoute = (value = "") =>
 
 export const SELF_SERVICE_ROUTES = ["/profile", "/changePassword"];
 
+export const MODULE_TAB_ORDER = [
+  "Access Control",
+  "Admin",
+  "Users & Sellers",
+  "Seller Management",
+  "Catalog",
+  "Content",
+  "Shopping",
+  "Payments & Finance",
+  "Marketing",
+  "Insights & Risk",
+  "Settings",
+  "Assigned",
+  "Access",
+];
+
+const MODULE_LABELS = {
+  admin: "Admin Dashboard",
+  analytics: "Analytics",
+  rbac: "RBAC Management",
+  users: "User Management",
+  sellers: "Seller Management",
+  "seller-management": "Seller Admin Management",
+  "sellers/commissions": "Seller Commissions",
+  products: "Product Management",
+  platform: "Platform Catalog",
+  cms: "CMS Management",
+  warranty: "Warranty",
+  inventory: "Inventory Management",
+  carts: "Cart Management",
+  orders: "Order Management",
+  returns: "Return Management",
+  payments: "Payment Management",
+  wallets: "Wallet Management",
+  subscriptions: "Subscriptions",
+  tax: "Tax Management",
+  delivery: "Delivery Management",
+  pricing: "Pricing & Promotions",
+  "dynamic-pricing": "Dynamic Pricing",
+  referral: "Referral Commerce",
+  loyalty: "Loyalty",
+  recommendations: "Recommendations",
+  notifications: "Notifications",
+  fraud: "Fraud Management",
+};
+
+const MODULE_TABS = {
+  rbac: "Access Control",
+  admin: "Admin",
+  users: "Users & Sellers",
+  sellers: "Users & Sellers",
+  "seller-management": "Seller Management",
+  "sellers/commissions": "Users & Sellers",
+  products: "Catalog",
+  platform: "Catalog",
+  cms: "Content",
+  warranty: "Catalog",
+  inventory: "Catalog",
+  carts: "Shopping",
+  orders: "Shopping",
+  returns: "Shopping",
+  delivery: "Shopping",
+  payments: "Payments & Finance",
+  wallets: "Payments & Finance",
+  tax: "Payments & Finance",
+  subscriptions: "Payments & Finance",
+  pricing: "Marketing",
+  "dynamic-pricing": "Marketing",
+  loyalty: "Marketing",
+  referral: "Marketing",
+  recommendations: "Marketing",
+  notifications: "Marketing",
+  analytics: "Insights & Risk",
+  fraud: "Insights & Risk",
+};
+
+const formatModuleLabel = (value = "") =>
+  String(value || "")
+    .replace(/[-/_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 // ─── Default landing route per module ────────────────────────────────────────
 export const MODULE_DEFAULT_ROUTES = {
   // Core
@@ -29,6 +110,7 @@ export const MODULE_DEFAULT_ROUTES = {
   // Users
   users:              "users",
   sellers:            "seller",
+  "seller-management": "seller-staff",
   "sellers/commissions":"transactions",
   // Marketing
   pricing:        "discount-coupons",
@@ -43,6 +125,26 @@ export const MODULE_DEFAULT_ROUTES = {
   // Settings / misc
   fraud: "settings",
   cms:   "content-management",
+};
+
+export const getModuleLabel = (moduleSlug) => {
+  const slug = String(moduleSlug || "").trim().toLowerCase();
+  return MODULE_LABELS[slug] || formatModuleLabel(slug);
+};
+
+export const getModuleMeta = (moduleSlug) => {
+  const slug = String(moduleSlug || "").trim().toLowerCase();
+  const tab = MODULE_TABS[slug] || "Settings";
+  return {
+    slug,
+    label: getModuleLabel(slug),
+    name: getModuleLabel(slug),
+    tab,
+    route: MODULE_DEFAULT_ROUTES[slug] || slug,
+    order: MODULE_TAB_ORDER.indexOf(tab) === -1
+      ? MODULE_TAB_ORDER.length
+      : MODULE_TAB_ORDER.indexOf(tab),
+  };
 };
 
 // ─── Route → modules mapping (for permission checks) ─────────────────────────
