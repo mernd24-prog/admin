@@ -25,7 +25,9 @@ const FormLayout = ({
   subTitleClassName = "",
 }) => {
   return (
-    <div className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f0ec] px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}>
+    <div
+      className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f0ec] px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}
+    >
       <div
         className={`relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
       >
@@ -41,7 +43,9 @@ const FormLayout = ({
         {topContent}
 
         <div className="mb-[22px] text-center">
-          <h2 className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#082f91] sm:text-[35px] ${titleClassName}`}>
+          <h2
+            className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#082f91] sm:text-[35px] ${titleClassName}`}
+          >
             {title}
           </h2>
           {subTitle && (
@@ -68,7 +72,9 @@ const FormLayout = ({
         </div>
 
         {(bottomText || linkText) && (
-          <p className={`mt-[15px] text-center text-[14px] font-semibold text-[#031b52] ${footerClassName}`}>
+          <p
+            className={`mt-[15px] text-center text-[14px] font-semibold text-[#031b52] ${footerClassName}`}
+          >
             {bottomText && <span>{bottomText} </span>}
             {linkText &&
               (onLinkClick ? (

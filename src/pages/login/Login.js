@@ -23,7 +23,7 @@ import Checkbox from "../../components/Atoms/Checkbox/Checkbox";
 import EmailInput from "../../components/Atoms/EmailInput";
 import PasswordInput from "../../components/Atoms/password/PasswordInput";
 import Loader from "../../components/Loader/Loader";
-import { CiUser, CiLock } from "react-icons/ci";
+import { CiLock } from "react-icons/ci";
 import { MdEmail } from "react-icons/md";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
 import { toast } from "sonner";
@@ -36,8 +36,13 @@ import {
 } from "../../_helpers/authStorage";
 import { useAuthLayout } from "../../context/AuthLayoutContext";
 import IconButton from "../../components/Atoms/buttons/iconButton";
+import TransparentButton from "../../components/Atoms/buttons/TransParentButton";
 
 const RESEND_COOLDOWN_SECONDS = 30;
+const authInputClassName =
+  "h-[31px] rounded-[6px] border-[#dcd8ee] bg-[#fbfaff] px-3 text-[11px] text-[#344054] placeholder:text-[#8f8aa3] focus:border-[#082f91] focus:ring-[#dce3ff]";
+const authLabelClassName =
+  "mb-[4px] text-[11px] font-medium leading-[16px] text-[#333142]";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -65,19 +70,23 @@ const Login = () => {
     newPassword: "",
     confirmNewPassword: "",
 
+    fullName: "",
     firstName: "",
     lastName: "",
     phone: "",
     registerEmail: "",
     registerPassword: "",
+    confirmRegisterPassword: "",
     referralCode: "",
   });
   const [formErrors, setFormErrors] = useState({
+    fullName: null,
     firstName: null,
     lastName: null,
     phone: null,
     registerEmail: null,
     registerPassword: null,
+    confirmRegisterPassword: null,
   });
   const [, setFormAnimation] = useState("slide-in");
   const [isLoading, setIsLoading] = useState(false);
@@ -184,19 +193,11 @@ const Login = () => {
           "Registration is available only on the seller panel.";
         isValid = false;
       }
-      if (!formFields.firstName.trim()) {
-        errors.firstName = "First name is required";
+      if (!formFields.fullName.trim()) {
+        errors.fullName = "Full name is required";
         isValid = false;
-      } else if (formFields.firstName.trim().length < 2) {
-        errors.firstName = "First name must be at least 2 characters";
-        isValid = false;
-      }
-
-      if (!formFields.lastName.trim()) {
-        errors.lastName = "Last name is required";
-        isValid = false;
-      } else if (formFields.lastName.trim().length < 2) {
-        errors.lastName = "Last name must be at least 2 characters";
+      } else if (formFields.fullName.trim().length < 2) {
+        errors.fullName = "Full name must be at least 2 characters";
         isValid = false;
       }
 
@@ -226,6 +227,17 @@ const Login = () => {
         errors.registerPassword = "Minimum 8 characters required";
         isValid = false;
       }
+
+      if (!formFields.confirmRegisterPassword.trim()) {
+        errors.confirmRegisterPassword = "Please confirm your password";
+        isValid = false;
+      } else if (
+        formFields.registerPassword &&
+        formFields.confirmRegisterPassword !== formFields.registerPassword
+      ) {
+        errors.confirmRegisterPassword = "Passwords do not match";
+        isValid = false;
+      }
     }
 
     setFormErrors(errors);
@@ -245,6 +257,11 @@ const Login = () => {
       return;
     }
 
+    const [firstName, ...lastNameParts] = formFields.fullName
+      .trim()
+      .split(/\s+/);
+    const lastName = lastNameParts.join(" ") || firstName;
+
     try {
       const response = await dispatch(
         registerWithOtp({
@@ -253,8 +270,8 @@ const Login = () => {
           password: formFields.registerPassword,
           role: "seller",
           profile: {
-            firstName: formFields.firstName,
-            lastName: formFields.lastName,
+            firstName,
+            lastName,
           },
           referralCode: formFields.referralCode || "",
         }),
@@ -395,11 +412,13 @@ const Login = () => {
       forgotOtp: "",
       newPassword: "",
       confirmNewPassword: "",
+      fullName: "",
       firstName: "",
       lastName: "",
       phone: "",
       registerEmail: "",
       registerPassword: "",
+      confirmRegisterPassword: "",
       referralCode: "",
     });
     setVerificationCode(["", "", "", "", "", ""]);
@@ -412,11 +431,13 @@ const Login = () => {
       verificationCode: null,
       newPassword: null,
       confirmNewPassword: null,
+      fullName: null,
       firstName: null,
       lastName: null,
       phone: null,
       registerEmail: null,
       registerPassword: null,
+      confirmRegisterPassword: null,
     });
   }, []);
 
@@ -719,26 +740,28 @@ const Login = () => {
   const resendOtpLabel =
     resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP";
 
-  // const getAnimationClasses = useCallback(() => {
-  //   switch (formAnimation) {
-  //     case "slide-in":
-  //       return "animate-slide-in opacity-100 transform translate-x-0";
-  //     case "slide-out":
-  //       return "animate-slide-out opacity-0 transform -translate-x-full";
-  //     case "loading":
-  //       return "animate-pulse";
-  //     case "success-animation":
-  //       return "animate-success-bounce";
-  //     case "error":
-  //       return "animate-error";
-  //     default:
-  //       return "";
-  //   }
-  // }, [formAnimation]);
+  const BootmCheckBox = () => {
+    return (
+      <label className="mt-[20px]  flex cursor-pointer items-center gap-[10px]">
+        <Checkbox
+          id="remember_me"
+          name="remember_me"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
+        />
+
+        <span className="text-sm font-inter text-[#667085]">
+          I agree to all{" "}
+          <span className="font-semibold text-[#031b52]">
+            Terms, Privacy, and Cancellation Policies.
+          </span>
+        </span>
+      </label>
+    );
+  };
 
   const renderForm = () => {
-    // const animationClasses = getAnimationClasses();
-
     switch (formState) {
       case "login":
         return (
@@ -808,7 +831,7 @@ const Login = () => {
                   type="button"
                   onClick={toggleForgotPassword}
                   className="
-            text-[11px]
+            text-[12px]
             font-medium
             text-[#031b52]
             transition-all
@@ -832,22 +855,7 @@ const Login = () => {
                 />
               </div>
 
-              <label className="mt-[20px] flex cursor-pointer items-start gap-[10px]">
-                <Checkbox
-                  id="remember_me"
-                  name="remember_me"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
-                />
-
-                <span className="text-[8px] leading-[14px] text-[#667085]">
-                  I agree to all{" "}
-                  <span className="font-semibold text-[#031b52]">
-                    Terms, Privacy, and Cancellation Policies.
-                  </span>
-                </span>
-              </label>
+              <BootmCheckBox />
             </div>
           </FormLayout>
         );
@@ -879,7 +887,6 @@ const Login = () => {
                   name="forgotEmail"
                   value={formFields.forgotEmail}
                   placeholder="Email address"
-                  icon={MdEmail}
                   onChange={handleInputChange}
                   errorMessage={formErrors.forgotEmail}
                   inputClassName="h-[38px] border-[#ded9f0] bg-[#fbf9ff] focus:border-[#d7cdea] focus:ring-[#eee8f8]"
@@ -893,13 +900,13 @@ const Login = () => {
                 </div>
               )}
 
-              <div
-                className="pt-4 animate-fade-in"
-                style={{ animationDelay: "0.2s" }}
-              >
+              <div className="pt-4">
                 <FormSubmitButton
-                  buttonLabel={loading ? "Sending OTP..." : "Send OTP"}
+                  buttonLabel={
+                    loading ? "Sending Reset Link..." : "Send Reset Link"
+                  }
                 />
+                <BootmCheckBox />
               </div>
             </div>
           </FormLayout>
@@ -976,8 +983,9 @@ const Login = () => {
         return (
           <FormLayout
             title="Reset Password"
-            subTitle="Please create a new password for your account"
+            subTitle="Create a new password to secure your account"
             onSubmit={handleResetPasswordSubmit}
+            bottomText="Don't have an account?"
             // className={`${animationClasses} transition-all duration-300`}
           >
             <div className="relative z-10 flex flex-col gap-4">
@@ -1019,116 +1027,110 @@ const Login = () => {
                 <FormSubmitButton
                   buttonLabel={loading ? "Resetting..." : "Reset Password"}
                 />
-              </div>
 
-              <p
-                className="mt-3 cursor-pointer text-center text-xs font-medium text-[#031b52] transition-all duration-300 hover:text-[#082f91] hover:underline animate-fade-in"
-                onClick={toggleForgotPassword}
-                style={{ animationDelay: "0.4s" }}
-              >
-                Back to Login
-              </p>
+                <BootmCheckBox />
+              </div>
             </div>
           </FormLayout>
         );
       case "register":
         return (
-          <FormLayout
-            title="Registration Form"
-            subTitle="Please fill your details to register"
-            onSubmit={handleRegisterSubmit}
-            bottomText="Already have an account?"
-            linkText="Back to Login"
-            onLinkClick={() => {
-              resetForm();
-              setFormState("login");
-            }}
-            //className={`${animationClasses} transition-all duration-300`}
-            showLogo
-          >
-            <div className="relative z-10 flex flex-col gap-3">
-              <EmailInput
-                id="firstName"
-                name="firstName"
-                // label="First Name"
-                value={formFields.firstName}
-                placeholder="Enter first name"
-                icon={CiUser}
-                onChange={handleInputChange}
-                errorMessage={formErrors.firstName}
-              />
+          <div className="w-full">
+            <div className="mb-10 text-center">
+              <h2 className="font-inter text-3xl font-extrabold  text-blue ">
+                Create Your Vendor Account
+              </h2>
+              <p className="mt-3 font-inter text-lg  text-darkInk">
+                Set up your secure profile and start selling on Sam Global.
+              </p>
+            </div>
 
-              <EmailInput
-                id="lastName"
-                name="lastName"
-                // label="Last Name"
-                value={formFields.lastName}
-                placeholder="Enter last name"
-                icon={CiUser}
-                onChange={handleInputChange}
-                errorMessage={formErrors.lastName}
-              />
+            <form
+              onSubmit={handleRegisterSubmit}
+              className="mx-auto min-h-[440px] w-full rounded-[8px] bg-white/25 shadow-[0_0_15px_rgba(0,0,0,0.15)]  px-5 py-10  sm:px-10 md:min-h-[480px] md:px-[64px] md:py-[70px] xl:min-h-[400px]"
+            >
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
+                <EmailInput
+                  id="fullName"
+                  name="fullName"
+                  label="Full Name"
+                  value={formFields.fullName}
+                  placeholder="e.g. John Doe"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.fullName}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                />
 
-              <EmailInput
-                id="phone"
-                name="phone"
-                // label="Phone Number"
-                value={formFields.phone}
-                placeholder="Enter phone number"
-                icon={CiUser}
-                onChange={handleInputChange}
-                errorMessage={formErrors.phone}
-              />
+                <EmailInput
+                  id="registerEmail"
+                  name="registerEmail"
+                  label="Email Address"
+                  value={formFields.registerEmail}
+                  placeholder="john@example.com"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.registerEmail}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                />
 
-              <EmailInput
-                id="registerEmail"
-                name="registerEmail"
-                // label="Email Address"
-                value={formFields.registerEmail}
-                placeholder="Enter email"
-                icon={MdEmail}
-                onChange={handleInputChange}
-                errorMessage={formErrors.registerEmail}
-              />
+                <EmailInput
+                  id="phone"
+                  name="phone"
+                  label="Phone Number"
+                  value={formFields.phone}
+                  placeholder="+1 (555) 000-0000"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.phone}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                  containerClassName="md:col-span-2"
+                />
 
-              <PasswordInput
-                id="registerPassword"
-                name="registerPassword"
-                // label="Password"
-                value={formFields.registerPassword}
-                placeholder="Enter password"
-                icon={CiLock}
-                onChange={handleInputChange}
-                errorMessage={formErrors.registerPassword}
-              />
+                <PasswordInput
+                  id="registerPassword"
+                  name="registerPassword"
+                  label="Password"
+                  value={formFields.registerPassword}
+                  placeholder="••••••••"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.registerPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                />
 
-              <EmailInput
-                id="referralCode"
-                name="referralCode"
-                // label="Referral Code (Optional)"
-                value={formFields.referralCode}
-                placeholder="Enter referral code"
-                icon={CiUser}
-                onChange={handleInputChange}
-              />
-
-              <div className="mt-4">
-                <FormSubmitButton
-                  buttonLabel={loading ? "Registering..." : "Register"}
+                <PasswordInput
+                  id="confirmRegisterPassword"
+                  name="confirmRegisterPassword"
+                  label="Confirm Password"
+                  value={formFields.confirmRegisterPassword}
+                  placeholder="••••••••"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.confirmRegisterPassword}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
                 />
               </div>
 
-              <p
-                className="mt-4 cursor-pointer text-center text-xs font-medium text-[#031b52] transition-all duration-300 hover:text-[#082f91] hover:underline animate-fade-in"
-                onClick={() => {
-                  resetForm();
-                  setFormState("login");
-                }}
-              >
-                Already have an account? Back to Login
-              </p>
-            </div>
-          </FormLayout>
+              <div className="my-8">
+                <BootmCheckBox />
+              </div>
+
+              <div className=" grid grid-cols-1 gap-3 md:grid-cols-[150px_1fr]">
+                <button className="px-6 py-2 rounded-lg border border-blue text-blue font-semibold">
+                  Back
+                </button>
+                <FormSubmitButton
+                  buttonLabel={
+                    loading
+                      ? "Sending Verification..."
+                      : "Continue to Verification"
+                  }
+                  className="h-[40px] rounded-[7px] font-inter text-[12px]"
+                />
+              </div>
+            </form>
+          </div>
         );
 
       case "registerVerification":
