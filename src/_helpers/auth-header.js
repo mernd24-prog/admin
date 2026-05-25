@@ -1,6 +1,7 @@
 import axios from "axios";
 import { forceLogout, getStoredAccessToken } from "./authSession";
 
+const MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH = 7000;
 
 // let backendUrl = `https://Sam Global.jamsara.com/api/v1/`
 let backendUrl = `http://localhost:7004/api/v1`
@@ -12,7 +13,7 @@ let backendUrl = `http://localhost:7004/api/v1`
 
 export function authHeader() {
     const token = getStoredAccessToken();
-    if (token) {
+    if (token && String(token).length <= MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH) {
         return { 'Authorization': 'Bearer ' + token }; // returning an object
     } else {
         return {}; // returning an empty object if no user or token

@@ -1,229 +1,277 @@
-
 import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { FaLeftLong, FaRightFromBracket } from 'react-icons/fa6';
-import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import TableData from '../../components/Atoms/TableData/TableData';
-import Dropdown from '../../components/Atoms/Dropdown/Dropdown';
-import DashboardCard from '../../components/Atoms/Cards/DashboardCard';
+import {
+  MdAdd,
+  MdCalendarToday,
+  MdCurrencyRupee,
+  MdInventory2,
+  MdMoreVert,
+  MdOutlineFileDownload,
+  MdPayments,
+  MdPendingActions,
+  MdShoppingCart,
+  MdStorefront,
+} from 'react-icons/md';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { getDashboardOverview } from '../../Redux/adminCoreSlice';
 
-const salesData = [
-  { name: 'Dec-2024', value: 0 },
-  { name: 'Jan-2025', value: 0 },
-  { name: 'Feb-2025', value: 0 },
-  { name: 'Mar-2025', value: 0 },
-  { name: 'Apr-2025', value: 0 },
-  { name: 'May-2025', value: 0 },
+const EMPTY_PERFORMANCE = [
+  { label: 'Mon', value: 0 },
+  { label: 'Tue', value: 0 },
+  { label: 'Wed', value: 0 },
+  { label: 'Thu', value: 0 },
+  { label: 'Fri', value: 0 },
+  { label: 'Sat', value: 0 },
+  { label: 'Sun', value: 0 },
 ];
 
-const ordersData = [
-  {
-    id: 'O2519787759',
-    customer: 'Michael Williams (michael)',
-    email: 'login@dummyid.com',
-    date: '16/05/2025',
-    time: '12:00',
-    total: '$79,081.80',
-    status: 'Pending'
-  },
-  {
-    id: 'O6892955277',
-    customer: 'Michael Williams (michael)',
-    email: 'login@dummyid.com',
-    date: '16/05/2025',
-    time: '11:58',
-    total: '$78,831.80',
-    status: 'Paid'
+const integerFormatter = new Intl.NumberFormat('en-IN');
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+const asNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const formatNumber = (value) => integerFormatter.format(asNumber(value));
+const formatCurrency = (value) => currencyFormatter.format(asNumber(value));
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+};
+
+const statusStyle = (status = '') => {
+  const nextStatus = String(status).toLowerCase();
+  if (['delivered', 'paid', 'shipped', 'captured', 'completed'].includes(nextStatus)) {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   }
-];
+  if (['cancelled', 'failed', 'rejected', 'returned'].includes(nextStatus)) {
+    return 'border-red-200 bg-red-50 text-red-600';
+  }
+  return 'border-amber-200 bg-amber-50 text-amber-600';
+};
 
-const trafficData = [
-  { name: 'Organic Search', value: 44, color: '#3366CC' },
-  { name: 'Direct', value: 29.6, color: '#DC3912' },
-  { name: 'Referral', value: 17.2, color: '#FF9900' },
-  { name: 'Social', value: 5.4, color: '#109618' },
-  { name: 'Other', value: 3.8, color: '#990099' },
-];
-
-const salesOption = [{ value: 'sales', label: "Sales" }]
-
-
-
-const StatsSection = () => {
+function MetricCard({ icon: Icon, label, value, helper, warning = false }) {
   return (
-    <div className="bg-white rounded-md shadow-sm mb-6">
-      <div className="flex justify-between items-center p-4 bg-white border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-800">Statistics</h2>
-        <Dropdown options={salesOption} triggerLabel={`Sales`} />
+    <div className="rounded-xl border border-[#eee9e4] bg-white px-5 py-4 shadow-[0_1px_4px_rgba(35,29,23,0.06)]">
+      <div className="mb-4 flex items-start justify-between">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-full ${warning ? 'bg-red-600' : 'bg-[#efa817]'} text-white`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <MdMoreVert className="h-4 w-4 text-gray-400" />
       </div>
-      <div className=" h-80 text-gray-300 text-xs">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={salesData}
-            margin={{ top: 5, right: 40, left: 0, bottom: 10 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <p className="text-[11px] font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-[22px] font-bold leading-none text-[#082f91]">{value}</p>
+      <p className="mt-2 text-[10px] text-slate-400">{helper}</p>
     </div>
   );
-};
-const tableHeadings = [
-  "Order ID",
-  "Customer",
-  "Date",
-  "Order Total",
-  "Payment Status",
-]
+}
 
-const tableRows = ordersData?.map((ele, index) => {
-  return [
-    ele?.id,
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-gray-300"></div>
-      <div>
-        <p className="text-sm font-semibold">{ele.customer}</p>
-        <p className="text-xs text-gray-500">{ele.email}</p>
-      </div>
-    </div>,
-    <span>
-      31/01/2025 <br></br>
-      15:17
-    </span>,
-    <span>{ele?.total}</span>,
-    <span className='p-1 text-teal-800 bg-[#def8f4]'>
-      Approved
-    </span>,
+function EmptyTableRow({ colSpan, children }) {
+  return (
+    <tr>
+      <td className="px-4 py-10 text-center text-xs text-slate-400" colSpan={colSpan}>
+        {children}
+      </td>
+    </tr>
+  );
+}
 
-  ];
-});
 export default function Dashboard() {
   const dispatch = useDispatch();
-  const overview = useSelector(
-    (state) => state.adminCore?.dashboardOverviewData?.normalized?.data
-  );
+  const dashboardState = useSelector((state) => state.adminCore?.dashboardOverviewData);
+  const isLoading = useSelector((state) => state.adminCore?.loading);
+  const overview = dashboardState?.normalized?.data || dashboardState?.data?.data || {};
 
   useEffect(() => {
     dispatch(getDashboardOverview());
   }, [dispatch]);
 
-  const dashboardStats = useMemo(() => {
-    const totals = overview?.totals || overview || {};
-    const getCurrencyValue = (val) => {
-      if (typeof val === 'number') return `$${val.toFixed(2)}`;
-      if (typeof val === 'string') return val;
-      return "$0.00";
-    };
-    const getNumberValue = (val) => {
-      if (typeof val === 'number') return val;
-      return 0;
-    };
-    return {
-      sales: getCurrencyValue(totals.totalSales ?? totals.sales),
-      earnings: getCurrencyValue(totals.salesEarnings ?? totals.earnings),
-      users: getNumberValue(totals.newUsers ?? totals.users ?? totals.totalUsers),
-      shops: getNumberValue(totals.newShops ?? totals.shops ?? totals.vendors ?? totals.totalSellers),
-    };
+  const isSellerOverview = Boolean(overview?.metrics);
+
+  const metrics = useMemo(() => {
+    const sellerMetrics = overview?.metrics || {};
+    const commerce = overview?.commerce || {};
+    const payments = overview?.payments || {};
+    const catalog = overview?.catalog || {};
+
+    if (isSellerOverview) {
+      return [
+        { icon: MdShoppingCart, label: 'Total Orders', value: formatNumber(sellerMetrics.totalOrders), helper: 'Current selected period' },
+        { icon: MdCurrencyRupee, label: 'Total Revenue (GMV)', value: formatCurrency(sellerMetrics.gmv), helper: 'Gross order value' },
+        { icon: MdPayments, label: 'Delivered Revenue', value: formatCurrency(sellerMetrics.deliveredRevenue), helper: 'Delivered orders only' },
+        { icon: MdInventory2, label: 'Units Sold', value: formatNumber(sellerMetrics.unitsSold), helper: 'Products ordered' },
+        { icon: MdPendingActions, label: 'Cancelled Orders', value: formatNumber(sellerMetrics.cancelledOrders), helper: 'Current selected period', warning: true },
+        { icon: MdStorefront, label: 'Returned Orders', value: formatNumber(sellerMetrics.returnedOrders), helper: 'Current selected period' },
+      ];
+    }
+
+    return [
+      { icon: MdShoppingCart, label: 'Total Orders', value: formatNumber(commerce.totalOrders), helper: 'All platform orders' },
+      { icon: MdCurrencyRupee, label: 'Total Revenue (GMV)', value: formatCurrency(commerce.gmv), helper: 'Gross order value' },
+      { icon: MdPayments, label: 'Payments Captured', value: formatNumber(payments.totalPayments), helper: 'Successful payments' },
+      { icon: MdInventory2, label: 'Products Listed', value: formatNumber(catalog.totalProducts), helper: 'Catalog products' },
+      { icon: MdStorefront, label: 'Platform Fees', value: formatCurrency(commerce.totalPlatformFees), helper: 'Revenue earned' },
+      { icon: MdPendingActions, label: 'Pending Products', value: formatNumber(catalog.pendingProducts), helper: 'Awaiting review', warning: true },
+    ];
+  }, [isSellerOverview, overview]);
+
+  const performanceData = useMemo(() => {
+    const source = overview?.orderPerformance || overview?.ordersPerformance || overview?.salesTrend;
+    if (!Array.isArray(source) || source.length === 0) return EMPTY_PERFORMANCE;
+
+    return source.map((item, index) => ({
+      label: item.label || item.name || item.date || `Day ${index + 1}`,
+      value: asNumber(item.value ?? item.orders ?? item.totalOrders ?? item.total),
+    }));
   }, [overview]);
 
-  const recentOrders = useMemo(() => {
-    const orders = overview?.recentOrders || overview?.orders || ordersData;
-    return orders.map((order) => [
-      order.orderNumber || order.id || order._id,
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gray-300"></div>
-        <div>
-          <p className="text-sm font-semibold">{order.customerName || order.customer || order.user?.userName || "Customer"}</p>
-          <p className="text-xs text-gray-500">{order.email || order.user?.email || "-"}</p>
-        </div>
-      </div>,
-      <span>{order.createdAt ? new Date(order.createdAt).toLocaleString() : order.date || "-"}</span>,
-      <span>{typeof order.totalAmount === 'object' ? 'Invalid Data' : order.totalAmount ?? order.total ?? "-"}</span>,
-      <span className='p-1 text-teal-800 bg-[#def8f4]'>{order.paymentStatus || order.status || "Pending"}</span>,
-    ]);
-  }, [overview]);
+  const hasPerformanceSeries = performanceData.some((item) => item.value > 0);
+  const topProducts = Array.isArray(overview?.topProducts) ? overview.topProducts : [];
+  const recentOrders = Array.isArray(overview?.recentOrders) ? overview.recentOrders : [];
 
   return (
-    <div className="min-h-screen max-w-7xl mx-auto mt-6 p-2 w-full">
-      <div className=" mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <StatsSection />
-            <div className="bg-white rounded-md shadow-sm mb-6 p-2">
-              <div className="overflow-x-auto">
-                <TableData
-                  Heading="Recent Orders"
-                  tableHeadings={tableHeadings}
-                  data={recentOrders}
-                  showSearch={false}
-                  showAddButton={true}
-                  addButtonLabel="View All"
-                />
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen w-full bg-[#fffdfa] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="bg-white rounded-md shadow-sm mb-6">
-              <div className="flex justify-between items-center p-4 bg-white border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">{`Total Sales`}</h2>
-                <Dropdown options={salesOption} triggerLabel={`Sales`} />
-              </div>
-              <div className="p-4">
-                <DashboardCard color={`bg-red-500`} label="Order Sales" value={dashboardStats.sales} />
-                <DashboardCard color="blue" label="Sales Earnings" value={dashboardStats.earnings} />
-                <DashboardCard color="red" label="New Users" value={dashboardStats.users} />
-                <DashboardCard color="red" label="New Shops" value={dashboardStats.shops} />
-              </div>
+            <span className="mb-2 inline-flex items-center rounded-sm bg-[#fff1d2] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#df9500]">
+              Global Dashboard
+            </span>
+            <h1 className="text-xl font-bold text-[#082f91]">Merchant Insights</h1>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-600">
+              <MdOutlineFileDownload className="h-4 w-4" />
+              Export Report
+            </button>
+            <button type="button" className="flex items-center gap-1 rounded-md bg-[#082f91] px-4 py-2 text-[11px] font-semibold text-white">
+              <MdAdd className="h-4 w-4" />
+              New Listing
+            </button>
+          </div>
+        </div>
+
+        {isLoading && !dashboardState?.normalized?.data && (
+          <p className="mb-4 text-xs text-slate-400">Loading dashboard data...</p>
+        )}
+
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {metrics.map((metric) => (
+            <MetricCard key={metric.label} {...metric} />
+          ))}
+        </div>
+
+        <section className="mb-6 rounded-xl border border-[#ebeaf1] bg-[#f7f9ff] p-5 shadow-[0_1px_4px_rgba(18,37,80,0.05)]">
+          <div className="mb-5 flex flex-wrap justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-bold text-[#082f91]">Orders Performance</h2>
+              <p className="mt-1 text-[11px] text-slate-500">Daily transactional volume for current period</p>
             </div>
-            <div className="bg-white rounded-md shadow-sm mb-6">
-              <div className="flex justify-between items-center p-4 bg-white border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">{`Traffic`}</h2>
-                <Dropdown options={salesOption} triggerLabel={`Sales`} />
-              </div>
-              <div className="p-4 flex justify-center">
-                <div className="w-80 h-72 text-xs">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={trafficData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
-                        labelLine={false}
-                      >
-                        {trafficData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="p-4 flex justify-between items-center">
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-gray-500">1/5</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="p-1 rounded-md bg-gray-100 hover:bg-gray-200">
-                    <FaLeftLong size={16} />
-                  </button>
-                  <button className="p-1 rounded-md bg-gray-100 hover:bg-gray-200">
-                    <FaRightFromBracket size={16} />
-                  </button>
-                </div>
-              </div>
+            <div className="flex items-center rounded-md bg-[#e9eefc] p-1 text-[10px] font-semibold text-slate-500">
+              <span className="rounded bg-[#082f91] px-4 py-2 text-white">Day</span>
+              <span className="px-4 py-2">Week</span>
+              <span className="px-4 py-2">Month</span>
+              <MdCalendarToday className="mx-3 h-3.5 w-3.5" />
             </div>
           </div>
+          <div className="h-[270px] w-full text-xs">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={performanceData} margin={{ top: 10, right: 12, left: -16, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="ordersPerformanceFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#1f55d1" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#1f55d1" stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke="#e3e8f4" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                <Tooltip formatter={(value) => [formatNumber(value), 'Orders']} />
+                <Area type="monotone" dataKey="value" stroke="#2156d5" strokeWidth={2} fill="url(#ordersPerformanceFill)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          {!hasPerformanceSeries && (
+            <p className="-mt-4 text-center text-[11px] text-slate-400">Performance trend data is not available yet.</p>
+          )}
+        </section>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <section className="overflow-hidden rounded-xl border border-[#eee9e4] bg-white shadow-[0_1px_4px_rgba(35,29,23,0.06)]">
+            <h2 className="px-5 py-4 text-sm font-bold text-[#082f91]">Top Products</h2>
+            <table className="w-full text-left">
+              <thead className="bg-[#082f91] text-[10px] text-white">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Product</th>
+                  <th className="px-4 py-3 font-semibold">Units Sold</th>
+                  <th className="px-4 py-3 font-semibold">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="text-[11px] text-slate-600">
+                {topProducts.length === 0 && <EmptyTableRow colSpan={3}>No product sales data available.</EmptyTableRow>}
+                {topProducts.map((product, index) => (
+                  <tr key={product.product_id || product.productId || index} className="border-b border-slate-50 last:border-0">
+                    <td className="px-5 py-3 font-medium text-slate-700">
+                      {product.name || product.title || `Product #${product.product_id || product.productId || index + 1}`}
+                    </td>
+                    <td className="px-4 py-3">{formatNumber(product.units_sold ?? product.unitsSold)}</td>
+                    <td className="px-4 py-3">{formatCurrency(product.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-[#eee9e4] bg-white shadow-[0_1px_4px_rgba(35,29,23,0.06)]">
+            <h2 className="px-5 py-4 text-sm font-bold text-[#082f91]">Recent Orders</h2>
+            <table className="w-full text-left">
+              <thead className="bg-[#082f91] text-[10px] text-white">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Order ID</th>
+                  <th className="px-4 py-3 font-semibold">Customer</th>
+                  <th className="px-4 py-3 font-semibold">Date</th>
+                  <th className="px-4 py-3 font-semibold">Amount</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="text-[11px] text-slate-600">
+                {recentOrders.length === 0 && <EmptyTableRow colSpan={5}>No recent orders available.</EmptyTableRow>}
+                {recentOrders.map((order, index) => {
+                  const status = order.status || order.paymentStatus || 'Pending';
+                  return (
+                    <tr key={order.id || order._id || index} className="border-b border-slate-50 last:border-0">
+                      <td className="px-4 py-3 font-medium">#{String(order.id || order._id || index + 1).slice(0, 10)}</td>
+                      <td className="px-4 py-3">{order.customerName || order.customer || order.buyer_id || order.buyerId || '-'}</td>
+                      <td className="px-4 py-3">{formatDate(order.created_at || order.createdAt || order.date)}</td>
+                      <td className="px-4 py-3">{formatCurrency(order.seller_order_total ?? order.payable_amount ?? order.totalAmount ?? order.total)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize ${statusStyle(status)}`}>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
         </div>
       </div>
     </div>

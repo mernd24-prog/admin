@@ -168,7 +168,10 @@ export const ENDPOINTS = {
   rbac: {
     permissionManagementModules: "/rbac/permission-management/modules",
     modules: "/rbac/modules",
+    sidebarModules: "/rbac/modules/sidebar",
     module: (moduleId) => `/rbac/modules/${moduleId}`,
+    moduleStatus: (moduleId) => `/rbac/modules/${moduleId}/status`,
+    reorderModules: "/rbac/modules/reorder",
     permissions: "/rbac/permissions",
     permission: (permissionId) => `/rbac/permissions/${permissionId}`,
     roles: "/rbac/roles",

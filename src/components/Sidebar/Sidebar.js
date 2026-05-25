@@ -4,199 +4,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   MdChevronRight, MdOutlineDashboard, MdInventory, MdWarehouse,
   MdShoppingCart, MdPeople, MdCampaign, MdAccountBalance,
-  MdBarChart, MdSettings, MdStorefront, MdSecurity, MdLocationOn,
+  MdBarChart, MdLocationOn,
 } from 'react-icons/md';
 import { CiSettings } from 'react-icons/ci';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
-import { getStoredRole, getStoredUser, hasModuleAccess } from '../../_helpers/authStorage';
+import { getRbacSidebarModules } from '../../Redux/adminCoreSlice';
+import { getAccessToken, getStoredRole, getStoredUser, hasModuleAccess, normalizeRole } from '../../_helpers/authStorage';
 import { IoIosMenu } from 'react-icons/io';
 import { RxCross2 } from 'react-icons/rx';
 import { isSellerPanel } from '../../_helpers/panelConfig';
-import { getModuleRoute } from '../../_helpers/rbacRoutes';
-import { CONTENT_SIDEBAR_ROUTES } from '../../pages/CMS/ContentManagement/contentTypes';
-
-// ─── Route allowlist ──────────────────────────────────────────────────────────
-export const SUPPORTED_ADMIN_ROUTES = new Set([
-  // Core
-  'home',
-  // Catalog Management
-  'product-catalog', 'add-product', 'draft-products', 'pending-products', 'rejected-products',
-  'categories', 'category-attributes',
-  'brands',
-  'product-options', 'product-option-value', 'product-option-values',
-  'product-families',
-  'product-reviews',
-  'seo-media',
-  // Inventory Management
-  'inventory-overview', 'variant-inventory', 'inventory-adjustment', 'warehouse', 'low-stock-alerts',
-  // Orders Management
-  'orders', 'order-return-reasons', 'refunds', 'transactions', 'shipment-tracking',
-  'order-status', 'gift-card-orders', 'subscription-orders',
-  'order-cancellation-reasons', 'view-orders', 'view-subscription-orders',
-  // Users & Access
-  'users', 'seller', 'admin-users', 'seller-staff', 'roles-permissions', 'activity-logs',
-  'user-permissions',
-  // Marketing
-  'discount-coupons', 'campaigns', 'promotions-banners', 'messages',
-  'special-price', 'volume-discounts', 'similar-products', 'frequently-bought-together',
-  'PPC-promotions-management', 'reward-on-purchase',
-  'product-event-weightages', 'recommended-product-tag-weightages',
-  'referral-commerce', 'badges', 'ribbons',
-  // Tax & Compliance
-  'hsn-code', 'tax', 'subTax', 'tax-rule', 'shipping-packages',
-  'shipping-profile', 'pickup-addresses', 'shipping-company-users', 'shipping-duration',
-  'warranty', 'tax-structure', 'tax-category', 'tax-category-rules',
-  // Reports
-  'reports-sales', 'reports-products', 'reports-inventory', 'reports-sellers',
-  // Settings
-  'settings', 'setting', 'payment-settings', 'seo-settings',
-  // Self-service
-  'profile', 'changePassword',
-  // Misc (keep backward-compat)
-  'batch', 'finish', 'product-variants', 'product-dimensions', 'product-tags',
-  'threshold-products', 'hsn-code', 'bar-code', 'qty-head', 'colors',
-  'country', 'state', 'city', 'zipcode', 'zip-codes', 'locations',
-]);
-
-// ─── Tab groupings (module slug → sidebar section label) ─────────────────────
-const getTabName = (slug) => {
-  const map = {
-    // Dashboard
-    admin:    'Dashboard',
-    // Catalog Management
-    products: 'Catalog Management',
-    platform: 'Catalog Management',
-    warranty: 'Tax & Compliance',
-    // Inventory
-    inventory: 'Inventory Management',
-    // Orders
-    orders:    'Orders Management',
-    returns:   'Orders Management',
-    carts:     'Orders Management',
-    payments:  'Orders Management',
-    wallets:   'Orders Management',
-    subscriptions: 'Orders Management',
-    // Users & Access
-    users:     'Users & Access',
-    sellers:   'Users & Access',
-    rbac:      'Users & Access',
-    // Marketing
-    pricing:         'Marketing',
-    'dynamic-pricing':'Marketing',
-    referral:        'Marketing',
-    loyalty:         'Marketing',
-    recommendations: 'Marketing',
-    notifications:   'Marketing',
-    // Tax & Compliance
-    tax:      'Tax & Compliance',
-    delivery: 'Tax & Compliance',
-    // Reports & Analytics
-    analytics: 'Reports & Analytics',
-    // Settings
-    fraud: 'Settings',
-    cms:   'Settings',
-    // Location Management
-    locations: 'Location Management',
-  };
-  return map[slug] || 'Settings';
-};
-
-// ─── Sub-route expansions per module ─────────────────────────────────────────
-const MODULE_ROUTE_EXPANSIONS = {
-  // Catalog — products module
-  products: [
-    { label: 'All Products',      route: 'product-catalog'    },
-    { label: 'Add Product',       route: 'add-product'        },
-    { label: 'Draft Products',    route: 'draft-products'     },
-    { label: 'Pending Approval',  route: 'pending-products'   },
-    { label: 'Rejected Products', route: 'rejected-products'  },
-  ],
-  // Catalog — platform module (categories, brands, options)
-  platform: [
-    { label: 'Category Tree',       route: 'categories'           },
-    { label: 'Category Attributes', route: 'category-attributes'  },
-    { label: 'Brands',              route: 'brands'               },
-    { label: 'Option Masters',      route: 'product-options'      },
-    { label: 'Option Values',       route: 'product-option-values'},
-    { label: 'Product Families',    route: 'product-families'     },
-    { label: 'Product Reviews',     route: 'product-reviews'      },
-  ],
-  // Inventory
-  inventory: [
-    { label: 'Stock Overview',       route: 'inventory-overview'   },
-    { label: 'Variant Inventory',    route: 'variant-inventory'    },
-    { label: 'Inventory Adjustment', route: 'inventory-adjustment' },
-    { label: 'Warehouse Management', route: 'warehouse'            },
-    { label: 'Low Stock Alerts',     route: 'low-stock-alerts'     },
-  ],
-  // Orders
-  orders: [
-    { label: 'Orders',            route: 'orders'               },
-    { label: 'Returns',           route: 'order-return-reasons' },
-    { label: 'Refunds',           route: 'refunds'              },
-    { label: 'Transactions',      route: 'transactions'         },
-    { label: 'Shipment Tracking', route: 'shipment-tracking'    },
-  ],
-  // Users
-  users: [
-    { label: 'Customers', route: 'users' },
-  ],
-  sellers: [
-    { label: 'Sellers',      route: 'seller'      },
-    { label: 'Seller Staff', route: 'seller-staff'},
-  ],
-  rbac: [
-    { label: 'Admin Users',        route: 'admin-users'       },
-    { label: 'Roles & Permissions',route: 'roles-permissions' },
-    { label: 'Activity Logs',      route: 'activity-logs'     },
-  ],
-  // Marketing
-  pricing: [
-    { label: 'Coupons',          route: 'discount-coupons'    },
-    { label: 'Special Price',    route: 'special-price'       },
-    { label: 'Volume Discounts', route: 'volume-discounts'    },
-    { label: 'Campaigns',        route: 'campaigns'           },
-  ],
-  referral: [
-    { label: 'Referral Commerce', route: 'referral-commerce' },
-  ],
-  notifications: [
-    { label: 'Notifications', route: 'messages' },
-  ],
-  cms: [
-    { label: 'Banners',        route: 'promotions-banners' },
-    { label: 'Content Pages',  route: 'content-management' },
-  ],
-  // Tax & Compliance
-  tax: [
-    { label: 'HSN Codes',  route: 'hsn-code'  },
-    { label: 'Taxes',      route: 'tax'       },
-    { label: 'Tax Rules',  route: 'tax-rule'  },
-  ],
-  delivery: [
-    { label: 'Shipping Rules',   route: 'shipping-packages'  },
-    { label: 'Pickup Addresses', route: 'pickup-addresses'   },
-  ],
-  warranty: [
-    { label: 'Warranty Templates', route: 'warranty' },
-  ],
-  // Analytics
-  analytics: [
-    { label: 'Sales Reports',       route: 'reports-sales'     },
-    { label: 'Product Analytics',   route: 'reports-products'  },
-    { label: 'Inventory Analytics', route: 'reports-inventory' },
-    { label: 'Seller Analytics',    route: 'reports-sellers'   },
-  ],
-  // Content (legacy alias)
-  content: CONTENT_SIDEBAR_ROUTES,
-  // Location Management
-  locations: [
-    { label: 'Countries',         route: 'country'    },
-    { label: 'States',            route: 'state'      },
-    { label: 'Cities',            route: 'city'       },
-    { label: 'Zip / Pin Codes',   route: 'zip-codes'  },
-  ],
-};
 
 // ─── Seller panel sections ────────────────────────────────────────────────────
 const SELLER_SIDEBAR_SECTIONS = [
@@ -228,57 +44,60 @@ const SECTION_ICONS = {
 const getIconForTab = (tabName) =>
   SECTION_ICONS[String(tabName || '').toLowerCase()] || MdOutlineDashboard;
 
-const isSupportedRoute = (route) => {
-  const r = String(route || "").trim();
-  return (
-    SUPPORTED_ADMIN_ROUTES.has(r) ||
-    r === "content-management" ||
-    r.startsWith("content-management/")
-  );
-};
+const toRouteCode = (routePath = "") =>
+  String(routePath || "")
+    .replace(/^\/app\/?/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
 
-export const buildAdminSidebarData = (permissions = []) => {
-  const grouped = (Array.isArray(permissions) ? permissions : []).reduce((acc, curr) => {
-    const hasAny = (curr.permissions || []).some((p) => p.assigned) || curr.assigned;
-    if (!hasAny) return acc;
+const flattenSidebarChildren = (items = [], prefix = "") =>
+  items.flatMap((item) => {
+    const label = prefix ? `${prefix} / ${item.moduleName || item.name}` : (item.moduleName || item.name);
+    const route = toRouteCode(item.routePath);
+    const children = flattenSidebarChildren(item.children || [], label);
+    const self = route
+      ? [{
+          name: label,
+          label,
+          module_code: route,
+          module: item.metadata?.requiredModule || item.moduleKey || item.slug,
+        }]
+      : [];
+    return [...self, ...children];
+  });
 
-    const tabName = curr.tab || curr.metadata?.tab || getTabName(curr.slug);
-    if (!acc[tabName]) acc[tabName] = [];
+const filterSidebarTreeByAccess = (items = [], options = {}) =>
+  items
+    .map((item) => {
+      const requiredModule = item.metadata?.requiredModule || item.requiredModule || item.moduleKey || item.slug;
+      const children = filterSidebarTreeByAccess(item.children || [], options);
+      const allowedModules = options.allowedModules || new Set();
+      const selfAllowed =
+        options.superAdmin ||
+        allowedModules.has(requiredModule) ||
+        allowedModules.has(item.moduleKey) ||
+        allowedModules.has(item.slug) ||
+        !requiredModule ||
+        hasModuleAccess(requiredModule) ||
+        hasModuleAccess(item.moduleKey) ||
+        hasModuleAccess(item.slug);
+      if (!selfAllowed && !children.length) return null;
+      return { ...item, children };
+    })
+    .filter(Boolean);
 
-    const expanded = MODULE_ROUTE_EXPANSIONS[curr.slug];
-    if (Array.isArray(expanded) && expanded.length) {
-      expanded.forEach((item) => {
-        if (!isSupportedRoute(item.route)) return;
-        acc[tabName].push({
-          name: item.label,
-          label: item.label,
-          module_code: item.route,
-          module: curr.slug,
-        });
-      });
-    } else {
-      const moduleCode = getModuleRoute(curr.slug);
-      if (!isSupportedRoute(moduleCode)) return acc;
-      acc[tabName].push({
-        name: curr.name,
-        label: curr.name,
-        module_code: moduleCode,
-        module: curr.slug,
-      });
-    }
-    return acc;
-  }, {});
-
-  return Object.entries(grouped).map(([tab, mods]) => {
-    const unique = Array.from(new Map(mods.map((m) => [m.module_code, m])).values());
+const buildDynamicSidebarData = (modules = [], options = {}) =>
+  filterSidebarTreeByAccess(modules, options).map((item) => {
+    const subItems = flattenSidebarChildren(item.children || []);
+    const route = toRouteCode(item.routePath);
+    const isSingleItem = Boolean(route) && subItems.length === 0;
     return {
-      label: tab,
-      icon: getIconForTab(tab),
-      subItems: unique,
-      isSingleItem: tab.toLowerCase() === 'dashboard' && unique.length === 1,
+      label: item.moduleName || item.name,
+      icon: getIconForTab(item.moduleName || item.name),
+      subItems: isSingleItem ? [{ name: item.moduleName || item.name, label: item.moduleName || item.name, module_code: route }] : subItems,
+      isSingleItem,
     };
-  }).filter((t) => t.subItems.length > 0);
-};
+  }).filter((item) => item.subItems.length > 0);
 
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
@@ -308,8 +127,19 @@ const Sidebar = ({
   navbarOpen, setNavbarOpen, setModuleName, setIsExpanded, isExpanded, isRefreshConfig, setHasPermanentOpen,
 }) => {
   const dispatch = useDispatch();
-  const selector  = useSelector((state) => state.user);
-  const permissions = selector?.getMyModulePermissionData?.data?.data?.modules;
+  const userSelector = useSelector((state) => state.user);
+  const adminCoreSelector = useSelector((state) => state.adminCore);
+  const dynamicSidebarModules = useMemo(() => {
+    const sd = adminCoreSelector?.rbacSidebarModulesData;
+    // After asLegacyData: data.normalized.data is the original server array
+    if (Array.isArray(sd?.data?.normalized?.data)) return sd.data.normalized.data;
+    // Legacy list format
+    if (Array.isArray(sd?.data?.data?.list)) return sd.data.data.list;
+    // Direct array (some response shapes)
+    if (Array.isArray(sd?.data?.data)) return sd.data.data;
+    if (Array.isArray(sd?.normalized?.normalized?.data)) return sd.normalized.normalized.data;
+    return [];
+  }, [adminCoreSelector?.rbacSidebarModulesData]);
   const sellerPanel = isSellerPanel();
 
   const [activeTab, setActiveTab]   = useState(null);
@@ -321,6 +151,28 @@ const Sidebar = ({
 
   const location = useLocation();
   const sidebarRef = useRef(null);
+  const currentRole = normalizeRole(userData?.role || getStoredRole());
+  const isSuperAdmin = currentRole === 'super-admin';
+  const permissionModules = userSelector?.getMyModulePermissionData?.data?.data?.modules;
+  const assignedSidebarModules = useMemo(() => {
+    const modules = Array.isArray(permissionModules) ? permissionModules : [];
+    return new Set(
+      modules
+        .filter((module) =>
+          module.assigned !== false ||
+          (module.permissions || []).some((permission) => permission.assigned),
+        )
+        .flatMap((module) => [
+          module.slug,
+          module.moduleKey,
+          module.moduleSlug,
+          module.metadata?.routeKey,
+          module.metadata?.requiredModule,
+        ])
+        .filter(Boolean)
+        .map(String),
+    );
+  }, [permissionModules]);
 
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
@@ -339,10 +191,13 @@ const Sidebar = ({
       }));
     }
 
-    if (!permissions) return [];
-
-    return buildAdminSidebarData(permissions);
-  }, [permissions, sellerPanel]);
+    return Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length
+      ? buildDynamicSidebarData(dynamicSidebarModules, {
+          superAdmin: isSuperAdmin,
+          allowedModules: assignedSidebarModules,
+        })
+      : [];
+  }, [sellerPanel, dynamicSidebarModules, isSuperAdmin, assignedSidebarModules]);
 
   // ── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -354,10 +209,13 @@ const Sidebar = ({
   }, []);
 
   useEffect(() => {
-    if (!sellerPanel && (userData?.userId || userData?.role)) {
-      dispatch(
-        getMyModulePermission({ _id: userData.userId, role: userData.role }),
-      );
+    if (!sellerPanel && getAccessToken()) {
+      if (userData?.userId || userData?.role) {
+        dispatch(
+          getMyModulePermission({ _id: userData.userId, role: userData.role }),
+        );
+      }
+      dispatch(getRbacSidebarModules());
     }
   }, [userData, dispatch, isRefreshConfig, sellerPanel]);
 
@@ -455,11 +313,15 @@ const Sidebar = ({
             {sidebarData.map((item, index) => {
               const Icon = item.icon;
               const isTabActive = activeTab === item.label;
-              const hasActiveChild = item.subItems.some((s) => location.pathname === `/app/${s.module_code}`);
+              const hasActiveChild = item.subItems.some((s) => {
+                const path = `/app/${s.module_code}`;
+                return location.pathname === path || location.pathname.startsWith(`${path}/`);
+              });
 
               if (item.isSingleItem) {
                 const sub = item.subItems[0];
-                const isActive = location.pathname === `/app/${sub.module_code}`;
+                const path = `/app/${sub.module_code}`;
+                const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
                 return (
                   <li
                     key={index}
@@ -510,7 +372,8 @@ const Sidebar = ({
                     {isExpanded && (
                       <ul className="mt-1 ml-6 space-y-1">
                         {item.subItems.map((sub, si) => {
-                          const isSubActive = location.pathname === `/app/${sub.module_code}`;
+                          const path = `/app/${sub.module_code}`;
+                          const isSubActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
                           const isVisible = (visibleSubItems[item.label] || 0) > si;
                           return (
                             <li

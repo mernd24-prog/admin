@@ -36,7 +36,10 @@ import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
-const getApiErrorMessage = (error, fallback = "Something went wrong. Please try again.") =>
+const getApiErrorMessage = (
+  error,
+  fallback = "Something went wrong. Please try again.",
+) =>
   error?.payload ||
   error?.error?.message ||
   error?.message ||
@@ -150,8 +153,7 @@ const Login = () => {
           formFields.password,
         )
       ) {
-        errors.password =
-          "Use 8+ characters with uppercase, number & special character.";
+        errors.password = "Please enter a valid password.";
         isValid = false;
       }
     } else if (formState === "forgotPassword") {
@@ -254,7 +256,10 @@ const Login = () => {
 
   const setInlineError = useCallback((targetFormState, message) => {
     const safeMessage = message || "Something went wrong. Please try again.";
-    if (targetFormState === "verificationCode" || targetFormState === "registerVerification") {
+    if (
+      targetFormState === "verificationCode" ||
+      targetFormState === "registerVerification"
+    ) {
       setFormErrors((prev) => ({ ...prev, verificationCode: safeMessage }));
       return;
     }
@@ -264,7 +269,10 @@ const Login = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!sellerPanel) {
-      setInlineError("register", "Admin accounts are created by a super admin. Please use admin login.");
+      setInlineError(
+        "register",
+        "Admin accounts are created by a super admin. Please use admin login.",
+      );
       return;
     }
 
@@ -307,11 +315,20 @@ const Login = () => {
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
         setFormState("registerVerification");
       } else {
-        setInlineError("register", getApiErrorMessage(response, "Registration failed. Please check the form and try again."));
+        setInlineError(
+          "register",
+          getApiErrorMessage(
+            response,
+            "Registration failed. Please check the form and try again.",
+          ),
+        );
       }
     } catch (error) {
       console.log(error);
-      setInlineError("register", getApiErrorMessage(error, "Registration failed. Please try again."));
+      setInlineError(
+        "register",
+        getApiErrorMessage(error, "Registration failed. Please try again."),
+      );
     }
   };
   const handleRegisterOtpSubmit = async (e) => {
@@ -356,7 +373,10 @@ const Login = () => {
         setFormErrors((prev) => ({ ...prev, verificationCode: message }));
       }
     } catch (error) {
-      setInlineError("registerVerification", getApiErrorMessage(error, "Verification failed. Please try again."));
+      setInlineError(
+        "registerVerification",
+        getApiErrorMessage(error, "Verification failed. Please try again."),
+      );
     }
   };
   const handleInputChange = useCallback((e) => {
@@ -473,7 +493,10 @@ const Login = () => {
 
   const requireTermsAgreement = useCallback(() => {
     if (rememberMe) return true;
-    setInlineError(formState, "Please agree to the terms, privacy, and cancellation policies.");
+    setInlineError(
+      formState,
+      "Please agree to the terms, privacy, and cancellation policies.",
+    );
     return false;
   }, [formState, rememberMe, setInlineError]);
 
@@ -543,7 +566,10 @@ const Login = () => {
           if (auth.requiresOnboarding && auth.onboardingToken) {
             if (!sellerPanel) {
               clearStoredAuth();
-              setInlineError("login", "Seller onboarding belongs in the seller panel.");
+              setInlineError(
+                "login",
+                "Seller onboarding belongs in the seller panel.",
+              );
               return;
             }
             dispatch(
@@ -638,7 +664,10 @@ const Login = () => {
       );
       handleApiResponse(response, "login");
     } catch (error) {
-      setInlineError("login", getApiErrorMessage(error, "Login failed. Please try again."));
+      setInlineError(
+        "login",
+        getApiErrorMessage(error, "Login failed. Please try again."),
+      );
     }
   };
 
@@ -662,7 +691,13 @@ const Login = () => {
       setIsLoading(false);
       handleApiResponse(response, "forgotPassword");
     } catch (error) {
-      setInlineError("forgotPassword", getApiErrorMessage(error, "Failed to process request. Please try again."));
+      setInlineError(
+        "forgotPassword",
+        getApiErrorMessage(
+          error,
+          "Failed to process request. Please try again.",
+        ),
+      );
       console.error("Forgot password error:", error);
       setIsLoading(false);
     } finally {
@@ -696,7 +731,10 @@ const Login = () => {
       }
       handleApiResponse(response, "verificationCode");
     } catch (error) {
-      setInlineError("verificationCode", getApiErrorMessage(error, "Verification failed. Please try again."));
+      setInlineError(
+        "verificationCode",
+        getApiErrorMessage(error, "Verification failed. Please try again."),
+      );
       console.error("Verification error:", error);
     }
   };
@@ -725,7 +763,10 @@ const Login = () => {
       );
       handleApiResponse(response, "resetPassword");
     } catch (error) {
-      setInlineError("resetPassword", getApiErrorMessage(error, "Password reset failed. Please try again."));
+      setInlineError(
+        "resetPassword",
+        getApiErrorMessage(error, "Password reset failed. Please try again."),
+      );
       console.error("Password reset error:", error);
     }
   };
@@ -760,10 +801,16 @@ const Login = () => {
           setVerificationCode(["", "", "", "", "", ""]);
           setResendCooldown(RESEND_COOLDOWN_SECONDS);
         } else {
-          setInlineError(formState, response?.payload || "Failed to resend OTP");
+          setInlineError(
+            formState,
+            response?.payload || "Failed to resend OTP",
+          );
         }
       } catch (error) {
-        setInlineError(formState, getApiErrorMessage(error, "Failed to resend code. Please try again."));
+        setInlineError(
+          formState,
+          getApiErrorMessage(error, "Failed to resend code. Please try again."),
+        );
         console.error("Resend OTP error:", error);
       }
     },
