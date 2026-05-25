@@ -1,8 +1,4 @@
 import React from "react";
-import { CheckCircle2, Hourglass } from "lucide-react";
-import { GoArrowRight, GoDotFill } from "react-icons/go";
-import FormSubmitButton from "../Atoms/FormButton/FormSubmitButton";
-import IconButton from "../Atoms/buttons/iconButton";
 
 const statusContent = {
   verificationComplete: {
@@ -43,9 +39,11 @@ const statusContent = {
     description:
       "Your KYC was rejected. Please update your details and submit again.",
     buttonLabel: "Update Details",
-    icon: "review",
+    icon: "rejected",
   },
 };
+
+const STATUS_IMAGE_SRC = "/Img/auth-img/completeVerification.png";
 
 const SellerStatusScreen = ({
   variant = "verificationComplete",
@@ -58,76 +56,42 @@ const SellerStatusScreen = ({
   const content = statusContent[variant] || statusContent.verificationComplete;
   const finalDescription = description || content.description;
   const finalButtonLabel = buttonLabel || content.buttonLabel;
-  const isReview = content.icon === "review";
 
   return (
     <div
-      className={`h-full w-full rounded-lg bg-white/40 shadow-[0_0_15px_rgba(0,0,0,0.15)] ${className}`}
+      className={`flex min-h-[560px] w-full items-center justify-center rounded-[22px] border border-[#e7e7e7] bg-white px-5 py-12 shadow-[0_10px_28px_rgba(0,0,0,0.16)] sm:min-h-[640px] sm:px-10 ${className}`}
     >
       <div
-        className={`flex flex-col items-center justify-center px-8 pb-12 pt-1 text-center ${contentClassName}`}
+        className={`flex w-full max-w-[920px] flex-col items-center justify-center text-center ${contentClassName}`}
       >
-        {content.imageSrc ? (
-          <img
-            src={content.imageSrc}
-            alt={content.imageAlt || content.title}
-            className="h-[8rem] w-[11rem] object-cover lg:w-[10rem]"
-          />
-        ) : (
-          <div className="mb-6 flex h-[110px] w-[110px] items-center justify-center rounded-full bg-[#30318d]">
-            <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full border border-[#d09a2b]">
-              {isReview ? (
-                <Hourglass size={54} strokeWidth={2.6} className="text-white" />
-              ) : (
-                <CheckCircle2
-                  size={54}
-                  strokeWidth={2.6}
-                  className="text-white"
-                />
-              )}
-            </div>
-          </div>
-        )}
+        <img
+          src={STATUS_IMAGE_SRC}
+          alt={content.imageAlt || content.title}
+          className="h-[14rem] w-full  object-contain"
+        />
 
-        <div className="mb-6 flex w-fit items-center justify-center">
-          <IconButton
-            label={content.badgeLabel}
-            icon={isReview ? <Hourglass size={14} /> : <GoDotFill />}
-            className="rounded-lg bg-golden/30"
-          />
-        </div>
-
-        <div>
-          <h1 className="font-inter text-center text-2xl font-extrabold text-blue xl:text-4xl xl:leading-[50px]">
+        <div className="w-full">
+          <h1 className="font-inter text-center text-[26px] font-extrabold leading-[38px] text-[#082f91] sm:text-[34px] sm:leading-[50px]">
             {content.title}
             <br />
-            <span className="font-semibold text-ink">
+            <span className="font-extrabold text-[#082f91]">
               {content.subtitleTitle}
             </span>
           </h1>
 
           {finalDescription && (
-            <h5 className="mx-auto mt-8 max-w-2xl text-center font-inter text-xl text-darkInk">
+            <p className="mx-auto mt-5 max-w-2xl text-center font-inter text-[15px] font-medium leading-6 text-[#596172]">
               {finalDescription}
-            </h5>
+            </p>
           )}
 
-          {content.nextStepLabel && (
-            <div className="my-6 flex w-fit items-center justify-center mx-auto">
-              <IconButton
-                label={content.nextStepLabel}
-                className="rounded-lg bg-golden/30"
-                icon={<GoArrowRight />}
-              />
-            </div>
-          )}
-
-          <FormSubmitButton
+          <button
             type="button"
             onClick={onButtonClick}
-            buttonLabel={finalButtonLabel}
-            className="mt-8"
-          />
+            className="mx-auto mt-10 flex h-[48px] w-full max-w-[680px] items-center justify-center rounded-[8px] bg-[#082f91] px-6 font-inter text-[15px] font-bold text-white shadow-[0_8px_16px_rgba(8,47,145,0.24)] transition hover:bg-[#062779]"
+          >
+            {finalButtonLabel}
+          </button>
         </div>
       </div>
     </div>

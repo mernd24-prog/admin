@@ -1,4 +1,3 @@
-import React from "react";
 import { Bell, Check } from "lucide-react";
 
 const KYCStatusLayout = ({
@@ -11,7 +10,7 @@ const KYCStatusLayout = ({
     { id: "business", label: "Business Details" },
     { id: "bank", label: "Bank Details" },
     { id: "review", label: "Review Details" },
-    { id: "status", label: "Status Status" },
+    { id: "status", label: "Status States" },
   ];
   const currentIndex = menuItems.findIndex(
     (item) => item.id === currentSection,
@@ -32,7 +31,7 @@ const KYCStatusLayout = ({
           </div>
 
           <div className="border-b border-[#e4d7c5] px-7 py-5">
-            <h2 className="text-[17px] font-bold tracking-[0.08em] text-[#082f91]">
+            <h2 className="text-[17px]  font-bold tracking-[0.08em] text-[#082f91]">
               Verification Steps
             </h2>
           </div>
@@ -87,7 +86,8 @@ const KYCStatusLayout = ({
                 Need Help?
               </p>
               <p className="mt-2 text-[11px] leading-5 text-[#43506a]">
-                Our verification team is available 24/7 to help you complete KYC.
+                Our verification team is available 24/7 to help you complete
+                KYC.
               </p>
               <button
                 type="button"
@@ -100,7 +100,7 @@ const KYCStatusLayout = ({
         </div>
       </aside>
 
-      <main className="min-w-0 bg-[#f8f6f3]">
+      <main className="min-w-0 ">
         <header className="flex h-[58px] items-center justify-between bg-[#082f91] px-4 text-white shadow-[0_8px_24px_rgba(8,47,145,0.16)] sm:px-8">
           <div className="flex items-center gap-2 text-[12px] font-medium">
             <span>Onboarding</span>
@@ -112,7 +112,9 @@ const KYCStatusLayout = ({
           <div className="flex items-center gap-4">
             <Bell size={16} className="text-white/90" />
             <div className="hidden text-right sm:block">
-              <p className="text-[12px] font-bold leading-none">Seller Account</p>
+              <p className="text-[12px] font-bold leading-none">
+                Seller Account
+              </p>
               <p className="mt-1 text-[9px] text-white/70">Vendor Applicant</p>
             </div>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#082f91]">
