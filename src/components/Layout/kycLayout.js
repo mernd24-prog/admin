@@ -13,6 +13,11 @@ const readStoredJson = (key) => {
   }
 };
 
+const formatLabel = (value = "") =>
+  String(value || "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const getSellerHeaderName = (...sources) => {
   for (const source of sources) {
     const profile = source?.sellerProfile || {};
@@ -32,6 +37,19 @@ const getSellerHeaderName = (...sources) => {
     if (name) return name;
   }
   return "Seller Account";
+};
+
+const getSellerHeaderSubtitle = (...sources) => {
+  for (const source of sources) {
+    const profile = source?.sellerProfile || {};
+    const subtitle =
+      profile.businessType ||
+      source?.role ||
+      source?.roleName ||
+      source?.onboardingStatus;
+    if (subtitle) return formatLabel(subtitle);
+  }
+  return "Vendor Applicant";
 };
 
 const getInitials = (name = "") => {
@@ -58,6 +76,13 @@ const KYCStatusLayout = ({
   const storedFlowState = readStoredJson("authFlowState");
   const flowState = seller?.flowState || storedFlowState || {};
   const headerName = getSellerHeaderName(
+    authSlice?.user,
+    seller?.onboardingUser,
+    flowState,
+    storedUser,
+    storedOnboardingUser,
+  );
+  const headerSubtitle = getSellerHeaderSubtitle(
     authSlice?.user,
     seller?.onboardingUser,
     flowState,
@@ -111,13 +136,12 @@ const KYCStatusLayout = ({
                         }`}
                     >
                       <span
-                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${
-                          index < currentIndex
-                            ? "border-[#042586] bg-white text-[#042586]"
-                            : item.id === currentSection
-                              ? "border-[#E49E1C] bg-[#E49E1C] text-white"
-                              : "border-[#042586] bg-white text-[#042586]"
-                        }`}
+                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${index < currentIndex
+                          ? "border-[#042586] bg-white text-[#042586]"
+                          : item.id === currentSection
+                            ? "border-[#E49E1C] bg-[#E49E1C] text-white"
+                            : "border-[#042586] bg-white text-[#042586]"
+                          }`}
                       >
                         {index < currentIndex ? (
                           <Check size={14} />
@@ -127,11 +151,10 @@ const KYCStatusLayout = ({
                       </span>
                       <span className="flex min-w-0 flex-col justify-center">
                         <span
-                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${
-                            item.id === currentSection
-                              ? "text-white"
-                              : "text-[#042586]"
-                          }`}
+                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${item.id === currentSection
+                            ? "text-white"
+                            : "text-[#042586]"
+                            }`}
                         >
                           Step {String(index + 1).padStart(2, "0")}
                         </span>
@@ -141,6 +164,7 @@ const KYCStatusLayout = ({
                             : "text-[#000000]"
                             }`}
                         >
+
                           {item.label}
                         </span>
                       </span>
@@ -156,8 +180,7 @@ const KYCStatusLayout = ({
                 className="mx-auto mt-5 max-w-[285px] sm:mt-6 lg:mt-8 lg:max-w-none"
               />
             </div>
-          </div>
-        </div>
+          </div></div>
       </aside>
 
       <main className="min-w-0 bg-[#f8f6f3]">
