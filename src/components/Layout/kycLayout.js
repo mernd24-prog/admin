@@ -129,18 +129,20 @@ const KYCStatusLayout = ({
                     className="relative z-10 min-w-[238px] lg:min-w-0"
                   >
                     <div
-                      className={`relative flex items-center gap-[10px] transition ${item.id === currentSection
-                        ? "h-[50px] rounded-r-[12px] rounded-l-[4px] border-l-[4px] border-[#E49E1C] bg-[#042586] px-[8px] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)]"
-                        : "h-[42px] bg-transparent pl-[11px] pr-[2px] text-[#042586]"
-                        }`}
+                      className={`relative flex items-center gap-[10px] transition ${
+                        item.id === currentSection
+                          ? "h-[50px] rounded-r-[12px] rounded-l-[4px] border-l-[4px] border-[#E49E1C] bg-[#042586] px-[8px] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)]"
+                          : "h-[42px] bg-transparent pl-[11px] pr-[2px] text-[#042586]"
+                      }`}
                     >
                       <span
-                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${index < currentIndex
-                          ? "border-[#042586] bg-white text-[#042586]"
-                          : item.id === currentSection
-                            ? "border-[#E49E1C] bg-[#E49E1C] text-white"
-                            : "border-[#042586] bg-white text-[#042586]"
-                          }`}
+                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${
+                          index < currentIndex
+                            ? "border-[#042586] bg-white text-[#042586]"
+                            : item.id === currentSection
+                              ? "border-[#E49E1C] bg-[#E49E1C] text-white"
+                              : "border-[#042586] bg-white text-[#042586]"
+                        }`}
                       >
                         {index < currentIndex ? (
                           <Check size={14} />
@@ -150,20 +152,21 @@ const KYCStatusLayout = ({
                       </span>
                       <span className="flex min-w-0 flex-col justify-center">
                         <span
-                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${item.id === currentSection
-                            ? "text-white"
-                            : "text-[#042586]"
-                            }`}
+                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${
+                            item.id === currentSection
+                              ? "text-white"
+                              : "text-[#042586]"
+                          }`}
                         >
                           Step {String(index + 1).padStart(2, "0")}
                         </span>
                         <span
-                          className={`mt-[2px] block max-w-[170px] truncate text-[11px] font-semibold leading-[12px] ${item.id === currentSection
+                          className={`mt-[2px] block max-w-[170px] truncate text-[11px] font-semibold leading-[12px] ${
+                            item.id === currentSection
                               ? "text-white"
                               : "text-[#000000]"
-                            }`}
+                          }`}
                         >
-
                           {item.label}
                         </span>
                       </span>
@@ -172,12 +175,13 @@ const KYCStatusLayout = ({
                 ))}
               </nav>
 
-              <div className="mt-8 rounded-[8px] border-[#ead9bf] bg-[#fff5df] p-4 border border-[#0425861F] bg-[#E49E1C1A]" >
+              <div className="mt-8 rounded-[8px] border-[#ead9bf] bg-[#fff5df] p-4 border border-[#0425861F] bg-[#E49E1C1A]">
                 <p className="text-[14px] font-bold uppercase leading-[15px] tracking-[1px] text-[#042586]">
                   Need Help?
                 </p>
                 <p className="mt-2 text-[12px] font-normal leading-[19.5px] text-[#042586]">
-                  Our verification team is available 24/7 to help you complete KYC.
+                  Our verification team is available 24/7 to help you complete
+                  KYC.
                 </p>
                 <button
                   type="button"
@@ -187,17 +191,16 @@ const KYCStatusLayout = ({
                 </button>
               </div>
             </div>
-          </div></div>
+          </div>
+        </div>
       </aside>
 
-      <main className="min-w-0 bg-[#f8f6f3]">
-       <header className="flex h-[75px] items-center justify-between gap-[10px] bg-[#042586] px-[48px] pt-[18px] pb-[17px] text-white">
+      <main className="min-w-0 ">
+        <header className="flex h-[75px] items-center justify-between gap-[10px] bg-[#042586] px-[48px] pt-[18px] pb-[17px] text-white">
           <div className="flex items-center gap-2 text-[16px] font-medium leading-[16px] text-white">
             <span>Onboarding</span>
             <span className="mx-[10px]">›</span>
-            <span>
-              {menuItems[currentIndex]?.label || "Status Status"}
-            </span>
+            <span>{menuItems[currentIndex]?.label || "Status Status"}</span>
           </div>
           <div className="flex items-center gap-4">
             {/* <Bell size={16} className="text-white/90" /> */}
@@ -205,7 +208,7 @@ const KYCStatusLayout = ({
               <p className="max-w-[95px] truncate text-right text-[14px] font-bold leading-[20px] text-white">
                 {headerName}
               </p>
-             <p className="mt-1 max-w-[83px] truncate text-right text-[10px] font-medium leading-[15px] text-[#FFFFFF99]">
+              <p className="mt-1 max-w-[83px] truncate text-right text-[10px] font-medium leading-[15px] text-[#FFFFFF99]">
                 {headerSubtitle}
               </p>
             </div>

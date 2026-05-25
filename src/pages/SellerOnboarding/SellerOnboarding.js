@@ -7,11 +7,11 @@ import { FaCalendarAlt } from "react-icons/fa";
 import { RiEditBoxFill } from "react-icons/ri";
 import { LuClipboardList } from "react-icons/lu";
 import {
-  clearSellerOnboarding,
   fetchAuthStatus,
   submitSellerKyc,
   updateSellerOnboardingProfile,
 } from "../../Redux/seller-slice";
+import { listSellerProducts } from "../../Redux/sellerProductsSlice";
 import { useKYC } from "../../context/KycContext";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -91,12 +91,12 @@ const ONBOARDING_STEP_META = {
 const getOnboardingStepMeta = (step) =>
   ONBOARDING_STEP_META[step] || ONBOARDING_STEP_META[1];
 
-const OnboardingScreen = ({ step, children }) => {
-  const meta = getOnboardingStepMeta(step);
+const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
+  const meta = { ...getOnboardingStepMeta(step), ...metaOverride };
   const progress = Math.min(Math.max(step, 1), 5) * 20;
 
   return (
-    <div className=" w-full max-w-[1450px] ">
+    <div className=" w-full max-w-[1350px] ">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">
@@ -227,6 +227,42 @@ const getIsoDateYearsAgo = (years) => {
 };
 
 const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
+const SELLER_ONBOARDING_DRAFT_KEY = "sellerOnboardingDraft";
+
+const getSellerOnboardingDraftKey = (token) =>
+  `${SELLER_ONBOARDING_DRAFT_KEY}:${token || "guest"}`;
+
+const isRepeatedSingleWordName = (value = "") => {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase();
+};
+
+const stripFileFieldsFromDraft = (draft = {}) => ({
+  ...draft,
+  kycForm: draft.kycForm
+    ? {
+        ...draft.kycForm,
+        panDocumentFile: null,
+        aadhaarFrontFile: null,
+        aadhaarBackFile: null,
+      }
+    : undefined,
+  profileForm: draft.profileForm
+    ? {
+        ...draft.profileForm,
+        businessName: isRepeatedSingleWordName(draft.profileForm.businessName)
+          ? ""
+          : draft.profileForm.businessName,
+        displayName: isRepeatedSingleWordName(draft.profileForm.displayName)
+          ? ""
+          : draft.profileForm.displayName,
+        gstCertificateFile: null,
+      }
+    : undefined,
+});
 
 const detectDocumentMimeType = (bytes) => {
   if (!bytes?.length) return "";
@@ -308,6 +344,47 @@ const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
       .pop();
     return name || fallback;
   }
+};
+
+const getListTotal = (payload) => {
+  const data = payload?.data || payload;
+  const nestedData = data?.data || {};
+  const normalizedData = payload?.normalized?.data || {};
+  const rawData = payload?.raw?.data || {};
+  const list =
+    data?.list ||
+    data?.items ||
+    data?.products ||
+    data?.docs ||
+    nestedData?.list ||
+    nestedData?.items ||
+    nestedData?.products ||
+    nestedData?.docs ||
+    normalizedData?.list ||
+    normalizedData?.items ||
+    normalizedData?.products ||
+    normalizedData?.docs ||
+    rawData?.list ||
+    rawData?.items ||
+    rawData?.products ||
+    rawData?.docs ||
+    [];
+
+  return Number(
+    data?.total ??
+      data?.count ??
+      data?.totalDocs ??
+      nestedData?.total ??
+      nestedData?.count ??
+      nestedData?.totalDocs ??
+      normalizedData?.total ??
+      normalizedData?.count ??
+      normalizedData?.totalDocs ??
+      rawData?.total ??
+      rawData?.count ??
+      rawData?.totalDocs ??
+      (Array.isArray(list) ? list.length : 0),
+  );
 };
 
 const DocumentUploadField = ({
@@ -432,6 +509,9 @@ const SellerOnboarding = () => {
   const [requiresKycRefresh, setRequiresKycRefresh] = useState(false);
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
+  const [showReadyToSellScreen, setShowReadyToSellScreen] = useState(false);
+  const [checkingSellerProducts, setCheckingSellerProducts] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
 
   const [kycForm, setKycForm] = useState({
@@ -439,8 +519,8 @@ const SellerOnboarding = () => {
     gstNumber: "",
     aadhaarNumber: "",
     legalName: "",
-    businessType: "individual",
-    dateOfBirth: MAX_DOB_FOR_SELLER,
+    businessType: "",
+    dateOfBirth: "",
     panDocumentFile: null,
     aadhaarFrontFile: null,
     aadhaarBackFile: null,
@@ -490,6 +570,58 @@ const SellerOnboarding = () => {
     () => !!onboardingToken || !!accessToken,
     [accessToken, onboardingToken],
   );
+  const draftKey = useMemo(
+    () => getSellerOnboardingDraftKey(onboardingToken || accessToken),
+    [accessToken, onboardingToken],
+  );
+
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (!savedDraft) {
+        setDraftLoaded(true);
+        return;
+      }
+
+      const draft = stripFileFieldsFromDraft(JSON.parse(savedDraft));
+      if (draft.kycForm) {
+        setKycForm((prev) => ({ ...prev, ...draft.kycForm }));
+      }
+      if (draft.profileForm) {
+        setProfileForm((prev) => ({ ...prev, ...draft.profileForm }));
+      }
+      if (draft.bankForm) {
+        setBankForm((prev) => ({ ...prev, ...draft.bankForm }));
+      }
+      if (draft.documentUrls) {
+        setDocumentUrls((prev) => ({ ...prev, ...draft.documentUrls }));
+      }
+      if (draft.step && draft.step >= 1 && draft.step <= 4) {
+        setStep(draft.step);
+      }
+    } catch {
+      localStorage.removeItem(draftKey);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [draftKey, setStep]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    if (step >= 5) {
+      localStorage.removeItem(draftKey);
+      return;
+    }
+
+    const draft = stripFileFieldsFromDraft({
+      kycForm,
+      profileForm,
+      bankForm,
+      documentUrls,
+      step,
+    });
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [bankForm, documentUrls, draftKey, draftLoaded, kycForm, profileForm, step]);
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
@@ -568,11 +700,8 @@ const SellerOnboarding = () => {
             prev.businessType ||
             kyc?.businessType ||
             sellerProfile?.businessType ||
-            "individual",
-          dateOfBirth:
-            prev.dateOfBirth ||
-            sellerProfile?.dateOfBirth ||
-            MAX_DOB_FOR_SELLER,
+            "",
+          dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
         }));
         setProfileForm((prev) => ({
           ...prev,
@@ -582,13 +711,13 @@ const SellerOnboarding = () => {
             kyc?.businessType ||
             "",
           businessName:
-            prev.businessName ||
-            sellerProfile?.businessName ||
-            sellerProfile?.displayName ||
-            "",
+            prev.businessName || sellerProfile?.businessName || "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
-          displayName: prev.displayName || sellerProfile?.displayName || "",
+          displayName:
+            prev.displayName ||
+            (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+            "",
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
           supportEmail:
@@ -710,9 +839,8 @@ const SellerOnboarding = () => {
         prev.businessType ||
         kyc?.businessType ||
         sellerProfile?.businessType ||
-        "individual",
-      dateOfBirth:
-        prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
+        "",
+      dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
     }));
     setProfileForm((prev) => ({
       ...prev,
@@ -722,13 +850,13 @@ const SellerOnboarding = () => {
         kyc?.businessType ||
         "",
       businessName:
-        prev.businessName ||
-        sellerProfile?.businessName ||
-        sellerProfile?.displayName ||
-        "",
+        prev.businessName || sellerProfile?.businessName || "",
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
-      displayName: prev.displayName || sellerProfile?.displayName || "",
+      displayName:
+        prev.displayName ||
+        (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+        "",
       legalBusinessName:
         prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
       supportEmail: prev.supportEmail || sellerProfile?.supportEmail || "",
@@ -1213,6 +1341,7 @@ const SellerOnboarding = () => {
         payload.dateOfBirth = kycForm.dateOfBirth;
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+      localStorage.removeItem(draftKey);
       setStep(5);
       toast.success("Onboarding submitted for approval");
     } catch (error) {
@@ -1231,6 +1360,29 @@ const SellerOnboarding = () => {
     }
   };
 
+  const handleApprovedStatusAction = async () => {
+    if (showReadyToSellScreen) {
+      navigate("/app/home");
+      return;
+    }
+
+    setCheckingSellerProducts(true);
+    try {
+      const response = await dispatch(
+        listSellerProducts({ page: 1, size: 1, limit: 1 }),
+      ).unwrap();
+      if (getListTotal(response) > 0) {
+        navigate("/app/home");
+        return;
+      }
+      setShowReadyToSellScreen(true);
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to check products");
+    } finally {
+      setCheckingSellerProducts(false);
+    }
+  };
+
   if (step === 5) {
     const isRejected = flowState?.kycStatus === "rejected";
     const isApproved =
@@ -1238,14 +1390,42 @@ const SellerOnboarding = () => {
       flowState?.kycStatus === "approved" ||
       flowState?.onboardingStatus === "approved" ||
       (flowState?.accountStatus === "active" && !flowState?.requiresOnboarding);
-    const statusVariant = isRejected
-      ? "rejected"
+    const statusVariant = showReadyToSellScreen
+      ? "readyToSell"
+      : isRejected
+        ? "rejected"
+        : isApproved
+          ? "approved"
+          : "underReview";
+    const statusMeta = showReadyToSellScreen
+      ? {
+          badge: "KYC VERIFICATION",
+          title: "KYC Approved",
+          subtitle:
+            "Your seller account is now verified. You can begin adding products and accepting orders.",
+        }
       : isApproved
-        ? "approved"
-        : "underReview";
+        ? {
+            badge: "KYC VERIFICATION",
+            title: "KYC Approved",
+            subtitle:
+              "Your seller account is now verified. You can begin adding products and accepting orders.",
+          }
+        : isRejected
+          ? {
+              badge: "KYC VERIFICATION",
+              title: "KYC Rejected",
+              subtitle: "Please update your seller details and submit again.",
+            }
+          : {
+              badge: "KYC VERIFICATION",
+              title: "Under Review",
+              subtitle:
+                "Your account is under review. Our team will verify your details within 24-48 hours.",
+            };
 
     return (
-      <OnboardingScreen step={5}>
+      <OnboardingScreen step={5} metaOverride={statusMeta}>
         <div className="w-full ">
           <SellerStatusScreen
             variant={statusVariant}
@@ -1255,17 +1435,20 @@ const SellerOnboarding = () => {
                   "Your KYC was rejected. Please update details and submit again."
                 : undefined
             }
+            buttonLabel={
+              checkingSellerProducts ? "Checking Products..." : undefined
+            }
+            disabled={checkingSellerProducts}
             onButtonClick={() => {
               if (isRejected) {
                 setStep(1);
                 return;
               }
               if (isApproved) {
-                navigate("/app/home");
+                handleApprovedStatusAction();
                 return;
               }
-              dispatch(clearSellerOnboarding());
-              navigate("/login");
+              setShowReadyToSellScreen(true);
             }}
           />
         </div>
@@ -1364,11 +1547,11 @@ const SellerOnboarding = () => {
               </div>
 
               {/* Business Type */}
-              <div>
+              <div className="w-full md:col-span-2">
                 <label className="text-[#484555] font-medium font-inter text-base">
                   Business Type
                 </label>
-                <div className="relative">
+                <div className="relative w-full">
                   <select
                     id="businessType"
                     name="businessType"
@@ -1388,25 +1571,6 @@ const SellerOnboarding = () => {
                 </div>
                 {kycErrors.businessType && (
                   <p className={ERROR_CLASS}>{kycErrors.businessType}</p>
-                )}
-              </div>
-
-              {/* GST Number */}
-              <div>
-                <label className="text-[#484555] font-medium font-inter text-base">
-                  GST Number
-                </label>
-                <input
-                  id="gstNumber"
-                  name="gstNumber"
-                  placeholder="27ABCDE1234F2Z5"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={kycForm.gstNumber}
-                  onChange={onKycChange}
-                  maxLength={15}
-                />
-                {kycErrors.gstNumber && (
-                  <p className={ERROR_CLASS}>{kycErrors.gstNumber}</p>
                 )}
               </div>
             </div>

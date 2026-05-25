@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { Route, Routes } from "react-router-dom";
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
@@ -11,230 +11,251 @@ import {
   isSelfServiceRoute,
 } from "../../_helpers/rbacRoutes";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
- 
+
 import Tax from "../../pages/Tax/Tax";
 import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
 
- 
-
-
 const Dashboard = React.lazy(() => import("../../pages/dashboard/Dashboard"));
-const AdminUsers = React.lazy(() =>
-  import("../../pages/UserManagement/Adminusers/AdminUsers")
+const AdminUsers = React.lazy(
+  () => import("../../pages/UserManagement/Adminusers/AdminUsers"),
 );
-const Users = React.lazy(() =>
-  import("../../pages/UserManagement/Users/Users")
+const Users = React.lazy(
+  () => import("../../pages/UserManagement/Users/Users"),
 );
-const UserDetails = React.lazy(() =>
-  import("../../pages/UserManagement/UserDetails/UserDetails")
+const UserDetails = React.lazy(
+  () => import("../../pages/UserManagement/UserDetails/UserDetails"),
 );
-const UsersTransactions = React.lazy(() =>
-  import("../../pages/UserManagement/UsersTransactions/UsersTransactions")
+const UsersTransactions = React.lazy(
+  () =>
+    import("../../pages/UserManagement/UsersTransactions/UsersTransactions"),
 );
- 
 
- 
-const ProductCatalog = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductCatalog/ProductCatalog")
+const ProductCatalog = React.lazy(
+  () => import("../../pages/ProductManagement/ProductCatalog/ProductCatalog"),
 );
-const SellerProductInventories = React.lazy(() =>
-  import(
-    "../../pages/ProductManagement/SellerProductInventories/SellerProductInventories"
-  )
+const SellerProductInventories = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/SellerProductInventories/SellerProductInventories"),
 );
-const Store = React.lazy(() =>
-  import("../../pages/ProductManagement/Store/Store")
+const Store = React.lazy(
+  () => import("../../pages/ProductManagement/Store/Store"),
 );
-const Brands = React.lazy(() =>
-  import("../../pages/ProductManagement/Brands/Brands")
+const Brands = React.lazy(
+  () => import("../../pages/ProductManagement/Brands/Brands"),
 );
-const ProductOptions = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductOptions/ProductOptions")
+const ProductOptions = React.lazy(
+  () => import("../../pages/ProductManagement/ProductOptions/ProductOptions"),
 );
-const ProductTags = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductTags/ProductTags")
+const ProductTags = React.lazy(
+  () => import("../../pages/ProductManagement/ProductTags/ProductTags"),
 );
-const ThresholdProducts = React.lazy(() =>
-  import("../../pages/ProductManagement/ThresholdProducts/ThresholdProducts")
+const ThresholdProducts = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ThresholdProducts/ThresholdProducts"),
 );
-const Orders = React.lazy(() =>
-  import("../../pages/OrdersManagement/Orders/Orders")
+const Orders = React.lazy(
+  () => import("../../pages/OrdersManagement/Orders/Orders"),
 );
-const OrderStatus = React.lazy(() =>
-  import("../../pages/OrdersManagement/OrderStatus/OrderStatus")
+const OrderStatus = React.lazy(
+  () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
 );
-const ProductReviews = React.lazy(() =>
-  import("../../pages/OrdersManagement/ProductReviews/ProductReviews")
+const ProductReviews = React.lazy(
+  () => import("../../pages/OrdersManagement/ProductReviews/ProductReviews"),
 );
-const SpecialPrice = React.lazy(() =>
-  import("../../pages/Promotions/SpecialPrice/SpecialPrice")
+const SpecialPrice = React.lazy(
+  () => import("../../pages/Promotions/SpecialPrice/SpecialPrice"),
 );
-const VolumeDiscount = React.lazy(() =>
-  import("../../pages/Promotions/VolumeDiscount/VolumeDiscount")
+const VolumeDiscount = React.lazy(
+  () => import("../../pages/Promotions/VolumeDiscount/VolumeDiscount"),
 );
-const SimilarProducts = React.lazy(() =>
-  import("../../pages/Promotions/SimilarProducts/SimilarProducts")
+const SimilarProducts = React.lazy(
+  () => import("../../pages/Promotions/SimilarProducts/SimilarProducts"),
 );
-const FrequentlyBoughtTogether = React.lazy(() =>
-  import(
-    "../../pages/Promotions/FrequentlyBoughtTogether/FrequentlyBoughtTogether"
-  )
+const FrequentlyBoughtTogether = React.lazy(
+  () =>
+    import("../../pages/Promotions/FrequentlyBoughtTogether/FrequentlyBoughtTogether"),
 );
-const PPCPromotionsManagement = React.lazy(() =>
-  import(
-    "../../pages/Promotions/PPCPromotionsManagement/PPCPromotionsManagement"
-  )
+const PPCPromotionsManagement = React.lazy(
+  () =>
+    import("../../pages/Promotions/PPCPromotionsManagement/PPCPromotionsManagement"),
 );
-const RewardOnPurchase = React.lazy(() =>
-  import("../../pages/Promotions/RewardOnPurchase/RewardOnPurchase")
+const RewardOnPurchase = React.lazy(
+  () => import("../../pages/Promotions/RewardOnPurchase/RewardOnPurchase"),
 );
-const ProductEventWeightages = React.lazy(() =>
-  import("../../pages/Promotions/ProductEventWeightages/ProductEventWeightages")
+const ProductEventWeightages = React.lazy(
+  () =>
+    import("../../pages/Promotions/ProductEventWeightages/ProductEventWeightages"),
 );
-const RecommendedProductTagWeightages = React.lazy(() =>
-  import(
-    "../../pages/Promotions/RecommendedProductTagWeightages/RecommendedProductTagWeightages"
-  )
+const RecommendedProductTagWeightages = React.lazy(
+  () =>
+    import("../../pages/Promotions/RecommendedProductTagWeightages/RecommendedProductTagWeightages"),
 );
-const DiscountCoupons = React.lazy(() =>
-  import("../../pages/Promotions/DiscountCoupons/DiscountCoupons")
+const DiscountCoupons = React.lazy(
+  () => import("../../pages/Promotions/DiscountCoupons/DiscountCoupons"),
 );
-const ReferralCommerce = React.lazy(() =>
-  import("../../pages/ReferralCommerce/ReferralCommerce")
+const ReferralCommerce = React.lazy(
+  () => import("../../pages/ReferralCommerce/ReferralCommerce"),
 );
- 
-const ShippingCompanyUsers = React.lazy(() =>
-  import("../../pages/ShippingPickup/ShippingCompanyUsers/ShippingCompanyUsers")
+
+const ShippingCompanyUsers = React.lazy(
+  () =>
+    import("../../pages/ShippingPickup/ShippingCompanyUsers/ShippingCompanyUsers"),
 );
-const ShippingPackages = React.lazy(() =>
-  import("../../pages/ShippingPickup/ShippingPackages/ShippingPackages")
+const ShippingPackages = React.lazy(
+  () => import("../../pages/ShippingPickup/ShippingPackages/ShippingPackages"),
 );
-const ShippingProfiles = React.lazy(() =>
-  import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles")
+const ShippingProfiles = React.lazy(
+  () => import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles"),
 );
- 
-const AddEditProductPopup = React.lazy(() =>
-  import(
-    "../../pages/ProductManagement/ProductCatalog/components/AddEditProduct"
-  )
+
+const AddEditProductPopup = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductCatalog/components/AddEditProduct"),
 );
-const ProductAdminDetails = React.lazy(() =>
-  import(
-    "../../pages/ProductManagement/ProductCatalog/components/ProductAdminDetails"
-  )
+const ProductAdminDetails = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductCatalog/components/ProductAdminDetails"),
 );
-const ProductCategories = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductCategories/ProductCategories")
+const ProductCategories = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductCategories/ProductCategories"),
 );
-const CategoryAttributes = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductCategories/CategoryAttributes")
+const CategoryAttributes = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductCategories/CategoryAttributes"),
 );
-const OrderSummary = React.lazy(() =>
-  import("../../pages/OrdersManagement/Orders/components/ViewOrders")
+const OrderSummary = React.lazy(
+  () => import("../../pages/OrdersManagement/Orders/components/ViewOrders"),
 );
-const SubscriptionOrders = React.lazy(() =>
-  import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionOrders")
+const SubscriptionOrders = React.lazy(
+  () =>
+    import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionOrders"),
 );
-const ViewSubscriptionOrders = React.lazy(() =>
-  import(
-    "../../pages/OrdersManagement/SubscriptionOrders/components/ViewSubscriptionOrders"
-  )
+const ViewSubscriptionOrders = React.lazy(
+  () =>
+    import("../../pages/OrdersManagement/SubscriptionOrders/components/ViewSubscriptionOrders"),
 );
-const ManageCountry = React.lazy(() =>
-  import("../../pages/UserManagement/ManageCountry/ManageCountry")
+const ManageCountry = React.lazy(
+  () => import("../../pages/UserManagement/ManageCountry/ManageCountry"),
 );
-const ManageState = React.lazy(() =>
-  import("../../pages/UserManagement/ManageState/ManageState")
+const ManageState = React.lazy(
+  () => import("../../pages/UserManagement/ManageState/ManageState"),
 );
-const ManageCity = React.lazy(() =>
-  import("../../pages/UserManagement/ManageCity/ManageCity")
+const ManageCity = React.lazy(
+  () => import("../../pages/UserManagement/ManageCity/ManageCity"),
 );
-const ManageZipCode = React.lazy(() =>
-  import("../../pages/UserManagement/ManageZipCode/ManageZipCode")
+const ManageZipCode = React.lazy(
+  () => import("../../pages/UserManagement/ManageZipCode/ManageZipCode"),
 );
-const ContentManagement = React.lazy(() =>
-  import("../../pages/CMS/ContentManagement/ContentManagement")
+const ContentManagement = React.lazy(
+  () => import("../../pages/CMS/ContentManagement/ContentManagement"),
 );
-const GiftCardOrder = React.lazy(() =>
-  import("../../pages/OrdersManagement/GiftCardOrder/GiftCardOrder")
+const GiftCardOrder = React.lazy(
+  () => import("../../pages/OrdersManagement/GiftCardOrder/GiftCardOrder"),
 );
-const OrderCancellationReasons = React.lazy(() =>
-  import(
-    "../../pages/OrdersManagement/Order Cancellation Reasons/OrderCancellationReasons"
-  )
+const OrderCancellationReasons = React.lazy(
+  () =>
+    import("../../pages/OrdersManagement/Order Cancellation Reasons/OrderCancellationReasons"),
 );
-const OrderReturn = React.lazy(() =>
-  import("../../pages/OrdersManagement/Order Return Reason/OrderReturn")
+const OrderReturn = React.lazy(
+  () => import("../../pages/OrdersManagement/Order Return Reason/OrderReturn"),
 );
 const Profile = React.lazy(() => import("../../pages/My Profile/Profile"));
-const ChangePassword = React.lazy(() =>
-  import("../../pages/Change Password/ChangePassword")
+const ChangePassword = React.lazy(
+  () => import("../../pages/Change Password/ChangePassword"),
 );
- 
-const TaxStructure = React.lazy(() =>
-  import("../../pages/Admin/Tax/TaxStructure")
+
+const TaxStructure = React.lazy(
+  () => import("../../pages/Admin/Tax/TaxStructure"),
 );
-const TaxCategory = React.lazy(() =>
-  import("../../pages/Admin/Tax/TaxCategory")
+const TaxCategory = React.lazy(
+  () => import("../../pages/Admin/Tax/TaxCategory"),
 );
 const TaxRules = React.lazy(() => import("../../pages/Admin/Tax/TaxRules"));
- 
- 
-const ProductVariants = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductVariants/ProductVariants")
+
+const ProductVariants = React.lazy(
+  () => import("../../pages/ProductManagement/ProductVariants/ProductVariants"),
 );
-const ProductFamilies = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductFamilies/ProductFamilies")
+const ProductFamilies = React.lazy(
+  () => import("../../pages/ProductManagement/ProductFamilies/ProductFamilies"),
 );
-const ProductFlow = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductFlow/ProductFlow")
+const ProductFlow = React.lazy(
+  () => import("../../pages/ProductManagement/ProductFlow/ProductFlow"),
 );
-const ProductDimensions = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductDimensions/ProductDimensions")
+const ProductDimensions = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductDimensions/ProductDimensions"),
 );
-const FinishProducts = React.lazy(() =>
-  import("../../pages/ProductManagement/FinishProduct/FinishProduct")
+const FinishProducts = React.lazy(
+  () => import("../../pages/ProductManagement/FinishProduct/FinishProduct"),
 );
- 
- 
-const ProductWarranty = React.lazy(() =>
-  import("../../pages/ProductManagement/ProductWarranty/ProductWarranty")
+
+const ProductWarranty = React.lazy(
+  () => import("../../pages/ProductManagement/ProductWarranty/ProductWarranty"),
 );
-const Sellers = React.lazy(() =>
-  import("../../pages/UserManagement/Sellers/Seller")
+const Sellers = React.lazy(
+  () => import("../../pages/UserManagement/Sellers/Seller"),
 );
-const UserPermissions = React.lazy(() =>
-  import("../../pages/UserManagement/Adminusers/UserPermissions")
+const UserPermissions = React.lazy(
+  () => import("../../pages/UserManagement/Adminusers/UserPermissions"),
 );
-const SellerSubAdminManagement = React.lazy(() =>
-  import("../../pages/SellerManagement/SellerSubAdminManagement")
+const SellerSubAdminManagement = React.lazy(
+  () => import("../../pages/SellerManagement/SellerSubAdminManagement"),
 );
- 
+
 // ── Inventory Management ────────────────────────────────────────────────────
-const InventoryOverview    = React.lazy(() => import('../../pages/Inventory/InventoryOverview'));
-const VariantInventory     = React.lazy(() => import('../../pages/Inventory/VariantInventory'));
-const InventoryAdjustment  = React.lazy(() => import('../../pages/Inventory/InventoryAdjustment'));
-const WarehouseManagement  = React.lazy(() => import('../../pages/Inventory/WarehouseManagement'));
-const LowStockAlerts       = React.lazy(() => import('../../pages/Inventory/LowStockAlerts'));
+const InventoryOverview = React.lazy(
+  () => import("../../pages/Inventory/InventoryOverview"),
+);
+const VariantInventory = React.lazy(
+  () => import("../../pages/Inventory/VariantInventory"),
+);
+const InventoryAdjustment = React.lazy(
+  () => import("../../pages/Inventory/InventoryAdjustment"),
+);
+const WarehouseManagement = React.lazy(
+  () => import("../../pages/Inventory/WarehouseManagement"),
+);
+const LowStockAlerts = React.lazy(
+  () => import("../../pages/Inventory/LowStockAlerts"),
+);
 
 // ── Reports & Analytics ─────────────────────────────────────────────────────
-const SalesReport       = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.SalesReport })));
-const ProductAnalytics  = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.ProductAnalytics })));
-const InventoryAnalytics= React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.InventoryAnalytics })));
-const SellerAnalytics   = React.lazy(() => import('../../pages/Reports/ReportShell').then((m) => ({ default: m.SellerAnalytics })));
+const SalesReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.SalesReport,
+  })),
+);
+const ProductAnalytics = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.ProductAnalytics,
+  })),
+);
+const InventoryAnalytics = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.InventoryAnalytics,
+  })),
+);
+const SellerAnalytics = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.SellerAnalytics,
+  })),
+);
 
 // ── RBAC Management Pages ───────────────────────────────────────────────────
-const RolesPermissions = React.lazy(() => import('../../pages/UserManagement/RolesPermissions/RolesPermissions'));
-const ModuleManagement = React.lazy(() => import('../../pages/UserManagement/ModuleManagement/ModuleManagement'));
-const ActivityLogs     = React.lazy(() => import('../../pages/UserManagement/ActivityLogs/ActivityLogs'));
+const RolesPermissions = React.lazy(
+  () => import("../../pages/UserManagement/RolesPermissions/RolesPermissions"),
+);
+const ModuleManagement = React.lazy(
+  () => import("../../pages/UserManagement/ModuleManagement/ModuleManagement"),
+);
+const ActivityLogs = React.lazy(
+  () => import("../../pages/UserManagement/ActivityLogs/ActivityLogs"),
+);
 
-
- 
-
- 
 const getStoredSidebarState = () => {
   try {
     const expandedState = sessionStorage.getItem("sidebarExpandedState");
@@ -254,7 +275,9 @@ function Layout() {
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
-  const [hasPermanentOpen, setHasPermanentOpen] = useState(getStoredSidebarState);
+  const [hasPermanentOpen, setHasPermanentOpen] = useState(
+    getStoredSidebarState,
+  );
 
   useEffect(() => {
     setSocket(socketConnection());
@@ -279,10 +302,13 @@ function Layout() {
         if (!moduleCode) return;
 
         const viewPermission = Array.isArray(module.permissions)
-          ? module.permissions.find((permission) => permission.action === "view")
+          ? module.permissions.find(
+              (permission) => permission.action === "view",
+            )
           : null;
-        const hasAssignedView =
-          viewPermission ? viewPermission.assigned !== false : module.assigned !== false;
+        const hasAssignedView = viewPermission
+          ? viewPermission.assigned !== false
+          : module.assigned !== false;
 
         permMap[moduleCode] = module.assigned !== false && hasAssignedView;
       });
@@ -341,8 +367,9 @@ function Layout() {
       </div>
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden ${navbarOpen ? "" : "lg:ml-0"
-          }`}
+        className={`flex flex-col flex-1 overflow-hidden ${
+          navbarOpen ? "" : "lg:ml-0"
+        }`}
       >
         <Header
           handleNavbar={() => setNavbarOpen((prev) => !prev)}
@@ -363,18 +390,29 @@ function Layout() {
               />
               <Route
                 path="/seller-management"
-                element={renderRoute("/seller-management", <SellerSubAdminManagement />)}
+                element={renderRoute(
+                  "/seller-management",
+                  <SellerSubAdminManagement />,
+                )}
               />
               <Route path="/users" element={renderRoute("/users", <Users />)} />
-              <Route path="/users/view/:id" element={renderRoute("/users", <UserDetails />)} />
-              <Route path="/admin-users/view/:id" element={renderRoute("/admin-users", <UserDetails />)} />
-              <Route path="/seller/view/:id" element={renderRoute("/seller", <UserDetails />)} />
+              <Route
+                path="/users/view/:id"
+                element={renderRoute("/users", <UserDetails />)}
+              />
+              <Route
+                path="/admin-users/view/:id"
+                element={renderRoute("/admin-users", <UserDetails />)}
+              />
+              <Route
+                path="/seller/view/:id"
+                element={renderRoute("/seller", <UserDetails />)}
+              />
               <Route
                 path="/transactions"
                 element={renderRoute("/transactions", <UsersTransactions />)}
               />
-             
-             
+
               <Route
                 path="/product-flow"
                 element={renderRoute("/product-flow", <ProductFlow />)}
@@ -387,7 +425,7 @@ function Layout() {
                 path="/seller-Product-Inventory"
                 element={renderRoute(
                   "/seller-Product-Inventory",
-                  <SellerProductInventories />
+                  <SellerProductInventories />,
                 )}
               />
               <Route path="/store" element={renderRoute("/store", <Store />)} />
@@ -407,7 +445,7 @@ function Layout() {
                 path="/threshold-products"
                 element={renderRoute(
                   "/threshold-products",
-                  <ThresholdProducts />
+                  <ThresholdProducts />,
                 )}
               />
               <Route
@@ -426,7 +464,7 @@ function Layout() {
                 path="/order-cancellation-reasons"
                 element={renderRoute(
                   "/order-cancellation-reasons",
-                  <OrderCancellationReasons />
+                  <OrderCancellationReasons />,
                 )}
               />
               <Route
@@ -453,35 +491,35 @@ function Layout() {
                 path="/frequently-bought-together"
                 element={renderRoute(
                   "/frequently-bought-together",
-                  <FrequentlyBoughtTogether />
+                  <FrequentlyBoughtTogether />,
                 )}
               />
               <Route
                 path="/PPC-promotions-management"
                 element={renderRoute(
                   "/PPC-promotions-management",
-                  <PPCPromotionsManagement />
+                  <PPCPromotionsManagement />,
                 )}
               />
               <Route
                 path="/reward-on-purchase"
                 element={renderRoute(
                   "/reward-on-purchase",
-                  <RewardOnPurchase />
+                  <RewardOnPurchase />,
                 )}
               />
               <Route
                 path="/product-event-weightages"
                 element={renderRoute(
                   "/product-event-weightages",
-                  <ProductEventWeightages />
+                  <ProductEventWeightages />,
                 )}
               />
               <Route
                 path="/recommended-product-tag-weightages"
                 element={renderRoute(
                   "/recommended-product-tag-weightages",
-                  <RecommendedProductTagWeightages />
+                  <RecommendedProductTagWeightages />,
                 )}
               />
               <Route
@@ -490,117 +528,319 @@ function Layout() {
               />
               <Route
                 path="/referral-commerce"
-                element={renderRoute("/referral-commerce", <ReferralCommerce />)}
+                element={renderRoute(
+                  "/referral-commerce",
+                  <ReferralCommerce />,
+                )}
               />
-               
-              <Route path="/shipping-company-users" element={renderRoute('/shipping-company-users', <ShippingCompanyUsers />)} />
-              <Route path="/shipping-packages" element={renderRoute('/shipping-packages', <ShippingPackages />)} />
-              <Route path="/shipping-profile" element={renderRoute('/shipping-profile', <ShippingProfiles />)} />
-             
-              <Route path="/categories" element={renderRoute('/categories', <ProductCategories />)} />
-              <Route path="/category-attributes" element={renderRoute('/category-attributes', <CategoryAttributes />)} />
-              <Route path="/subscription-orders" element={renderRoute('/subscription-orders', <SubscriptionOrders />)} />
-              <Route path="/content-management" element={renderRoute('/content-management', <ContentManagement />)} />
-              <Route path="/content-management/:type" element={renderRoute('/content-management', <ContentManagement />)} />
-              <Route path="/view-orders" element={renderRoute('/view-orders', <OrderSummary />)} />
-              <Route path="/product-catalog/form/:id?" element={renderRoute('/product-catalog/form', <AddEditProductPopup />)} />
-              <Route path="/product-catalog/view/:id" element={renderRoute('/product-catalog', <ProductAdminDetails />)} />
-              <Route path="/view-subscription-orders" element={renderRoute('/view-subscription-orders', <ViewSubscriptionOrders />)} />
-              <Route path="/profile" element={renderRoute('/profile', <Profile />)} />
-              <Route path="/changePassword" element={renderRoute('/changePassword', <ChangePassword />)} />
-              <Route path="/state" element={renderRoute('/state', <ManageState />)} />
-              <Route path="/city" element={renderRoute('/city', <ManageCity />)} />
-              <Route path="/country" element={renderRoute('/country', <ManageCountry />)} />
-              <Route path="/zip-codes" element={renderRoute('/zip-codes', <ManageZipCode />)} />
-              
-              <Route path="/tax-structure" element={renderRoute('/tax-structure', <TaxStructure />)} />
-              <Route path="/tax-category" element={renderRoute('/tax-category', <TaxCategory />)} />
-              <Route path="/tax-category-rules" element={renderRoute('/tax-category-rules', <TaxRules />)} />
-               
-              <Route path="/product-variants" element={renderRoute('/product-variants', <ProductVariants />)} />
-              <Route path="/product-families" element={renderRoute('/product-families', <ProductFamilies />)} />
-              <Route path='/product-dimensions' element={renderRoute('/product-dimensions', <ProductDimensions />)} />
-              
-              <Route path='/finish' element={renderRoute('/finish', <FinishProducts />)} />
-             
-              <Route
-                path='/user-permissions/:id'
-                element={renderSupportedRoute('/user-permissions', <UserPermissions setModuleName={setModuleName} />)}
-              />
-              <Route path='/seller' element={renderRoute('/seller', <Sellers />)} />
-              
-              <Route
-                path='/product-option-value/:id'
-                element={renderSupportedRoute('/product-options', <ProductOptionValue setModuleName={setModuleName} />)}
-              />
-              
-              <Route path='/warranty' element={renderRoute('/warranty', <ProductWarranty />)} />
-              <Route path="/tax" element={renderRoute('/tax', <Tax />)} />
-              <Route
-                path='/subTax'
-                element={renderSupportedRoute('/subTax', <SubTax setModuleName={setModuleName} />)}
-              />
-              <Route
-                path='/subTax/:id'
-                element={renderSupportedRoute('/subTax', <SubTax setModuleName={setModuleName} />)}
-              />
-              <Route
-                path='/tax-rule'
-                element={renderSupportedRoute('/tax-rule', <TaxRule setModuleName={setModuleName} />)}
-              />
-              <Route path="/discount-coupons" element={renderRoute('/discount-coupons', <DiscountCoupons />)} />
 
-              <Route path="/bar-code" element={renderRoute('/barcode', <BarcodePage />)} />
-              <Route path="/hsn-code" element={renderRoute('/hsn-code', <HsnCode />)} />
-              <Route path="/orders/view/:id" element={renderRoute('/orders/view', <OrderSummary />)} />
+              <Route
+                path="/shipping-company-users"
+                element={renderRoute(
+                  "/shipping-company-users",
+                  <ShippingCompanyUsers />,
+                )}
+              />
+              <Route
+                path="/shipping-packages"
+                element={renderRoute(
+                  "/shipping-packages",
+                  <ShippingPackages />,
+                )}
+              />
+              <Route
+                path="/shipping-profile"
+                element={renderRoute("/shipping-profile", <ShippingProfiles />)}
+              />
 
+              <Route
+                path="/categories"
+                element={renderRoute("/categories", <ProductCategories />)}
+              />
+              <Route
+                path="/category-attributes"
+                element={renderRoute(
+                  "/category-attributes",
+                  <CategoryAttributes />,
+                )}
+              />
+              <Route
+                path="/subscription-orders"
+                element={renderRoute(
+                  "/subscription-orders",
+                  <SubscriptionOrders />,
+                )}
+              />
+              <Route
+                path="/content-management"
+                element={renderRoute(
+                  "/content-management",
+                  <ContentManagement />,
+                )}
+              />
+              <Route
+                path="/content-management/:type"
+                element={renderRoute(
+                  "/content-management",
+                  <ContentManagement />,
+                )}
+              />
+              <Route
+                path="/view-orders"
+                element={renderRoute("/view-orders", <OrderSummary />)}
+              />
+              <Route
+                path="/product-catalog/form/:id?"
+                element={renderRoute(
+                  "/product-catalog/form",
+                  <AddEditProductPopup />,
+                )}
+              />
+              <Route
+                path="/product-catalog/view/:id"
+                element={renderRoute(
+                  "/product-catalog",
+                  <ProductAdminDetails />,
+                )}
+              />
+              <Route
+                path="/view-subscription-orders"
+                element={renderRoute(
+                  "/view-subscription-orders",
+                  <ViewSubscriptionOrders />,
+                )}
+              />
+              <Route
+                path="/profile"
+                element={renderRoute("/profile", <Profile />)}
+              />
+              <Route
+                path="/changePassword"
+                element={renderRoute("/changePassword", <ChangePassword />)}
+              />
+              <Route
+                path="/state"
+                element={renderRoute("/state", <ManageState />)}
+              />
+              <Route
+                path="/city"
+                element={renderRoute("/city", <ManageCity />)}
+              />
+              <Route
+                path="/country"
+                element={renderRoute("/country", <ManageCountry />)}
+              />
+              <Route
+                path="/zip-codes"
+                element={renderRoute("/zip-codes", <ManageZipCode />)}
+              />
 
- 
+              <Route
+                path="/tax-structure"
+                element={renderRoute("/tax-structure", <TaxStructure />)}
+              />
+              <Route
+                path="/tax-category"
+                element={renderRoute("/tax-category", <TaxCategory />)}
+              />
+              <Route
+                path="/tax-category-rules"
+                element={renderRoute("/tax-category-rules", <TaxRules />)}
+              />
 
-            
- 
+              <Route
+                path="/product-variants"
+                element={renderRoute("/product-variants", <ProductVariants />)}
+              />
+              <Route
+                path="/product-families"
+                element={renderRoute("/product-families", <ProductFamilies />)}
+              />
+              <Route
+                path="/product-dimensions"
+                element={renderRoute(
+                  "/product-dimensions",
+                  <ProductDimensions />,
+                )}
+              />
+
+              <Route
+                path="/finish"
+                element={renderRoute("/finish", <FinishProducts />)}
+              />
+
+              <Route
+                path="/user-permissions/:id"
+                element={renderSupportedRoute(
+                  "/user-permissions",
+                  <UserPermissions setModuleName={setModuleName} />,
+                )}
+              />
+              <Route
+                path="/seller"
+                element={renderRoute("/seller", <Sellers />)}
+              />
+
+              <Route
+                path="/product-option-value/:id"
+                element={renderSupportedRoute(
+                  "/product-options",
+                  <ProductOptionValue setModuleName={setModuleName} />,
+                )}
+              />
+
+              <Route
+                path="/warranty"
+                element={renderRoute("/warranty", <ProductWarranty />)}
+              />
+              <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
+              <Route
+                path="/subTax"
+                element={renderSupportedRoute(
+                  "/subTax",
+                  <SubTax setModuleName={setModuleName} />,
+                )}
+              />
+              <Route
+                path="/subTax/:id"
+                element={renderSupportedRoute(
+                  "/subTax",
+                  <SubTax setModuleName={setModuleName} />,
+                )}
+              />
+              <Route
+                path="/tax-rule"
+                element={renderSupportedRoute(
+                  "/tax-rule",
+                  <TaxRule setModuleName={setModuleName} />,
+                )}
+              />
+              <Route
+                path="/discount-coupons"
+                element={renderRoute("/discount-coupons", <DiscountCoupons />)}
+              />
+
+              <Route
+                path="/bar-code"
+                element={renderRoute("/barcode", <BarcodePage />)}
+              />
+              <Route
+                path="/hsn-code"
+                element={renderRoute("/hsn-code", <HsnCode />)}
+              />
+              <Route
+                path="/orders/view/:id"
+                element={renderRoute("/orders/view", <OrderSummary />)}
+              />
 
               {/* ── Catalog Management — filtered product views ─────────── */}
-              <Route path="/add-product"           element={renderRoute("/add-product",           <ProductCatalog />)} />
-              <Route path="/draft-products"        element={renderRoute("/draft-products",        <ProductCatalog />)} />
-              <Route path="/pending-products"      element={renderRoute("/pending-products",      <ProductCatalog />)} />
-              <Route path="/rejected-products"     element={renderRoute("/rejected-products",     <ProductCatalog />)} />
-              <Route path="/product-option-values" element={renderRoute("/product-option-values", <ProductOptionValue setModuleName={setModuleName} />)} />
+              <Route
+                path="/add-product"
+                element={renderRoute("/add-product", <ProductCatalog />)}
+              />
+              <Route
+                path="/draft-products"
+                element={renderRoute("/draft-products", <ProductCatalog />)}
+              />
+              <Route
+                path="/pending-products"
+                element={renderRoute("/pending-products", <ProductCatalog />)}
+              />
+              <Route
+                path="/rejected-products"
+                element={renderRoute("/rejected-products", <ProductCatalog />)}
+              />
+              <Route
+                path="/product-option-values"
+                element={renderRoute(
+                  "/product-option-values",
+                  <ProductOptionValue setModuleName={setModuleName} />,
+                )}
+              />
 
               {/* ── Inventory Management ────────────────────────────────── */}
-              <Route path="/inventory-overview"   element={renderRoute("/inventory-overview",   <InventoryOverview />)} />
-              <Route path="/variant-inventory"    element={renderRoute("/variant-inventory",    <VariantInventory />)} />
-              <Route path="/inventory-adjustment" element={renderRoute("/inventory-adjustment", <InventoryAdjustment />)} />
-              <Route path="/warehouse"            element={renderRoute("/warehouse",            <WarehouseManagement />)} />
-              <Route path="/low-stock-alerts"     element={renderRoute("/low-stock-alerts",     <LowStockAlerts />)} />
+              <Route
+                path="/inventory-overview"
+                element={renderRoute(
+                  "/inventory-overview",
+                  <InventoryOverview />,
+                )}
+              />
+              <Route
+                path="/variant-inventory"
+                element={renderRoute(
+                  "/variant-inventory",
+                  <VariantInventory />,
+                )}
+              />
+              <Route
+                path="/inventory-adjustment"
+                element={renderRoute(
+                  "/inventory-adjustment",
+                  <InventoryAdjustment />,
+                )}
+              />
+              <Route
+                path="/warehouse"
+                element={renderRoute("/warehouse", <WarehouseManagement />)}
+              />
+              <Route
+                path="/low-stock-alerts"
+                element={renderRoute("/low-stock-alerts", <LowStockAlerts />)}
+              />
 
               {/* ── Orders Management — new routes ──────────────────────── */}
-              <Route path="/refunds"           element={renderRoute("/refunds",           <UsersTransactions />)} />
-            
+              <Route
+                path="/refunds"
+                element={renderRoute("/refunds", <UsersTransactions />)}
+              />
 
               {/* ── Users & Access — new routes ─────────────────────────── */}
-              <Route path="/seller-staff"      element={renderRoute("/seller-staff",      <Sellers />)} />
-              <Route path="/roles-permissions" element={renderRoute("/roles-permissions", <RolesPermissions />)} />
-              <Route path="/module-management" element={renderRoute("/module-management", <ModuleManagement />)} />
-              <Route path="/activity-logs"     element={renderRoute("/activity-logs",     <ActivityLogs />)} />
+              <Route
+                path="/seller-staff"
+                element={renderRoute("/seller-staff", <Sellers />)}
+              />
+              <Route
+                path="/roles-permissions"
+                element={renderRoute(
+                  "/roles-permissions",
+                  <RolesPermissions />,
+                )}
+              />
+              <Route
+                path="/module-management"
+                element={renderRoute(
+                  "/module-management",
+                  <ModuleManagement />,
+                )}
+              />
+              <Route
+                path="/activity-logs"
+                element={renderRoute("/activity-logs", <ActivityLogs />)}
+              />
 
               {/* ── Marketing — new routes ──────────────────────────────── */}
-             
-
-
 
               {/* ── Reports & Analytics ─────────────────────────────────── */}
-              <Route path="/reports-sales"     element={renderRoute("/reports-sales",     <SalesReport />)} />
-              <Route path="/reports-products"  element={renderRoute("/reports-products",  <ProductAnalytics />)} />
-              <Route path="/reports-inventory" element={renderRoute("/reports-inventory", <InventoryAnalytics />)} />
-              <Route path="/reports-sellers"   element={renderRoute("/reports-sellers",   <SellerAnalytics />)} />
-
-
-
-
-
-
-
+              <Route
+                path="/reports-sales"
+                element={renderRoute("/reports-sales", <SalesReport />)}
+              />
+              <Route
+                path="/reports-products"
+                element={renderRoute("/reports-products", <ProductAnalytics />)}
+              />
+              <Route
+                path="/reports-inventory"
+                element={renderRoute(
+                  "/reports-inventory",
+                  <InventoryAnalytics />,
+                )}
+              />
+              <Route
+                path="/reports-sellers"
+                element={renderRoute("/reports-sellers", <SellerAnalytics />)}
+              />
             </Routes>
           </Suspense>
         </main>
