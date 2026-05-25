@@ -835,7 +835,7 @@ const Login = () => {
           name="remember_me"
           checked={rememberMe}
           onChange={(e) => setRememberMe(e.target.checked)}
-          className="mt-[1px] h-[14px] w-[14px] shrink-0 rounded border-gray-300"
+          className="mt-[1px]"
         />
 
         <span className="text-sm font-inter text-[#667085]">

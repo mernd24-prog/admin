@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronDown, FileText, UploadCloud } from "lucide-react";
 import { FaCalendarAlt } from "react-icons/fa";
-import { RiEditBoxFill } from "react-icons/ri";
+import { BiSolidEdit } from "react-icons/bi";
 import { LuClipboardList } from "react-icons/lu";
 import {
   fetchAuthStatus,
@@ -20,6 +20,8 @@ import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
 const AADHAAR_REGEX = /^[0-9]{12}$/;
+const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /^https?:\/\/.+/i;
 const KYC_DOCUMENT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
@@ -34,7 +36,7 @@ const DATE_FIELD_CLASS =
   "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
 const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
 const SECONDARY_BUTTON_CLASS =
-  "admin-btn-secondary min-w-[220px] text-[14px]";
+  "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
 const PRIMARY_BUTTON_CLASS =
   "admin-btn-primary w-full text-[14px]";
 const ONBOARDING_CARD_CLASS =
@@ -96,7 +98,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
   const progress = Math.min(Math.max(step, 1), 5) * 20;
 
   return (
-    <div className=" w-full max-w-[1350px] ">
+    <div className="mx-auto w-full max-w-[1350px]">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">
@@ -169,7 +171,7 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
         title="Edit"
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#082f91] transition hover:bg-[#eef2ff]"
       >
-        <RiEditBoxFill size={20} />
+        <BiSolidEdit size={20} />
       </button>
     </div>
     {children}
@@ -711,7 +713,10 @@ const SellerOnboarding = () => {
             kyc?.businessType ||
             "",
           businessName:
-            prev.businessName || sellerProfile?.businessName || "",
+            prev.businessName ||
+            sellerProfile?.businessName ||
+            sellerProfile?.displayName ||
+            "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
           displayName:
@@ -850,7 +855,10 @@ const SellerOnboarding = () => {
         kyc?.businessType ||
         "",
       businessName:
-        prev.businessName || sellerProfile?.businessName || "",
+        prev.businessName ||
+        sellerProfile?.businessName ||
+        sellerProfile?.displayName ||
+        "",
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
       displayName:
@@ -901,9 +909,28 @@ const SellerOnboarding = () => {
 
   useEffect(() => {
     if (!flowState) return;
+    const sellerProfile = flowState?.sellerProfile || {};
+    const pickupAddress = sellerProfile?.pickupAddress || {};
+    const hasStoredBusinessProfile =
+      Boolean(
+        (
+          sellerProfile?.businessName ||
+          sellerProfile?.displayName ||
+          sellerProfile?.legalBusinessName
+        )?.trim(),
+      ) &&
+      Boolean(sellerProfile?.businessType?.trim()) &&
+      Boolean(sellerProfile?.gstNumber?.trim()) &&
+      Boolean(sellerProfile?.supportEmail?.trim()) &&
+      Boolean(sellerProfile?.supportPhone?.trim()) &&
+      Boolean(pickupAddress?.line1?.trim()) &&
+      Boolean(pickupAddress?.city?.trim()) &&
+      Boolean(pickupAddress?.state?.trim()) &&
+      Boolean(pickupAddress?.postalCode?.trim());
     const profileCompleted =
-      !!flowState?.checklist?.profileCompleted ||
-      !!flowState?.requirements?.profile?.completed;
+      hasStoredBusinessProfile &&
+      (!!flowState?.checklist?.profileCompleted ||
+        !!flowState?.requirements?.profile?.completed);
     const bankRejected =
       flowState?.bankVerificationStatus === "rejected" ||
       flowState?.sellerProfile?.bankVerificationStatus === "rejected";
@@ -1103,7 +1130,7 @@ const SellerOnboarding = () => {
         name === "gstNumber"
           ? normalized.slice(0, 15)
           : name === "supportPhone"
-            ? normalized.replace(/\D/g, "").slice(0, 10)
+            ? normalized.replace(/\D/g, "").slice(0, 15)
             : upperCaseFields.includes(name)
               ? normalized.slice(0, 6)
               : normalized,
@@ -1113,7 +1140,9 @@ const SellerOnboarding = () => {
   const onBankChange = (event) => {
     const { name, value } = event.target;
     let normalized = name === "ifscCode" ? value.toUpperCase() : value;
-    if (name === "ifscCode") normalized = normalized.slice(0, 11);
+    if (name === "ifscCode") {
+      normalized = normalized.replace(/[^A-Z0-9]/g, "").slice(0, 11);
+    }
     if (name === "accountNumber") {
       normalized = normalized.replace(/\D/g, "").slice(0, 18);
     }
@@ -1135,9 +1164,6 @@ const SellerOnboarding = () => {
       errors.panNumber = "PAN format should be like ABCDE1234F";
     if (!kycForm.panDocumentFile && !documentUrls.panDocumentUrl)
       errors.panDocumentFile = "PAN document is required";
-    if (kycForm.gstNumber.trim() && !GST_REGEX.test(kycForm.gstNumber.trim())) {
-      errors.gstNumber = "GST format is invalid";
-    }
     if (!kycForm.aadhaarNumber.trim()) {
       errors.aadhaarNumber = "Aadhaar number is required";
     } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
@@ -1154,9 +1180,8 @@ const SellerOnboarding = () => {
   const getDocumentUploadValue = async (file, existingUrl) =>
     file ? readFileAsUploadPayload(file) : existingUrl || null;
 
-  const buildKycPayload = async () => ({
+  const buildKycPayload = async ({ includeGstCertificate = false } = {}) => ({
     panNumber: kycForm.panNumber.trim(),
-    gstNumber: (profileForm.gstNumber || kycForm.gstNumber).trim(),
     aadhaarNumber: kycForm.aadhaarNumber.trim(),
     legalName: kycForm.legalName.trim(),
     businessType: profileForm.businessType || kycForm.businessType,
@@ -1166,10 +1191,14 @@ const SellerOnboarding = () => {
         kycForm.panDocumentFile,
         documentUrls.panDocumentUrl,
       ),
-      gstCertificateUrl: await getDocumentUploadValue(
-        profileForm.gstCertificateFile,
-        documentUrls.gstCertificateUrl,
-      ),
+      ...(includeGstCertificate
+        ? {
+            gstCertificateUrl: await getDocumentUploadValue(
+              profileForm.gstCertificateFile,
+              documentUrls.gstCertificateUrl,
+            ),
+          }
+        : {}),
       aadhaarFrontUrl: await getDocumentUploadValue(
         kycForm.aadhaarFrontFile,
         documentUrls.aadhaarFrontUrl,
@@ -1180,6 +1209,57 @@ const SellerOnboarding = () => {
       ),
     },
   });
+
+  const buildProfilePayload = ({ includeBankDetails = false } = {}) => {
+    const payload = {
+      displayName:
+        profileForm.displayName.trim() || profileForm.businessName.trim(),
+      legalBusinessName:
+        profileForm.legalBusinessName.trim() || profileForm.businessName.trim(),
+      description: profileForm.description.trim(),
+      supportEmail: profileForm.supportEmail.trim(),
+      supportPhone: profileForm.supportPhone.trim(),
+      businessType: profileForm.businessType,
+      registrationNumber: profileForm.registrationNumber.trim(),
+      gstNumber: profileForm.gstNumber.trim(),
+      businessWebsite: profileForm.businessWebsite.trim(),
+      primaryContactName:
+        profileForm.primaryContactName.trim() || kycForm.legalName.trim(),
+      businessAddress: {
+        line1: profileForm.businessAddressLine1.trim(),
+        line2: profileForm.businessAddressLine2.trim(),
+        city: profileForm.businessAddressCity.trim(),
+        state: profileForm.businessAddressState.trim(),
+        country: profileForm.businessAddressCountry.trim() || "India",
+        postalCode: profileForm.businessAddressPostalCode.trim(),
+      },
+      pickupAddress: {
+        line1: profileForm.pickupLine1.trim(),
+        line2: profileForm.pickupLine2.trim(),
+        city: profileForm.pickupCity.trim(),
+        state: profileForm.pickupState.trim(),
+        country: profileForm.pickupCountry.trim() || "India",
+        postalCode: profileForm.pickupPostalCode.trim(),
+      },
+    };
+
+    if (kycForm.panNumber.trim()) payload.panNumber = kycForm.panNumber.trim();
+    if (kycForm.aadhaarNumber.trim()) {
+      payload.aadhaarNumber = kycForm.aadhaarNumber.trim();
+    }
+    if (kycForm.dateOfBirth) payload.dateOfBirth = kycForm.dateOfBirth;
+    if (includeBankDetails) {
+      payload.bankDetails = {
+        accountHolderName: bankForm.accountHolderName.trim(),
+        accountNumber: bankForm.accountNumber.trim(),
+        ifscCode: bankForm.ifscCode.trim(),
+        bankName: bankForm.bankName.trim(),
+        branchName: bankForm.branchName.trim(),
+      };
+    }
+
+    return payload;
+  };
 
   const validateProfile = () => {
     const errors = {};
@@ -1197,8 +1277,8 @@ const SellerOnboarding = () => {
       errors.supportEmail = "Support email is invalid";
     if (!profileForm.supportPhone.trim())
       errors.supportPhone = "Support phone is required";
-    else if (!/^[0-9]{10}$/.test(profileForm.supportPhone.trim()))
-      errors.supportPhone = "Support phone must be 10 digits";
+    else if (!/^[0-9]{10,15}$/.test(profileForm.supportPhone.trim()))
+      errors.supportPhone = "Support phone must be 10 to 15 digits";
     if (
       profileForm.businessWebsite.trim() &&
       !URL_REGEX.test(profileForm.businessWebsite.trim())
@@ -1213,17 +1293,17 @@ const SellerOnboarding = () => {
     if (!profileForm.pickupPostalCode.trim())
       errors.pickupPostalCode = "Pickup postal code is required";
     else if (
-      profileForm.pickupPostalCode.trim().length < 6 ||
-      profileForm.pickupPostalCode.trim().length > 6
+      profileForm.pickupPostalCode.trim().length < 5 ||
+      profileForm.pickupPostalCode.trim().length > 10
     )
-      errors.pickupPostalCode = "Pickup postal code must be 6 characters";
+      errors.pickupPostalCode = "Pickup postal code must be 5 to 10 characters";
     if (
       profileForm.businessAddressPostalCode.trim() &&
-      (profileForm.businessAddressPostalCode.trim().length < 6 ||
-        profileForm.businessAddressPostalCode.trim().length > 6)
+      (profileForm.businessAddressPostalCode.trim().length < 5 ||
+        profileForm.businessAddressPostalCode.trim().length > 10)
     )
       errors.businessAddressPostalCode =
-        "Business postal code must be 6 characters";
+        "Business postal code must be 5 to 10 characters";
     setProfileErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -1231,12 +1311,23 @@ const SellerOnboarding = () => {
   const submitKycStep = async (event) => {
     event.preventDefault();
     if (!validateKyc()) return;
-    setProfileForm((prev) => ({
-      ...prev,
-      businessType: prev.businessType || kycForm.businessType,
-      gstNumber: prev.gstNumber || kycForm.gstNumber,
-    }));
-    setStep(2);
+    try {
+      const kycPayload = await buildKycPayload();
+      await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      setKycSubmittedApi(true);
+      setRequiresKycRefresh(false);
+      setProfileForm((prev) => ({
+        ...prev,
+        businessType: prev.businessType || kycForm.businessType,
+        gstNumber: prev.gstNumber || kycForm.gstNumber,
+      }));
+      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+      setStep(2);
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to submit KYC details");
+      setBackendFieldErrors(parsed.details, setKycErrors);
+      toast.error(parsed.message);
+    }
   };
 
   const submitBusinessStep = async (event) => {
@@ -1245,24 +1336,57 @@ const SellerOnboarding = () => {
       setStep(2);
       return;
     }
-    setStep(3);
+    try {
+      const kycPayload = await buildKycPayload({ includeGstCertificate: true });
+      await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      setKycSubmittedApi(true);
+      setRequiresKycRefresh(false);
+      await dispatch(updateSellerOnboardingProfile(buildProfilePayload())).unwrap();
+      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+      setStep(3);
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to save business details");
+      const detailKeys = (parsed.details || []).map(
+        (detail) => detail?.path?.[detail?.path?.length - 1],
+      );
+      const isKycError = detailKeys.some((key) =>
+        ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key),
+      );
+      setBackendFieldErrors(
+        parsed.details,
+        isKycError ? setKycErrors : setProfileErrors,
+      );
+      toast.error(parsed.message);
+    }
   };
 
-  const submitBankStep = async (event) => {
-    event.preventDefault();
+  const validateBankDetails = () => {
     const errors = {};
     if (!bankForm.accountHolderName.trim())
       errors.accountHolderName = "Account holder name is required";
-    if (!bankForm.accountNumber.trim())
+    if (!bankForm.accountNumber.trim()) {
       errors.accountNumber = "Account number is required";
-    if (!bankForm.ifscCode.trim()) errors.ifscCode = "IFSC code is required";
+    } else if (!BANK_ACCOUNT_REGEX.test(bankForm.accountNumber.trim())) {
+      errors.accountNumber = "Account number must be 9 to 18 digits";
+    }
+    if (!bankForm.ifscCode.trim()) {
+      errors.ifscCode = "IFSC code is required";
+    } else if (!IFSC_REGEX.test(bankForm.ifscCode.trim())) {
+      errors.ifscCode = "IFSC format should be like ABCD0123456";
+    }
     if (!bankForm.bankName.trim()) errors.bankName = "Bank name is required";
     if (!bankForm.branchName.trim())
       errors.branchName = "Branch name is required";
     if (Object.keys(errors).length > 0) {
       setProfileErrors((prev) => ({ ...prev, ...errors }));
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const submitBankStep = async (event) => {
+    event.preventDefault();
+    if (!validateBankDetails()) return;
     const bankRejected =
       flowState?.bankVerificationStatus === "rejected" ||
       flowState?.sellerProfile?.bankVerificationStatus === "rejected" ||
@@ -1286,59 +1410,22 @@ const SellerOnboarding = () => {
       setStep(2);
       return;
     }
-    const shouldSubmitKyc = !kycSubmittedApi;
+    if (!validateBankDetails()) {
+      setStep(3);
+      return;
+    }
+    const shouldSubmitKyc =
+      !kycSubmittedApi || Boolean(profileForm.gstCertificateFile);
     try {
       if (shouldSubmitKyc) {
-        const kycPayload = await buildKycPayload();
+        const kycPayload = await buildKycPayload({
+          includeGstCertificate: true,
+        });
         await dispatch(submitSellerKyc(kycPayload)).unwrap();
         setKycSubmittedApi(true);
         setRequiresKycRefresh(false);
       }
-      const payload = {
-        displayName:
-          profileForm.displayName.trim() || profileForm.businessName.trim(),
-        legalBusinessName:
-          profileForm.legalBusinessName.trim() ||
-          profileForm.businessName.trim(),
-        description: profileForm.description.trim(),
-        supportEmail: profileForm.supportEmail.trim(),
-        supportPhone: profileForm.supportPhone.trim(),
-        businessType: profileForm.businessType,
-        registrationNumber: profileForm.registrationNumber.trim(),
-        gstNumber: profileForm.gstNumber.trim(),
-        businessWebsite: profileForm.businessWebsite.trim(),
-        primaryContactName:
-          profileForm.primaryContactName.trim() || kycForm.legalName.trim(),
-        businessAddress: {
-          line1: profileForm.businessAddressLine1.trim(),
-          line2: profileForm.businessAddressLine2.trim(),
-          city: profileForm.businessAddressCity.trim(),
-          state: profileForm.businessAddressState.trim(),
-          country: profileForm.businessAddressCountry.trim() || "India",
-          postalCode: profileForm.businessAddressPostalCode.trim(),
-        },
-        pickupAddress: {
-          line1: profileForm.pickupLine1.trim(),
-          line2: profileForm.pickupLine2.trim(),
-          city: profileForm.pickupCity.trim(),
-          state: profileForm.pickupState.trim(),
-          country: profileForm.pickupCountry.trim() || "India",
-          postalCode: profileForm.pickupPostalCode.trim(),
-        },
-        bankDetails: {
-          accountHolderName: bankForm.accountHolderName.trim(),
-          accountNumber: bankForm.accountNumber.trim(),
-          ifscCode: bankForm.ifscCode.trim(),
-          bankName: bankForm.bankName.trim(),
-          branchName: bankForm.branchName.trim(),
-        },
-      };
-      if (kycForm.panNumber.trim())
-        payload.panNumber = kycForm.panNumber.trim();
-      if (kycForm.aadhaarNumber.trim())
-        payload.aadhaarNumber = kycForm.aadhaarNumber.trim();
-      if (shouldSubmitKyc && kycForm.dateOfBirth)
-        payload.dateOfBirth = kycForm.dateOfBirth;
+      const payload = buildProfilePayload({ includeBankDetails: true });
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       localStorage.removeItem(draftKey);
@@ -1664,7 +1751,7 @@ const SellerOnboarding = () => {
           </OnboardingSection>
 
           <OnboardingActions>
-            <div className="flex w-full items-start justify-start gap-4 ">
+            <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-start sm:gap-4">
               <button
                 className={SECONDARY_BUTTON_CLASS}
                 type="button"

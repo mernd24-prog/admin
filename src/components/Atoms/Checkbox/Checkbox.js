@@ -1,26 +1,29 @@
 import React from "react";
 
 const CustomCheckbox = ({
+  id,
+  name,
   checked,
   onChange,
-
   className = "",
 }) => {
   return (
     <label
-      className={`relative inline-flex items-center cursor-pointer select-none ${className} `}
+      className={`relative inline-flex shrink-0 cursor-pointer items-center select-none ${className}`}
     >
       <input
+        id={id}
+        name={name}
         type="checkbox"
-        className="peer hidden"
+        className="peer sr-only"
         checked={checked}
         onChange={onChange}
       />
 
-      <span className="w-4 h-4 border border-[#4a4a4f] rounded bg-transparent  transition-all duration-300" />
+      <span className="h-[18px] w-[18px] rounded-[5px] border border-[#d0c9bd] bg-white shadow-sm transition-all duration-200 peer-checked:border-[#082f91] peer-checked:bg-[#082f91] peer-focus-visible:ring-2 peer-focus-visible:ring-[#d9e2ff] peer-focus-visible:ring-offset-1" />
 
       <svg
-        className="absolute left-[2px] top-[3px] w-3 h-3 text-black opacity-0 peer-checked:opacity-100 transition-opacity duration-300 pointer-events-none"
+        className="pointer-events-none absolute left-[3px] top-[3px] h-3 w-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

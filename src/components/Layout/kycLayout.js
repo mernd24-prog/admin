@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { Check } from "lucide-react";
 import BrandLogo from "../BrandLogo";
@@ -70,6 +70,8 @@ const KYCStatusLayout = ({
   currentSection = "status",
   logo = "/logo.png",
 }) => {
+  const stepsNavRef = useRef(null);
+  const activeStepRef = useRef(null);
   const { seller, authSlice } = useSelector((state) => state || {});
   const storedUser = readStoredJson("currentUser");
   const storedOnboardingUser = readStoredJson("sellerOnboardingUser");
@@ -102,6 +104,21 @@ const KYCStatusLayout = ({
     (item) => item.id === currentSection,
   );
 
+  useEffect(() => {
+    const nav = stepsNavRef.current;
+    const activeStep = activeStepRef.current;
+    if (!nav || !activeStep || window.matchMedia("(min-width: 1024px)").matches) {
+      return;
+    }
+
+    nav.scrollTo({
+      left:
+        activeStep.offsetLeft -
+        (nav.clientWidth - activeStep.offsetWidth) / 2,
+      behavior: "smooth",
+    });
+  }, [currentSection]);
+
   return (
     <div className="min-h-screen bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
       <aside className="w-full bg-[#FEFEFE] shadow-[2px_2px_50px_0px_#0000001A] lg:min-h-screen">
@@ -122,11 +139,15 @@ const KYCStatusLayout = ({
             </div>
 
             <div className="px-4 pt-4 sm:px-6 sm:pt-5 lg:px-[31px] lg:pt-[22px]">
-              <nav className="relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0">
+              <nav
+                ref={stepsNavRef}
+                className="relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
+              >
                 <span className="absolute left-[25px] top-[20px] hidden h-[310px] w-[2.5px] rounded-full bg-[#E49E1C] lg:block" />
                 {menuItems.map((item, index) => (
                   <div
                     key={item.id}
+                    ref={item.id === currentSection ? activeStepRef : null}
                     className="relative z-10 min-w-[205px] sm:min-w-[225px] lg:min-w-0"
                   >
                     <div
@@ -177,7 +198,7 @@ const KYCStatusLayout = ({
                 title="Need Help?"
                 description="Our verification team is available 24/7 to help you complete KYC."
                 buttonText="Contact Support"
-                className="mx-auto mt-5 max-w-[285px] sm:mt-6 lg:mt-8 lg:max-w-none"
+                className="mx-auto mt-5 hidden max-w-[285px] lg:mt-8 lg:block lg:max-w-none"
               />
             </div>
           </div></div>
