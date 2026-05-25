@@ -43,6 +43,13 @@ export const ENDPOINTS = {
       (userId) => `/sellers/me/sub-admins/${userId}/modules`
     ),
   },
+  sellerUsers: {
+    sellers: "/admin/seller-users/sellers",
+    sellerAdmins: "/admin/seller-users/seller-admins",
+    sellerSubAdmins: "/admin/seller-users/seller-sub-admins",
+    createSellerAdmin: "/admin/seller-users/seller-admin",
+    createSellerSubAdmin: "/admin/seller-users/seller-sub-admin",
+  },
   sellers: {
     onboardingKyc: "/sellers/onboarding/kyc",
     onboardingProfile: "/sellers/onboarding/profile",

@@ -110,7 +110,7 @@ export const MODULE_DEFAULT_ROUTES = {
   // Users
   users:              "users",
   sellers:            "seller",
-  "seller-management": "seller-staff",
+  "seller-management": "seller-users",
   "sellers/commissions":"transactions",
   // Marketing
   pricing:        "discount-coupons",
@@ -153,11 +153,11 @@ const ROUTE_MODULES = [
   [["/home"], ["admin", "analytics"]],
 
   // Users & Access
-  [["/admin-users", "/user-permissions", "/roles-permissions", "/module-management"], ["rbac", "users"]],
+  [["/admin-users", "/user-permissions", "/roles-permissions", "/module-management"], ["rbac"]],
   [["/activity-logs"], ["rbac"]],
   [["/users", "/users-addresses", "/messages"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
-  [["/seller", "/seller-staff"], ["sellers"]],
+  [["/seller", "/seller-staff", "/seller-users"], ["sellers"]],
 
   // Catalog Management — products
   [

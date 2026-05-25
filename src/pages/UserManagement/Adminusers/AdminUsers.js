@@ -184,7 +184,7 @@ const ModuleSelector = ({ selected, onChange, modules = DEFAULT_PLATFORM_MODULES
 };
 
 const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: [] };
-const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', role: 'sub-admin', parentSellerId: '', allowedModules: ['products', 'orders'] };
+const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', role: 'sub-admin', allowedModules: ['products', 'orders'] };
 
 const getUserDisplayName = (user = {}) => {
   const profile = user.profile || {};
@@ -274,8 +274,9 @@ const AdminUsers = () => {
   const storedRole = normalizeRole(getStoredRole());
   const isSuperAdmin = storedRole === 'super-admin';
   const isAdmin = storedRole === 'admin' || isSuperAdmin;
+  const canSeeAdminsTab = isSuperAdmin;
 
-  const [tab, setTab] = useState('subadmins');
+  const [tab, setTab] = useState(isSuperAdmin ? 'admins' : 'subadmins');
   const [pageAdmin, setPageAdmin] = useState(1);
   const [pageSubAdmin, setPageSubAdmin] = useState(1);
   const [refresh, setRefresh] = useState(false);
@@ -300,8 +301,15 @@ const AdminUsers = () => {
   const { list: legacyAdmins, total: legacyAdminsTotal } = extractListPayload(selector?.adminUsersData);
   const { list: hierarchyAdmins, total: hierarchyAdminsTotal } = extractListPayload(selector?.adminsData);
   const { list: allSubAdmins, total: platformSubAdminsTotal } = extractListPayload(selector?.platformSubAdminsData);
-  const admins = hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins;
-  const adminsTotal = hierarchyAdmins.length ? hierarchyAdminsTotal : legacyAdminsTotal;
+  const admins = (hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins).filter(
+    (user) => normalizeRole(user?.role) === 'admin',
+  );
+  const rawAdmins = hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins;
+  const rawAdminsTotal = hierarchyAdmins.length ? hierarchyAdminsTotal : legacyAdminsTotal;
+  const adminsTotal = rawAdmins.length === admins.length ? rawAdminsTotal : admins.length;
+  const subAdminPool = (Array.isArray(allSubAdmins) ? allSubAdmins : []).filter(
+    (user) => normalizeRole(user?.role) === 'sub-admin',
+  );
   const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
   const sidebarModuleSlugs = useMemo(
     () => new Set(
@@ -338,14 +346,6 @@ const AdminUsers = () => {
     () => groupModuleOptions(selectedModuleOptions).length,
     [selectedModuleOptions],
   );
-  const sellerOptions = useMemo(
-    () => (admins || []).filter((user) => user.role === 'seller'),
-    [admins],
-  );
-  const getAllowedModuleGroups = (allowedModules = []) => {
-    const selectedOptions = getSelectedModuleOptions(moduleOptions, allowedModules);
-    return groupModuleOptions(selectedOptions).map(([tabName]) => tabName);
-  };
   const defaultSubAdminModules = useMemo(() => {
     const preferred = moduleOptionSlugs.filter((mod) => ['products', 'orders'].includes(mod));
     return preferred.length ? preferred : moduleOptionSlugs.slice(0, 1);
@@ -355,10 +355,12 @@ const AdminUsers = () => {
     [moduleOptionSlugs],
   );
   const filteredSubAdmins = useMemo(
-    () => filterUsers(allSubAdmins, filters.search),
-    [allSubAdmins, filters.search]
+    () => filterUsers(subAdminPool, filters.search),
+    [subAdminPool, filters.search]
   );
-  const subAdminsTotal = platformSubAdminsTotal || filteredSubAdmins.length;
+  const subAdminsTotal = subAdminPool.length === allSubAdmins.length
+    ? (platformSubAdminsTotal || filteredSubAdmins.length)
+    : filteredSubAdmins.length;
   const subAdmins = useMemo(() => {
     if (platformSubAdminsTotal) return filteredSubAdmins;
     const start = (pageSubAdmin - 1) * PAGE_SIZE;
@@ -370,16 +372,10 @@ const AdminUsers = () => {
   // ── Fetch ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (tab === 'admins' && isAdmin) {
+    if (tab === 'admins' && canSeeAdminsTab) {
       dispatch(getAdmins({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search }));
     }
-  }, [tab, pageAdmin, refresh, filters.search]);
-
-  useEffect(() => {
-    if (isAdmin && ['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role)) {
-      dispatch(getAdmins({ page: 1, limit: 100 }));
-    }
-  }, [dispatch, isAdmin, subAdminForm.role, refresh]);
+  }, [tab, pageAdmin, refresh, filters.search, dispatch, canSeeAdminsTab]);
 
   useEffect(() => {
     if (tab === 'subadmins') {
@@ -389,9 +385,9 @@ const AdminUsers = () => {
 
   useEffect(() => {
     if (isAdmin) {
-      dispatch(getAccessModules({ role: subAdminForm.role || 'sub-admin', includePermissions: false }));
+      dispatch(getAccessModules({ role: 'sub-admin', includePermissions: false }));
     }
-  }, [dispatch, isAdmin, subAdminForm.role]);
+  }, [dispatch, isAdmin]);
 
   useEffect(() => {
     if (!isAdmin || sidebarModules.length) return;
@@ -450,9 +446,6 @@ const AdminUsers = () => {
     const errs = validateUserForm(subAdminForm);
     const allowedModules = subAdminForm.allowedModules.filter((mod) => moduleOptionSlugs.includes(mod));
     if (!allowedModules.length) errs.allowedModules = 'Select at least one module';
-    if (['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role) && !subAdminForm.parentSellerId) {
-      errs.parentSellerId = 'Select a parent seller';
-    }
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try {
       await dispatch(createPlatformSubAdmin({ ...subAdminForm, allowedModules })).unwrap();
@@ -489,7 +482,6 @@ const AdminUsers = () => {
       email: user.email || '',
       phone: user.phone || '',
       role: user.role || 'sub-admin',
-      parentSellerId: user.parentSellerId || user.ownerSellerId || '',
       allowedModules: selectedModules.length ? selectedModules : defaultSubAdminModules,
     });
     setEditSubAdminOpen(true);
@@ -574,48 +566,74 @@ const AdminUsers = () => {
 
   // ── Table data ───────────────────────────────────────────────────────────────
 
-  const buildRows = (list, showModules = false) =>
-    (Array.isArray(list) ? list : []).map((user) => {
-      const name = user.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : user.full_name || user.email;
-      const isActive = isUserActive(user);
-      const userId = user._id || user.id;
-      return [
-        <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
-        <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
-        <span key={`role-${userId}`} className="text-gray-600">{formatRole(user.role)}</span>,
-        ...(showModules ? [
-          <div key={`mods-${userId}`} className="flex flex-wrap gap-1">
-            {getAllowedModuleGroups(user.allowedModules || []).slice(0, 3).map((groupName) => (
-              <span key={groupName} className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded">{groupName}</span>
-            ))}
-            {getAllowedModuleGroups(user.allowedModules || []).length > 3 && (
-              <span className="text-xs text-gray-400">+{getAllowedModuleGroups(user.allowedModules || []).length - 3} more</span>
-            )}
-          </div>,
-        ] : []),
-        <span key={`summary-${userId}`} className="text-xs text-gray-500">
-          {user.assignedModuleCount ?? (user.allowedModules || []).length} modules / {user.assignedActionCount ?? user.permissionSummary?.actionCount ?? 0} actions
-        </span>,
-        <span key={`created-${userId}`} className="text-xs text-gray-500">
-          {formatRole(user.createdByRole) || '-'}
-        </span>,
-        <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
-        <ActionButtons
-          key={`actions-${userId}`}
-          onEdit={() => showModules ? openEditSubAdmin(user) : openEditAdmin(user)}
-          showDeleteButton={false}
-          showPasswordButton={false}
-          showLinkButton={false}
-          viewButton={true}
-          onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
-          userPermissions={true}
-          onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
-        />,
-      ];
-    });
+  const getParentAdminLabel = (user = {}) => {
+    const parent = user.parentAdmin || user.createdByUser || {};
+    const nameFromParent =
+      [parent?.profile?.firstName, parent?.profile?.lastName].filter(Boolean).join(' ') ||
+      parent?.full_name ||
+      parent?.email;
+    return nameFromParent || user.parentAdminName || '-';
+  };
 
-  const adminRows = useMemo(() => buildRows(admins, false), [admins]);
-  const subAdminRows = useMemo(() => buildRows(subAdmins, true), [subAdmins, moduleOptions]);
+  const adminRows = useMemo(
+    () =>
+      (Array.isArray(admins) ? admins : []).map((user) => {
+        const name = user.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : user.full_name || user.email;
+        const isActive = isUserActive(user);
+        const userId = user._id || user.id;
+        return [
+          <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
+          <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
+          <span key={`summary-${userId}`} className="text-xs text-gray-500">
+            {user.assignedModuleCount ?? (user.allowedModules || []).length} modules / {user.assignedActionCount ?? user.permissionSummary?.actionCount ?? 0} actions
+          </span>,
+          <span key={`created-${userId}`} className="text-xs text-gray-500">{formatRole(user.createdByRole) || '-'}</span>,
+          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
+          <ActionButtons
+            key={`actions-${userId}`}
+            onEdit={() => openEditAdmin(user)}
+            showDeleteButton={false}
+            showPasswordButton={false}
+            showLinkButton={false}
+            viewButton={true}
+            onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
+            userPermissions={true}
+            onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+          />,
+        ];
+      }),
+    [admins, navigate],
+  );
+
+  const subAdminRows = useMemo(
+    () =>
+      (Array.isArray(subAdmins) ? subAdmins : []).map((user) => {
+        const name = user.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ''}`.trim() : user.full_name || user.email;
+        const isActive = isUserActive(user);
+        const userId = user._id || user.id;
+        const assignedModuleCount = user.assignedModuleCount ?? (user.allowedModules || []).length;
+        return [
+          <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
+          <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
+          <span key={`parent-${userId}`} className="text-xs text-gray-600">{getParentAdminLabel(user)}</span>,
+          <span key={`created-${userId}`} className="text-xs text-gray-500">{formatRole(user.createdByRole) || '-'}</span>,
+          <span key={`module-count-${userId}`} className="text-xs text-gray-500">{assignedModuleCount}</span>,
+          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
+          <ActionButtons
+            key={`actions-${userId}`}
+            onEdit={() => openEditSubAdmin(user)}
+            showDeleteButton={false}
+            showPasswordButton={false}
+            showLinkButton={false}
+            viewButton={true}
+            onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
+            userPermissions={true}
+            onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+          />,
+        ];
+      }),
+    [subAdmins, navigate],
+  );
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -644,8 +662,8 @@ const AdminUsers = () => {
         {/* Tab navigation */}
         <div className="flex gap-0 mb-4 border-b border-gray-200">
           {[
+            ...(canSeeAdminsTab ? [{ key: 'admins', label: 'Admins' }] : []),
             { key: 'subadmins', label: 'Sub-Admins' },
-            ...(isAdmin ? [{ key: 'admins', label: 'Admins' }] : []),
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -676,7 +694,7 @@ const AdminUsers = () => {
           {tab === 'admins' && (
             <TableData
               Heading="Admins"
-              tableHeadings={['Name', 'Email', 'Role', 'Permission Summary', 'Created By', 'Status', 'Actions']}
+              tableHeadings={['Name', 'Email', 'Permission Summary', 'Created By', 'Status', 'Actions']}
               data={adminRows}
               totalData={adminsTotal}
               totalSize={PAGE_SIZE}
@@ -688,7 +706,7 @@ const AdminUsers = () => {
           {tab === 'subadmins' && (
             <TableData
               Heading="Sub-Admins"
-              tableHeadings={['Name', 'Email', 'Role', 'Assigned Modules', 'Permission Summary', 'Created By', 'Status', 'Actions']}
+              tableHeadings={['Name', 'Email', 'Parent Admin', 'Created By', 'Assigned Modules Count', 'Status', 'Actions']}
               data={subAdminRows}
               totalData={subAdminsTotal}
               totalSize={PAGE_SIZE}
@@ -802,36 +820,13 @@ const AdminUsers = () => {
             onChange={(e) => setSubAdminForm((f) => ({ ...f, phone: e.target.value }))}
             maxLength={15} />
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Role *</label>
-            <select
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3E4094] focus:outline-none"
-              value={subAdminForm.role}
-              onChange={(e) => setSubAdminForm((f) => ({ ...f, role: e.target.value, allowedModules: [] }))}
-            >
-              <option value="sub-admin">Sub Admin</option>
-              <option value="seller">Seller</option>
-              <option value="seller-admin">Seller Admin</option>
-              <option value="seller-sub-admin">Seller Sub Admin</option>
-            </select>
+            <label className="text-sm font-medium text-gray-700">Role</label>
+            <input
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-500 bg-gray-50"
+              value="Sub Admin"
+              readOnly
+            />
           </div>
-          {['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role) && (
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Parent Seller *</label>
-              <select
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3E4094] focus:outline-none"
-                value={subAdminForm.parentSellerId}
-                onChange={(e) => setSubAdminForm((f) => ({ ...f, parentSellerId: e.target.value }))}
-              >
-                <option value="">Select seller</option>
-                {sellerOptions.map((seller) => (
-                  <option key={seller._id || seller.id} value={seller._id || seller.id}>
-                    {getUserDisplayName(seller)}
-                  </option>
-                ))}
-              </select>
-              {errors.parentSellerId && <p className="text-xs text-red-500">{errors.parentSellerId}</p>}
-            </div>
-          )}
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Password *" name="password" type="password" value={subAdminForm.password}
               onChange={(e) => setSubAdminForm((f) => ({ ...f, password: e.target.value }))}

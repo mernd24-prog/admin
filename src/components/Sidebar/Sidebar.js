@@ -50,6 +50,13 @@ const toRouteCode = (routePath = "") =>
     .replace(/^\/+/, "")
     .replace(/\/+$/, "");
 
+const normalizeModuleCode = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-");
+
 const flattenSidebarChildren = (items = [], prefix = "") =>
   items.flatMap((item) => {
     const label = prefix ? `${prefix} / ${item.moduleName || item.name}` : (item.moduleName || item.name);
@@ -69,14 +76,14 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
 const filterSidebarTreeByAccess = (items = [], options = {}) =>
   items
     .map((item) => {
-      const requiredModule = item.metadata?.requiredModule || item.requiredModule || item.moduleKey || item.slug;
+      const requiredModule = normalizeModuleCode(item.metadata?.requiredModule || item.requiredModule || item.moduleKey || item.slug);
       const children = filterSidebarTreeByAccess(item.children || [], options);
       const allowedModules = options.allowedModules || new Set();
       const selfAllowed =
         options.superAdmin ||
         allowedModules.has(requiredModule) ||
-        allowedModules.has(item.moduleKey) ||
-        allowedModules.has(item.slug) ||
+        allowedModules.has(normalizeModuleCode(item.moduleKey)) ||
+        allowedModules.has(normalizeModuleCode(item.slug)) ||
         !requiredModule ||
         hasModuleAccess(requiredModule) ||
         hasModuleAccess(item.moduleKey) ||
@@ -170,7 +177,7 @@ const Sidebar = ({
           module.metadata?.requiredModule,
         ])
         .filter(Boolean)
-        .map(String),
+        .map(normalizeModuleCode),
     );
   }, [permissionModules]);
 

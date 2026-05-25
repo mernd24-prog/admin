@@ -17,27 +17,61 @@ import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/a
 import { MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
 
 const ACTION_ALIASES = {
-    create: 'add',
-    edit: 'update',
-    approve: 'action',
-    review: 'action',
-    manage: 'action',
-    status: 'action',
-    approval: 'action',
+    review: 'approval',
+    manage: 'status',
 };
-const ACTION_ALIASES_TO_STANDARD = {
-    create: 'add',
-    edit: 'update',
-    status: 'action',
-    approval: 'action',
-    approve: 'action',
-    review: 'action',
-    manage: 'action',
+const ACTION_EQUIVALENTS = {
+    create: ['add'],
+    add: ['create'],
+    edit: ['update'],
+    update: ['edit'],
+    approve: ['approval'],
+    approval: ['approve'],
+    status: ['status_change', 'action'],
+    status_change: ['status', 'action'],
+    manage: ['status', 'action'],
+    action: ['status', 'status_change', 'manage'],
 };
-const BACKEND_PERMISSION_ACTIONS = ['view', 'add', 'update', 'delete', 'action'];
+const BACKEND_PERMISSION_ACTIONS = [
+    'view',
+    'create',
+    'add',
+    'edit',
+    'update',
+    'delete',
+    'approve',
+    'approval',
+    'reject',
+    'assign',
+    'export',
+    'import',
+    'status_change',
+    'status',
+    'restore',
+    'bulk_action',
+    'action',
+];
 const SEARCH_ACCENT = '#082f91';
 const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#082f91] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
 const SECONDARY_BUTTON_CLASS = 'px-4 py-2 text-sm font-medium border border-[#082f91] text-[#082f91] rounded-lg hover:bg-[#eef3ff] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+
+const normalizeAction = (action = '') => {
+    const value = String(action || '').trim().toLowerCase();
+    return ACTION_ALIASES[value] || value;
+};
+
+const normalizeModuleCode = (value = '') =>
+    String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/_/g, '-');
+
+const expandActionCandidates = (action = '') => {
+    const normalized = normalizeAction(action);
+    const aliases = ACTION_EQUIVALENTS[normalized] || [];
+    return Array.from(new Set([normalized, ...aliases]));
+};
 
 const AccessCheckbox = ({ checked, disabled, onChange, ariaLabel }) => (
     <button
@@ -74,7 +108,7 @@ const getListItems = (sliceData) => {
 
 const getModuleActions = (module) => {
     const actions = (module.permissions || [])
-        .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
+        .map((permission) => normalizeAction(permission.action))
         .filter(Boolean);
     const unique = Array.from(new Set(['view', ...actions]));
     return unique.filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
@@ -83,24 +117,32 @@ const getModuleActions = (module) => {
 const getAssignedModuleActions = (module) => {
     const assigned = (module.permissions || [])
         .filter((permission) => permission.assigned)
-        .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
+        .map((permission) => normalizeAction(permission.action))
         .filter(Boolean);
     return Array.from(new Set(assigned));
 };
 
 const normalizeActionsForBackend = (actions = []) => {
     const normalized = actions
-        .map((action) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[action] || action] || action)
+        .map((action) => normalizeAction(action))
         .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
 
     const withView = normalized.includes('view') ? normalized : ['view', ...normalized];
     return Array.from(new Set(withView));
 };
 
-const ASSIGNMENT_ACTIONS = ['update', 'action', 'add', 'delete', 'view'];
+const ASSIGNMENT_ACTIONS = ['assign', 'create', 'add', 'edit', 'update', 'approval', 'approve', 'status', 'status_change', 'action', 'delete', 'view'];
 
 const getModuleCode = (module) =>
-    module?.slug || module?.module || module?.module_code?.module_code || module?.module_code;
+    normalizeModuleCode(
+        module?.slug ||
+        module?.moduleKey ||
+        module?.moduleSlug ||
+        module?.module ||
+        module?.module_code?.module_code ||
+        module?.module_code ||
+        module?.metadata?.requiredModule
+    );
 
 const hasAssignedModuleAccess = (module = {}) => {
     if (module.assigned) return true;
@@ -114,7 +156,7 @@ const buildAssignedActionMap = (modules = []) => {
         if (!moduleCode) return;
         const assigned = (module.permissions || [])
             .filter((permission) => permission?.assigned)
-            .map((permission) => ACTION_ALIASES_TO_STANDARD[ACTION_ALIASES[permission.action] || permission.action] || permission.action)
+            .flatMap((permission) => expandActionCandidates(permission.action))
             .filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
         result[moduleCode] = new Set(Array.from(new Set(assigned)));
     });
@@ -166,7 +208,7 @@ const UserPermissions = ({ setModuleName }) => {
     useEffect(() => {
         let isMounted = true;
         const role = normalizeRole(getStoredRole());
-        if (role === 'admin' || role === 'super-admin' || role === 'seller') {
+        if (role === 'super-admin' || role === 'seller') {
             setCanAssignPermissions(true);
             setActorPermissionMap({});
             return () => {
@@ -197,9 +239,13 @@ const UserPermissions = ({ setModuleName }) => {
                 setActorPermissionMap(map);
                 const rbacActions = map.rbac || map['admin-users'] || new Set();
                 const sellerAccessActions = map.sellers || new Set();
-                const hasAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
+                const hasNamedAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
                     rbacActions.has(action) || sellerAccessActions.has(action)
                 );
+                const hasDelegatablePermission = Object.values(map).some((actions) =>
+                    actions instanceof Set && actions.size > 0
+                );
+                const hasAssignmentAction = hasNamedAssignmentAction || hasDelegatablePermission;
                 setCanAssignPermissions(hasAssignmentAction);
             })
             .catch(() => {
@@ -250,7 +296,9 @@ const UserPermissions = ({ setModuleName }) => {
             )
             : getPayload(selector?.getAdminUserDetailsData);
         const modules = modulePayload?.modules || modulePayload?.list || [];
-        const allowedModules = Array.isArray(user?.allowedModules) ? user.allowedModules : [];
+        const allowedModules = Array.isArray(user?.allowedModules)
+            ? user.allowedModules.map(normalizeModuleCode)
+            : [];
         const userUsesModuleScope = ['sub-admin', 'seller-admin', 'seller-sub-admin'].includes(user?.role);
         const label = user?.full_name || user?.userName || user?.email || '';
 
@@ -263,7 +311,10 @@ const UserPermissions = ({ setModuleName }) => {
         }
 
         const visibleModules = modules
-            .filter((module) => sellerPanel || !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug))
+            .filter((module) => {
+                const moduleSlug = getModuleCode(module);
+                return sellerPanel || !sidebarModuleSlugs.size || sidebarModuleSlugs.has(moduleSlug);
+            })
             .sort((a, b) => {
                 const tabA = a.tab || a.metadata?.tab || '';
                 const tabB = b.tab || b.metadata?.tab || '';
@@ -276,24 +327,28 @@ const UserPermissions = ({ setModuleName }) => {
             });
 
         setPermissions(visibleModules.map((module) => {
+            const moduleSlug = getModuleCode(module);
             const availablePermissions = getModuleActions(module);
-            const actorModuleActions = actorPermissionMap[module.slug] || new Set();
+            const actorModuleActions = actorPermissionMap[moduleSlug] || new Set();
             const effectiveAssignablePermissions = canAssignPermissions
                 ? (hasActorPermissionCeiling
-                    ? availablePermissions.filter((action) => action === 'view' || actorModuleActions.has(action))
+                    ? availablePermissions.filter((action) =>
+                        action === 'view' ||
+                        expandActionCandidates(action).some((candidate) => actorModuleActions.has(candidate))
+                    )
                     : availablePermissions)
                 : [];
             const assignedActions = getAssignedModuleActions(module).filter((action) => availablePermissions.includes(action));
             const selected = userUsesModuleScope
-                ? allowedModules.includes(module.slug)
+                ? allowedModules.includes(moduleSlug)
                 : Boolean(module.assigned || assignedActions.length);
             const selectedPermissions = assignedActions.length
                 ? assignedActions
                 : (selected ? ['view'] : ['none']);
             return {
-                id: module.slug,
-                module: module.name || module.slug,
-                tab: module.tab || module.metadata?.tab || module.slug,
+                id: moduleSlug,
+                module: module.name || moduleSlug,
+                tab: module.tab || module.metadata?.tab || moduleSlug,
                 availablePermissions,
                 assignablePermissions: effectiveAssignablePermissions,
                 canAssign: canAssignPermissions && effectiveAssignablePermissions.includes('view'),
@@ -497,7 +552,7 @@ const UserPermissions = ({ setModuleName }) => {
     }, [selectedModules.length]);
 
     const storedRole = normalizeRole(getStoredRole());
-    const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin' || storedRole === 'sub-admin');
+    const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin');
 
     return (
         <div className="p-6">

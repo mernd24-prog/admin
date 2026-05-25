@@ -1,10 +1,70 @@
-import React from 'react'
-import selectJson from '../../../_helpers/SelectJson.json'
+import React from 'react';
 
-const ORDERED_PERMISSION_VALUES = ['none', 'view', 'add', 'update', 'delete'];
+const ACTION_ORDER = [
+  'none',
+  'view',
+  'create',
+  'add',
+  'edit',
+  'update',
+  'delete',
+  'approve',
+  'approval',
+  'reject',
+  'assign',
+  'export',
+  'import',
+  'status_change',
+  'status',
+  'restore',
+  'bulk_action',
+  'action',
+];
+
+const ACTION_LABELS = {
+  none: 'None',
+  view: 'View',
+  create: 'Create',
+  add: 'Add',
+  edit: 'Edit',
+  update: 'Update',
+  delete: 'Delete',
+  approve: 'Approve',
+  approval: 'Approval',
+  reject: 'Reject',
+  assign: 'Assign',
+  export: 'Export',
+  import: 'Import',
+  status_change: 'Status Change',
+  status: 'Status',
+  restore: 'Restore',
+  bulk_action: 'Bulk Action',
+  action: 'Action',
+};
+
+const formatActionLabel = (value = '') =>
+  ACTION_LABELS[value] ||
+  String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const PermissionsSelector = ({ module, selected, availablePermissions = [], onChange, disabled = false }) => {
-    const available = new Set(['none', ...availablePermissions]);
+    const normalizedAvailable = Array.from(
+        new Set(
+            ['none', ...(availablePermissions || [])]
+                .map((permission) => String(permission || '').trim().toLowerCase())
+                .filter(Boolean),
+        ),
+    );
+    const available = new Set(normalizedAvailable);
+    const sortedPermissions = normalizedAvailable.sort((left, right) => {
+        const leftIndex = ACTION_ORDER.indexOf(left);
+        const rightIndex = ACTION_ORDER.indexOf(right);
+        const safeLeft = leftIndex === -1 ? ACTION_ORDER.length : leftIndex;
+        const safeRight = rightIndex === -1 ? ACTION_ORDER.length : rightIndex;
+        if (safeLeft !== safeRight) return safeLeft - safeRight;
+        return left.localeCompare(right);
+    });
     
     const handlePermissionChange = (optionValue) => {
         if (optionValue === 'none') {
@@ -31,32 +91,30 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
 
     return (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                {selectJson?.permissionOptions
-                    .filter((option) => ORDERED_PERMISSION_VALUES.includes(option.value))
-                    .sort((a, b) => ORDERED_PERMISSION_VALUES.indexOf(a.value) - ORDERED_PERMISSION_VALUES.indexOf(b.value))
-                    .filter((option) => available.has(option.value))
+                {sortedPermissions
+                    .filter((option) => available.has(option))
                     .map((option) => {
-                    const isSelected = selected.includes(option.value);
+                    const isSelected = selected.includes(option);
                     return (
                         <label
-                            key={option.value}
-                            htmlFor={`${module}-${option.value}`}
+                            key={option}
+                            htmlFor={`${module}-${option}`}
                             className={`inline-flex items-center gap-2 text-sm ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                         >
                             <input
                                 type="checkbox"
                                 name={`permission-${module}`}
-                                id={`${module}-${option.value}`}
+                                id={`${module}-${option}`}
                                 className="h-4 w-4 rounded border-[#082f91] accent-[#082f91] focus:ring-[#082f91]"
                                 checked={isSelected}
                                 onChange={() => {
                                     if (disabled) return;
-                                    handlePermissionChange(option.value);
+                                    handlePermissionChange(option);
                                 }}
                                 disabled={disabled}
                             />
                             <span className={`${isSelected ? 'font-medium text-gray-800' : 'font-normal text-gray-600'}`}>
-                                {option.label}
+                                {formatActionLabel(option)}
                             </span>
                         </label>
                     );
@@ -65,4 +123,4 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
     )
 }
 
-export default PermissionsSelector
+export default PermissionsSelector;

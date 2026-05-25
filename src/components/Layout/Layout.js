@@ -202,8 +202,8 @@ const Sellers = React.lazy(
 const UserPermissions = React.lazy(
   () => import("../../pages/UserManagement/Adminusers/UserPermissions"),
 );
-const SellerSubAdminManagement = React.lazy(
-  () => import("../../pages/SellerManagement/SellerSubAdminManagement"),
+const SellerUsers = React.lazy(
+  () => import("../../pages/SellerManagement/SellerUsers"),
 );
 
 // ── Inventory Management ────────────────────────────────────────────────────
@@ -285,6 +285,12 @@ function Layout() {
 
   const modulePermissions = useMemo(() => {
     const permMap = {};
+    const normalizeModule = (value = "") =>
+      String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/_/g, "-");
     const modules = Array.isArray(permissions?.modules)
       ? permissions.modules
       : Array.isArray(permissions)
@@ -293,24 +299,34 @@ function Layout() {
 
     if (modules.length) {
       modules.forEach((module) => {
-        const moduleCode =
+        const moduleCode = normalizeModule(
           module.slug ||
+          module.moduleKey ||
+          module.moduleSlug ||
           module.module ||
           module.module_code?.module_code ||
-          module.module_code;
+          module.module_code ||
+          module.metadata?.requiredModule,
+        );
 
         if (!moduleCode) return;
 
-        const viewPermission = Array.isArray(module.permissions)
-          ? module.permissions.find(
-              (permission) => permission.action === "view",
-            )
-          : null;
-        const hasAssignedView = viewPermission
-          ? viewPermission.assigned !== false
+        const hasAssignedAction = Array.isArray(module.permissions)
+          ? module.permissions.some((permission) => permission.assigned !== false)
           : module.assigned !== false;
+        const isAssigned = module.assigned !== false && hasAssignedAction;
 
-        permMap[moduleCode] = module.assigned !== false && hasAssignedView;
+        [
+          moduleCode,
+          normalizeModule(module.slug),
+          normalizeModule(module.moduleKey),
+          normalizeModule(module.moduleSlug),
+          normalizeModule(module.metadata?.requiredModule),
+        ]
+          .filter(Boolean)
+          .forEach((code) => {
+            permMap[code] = isAssigned;
+          });
       });
     }
     return permMap;
@@ -334,8 +350,13 @@ function Layout() {
     if (!moduleCandidates.length) return true;
 
     return moduleCandidates.some((moduleCode) => {
-      if (modulePermissions[moduleCode] === true) return true;
-      if (modulePermissions[moduleCode] === false) return false;
+      const normalizedModuleCode = String(moduleCode || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/_/g, "-");
+      if (modulePermissions[normalizedModuleCode] === true) return true;
+      if (modulePermissions[normalizedModuleCode] === false) return false;
       return hasModuleAccess(moduleCode);
     });
   };
@@ -391,9 +412,13 @@ function Layout() {
               <Route
                 path="/seller-management"
                 element={renderRoute(
-                  "/seller-management",
-                  <SellerSubAdminManagement />,
+                  "/seller-users",
+                  <SellerUsers />,
                 )}
+              />
+              <Route
+                path="/seller-users"
+                element={renderRoute("/seller-users", <SellerUsers />)}
               />
               <Route path="/users" element={renderRoute("/users", <Users />)} />
               <Route
@@ -798,7 +823,7 @@ function Layout() {
               {/* ── Users & Access — new routes ─────────────────────────── */}
               <Route
                 path="/seller-staff"
-                element={renderRoute("/seller-staff", <Sellers />)}
+                element={renderRoute("/seller-users", <SellerUsers />)}
               />
               <Route
                 path="/roles-permissions"

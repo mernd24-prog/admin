@@ -82,7 +82,7 @@
       { "label": "Customers",          "icon": "MdPerson",              "key": "users",             "route": "users"              },
       { "label": "Sellers",            "icon": "MdStorefront",          "key": "sellers",           "route": "seller"             },
       { "label": "Admin Users",        "icon": "MdAdminPanelSettings",  "key": "admin-users",       "route": "admin-users"        },
-      { "label": "Seller Staff",       "icon": "MdGroup",               "key": "seller-staff",      "route": "seller-staff"       },
+      { "label": "Seller Users",       "icon": "MdGroup",               "key": "seller-users",      "route": "seller-users"       },
       { "label": "Roles & Permissions","icon": "MdSecurity",            "key": "roles-permissions", "route": "roles-permissions"  },
       { "label": "Activity Logs",      "icon": "MdHistory",             "key": "activity-logs",     "route": "activity-logs"      }
     ]

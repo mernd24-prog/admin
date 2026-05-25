@@ -16,6 +16,42 @@ export const ACTIONS = {
   EXPORT:  'export',
 };
 
+const ACTION_ALIASES = {
+  review: 'approval',
+  manage: 'status',
+};
+
+const ACTION_EQUIVALENTS = {
+  create: ['add'],
+  add: ['create'],
+  edit: ['update'],
+  update: ['edit'],
+  approve: ['approval'],
+  approval: ['approve'],
+  status: ['status_change', 'action'],
+  status_change: ['status', 'action'],
+  manage: ['status', 'action'],
+  action: ['status', 'status_change', 'manage'],
+};
+
+const normalizeAction = (action = '') => {
+  const value = String(action || '').trim().toLowerCase();
+  return ACTION_ALIASES[value] || value;
+};
+
+const expandActionCandidates = (action = '') => {
+  const normalized = normalizeAction(action);
+  const aliases = ACTION_EQUIVALENTS[normalized] || [];
+  return Array.from(new Set([normalized, ...aliases]));
+};
+
+const normalizeModuleCode = (value = '') =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/_/g, '-');
+
 /**
  * ROLE constants — mirrors backend roles.js
  */
@@ -51,14 +87,24 @@ export function usePermission() {
     if (!Array.isArray(permissions)) return map;
 
     permissions.forEach((mod) => {
-      const slug = mod.slug || mod.module_code?.module_code || mod.module_code;
+      const slug = normalizeModuleCode(
+        mod.slug ||
+        mod.moduleKey ||
+        mod.moduleSlug ||
+        mod.module ||
+        mod.module_code?.module_code ||
+        mod.module_code ||
+        mod.metadata?.requiredModule
+      );
       if (!slug) return;
 
       map[slug] = { _assigned: mod.assigned !== false };
 
       if (Array.isArray(mod.permissions)) {
         mod.permissions.forEach((p) => {
-          map[slug][p.action] = p.assigned !== false;
+          const action = normalizeAction(p.action);
+          if (!action) return;
+          map[slug][action] = p.assigned !== false;
         });
       }
     });
@@ -73,21 +119,29 @@ export function usePermission() {
    * If action is omitted, checks module-level assignment only.
    */
   const can = (moduleSlug, action) => {
-    // Super-admin and full admin always allowed
-    if (role === ROLES.SUPER_ADMIN || role === ROLES.ADMIN) return true;
+    const normalizedModule = normalizeModuleCode(moduleSlug);
+    // Super-admin bypasses permission matrix checks.
+    if (role === ROLES.SUPER_ADMIN) return true;
 
     // Module-level check via authStorage alias resolution
-    if (!hasModuleAccess(moduleSlug)) return false;
+    if (!hasModuleAccess(normalizedModule || moduleSlug)) return false;
 
     // Action-level check
     if (!action) return true;
 
-    const mod = permMap[moduleSlug];
+    const mod = permMap[normalizedModule] || permMap[moduleSlug];
     if (!mod) return false;
     if (!mod._assigned) return false;
 
-    // If action not specifically set, fall back to module assignment
-    return mod[action] !== false;
+    const actionCandidates = expandActionCandidates(action);
+    const hasExplicitGrant = actionCandidates.some((candidate) => mod[candidate] === true);
+    if (hasExplicitGrant) return true;
+
+    const hasExplicitDeny = actionCandidates.some((candidate) => mod[candidate] === false);
+    if (hasExplicitDeny) return false;
+
+    // If action isn't present in the matrix, fall back to module-level assignment
+    return mod._assigned === true;
   };
 
   /**

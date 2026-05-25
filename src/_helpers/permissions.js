@@ -1,17 +1,62 @@
 import { getAllowedModules, getStoredRole, normalizeRole } from './authStorage';
 
-export const PERMISSION_ACTIONS = ['view', 'add', 'update', 'delete', 'action'];
+export const PERMISSION_ACTIONS = [
+  'view',
+  'create',
+  'add',
+  'edit',
+  'update',
+  'delete',
+  'approve',
+  'approval',
+  'reject',
+  'assign',
+  'export',
+  'import',
+  'status_change',
+  'status',
+  'restore',
+  'bulk_action',
+  'action',
+];
+
+const ACTION_ALIASES = {
+  review: 'approval',
+  manage: 'status',
+};
+
+const ACTION_EQUIVALENTS = {
+  create: ['add'],
+  add: ['create'],
+  edit: ['update'],
+  update: ['edit'],
+  approve: ['approval'],
+  approval: ['approve'],
+  status: ['status_change', 'action'],
+  status_change: ['status', 'action'],
+  manage: ['status', 'action'],
+  action: ['status', 'status_change', 'manage'],
+};
 
 export const normalizePermissionAction = (action = '') => {
   const value = String(action || '').trim().toLowerCase();
-  if (value === 'create') return 'add';
-  if (value === 'edit') return 'update';
-  if (['approve', 'review', 'manage', 'status', 'approval'].includes(value)) return 'action';
-  return value;
+  return ACTION_ALIASES[value] || value;
 };
 
 export const makePermission = (module, action = 'view') =>
   `${String(module || '').trim().toLowerCase()}:${normalizePermissionAction(action)}`;
+
+const getModuleFromPermission = (permission = '') => {
+  const value = String(permission || '').trim().toLowerCase();
+  if (!value.includes(':')) return '';
+  return value.split(':')[0];
+};
+
+const buildActionCandidates = (action = 'view') => {
+  const normalized = normalizePermissionAction(action);
+  const aliases = ACTION_EQUIVALENTS[normalized] || [];
+  return Array.from(new Set([normalized, ...aliases]));
+};
 
 export const getStoredPermissions = () => {
   try {
@@ -34,9 +79,18 @@ export const hasPermission = (module, action = 'view', options = {}) => {
   const allowedModules = (options.allowedModules || getAllowedModules()).map((item) =>
     String(item || '').trim().toLowerCase()
   );
-  if (!allowedModules.includes(moduleSlug)) return false;
 
   const permissions = options.permissions || getStoredPermissions();
-  const normalizedAction = normalizePermissionAction(action);
-  return permissions.includes(makePermission(moduleSlug, normalizedAction)) || permissions.includes(normalizedAction);
+  const permissionModules = permissions
+    .map(getModuleFromPermission)
+    .filter(Boolean);
+  const moduleScope = new Set([...allowedModules, ...permissionModules]);
+  if (!moduleScope.has(moduleSlug)) return false;
+
+  const actionCandidates = buildActionCandidates(action);
+  const permissionCandidates = actionCandidates.flatMap((candidate) => [
+    makePermission(moduleSlug, candidate),
+    candidate,
+  ]);
+  return permissionCandidates.some((candidate) => permissions.includes(candidate));
 };

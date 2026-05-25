@@ -133,6 +133,10 @@ export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
   email: String(payload.email || "").trim(),
   phone: payload.phone || null,
   password: payload.password,
+  ...(payload.role ? { role: payload.role } : {}),
+  ...(payload.parentAdminId ? { parentAdminId: payload.parentAdminId } : {}),
+  ...(payload.parentSellerId ? { parentSellerId: payload.parentSellerId } : {}),
+  ...(payload.accountStatus ? { accountStatus: payload.accountStatus } : {}),
   profile: toProfile(payload, options.requireLastName),
   ...(options.allowedModules
     ? { allowedModules: normalizeAllowedModules(payload.allowedModules, options.allowedModules) }

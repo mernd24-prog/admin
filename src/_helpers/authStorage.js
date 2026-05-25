@@ -137,10 +137,18 @@ export const clearStoredAuth = () => {
 };
 
 export const hasModuleAccess = (moduleCode) => {
+  const normalizeCode = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/_/g, "-");
+
   const role = normalizeRole(getStoredRole());
   const panelMode = getPanelMode();
   const { fullAccessRoles, restrictedRole } = getPanelRoleRules(panelMode);
   const moduleCodes = Array.isArray(moduleCode) ? moduleCode : [moduleCode];
+  const sessionUser = safeParse(sessionStorage.getItem("EcomAdmin"), {});
 
   if (!isAllowedRoleForPanel(role, panelMode)) return false;
   if (!moduleCode) return false;
@@ -152,21 +160,21 @@ export const hasModuleAccess = (moduleCode) => {
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
     delivery: ["delivery", "shipping_packages", "shipping_profile", "pickup_addresses", "delivery-staff"],
-    sellers: ["sellers", "seller", "vendors", "profile", "seller-management"],
-    "seller-management": ["seller-management", "seller-admins", "seller-sub-admins", "seller-hierarchy"],
+    sellers: ["sellers", "seller", "vendors", "profile", "seller-management", "seller-users", "seller-staff"],
+    "seller-management": ["seller-management", "seller-admins", "seller-sub-admins", "seller-hierarchy", "seller-users", "seller-staff"],
     "sellers/commissions": ["sellers/commissions", "commissions", "transactions"],
     notifications: ["notifications", "messages"],
     returns: ["returns", "order_return_reasons"],
     analytics: ["analytics", "dashboard", "home"],
-    users: ["users", "admin_users"],
-    rbac: ["rbac", "admin_users"],
+    users: ["users", "admin_users", "admin-users"],
+    rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
     tax: ["tax", "tax-structure", "tax-category"],
     system: ["system", "settings"],
   };
 
   const expandedModuleCodes = moduleCodes
-    .map(String)
-    .flatMap((code) => moduleAliases[code] || [code]);
+    .map(normalizeCode)
+    .flatMap((code) => (moduleAliases[code] || [code]).map(normalizeCode));
 
   const sellerOwnedModules = new Set([
     "dashboard",
@@ -198,7 +206,22 @@ export const hasModuleAccess = (moduleCode) => {
     return true;
   }
 
-  const allowedModules = getAllowedModules().map(String);
+  const permissionModules = [
+    ...(Array.isArray(getStoredUser()?.permissions) ? getStoredUser().permissions : []),
+    ...(Array.isArray(sessionUser?.permissions)
+      ? sessionUser?.permissions
+      : []),
+  ]
+    .map((permission) => String(permission || "").trim().toLowerCase())
+    .filter((permission) => permission.includes(":"))
+    .map((permission) => normalizeCode(permission.split(":")[0]));
+
+  const allowedModules = Array.from(
+    new Set([
+      ...getAllowedModules().map(normalizeCode),
+      ...permissionModules,
+    ]),
+  );
   if (role !== restrictedRole && !allowedModules.length) return false;
 
   return expandedModuleCodes.some((code) => {
