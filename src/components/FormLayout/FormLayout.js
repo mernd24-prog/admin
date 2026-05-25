@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import FormSubmitButton from "../Atoms/FormButton/FormSubmitButton";
+import BrandLogo from "../BrandLogo";
 
 const FormLayout = ({
   title,
@@ -14,6 +15,8 @@ const FormLayout = ({
   onLinkClick,
   logoSrc = "/logo.png",
   showLogo = true,
+  logoClassName = "",
+  logoImageClassName = "",
   topContent = null,
   className = "",
   shellClassName = "",
@@ -32,13 +35,11 @@ const FormLayout = ({
         className={`relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
       >
         {showLogo && (
-          <div className="mb-[26px] flex h-[155px] w-[210px] items-center justify-center rounded-[8px] border border-[#e6cda9] bg-[#f7f5f2] p-[10px] shadow-[0_7px_12px_rgba(78,53,23,0.16)]">
-            <img
-              src={logoSrc}
-              alt="Sam Global"
-              className="h-full w-full rounded-[6px] border border-[#eadbc8] object-contain object-center p-[6px]"
-            />
-          </div>
+          <BrandLogo
+            src={logoSrc}
+            className={logoClassName}
+            imageClassName={logoImageClassName}
+          />
         )}
         {topContent}
 
