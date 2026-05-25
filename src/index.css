@@ -152,6 +152,20 @@ body {
   border: 1px solid #9ca3af !important;
 }
 
+/* Remove default focus/active shadow for native select dropdowns */
+select:focus,
+select:active {
+  outline: none;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+}
+
+/* Also remove Tailwind ring effect for our step input selects specifically */
+.h-\[46px\]\.w-full\.rounded-\[6px\]\.border\.border-\#DAD7EA\.bg-\#FAF8FFB2\/70\.px-3\.text-\[14px\]\.text-\#344054\.outline-none\.transition select:focus {
+  box-shadow: none !important;
+}
+
 /* Theme Css End */
 
 .pagination {
