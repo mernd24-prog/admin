@@ -227,6 +227,42 @@ const getIsoDateYearsAgo = (years) => {
 };
 
 const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
+const SELLER_ONBOARDING_DRAFT_KEY = "sellerOnboardingDraft";
+
+const getSellerOnboardingDraftKey = (token) =>
+  `${SELLER_ONBOARDING_DRAFT_KEY}:${token || "guest"}`;
+
+const isRepeatedSingleWordName = (value = "") => {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase();
+};
+
+const stripFileFieldsFromDraft = (draft = {}) => ({
+  ...draft,
+  kycForm: draft.kycForm
+    ? {
+        ...draft.kycForm,
+        panDocumentFile: null,
+        aadhaarFrontFile: null,
+        aadhaarBackFile: null,
+      }
+    : undefined,
+  profileForm: draft.profileForm
+    ? {
+        ...draft.profileForm,
+        businessName: isRepeatedSingleWordName(draft.profileForm.businessName)
+          ? ""
+          : draft.profileForm.businessName,
+        displayName: isRepeatedSingleWordName(draft.profileForm.displayName)
+          ? ""
+          : draft.profileForm.displayName,
+        gstCertificateFile: null,
+      }
+    : undefined,
+});
 
 const detectDocumentMimeType = (bytes) => {
   if (!bytes?.length) return "";
@@ -475,6 +511,7 @@ const SellerOnboarding = () => {
   const [profileErrors, setProfileErrors] = useState({});
   const [showReadyToSellScreen, setShowReadyToSellScreen] = useState(false);
   const [checkingSellerProducts, setCheckingSellerProducts] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
 
   const [kycForm, setKycForm] = useState({
@@ -482,8 +519,8 @@ const SellerOnboarding = () => {
     gstNumber: "",
     aadhaarNumber: "",
     legalName: "",
-    businessType: "individual",
-    dateOfBirth: MAX_DOB_FOR_SELLER,
+    businessType: "",
+    dateOfBirth: "",
     panDocumentFile: null,
     aadhaarFrontFile: null,
     aadhaarBackFile: null,
@@ -533,6 +570,58 @@ const SellerOnboarding = () => {
     () => !!onboardingToken || !!accessToken,
     [accessToken, onboardingToken],
   );
+  const draftKey = useMemo(
+    () => getSellerOnboardingDraftKey(onboardingToken || accessToken),
+    [accessToken, onboardingToken],
+  );
+
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (!savedDraft) {
+        setDraftLoaded(true);
+        return;
+      }
+
+      const draft = stripFileFieldsFromDraft(JSON.parse(savedDraft));
+      if (draft.kycForm) {
+        setKycForm((prev) => ({ ...prev, ...draft.kycForm }));
+      }
+      if (draft.profileForm) {
+        setProfileForm((prev) => ({ ...prev, ...draft.profileForm }));
+      }
+      if (draft.bankForm) {
+        setBankForm((prev) => ({ ...prev, ...draft.bankForm }));
+      }
+      if (draft.documentUrls) {
+        setDocumentUrls((prev) => ({ ...prev, ...draft.documentUrls }));
+      }
+      if (draft.step && draft.step >= 1 && draft.step <= 4) {
+        setStep(draft.step);
+      }
+    } catch {
+      localStorage.removeItem(draftKey);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [draftKey, setStep]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    if (step >= 5) {
+      localStorage.removeItem(draftKey);
+      return;
+    }
+
+    const draft = stripFileFieldsFromDraft({
+      kycForm,
+      profileForm,
+      bankForm,
+      documentUrls,
+      step,
+    });
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [bankForm, documentUrls, draftKey, draftLoaded, kycForm, profileForm, step]);
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
@@ -611,11 +700,8 @@ const SellerOnboarding = () => {
             prev.businessType ||
             kyc?.businessType ||
             sellerProfile?.businessType ||
-            "individual",
-          dateOfBirth:
-            prev.dateOfBirth ||
-            sellerProfile?.dateOfBirth ||
-            MAX_DOB_FOR_SELLER,
+            "",
+          dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
         }));
         setProfileForm((prev) => ({
           ...prev,
@@ -625,13 +711,13 @@ const SellerOnboarding = () => {
             kyc?.businessType ||
             "",
           businessName:
-            prev.businessName ||
-            sellerProfile?.businessName ||
-            sellerProfile?.displayName ||
-            "",
+            prev.businessName || sellerProfile?.businessName || "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
-          displayName: prev.displayName || sellerProfile?.displayName || "",
+          displayName:
+            prev.displayName ||
+            (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+            "",
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
           supportEmail:
@@ -753,9 +839,8 @@ const SellerOnboarding = () => {
         prev.businessType ||
         kyc?.businessType ||
         sellerProfile?.businessType ||
-        "individual",
-      dateOfBirth:
-        prev.dateOfBirth || sellerProfile?.dateOfBirth || MAX_DOB_FOR_SELLER,
+        "",
+      dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
     }));
     setProfileForm((prev) => ({
       ...prev,
@@ -765,13 +850,13 @@ const SellerOnboarding = () => {
         kyc?.businessType ||
         "",
       businessName:
-        prev.businessName ||
-        sellerProfile?.businessName ||
-        sellerProfile?.displayName ||
-        "",
+        prev.businessName || sellerProfile?.businessName || "",
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
-      displayName: prev.displayName || sellerProfile?.displayName || "",
+      displayName:
+        prev.displayName ||
+        (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+        "",
       legalBusinessName:
         prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
       supportEmail: prev.supportEmail || sellerProfile?.supportEmail || "",
@@ -1256,6 +1341,7 @@ const SellerOnboarding = () => {
         payload.dateOfBirth = kycForm.dateOfBirth;
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+      localStorage.removeItem(draftKey);
       setStep(5);
       toast.success("Onboarding submitted for approval");
     } catch (error) {

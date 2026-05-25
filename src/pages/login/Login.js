@@ -288,7 +288,7 @@ const Login = () => {
     const [firstName, ...lastNameParts] = formFields.fullName
       .trim()
       .split(/\s+/);
-    const lastName = lastNameParts.join(" ") || firstName;
+    const lastName = lastNameParts.join(" ");
 
     try {
       const response = await dispatch(
