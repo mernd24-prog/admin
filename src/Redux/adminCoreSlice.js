@@ -399,7 +399,7 @@ export const getPlatformSubAdmins = createApiThunkPrivate(
   ENDPOINTS.adminAccess.subAdmins,
   "GET",
   true,
-  { transformParams: pickQuery(["ownerAdminId"]) }
+  { transformParams: pickQuery(["ownerAdminId", "ownerSellerId", "q", "search", "status", "page", "limit"]) }
 );
 
 export const updatePlatformSubAdminModules = createApiThunkPrivate(

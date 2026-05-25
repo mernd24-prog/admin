@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import {
-  getAdminUsers, deactivateAdminUser,
+  getAdmins, deactivateAdminUser,
   getPlatformSubAdmins, createPlatformSubAdmin, createAdmin,
   getAccessModules, updateAdminUser, updatePlatformSubAdminModules,
 } from '../../../Redux/adminCoreSlice';
@@ -184,7 +184,7 @@ const ModuleSelector = ({ selected, onChange, modules = DEFAULT_PLATFORM_MODULES
 };
 
 const emptyUser = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: [] };
-const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', allowedModules: ['products', 'orders'] };
+const emptySubAdmin = { fullName: '', email: '', password: '', confirmPassword: '', phone: '', role: 'sub-admin', parentSellerId: '', allowedModules: ['products', 'orders'] };
 
 const getUserDisplayName = (user = {}) => {
   const profile = user.profile || {};
@@ -259,6 +259,12 @@ const isUserActive = (user = {}) => {
   return true;
 };
 
+const formatRole = (role = '') =>
+  String(role || '')
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 const AdminUsers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -291,8 +297,11 @@ const AdminUsers = () => {
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  const { list: admins, total: adminsTotal } = extractListPayload(selector?.adminUsersData);
-  const { list: allSubAdmins } = extractListPayload(selector?.platformSubAdminsData);
+  const { list: legacyAdmins, total: legacyAdminsTotal } = extractListPayload(selector?.adminUsersData);
+  const { list: hierarchyAdmins, total: hierarchyAdminsTotal } = extractListPayload(selector?.adminsData);
+  const { list: allSubAdmins, total: platformSubAdminsTotal } = extractListPayload(selector?.platformSubAdminsData);
+  const admins = hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins;
+  const adminsTotal = hierarchyAdmins.length ? hierarchyAdminsTotal : legacyAdminsTotal;
   const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
   const sidebarModuleSlugs = useMemo(
     () => new Set(
@@ -329,6 +338,10 @@ const AdminUsers = () => {
     () => groupModuleOptions(selectedModuleOptions).length,
     [selectedModuleOptions],
   );
+  const sellerOptions = useMemo(
+    () => (admins || []).filter((user) => user.role === 'seller'),
+    [admins],
+  );
   const getAllowedModuleGroups = (allowedModules = []) => {
     const selectedOptions = getSelectedModuleOptions(moduleOptions, allowedModules);
     return groupModuleOptions(selectedOptions).map(([tabName]) => tabName);
@@ -345,11 +358,12 @@ const AdminUsers = () => {
     () => filterUsers(allSubAdmins, filters.search),
     [allSubAdmins, filters.search]
   );
-  const subAdminsTotal = filteredSubAdmins.length;
+  const subAdminsTotal = platformSubAdminsTotal || filteredSubAdmins.length;
   const subAdmins = useMemo(() => {
+    if (platformSubAdminsTotal) return filteredSubAdmins;
     const start = (pageSubAdmin - 1) * PAGE_SIZE;
     return filteredSubAdmins.slice(start, start + PAGE_SIZE);
-  }, [filteredSubAdmins, pageSubAdmin]);
+  }, [filteredSubAdmins, pageSubAdmin, platformSubAdminsTotal]);
 
   const loading = selector?.loading || false;
 
@@ -357,9 +371,15 @@ const AdminUsers = () => {
 
   useEffect(() => {
     if (tab === 'admins' && isAdmin) {
-      dispatch(getAdminUsers({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search, role: 'admin' }));
+      dispatch(getAdmins({ page: pageAdmin, limit: PAGE_SIZE, q: filters.search }));
     }
   }, [tab, pageAdmin, refresh, filters.search]);
+
+  useEffect(() => {
+    if (isAdmin && ['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role)) {
+      dispatch(getAdmins({ page: 1, limit: 100 }));
+    }
+  }, [dispatch, isAdmin, subAdminForm.role, refresh]);
 
   useEffect(() => {
     if (tab === 'subadmins') {
@@ -369,9 +389,9 @@ const AdminUsers = () => {
 
   useEffect(() => {
     if (isAdmin) {
-      dispatch(getAccessModules({ role: 'sub-admin', includePermissions: false }));
+      dispatch(getAccessModules({ role: subAdminForm.role || 'sub-admin', includePermissions: false }));
     }
-  }, [dispatch, isAdmin]);
+  }, [dispatch, isAdmin, subAdminForm.role]);
 
   useEffect(() => {
     if (!isAdmin || sidebarModules.length) return;
@@ -430,6 +450,9 @@ const AdminUsers = () => {
     const errs = validateUserForm(subAdminForm);
     const allowedModules = subAdminForm.allowedModules.filter((mod) => moduleOptionSlugs.includes(mod));
     if (!allowedModules.length) errs.allowedModules = 'Select at least one module';
+    if (['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role) && !subAdminForm.parentSellerId) {
+      errs.parentSellerId = 'Select a parent seller';
+    }
     if (Object.keys(errs).length) { setErrors(errs); return; }
     try {
       await dispatch(createPlatformSubAdmin({ ...subAdminForm, allowedModules })).unwrap();
@@ -465,6 +488,8 @@ const AdminUsers = () => {
       fullName: getUserDisplayName(user),
       email: user.email || '',
       phone: user.phone || '',
+      role: user.role || 'sub-admin',
+      parentSellerId: user.parentSellerId || user.ownerSellerId || '',
       allowedModules: selectedModules.length ? selectedModules : defaultSubAdminModules,
     });
     setEditSubAdminOpen(true);
@@ -557,6 +582,7 @@ const AdminUsers = () => {
       return [
         <span key={`name-${userId}`} className="font-medium capitalize">{name}</span>,
         <span key={`email-${userId}`} className="text-gray-500">{user.email}</span>,
+        <span key={`role-${userId}`} className="text-gray-600">{formatRole(user.role)}</span>,
         ...(showModules ? [
           <div key={`mods-${userId}`} className="flex flex-wrap gap-1">
             {getAllowedModuleGroups(user.allowedModules || []).slice(0, 3).map((groupName) => (
@@ -567,6 +593,12 @@ const AdminUsers = () => {
             )}
           </div>,
         ] : []),
+        <span key={`summary-${userId}`} className="text-xs text-gray-500">
+          {user.assignedModuleCount ?? (user.allowedModules || []).length} modules / {user.assignedActionCount ?? user.permissionSummary?.actionCount ?? 0} actions
+        </span>,
+        <span key={`created-${userId}`} className="text-xs text-gray-500">
+          {formatRole(user.createdByRole) || '-'}
+        </span>,
         <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
         <ActionButtons
           key={`actions-${userId}`}
@@ -644,7 +676,7 @@ const AdminUsers = () => {
           {tab === 'admins' && (
             <TableData
               Heading="Admins"
-              tableHeadings={['Name', 'Email', 'Status', 'Actions']}
+              tableHeadings={['Name', 'Email', 'Role', 'Permission Summary', 'Created By', 'Status', 'Actions']}
               data={adminRows}
               totalData={adminsTotal}
               totalSize={PAGE_SIZE}
@@ -656,7 +688,7 @@ const AdminUsers = () => {
           {tab === 'subadmins' && (
             <TableData
               Heading="Sub-Admins"
-              tableHeadings={['Name', 'Email', 'Assigned Modules', 'Status', 'Actions']}
+              tableHeadings={['Name', 'Email', 'Role', 'Assigned Modules', 'Permission Summary', 'Created By', 'Status', 'Actions']}
               data={subAdminRows}
               totalData={subAdminsTotal}
               totalSize={PAGE_SIZE}
@@ -769,6 +801,37 @@ const AdminUsers = () => {
           <FormInput label="Phone" name="phone" value={subAdminForm.phone}
             onChange={(e) => setSubAdminForm((f) => ({ ...f, phone: e.target.value }))}
             maxLength={15} />
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Role *</label>
+            <select
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3E4094] focus:outline-none"
+              value={subAdminForm.role}
+              onChange={(e) => setSubAdminForm((f) => ({ ...f, role: e.target.value, allowedModules: [] }))}
+            >
+              <option value="sub-admin">Sub Admin</option>
+              <option value="seller">Seller</option>
+              <option value="seller-admin">Seller Admin</option>
+              <option value="seller-sub-admin">Seller Sub Admin</option>
+            </select>
+          </div>
+          {['seller-admin', 'seller-sub-admin'].includes(subAdminForm.role) && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Parent Seller *</label>
+              <select
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3E4094] focus:outline-none"
+                value={subAdminForm.parentSellerId}
+                onChange={(e) => setSubAdminForm((f) => ({ ...f, parentSellerId: e.target.value }))}
+              >
+                <option value="">Select seller</option>
+                {sellerOptions.map((seller) => (
+                  <option key={seller._id || seller.id} value={seller._id || seller.id}>
+                    {getUserDisplayName(seller)}
+                  </option>
+                ))}
+              </select>
+              {errors.parentSellerId && <p className="text-xs text-red-500">{errors.parentSellerId}</p>}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Password *" name="password" type="password" value={subAdminForm.password}
               onChange={(e) => setSubAdminForm((f) => ({ ...f, password: e.target.value }))}
@@ -821,6 +884,16 @@ const AdminUsers = () => {
           <FormInput label="Phone" name="phone" value={subAdminForm.phone}
             onChange={(e) => setSubAdminForm((f) => ({ ...f, phone: e.target.value }))}
             maxLength={15} />
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Role</label>
+            <select
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-gray-50"
+              value={subAdminForm.role}
+              disabled
+            >
+              <option value={subAdminForm.role}>{formatRole(subAdminForm.role)}</option>
+            </select>
+          </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-700">
