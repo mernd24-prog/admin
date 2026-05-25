@@ -25,6 +25,13 @@ const getUserInitial = (user = {}) =>
     .charAt(0)
     .toUpperCase();
 
+const getAvatarUrl = (user = {}) =>
+  user.profile?.avatarUrl ||
+  user.avatarUrl ||
+  user.user_image ||
+  user.sellerProfile?.avatarUrl ||
+  "";
+
 const getHeaderDescription = (path = "") => {
   if (path.includes("/country")) {
     return "View and manage countries used across platform dropdowns, tax setup, and addresses.";
@@ -64,6 +71,8 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
   const currentPath = location.pathname;
   const [headerTitle, setHeaderTitle] = useState('');
   const [userData, setUserData] = useState({})
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarUrl = getAvatarUrl(userData);
 
 
   const fetchUserData = useCallback(async () => {
@@ -99,6 +108,10 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
       setHeaderTitle(moduleName);
     }
   }, [fetchUserData, moduleName, currentPath]);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl]);
 
   const handleLogout = () => {
     logoutFunction();
@@ -179,10 +192,19 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
               <button
                 type="button"
                 onClick={toggleLogoutModal}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white text-sm font-bold text-[#082f91] transition-transform hover:scale-105"
+                className="flex h-9 w-9 overflow-hidden items-center justify-center rounded-full border border-white/25 bg-white text-sm font-bold text-[#082f91] transition-transform hover:scale-105"
                 aria-label="Open profile menu"
               >
-                {getUserInitial(userData)}
+                {avatarUrl && !avatarFailed ? (
+                  <img
+                    className="h-full w-full object-cover"
+                    src={avatarUrl}
+                    alt={getDisplayName(userData)}
+                    onError={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  getUserInitial(userData)
+                )}
               </button>
             </div>
             <div
@@ -195,10 +217,19 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
                     <button
                       type="button"
                       onClick={toggleLogoutModal}
-                      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
+                      className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
                       aria-label="Close profile menu"
                     >
-                      {getUserInitial(userData)}
+                      {avatarUrl && !avatarFailed ? (
+                        <img
+                          className="h-full w-full object-cover"
+                          src={avatarUrl}
+                          alt={getDisplayName(userData)}
+                          onError={() => setAvatarFailed(true)}
+                        />
+                      ) : (
+                        getUserInitial(userData)
+                      )}
                     </button>
                     <div>
                       <p className="text-sm font-medium text-gray-900">Hi, {getDisplayName(userData)}</p>
