@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutFunction } from "../../_helpers";
 import { IoLogOutOutline } from "react-icons/io5";
 import { MdOutlineMenu } from 'react-icons/md';
-import { FiUser, FiKey } from 'react-icons/fi';
+import { FiBell, FiKey, FiUser } from 'react-icons/fi';
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from '../../Redux/userSlice';
 import { Link, useLocation } from "react-router-dom";
@@ -19,12 +19,11 @@ const getDisplayName = (user = {}) => {
   );
 };
 
-const getAvatarUrl = (user = {}) =>
-  user.user_image ||
-  user.avatarUrl ||
-  user.profile?.avatarUrl ||
-  user.sellerProfile?.avatarUrl ||
-  "/Img/user.png";
+const getUserInitial = (user = {}) =>
+  String(user.profile?.firstName || getDisplayName(user) || "U")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
 const getHeaderDescription = (path = "") => {
   if (path.includes("/country")) {
@@ -141,50 +140,66 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
 
   return (
-    <div className={`${hasPermanentOpen ? "bg-white text-black flex flex-shrink-0 h-16 " : "fixed top-0 left-0 right-0 flex flex-shrink-0 h-16 bg-white bg-opacity-40 backdrop-blur-sm"}  z-20  `}>
-      <div className="flex items-center justify-between flex-1 px-6 w-full">
+    <div className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-16 bg-[#082f91] text-white shadow-[0_2px_10px_rgba(8,47,145,0.22)]`}>
+      <div className="flex items-center justify-between flex-1 px-5 md:px-7 w-full">
 
-        <div className={`flex items-center  ${hasPermanentOpen ? "lg:ps-0" : "lg:ps-10 space-x-4"}  ps-0`}>
+        <div className={`flex items-center ${hasPermanentOpen ? "lg:ps-0" : "lg:ps-10 space-x-3"} ps-0`}>
           <button
-            className="p-2 text-gray-700 rounded-md focus:outline-none md:hidden"
+            className="p-2 text-white rounded-md focus:outline-none hover:bg-white/10 md:hidden"
             onClick={handleNavbar}
           >
             <MdOutlineMenu className="w-6 h-6" />
           </button>
 
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 capitalize">{headerTitle}</h1>
-            <p className="text-xs text-gray-500 md:block hidden">{getHeaderDescription(currentPath)}</p>
+          <div className="leading-tight">
+            <h1 className="text-sm font-semibold capitalize tracking-[0.01em] text-white">
+              {headerTitle || moduleName || "Dashboard"}
+            </h1>
+            <p className="hidden max-w-[34rem] truncate pt-0.5 text-[10px] text-white/65 md:block">
+              {getHeaderDescription(currentPath)}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3 md:gap-5">
+          <button
+            type="button"
+            className="relative flex h-8 w-8 items-center justify-center rounded-full text-white/90 hover:bg-white/10"
+            aria-label="Notifications"
+          >
+            <FiBell className="h-4 w-4" />
+          </button>
 
           <div className="relative">
-            <div className="flex gap-2">
-              <div>
-                <img
-                  className="object-contain w-10 h-10 rounded-full cursor-pointer transition-transform hover:scale-105"
-                  src={getAvatarUrl(userData)}
-                  alt="Profile"
-                  onClick={toggleLogoutModal}
-                />
+            <div className="flex items-center gap-2.5">
+              <div className="hidden md:block text-right leading-tight">
+                <p className="max-w-32 truncate text-[11px] font-semibold text-white">{getDisplayName(userData)}</p>
+                <p className="max-w-32 truncate text-[9px] capitalize text-white/65">{userData?.role || "Admin"}</p>
               </div>
+              <button
+                type="button"
+                onClick={toggleLogoutModal}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white text-sm font-bold text-[#082f91] transition-transform hover:scale-105"
+                aria-label="Open profile menu"
+              >
+                {getUserInitial(userData)}
+              </button>
             </div>
             <div
-              className={`absolute right-0 w-64 mt-2 bg-white border border-gray-200 shadow-lg rounded-md transition-all duration-300 ease-in-out ${openModel ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+              className={`absolute right-0 w-64 mt-3 bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
               ref={dropDownRef}
             >
               {openModel && (
                 <>
-                  <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center gap-3">
-                    <img
-                      className="object-contain w-12 h-12 rounded cursor-pointer transition-transform hover:scale-105"
-                      src={getAvatarUrl(userData)}
-
-                      alt="Profile"
+                  <div className="px-4 py-3 bg-[#082f91]/[0.04] border-b border-gray-100 flex items-center gap-3">
+                    <button
+                      type="button"
                       onClick={toggleLogoutModal}
-                    />
+                      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
+                      aria-label="Close profile menu"
+                    >
+                      {getUserInitial(userData)}
+                    </button>
                     <div>
                       <p className="text-sm font-medium text-gray-900">Hi, {getDisplayName(userData)}</p>
                       <p className="text-xs text-gray-500 truncate text-wrap">{userData?.email}</p>
