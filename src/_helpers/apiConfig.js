@@ -13,6 +13,8 @@ const apiClient = axios.create({
   baseURL: apiUrl,
 });
 
+const MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH = 7000;
+
 const getSessionToken = () => {
   try {
     const sessionUser = JSON.parse(sessionStorage.getItem("EcomAdmin") || "null");
@@ -24,11 +26,12 @@ const getSessionToken = () => {
 
 export const setHeaders = () => {
   const user = localStorage.getItem('accessToken') || getSessionToken();
+  const safeToken = String(user || "").length > MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH ? null : user;
 
   return {
     headers: {
       'Content-Type': 'application/json',
-      ...(user ? { Authorization: `Bearer ${user}` } : {}),
+      ...(safeToken ? { Authorization: `Bearer ${safeToken}` } : {}),
     },
   };
 };
@@ -44,7 +47,10 @@ const getApiToken = async (endpoint, tokenOverride = null) => {
   if (
     accessToken &&
     !isAuthEndpoint(endpoint) &&
-    isTokenExpiring(accessToken) &&
+    (
+      isTokenExpiring(accessToken) ||
+      String(accessToken || "").length > MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH
+    ) &&
     getStoredRefreshToken()
   ) {
     try {

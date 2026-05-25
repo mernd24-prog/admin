@@ -3,7 +3,6 @@ import { Route, Routes } from "react-router-dom";
 import { useSelector } from 'react-redux';
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
-import { SUPPORTED_ADMIN_ROUTES } from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
@@ -229,6 +228,7 @@ const SellerAnalytics   = React.lazy(() => import('../../pages/Reports/ReportShe
 
 // ── RBAC Management Pages ───────────────────────────────────────────────────
 const RolesPermissions = React.lazy(() => import('../../pages/UserManagement/RolesPermissions/RolesPermissions'));
+const ModuleManagement = React.lazy(() => import('../../pages/UserManagement/ModuleManagement/ModuleManagement'));
 const ActivityLogs     = React.lazy(() => import('../../pages/UserManagement/ActivityLogs/ActivityLogs'));
 
 
@@ -308,6 +308,7 @@ function Layout() {
     if (!moduleCandidates.length) return true;
 
     return moduleCandidates.some((moduleCode) => {
+      if (modulePermissions[moduleCode] === true) return true;
       if (modulePermissions[moduleCode] === false) return false;
       return hasModuleAccess(moduleCode);
     });
@@ -322,10 +323,6 @@ function Layout() {
   };
 
   const renderSupportedRoute = (path, element) => {
-    const normalizedPath = String(path || "").replace(/^\/+/, "");
-    if (!SUPPORTED_ADMIN_ROUTES.has(normalizedPath)) {
-      return <PermissionNotAllowed loading={isPermissionShow} />;
-    }
     return renderRoute(path, element);
   };
 
@@ -584,6 +581,7 @@ function Layout() {
               {/* ── Users & Access — new routes ─────────────────────────── */}
               <Route path="/seller-staff"      element={renderRoute("/seller-staff",      <Sellers />)} />
               <Route path="/roles-permissions" element={renderRoute("/roles-permissions", <RolesPermissions />)} />
+              <Route path="/module-management" element={renderRoute("/module-management", <ModuleManagement />)} />
               <Route path="/activity-logs"     element={renderRoute("/activity-logs",     <ActivityLogs />)} />
 
               {/* ── Marketing — new routes ──────────────────────────────── */}

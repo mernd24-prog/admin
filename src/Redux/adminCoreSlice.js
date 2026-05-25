@@ -104,8 +104,11 @@ const initialState = {
   deleteProductReviewData: {},
   rbacPermissionManagementModulesData: {},
   rbacModulesData: {},
+  rbacSidebarModulesData: {},
   createRbacModuleData: {},
   updateRbacModuleData: {},
+  updateRbacModuleStatusData: {},
+  reorderRbacModulesData: {},
   deleteRbacModuleData: {},
   rbacPermissionsData: {},
   createRbacPermissionData: {},
@@ -588,9 +591,12 @@ export const getRbacPermissionManagementModules = createApiThunkPrivate("rbac/ge
     ...(params.active !== undefined ? { active: params.active } : {}),
   }),
 });
-export const getRbacModules = createApiThunkPrivate("rbac/getModules", ENDPOINTS.rbac.modules, "GET", true, { transformParams: pickQuery(["active", "limit", "offset"]) });
+export const getRbacModules = createApiThunkPrivate("rbac/getModules", ENDPOINTS.rbac.modules, "GET", true, { transformParams: pickQuery(["active", "includeInactive", "status", "q", "sidebar", "parentModuleId", "limit", "offset"]) });
+export const getRbacSidebarModules = createApiThunkPrivate("rbac/getSidebarModules", ENDPOINTS.rbac.sidebarModules, "GET", true, { transformParams: noParams });
 export const createRbacModule = createApiThunkPrivate("rbac/createModule", ENDPOINTS.rbac.modules, "POST");
 export const updateRbacModule = createApiThunkPrivate("rbac/updateModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["moduleId", "id"]) });
+export const updateRbacModuleStatus = createApiThunkPrivate("rbac/updateModuleStatus", (payload) => ENDPOINTS.rbac.moduleStatus(payload.moduleId || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["status"]) });
+export const reorderRbacModules = createApiThunkPrivate("rbac/reorderModules", ENDPOINTS.rbac.reorderModules, "POST", false, { transformBody: (payload = {}) => ({ modules: payload.modules || [] }) });
 export const deleteRbacModule = createApiThunkPrivate("rbac/deleteModule", (payload) => ENDPOINTS.rbac.module(payload.moduleId || payload.id), "DELETE", false, { transformParams: noParams });
 export const getRbacPermissions = createApiThunkPrivate("rbac/getPermissions", ENDPOINTS.rbac.permissions, "GET", true, { transformParams: pickQuery(["moduleId", "active", "limit", "offset"]) });
 export const createRbacPermission = createApiThunkPrivate("rbac/createPermission", ENDPOINTS.rbac.permissions, "POST");
@@ -709,8 +715,11 @@ const adminCoreSlice = createSlice({
       [deletePlatformOptionValue, "deletePlatformOptionValueData"],
       [getRbacPermissionManagementModules, "rbacPermissionManagementModulesData"],
       [getRbacModules, "rbacModulesData"],
+      [getRbacSidebarModules, "rbacSidebarModulesData"],
       [createRbacModule, "createRbacModuleData"],
       [updateRbacModule, "updateRbacModuleData"],
+      [updateRbacModuleStatus, "updateRbacModuleStatusData"],
+      [reorderRbacModules, "reorderRbacModulesData"],
       [deleteRbacModule, "deleteRbacModuleData"],
       [getRbacPermissions, "rbacPermissionsData"],
       [createRbacPermission, "createRbacPermissionData"],

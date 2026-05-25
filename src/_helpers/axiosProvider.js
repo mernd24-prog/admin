@@ -50,6 +50,7 @@ const axiosRefresh = axios.create({
 });
 
 let refreshPromise = null;
+const MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH = 7000;
 
 const normalizeRefreshResponse = (response) => {
     const raw = response?.data?.data || response?.data || {};
@@ -168,7 +169,16 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
 };
 
 const refreshBeforeRequestInterceptor = async (config) => {
-    if (!isAuthEndpoint(config.url) && isTokenExpiring(getStoredAccessToken()) && getStoredRefreshToken()) {
+    const storedAccessToken = getStoredAccessToken();
+    const shouldRefreshBeforeRequest =
+        !isAuthEndpoint(config.url) &&
+        getStoredRefreshToken() &&
+        (
+            isTokenExpiring(storedAccessToken) ||
+            String(storedAccessToken || "").length > MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH
+        );
+
+    if (shouldRefreshBeforeRequest) {
         try {
             const accessToken = await refreshAccessToken();
             config.headers.Authorization = `Bearer ${accessToken}`;

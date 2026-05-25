@@ -153,7 +153,7 @@ const ROUTE_MODULES = [
   [["/home"], ["admin", "analytics"]],
 
   // Users & Access
-  [["/admin-users", "/user-permissions", "/roles-permissions"], ["rbac", "users"]],
+  [["/admin-users", "/user-permissions", "/roles-permissions", "/module-management"], ["rbac", "users"]],
   [["/activity-logs"], ["rbac"]],
   [["/users", "/users-addresses", "/messages"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
