@@ -155,9 +155,11 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
     const responseStatus = error.response.status;
     const fallback = responseStatus === 403
         ? "Access denied. Insufficient permissions."
-        : responseStatus === 500
-            ? "Internal server error. Please try again later."
-            : "An unknown error occurred";
+        : responseStatus === 413
+            ? "File or data is too large. Please reduce the size and try again."
+            : responseStatus === 500
+                ? "Internal server error. Please try again later."
+                : "An unknown error occurred";
     const normalized = normalizeApiError(error, fallback);
 
     return Promise.reject({
