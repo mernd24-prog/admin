@@ -279,18 +279,20 @@ const Sidebar = ({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const sidebarWidth = isExpanded ? 'w-64' : 'w-16';
+  const sidebarWidth = isExpanded ? 'w-[270px]' : 'w-16';
 
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-white ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-all duration-300 ease-in-out ${navbarOpen ? '' : 'hidden lg:flex'} shadow-lg`}
+      className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? '' : 'hidden lg:flex'} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
     >
       {/* Logo / toggle */}
-      <div className="sticky top-0 z-10 flex items-center justify-center h-20 px-2 bg-white w-full mt-3 mb-3">
+      <div className="sticky top-0 z-10 flex items-center justify-center h-[102px] px-3 bg-[#faf8f5] w-full mb-2">
         {isExpanded ? (
           <div className="flex justify-center items-center gap-8">
-            <img src="/logo.png" alt="logo" className="w-auto h-20" />
+            <div className="rounded-md border border-[#e8d6b7] bg-white p-2 shadow-sm">
+              <img src="/logo.png" alt="logo" className="w-auto h-[62px]" />
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
@@ -307,7 +309,7 @@ const Sidebar = ({
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto sidebar-scrollbar">
         <nav
-          className={`w-full bg-white ${isExpanded ? "p-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
+          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-4 pb-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
         >
           <ul>
             {sidebarData.map((item, index) => {
@@ -325,34 +327,38 @@ const Sidebar = ({
                 return (
                   <li
                     key={index}
-                    className={`flex flex-col mt-2 uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
+                    className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
-                      className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'} p-2 rounded transition-colors duration-200 ${isActive ? 'text-black bg-[#F0F0F3]' : 'text-black hover:bg-[#F0F0F3]'}`}
+                      className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'} p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#082f91] text-white' : 'text-[#082f91] hover:bg-[#eef2ff]'}`}
                       to={`/app/${sub.module_code}`}
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ''}
                     >
-                      <Icon size={isExpanded ? 22 : 18} className="text-[#082f91]" />
-                      {isExpanded && <span className="text-xs">{item.label}</span>}
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#082f91] bg-white text-[#082f91] shadow-[0_2px_5px_rgba(8,47,145,0.12)]">
+                        <Icon size={18} />
+                      </span>
+                      {isExpanded && <span className="text-[11px] font-semibold">{item.label}</span>}
                     </Link>
                   </li>
                 );
               }
 
               return (
-                <li key={index} className={`flex flex-col mt-2 uppercase text-[14px] ${isExpanded ? '' : 'items-center'}`}>
+                <li key={index} className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? '' : 'items-center'}`}>
                   {/* Section header */}
                   <div
-                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded transition-colors duration-200 ${hasActiveChild ? "text-black" : "text-black hover:bg-[#F0F0F3]"}`}
+                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? "bg-[#082f91] text-white" : "text-[#082f91] hover:bg-[#eef2ff]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
-                    <Icon size={isExpanded ? 22 : 18} className="text-[#082f91]" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#082f91] bg-white text-[#082f91] shadow-[0_2px_5px_rgba(8,47,145,0.12)]">
+                      <Icon size={18} />
+                    </span>
                     {isExpanded && (
                       <>
-                        <span className="text-xs">{item.label}</span>
-                        <MdChevronRight className={`ml-auto transition-transform duration-200 text-[#082f91] ${isTabActive ? 'rotate-90' : ''}`} />
+                        <span className="text-[11px] font-semibold">{item.label}</span>
+                        <MdChevronRight className={`ml-auto transition-transform duration-200 ${hasActiveChild ? 'text-white' : 'text-[#082f91]'} ${isTabActive ? 'rotate-90' : ''}`} />
                       </>
                     )}
                   </div>
@@ -386,7 +392,7 @@ const Sidebar = ({
                               }}
                             >
                               <Link
-                                className={`flex items-center gap-3 p-2 text-sm transition-all duration-200 ease-in-out rounded ${isSubActive ? 'text-black font-medium bg-[#F0F0F3]' : 'text-gray-600 hover:text-black hover:bg-[#F8F8FA]'}`}
+                                className={`flex items-center gap-3 p-2 text-sm transition-all duration-200 ease-in-out rounded ${isSubActive ? 'font-medium bg-[#eef2ff] text-[#082f91]' : 'text-gray-600 hover:text-[#082f91] hover:bg-[#eef2ff]'}`}
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
@@ -405,6 +411,17 @@ const Sidebar = ({
           </ul>
         </nav>
       </div>
+      {isExpanded && (
+        <div className="m-4 rounded-lg border border-[#ead9bf] bg-[#fff5df] p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#082f91]">Need Help?</p>
+          <p className="mt-2 text-[10px] leading-4 text-[#43506a]">
+            Our support team is available to help with your account.
+          </p>
+          <button type="button" className="mt-3 h-8 w-full rounded bg-[#082f91] text-[10px] font-semibold text-white hover:bg-[#062779]">
+            Contact Support
+          </button>
+        </div>
+      )}
     </div>
   );
 };

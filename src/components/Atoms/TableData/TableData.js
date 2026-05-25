@@ -25,7 +25,7 @@ const TableData = ({
 
   return (
     <>
-      <section className="w-full overflow-hidden">
+      <section className="admin-card w-full overflow-hidden">
         <div className="w-full">
           {loading ? (
             <TableSkeletonLoader
@@ -36,11 +36,11 @@ const TableData = ({
             <>
               <div className="hidden w-full border-b-[#ebedf0] lg:block overflow-hidden overflow-x-auto overflow-y-auto">
                 <table className="w-full text-sm text-gray-800 bg-transparent border-collapse table-auto">
-                  <thead className="">
-                    <tr className="border-b border-[#edeff1]">
+                  <thead className="admin-table-head">
+                    <tr>
                       {
                         isHeaderCheckbox && (
-                          <th key="checkbox-header" className="px-4 py-4 font-semibold text-left text-black  whitespace-nowrap">
+                          <th key="checkbox-header" className="px-4 py-4 font-semibold text-left text-white whitespace-nowrap">
                             <CustomCheckbox checked={allRowsSelected} onChange={handleHeaderCheckboxChange} />
                           </th>
                         )
@@ -48,7 +48,7 @@ const TableData = ({
                       {tableHeadings.map((heading, index) => (
                         <th
                           key={`heading-${index}`}
-                          className={` px-4 py-4 font-medium text-left text-black whitespace-nowrap ${sortableColumns.includes(index)
+                          className={` px-4 py-4 font-medium text-left text-white whitespace-nowrap ${sortableColumns.includes(index)
                             ? "cursor-pointer"
                             : "cursor-default"
                             }`}
@@ -94,7 +94,7 @@ const TableData = ({
                     {data.map((row, rowIndex) => (
                       <tr
                         key={`row-${rowIndex}`}
-                        className="border-t border-[#edeff1]  hover:bg-gray-100"
+                        className="border-t border-[#edeff1] hover:bg-[#f7f9ff]"
                       >
                         {row && Array.isArray(row) && row.length > 0 ? (
                           row.map((cell, cellIndex) => (
@@ -129,7 +129,7 @@ const TableData = ({
                 {data.map((row, rowIndex) => (
                   <div
                     key={`mobile-row-${rowIndex}`}
-                    className="p-4 mb-4 border border-[#dbdbdb]"
+                    className="admin-card p-4 mb-4"
                   >
                     <div className="flex items-center justify-between pb-3 mb-3">
                       {/* Mobile row header area */}

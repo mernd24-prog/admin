@@ -22,30 +22,29 @@ const FormInput = ({
     setShowPassword(prev => !prev);
   };
 
-  const baseClasses =
-    'w-full p-2.5 text-[#475569] bg-[#f3f6f9] text-[14px] rounded border focus:outline-none focus:ring-1';
+  const baseClasses = 'admin-input';
 
   const inputClasses = `${baseClasses} ${
     error
-      ? 'border-red-500 focus:ring-red-300'
-      : 'border-none focus:ring-black/30 peer-focus:outline-none peer-focus:ring-0'
+      ? '!border-red-500 focus:!ring-red-100'
+      : ''
   } ${className}`;
 
-  const selectClasses = `w-full p-2.5 bg-transparent rounded border focus:outline-none focus:ring-1 ${
-    error ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-black/30'
+  const selectClasses = `admin-input ${
+    error ? '!border-red-500 focus:!ring-red-100' : ''
   }`;
 
-  const textareaClasses = `w-full p-2 rounded border focus:outline-none focus:ring-1 ${
-    error ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-black/30'
+  const textareaClasses = `admin-input !h-auto py-3 ${
+    error ? '!border-red-500 focus:!ring-red-100' : ''
   }`;
 
-  const dateClasses = `w-full p-1.5 border rounded focus:outline-none focus:ring-1 ${
-    error ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-black/30'
+  const dateClasses = `admin-input ${
+    error ? '!border-red-500 focus:!ring-red-100' : ''
   }`;
 
   return (
     <div className="mb-4">
-      <label className="label block text-sm font-medium text-gray-700 mb-1">
+      <label className="admin-label">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>

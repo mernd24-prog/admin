@@ -1,6 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Bell, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import BrandLogo from "../BrandLogo";
 
 const readStoredJson = (key) => {
@@ -11,11 +11,6 @@ const readStoredJson = (key) => {
     return null;
   }
 };
-
-const formatLabel = (value = "") =>
-  String(value || "")
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const getSellerHeaderName = (...sources) => {
   for (const source of sources) {
@@ -36,19 +31,6 @@ const getSellerHeaderName = (...sources) => {
     if (name) return name;
   }
   return "Seller Account";
-};
-
-const getSellerHeaderSubtitle = (...sources) => {
-  for (const source of sources) {
-    const profile = source?.sellerProfile || {};
-    const subtitle =
-      profile.businessType ||
-      source?.role ||
-      source?.roleName ||
-      source?.onboardingStatus;
-    if (subtitle) return formatLabel(subtitle);
-  }
-  return "Vendor Applicant";
 };
 
 const getInitials = (name = "") => {
@@ -75,13 +57,6 @@ const KYCStatusLayout = ({
   const storedFlowState = readStoredJson("authFlowState");
   const flowState = seller?.flowState || storedFlowState || {};
   const headerName = getSellerHeaderName(
-    authSlice?.user,
-    seller?.onboardingUser,
-    flowState,
-    storedUser,
-    storedOnboardingUser,
-  );
-  const headerSubtitle = getSellerHeaderSubtitle(
     authSlice?.user,
     seller?.onboardingUser,
     flowState,

@@ -46,10 +46,9 @@ const PasswordInput = React.memo(
             value={value}
             autoComplete={autoComplete}
             required={required}
-            className={`h-[38px] w-full rounded-md border border-transparent bg-white px-3 py-[0.5rem] pr-10 text-[12px] leading-[1.5] text-[#101828] placeholder:text-[#9a9a9a] transition-all duration-300 ease-in-out
-                   appearance-none focus:border-[#d8d4cf] focus:outline-none focus:ring-2 focus:ring-[#e8e3dd]
+            className={`admin-input h-[40px] pr-10
               ${inputClassName}
-              ${errorMessage ? 'border-[#fe3c6a]/50' : ''}
+              ${errorMessage ? '!border-[#fe3c6a]/50' : ''}
             `}
             placeholder={placeholder}
             {...rest}

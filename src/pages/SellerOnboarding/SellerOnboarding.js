@@ -29,23 +29,23 @@ const MIN_SELLER_AGE = 18;
 
 const ERROR_CLASS = "mt-1 text-xs text-red-600";
 const STEP_ONE_INPUT_CLASS =
-  "h-[46px] w-full rounded-[6px] border border-[#DAD7EA] bg-[#FAF8FFB2]/70 px-3 text-[14px] text-[#344054] outline-none transition placeholder:text-[#8f8aa3] focus:border-[#DAD7EA] focus:ring-1 focus:ring-[#DAD7EA]";
+  "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
 const DATE_FIELD_CLASS =
-  "h-[46px] w-full rounded-[6px] border border-[#DAD7EA] bg-[#FAF8FFB2]/70 px-3 text-[14px] text-[#344054] outline-none transition placeholder:text-[#8f8aa3] focus:border-[#DAD7EA] focus:ring-1 focus:ring-[#DAD7EA]";
+  "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
 const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
 const SECONDARY_BUTTON_CLASS =
-  "flex h-[40px] min-w-[380px] items-center justify-center rounded-[7px] border border-[#082f91] bg-transparent px-6 text-[14px] font-bold leading-none text-[#031b52] transition hover:bg-[#eef2ff]";
+  "admin-btn-secondary min-w-[220px] text-[14px]";
 const PRIMARY_BUTTON_CLASS =
-  "flex h-[40px] w-full items-center justify-center rounded-[7px] bg-[#082f91] px-7 text-[14px] font-bold leading-none text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#062779] disabled:cursor-not-allowed disabled:opacity-70";
+  "admin-btn-primary w-full text-[14px]";
 const ONBOARDING_CARD_CLASS =
-  "w-full rounded-[14px] border border-[#e4dfd9] bg-white px-5 py-4 sm:px-8 md:px-10 shadow-[0_8px_24px_rgba(8,47,145,0.12)]";
+  "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
-  "h-[35px] w-full rounded-[6px] border border-[#DAD7EA] bg-[#FAF8FFB2]/70 px-3 text-[14px] text-[#344054] outline-none placeholder:text-[14px] truncate";
+  "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_FILE_INPUT_CLASS = `${REVIEW_INPUT_CLASS} pl-9`;
 const REVIEW_SECONDARY_BUTTON_CLASS =
-  "flex h-[40px] w-full items-center justify-center rounded-[7px] border border-[#082f91] bg-transparent px-6 text-[14px] font-bold leading-none text-[#031b52] transition hover:bg-[#eef2ff] sm:w-[260px]";
+  "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
 const REVIEW_PRIMARY_BUTTON_CLASS =
-  "flex h-[40px] w-full items-center justify-center rounded-[7px] bg-[#082f91] px-7 text-[14px] font-bold leading-none text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#062779] disabled:cursor-not-allowed disabled:opacity-70";
+  "admin-btn-primary w-full text-[14px]";
 // const DISPLAY_FIELD_CLASS =
 //   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
 
@@ -138,7 +138,7 @@ const OnboardingSection = ({ number, title, children }) => (
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E49E1C] text-[12px] font-bold text-white">
         {number}
       </span>
-      <h2 className="whitespace-nowrap font-inter text-[26px]  my-auto font-semibold text-[#042586]">
+      <h2 className="whitespace-nowrap font-inter text-[18px] my-auto font-semibold text-[#042586]">
         {title}
       </h2>
       <span className="h-px flex-1 max-w-lg bg-[#E49E1C]" />
@@ -159,7 +159,7 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E49E1C] text-[10px] font-bold text-white">
         {number}
       </span>
-      <h2 className="whitespace-nowrap font-inter text-[24px]  my-auto font-semibold text-[#042586]">
+      <h2 className="whitespace-nowrap font-inter text-[16px] my-auto font-semibold text-[#042586]">
         {title}
       </h2>
       <span className="h-px flex-1 bg-[#E49E1C]" />
@@ -178,7 +178,7 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
 
 const ReviewInput = ({ label, value, className = "" }) => (
   <div className={className}>
-    <label className="mb-[6px] block text-base font-inter font-medium text-[##484555]">
+    <label className="admin-label font-inter">
       {label}
     </label>
     <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />

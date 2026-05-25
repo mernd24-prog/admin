@@ -14,7 +14,7 @@ const NewButton = React.memo(({
             type={type}
             onClick={onClick}
             disabled={isDisable}
-            className={`group w-full flex space-x-4 justify-center py-2 px-4 border-[#D8D8D8] border text-[16px] font-[600] font-[Inter] rounded-md text-white bg-[#CE9F2D] hover:scale-95 transition-all duration-300 ease-in-out ${className}`} {...rest}>
+            className={`admin-btn-primary group w-full font-[Inter] ${className}`} {...rest}>
             {children}
         </button>
     );

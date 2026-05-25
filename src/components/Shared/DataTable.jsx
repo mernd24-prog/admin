@@ -62,7 +62,7 @@ const DataTable = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="admin-card overflow-hidden">
       {/* Toolbar */}
       {(onSearch || actions) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
@@ -73,7 +73,7 @@ const DataTable = ({
                 value={searchValue}
                 onChange={handleSearch}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF] transition-colors"
+                className="admin-input w-full pl-9 pr-4"
               />
             </div>
           )}
@@ -84,12 +84,12 @@ const DataTable = ({
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
+          <thead className="admin-table-head">
+            <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${col.sortable ? 'cursor-pointer select-none hover:text-gray-700' : ''} ${col.width ? `w-${col.width}` : ''}`}
+                  className={`px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wide whitespace-nowrap ${col.sortable ? 'cursor-pointer select-none hover:text-white/80' : ''} ${col.width ? `w-${col.width}` : ''}`}
                   onClick={() => handleSort(col)}
                 >
                   <span className="flex items-center gap-1">
@@ -97,7 +97,7 @@ const DataTable = ({
                     {col.sortable && (
                       <MdUnfoldMore
                         size={14}
-                        className={sortKey === col.key ? 'text-[#989AFF]' : 'text-gray-300'}
+                        className={sortKey === col.key ? 'text-[#e49e1c]' : 'text-white/50'}
                       />
                     )}
                   </span>
@@ -117,7 +117,7 @@ const DataTable = ({
                   </tr>
                 )
                 : data.map((row) => (
-                  <tr key={getKey(row)} className="hover:bg-gray-50/60 transition-colors">
+                  <tr key={getKey(row)} className="hover:bg-[#f7f9ff] transition-colors">
                     {columns.map((col) => (
                       <td key={col.key} className="px-4 py-3 text-gray-700">
                         {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
@@ -155,7 +155,7 @@ const DataTable = ({
                 <button
                   key={p}
                   onClick={() => onPageChange?.(p)}
-                  className={`w-8 h-8 rounded text-xs font-medium transition-colors ${p === page ? 'bg-[#989AFF] text-white' : 'hover:bg-gray-100'}`}
+                  className={`w-8 h-8 rounded text-xs font-medium transition-colors ${p === page ? 'bg-[#082f91] text-white' : 'hover:bg-[#eef2ff]'}`}
                 >
                   {p}
                 </button>
