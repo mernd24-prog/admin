@@ -7,13 +7,27 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
 
 body {
-  font-family: "Poppins", sans-serif;
+  font-family: "Inter", "Poppins", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+  color: #182d50;
+  background: #fffdfa;
 }
 
-.d {
-  border: 2px solid red;
+:root {
+  --admin-navy: #082f91;
+  --admin-navy-dark: #062779;
+  --admin-amber: #e49e1c;
+  --admin-amber-soft: #fbebd7;
+  --admin-canvas: #fffdfa;
+  --admin-surface: #ffffff;
+  --admin-surface-soft: #faf8f5;
+  --admin-line: #e8e2db;
+  --admin-field: rgba(250, 248, 255, 0.7);
+  --admin-field-line: #dad7ea;
+  --admin-ink: #182d50;
+  --admin-muted: #667085;
+  --admin-shadow: 0 8px 24px rgba(8, 47, 145, 0.08);
 }
 
 .d {
@@ -31,58 +45,58 @@ body {
 /* Theme CSS Start */
 
 .text-primary {
-  color: #ce9f2d;
+  color: var(--admin-navy);
 }
 
 .border-primary {
-  border: 1px solid #ce9f2d;
+  border: 1px solid var(--admin-navy);
 }
 
 .bg-primary {
-  background-color: #ce9f2d;
+  background-color: var(--admin-navy);
 }
 
-/* Global Primary Button Style for All Buttons */
-/* button, */
 .button-primary {
+  min-height: 40px !important;
   padding: 10px 20px !important;
-  border: 1px solid #ce9f2d !important;
-  border-radius: 999px !important;
+  border: 1px solid var(--admin-navy) !important;
+  border-radius: 7px !important;
   color: white !important;
   cursor: pointer !important;
-  transition: 0.3s ease !important;
-
-  background: linear-gradient(90deg, #a26d27 0%, #ce9f2d 100%) !important;
+  font-weight: 600 !important;
+  transition: 0.2s ease !important;
+  background: var(--admin-navy) !important;
+  box-shadow: 0 8px 16px rgba(8, 47, 145, 0.16);
 }
 
-/* button:hover, */
 .button-primary:hover {
-  opacity: 0.9 !important;
+  background: var(--admin-navy-dark) !important;
   color: white !important;
 }
 
-/* Outline Primary Button */
 .button-outline-primary {
+  min-height: 40px;
   padding: 10px 20px;
-  border: 1px solid #ce9f2d;
-  border-radius: 999px;
+  border: 1px solid var(--admin-navy);
+  border-radius: 7px;
   background: transparent;
-  color: #ce9f2d;
+  color: var(--admin-navy);
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: 0.2s ease;
 }
 
 .button-outline-primary:hover {
-  background: linear-gradient(90deg, #a26d27 0%, #ce9f2d 100%);
-  color: white;
+  background: #eef2ff;
+  color: var(--admin-navy);
 }
 
 .bgcolor {
-  background-color: #911212;
+  background-color: var(--admin-navy);
 }
 
 .bggray {
-  background-color: #f8f4f0;
+  background-color: var(--admin-canvas);
 }
 
 /* .bgcolor {
@@ -90,7 +104,7 @@ body {
 } */
 
 .bgblue {
-  background: #911212;
+  background: var(--admin-navy);
 }
 
 .bgyellow {
@@ -106,12 +120,12 @@ body {
 }
 
 .textcolor {
-  color: #911212;
+  color: var(--admin-navy);
 }
 
 .texthover:hover {
   background: #ffffff;
-  color: #911212;
+  color: var(--admin-navy);
 }
 
 .textred {
@@ -139,17 +153,24 @@ body {
 }
 
 .borderone {
-  border: 1px solid #911212;
+  border: 1px solid var(--admin-navy);
 }
 
 .bordertwo {
-  border: 1px dashed #911212;
+  border: 1px dashed var(--admin-navy);
 }
 
 .react-select__control {
-  height: 35px !important;
-  min-height: 35px !important;
-  border: 1px solid #9ca3af !important;
+  min-height: 40px !important;
+  border: 1px solid var(--admin-field-line) !important;
+  border-radius: 6px !important;
+  background-color: var(--admin-field) !important;
+  box-shadow: none !important;
+}
+
+.react-select__control--is-focused {
+  border-color: var(--admin-navy) !important;
+  box-shadow: 0 0 0 2px rgba(8, 47, 145, 0.1) !important;
 }
 
 /* Remove default focus/active shadow for native select dropdowns */
@@ -168,13 +189,149 @@ select:active {
 
 /* Theme Css End */
 
+.admin-page {
+  min-height: 100%;
+  background: var(--admin-canvas);
+  color: var(--admin-ink);
+}
+
+.admin-card {
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-card-header {
+  border-bottom: 1px solid var(--admin-line);
+  color: var(--admin-navy);
+  font-weight: 700;
+}
+
+.admin-input {
+  height: 40px;
+  width: 100%;
+  border: 1px solid var(--admin-field-line);
+  border-radius: 6px;
+  background: var(--admin-field);
+  padding: 0 12px;
+  color: #344054;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-input:focus {
+  border-color: var(--admin-navy);
+  box-shadow: 0 0 0 2px rgba(8, 47, 145, 0.1);
+}
+
+.admin-input:disabled,
+.admin-input[readonly] {
+  color: #667085;
+  cursor: not-allowed;
+}
+
+.admin-label {
+  margin-bottom: 6px;
+  display: block;
+  color: #484555;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-btn-primary {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 7px;
+  background: var(--admin-navy);
+  padding: 0 20px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: var(--admin-navy-dark);
+}
+
+.admin-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.admin-btn-secondary {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--admin-navy);
+  border-radius: 7px;
+  background: white;
+  padding: 0 20px;
+  color: var(--admin-navy);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background: #eef2ff;
+}
+
+.admin-table-head {
+  background: var(--admin-navy);
+  color: white;
+}
+
+.admin-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--admin-navy);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-section-title::after {
+  height: 1px;
+  flex: 1;
+  background: var(--admin-amber);
+  content: "";
+}
+
+.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
+.admin-shell select:not(.admin-input),
+.admin-shell textarea:not(.admin-input) {
+  border-color: var(--admin-field-line);
+  border-radius: 6px;
+  background-color: var(--admin-field);
+}
+
+.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.admin-shell select:focus,
+.admin-shell textarea:focus {
+  border-color: var(--admin-navy);
+  box-shadow: 0 0 0 2px rgba(8, 47, 145, 0.1);
+}
+
+.admin-shell table thead:not(.admin-table-head) {
+  background: #f7f9ff;
+  color: var(--admin-navy);
+}
+
 .pagination {
   @apply items-center flex;
 }
 
 .pagination > li > a,
 .pagination > li > span {
-  @apply relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer bg-[#911212] bg-opacity-10;
+  @apply relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer bg-[#082f91] bg-opacity-10;
 }
 
 .pagination > li:nth-child(2n + 1) > a,

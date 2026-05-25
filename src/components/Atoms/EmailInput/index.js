@@ -128,22 +128,7 @@ const EmailInput = React.memo(
             onBlur={handleBlur}
             placeholder={placeholder}
             className={`
-              w-full h-[38px]
-              rounded-md
-              border border-transparent
-              bg-white
-              pl-3 ${Icon ? "pr-10" : "pr-3"}
-              text-[12px]
-              text-[#101828]
-              placeholder:text-[#9a9a9a]
-              outline-none
-              transition-all duration-300
-
-              focus:bg-white
-              focus:border-[#d8d4cf]
-              focus:ring-2
-              focus:ring-[#e8e3dd]
-
+              admin-input h-[40px] ${Icon ? "pr-10" : "pr-3"}
               disabled:cursor-not-allowed
               disabled:opacity-70
 

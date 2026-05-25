@@ -21,9 +21,8 @@ const Input = ({
   const inputType =
     type === "password" ? (isPasswordVisible ? "text" : "password") : type;
 
-    const baseStyles = `placeholder:text-gray-500 bg-[#f3f6f9] text-[#474747] w-full px-4 py-[0.6rem] text-[0.85rem] leading-[1.5]
-    rounded-[3px] border border-transparent transition-all duration-300 ease-in-out w-full
-    appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400 ${hasError ? "border-[#DC3545]" : "border-[#8089A0]"
+    const baseStyles = `admin-input placeholder:text-gray-400
+    appearance-none ${hasError ? "!border-[#DC3545]" : ""
     }`;
 
   const handleSanitizeInput = (e) => {
@@ -70,7 +69,7 @@ const Input = ({
     <div className="flex flex-col gap-2 mb-2">
       <label
         htmlFor={name}
-        className="text-[0.8rem] text-[rgba(0,0,0,0.87)] mb-[5px] inline-block cursor-default font-medium"
+        className="admin-label cursor-default"
       >
         {labelName} {required && <span className="text-[#DC3545]">*</span>}
       </label>

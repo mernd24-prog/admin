@@ -34,9 +34,9 @@ const Modal = ({
  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className={`bg-[#FAFAFA] rounded-lg w-11/12 lg:w-[900px] max-h-screen overflow-hidden ${modalClassName}`}>
-        <div className="flex justify-between items-center border-b border-[#ffff]/10 py-3 pt-8 px-5">
-          <h2 className={`text-xl text-[#212121] font-semibold ${headingClassName}`}>{heading}</h2>
+      <div className={`admin-card bg-white w-11/12 lg:w-[900px] max-h-screen overflow-hidden ${modalClassName}`}>
+        <div className="admin-card-header flex justify-between items-center py-4 px-5">
+          <h2 className={`text-xl text-[#082f91] font-semibold ${headingClassName}`}>{heading}</h2>
           {closeButton&&(
             <IoIosCloseCircle onClick={closeModal} className='text-2xl text-black-400 mr-3'/>
           )}

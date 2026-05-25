@@ -13,7 +13,7 @@ const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange }) =>
           className="absolute z-10 text-gray-800 transform -translate-y-1/2 right-3 top-1/2"
           size={20} onClick={handleRemove}
         /> : <IoSearchOutline
-          className="absolute z-10   transform -translate-y-1/2 left-3 top-1/2 text-[#CE9F2D]"
+          className="absolute z-10 transform -translate-y-1/2 left-3 top-1/2 text-[#082f91]"
           size={20}
         />
       }
@@ -25,7 +25,7 @@ const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange }) =>
         onInput={(e) => {
           e.target.value = e.target.value.replace(/^\s+/, '');
         }}
-        className="block w-full p-2.5 pr-10 text-sm border border-[#CE9F2D] text-gray-900 bg-[#f3f6f9] rounded-full outline-none focus:outline-none focus:ring-1 focus:ring-black/30 pl-10"
+        className="admin-input block pr-10 pl-10"
       />
 
     </div>

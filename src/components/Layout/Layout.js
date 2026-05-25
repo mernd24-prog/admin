@@ -353,7 +353,7 @@ function Layout() {
   };
 
   return (
-    <div className="relative flex h-screen overflow-hidden">
+    <div className="admin-shell relative flex h-screen overflow-hidden bg-[#fffdfa]">
       <div className={`z-50`}>
         <Sidebar
           navbarOpen={navbarOpen}
@@ -377,7 +377,7 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
         />
 
-        <main className="flex-1 bg-[#f1edf0] overflow-y-auto pt-16 sidebar-scrollbar">
+        <main className="flex-1 bg-[#fffdfa] overflow-y-auto pt-16 sidebar-scrollbar">
           <Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route

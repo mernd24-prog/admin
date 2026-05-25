@@ -49,7 +49,7 @@ export const isAdminPanel = () => getPanelMode() === PANEL_MODES.ADMIN;
 export const PANEL_ROLE_RULES = {
   [PANEL_MODES.ADMIN]: {
     allowedRoles: ["super-admin", "admin", "sub-admin"],
-    fullAccessRoles: ["super-admin"],
+    fullAccessRoles: ["super-admin", "admin"],
     restrictedRole: "sub-admin",
     blockedRoles: ["seller", "seller-admin", "seller-sub-admin", "buyer"],
   },

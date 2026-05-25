@@ -97,40 +97,29 @@ export default function Dashboard() {
   const dispatch = useDispatch();
   const dashboardState = useSelector((state) => state.adminCore?.dashboardOverviewData);
   const isLoading = useSelector((state) => state.adminCore?.loading);
-  const overview = dashboardState?.normalized?.data || dashboardState?.data?.data || {};
+  const overview = useMemo(
+    () => dashboardState?.normalized?.data || dashboardState?.data?.data || {},
+    [dashboardState]
+  );
 
   useEffect(() => {
     dispatch(getDashboardOverview());
   }, [dispatch]);
 
-  const isSellerOverview = Boolean(overview?.metrics);
-
   const metrics = useMemo(() => {
     const sellerMetrics = overview?.metrics || {};
     const commerce = overview?.commerce || {};
-    const payments = overview?.payments || {};
-    const catalog = overview?.catalog || {};
-
-    if (isSellerOverview) {
-      return [
-        { icon: MdShoppingCart, label: 'Total Orders', value: formatNumber(sellerMetrics.totalOrders), helper: 'Current selected period' },
-        { icon: MdCurrencyRupee, label: 'Total Revenue (GMV)', value: formatCurrency(sellerMetrics.gmv), helper: 'Gross order value' },
-        { icon: MdPayments, label: 'Delivered Revenue', value: formatCurrency(sellerMetrics.deliveredRevenue), helper: 'Delivered orders only' },
-        { icon: MdInventory2, label: 'Units Sold', value: formatNumber(sellerMetrics.unitsSold), helper: 'Products ordered' },
-        { icon: MdPendingActions, label: 'Cancelled Orders', value: formatNumber(sellerMetrics.cancelledOrders), helper: 'Current selected period', warning: true },
-        { icon: MdStorefront, label: 'Returned Orders', value: formatNumber(sellerMetrics.returnedOrders), helper: 'Current selected period' },
-      ];
-    }
+    const payouts = overview?.payouts || {};
 
     return [
-      { icon: MdShoppingCart, label: 'Total Orders', value: formatNumber(commerce.totalOrders), helper: 'All platform orders' },
-      { icon: MdCurrencyRupee, label: 'Total Revenue (GMV)', value: formatCurrency(commerce.gmv), helper: 'Gross order value' },
-      { icon: MdPayments, label: 'Payments Captured', value: formatNumber(payments.totalPayments), helper: 'Successful payments' },
-      { icon: MdInventory2, label: 'Products Listed', value: formatNumber(catalog.totalProducts), helper: 'Catalog products' },
-      { icon: MdStorefront, label: 'Platform Fees', value: formatCurrency(commerce.totalPlatformFees), helper: 'Revenue earned' },
-      { icon: MdPendingActions, label: 'Pending Products', value: formatNumber(catalog.pendingProducts), helper: 'Awaiting review', warning: true },
+      { icon: MdShoppingCart, label: 'Total Orders', value: formatNumber(sellerMetrics.totalOrders ?? commerce.totalOrders), helper: 'vs last month' },
+      { icon: MdCurrencyRupee, label: 'Total Revenue (GMV)', value: formatCurrency(sellerMetrics.gmv ?? commerce.gmv), helper: 'vs last month' },
+      { icon: MdStorefront, label: 'Orders Today', value: formatNumber(sellerMetrics.ordersToday ?? commerce.ordersToday ?? overview.ordersToday), helper: 'vs last month' },
+      { icon: MdInventory2, label: 'Units Sold', value: formatNumber(sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold), helper: 'vs last month' },
+      { icon: MdPayments, label: 'Pending Payouts', value: formatCurrency(sellerMetrics.pendingPayouts ?? payouts.pendingAmount ?? overview.pendingPayouts), helper: 'vs last month', warning: true },
+      { icon: MdPendingActions, label: 'Returned Orders', value: formatNumber(sellerMetrics.returnedOrders ?? commerce.returnedOrders ?? overview.returnedOrders), helper: 'vs last month' },
     ];
-  }, [isSellerOverview, overview]);
+  }, [overview]);
 
   const performanceData = useMemo(() => {
     const source = overview?.orderPerformance || overview?.ordersPerformance || overview?.salesTrend;
@@ -147,7 +136,7 @@ export default function Dashboard() {
   const recentOrders = Array.isArray(overview?.recentOrders) ? overview.recentOrders : [];
 
   return (
-    <div className="min-h-screen w-full bg-[#fffdfa] px-4 py-5 sm:px-6 lg:px-8">
+    <div className="admin-page min-h-screen w-full px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1320px]">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -157,11 +146,11 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-[#082f91]">Merchant Insights</h1>
           </div>
           <div className="flex gap-3">
-            <button type="button" className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-600">
+            <button type="button" className="admin-btn-secondary !min-h-[34px] !px-4 !text-[11px]">
               <MdOutlineFileDownload className="h-4 w-4" />
               Export Report
             </button>
-            <button type="button" className="flex items-center gap-1 rounded-md bg-[#082f91] px-4 py-2 text-[11px] font-semibold text-white">
+            <button type="button" className="admin-btn-primary !min-h-[34px] !px-4 !text-[11px]">
               <MdAdd className="h-4 w-4" />
               New Listing
             </button>
@@ -214,10 +203,10 @@ export default function Dashboard() {
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <section className="overflow-hidden rounded-xl border border-[#eee9e4] bg-white shadow-[0_1px_4px_rgba(35,29,23,0.06)]">
+          <section className="admin-card overflow-hidden">
             <h2 className="px-5 py-4 text-sm font-bold text-[#082f91]">Top Products</h2>
             <table className="w-full text-left">
-              <thead className="bg-[#082f91] text-[10px] text-white">
+              <thead className="admin-table-head text-[10px]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Product</th>
                   <th className="px-4 py-3 font-semibold">Units Sold</th>
@@ -239,10 +228,10 @@ export default function Dashboard() {
             </table>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-[#eee9e4] bg-white shadow-[0_1px_4px_rgba(35,29,23,0.06)]">
+          <section className="admin-card overflow-hidden">
             <h2 className="px-5 py-4 text-sm font-bold text-[#082f91]">Recent Orders</h2>
             <table className="w-full text-left">
-              <thead className="bg-[#082f91] text-[10px] text-white">
+              <thead className="admin-table-head text-[10px]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Order ID</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>

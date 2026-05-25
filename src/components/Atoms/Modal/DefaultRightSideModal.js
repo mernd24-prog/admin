@@ -32,14 +32,14 @@ const DefaultModal = ({
             />
             <div
                 className={`
-                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[${width}] h-full  bg-white shadow-xl z-50 text-sm
+                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[${width}] h-full bg-white shadow-xl z-50 text-sm
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "translate-x-full"}
                 `}
                 style={isOpen ? {} : { pointerEvents: "none" }}
             >
-                <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                    <h2 className={`text-lg sm:text-xl font-semibold text-gray-800 ${titleClassName}`}>{title}</h2>
+                <div className="admin-card-header flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+                    <h2 className={`text-lg sm:text-xl font-semibold text-[#082f91] ${titleClassName}`}>{title}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 transition-colors duration-150 p-1"

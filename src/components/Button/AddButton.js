@@ -15,9 +15,7 @@ const AddButton = React.memo(({
             type={type}
             onClick={onClick}
             disabled={isDisable}
-            className={`button-outline-primary
-            inline-flex items-center cursor-pointer gap-1.5 px-5 h-10 text-sm leading-6 font-normal border-2     transition-colors duration-150
-            group w-auto ${className}`} {...rest}>
+            className={`admin-btn-secondary group w-auto ${className}`} {...rest}>
             <IoMdAddCircleOutline />
             {labelName ? <span>{labelName}</span> : <span>Add</span>}
         </button>
