@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-
-const BILLING_CYCLES = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly (every 3 months)' },
-  { value: 'biannual', label: 'Biannual (every 6 months)' },
-  { value: 'yearly', label: 'Yearly' },
-];
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
 const Field = ({ label, hint, children }) => (
   <div className="space-y-1">
@@ -26,6 +18,7 @@ const Field = ({ label, hint, children }) => (
  */
 const SubscriptionPanel = ({ subscription = {}, onChange }) => {
   const [featureInput, setFeatureInput] = useState('');
+  const billingCycles = useDropdownOptions('subscription-billing-cycles');
 
   const set = (key, val) => onChange(`subscription.${key}`, val);
 
@@ -59,7 +52,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
             value={subscription.billingCycle || 'monthly'}
             onChange={(e) => set('billingCycle', e.target.value)}
           >
-            {BILLING_CYCLES.map((c) => (
+            {billingCycles.options.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>

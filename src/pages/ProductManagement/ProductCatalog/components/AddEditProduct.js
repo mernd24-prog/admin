@@ -31,6 +31,7 @@ import TagsInput from '../../../../components/Product/TagsInput';
 import DigitalProductPanel from '../../../../components/Product/DigitalProductPanel';
 import SubscriptionPanel from '../../../../components/Product/SubscriptionPanel';
 import BundleBuilder from '../../../../components/Product/BundleBuilder';
+import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 const API_CALLS = [
 { action: getList, name: 'Category List' },
@@ -114,6 +115,7 @@ export default function ProductManagementUI() {
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformValues, setPlatformValues] = useState({});
   const fetchedOptionIds = useRef(new Set());
+  const productVisibilities = useDropdownOptions('product-visibilities');
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -1016,10 +1018,9 @@ export default function ProductManagementUI() {
               value={formData?.visibility || 'public'}
               onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
             >
-              <option value="public">Public — visible to all customers</option>
-              <option value="private">Private — hidden from catalog</option>
-              <option value="hidden">Hidden — accessible via direct link only</option>
-              <option value="scheduled">Scheduled — publish at a set date</option>
+              {productVisibilities.options.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
 
@@ -1102,7 +1103,6 @@ export default function ProductManagementUI() {
           options={options}
           formData={formData}
           handleChange={handleChange}
-          selectJson={selectJson}
           setFormData={setFormData}
           platformOptions={platformOptions}
         />

@@ -13,12 +13,12 @@ import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect'
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
 import { Link } from 'react-router-dom'
 import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup'
-import selectJson from '../../../_helpers/SelectJson.json'
 import FormInput from '../../../components/Atoms/FormInput/FormInput'
 import { createDiscountCoupons, editDiscountCoupons, enableDisableDiscountCoupons, getDiscountCoupons, softDeleteDiscountCoupons } from '../../../Redux/promotionsSlice'
 import AddButton from '../../../components/Button/AddButton'
 import moment from 'moment/moment'
 import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox'
+import useDropdownOptions from '../../../hooks/useDropdownOptions'
 
 
 const size = 10
@@ -104,6 +104,7 @@ const toCouponApiPayload = (data) => ({
 });
 
 const DiscountCoupons = () => {
+  const discountTypes = useDropdownOptions('discount-types');
   const dispatch = useDispatch();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [isEditMode, setIsEditMode] = useState(false);
@@ -594,13 +595,14 @@ const DiscountCoupons = () => {
 
             <div>
               <FilterSelect
-                options={selectJson?.discountType}
-                value={selectJson?.discountType?.find((opt) => opt?.value === formData?.type)}
+                options={discountTypes.options}
+                value={discountTypes.options.find((opt) => opt?.value === formData?.type)}
                 placeholder={`Select Discount Type`}
                 label={`Discount Type`}
                 onChange={handleSelectChange}
                 required
                 error={errors?.type}
+                isLoading={discountTypes.loading}
               />
             </div>
 

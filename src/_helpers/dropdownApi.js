@@ -1,0 +1,91 @@
+import { apiRequest } from "./apiConfig";
+import { ENDPOINTS } from "./endpoints";
+
+const cache = new Map();
+
+const stableParams = (params = {}) =>
+  Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .sort(([left], [right]) => left.localeCompare(right))
+    .reduce((result, [key, value]) => ({ ...result, [key]: value }), {});
+
+const unwrapOptions = (response) => {
+  const data = response?.data ?? response;
+  return Array.isArray(data) ? data : [];
+};
+
+const unwrapItems = (response) => {
+  const data = response?.data?.data ?? response?.data ?? response ?? {};
+  if (Array.isArray(data)) return data;
+  return data.items || data.list || data.results || [];
+};
+
+const load = async (resource, params = {}, { force = false } = {}) => {
+  const cleanParams = stableParams(params);
+  const key = `${resource}:${JSON.stringify(cleanParams)}`;
+  if (!force && cache.has(key)) return cache.get(key);
+
+  const pending = apiRequest("GET", ENDPOINTS.meta.dropdown(resource), cleanParams)
+    .then(unwrapOptions)
+    .catch((error) => {
+      cache.delete(key);
+      throw error;
+    });
+  cache.set(key, pending);
+  return pending;
+};
+
+const loadProtected = async (key, endpoint, params, mapOption) => {
+  const cleanParams = stableParams(params);
+  const cacheKey = `protected:${key}:${JSON.stringify(cleanParams)}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+  const pending = apiRequest("GET", endpoint, cleanParams)
+    .then((response) => unwrapItems(response).map(mapOption))
+    .catch((error) => {
+      cache.delete(cacheKey);
+      throw error;
+    });
+  cache.set(cacheKey, pending);
+  return pending;
+};
+
+export const dropdownApi = {
+  clearCache: () => cache.clear(),
+  get: load,
+  getCountries: (params) => load("countries", params),
+  getStates: (countryId, params) => load("states", { ...params, parentId: countryId }),
+  getCities: (stateId, params) => load("cities", { ...params, parentId: stateId }),
+  getPincodes: (cityId, params) => load("pincodes", { ...params, parentId: cityId }),
+  getCategories: (params) => load("categories", params),
+  getBrands: (params) => load("brands", params),
+  getProductFamilies: (params) => load("product-families", params),
+  getProductOptions: (params) => load("product-options", params),
+  getProductOptionValues: (optionId, params) => load("product-option-values", { ...params, parentId: optionId }),
+  getHsnCodes: (params) => load("hsn-codes", params),
+  getTaxes: (params) => load("taxes", params),
+  getSystemOptions: (resource, params) => load(resource, params),
+  getSellers: (params) => loadProtected("sellers", ENDPOINTS.sellers.list, params, (item) => ({
+    label: item.displayName || item.businessName || item.email || item._id || item.id,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { status: item.status || item.accountStatus || "" },
+  })),
+  getRoles: (params) => loadProtected("roles", ENDPOINTS.rbac.roles, params, (item) => ({
+    label: item.name || item.roleName || item.slug,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { slug: item.slug || item.roleKey || "" },
+  })),
+  getModules: (params) => loadProtected("modules", ENDPOINTS.rbac.modules, params, (item) => ({
+    label: item.moduleName || item.name || item.moduleKey,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { key: item.moduleKey || item.slug || "" },
+  })),
+  getPermissions: (params) => loadProtected("permissions", ENDPOINTS.rbac.permissions, params, (item) => ({
+    label: item.name || `${item.moduleKey || item.module || ""}:${item.action || ""}`,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { action: item.action || "", module: item.moduleKey || item.module || "" },
+  })),
+};

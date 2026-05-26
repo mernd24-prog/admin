@@ -8,6 +8,7 @@ import { FaEye, FaUserLock } from "react-icons/fa6";
 import { MdListAlt, MdPassword } from "react-icons/md";
 import Tooltip from "../tooltip/Tooltip";
 import { MdLocalPrintshop } from "react-icons/md";
+import PermissionGuard from "../PermissionGuard/PermissionGuard";
 
 export const ActionButtons = ({
   onEdit,
@@ -41,11 +42,18 @@ export const ActionButtons = ({
   showActivateAndDeActivate = false,
   activate = false,
   showPrintIcon = false,
-  viewButton=false,onViewClick
+  viewButton=false,onViewClick,
+  requiredModule,
+  editAction = "edit",
+  deleteAction = "delete",
+  viewAction = "view",
 }) => {
+  const guard = (action, node) => requiredModule ? (
+    <PermissionGuard module={requiredModule} action={action} hide>{node}</PermissionGuard>
+  ) : node;
   return (
     <div className="flex items-center space-x-2">
-      {showEditButton && (
+      {showEditButton && guard(editAction, (
         <Tooltip text="Edit" position="top">
           <button
             onClick={onEdit}
@@ -54,10 +62,10 @@ export const ActionButtons = ({
             <FiEdit size={18} />
           </button>
         </Tooltip>
-      )}
+      ))}
 
 
-         {viewButton && (
+         {viewButton && guard(viewAction, (
         <Tooltip text="View" position="top">
           <button
             onClick={onViewClick}
@@ -66,7 +74,7 @@ export const ActionButtons = ({
             <FiEye size={18} />
           </button>
         </Tooltip>
-      )}
+      ))}
 
 
       {showAddButton && (
@@ -120,14 +128,14 @@ export const ActionButtons = ({
           <RxCountdownTimer size={20} />
         </button>
       )}
-      {showDeleteButton && (
+      {showDeleteButton && guard(deleteAction, (
         <button
           onClick={onDelete}
           className="p-1 text-red-600 transition-colors duration-200 rounded hover:bg-red-100"
         >
           <FiTrash2 size={18} />
         </button>
-      )}
+      ))}
       {showBannerButton && (
         <button
           onClick={onBanner}

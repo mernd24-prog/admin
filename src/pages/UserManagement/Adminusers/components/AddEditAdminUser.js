@@ -146,7 +146,13 @@ const AddEditAdminUser = ({
                   name="role"
                   value={form?.role || ''}
                   onChange={handleChange}
-                  options={['Select Role']}
+                  options={[
+                    { label: 'Select Role', value: '' },
+                    ...(rolesData || []).map((role) => ({
+                      label: role.label || role.name || role.roleName || role.slug,
+                      value: role.value || role._id || role.id || role.slug,
+                    })),
+                  ]}
                 />
                 {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
               </div>

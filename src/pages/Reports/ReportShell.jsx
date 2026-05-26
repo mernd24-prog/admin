@@ -1,5 +1,5 @@
 import React from 'react';
-import { MdBarChart, MdTrendingUp, MdInventory, MdStorefront, MdFileDownload } from 'react-icons/md';
+import { MdFileDownload } from 'react-icons/md';
 import { PageHeader } from '../../components/Shared';
 
 /**

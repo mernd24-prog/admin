@@ -4,8 +4,10 @@ import { LuAsterisk } from 'react-icons/lu';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
 import FormInput from '../../../../components/Atoms/FormInput/FormInput';
+import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 const AddEditTransactionModal = ({ isOpen, onClose, onSubmit, users = [] }) => {
+  const transactionTypes = useDropdownOptions('wallet-transaction-types');
   const [formData, setFormData] = useState({
     userId: '',
     type: '',
@@ -78,7 +80,7 @@ const AddEditTransactionModal = ({ isOpen, onClose, onSubmit, users = [] }) => {
               name="type"
               value={formData.type}
               onChange={handleChange}
-              options={['Select Type', 'Credit', 'Debit']}
+              options={[{ label: 'Select Type', value: '' }, ...transactionTypes.options]}
             />
             {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
           </div>

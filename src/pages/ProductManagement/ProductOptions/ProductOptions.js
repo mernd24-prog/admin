@@ -13,6 +13,7 @@ import Pagination from '../../../components/Pagination/Pagination';
 import AddButton from '../../../components/Button/AddButton';
 import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 const PAGE_SIZE = 15;
 
@@ -23,8 +24,6 @@ const DISPLAY_TYPE_META = {
   radio:        { label: 'Radio',        color: 'bg-purple-100 text-purple-700' },
   thumbnail:    { label: 'Thumbnail',    color: 'bg-yellow-100 text-yellow-700' },
 };
-
-const DISPLAY_TYPES = Object.entries(DISPLAY_TYPE_META).map(([value, meta]) => ({ value, label: meta.label }));
 
 const slugify = (value = '') =>
   String(value || '')
@@ -67,6 +66,7 @@ export default function ProductOptions() {
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
+  const displayTypes = useDropdownOptions('product-option-display-types');
 
   const items = getListPayload(selector?.platformOptionsData);
   const total = getTotal(selector?.platformOptionsData, items.length);
@@ -289,7 +289,7 @@ export default function ProductOptions() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
                 <p className="text-xs text-gray-400 mb-2">How values from this option appear on product and variant forms</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {DISPLAY_TYPES.map((dt) => (
+                  {displayTypes.options.map((dt) => (
                     <button
                       key={dt.value}
                       type="button"

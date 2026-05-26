@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MdWarning, MdError, MdInfo, MdCheckCircle } from 'react-icons/md';
 import { RxCross2 } from 'react-icons/rx';
 
@@ -41,6 +41,13 @@ const ConfirmModal = ({
   cancelLabel = 'Cancel',
   loading = false,
 }) => {
+  useEffect(() => {
+    if (!open || loading) return undefined;
+    const closeOnEscape = (event) => event.key === 'Escape' && onClose?.();
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [loading, onClose, open]);
+
   if (!open) return null;
 
   const { Icon, bg, color } = ICON_MAP[variant] || ICON_MAP.warning;
@@ -55,7 +62,7 @@ const ConfirmModal = ({
       />
 
       {/* Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
+      <div role="alertdialog" aria-modal="true" aria-label={title} className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
         {/* Close */}
         <button
           onClick={onClose}

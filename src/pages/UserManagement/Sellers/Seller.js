@@ -15,6 +15,7 @@ import Loader from '../../../components/Loader/Loader';
 import AddButton from '../../../components/Button/AddButton';
 import DefaultMiddleModal from '../../../components/Atoms/Modal/DefaultMiddleModal ';
 import { useNavigate } from 'react-router';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 const Sellers = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -50,6 +51,8 @@ const Sellers = () => {
         bankRejectionReason: ''
     });
     const size = 10;
+    const kycOptions = useDropdownOptions('kyc-review-statuses');
+    const bankOptions = useDropdownOptions('bank-review-statuses');
 
     // Fetch seller list on component mount and when dependencies change
     useEffect(() => {
@@ -754,9 +757,9 @@ const Sellers = () => {
                                 value={kycForm.verificationStatus}
                                 onChange={(e) => setKycForm((prev) => ({ ...prev, verificationStatus: e.target.value }))}
                             >
-                                <option value="verified">Approve</option>
-                                <option value="rejected">Reject</option>
-                                <option value="under_review">Under Review</option>
+                                {kycOptions.options.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </div>
                         {kycForm.verificationStatus === 'rejected' && (
@@ -790,9 +793,9 @@ const Sellers = () => {
                                 value={bankForm.bankVerificationStatus}
                                 onChange={(e) => setBankForm((prev) => ({ ...prev, bankVerificationStatus: e.target.value }))}
                             >
-                                <option value="verified">Verify</option>
-                                <option value="rejected">Reject</option>
-                                <option value="submitted">Submitted</option>
+                                {bankOptions.options.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                         </div>
                         {bankForm.bankVerificationStatus === 'rejected' && (

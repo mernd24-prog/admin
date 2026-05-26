@@ -148,14 +148,7 @@ const Login = () => {
       if (!formFields.password.trim()) {
         errors.password = "Password is required.";
         isValid = false;
-      } else if (
-        !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
-          formFields.password,
-        )
-      ) {
-        errors.password = "Please enter a valid password.";
-        isValid = false;
-      }
+      } 
     } else if (formState === "forgotPassword") {
       if (!formFields.forgotEmail.trim()) {
         errors.forgotEmail = "Email is required.";

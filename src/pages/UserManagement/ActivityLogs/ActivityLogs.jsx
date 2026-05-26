@@ -113,7 +113,9 @@ const ActivityLogs = () => {
         onSearch={(q) => { setSearch(q); setPage(1); }}
         searchPlaceholder="Search by user, module, or description…"
         emptyText="No activity logs found for the selected filters."
-        rowKey={(row) => row._id || row.id || Math.random()}
+        rowKey={(row) => row._id || row.id || `${row.createdAt}-${row.action}-${row.ip}`}
+        requiredModule="rbac"
+        exportConfig={{ filename: 'activity-logs', columns: COLUMNS }}
       />
     </div>
   );

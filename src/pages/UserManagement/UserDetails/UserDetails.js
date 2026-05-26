@@ -19,6 +19,7 @@ import SellerKycCard from '../../../components/Seller/SellerKycCard';
 import { uploadFile } from '../../../_helpers/globalFunctions';
 import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 // ─── small display helpers ────────────────────────────────────────────────────
 
@@ -216,20 +217,6 @@ const normalizeBankDetails = (bankDetails = {}) => ({
 const hasAnyBankDetails = (bankDetails = {}) =>
   Object.values(bankDetails).some((value) => String(value || '').trim().length > 0);
 
-// ─── KYC decision options ─────────────────────────────────────────────────────
-
-const KYC_OPTIONS = [
-  { value: 'verified',     label: 'Approve (Verified)' },
-  { value: 'under_review', label: 'Mark Under Review' },
-  { value: 'rejected',     label: 'Reject' },
-];
-
-const BANK_OPTIONS = [
-  { value: 'verified',  label: 'Verify' },
-  { value: 'submitted', label: 'Mark Submitted' },
-  { value: 'rejected',  label: 'Reject' },
-];
-
 // ─── main component ───────────────────────────────────────────────────────────
 
 const UserDetails = () => {
@@ -239,6 +226,8 @@ const UserDetails = () => {
   const selector = useSelector((state) => state.user);
   const adminSelector = useSelector((state) => state.adminCore);
   const isSellerRoute = location.pathname.includes('/seller/');
+  const kycOptions = useDropdownOptions('kyc-review-statuses');
+  const bankOptions = useDropdownOptions('bank-review-statuses');
 
   const detailUser = getPayload(selector?.getAdminUserDetailsData);
   const adminCoreUser = getPayload(adminSelector?.adminUserData);
@@ -557,7 +546,7 @@ const UserDetails = () => {
         onSubmit={handleKycSubmit}
         title="Review Seller KYC"
         decisionLabel="KYC Decision"
-        options={KYC_OPTIONS}
+        options={kycOptions.options}
         defaultDecision={kycModal.defaultDecision}
         rejectionValue="rejected"
         rejectionLabel="KYC Rejection Reason"
@@ -571,7 +560,7 @@ const UserDetails = () => {
         onSubmit={handleBankSubmit}
         title="Review Seller Bank Details"
         decisionLabel="Bank Decision"
-        options={BANK_OPTIONS}
+        options={bankOptions.options}
         defaultDecision={bankModal.defaultDecision}
         rejectionValue="rejected"
         rejectionLabel="Bank Rejection Reason"

@@ -1,7 +1,8 @@
 import { IoIosCheckmark } from "react-icons/io";
+import PermissionGuard from "../PermissionGuard/PermissionGuard";
 
-const ToggleButton = ({ handleClick, isToggle }) => {
-  return (
+const ToggleButton = ({ handleClick, isToggle, requiredModule, requiredAction = "status" }) => {
+  const toggle = (
     <div className="flex">
       <label className="relative inline-flex items-center w-11 h-6">
         <input
@@ -27,6 +28,11 @@ const ToggleButton = ({ handleClick, isToggle }) => {
       </label>
     </div>
   );
+  return requiredModule ? (
+    <PermissionGuard module={requiredModule} action={requiredAction} hide>
+      {toggle}
+    </PermissionGuard>
+  ) : toggle;
 };
 
 export default ToggleButton;

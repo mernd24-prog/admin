@@ -25,6 +25,7 @@ import {
 import { getAllProducts } from '../../../Redux/productSlice';
 import { getAllSellerList } from '../../../Redux/StoreSlice';
 import { transformArray } from '../../../_helpers/globalFunctions';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 const PAGE_SIZE = 10;
 const variantIdFromRecord = (variant = {}) => variant?.id || variant?._id || variant?.variantId || '';
@@ -72,6 +73,7 @@ const ProductVariants = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [selectedRow, setSelectedRow] = useState([]);
+  const productStatuses = useDropdownOptions('product-statuses');
 
   const listPayload = selector?.productVariantsData?.data?.data || {};
   const variants = listPayload?.list || [];
@@ -312,7 +314,7 @@ const ProductVariants = () => {
           />
           <FormInput label="Stock" name="stock" type="number" value={formData.stock} onChange={(e) => setFormData((p) => ({ ...p, stock: Number(e.target.value || 0) }))} error={errors.stock} required />
           <FormInput label="Reserved Stock" name="reservedStock" type="number" value={formData.reservedStock} onChange={(e) => setFormData((p) => ({ ...p, reservedStock: Number(e.target.value || 0) }))} error={errors.reservedStock} required />
-          <FormInput label="Status" name="status" type="select" value={formData.status} onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))} options={['active', 'inactive', 'draft']} />
+          <FormInput label="Status" name="status" type="select" value={formData.status} onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))} options={productStatuses.options} disabled={productStatuses.loading} />
         </div>
 
         <div className='p-4 space-y-2'>

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import useDropdownOptions from "../../hooks/useDropdownOptions";
 import {
   approveReferralPayout,
   createReferralChild,
@@ -240,6 +241,10 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
 );
 
 const ReferralCommerce = () => {
+  const referralFilterStatuses = useDropdownOptions("referral-filter-statuses");
+  const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
+  const referralOverrideModes = useDropdownOptions("referral-override-modes");
+  const referralOverrideScopes = useDropdownOptions("referral-override-scopes");
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const [activeTab, setActiveTab] = useState("overview");
@@ -742,12 +747,10 @@ const ReferralCommerce = () => {
         <TextInput label="Release Delay Days" name="releaseDelayDays" type="number" value={rulesForm.releaseDelayDays} onChange={handleRulesField} />
         <TextInput label="Yearly Threshold" name="yearlyPromotionThreshold" type="number" value={rulesForm.yearlyPromotionThreshold} onChange={handleRulesField} />
         <SelectInput label="Override Mode" name="overrideMode" value={rulesForm.overrideMode} onChange={handleRulesField}>
-          <option value="nearest_only">nearest_only</option>
-          <option value="stacked">stacked</option>
+          {referralOverrideModes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </SelectInput>
         <SelectInput label="Override Scope" name="overrideScope" value={rulesForm.overrideScope} onChange={handleRulesField}>
-          <option value="promoted_subtree">promoted_subtree</option>
-          <option value="direct_sales_only">direct_sales_only</option>
+          {referralOverrideScopes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </SelectInput>
         <TextInput label="Max Discount" name="maxDiscountAmount" type="number" step="0.01" value={rulesForm.maxDiscountAmount} onChange={handleRulesField} />
         <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
@@ -835,12 +838,7 @@ const ReferralCommerce = () => {
           className="h-10 rounded border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-indigo-400"
         >
           <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="suspended">Suspended</option>
-          <option value="rejected">Rejected</option>
-          <option value="completed">Completed</option>
-          <option value="paid">Paid</option>
+          {referralFilterStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <button type="submit" className="inline-flex h-10 items-center gap-2 rounded bg-gray-900 px-4 text-sm font-medium text-white hover:bg-gray-800">
           <Search size={16} />
@@ -1065,10 +1063,7 @@ const ReferralCommerce = () => {
           <TextInput label="Max Discount" name="maxDiscountAmount" type="number" step="0.01" value={codeForm.maxDiscountAmount} onChange={handleCodeField} />
           <TextInput label="Usage Limit" name="usageLimit" type="number" value={codeForm.usageLimit} onChange={handleCodeField} />
           <SelectInput label="Status" name="status" value={codeForm.status} onChange={handleCodeField}>
-            <option value="active">active</option>
-            <option value="inactive">inactive</option>
-            <option value="expired">expired</option>
-            <option value="suspended">suspended</option>
+            {referralCodeStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </SelectInput>
         </form>
       </Modal>

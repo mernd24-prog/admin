@@ -9,7 +9,6 @@ export default function VariantsOptionsTab({
     options,
     setVariantRows,
     setFormData,
-    selectJson,
     platformOptions = [],
 }) {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -181,15 +180,11 @@ export default function VariantsOptionsTab({
 
     const getSelectedOption = (row) => {
         if (!row.type) return null;
-        const optionChoices = platformOptions.length
-            ? platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }))
-            : (selectJson?.HEADS_TYPE || []);
+        const optionChoices = platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }));
         return optionChoices.find(option => option.value === row.type || option.label === row.type) || null;
     };
 
-    const optionChoices = platformOptions.length
-        ? platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }))
-        : (selectJson?.HEADS_TYPE || []);
+    const optionChoices = platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }));
 
     return (
         <div className="w-full bg-white">

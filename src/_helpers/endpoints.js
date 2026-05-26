@@ -9,6 +9,9 @@ const byPanelFn = (adminBuilder, sellerBuilder = adminBuilder) => (...args) =>
   (isSellerPanel() ? sellerBuilder(...args) : adminBuilder(...args));
 
 export const ENDPOINTS = {
+  meta: {
+    dropdown: (resource) => `/meta/dropdowns/${resource}`,
+  },
   auth: {
     register: "/auth/register",
     login: "/auth/login",
@@ -266,43 +269,3 @@ export const ENDPOINTS = {
     discardDeadLetter: (eventId) => `/admin/system/dead-letter/${eventId}/discard`,
   },
 };
-
-export const ORDER_STATUSES = [
-  "cancelled",
-  "packed",
-  "shipped",
-  "delivered",
-  "fulfilled",
-  "return_requested",
-  "returned",
-];
-
-export const SELLER_FULFILLMENT_STATUSES = [
-  "packed",
-  "shipped",
-  "delivered",
-  "fulfilled",
-  "return_requested",
-  "returned",
-];
-
-export const DELIVERY_STATUSES = [
-  "initiated",
-  "manifested",
-  "picked_up",
-  "in_transit",
-  "out_for_delivery",
-  "delivered",
-  "failed",
-  "cancelled",
-];
-
-export const COUPON_TYPES = ["percentage", "fixed"];
-
-export const PERMISSION_ACTIONS = [
-  "view",
-  "add",
-  "delete",
-  "update",
-  "action",
-];

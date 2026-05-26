@@ -13,7 +13,9 @@ const DefaultModal = ({
     closeButtonText = "Reset",
     title,
     titleClassName = '',
-    width = "500px" // Added customizable width
+    width = "500px",
+    loading = false,
+    closeOnOutsideClick = true
 }) => {
     useEffect(() => {
         document.body.style.overflow = isOpen ? "hidden" : "auto";
@@ -22,13 +24,20 @@ const DefaultModal = ({
         };
     }, [isOpen]);
 
+    useEffect(() => {
+        if (!isOpen || loading) return undefined;
+        const closeOnEscape = (event) => event.key === "Escape" && onClose?.();
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [isOpen, loading, onClose]);
+
     return (
         <>
             <div
                 className={`fixed inset-0 z-40 transition-all duration-300 ease-in-out 
                     ${isOpen ? "bg-black bg-opacity-30 backdrop-blur-sm p-0 m-0 -top-3" : "bg-transparent backdrop-blur-0 pointer-events-none"}
                 `}
-                onClick={onClose}
+                onClick={!loading && closeOnOutsideClick ? onClose : undefined}
             />
             <div
                 className={`
@@ -37,11 +46,15 @@ const DefaultModal = ({
                     ${isOpen ? "translate-x-0" : "translate-x-full"}
                 `}
                 style={isOpen ? {} : { pointerEvents: "none" }}
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
             >
                 <div className="admin-card-header flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
                     <h2 className={`text-lg sm:text-xl font-semibold text-[#082f91] ${titleClassName}`}>{title}</h2>
                     <button
                         onClick={onClose}
+                        disabled={loading}
                         className="text-gray-500 hover:text-gray-700 transition-colors duration-150 p-1"
                         aria-label="Close modal"
                     >
@@ -60,6 +73,8 @@ const DefaultModal = ({
                         />
                         <Button 
                             onClick={onSubmit}
+                            loading={loading}
+                            isDisable={loading}
                             className="flex-1 sm:flex-none button-primary"
                         >
                             {submitButtonText}

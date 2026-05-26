@@ -588,7 +588,7 @@ const AdminUsers = () => {
             {user.assignedModuleCount ?? (user.allowedModules || []).length} modules / {user.assignedActionCount ?? user.permissionSummary?.actionCount ?? 0} actions
           </span>,
           <span key={`created-${userId}`} className="text-xs text-gray-500">{formatRole(user.createdByRole) || '-'}</span>,
-          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
+          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} requiredModule="rbac" />,
           <ActionButtons
             key={`actions-${userId}`}
             onEdit={() => openEditAdmin(user)}
@@ -599,6 +599,7 @@ const AdminUsers = () => {
             onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
             userPermissions={true}
             onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+            requiredModule="rbac"
           />,
         ];
       }),
@@ -618,7 +619,7 @@ const AdminUsers = () => {
           <span key={`parent-${userId}`} className="text-xs text-gray-600">{getParentAdminLabel(user)}</span>,
           <span key={`created-${userId}`} className="text-xs text-gray-500">{formatRole(user.createdByRole) || '-'}</span>,
           <span key={`module-count-${userId}`} className="text-xs text-gray-500">{assignedModuleCount}</span>,
-          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} />,
+          <ToggleButton key={`toggle-${userId}`} isToggle={isActive} handleClick={() => handleToggleStatus(user)} requiredModule="rbac" />,
           <ActionButtons
             key={`actions-${userId}`}
             onEdit={() => openEditSubAdmin(user)}
@@ -629,6 +630,7 @@ const AdminUsers = () => {
             onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
             userPermissions={true}
             onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+            requiredModule="rbac"
           />,
         ];
       }),
@@ -647,12 +649,12 @@ const AdminUsers = () => {
           </h3>
           <div className="flex gap-2">
             {tab === 'admins' && isSuperAdmin && (
-              <AddButton onClick={() => { setErrors({}); setAdminForm({ ...emptyUser, allowedModules: defaultAdminModules }); setAddAdminOpen(true); }}>
+              <AddButton requiredModule="rbac" onClick={() => { setErrors({}); setAdminForm({ ...emptyUser, allowedModules: defaultAdminModules }); setAddAdminOpen(true); }}>
                 + Add Admin
               </AddButton>
             )}
             {tab === 'subadmins' && isAdmin && (
-              <AddButton onClick={() => { setErrors({}); setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules }); setAddSubAdminOpen(true); }}>
+              <AddButton requiredModule="rbac" onClick={() => { setErrors({}); setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules }); setAddSubAdminOpen(true); }}>
                 + Add Sub-Admin
               </AddButton>
             )}
@@ -688,6 +690,7 @@ const AdminUsers = () => {
               placeholder={`Search ${tab === 'admins' ? 'admins' : 'sub-admins'}…`}
               handleSearchRemove={handleSearchRemove}
               applyFilters={handleSearchApply}
+              requiredModule="rbac"
             />
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DefaultMiddleModal from '../Atoms/Modal/DefaultMiddleModal ';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
 const CHECKLIST_ITEMS = [
   { key: 'titleVerified',      label: 'Title & Description verified' },
@@ -25,6 +26,7 @@ const DEFAULT_CHECKLIST = {
  *  product        - { title, status, moderation: { rejectionReason, checklist } }
  */
 const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
+  const productStatuses = useDropdownOptions('product-statuses');
   const [decision, setDecision] = useState('active');
   const [rejectionReason, setRejectionReason] = useState('');
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST);
@@ -107,9 +109,9 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
             value={decision}
             onChange={(e) => { setDecision(e.target.value); setError(''); }}
           >
-            <option value="active">Approve — make product active</option>
-            <option value="inactive">Deactivate — set to inactive</option>
-            <option value="rejected">Reject — requires reason</option>
+            {productStatuses.options
+              .filter((option) => ['active', 'inactive', 'rejected'].includes(option.value))
+              .map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </div>
 

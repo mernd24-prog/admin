@@ -3,8 +3,15 @@ import FormInput from '../../../../components/Atoms/FormInput/FormInput'
 import { MdOutlineClose } from 'react-icons/md'
 import ButtonTransparent from '../../../../components/ButtonTransparent/button'
 import NewButton from '../../../../components/Button/NewButton'
+import useDropdownOptions from '../../../../hooks/useDropdownOptions'
 
 const AddEditUsers = ({ isOpen, onClose, errors, handleChange, handleSubmit, formData }) => {
+  const accountTypes = useDropdownOptions('account-types');
+  const countries = useDropdownOptions('countries', { limit: 250 });
+  const countryId = countries.options.find((option) => option.value === formData?.country)?.id || '';
+  const states = useDropdownOptions('states', { parentId: countryId, limit: 250 }, { enabled: Boolean(countryId) });
+  const stateId = states.options.find((option) => option.value === formData?.state)?.id || '';
+  const cities = useDropdownOptions('cities', { parentId: stateId, limit: 250 }, { enabled: Boolean(stateId) });
 
   return (
     <div
@@ -27,7 +34,7 @@ const AddEditUsers = ({ isOpen, onClose, errors, handleChange, handleSubmit, for
             type="select"
             value={formData?.userType}
             onChange={handleChange}
-            options={['Select User Type', 'Admin', 'User']}
+            options={[{ label: 'Select User Type', value: '' }, ...accountTypes.options]}
           />
           {errors.userType && <p className="text-sm text-red-500">{errors.userType}</p>}
 
@@ -85,16 +92,27 @@ const AddEditUsers = ({ isOpen, onClose, errors, handleChange, handleSubmit, for
             type="select"
             value={formData?.country}
             onChange={handleChange}
-            options={['Select Country', 'United States', 'Canada', 'India']}
+            options={[{ label: 'Select Country', value: '' }, ...countries.options]}
           />
 
           <FormInput
             label="State"
             name="state"
-            type="text"
+            type="select"
             value={formData?.state}
             onChange={handleChange}
-            placeholder="Enter state"
+            options={[{ label: 'Select State', value: '' }, ...states.options]}
+            disabled={!countryId || states.loading}
+          />
+
+          <FormInput
+            label="City"
+            name="city"
+            type="select"
+            value={formData?.city}
+            onChange={handleChange}
+            options={[{ label: 'Select City', value: '' }, ...cities.options]}
+            disabled={!stateId || cities.loading}
           />
 
           {/* Bank Details Section */}

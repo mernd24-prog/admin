@@ -11,9 +11,9 @@ import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect
 import { TitleValue2, TitleValue } from "../../../../components/Atoms/TitleValue/TitleValue";
 import Loader from "../../../../components/Loader/Loader";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
-import selectJson from '../../../../_helpers/SelectJson.json';
 import Input from "../../../../components/Atoms/Input/Input";
 import { getProfile } from "../../../../Redux/userSlice";
+import useDropdownOptions from "../../../../hooks/useDropdownOptions";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 const DESCRIPTION_WORD_LIMIT = 20;
@@ -101,6 +101,7 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+  const orderStatuses = useDropdownOptions("order-statuses");
 
   const [state, setState] = useState({
     selectedSeller: "",
@@ -364,11 +365,12 @@ const OrderSummary = () => {
       <DefaultModal isOpen={state.statusModal} onClose={() => setState(prev => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleSubmit}>
         <div className="space-y-4">
           <FilterSelect
-            options={selectJson?.ORDER_STATUS || []}
-            value={(selectJson?.ORDER_STATUS || []).find((opt) => opt.value === formData.status) || null}
+            options={orderStatuses.options}
+            value={orderStatuses.options.find((opt) => opt.value === formData.status) || null}
             onChange={handleSelectChange}
             label="Status"
             placeholder="Select Status"
+            isLoading={orderStatuses.loading}
           />
           {formData.status === "cancelled" && (
             <Input

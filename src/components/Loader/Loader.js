@@ -2,7 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { FaShoppingCart } from "react-icons/fa";
 import { motion } from 'framer-motion';
 
-const Loader = ({ loading }) => {
+export const InlineLoader = ({ label = "Loading" }) => (
+  <span className="inline-flex items-center gap-2 text-sm text-gray-500" role="status">
+    <span className="admin-button-spinner" aria-hidden="true" /> {label}
+  </span>
+);
+
+export const ButtonLoader = () => <span className="admin-button-spinner" aria-hidden="true" />;
+
+const Loader = ({ loading, fullScreen = true, label }) => {
   const [truckPosition, setTruckPosition] = useState(0);
   const [isBouncing, setIsBouncing] = useState(false);
 
@@ -36,7 +44,9 @@ const Loader = ({ loading }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className={`${fullScreen ? "fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm" : "min-h-32"} flex items-center justify-center`}
+      role="status"
+      aria-label={label || "Loading"}
     >
       <div className="flex flex-col items-center space-y-6">
         {/* Truck with bouncing animation */}

@@ -14,6 +14,7 @@ import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox'
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
 import AddButton from '../../../components/Button/AddButton'
 import FormInput from '../../../components/Atoms/FormInput/FormInput'
+import { validateValues } from '../../../_helpers/validation'
 
 import {
     createHsn,
@@ -33,6 +34,14 @@ const INITIAL_FORM_STATE = {
     additionalTax: "",
     description: "",
     isDisable: false
+}
+
+const HSN_VALIDATION_SCHEMA = {
+    code: { label: 'HSN Code', required: true, hsn: true, messages: { hsn: 'HSN Code must be 4 to 8 digits' } },
+    IGST: { label: 'IGST', required: true, number: true, min: 0, max: 100 },
+    CGST: { label: 'CGST', required: true, number: true, min: 0, max: 100 },
+    SGST: { label: 'SGST', required: true, number: true, min: 0, max: 100 },
+    additionalTax: { label: 'Additional Tax', required: true, number: true, min: 0, max: 100 },
 }
 
 const HsnCode = () => {
@@ -118,35 +127,7 @@ const HsnCode = () => {
     }, [errors])
 
     const validateForm = useCallback(() => {
-        const newErrors = {};
-
-        if (!formData?.code) {
-            newErrors.code = 'HSN Code is required';
-        } else if (!/^\d{4,8}$/.test(formData.code)) {
-            newErrors.code = 'HSN Code must be 4 to 8 digits';
-        }
-        if (formData.IGST === '' || formData.IGST === null || formData.IGST === undefined) {
-            newErrors.IGST = 'IGST is required';
-        } else if (formData.IGST < 0 || formData.IGST > 100) {
-            newErrors.IGST = 'IGST must be between 0 and 100';
-        }
-        if (formData.CGST === '' || formData.CGST === null || formData.CGST === undefined) {
-            newErrors.CGST = 'CGST is required';
-        } else if (formData.CGST < 0 || formData.CGST > 100) {
-            newErrors.CGST = 'CGST must be between 0 and 100';
-        }
-        if (formData.SGST === '' || formData.SGST === null || formData.SGST === undefined) {
-            newErrors.SGST = 'SGST is required';
-        } else if (formData.SGST < 0 || formData.SGST > 100) {
-            newErrors.SGST = 'SGST must be between 0 and 100';
-        }
-        if (formData.additionalTax === '' || formData.additionalTax === null || formData.additionalTax === undefined) {
-            newErrors.additionalTax = 'SGST is required';
-        } else if (formData.additionalTax < 0 || formData.additionalTax > 100) {
-            newErrors.additionalTax = 'additional Tax must be between 0 and 100';
-        }
-
-        return newErrors;
+        return validateValues(formData, HSN_VALIDATION_SCHEMA)
     }, [formData]);
 
 
@@ -323,6 +304,7 @@ const HsnCode = () => {
                 <ToggleButton
                     isToggle={!item?.isDisable}
                     handleClick={() => handleToggle(item)}
+                    requiredModule="products"
                 />
             </div>,
             <div key={`actions-${item._id}`} className="flex justify-center gap-2">
@@ -331,6 +313,7 @@ const HsnCode = () => {
                     showLinkButton={false}
                     showDeleteButton={true}
                     onDelete={() => handleDelete(item)}
+                    requiredModule="products"
                 />
             </div>
         ]) || [],
@@ -350,7 +333,7 @@ const HsnCode = () => {
             {/* Header */}
             <div className='flex justify-between items-center'>
                 <h3 className="text-lg font-semibold text-gray-800">Home / HSN Code</h3>
-                <AddButton onClick={handleAddNew}>
+                <AddButton onClick={handleAddNew} requiredModule="products">
                     Add HSN Code
                 </AddButton>
             </div>
@@ -369,6 +352,7 @@ const HsnCode = () => {
                     applyFilters={applyFilters}
                     handleSearchRemove={handleSearchRemove}
                     isDelete={true}
+                    requiredModule="products"
                 />
 
                 <TableData

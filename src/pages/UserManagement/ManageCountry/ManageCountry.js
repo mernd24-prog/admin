@@ -13,6 +13,7 @@ import Pagination from '../../../components/Pagination/Pagination';
 import Loader from '../../../components/Loader/Loader';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 import { Link } from 'react-router-dom';
+import { validateValues } from '../../../_helpers/validation';
 
 const PAGE_SIZE = 10;
 
@@ -27,23 +28,11 @@ const extractListPayload = (payload = {}) => {
 };
 
 export const validateCountry = (data) => {
-  const errors = {};
-  if (!data.name?.trim()) {
-    errors.name = 'Country name is required';
-  } else if (data.name.length < 3 || data.name.length > 100) {
-    errors.name = 'Country name must be between 3-100 characters';
-  }
-  if (!data.code?.trim()) {
-    errors.code = 'Country code is required';
-  } else if (data.code.length < 2 || data.code.length > 5) {
-    errors.code = 'Country code must be between 2-5 characters';
-  }
-  if (!data?.dialCode?.trim()) {
-    errors.dialCode = 'Dial code is required'
-  } else if (data.dialCode && data.dialCode.length > 10) {
-    errors.dialCode = 'Dial code must be 10 characters or less';
-  }
-  return errors;
+  return validateValues(data, {
+    name: { label: 'Country name', required: true, minLength: 3, maxLength: 100, messages: { minLength: 'Country name must be between 3-100 characters', maxLength: 'Country name must be between 3-100 characters' } },
+    code: { label: 'Country code', required: true, minLength: 2, maxLength: 5, messages: { minLength: 'Country code must be between 2-5 characters', maxLength: 'Country code must be between 2-5 characters' } },
+    dialCode: { label: 'Dial code', required: true, maxLength: 10, messages: { maxLength: 'Dial code must be 10 characters or less' } },
+  });
 };
 
 const ManageCountry = () => {
@@ -226,7 +215,7 @@ const ManageCountry = () => {
     <span className='capitalize'>{ele?.name}</span>,
     ele?.code,
     <div className='flex flex-col'>
-      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
+      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} requiredModule="platform" />
 
     </div>,
     <ActionButtons
@@ -242,6 +231,7 @@ const ManageCountry = () => {
       }}
       showLinkButton={false}
       showDeleteButton={false}
+      requiredModule="platform"
     />
   ]);
 
@@ -250,7 +240,7 @@ const ManageCountry = () => {
       <Loader loading={isLoading} />
       <div className='flex justify-between items-center'>
         <h3>Home / <Link to="/app/setting">Settings</Link> / Country</h3>
-        <Button onClick={() => {
+        <Button requiredModule="platform" requiredAction="create" onClick={() => {
           setFormData(initialFormState);
           setIsEditMode(false);
           setIsAddModal(true);
@@ -270,6 +260,7 @@ const ManageCountry = () => {
           setSelectedRow={setSelectedRow}
           placeholder={`Search by name and code`}
           handleAction={handleBulkAction}
+          requiredModule="platform"
         />
 
         <TableData
