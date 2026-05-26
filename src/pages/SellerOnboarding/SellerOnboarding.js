@@ -42,7 +42,6 @@ const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
 const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
-const REVIEW_FILE_INPUT_CLASS = `${REVIEW_INPUT_CLASS} pl-9`;
 const REVIEW_SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
 const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
@@ -227,16 +226,12 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
     <label className="mb-[6px] block text-[12px] font-medium leading-[16px] text-[#484555]">
       {label}
     </label>
-    <div className="relative">
-      <FileText
-        size={16}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#484555]"
-      />
-      <input
-        className={REVIEW_FILE_INPUT_CLASS}
-        value={value || "-"}
-        readOnly
-      />
+    <div
+      className={`${REVIEW_INPUT_CLASS} flex items-center gap-2`}
+      title={value || "-"}
+    >
+      <FileText size={16} className="shrink-0 text-[#484555]" />
+      <span className="min-w-0 truncate">{value || "-"}</span>
     </div>
   </div>
 );
@@ -265,6 +260,63 @@ const getIsoDateYearsAgo = (years) => {
 
 const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
 const SELLER_ONBOARDING_DRAFT_KEY = "sellerOnboardingDraft";
+
+const composeRegistrationName = (firstName = "", lastName = "") => {
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  if (!last) return first;
+  if (!first) return last;
+
+  const firstParts = first.toLowerCase().split(/\s+/);
+  const lastParts = last.toLowerCase().split(/\s+/);
+  const firstAlreadyIncludesLast =
+    lastParts.length <= firstParts.length &&
+    lastParts.every(
+      (part, index) =>
+        firstParts[firstParts.length - lastParts.length + index] === part,
+    );
+
+  return firstAlreadyIncludesLast ? first : `${first} ${last}`;
+};
+
+const getRegistrationContact = (...sources) => {
+  const contact = {
+    fullName: "",
+    rawFullName: "",
+    emailAddress: "",
+    mobileNumber: "",
+  };
+
+  sources.filter(Boolean).forEach((source) => {
+    const user = source?.user || source;
+    const profile = user?.profile || {};
+    const rawFullName = [profile.firstName, profile.lastName]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(" ");
+    const fullName = composeRegistrationName(
+      profile.firstName,
+      profile.lastName,
+    );
+
+    if (!contact.fullName) contact.fullName = fullName;
+    if (!contact.rawFullName) contact.rawFullName = rawFullName;
+    if (!contact.emailAddress) contact.emailAddress = String(user?.email || "").trim();
+    if (!contact.mobileNumber) contact.mobileNumber = String(user?.phone || "").trim();
+  });
+
+  return contact;
+};
+
+const clearAutoFilledBusinessName = (value = "", registeredContact = {}) => {
+  const currentValue = String(value || "").trim();
+  const generatedNames = [
+    registeredContact.fullName,
+    registeredContact.rawFullName,
+  ].filter(Boolean);
+
+  return generatedNames.includes(currentValue) ? "" : value;
+};
 
 const getSellerOnboardingDraftKey = (token) =>
   `${SELLER_ONBOARDING_DRAFT_KEY}:${token || "guest"}`;
@@ -558,7 +610,8 @@ const SellerOnboarding = () => {
     gstNumber: "",
     aadhaarNumber: "",
     legalName: "",
-    businessType: "",
+    mobileNumber: "",
+    emailAddress: "",
     dateOfBirth: "",
     panDocumentFile: null,
     aadhaarFrontFile: null,
@@ -620,6 +673,14 @@ const SellerOnboarding = () => {
   const businessCities = useDropdownOptions("cities", { parentId: businessStateId, limit: 250 }, { enabled: Boolean(businessStateId) });
   const businessCityId = optionIdByValue(businessCities.options, profileForm.businessAddressCity);
   const businessPincodes = useDropdownOptions("pincodes", { parentId: businessCityId, limit: 250 }, { enabled: Boolean(businessCityId) });
+  const registeredContact = useMemo(
+    () => getRegistrationContact(seller?.onboardingUser, flowState),
+    [flowState, seller?.onboardingUser],
+  );
+  const businessTypeLabel =
+    withSelectedOption(businessTypes.options, profileForm.businessType).find(
+      (option) => String(option.value) === String(profileForm.businessType),
+    )?.label || profileForm.businessType;
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -691,6 +752,35 @@ const SellerOnboarding = () => {
   }, [dispatch, onboardingToken]);
 
   useEffect(() => {
+    if (
+      !registeredContact.fullName &&
+      !registeredContact.emailAddress &&
+      !registeredContact.mobileNumber
+    ) {
+      return;
+    }
+
+    setKycForm((prev) => ({
+      ...prev,
+      legalName:
+        !prev.legalName ||
+        (registeredContact.rawFullName !== registeredContact.fullName &&
+          prev.legalName === registeredContact.rawFullName)
+          ? registeredContact.fullName
+          : prev.legalName,
+      emailAddress: registeredContact.emailAddress || prev.emailAddress,
+      mobileNumber: registeredContact.mobileNumber || prev.mobileNumber,
+    }));
+    setProfileForm((prev) => ({
+      ...prev,
+      businessName: clearAutoFilledBusinessName(
+        prev.businessName,
+        registeredContact,
+      ),
+    }));
+  }, [registeredContact]);
+
+  useEffect(() => {
     if (!accessToken) return;
 
     let isMounted = true;
@@ -705,6 +795,7 @@ const SellerOnboarding = () => {
         const bankDetails = sellerProfile?.bankDetails || {};
         const businessAddress = sellerProfile?.businessAddress || {};
         const pickupAddress = sellerProfile?.pickupAddress || {};
+        const registrationContact = getRegistrationContact(user);
         const onboarding = user?.onboarding || {};
         const kycStatus =
           onboarding?.kycStatus ||
@@ -754,29 +845,38 @@ const SellerOnboarding = () => {
             sellerProfile?.aadhaarNumber ||
             "",
           legalName:
-            prev.legalName ||
             kyc?.legalName ||
+            prev.legalName ||
+            registrationContact.fullName ||
             sellerProfile?.legalBusinessName ||
             sellerProfile?.displayName ||
             "",
-          businessType:
-            prev.businessType ||
-            kyc?.businessType ||
-            sellerProfile?.businessType ||
+          emailAddress:
+            registrationContact.emailAddress ||
+            prev.emailAddress ||
+            sellerProfile?.supportEmail ||
+            "",
+          mobileNumber:
+            registrationContact.mobileNumber ||
+            prev.mobileNumber ||
+            sellerProfile?.supportPhone ||
             "",
           dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
         }));
         setProfileForm((prev) => ({
           ...prev,
           businessType:
-            prev.businessType ||
-            sellerProfile?.businessType ||
-            kyc?.businessType ||
-            "",
+            sellerProfile?.businessName?.trim() && sellerProfile?.businessType
+              ? sellerProfile.businessType
+              : clearAutoFilledBusinessName(
+                    prev.businessName,
+                    registrationContact,
+                  )?.trim()
+                ? prev.businessType
+                : "",
           businessName:
-            prev.businessName ||
             sellerProfile?.businessName ||
-            sellerProfile?.displayName ||
+            clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
             "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
@@ -849,6 +949,7 @@ const SellerOnboarding = () => {
 
     const sellerProfile = flowState?.sellerProfile || {};
     const kyc = flowState?.kyc || {};
+    const registrationContact = getRegistrationContact(flowState, seller?.onboardingUser);
     const bankDetails = sellerProfile?.bankDetails || {};
     const businessAddress = sellerProfile?.businessAddress || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
@@ -896,29 +997,38 @@ const SellerOnboarding = () => {
         sellerProfile?.aadhaarNumber ||
         "",
       legalName:
-        prev.legalName ||
         kyc?.legalName ||
+        prev.legalName ||
+        registrationContact.fullName ||
         sellerProfile?.legalBusinessName ||
         sellerProfile?.displayName ||
         "",
-      businessType:
-        prev.businessType ||
-        kyc?.businessType ||
-        sellerProfile?.businessType ||
+      emailAddress:
+        registrationContact.emailAddress ||
+        prev.emailAddress ||
+        sellerProfile?.supportEmail ||
+        "",
+      mobileNumber:
+        registrationContact.mobileNumber ||
+        prev.mobileNumber ||
+        sellerProfile?.supportPhone ||
         "",
       dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
     }));
     setProfileForm((prev) => ({
       ...prev,
       businessType:
-        prev.businessType ||
-        sellerProfile?.businessType ||
-        kyc?.businessType ||
-        "",
+        sellerProfile?.businessName?.trim() && sellerProfile?.businessType
+          ? sellerProfile.businessType
+          : clearAutoFilledBusinessName(
+                prev.businessName,
+                registrationContact,
+              )?.trim()
+            ? prev.businessType
+            : "",
       businessName:
-        prev.businessName ||
         sellerProfile?.businessName ||
-        sellerProfile?.displayName ||
+        clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
         "",
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
@@ -966,7 +1076,7 @@ const SellerOnboarding = () => {
       bankName: prev.bankName || bankDetails?.bankName || "",
       branchName: prev.branchName || bankDetails?.branchName || "",
     }));
-  }, [flowState]);
+  }, [flowState, seller?.onboardingUser]);
 
   useEffect(() => {
     if (!flowState) return;
@@ -1205,7 +1315,14 @@ const SellerOnboarding = () => {
       [field]: value,
       ...resetFields.reduce((result, childField) => ({ ...result, [childField]: "" }), {}),
     }));
-    setProfileErrors((prev) => ({ ...prev, [field]: null }));
+    setProfileErrors((prev) => ({
+      ...prev,
+      [field]: null,
+      ...resetFields.reduce(
+        (result, childField) => ({ ...result, [childField]: null }),
+        {},
+      ),
+    }));
   };
   const onBankChange = (event) => {
     const { name, value } = event.target;
@@ -1223,13 +1340,21 @@ const SellerOnboarding = () => {
   const validateKyc = () => {
     const errors = {};
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
+    if (!kycForm.mobileNumber.trim()) {
+      errors.mobileNumber = "Mobile number is required";
+    } else if (!/^[0-9]{10,15}$/.test(kycForm.mobileNumber.trim())) {
+      errors.mobileNumber = "Mobile number must be 10 to 15 digits";
+    }
+    if (!kycForm.emailAddress.trim()) {
+      errors.emailAddress = "Email address is required";
+    } else if (!EMAIL_REGEX.test(kycForm.emailAddress.trim())) {
+      errors.emailAddress = "Email address is invalid";
+    }
     if (!kycForm.dateOfBirth.trim()) {
       errors.dateOfBirth = "Date of birth is required";
     } else if (kycForm.dateOfBirth > MAX_DOB_FOR_SELLER) {
       errors.dateOfBirth = "Seller must be at least 18 years old";
     }
-    if (!kycForm.businessType.trim())
-      errors.businessType = "Business type is required";
     if (!PAN_REGEX.test(kycForm.panNumber.trim()))
       errors.panNumber = "PAN format should be like ABCDE1234F";
     if (!kycForm.panDocumentFile && !documentUrls.panDocumentUrl)
@@ -1237,7 +1362,7 @@ const SellerOnboarding = () => {
     if (!kycForm.aadhaarNumber.trim()) {
       errors.aadhaarNumber = "Aadhaar number is required";
     } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
-      errors.aadhaarNumber = "Aadhaar must be 12 digits";
+      errors.aadhaarNumber = "Aadhaar must be 12 digits (12341048002615)";
     }
     if (!kycForm.aadhaarFrontFile && !documentUrls.aadhaarFrontUrl)
       errors.aadhaarFrontFile = "Aadhaar front image is required";
@@ -1250,11 +1375,16 @@ const SellerOnboarding = () => {
   const getDocumentUploadValue = async (file, existingUrl) =>
     file ? readFileAsUploadPayload(file) : existingUrl || null;
 
-  const buildKycPayload = async ({ includeGstCertificate = false } = {}) => ({
+  const buildKycPayload = async ({
+    includeGstCertificate = false,
+    includeBusinessType = false,
+  } = {}) => ({
     panNumber: kycForm.panNumber.trim(),
     aadhaarNumber: kycForm.aadhaarNumber.trim(),
     legalName: kycForm.legalName.trim(),
-    businessType: profileForm.businessType || kycForm.businessType,
+    ...(includeBusinessType && profileForm.businessType
+      ? { businessType: profileForm.businessType }
+      : {}),
     dateOfBirth: kycForm.dateOfBirth,
     documents: {
       panDocumentUrl: await getDocumentUploadValue(
@@ -1338,7 +1468,7 @@ const SellerOnboarding = () => {
     if (!profileForm.businessName.trim())
       errors.businessName = "Business name is required";
     if (!GST_REGEX.test(profileForm.gstNumber.trim()))
-      errors.gstNumber = "GST format is invalid";
+      errors.gstNumber = "Please enter a valid GST Number (e.g. 27ABCDE1234F1Z5)";
     if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
       errors.gstCertificateFile = "GST certificate is required";
     if (!profileForm.supportEmail.trim())
@@ -1356,6 +1486,8 @@ const SellerOnboarding = () => {
       errors.businessWebsite = "Website must start with http:// or https://";
     if (!profileForm.pickupLine1.trim())
       errors.pickupLine1 = "Pickup address line 1 is required";
+    if (!profileForm.pickupCountry.trim())
+      errors.pickupCountry = "Pickup country is required";
     if (!profileForm.pickupCity.trim())
       errors.pickupCity = "Pickup city is required";
     if (!profileForm.pickupState.trim())
@@ -1388,7 +1520,6 @@ const SellerOnboarding = () => {
       setRequiresKycRefresh(false);
       setProfileForm((prev) => ({
         ...prev,
-        businessType: prev.businessType || kycForm.businessType,
         gstNumber: prev.gstNumber || kycForm.gstNumber,
       }));
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
@@ -1407,7 +1538,10 @@ const SellerOnboarding = () => {
       return;
     }
     try {
-      const kycPayload = await buildKycPayload({ includeGstCertificate: true });
+      const kycPayload = await buildKycPayload({
+        includeGstCertificate: true,
+        includeBusinessType: true,
+      });
       await dispatch(submitSellerKyc(kycPayload)).unwrap();
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
@@ -1705,31 +1839,39 @@ const SellerOnboarding = () => {
                 )}
               </div>
 
-              {/* Business Type */}
-              <div className="w-full md:col-span-2">
+              <div>
                 <label className="text-[#484555] font-medium font-inter text-base">
-                  Business Type
+                  Mobile Number
                 </label>
-                <div className="relative w-full">
-                  <select
-                    id="businessType"
-                    name="businessType"
-                    className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
-                    value={kycForm.businessType}
-                    onChange={onKycChange}
-                  >
-                    <option value="">Business Type*</option>
-                    <option value="individual">Individual</option>
-                    <option value="proprietorship">Proprietorship</option>
-                    <option value="partnership">Partnership</option>
-                    <option value="private_limited">Private Limited</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#082f91] text-white">
-                    <ChevronDown size={12} />
-                  </span>
-                </div>
-                {kycErrors.businessType && (
-                  <p className={ERROR_CLASS}>{kycErrors.businessType}</p>
+                <input
+                  id="mobileNumber"
+                  name="mobileNumber"
+                  type="tel"
+                  className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
+                  value={kycForm.mobileNumber}
+                  readOnly
+                  aria-readonly="true"
+                />
+                {kycErrors.mobileNumber && (
+                  <p className={ERROR_CLASS}>{kycErrors.mobileNumber}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[#484555] font-medium font-inter text-base">
+                  Email Address
+                </label>
+                <input
+                  id="emailAddress"
+                  name="emailAddress"
+                  type="email"
+                  className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
+                  value={kycForm.emailAddress}
+                  readOnly
+                  aria-readonly="true"
+                />
+                {kycErrors.emailAddress && (
+                  <p className={ERROR_CLASS}>{kycErrors.emailAddress}</p>
                 )}
               </div>
             </div>
@@ -1847,27 +1989,17 @@ const SellerOnboarding = () => {
         <form onSubmit={submitBusinessStep} className={ONBOARDING_CARD_CLASS}>
           <OnboardingSection number="01" title="Business Information">
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-              <div className="relative">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Type {STEP_ONE_REQUIRED}
-                </label>
-                <div className="relative">
-                  <select
-                    name="businessType"
-                    className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
-                    value={profileForm.businessType}
-                    onChange={onProfileChange}
-                  >
-                    <option value="">Select Business Type</option>
-                    <option value="individual">Individual</option>
-                    <option value="proprietorship">Proprietorship</option>
-                    <option value="partnership">Partnership</option>
-                    <option value="private_limited">Private Limited</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-[#082f91] text-white">
-                    <ChevronDown size={12} />
-                  </span>
-                </div>
+              <div>
+                <OnboardingSelect
+                  name="businessType"
+                  label="Business Type"
+                  value={profileForm.businessType}
+                  options={businessTypes.options}
+                  onChange={onProfileChange}
+                  loading={businessTypes.loading}
+                  error={businessTypes.error}
+                  required
+                />
                 {profileErrors.businessType && (
                   <p className={ERROR_CLASS}>{profileErrors.businessType}</p>
                 )}
@@ -2067,31 +2199,39 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup City {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="pickupCity"
-                  placeholder="Pickup City"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.pickupCity}
-                  onChange={onProfileChange}
+                <OnboardingSelect
+                  name="pickupCountry"
+                  label="Pickup Country"
+                  value={profileForm.pickupCountry}
+                  options={countries.options}
+                  onChange={onAddressSelectChange("pickupCountry", [
+                    "pickupState",
+                    "pickupCity",
+                    "pickupPostalCode",
+                  ])}
+                  loading={countries.loading}
+                  error={countries.error}
+                  required
                 />
-                {profileErrors.pickupCity && (
-                  <p className={ERROR_CLASS}>{profileErrors.pickupCity}</p>
+                {profileErrors.pickupCountry && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupCountry}</p>
                 )}
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup State {STEP_ONE_REQUIRED}
-                </label>
-                <input
+                <OnboardingSelect
                   name="pickupState"
-                  placeholder="Pickup State"
-                  className={STEP_ONE_INPUT_CLASS}
+                  label="Pickup State"
                   value={profileForm.pickupState}
-                  onChange={onProfileChange}
+                  options={pickupStates.options}
+                  onChange={onAddressSelectChange("pickupState", [
+                    "pickupCity",
+                    "pickupPostalCode",
+                  ])}
+                  loading={pickupStates.loading}
+                  error={pickupStates.error}
+                  disabled={!pickupCountryId}
+                  required
                 />
                 {profileErrors.pickupState && (
                   <p className={ERROR_CLASS}>{profileErrors.pickupState}</p>
@@ -2099,28 +2239,35 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup Country
-                </label>
-                <input
-                  name="pickupCountry"
-                  placeholder="Pickup Country"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.pickupCountry}
-                  onChange={onProfileChange}
+                <OnboardingSelect
+                  name="pickupCity"
+                  label="Pickup City"
+                  value={profileForm.pickupCity}
+                  options={pickupCities.options}
+                  onChange={onAddressSelectChange("pickupCity", [
+                    "pickupPostalCode",
+                  ])}
+                  loading={pickupCities.loading}
+                  error={pickupCities.error}
+                  disabled={!pickupStateId}
+                  required
                 />
+                {profileErrors.pickupCity && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupCity}</p>
+                )}
               </div>
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup Postal Code {STEP_ONE_REQUIRED}
-                </label>
-                <input
+                <OnboardingSelect
                   name="pickupPostalCode"
-                  placeholder="Pickup Postal Code"
-                  className={STEP_ONE_INPUT_CLASS}
+                  label="Pickup Postal Code"
                   value={profileForm.pickupPostalCode}
-                  onChange={onProfileChange}
+                  options={pickupPincodes.options}
+                  onChange={onAddressSelectChange("pickupPostalCode")}
+                  loading={pickupPincodes.loading}
+                  error={pickupPincodes.error}
+                  disabled={!pickupCityId}
+                  required
                 />
                 {profileErrors.pickupPostalCode && (
                   <p className={ERROR_CLASS}>
@@ -2155,55 +2302,57 @@ const SellerOnboarding = () => {
                 />
               </div>
 
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business City
-                </label>
-                <input
-                  name="businessAddressCity"
-                  placeholder="Business City"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.businessAddressCity}
-                  onChange={onProfileChange}
-                />
-              </div>
+              <OnboardingSelect
+                name="businessAddressCountry"
+                label="Business Country"
+                value={profileForm.businessAddressCountry}
+                options={countries.options}
+                onChange={onAddressSelectChange("businessAddressCountry", [
+                  "businessAddressState",
+                  "businessAddressCity",
+                  "businessAddressPostalCode",
+                ])}
+                loading={countries.loading}
+                error={countries.error}
+              />
+
+              <OnboardingSelect
+                name="businessAddressState"
+                label="Business State"
+                value={profileForm.businessAddressState}
+                options={businessStates.options}
+                onChange={onAddressSelectChange("businessAddressState", [
+                  "businessAddressCity",
+                  "businessAddressPostalCode",
+                ])}
+                loading={businessStates.loading}
+                error={businessStates.error}
+                disabled={!businessCountryId}
+              />
+
+              <OnboardingSelect
+                name="businessAddressCity"
+                label="Business City"
+                value={profileForm.businessAddressCity}
+                options={businessCities.options}
+                onChange={onAddressSelectChange("businessAddressCity", [
+                  "businessAddressPostalCode",
+                ])}
+                loading={businessCities.loading}
+                error={businessCities.error}
+                disabled={!businessStateId}
+              />
 
               <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business State
-                </label>
-                <input
-                  name="businessAddressState"
-                  placeholder="Business State"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.businessAddressState}
-                  onChange={onProfileChange}
-                />
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Country
-                </label>
-                <input
-                  name="businessAddressCountry"
-                  placeholder="Business Country"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.businessAddressCountry}
-                  onChange={onProfileChange}
-                />
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Postal Code
-                </label>
-                <input
+                <OnboardingSelect
                   name="businessAddressPostalCode"
-                  placeholder="Business Postal Code"
-                  className={STEP_ONE_INPUT_CLASS}
+                  label="Business Postal Code"
                   value={profileForm.businessAddressPostalCode}
-                  onChange={onProfileChange}
+                  options={businessPincodes.options}
+                  onChange={onAddressSelectChange("businessAddressPostalCode")}
+                  loading={businessPincodes.loading}
+                  error={businessPincodes.error}
+                  disabled={!businessCityId}
                 />
                 {profileErrors.businessAddressPostalCode && (
                   <p className={ERROR_CLASS}>
@@ -2367,7 +2516,11 @@ const SellerOnboarding = () => {
                 <ReviewInput label="Full Name" value={kycForm.legalName} />
                 <ReviewInput
                   label="Email Address"
-                  value={profileForm.supportEmail}
+                  value={kycForm.emailAddress}
+                />
+                <ReviewInput
+                  label="Mobile Number"
+                  value={kycForm.mobileNumber}
                 />
                 <ReviewInput
                   label="Date of Birth"
@@ -2413,7 +2566,7 @@ const SellerOnboarding = () => {
               <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
                 <ReviewInput
                   label="Business Type"
-                  value={profileForm.businessType || kycForm.businessType}
+                  value={businessTypeLabel}
                 />
                 <ReviewInput
                   label="Business Name"

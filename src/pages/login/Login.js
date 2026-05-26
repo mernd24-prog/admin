@@ -296,8 +296,17 @@ const Login = () => {
       return;
     }
 
-    const firstName = formFields.fullName.trim();
+    const fullName = formFields.fullName.trim();
     const lastName = formFields.lastName.trim();
+    const normalizedFullName = fullName.toLowerCase();
+    const normalizedLastName = lastName.toLowerCase();
+    const deduplicatedFirstName =
+      normalizedLastName &&
+      (normalizedFullName === normalizedLastName ||
+        normalizedFullName.endsWith(` ${normalizedLastName}`))
+        ? fullName.slice(0, fullName.length - lastName.length).trim()
+        : fullName;
+    const firstName = deduplicatedFirstName || fullName;
 
     try {
       const response = await dispatch(
