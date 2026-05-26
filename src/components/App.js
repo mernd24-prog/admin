@@ -21,10 +21,10 @@ import { fetchAuthStatus } from "../Redux/seller-slice";
 import KYCStatusLayout from "./Layout/kycLayout";
 import { useKYC } from "../context/KycContext";
 import {
-  clearStoredAuth,
   getStoredRole,
   isAllowedRoleForCurrentPanel,
 } from "../_helpers/authStorage";
+import { forceLogout } from "../_helpers/authSession";
 import { isSellerPanel } from "../_helpers/panelConfig";
 const App = () => {
   const dispatch = useDispatch();
@@ -41,7 +41,14 @@ const App = () => {
   useEffect(() => {
     const bootstrap = async () => {
       if (hasAnyToken) {
-        await dispatch(fetchAuthStatus());
+        const result = await dispatch(fetchAuthStatus());
+        if (fetchAuthStatus.rejected.match(result)) {
+          forceLogout(
+            result.payload?.code || "SESSION_INVALID",
+            result.payload?.message || "Your session is no longer valid. Please login again.",
+          );
+          return;
+        }
       }
       setBootstrapped(true);
     };
@@ -156,7 +163,6 @@ const App = () => {
 
 const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   const isAuthenticated = localStorage.getItem("accessToken");
-  const hasOnboardingToken = localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   // if (
   //   isSellerPanel() &&
@@ -165,24 +171,21 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   //   return <Navigate to="/seller/onboarding" />;
   // }
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
-    clearStoredAuth();
+    forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
     return <Navigate to="/login" />;
   }
   return isAuthenticated ? <Component {...rest} /> : <Navigate to="/login" />;
 };
 
 const PublicRoute = ({ component: Component, flowState, ...rest }) => {
-  const { currentSection } = useKYC();
-
   const isAuthenticated = localStorage.getItem("accessToken");
-  const hasOnboardingToken = localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   const sellerPanel = isSellerPanel();
   // if (sellerPanel && (flowState?.requiresOnboarding || hasOnboardingToken)) {
   //   return <Navigate to="/seller/onboarding" />;
   // }
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
-    clearStoredAuth();
+    forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
   } else if (
     isAuthenticated &&
     (!flowState || flowState?.accountStatus === "active")

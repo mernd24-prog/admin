@@ -3,10 +3,13 @@ import { apiUrl, refreshAccessToken } from './axiosProvider';
 import { normalizeApiError } from './normalizeApiError';
 import {
   forceLogout,
+  getAuthErrorCode,
+  getAuthErrorMessage,
   getStoredAccessToken,
   getStoredRefreshToken,
   isAuthEndpoint,
   isTokenExpiring,
+  shouldForceLogoutForResponse,
 } from './authSession';
 
 const apiClient = axios.create({
@@ -56,7 +59,7 @@ const getApiToken = async (endpoint, tokenOverride = null) => {
     try {
       return await refreshAccessToken();
     } catch (error) {
-      forceLogout("Session expired. Please login again.");
+      forceLogout(getAuthErrorCode(error) || "TOKEN_EXPIRED", getAuthErrorMessage(error));
       throw error;
     }
   }
@@ -68,16 +71,15 @@ const shouldRetryWithRefresh = (error, endpoint, tokenOverride = null) => {
   if (tokenOverride || isAuthEndpoint(endpoint) || !getStoredRefreshToken()) return false;
 
   const status = error?.response?.status || error?.status;
-  const data = error?.response?.data || error || {};
-  return status === 401 || data?.code === 3 || data?.error?.code === 3;
+  const code = getAuthErrorCode(error);
+  return status === 401 &&
+    (!code || code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID");
 };
 
-const shouldForceLogout = (error, endpoint, tokenOverride = null) => {
-  if (tokenOverride || isAuthEndpoint(endpoint)) return false;
+const shouldForceLogout = (error, endpoint) => {
+  if (isAuthEndpoint(endpoint)) return false;
 
-  const status = error?.response?.status || error?.status;
-  const data = error?.response?.data || error || {};
-  return status === 401 || data?.code === 3 || data?.error?.code === 3;
+  return shouldForceLogoutForResponse(error);
 };
 
 export const apiRequest = async (method, endpoint, data, contentType = "json", tokenOverride = null) => {
@@ -112,13 +114,13 @@ export const apiRequest = async (method, endpoint, data, contentType = "json", t
         const response = await apiClient(await buildConfig(accessToken));
         return response.data;
       } catch (refreshError) {
-        forceLogout("Session expired. Please login again.");
+        forceLogout(getAuthErrorCode(refreshError) || "TOKEN_EXPIRED", getAuthErrorMessage(refreshError));
         throw normalizeApiError(refreshError);
       }
     }
 
     if (shouldForceLogout(error, endpoint, tokenOverride)) {
-      forceLogout("Session expired. Please login again.");
+      forceLogout(getAuthErrorCode(error) || "SESSION_INVALID", getAuthErrorMessage(error));
     }
 
     throw normalizeApiError(error);
@@ -150,13 +152,13 @@ export const apiRequestImage = async (method, endpoint, data) => {
         const response = await apiClient(await buildConfig(accessToken));
         return response.data;
       } catch (refreshError) {
-        forceLogout("Session expired. Please login again.");
+        forceLogout(getAuthErrorCode(refreshError) || "TOKEN_EXPIRED", getAuthErrorMessage(refreshError));
         throw normalizeApiError(refreshError);
       }
     }
 
     if (shouldForceLogout(error, endpoint)) {
-      forceLogout("Session expired. Please login again.");
+      forceLogout(getAuthErrorCode(error) || "SESSION_INVALID", getAuthErrorMessage(error));
     }
 
     throw normalizeApiError(error);

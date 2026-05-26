@@ -98,7 +98,17 @@ const Login = () => {
     .map(() => React.createRef());
 
   useEffect(() => {
+    const logoutReason = localStorage.getItem("logoutReason");
     clearStoredAuth();
+    if (logoutReason) {
+      try {
+        const parsed = JSON.parse(logoutReason);
+        toast.error(parsed?.message || "Please login again to continue.");
+      } catch {
+        toast.error(logoutReason);
+      }
+      localStorage.removeItem("logoutReason");
+    }
     const savedCredentials = localStorage.getItem("EcomAdminRemember");
     if (savedCredentials) {
       try {

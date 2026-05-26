@@ -3,11 +3,14 @@ import { sessionStorageGetItem } from './globalFunctions';
 import { normalizeApiError } from './normalizeApiError';
 import {
     forceLogout,
+    getAuthErrorCode,
+    getAuthErrorMessage,
     getStoredAccessToken,
     getStoredRefreshToken,
     isAuthEndpoint,
     isTokenExpiring,
     persistAuthTokens,
+    shouldForceLogoutForResponse,
 } from './authSession';
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
@@ -109,16 +112,16 @@ const authRequestInterceptor = (config) => {
 };
 
 const shouldForceLogout = (error) => {
-    const status = error?.response?.status || error?.status;
-    const data = error?.response?.data || error || {};
-    return status === 401 || data?.code === 3 || data?.error?.code === 3;
+    return shouldForceLogoutForResponse(error);
 };
 
 const createErrorResponseInterceptor = (instance) => async (error) => {
     const originalRequest = error?.config || {};
     const status = error?.response?.status || error?.status;
+    const authCode = getAuthErrorCode(error);
     const canRefresh =
         status === 401 &&
+        (!authCode || authCode === "TOKEN_EXPIRED" || authCode === "TOKEN_INVALID") &&
         !originalRequest._retry &&
         !isAuthEndpoint(originalRequest.url) &&
         Boolean(getStoredRefreshToken());
@@ -133,13 +136,13 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
             };
             return instance(originalRequest);
         } catch (refreshError) {
-            forceLogout("Session expired. Please login again.");
+            forceLogout(getAuthErrorCode(refreshError) || "TOKEN_EXPIRED", getAuthErrorMessage(refreshError));
             return Promise.reject(refreshError);
         }
     }
 
     if (shouldForceLogout(error) && !isAuthEndpoint(originalRequest.url)) {
-        forceLogout("Session expired. Please login again.");
+        forceLogout(authCode || "SESSION_INVALID", getAuthErrorMessage(error));
     }
 
     if (!error.response) {
@@ -186,7 +189,7 @@ const refreshBeforeRequestInterceptor = async (config) => {
             config.headers.Authorization = `Bearer ${accessToken}`;
             return config;
         } catch (error) {
-            forceLogout("Session expired. Please login again.");
+            forceLogout(getAuthErrorCode(error) || "TOKEN_EXPIRED", getAuthErrorMessage(error));
             throw error;
         }
     }
@@ -199,7 +202,7 @@ const refreshBeforeRequestInterceptor = async (config) => {
     instance.interceptors.response.use(
         (response) => {
             if (response?.data?.code === 3) {
-                forceLogout("Session expired. Please login again.");
+                forceLogout("SESSION_INVALID", "Session expired. Please login again.");
                 return Promise.reject({ message: "Session expired" });
             }
             return response;

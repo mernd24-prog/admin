@@ -131,7 +131,7 @@ const normalizeActionsForBackend = (actions = []) => {
     return Array.from(new Set(withView));
 };
 
-const ASSIGNMENT_ACTIONS = ['assign', 'create', 'add', 'edit', 'update', 'approval', 'approve', 'status', 'status_change', 'action', 'delete', 'view'];
+const ASSIGNMENT_ACTIONS = ['assign', 'create', 'add', 'edit', 'update', 'approval', 'approve', 'status', 'status_change', 'action', 'delete'];
 
 const getModuleCode = (module) =>
     normalizeModuleCode(
@@ -242,10 +242,7 @@ const UserPermissions = ({ setModuleName }) => {
                 const hasNamedAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
                     rbacActions.has(action) || sellerAccessActions.has(action)
                 );
-                const hasDelegatablePermission = Object.values(map).some((actions) =>
-                    actions instanceof Set && actions.size > 0
-                );
-                const hasAssignmentAction = hasNamedAssignmentAction || hasDelegatablePermission;
+                const hasAssignmentAction = hasNamedAssignmentAction;
                 setCanAssignPermissions(hasAssignmentAction);
             })
             .catch(() => {

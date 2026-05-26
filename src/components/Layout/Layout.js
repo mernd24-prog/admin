@@ -110,6 +110,9 @@ const ShippingPackages = React.lazy(
 const ShippingProfiles = React.lazy(
   () => import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles"),
 );
+const PickupAddresses = React.lazy(
+  () => import("../../pages/ShippingPickup/PickupAddresses/PickupAddresses"),
+);
 
 const AddEditProductPopup = React.lazy(
   () =>
@@ -576,6 +579,10 @@ function Layout() {
               <Route
                 path="/shipping-profile"
                 element={renderRoute("/shipping-profile", <ShippingProfiles />)}
+              />
+              <Route
+                path="/pickup-addresses"
+                element={renderRoute("/pickup-addresses", <PickupAddresses />)}
               />
 
               <Route

@@ -15,6 +15,7 @@ export const DEFAULT_PLATFORM_MODULES = [
   "seller-management",
   "wallets",
   "tax",
+  "locations",
   "subscriptions",
   "rbac",
   "warranty",

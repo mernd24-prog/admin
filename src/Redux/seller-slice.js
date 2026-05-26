@@ -20,6 +20,7 @@ const getStoredJson = (key) => {
 const normalizeError = (error, fallback) => {
   const apiError = error?.response?.data || error;
   return {
+    code: apiError?.code || apiError?.error?.code || null,
     message: apiError?.error?.message || apiError?.message || fallback,
     details: Array.isArray(apiError?.error?.details)
       ? apiError.error.details

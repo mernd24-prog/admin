@@ -43,6 +43,7 @@ const MODULE_LABELS = {
   wallets: "Wallet Management",
   subscriptions: "Subscriptions",
   tax: "Tax Management",
+  locations: "Location Management",
   delivery: "Delivery Management",
   pricing: "Pricing & Promotions",
   "dynamic-pricing": "Dynamic Pricing",
@@ -72,6 +73,7 @@ const MODULE_TABS = {
   payments: "Payments & Finance",
   wallets: "Payments & Finance",
   tax: "Payments & Finance",
+  locations: "Settings",
   subscriptions: "Payments & Finance",
   pricing: "Marketing",
   "dynamic-pricing": "Marketing",
@@ -121,6 +123,7 @@ export const MODULE_DEFAULT_ROUTES = {
   notifications:  "messages",
   // Tax & Compliance
   tax:      "tax",
+  locations:"country",
   delivery: "shipping-packages",
   // Settings / misc
   fraud: "settings",
@@ -155,7 +158,7 @@ const ROUTE_MODULES = [
   // Users & Access
   [["/admin-users", "/user-permissions", "/roles-permissions", "/module-management"], ["rbac"]],
   [["/activity-logs"], ["rbac"]],
-  [["/users", "/users-addresses", "/messages"], ["users"]],
+  [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller", "/seller-staff", "/seller-users"], ["sellers"]],
 
@@ -166,7 +169,7 @@ const ROUTE_MODULES = [
       "/pending-products", "/rejected-products",
       "/product-families", "/product-option-value", "/product-option-values",
       "/product-options", "/product-tags", "/threshold-products",
-      "/brands", "/store", "/finish", "/batch", "/bar-code", "/hsn-code", "/qty-head",
+      "/store", "/finish", "/batch", "/bar-code", "/qty-head",
       "/seo-media",
     ],
     ["products"],
@@ -178,7 +181,7 @@ const ROUTE_MODULES = [
       "/categories", "/category-attributes", "/collections",
       "/product-variants", "/product-dimensions",
       "/tax-structure", "/tax-category", "/tax-category-rules",
-      "/state", "/city", "/country", "/zipcode", "/shipping-duration",
+      "/shipping-duration",
     ],
     ["platform", "products"],
   ],
@@ -219,7 +222,8 @@ const ROUTE_MODULES = [
   [["/promotions-banners"], ["cms", "pricing"]],
 
   // Tax & Compliance
-  [["/tax", "/subTax", "/tax-rule"], ["tax"]],
+  [["/tax", "/subTax", "/tax-rule", "/hsn-code"], ["tax"]],
+  [["/state", "/city", "/country", "/zipcode", "/zip-codes"], ["locations"]],
   [["/warranty"], ["warranty", "products"]],
   [
     [

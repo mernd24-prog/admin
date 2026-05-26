@@ -1,5 +1,11 @@
 import axios from "axios";
-import { forceLogout, getStoredAccessToken } from "./authSession";
+import {
+    forceLogout,
+    getAuthErrorCode,
+    getAuthErrorMessage,
+    getStoredAccessToken,
+    shouldForceLogoutForResponse,
+} from "./authSession";
 
 const MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH = 7000;
 
@@ -128,15 +134,15 @@ export function handleResponse(response) {
         // console.log(data);
 
         if (!response.ok) {
-            if (response.status === 401) {
-                logoutFunction();
+            if (shouldForceLogoutForResponse({ status: response.status, data })) {
+                forceLogout(getAuthErrorCode(data) || "SESSION_INVALID", getAuthErrorMessage(data));
             }
             const error = (data && data.message) || response.statusText;
             return Promise.reject(error);
         }
         if (data.error) {
-            if (data.code === 3) {
-                logoutFunction();
+            if (shouldForceLogoutForResponse({ status: response.status, data })) {
+                forceLogout(getAuthErrorCode(data) || "SESSION_INVALID", getAuthErrorMessage(data));
             }
             const error = (data && data.message) || response.statusText;
             return Promise.reject(error);

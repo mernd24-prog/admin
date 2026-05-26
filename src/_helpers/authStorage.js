@@ -124,16 +124,31 @@ export const setStoredAuth = ({
 };
 
 export const clearStoredAuth = () => {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(ROLE_KEY);
-  localStorage.removeItem(ALLOWED_MODULES_KEY);
-  localStorage.removeItem("authFlowState");
-  localStorage.removeItem("authMode");
-  localStorage.removeItem("sellerOnboardingToken");
-  localStorage.removeItem("sellerOnboardingUser");
-  sessionStorage.removeItem("EcomAdmin");
+  [
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    USER_KEY,
+    ROLE_KEY,
+    ALLOWED_MODULES_KEY,
+    "authFlowState",
+    "authMode",
+    "sellerOnboardingToken",
+    "sellerOnboardingUser",
+    "token",
+    "adminuser",
+    "sidebarModules",
+    "rbacSidebarModules",
+    "permissions",
+    "modulePermissions",
+  ].forEach((key) => localStorage.removeItem(key));
+  [
+    "EcomAdmin",
+    "adminuser",
+    "sidebarModules",
+    "rbacSidebarModules",
+    "permissions",
+    "modulePermissions",
+  ].forEach((key) => sessionStorage.removeItem(key));
 };
 
 export const hasModuleAccess = (moduleCode) => {
@@ -156,6 +171,7 @@ export const hasModuleAccess = (moduleCode) => {
   const moduleAliases = {
     dashboard: ["home", "dashboard", "analytics"],
     products: ["products", "product-catalog", "seller-product-inventory", "categories", "category-attributes"],
+    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish"],
     orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
@@ -168,7 +184,8 @@ export const hasModuleAccess = (moduleCode) => {
     analytics: ["analytics", "dashboard", "home"],
     users: ["users", "admin_users", "admin-users"],
     rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
-    tax: ["tax", "tax-structure", "tax-category"],
+    tax: ["tax", "tax-structure", "tax-category", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule"],
+    locations: ["locations", "country", "countries", "state", "states", "city", "cities", "zipcode", "zip-code", "zip-codes", "pincode", "pin-code"],
     system: ["system", "settings"],
   };
 

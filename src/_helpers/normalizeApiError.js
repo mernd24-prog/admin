@@ -21,6 +21,12 @@ export const normalizeApiError = (error, fallback = "Something went wrong!") => 
 
   return {
     status: error?.response?.status || data?.status,
+    code:
+      responseData?.code ||
+      responseData?.error?.code ||
+      data?.code ||
+      data?.error?.code ||
+      null,
     message:
       responseData?.error?.message ||
       responseData?.message ||

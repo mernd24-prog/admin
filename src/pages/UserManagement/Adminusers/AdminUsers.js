@@ -23,6 +23,7 @@ import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/authStorage';
 import { DEFAULT_PLATFORM_MODULES } from '../../../_helpers/adminApi';
 import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
+import { usePermission } from '../../../_helpers/usePermission';
 
 const PAGE_SIZE = 10;
 
@@ -42,6 +43,7 @@ const MODULE_LABELS = {
   delivery: 'Delivery Management',
   wallets: 'Wallet Management',
   tax: 'Tax Management',
+  locations: 'Location Management',
   subscriptions: 'Subscriptions',
   pricing: 'Pricing & Promotions',
   'dynamic-pricing': 'Dynamic Pricing',
@@ -73,6 +75,7 @@ const MODULE_TABS = {
   payments: 'Payments & Finance',
   wallets: 'Payments & Finance',
   tax: 'Payments & Finance',
+  locations: 'Settings',
   subscriptions: 'Payments & Finance',
   pricing: 'Marketing',
   'dynamic-pricing': 'Marketing',
@@ -270,11 +273,13 @@ const AdminUsers = () => {
   const navigate = useNavigate();
   const selector = useSelector((s) => s.adminCore);
   const userSelector = useSelector((s) => s.user);
+  const { canAny } = usePermission();
 
   const storedRole = normalizeRole(getStoredRole());
   const isSuperAdmin = storedRole === 'super-admin';
   const isAdmin = storedRole === 'admin' || isSuperAdmin;
   const canSeeAdminsTab = isSuperAdmin;
+  const canCreateSubAdmin = isSuperAdmin || canAny('rbac', ['create', 'add', 'assign']);
 
   const [tab, setTab] = useState(isSuperAdmin ? 'admins' : 'subadmins');
   const [pageAdmin, setPageAdmin] = useState(1);
@@ -651,7 +656,7 @@ const AdminUsers = () => {
                 + Add Admin
               </AddButton>
             )}
-            {tab === 'subadmins' && isAdmin && (
+            {tab === 'subadmins' && isAdmin && canCreateSubAdmin && (
               <AddButton onClick={() => { setErrors({}); setSubAdminForm({ ...emptySubAdmin, allowedModules: defaultSubAdminModules }); setAddSubAdminOpen(true); }}>
                 + Add Sub-Admin
               </AddButton>
