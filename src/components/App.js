@@ -6,9 +6,12 @@ import NetworkDetector from "../components/Hoc/NetworkDetector";
 import Login from "../pages/login/Login";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ForgetPassword from "../pages/ForgotPassword/ForgotPassword";
-import VerifyOtp from "../pages/verifyOtp/VerifyOtp";
-import ResetPassword from "../pages/ResetPassword/ResetPassword";
+import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+import VerifyOtpPage from "../pages/auth/VerifyOtpPage";
+import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
+import RegisterPage from "../pages/auth/RegisterPage";
+import RegisterVerifyOtpPage from "../pages/auth/RegisterVerifyOtpPage";
+import VerificationCompletePage from "../pages/auth/VerificationCompletePage";
 import { useLoader } from "../context/LoaderContext";
 import Loader from "./Loader/Loader";
 import AuthLayout from "./Layout/authLayout";
@@ -16,6 +19,7 @@ import {
   AuthLayoutProvider,
   AUTH_FORM_TYPES,
 } from "../context/AuthLayoutContext";
+import { AUTH_ROUTES, LEGACY_AUTH_REDIRECTS } from "../pages/auth/authRoutes";
 import SellerOnboarding from "../pages/SellerOnboarding/SellerOnboarding";
 import { fetchAuthStatus } from "../Redux/seller-slice";
 import KYCStatusLayout from "./Layout/kycLayout";
@@ -81,7 +85,7 @@ const App = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/" element={<Navigate to={AUTH_ROUTES.LOGIN} />} />
         <Route
           path="/product-option-value/:id"
           element={<Navigate to={`/app${window.location.pathname}`} replace />}
@@ -103,66 +107,93 @@ const App = () => {
             </>
           }
         />
+        {Object.entries(LEGACY_AUTH_REDIRECTS).map(([legacyPath, target]) => (
+          <Route
+            key={legacyPath}
+            path={legacyPath}
+            element={<LegacyAuthRedirect to={target} />}
+          />
+        ))}
         <Route
-          path="/login"
+          path={AUTH_ROUTES.LOGIN}
           element={
-            <>
-              <LoaderWrapper />
-              <PublicRoute component={Login} flowState={seller?.flowState} />
-            </>
+            <PublicAuthRoute
+              component={Login}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.LOGIN}
+            />
           }
         />
         <Route
-          path="/forgotPassword"
+          path={AUTH_ROUTES.FORGOT_PASSWORD}
           element={
-            <>
-              <LoaderWrapper />
-              <AuthLayoutProvider
-                initialFormType={AUTH_FORM_TYPES.FORGOT_PASSWORD}
-                sellerPanel={isSellerPanel()}
-              >
-                <AuthLayout>
-                  <ForgetPassword />
-                </AuthLayout>
-              </AuthLayoutProvider>
-            </>
+            <PublicAuthRoute
+              component={ForgotPasswordPage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.FORGOT_PASSWORD}
+              sellerOnly
+            />
           }
         />
         <Route
-          path="/verifyOtp"
+          path={AUTH_ROUTES.VERIFY_OTP}
           element={
-            <>
-              <LoaderWrapper />
-              <AuthLayoutProvider
-                initialFormType={AUTH_FORM_TYPES.VERIFICATION_CODE}
-                sellerPanel={isSellerPanel()}
-              >
-                <AuthLayout>
-                  <VerifyOtp />
-                </AuthLayout>
-              </AuthLayoutProvider>
-            </>
+            <PublicAuthRoute
+              component={VerifyOtpPage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.VERIFICATION_CODE}
+              sellerOnly
+            />
           }
         />
         <Route
-          path="/ResetPassword"
+          path={AUTH_ROUTES.RESET_PASSWORD}
           element={
-            <>
-              <LoaderWrapper />
-              <AuthLayoutProvider
-                initialFormType={AUTH_FORM_TYPES.RESET_PASSWORD}
-                sellerPanel={isSellerPanel()}
-              >
-                <AuthLayout>
-                  <ResetPassword />
-                </AuthLayout>
-              </AuthLayoutProvider>
-            </>
+            <PublicAuthRoute
+              component={ResetPasswordPage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.RESET_PASSWORD}
+              sellerOnly
+            />
+          }
+        />
+        <Route
+          path={AUTH_ROUTES.REGISTER}
+          element={
+            <PublicAuthRoute
+              component={RegisterPage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.REGISTER}
+              sellerOnly
+            />
+          }
+        />
+        <Route
+          path={AUTH_ROUTES.REGISTER_VERIFY_OTP}
+          element={
+            <PublicAuthRoute
+              component={RegisterVerifyOtpPage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.REGISTER_VERIFICATION}
+              sellerOnly
+            />
+          }
+        />
+        <Route
+          path={AUTH_ROUTES.VERIFICATION_COMPLETE}
+          element={
+            <PublicAuthRoute
+              component={VerificationCompletePage}
+              flowState={seller?.flowState}
+              formType={AUTH_FORM_TYPES.VERIFICATION_COMPLETE}
+              sellerOnly
+              allowOnboardingToken
+            />
           }
         />
 
         <Route
-          path="/seller/onboarding"
+          path={AUTH_ROUTES.ONBOARDING}
           element={
             isSellerPanel() ? (
               <KYCStatusLayout currentSection={currentSection}>
@@ -208,15 +239,38 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   return isAuthenticated ? <Component {...rest} /> : <Navigate to="/login" />;
 };
 
-const PublicRoute = ({ component: Component, flowState, ...rest }) => {
+const LegacyAuthRedirect = ({ to }) => {
+  if (!isSellerPanel()) {
+    return <Navigate to={AUTH_ROUTES.LOGIN} replace />;
+  }
+  return <Navigate to={to} replace />;
+};
+
+const PublicAuthRoute = ({
+  component: Component,
+  flowState,
+  formType,
+  sellerOnly = false,
+  allowOnboardingToken = false,
+  ...rest
+}) => {
   const isAuthenticated = localStorage.getItem("accessToken");
   const hasOnboardingToken = !!localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   const sellerPanel = isSellerPanel();
 
+  if (sellerOnly && !sellerPanel) {
+    return <Navigate to={AUTH_ROUTES.LOGIN} replace />;
+  }
+
   // Seller with active onboarding session — go to onboarding instead of login
-  if (sellerPanel && hasOnboardingToken && flowState?.requiresOnboarding) {
-    return <Navigate to="/seller/onboarding" replace />;
+  if (
+    sellerPanel &&
+    hasOnboardingToken &&
+    flowState?.requiresOnboarding &&
+    !allowOnboardingToken
+  ) {
+    return <Navigate to={AUTH_ROUTES.ONBOARDING} replace />;
   }
 
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
@@ -228,14 +282,17 @@ const PublicRoute = ({ component: Component, flowState, ...rest }) => {
     return <Navigate to="/app/home" />;
   }
   return (
-    <AuthLayoutProvider
-      initialFormType={AUTH_FORM_TYPES.LOGIN}
-      sellerPanel={sellerPanel}
-    >
-      <AuthLayout>
-        <Component {...rest} />
-      </AuthLayout>
-    </AuthLayoutProvider>
+    <>
+      <LoaderWrapper />
+      <AuthLayoutProvider
+        initialFormType={formType || AUTH_FORM_TYPES.LOGIN}
+        sellerPanel={sellerPanel}
+      >
+        <AuthLayout>
+          <Component {...rest} />
+        </AuthLayout>
+      </AuthLayoutProvider>
+    </>
   );
 };
 
