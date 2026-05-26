@@ -88,6 +88,30 @@ export const fetchAuthStatus = createAsyncThunk(
   }
 );
 
+export const fetchSellerOnboardingStatus = createAsyncThunk(
+  "seller/fetchSellerOnboardingStatus",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest("GET", ENDPOINTS.sellers.sellerOnboardingStatus);
+      return response?.data || response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Unable to fetch onboarding status"));
+    }
+  }
+);
+
+export const markApprovalModalSeen = createAsyncThunk(
+  "seller/markApprovalModalSeen",
+  async (_, { rejectWithValue }) => {
+    try {
+      await apiRequest("PATCH", ENDPOINTS.sellers.approvalModalSeen);
+      return true;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to mark approval modal as seen"));
+    }
+  }
+);
+
 export const fetchSellerWebStatus = createAsyncThunk(
   "seller/fetchSellerWebStatus",
   async (_payload = {}, { rejectWithValue }) => {
@@ -114,6 +138,8 @@ const sellerSlice = createSlice({
     kycSubmitted: false,
     profileSubmitted: false,
     statusData: null,
+    onboardingStatusData: null,
+    approvalModalSeen: localStorage.getItem("sellerApprovalModalSeen") === "true",
   },
   reducers: {
     startSellerOnboarding(state, action) {
@@ -244,6 +270,22 @@ const sellerSlice = createSlice({
       .addCase(fetchAuthStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || action.payload || action.error.message;
+      })
+      .addCase(fetchSellerOnboardingStatus.fulfilled, (state, action) => {
+        state.onboardingStatusData = action.payload;
+        if (action.payload?.approvalModalSeen !== undefined) {
+          state.approvalModalSeen = action.payload.approvalModalSeen;
+          if (action.payload.approvalModalSeen) {
+            localStorage.setItem("sellerApprovalModalSeen", "true");
+          }
+        }
+      })
+      .addCase(markApprovalModalSeen.fulfilled, (state) => {
+        state.approvalModalSeen = true;
+        localStorage.setItem("sellerApprovalModalSeen", "true");
+        if (state.onboardingStatusData) {
+          state.onboardingStatusData = { ...state.onboardingStatusData, approvalModalSeen: true };
+        }
       })
       .addCase(fetchSellerWebStatus.pending, (state) => {
         state.loading = true;

@@ -26,6 +26,7 @@ import {
 } from "../_helpers/authStorage";
 import { forceLogout } from "../_helpers/authSession";
 import { isSellerPanel } from "../_helpers/panelConfig";
+import { clearSellerOnboarding } from "../Redux/seller-slice";
 const App = () => {
   const dispatch = useDispatch();
   const { currentSection } = useKYC();
@@ -43,10 +44,28 @@ const App = () => {
       if (hasAnyToken) {
         const result = await dispatch(fetchAuthStatus());
         if (fetchAuthStatus.rejected.match(result)) {
-          forceLogout(
-            result.payload?.code || "SESSION_INVALID",
-            result.payload?.message || "Your session is no longer valid. Please login again.",
-          );
+          const hasAccessToken = !!localStorage.getItem("accessToken");
+          if (hasAccessToken) {
+            // Regular session expired or invalidated — force logout with message
+            forceLogout(
+              result.payload?.code || "SESSION_INVALID",
+              result.payload?.message || "Your session is no longer valid. Please login again.",
+            );
+          } else {
+            // Onboarding token expired/invalid — clear silently and let user re-login
+            dispatch(clearSellerOnboarding());
+          }
+          return;
+        }
+
+        // After a successful status fetch, redirect sellers who still need onboarding
+        const flowState = result.payload;
+        if (
+          flowState?.requiresOnboarding &&
+          isSellerPanel() &&
+          !window.location.pathname.startsWith("/seller/onboarding")
+        ) {
+          window.location.replace("/seller/onboarding");
           return;
         }
       }
@@ -164,26 +183,42 @@ const App = () => {
 const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   const isAuthenticated = localStorage.getItem("accessToken");
   const role = getStoredRole() || flowState?.role;
-  // if (
-  //   isSellerPanel() &&
-  //   (flowState?.requiresOnboarding || hasOnboardingToken)
-  // ) {
-  //   return <Navigate to="/seller/onboarding" />;
-  // }
+
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
     forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
     return <Navigate to="/login" />;
   }
+
+  // Block seller panel dashboard access unless KYC, bank, and account are all fully approved
+  if (isSellerPanel() && isAuthenticated && flowState) {
+    const kycStatus = flowState.kycStatus;
+    const bankStatus =
+      flowState.bankStatus ||
+      flowState.bankVerificationStatus ||
+      flowState.sellerProfile?.bankVerificationStatus;
+    const kycApproved = kycStatus === "approved" || kycStatus === "verified";
+    const bankApproved = bankStatus === "approved" || bankStatus === "verified";
+    const accountActive = flowState.accountStatus === "active";
+
+    if (!(kycApproved && bankApproved && accountActive)) {
+      return <Navigate to="/seller/onboarding" replace />;
+    }
+  }
+
   return isAuthenticated ? <Component {...rest} /> : <Navigate to="/login" />;
 };
 
 const PublicRoute = ({ component: Component, flowState, ...rest }) => {
   const isAuthenticated = localStorage.getItem("accessToken");
+  const hasOnboardingToken = !!localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   const sellerPanel = isSellerPanel();
-  // if (sellerPanel && (flowState?.requiresOnboarding || hasOnboardingToken)) {
-  //   return <Navigate to="/seller/onboarding" />;
-  // }
+
+  // Seller with active onboarding session — go to onboarding instead of login
+  if (sellerPanel && hasOnboardingToken && flowState?.requiresOnboarding) {
+    return <Navigate to="/seller/onboarding" replace />;
+  }
+
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
     forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
   } else if (

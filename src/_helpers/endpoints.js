@@ -70,6 +70,8 @@ export const ENDPOINTS = {
     kycReviewAdmin: (sellerId) => `/admin/sellers/${sellerId}/kyc/status`,
     myStatus: "/sellers/me/status",
     myKyc: "/sellers/me/kyc",
+    sellerOnboardingStatus: "/sellers/me/onboarding-status",
+    approvalModalSeen: "/sellers/me/onboarding/approval-modal-seen",
     tracking: "/sellers/me/tracking",
     trackingOrder: (orderId) => `/sellers/me/tracking/${orderId}`,
     profile: "/sellers/me/profile",

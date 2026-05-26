@@ -10,8 +10,11 @@ import {
   fetchAuthStatus,
   submitSellerKyc,
   updateSellerOnboardingProfile,
+  markApprovalModalSeen,
 } from "../../Redux/seller-slice";
-import { listSellerProducts } from "../../Redux/sellerProductsSlice";
+import SellerVerificationModal, {
+  getVerificationCase,
+} from "../../components/Seller/SellerVerificationModal";
 import { useKYC } from "../../context/KycContext";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -35,17 +38,20 @@ const STEP_ONE_INPUT_CLASS =
   "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
 const DATE_FIELD_CLASS =
   "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
-const STEP_ONE_REQUIRED = <span className="text-[#ff0000]">*</span>;
+const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
 const SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
-const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
-const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
+const PRIMARY_BUTTON_CLASS =
+  "admin-btn-primary w-full text-[14px]";
+const ONBOARDING_CARD_CLASS =
+  "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_FILE_INPUT_CLASS = `${REVIEW_INPUT_CLASS} pl-9`;
 const REVIEW_SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
-const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+const REVIEW_PRIMARY_BUTTON_CLASS =
+  "admin-btn-primary w-full text-[14px]";
 // const DISPLAY_FIELD_CLASS =
 //   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
 
@@ -217,7 +223,9 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
 
 const ReviewInput = ({ label, value, className = "" }) => (
   <div className={className}>
-    <label className="admin-label font-inter">{label}</label>
+    <label className="admin-label font-inter">
+      {label}
+    </label>
     <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />
   </div>
 );
@@ -274,9 +282,7 @@ const isRepeatedSingleWordName = (value = "") => {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  return (
-    parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()
-  );
+  return parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase();
 };
 
 const stripFileFieldsFromDraft = (draft = {}) => ({
@@ -385,46 +391,6 @@ const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
   }
 };
 
-const getListTotal = (payload) => {
-  const data = payload?.data || payload;
-  const nestedData = data?.data || {};
-  const normalizedData = payload?.normalized?.data || {};
-  const rawData = payload?.raw?.data || {};
-  const list =
-    data?.list ||
-    data?.items ||
-    data?.products ||
-    data?.docs ||
-    nestedData?.list ||
-    nestedData?.items ||
-    nestedData?.products ||
-    nestedData?.docs ||
-    normalizedData?.list ||
-    normalizedData?.items ||
-    normalizedData?.products ||
-    normalizedData?.docs ||
-    rawData?.list ||
-    rawData?.items ||
-    rawData?.products ||
-    rawData?.docs ||
-    [];
-
-  return Number(
-    data?.total ??
-      data?.count ??
-      data?.totalDocs ??
-      nestedData?.total ??
-      nestedData?.count ??
-      nestedData?.totalDocs ??
-      normalizedData?.total ??
-      normalizedData?.count ??
-      normalizedData?.totalDocs ??
-      rawData?.total ??
-      rawData?.count ??
-      rawData?.totalDocs ??
-      (Array.isArray(list) ? list.length : 0),
-  );
-};
 
 const DocumentUploadField = ({
   id,
@@ -548,10 +514,12 @@ const SellerOnboarding = () => {
   const [requiresKycRefresh, setRequiresKycRefresh] = useState(false);
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
-  const [showReadyToSellScreen, setShowReadyToSellScreen] = useState(false);
-  const [checkingSellerProducts, setCheckingSellerProducts] = useState(false);
+  const [verificationModalDismissed, setVerificationModalDismissed] = useState(false);
+  const [goingToDashboard, setGoingToDashboard] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
+  // Tracks previous rejection state so the modal only re-shows on a NEW rejection event
+  const prevRejectionRef = useRef({ kyc: false, bank: false });
 
   const [kycForm, setKycForm] = useState({
     panNumber: "",
@@ -676,15 +644,7 @@ const SellerOnboarding = () => {
       step,
     });
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [
-    bankForm,
-    documentUrls,
-    draftKey,
-    draftLoaded,
-    kycForm,
-    profileForm,
-    step,
-  ]);
+  }, [bankForm, documentUrls, draftKey, draftLoaded, kycForm, profileForm, step]);
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
@@ -1022,15 +982,18 @@ const SellerOnboarding = () => {
       return;
     }
     if (flowState?.kycStatus === "rejected") {
-      setStep(1);
+      // Show rejection modal on step 5 — seller clicks "Update KYC" to proceed
+      setStep(5);
       return;
     }
     if (requiresKycRefresh) {
+      // KYC documents are incomplete (not rejected) — go directly to KYC form
       setStep(1);
       return;
     }
     if (bankRejected && profileCompleted && kycSubmitted) {
-      setStep(3);
+      // Show rejection modal on step 5 — seller clicks "Update Bank Details" to proceed
+      setStep(5);
       return;
     }
     if (statusMeansReview && profileCompleted && bankLinked) {
@@ -1052,6 +1015,33 @@ const SellerOnboarding = () => {
 
     setStep(1);
   }, [flowState, navigate, requiresKycRefresh, setStep]);
+
+  // Re-show modal only when a NEW rejection arrives from the backend.
+  // After the seller takes action and resubmits, the modal stays dismissed
+  // until admin reviews and sends a new rejection.
+  useEffect(() => {
+    if (!flowState) return;
+    const kycRejected = flowState.kycStatus === "rejected";
+    const bankStatus =
+      flowState.bankVerificationStatus ||
+      flowState.sellerProfile?.bankVerificationStatus;
+    const bankRejected = bankStatus === "rejected";
+    const wasKycRejected = prevRejectionRef.current.kyc;
+    const wasBankRejected = prevRejectionRef.current.bank;
+
+    if ((kycRejected && !wasKycRejected) || (bankRejected && !wasBankRejected)) {
+      setVerificationModalDismissed(false);
+    }
+    prevRejectionRef.current = { kyc: kycRejected, bank: bankRejected };
+  }, [flowState]);
+
+  // Case 8: already approved and modal seen — redirect directly to dashboard
+  useEffect(() => {
+    if (step !== 5 || !flowState) return;
+    if (getVerificationCase(flowState) === "already_approved") {
+      navigate("/app/home");
+    }
+  }, [step, flowState, navigate]);
 
   if (!canAccess) return <Navigate to="/login" />;
 
@@ -1411,9 +1401,7 @@ const SellerOnboarding = () => {
       await dispatch(submitSellerKyc(kycPayload)).unwrap();
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
-      await dispatch(
-        updateSellerOnboardingProfile(buildProfilePayload()),
-      ).unwrap();
+      await dispatch(updateSellerOnboardingProfile(buildProfilePayload())).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       setStep(3);
     } catch (error) {
@@ -1519,95 +1507,96 @@ const SellerOnboarding = () => {
     }
   };
 
-  const handleApprovedStatusAction = async () => {
-    if (showReadyToSellScreen) {
-      navigate("/app/home");
-      return;
-    }
-
-    setCheckingSellerProducts(true);
+  const handleGoToDashboard = async () => {
+    setGoingToDashboard(true);
+    // Persist approval modal seen locally immediately as fallback
+    localStorage.setItem("sellerApprovalModalSeen", "true");
     try {
-      const response = await dispatch(
-        listSellerProducts({ page: 1, size: 1, limit: 1 }),
-      ).unwrap();
-      if (getListTotal(response) > 0) {
-        navigate("/app/home");
-        return;
-      }
-      setShowReadyToSellScreen(true);
-    } catch (error) {
-      toast.error(error?.message || error || "Unable to check products");
-    } finally {
-      setCheckingSellerProducts(false);
+      await dispatch(markApprovalModalSeen());
+    } catch {
+      // localStorage already set — backend sync failure is non-blocking
     }
+    navigate("/app/home");
   };
 
   if (step === 5) {
-    const isRejected = flowState?.kycStatus === "rejected";
-    const isApproved =
-      flowState?.kycStatus === "verified" ||
-      flowState?.kycStatus === "approved" ||
-      flowState?.onboardingStatus === "approved" ||
-      (flowState?.accountStatus === "active" && !flowState?.requiresOnboarding);
-    const statusVariant = showReadyToSellScreen
-      ? "readyToSell"
-      : isRejected
-        ? "rejected"
-        : isApproved
-          ? "approved"
-          : "underReview";
-    const statusMeta = showReadyToSellScreen
+    const verificationCase = getVerificationCase(flowState);
+    const isAnyRejected = ["kyc_rejected", "bank_rejected", "both_rejected"].includes(verificationCase);
+    const isFullyApproved = verificationCase === "both_approved" || verificationCase === "already_approved";
+    const isPendingCase = ["pending", "kyc_approved_bank_pending", "bank_approved_kyc_pending"].includes(verificationCase);
+
+    // Modal shows for all cases except when pending and already dismissed
+    const showModal = !verificationModalDismissed;
+
+    const statusMeta = isFullyApproved
       ? {
-          badge: "KYC VERIFICATION",
-          title: "KYC Approved",
+          badge: "STATUS",
+          title: "Application Approved",
           subtitle:
-            "Your seller account is now verified. You can begin adding products and accepting orders.",
+            "Your seller application has been approved. You can access your dashboard.",
         }
-      : isApproved
+      : isAnyRejected && !verificationModalDismissed
         ? {
-            badge: "KYC VERIFICATION",
-            title: "KYC Approved",
-            subtitle:
-              "Your seller account is now verified. You can begin adding products and accepting orders.",
+            badge: "STATUS",
+            title: "Verification Requires Updates",
+            subtitle: "Please review the feedback below and update your details.",
           }
-        : isRejected
-          ? {
-              badge: "KYC VERIFICATION",
-              title: "KYC Rejected",
-              subtitle: "Please update your seller details and submit again.",
-            }
-          : {
-              badge: "KYC VERIFICATION",
-              title: "Under Review",
-              subtitle:
-                "Your account is under review. Our team will verify your details within 24-48 hours.",
-            };
+        : {
+            badge: "STATUS",
+            title: "Under Review",
+            subtitle:
+              "Your account is under review. Our team will verify your details within 24–48 hours.",
+          };
+
+    // After the seller has acknowledged a rejection and resubmitted (modal dismissed),
+    // show "underReview" so they know their details are being processed.
+    const bgStatusVariant = isFullyApproved
+      ? "approved"
+      : isAnyRejected && !verificationModalDismissed
+        ? "rejected"
+        : "underReview";
 
     return (
-      <OnboardingScreen step={5} metaOverride={statusMeta}>
-        <div className="w-full ">
+      <OnboardingScreen step={step} metaOverride={statusMeta}>
+        <div className="w-full">
+          {showModal && (
+            <SellerVerificationModal
+              flowState={flowState}
+              onNavigateToKyc={() => {
+                setVerificationModalDismissed(true);
+                setStep(1);
+              }}
+              onNavigateToBank={() => {
+                setVerificationModalDismissed(true);
+                setStep(3);
+              }}
+              onGoToDashboard={handleGoToDashboard}
+              onDismiss={() => setVerificationModalDismissed(true)}
+              loading={goingToDashboard}
+            />
+          )}
+          {/* Background status screen — visible when pending modal is dismissed */}
           <SellerStatusScreen
-            variant={statusVariant}
+            variant={bgStatusVariant}
             description={
-              isRejected
-                ? flowState?.kycRejectionReason ||
-                  "Your KYC was rejected. Please update details and submit again."
+              isAnyRejected && !showModal
+                ? (flowState?.kycRejectionReason ||
+                    flowState?.bankRejectionReason ||
+                    flowState?.sellerProfile?.bankRejectionReason ||
+                    "Please update your details and resubmit.")
                 : undefined
             }
-            buttonLabel={
-              checkingSellerProducts ? "Checking Products..." : undefined
-            }
-            disabled={checkingSellerProducts}
+            disabled={showModal}
             onButtonClick={() => {
-              if (isRejected) {
-                setStep(1);
+              if (showModal) return;
+              if (isPendingCase) return;
+              if (isAnyRejected) {
+                setVerificationModalDismissed(false);
                 return;
               }
-              if (isApproved) {
-                handleApprovedStatusAction();
-                return;
+              if (isFullyApproved) {
+                handleGoToDashboard();
               }
-              setShowReadyToSellScreen(true);
             }}
           />
         </div>
