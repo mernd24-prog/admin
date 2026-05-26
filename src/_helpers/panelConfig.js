@@ -39,7 +39,7 @@ const configuredMode =
   resolvePanelMode(process.env.REACT_APP_APP_MODE) ||
   resolvePanelMode(process.env.VITE_APP_MODE) ||
   detectModeFromRuntime() ||
-  PANEL_MODES.ADMIN;
+  PANEL_MODES.SELLER;
 
 export const getPanelMode = () => configuredMode;
 

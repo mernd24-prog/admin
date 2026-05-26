@@ -34,20 +34,17 @@ const STEP_ONE_INPUT_CLASS =
   "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
 const DATE_FIELD_CLASS =
   "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
-const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
+const STEP_ONE_REQUIRED = <span className="text-[#ff0000]">*</span>;
 const SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
-const PRIMARY_BUTTON_CLASS =
-  "admin-btn-primary w-full text-[14px]";
-const ONBOARDING_CARD_CLASS =
-  "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
+const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_FILE_INPUT_CLASS = `${REVIEW_INPUT_CLASS} pl-9`;
 const REVIEW_SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
-const REVIEW_PRIMARY_BUTTON_CLASS =
-  "admin-btn-primary w-full text-[14px]";
+const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
 // const DISPLAY_FIELD_CLASS =
 //   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
 
@@ -180,9 +177,7 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
 
 const ReviewInput = ({ label, value, className = "" }) => (
   <div className={className}>
-    <label className="admin-label font-inter">
-      {label}
-    </label>
+    <label className="admin-label font-inter">{label}</label>
     <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />
   </div>
 );
@@ -239,7 +234,9 @@ const isRepeatedSingleWordName = (value = "") => {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  return parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase();
+  return (
+    parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()
+  );
 };
 
 const stripFileFieldsFromDraft = (draft = {}) => ({
@@ -623,7 +620,15 @@ const SellerOnboarding = () => {
       step,
     });
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [bankForm, documentUrls, draftKey, draftLoaded, kycForm, profileForm, step]);
+  }, [
+    bankForm,
+    documentUrls,
+    draftKey,
+    draftLoaded,
+    kycForm,
+    profileForm,
+    step,
+  ]);
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
@@ -1341,7 +1346,9 @@ const SellerOnboarding = () => {
       await dispatch(submitSellerKyc(kycPayload)).unwrap();
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
-      await dispatch(updateSellerOnboardingProfile(buildProfilePayload())).unwrap();
+      await dispatch(
+        updateSellerOnboardingProfile(buildProfilePayload()),
+      ).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       setStep(3);
     } catch (error) {
