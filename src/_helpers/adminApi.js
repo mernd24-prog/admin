@@ -8,6 +8,7 @@ export const DEFAULT_PLATFORM_MODULES = [
   "orders",
   "payments",
   "platform",
+  "cms",
   "sellers",
   "notifications",
   "analytics",

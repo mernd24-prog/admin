@@ -26,7 +26,11 @@ const STANDARD_ROLE_NAMES = {
 
 const STANDARD_SLUGS = Object.values(ROLES);
 
-const ALL_ACTIONS = ['view', 'create', 'edit', 'update', 'delete', 'approve', 'reject', 'assign', 'export', 'import', 'status_change'];
+const ALL_ACTIONS = ['view', 'create', 'update', 'delete', 'status_change', 'approve', 'reject', 'assign', 'export'];
+
+const ACTION_LABELS = {
+  status_change: 'Status Change',
+};
 
 /* ─── Permission Matrix ──────────────────────────────────────────────────── */
 const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, onChange, readOnly = false }) => {
@@ -82,7 +86,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                 <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide w-48 sticky left-0 bg-gray-50">Module</th>
                 {visibleActions.map((a) => (
                   <th key={a} className="px-3 py-2.5 text-center font-semibold text-gray-500 uppercase tracking-wide capitalize whitespace-nowrap">
-                    {a.replace('_', ' ')}
+                    {ACTION_LABELS[a] || a.replace('_', ' ')}
                   </th>
                 ))}
                 {!readOnly && (
@@ -287,7 +291,7 @@ const RolesPermissions = () => {
     setPermLoading(true);
     try {
       const res = await axiosProvider.get('/rbac/permission-management/modules', {
-        params: { roleId: role.id },
+        params: { roleId: role.id, scope: 'sidebar' },
       });
       const matrix = res.data?.data || {};
       const mods = matrix.modules || [];

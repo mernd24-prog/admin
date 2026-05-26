@@ -170,8 +170,9 @@ export const hasModuleAccess = (moduleCode) => {
 
   const moduleAliases = {
     dashboard: ["home", "dashboard", "analytics"],
-    products: ["products", "product-catalog", "seller-product-inventory", "categories", "category-attributes"],
+    products: ["products", "product-catalog", "categories", "category-attributes"],
     platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish"],
+    inventory: ["inventory", "seller-product-inventory", "seller-product-inventories", "inventory-overview", "variant-inventory", "inventory-adjustment", "warehouse", "low-stock-alerts", "threshold-products"],
     orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
