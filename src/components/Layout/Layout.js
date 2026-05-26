@@ -307,18 +307,20 @@ function Layout() {
       modules.forEach((module) => {
         const moduleCode = normalizeModule(
           module.slug ||
-          module.moduleKey ||
-          module.moduleSlug ||
-          module.module ||
-          module.module_code?.module_code ||
-          module.module_code ||
-          module.metadata?.requiredModule,
+            module.moduleKey ||
+            module.moduleSlug ||
+            module.module ||
+            module.module_code?.module_code ||
+            module.module_code ||
+            module.metadata?.requiredModule,
         );
 
         if (!moduleCode) return;
 
         const hasAssignedAction = Array.isArray(module.permissions)
-          ? module.permissions.some((permission) => permission.assigned !== false)
+          ? module.permissions.some(
+              (permission) => permission.assigned !== false,
+            )
           : module.assigned !== false;
         const isAssigned = module.assigned !== false && hasAssignedAction;
 
@@ -404,7 +406,7 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
         />
 
-        <main className="flex-1 bg-[#fffdfa] overflow-y-auto pt-16 sidebar-scrollbar">
+        <main className="flex-1 bg-[#fffdfa] overflow-y-auto  sidebar-scrollbar">
           <Suspense fallback={<PageSkeletonLoader />}>
             <AnimatePresence mode="wait">
               <motion.div
@@ -415,477 +417,537 @@ function Layout() {
                 exit={{ opacity: 0, y: -3 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
               >
-            <Routes location={location}>
-              <Route
-                path="/home"
-                element={renderRoute("/home", <Dashboard />)}
-              />
-              <Route
-                path="/admin-users"
-                element={renderRoute("/admin-users", <AdminUsers />)}
-              />
-              <Route
-                path="/seller-management"
-                element={renderRoute(
-                  "/seller-users",
-                  <SellerUsers />,
-                )}
-              />
-              <Route
-                path="/seller-users"
-                element={renderRoute("/seller-users", <SellerUsers />)}
-              />
-              <Route path="/users" element={renderRoute("/users", <Users />)} />
-              <Route
-                path="/users/view/:id"
-                element={renderRoute("/users", <UserDetails />)}
-              />
-              <Route
-                path="/admin-users/view/:id"
-                element={renderRoute("/admin-users", <UserDetails />)}
-              />
-              <Route
-                path="/seller/view/:id"
-                element={renderRoute("/seller", <UserDetails />)}
-              />
-              <Route
-                path="/transactions"
-                element={renderRoute("/transactions", <UsersTransactions />)}
-              />
+                <Routes location={location}>
+                  <Route
+                    path="/home"
+                    element={renderRoute("/home", <Dashboard />)}
+                  />
+                  <Route
+                    path="/admin-users"
+                    element={renderRoute("/admin-users", <AdminUsers />)}
+                  />
+                  <Route
+                    path="/seller-management"
+                    element={renderRoute("/seller-users", <SellerUsers />)}
+                  />
+                  <Route
+                    path="/seller-users"
+                    element={renderRoute("/seller-users", <SellerUsers />)}
+                  />
+                  <Route
+                    path="/users"
+                    element={renderRoute("/users", <Users />)}
+                  />
+                  <Route
+                    path="/users/view/:id"
+                    element={renderRoute("/users", <UserDetails />)}
+                  />
+                  <Route
+                    path="/admin-users/view/:id"
+                    element={renderRoute("/admin-users", <UserDetails />)}
+                  />
+                  <Route
+                    path="/seller/view/:id"
+                    element={renderRoute("/seller", <UserDetails />)}
+                  />
+                  <Route
+                    path="/transactions"
+                    element={renderRoute(
+                      "/transactions",
+                      <UsersTransactions />,
+                    )}
+                  />
 
-              <Route
-                path="/product-flow"
-                element={renderRoute("/product-flow", <ProductFlow />)}
-              />
-              <Route
-                path="/product-catalog"
-                element={renderRoute("/product-catalog", <ProductCatalog />)}
-              />
-              <Route
-                path="/seller-Product-Inventory"
-                element={renderRoute(
-                  "/seller-Product-Inventory",
-                  <SellerProductInventories />,
-                )}
-              />
-              <Route path="/store" element={renderRoute("/store", <Store />)} />
-              <Route
-                path="/brands"
-                element={renderRoute("/brands", <Brands />)}
-              />
-              <Route
-                path="/product-options"
-                element={renderRoute("/product-options", <ProductOptions />)}
-              />
-              <Route
-                path="/product-tags"
-                element={renderRoute("/product-tags", <ProductTags />)}
-              />
-              <Route
-                path="/threshold-products"
-                element={renderRoute(
-                  "/threshold-products",
-                  <ThresholdProducts />,
-                )}
-              />
-              <Route
-                path="/orders"
-                element={renderRoute("/orders", <Orders />)}
-              />
-              <Route
-                path="/order-status"
-                element={renderRoute("/order-status", <OrderStatus />)}
-              />
-              <Route
-                path="/gift-card-orders"
-                element={renderRoute("/gift-card-orders", <GiftCardOrder />)}
-              />
-              <Route
-                path="/order-cancellation-reasons"
-                element={renderRoute(
-                  "/order-cancellation-reasons",
-                  <OrderCancellationReasons />,
-                )}
-              />
-              <Route
-                path="/order-return-reasons"
-                element={renderRoute("/order-return-reasons", <OrderReturn />)}
-              />
-              <Route
-                path="/product-reviews"
-                element={renderRoute("/product-reviews", <ProductReviews />)}
-              />
-              <Route
-                path="/special-price"
-                element={renderRoute("/special-price", <SpecialPrice />)}
-              />
-              <Route
-                path="/volume-discounts"
-                element={renderRoute("/volume-discounts", <VolumeDiscount />)}
-              />
-              <Route
-                path="/similar-products"
-                element={renderRoute("/similar-products", <SimilarProducts />)}
-              />
-              <Route
-                path="/frequently-bought-together"
-                element={renderRoute(
-                  "/frequently-bought-together",
-                  <FrequentlyBoughtTogether />,
-                )}
-              />
-              <Route
-                path="/PPC-promotions-management"
-                element={renderRoute(
-                  "/PPC-promotions-management",
-                  <PPCPromotionsManagement />,
-                )}
-              />
-              <Route
-                path="/reward-on-purchase"
-                element={renderRoute(
-                  "/reward-on-purchase",
-                  <RewardOnPurchase />,
-                )}
-              />
-              <Route
-                path="/product-event-weightages"
-                element={renderRoute(
-                  "/product-event-weightages",
-                  <ProductEventWeightages />,
-                )}
-              />
-              <Route
-                path="/recommended-product-tag-weightages"
-                element={renderRoute(
-                  "/recommended-product-tag-weightages",
-                  <RecommendedProductTagWeightages />,
-                )}
-              />
-              <Route
-                path="/discount-coupons"
-                element={renderRoute("/discount-coupons", <DiscountCoupons />)}
-              />
-              <Route
-                path="/referral-commerce"
-                element={renderRoute(
-                  "/referral-commerce",
-                  <ReferralCommerce />,
-                )}
-              />
+                  <Route
+                    path="/product-flow"
+                    element={renderRoute("/product-flow", <ProductFlow />)}
+                  />
+                  <Route
+                    path="/product-catalog"
+                    element={renderRoute(
+                      "/product-catalog",
+                      <ProductCatalog />,
+                    )}
+                  />
+                  <Route
+                    path="/seller-Product-Inventory"
+                    element={renderRoute(
+                      "/seller-Product-Inventory",
+                      <SellerProductInventories />,
+                    )}
+                  />
+                  <Route
+                    path="/store"
+                    element={renderRoute("/store", <Store />)}
+                  />
+                  <Route
+                    path="/brands"
+                    element={renderRoute("/brands", <Brands />)}
+                  />
+                  <Route
+                    path="/product-options"
+                    element={renderRoute(
+                      "/product-options",
+                      <ProductOptions />,
+                    )}
+                  />
+                  <Route
+                    path="/product-tags"
+                    element={renderRoute("/product-tags", <ProductTags />)}
+                  />
+                  <Route
+                    path="/threshold-products"
+                    element={renderRoute(
+                      "/threshold-products",
+                      <ThresholdProducts />,
+                    )}
+                  />
+                  <Route
+                    path="/orders"
+                    element={renderRoute("/orders", <Orders />)}
+                  />
+                  <Route
+                    path="/order-status"
+                    element={renderRoute("/order-status", <OrderStatus />)}
+                  />
+                  <Route
+                    path="/gift-card-orders"
+                    element={renderRoute(
+                      "/gift-card-orders",
+                      <GiftCardOrder />,
+                    )}
+                  />
+                  <Route
+                    path="/order-cancellation-reasons"
+                    element={renderRoute(
+                      "/order-cancellation-reasons",
+                      <OrderCancellationReasons />,
+                    )}
+                  />
+                  <Route
+                    path="/order-return-reasons"
+                    element={renderRoute(
+                      "/order-return-reasons",
+                      <OrderReturn />,
+                    )}
+                  />
+                  <Route
+                    path="/product-reviews"
+                    element={renderRoute(
+                      "/product-reviews",
+                      <ProductReviews />,
+                    )}
+                  />
+                  <Route
+                    path="/special-price"
+                    element={renderRoute("/special-price", <SpecialPrice />)}
+                  />
+                  <Route
+                    path="/volume-discounts"
+                    element={renderRoute(
+                      "/volume-discounts",
+                      <VolumeDiscount />,
+                    )}
+                  />
+                  <Route
+                    path="/similar-products"
+                    element={renderRoute(
+                      "/similar-products",
+                      <SimilarProducts />,
+                    )}
+                  />
+                  <Route
+                    path="/frequently-bought-together"
+                    element={renderRoute(
+                      "/frequently-bought-together",
+                      <FrequentlyBoughtTogether />,
+                    )}
+                  />
+                  <Route
+                    path="/PPC-promotions-management"
+                    element={renderRoute(
+                      "/PPC-promotions-management",
+                      <PPCPromotionsManagement />,
+                    )}
+                  />
+                  <Route
+                    path="/reward-on-purchase"
+                    element={renderRoute(
+                      "/reward-on-purchase",
+                      <RewardOnPurchase />,
+                    )}
+                  />
+                  <Route
+                    path="/product-event-weightages"
+                    element={renderRoute(
+                      "/product-event-weightages",
+                      <ProductEventWeightages />,
+                    )}
+                  />
+                  <Route
+                    path="/recommended-product-tag-weightages"
+                    element={renderRoute(
+                      "/recommended-product-tag-weightages",
+                      <RecommendedProductTagWeightages />,
+                    )}
+                  />
+                  <Route
+                    path="/discount-coupons"
+                    element={renderRoute(
+                      "/discount-coupons",
+                      <DiscountCoupons />,
+                    )}
+                  />
+                  <Route
+                    path="/referral-commerce"
+                    element={renderRoute(
+                      "/referral-commerce",
+                      <ReferralCommerce />,
+                    )}
+                  />
 
-              <Route
-                path="/shipping-company-users"
-                element={renderRoute(
-                  "/shipping-company-users",
-                  <ShippingCompanyUsers />,
-                )}
-              />
-              <Route
-                path="/shipping-packages"
-                element={renderRoute(
-                  "/shipping-packages",
-                  <ShippingPackages />,
-                )}
-              />
-              <Route
-                path="/shipping-profile"
-                element={renderRoute("/shipping-profile", <ShippingProfiles />)}
-              />
-              <Route
-                path="/pickup-addresses"
-                element={renderRoute("/pickup-addresses", <PickupAddresses />)}
-              />
+                  <Route
+                    path="/shipping-company-users"
+                    element={renderRoute(
+                      "/shipping-company-users",
+                      <ShippingCompanyUsers />,
+                    )}
+                  />
+                  <Route
+                    path="/shipping-packages"
+                    element={renderRoute(
+                      "/shipping-packages",
+                      <ShippingPackages />,
+                    )}
+                  />
+                  <Route
+                    path="/shipping-profile"
+                    element={renderRoute(
+                      "/shipping-profile",
+                      <ShippingProfiles />,
+                    )}
+                  />
+                  <Route
+                    path="/pickup-addresses"
+                    element={renderRoute(
+                      "/pickup-addresses",
+                      <PickupAddresses />,
+                    )}
+                  />
 
-              <Route
-                path="/categories"
-                element={renderRoute("/categories", <ProductCategories />)}
-              />
-              <Route
-                path="/category-attributes"
-                element={renderRoute(
-                  "/category-attributes",
-                  <CategoryAttributes />,
-                )}
-              />
-              <Route
-                path="/subscription-orders"
-                element={renderRoute(
-                  "/subscription-orders",
-                  <SubscriptionOrders />,
-                )}
-              />
-              <Route
-                path="/content-management"
-                element={renderRoute(
-                  "/content-management",
-                  <ContentManagement />,
-                )}
-              />
-              <Route
-                path="/content-management/:type"
-                element={renderRoute(
-                  "/content-management",
-                  <ContentManagement />,
-                )}
-              />
-              <Route
-                path="/view-orders"
-                element={renderRoute("/view-orders", <OrderSummary />)}
-              />
-              <Route
-                path="/product-catalog/form/:id?"
-                element={renderRoute(
-                  "/product-catalog/form",
-                  <AddEditProductPopup />,
-                )}
-              />
-              <Route
-                path="/product-catalog/view/:id"
-                element={renderRoute(
-                  "/product-catalog",
-                  <ProductAdminDetails />,
-                )}
-              />
-              <Route
-                path="/view-subscription-orders"
-                element={renderRoute(
-                  "/view-subscription-orders",
-                  <ViewSubscriptionOrders />,
-                )}
-              />
-              <Route
-                path="/profile"
-                element={renderRoute("/profile", <Profile />)}
-              />
-              <Route
-                path="/changePassword"
-                element={renderRoute("/changePassword", <ChangePassword />)}
-              />
-              <Route
-                path="/state"
-                element={renderRoute("/state", <ManageState />)}
-              />
-              <Route
-                path="/city"
-                element={renderRoute("/city", <ManageCity />)}
-              />
-              <Route
-                path="/country"
-                element={renderRoute("/country", <ManageCountry />)}
-              />
-              <Route
-                path="/zip-codes"
-                element={renderRoute("/zip-codes", <ManageZipCode />)}
-              />
+                  <Route
+                    path="/categories"
+                    element={renderRoute("/categories", <ProductCategories />)}
+                  />
+                  <Route
+                    path="/category-attributes"
+                    element={renderRoute(
+                      "/category-attributes",
+                      <CategoryAttributes />,
+                    )}
+                  />
+                  <Route
+                    path="/subscription-orders"
+                    element={renderRoute(
+                      "/subscription-orders",
+                      <SubscriptionOrders />,
+                    )}
+                  />
+                  <Route
+                    path="/content-management"
+                    element={renderRoute(
+                      "/content-management",
+                      <ContentManagement />,
+                    )}
+                  />
+                  <Route
+                    path="/content-management/:type"
+                    element={renderRoute(
+                      "/content-management",
+                      <ContentManagement />,
+                    )}
+                  />
+                  <Route
+                    path="/view-orders"
+                    element={renderRoute("/view-orders", <OrderSummary />)}
+                  />
+                  <Route
+                    path="/product-catalog/form/:id?"
+                    element={renderRoute(
+                      "/product-catalog/form",
+                      <AddEditProductPopup />,
+                    )}
+                  />
+                  <Route
+                    path="/product-catalog/view/:id"
+                    element={renderRoute(
+                      "/product-catalog",
+                      <ProductAdminDetails />,
+                    )}
+                  />
+                  <Route
+                    path="/view-subscription-orders"
+                    element={renderRoute(
+                      "/view-subscription-orders",
+                      <ViewSubscriptionOrders />,
+                    )}
+                  />
+                  <Route
+                    path="/profile"
+                    element={renderRoute("/profile", <Profile />)}
+                  />
+                  <Route
+                    path="/changePassword"
+                    element={renderRoute("/changePassword", <ChangePassword />)}
+                  />
+                  <Route
+                    path="/state"
+                    element={renderRoute("/state", <ManageState />)}
+                  />
+                  <Route
+                    path="/city"
+                    element={renderRoute("/city", <ManageCity />)}
+                  />
+                  <Route
+                    path="/country"
+                    element={renderRoute("/country", <ManageCountry />)}
+                  />
+                  <Route
+                    path="/zip-codes"
+                    element={renderRoute("/zip-codes", <ManageZipCode />)}
+                  />
 
-              <Route
-                path="/tax-structure"
-                element={renderRoute("/tax-structure", <TaxStructure />)}
-              />
-              <Route
-                path="/tax-category"
-                element={renderRoute("/tax-category", <TaxCategory />)}
-              />
-              <Route
-                path="/tax-category-rules"
-                element={renderRoute("/tax-category-rules", <TaxRules />)}
-              />
+                  <Route
+                    path="/tax-structure"
+                    element={renderRoute("/tax-structure", <TaxStructure />)}
+                  />
+                  <Route
+                    path="/tax-category"
+                    element={renderRoute("/tax-category", <TaxCategory />)}
+                  />
+                  <Route
+                    path="/tax-category-rules"
+                    element={renderRoute("/tax-category-rules", <TaxRules />)}
+                  />
 
-              <Route
-                path="/product-variants"
-                element={renderRoute("/product-variants", <ProductVariants />)}
-              />
-              <Route
-                path="/product-families"
-                element={renderRoute("/product-families", <ProductFamilies />)}
-              />
-              <Route
-                path="/product-dimensions"
-                element={renderRoute(
-                  "/product-dimensions",
-                  <ProductDimensions />,
-                )}
-              />
+                  <Route
+                    path="/product-variants"
+                    element={renderRoute(
+                      "/product-variants",
+                      <ProductVariants />,
+                    )}
+                  />
+                  <Route
+                    path="/product-families"
+                    element={renderRoute(
+                      "/product-families",
+                      <ProductFamilies />,
+                    )}
+                  />
+                  <Route
+                    path="/product-dimensions"
+                    element={renderRoute(
+                      "/product-dimensions",
+                      <ProductDimensions />,
+                    )}
+                  />
 
-              <Route
-                path="/finish"
-                element={renderRoute("/finish", <FinishProducts />)}
-              />
+                  <Route
+                    path="/finish"
+                    element={renderRoute("/finish", <FinishProducts />)}
+                  />
 
-              <Route
-                path="/user-permissions/:id"
-                element={renderSupportedRoute(
-                  "/user-permissions",
-                  <UserPermissions setModuleName={setModuleName} />,
-                )}
-              />
-              <Route
-                path="/seller"
-                element={renderRoute("/seller", <Sellers />)}
-              />
+                  <Route
+                    path="/user-permissions/:id"
+                    element={renderSupportedRoute(
+                      "/user-permissions",
+                      <UserPermissions setModuleName={setModuleName} />,
+                    )}
+                  />
+                  <Route
+                    path="/seller"
+                    element={renderRoute("/seller", <Sellers />)}
+                  />
 
-              <Route
-                path="/product-option-value/:id"
-                element={renderSupportedRoute(
-                  "/product-options",
-                  <ProductOptionValue setModuleName={setModuleName} />,
-                )}
-              />
+                  <Route
+                    path="/product-option-value/:id"
+                    element={renderSupportedRoute(
+                      "/product-options",
+                      <ProductOptionValue setModuleName={setModuleName} />,
+                    )}
+                  />
 
-              <Route
-                path="/warranty"
-                element={renderRoute("/warranty", <ProductWarranty />)}
-              />
-              <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
-              <Route
-                path="/subTax"
-                element={renderSupportedRoute(
-                  "/subTax",
-                  <SubTax setModuleName={setModuleName} />,
-                )}
-              />
-              <Route
-                path="/subTax/:id"
-                element={renderSupportedRoute(
-                  "/subTax",
-                  <SubTax setModuleName={setModuleName} />,
-                )}
-              />
-              <Route
-                path="/tax-rule"
-                element={renderSupportedRoute(
-                  "/tax-rule",
-                  <TaxRule setModuleName={setModuleName} />,
-                )}
-              />
-              <Route
-                path="/discount-coupons"
-                element={renderRoute("/discount-coupons", <DiscountCoupons />)}
-              />
+                  <Route
+                    path="/warranty"
+                    element={renderRoute("/warranty", <ProductWarranty />)}
+                  />
+                  <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
+                  <Route
+                    path="/subTax"
+                    element={renderSupportedRoute(
+                      "/subTax",
+                      <SubTax setModuleName={setModuleName} />,
+                    )}
+                  />
+                  <Route
+                    path="/subTax/:id"
+                    element={renderSupportedRoute(
+                      "/subTax",
+                      <SubTax setModuleName={setModuleName} />,
+                    )}
+                  />
+                  <Route
+                    path="/tax-rule"
+                    element={renderSupportedRoute(
+                      "/tax-rule",
+                      <TaxRule setModuleName={setModuleName} />,
+                    )}
+                  />
+                  <Route
+                    path="/discount-coupons"
+                    element={renderRoute(
+                      "/discount-coupons",
+                      <DiscountCoupons />,
+                    )}
+                  />
 
-              <Route
-                path="/bar-code"
-                element={renderRoute("/barcode", <BarcodePage />)}
-              />
-              <Route
-                path="/hsn-code"
-                element={renderRoute("/hsn-code", <HsnCode />)}
-              />
-              <Route
-                path="/orders/view/:id"
-                element={renderRoute("/orders/view", <OrderSummary />)}
-              />
+                  <Route
+                    path="/bar-code"
+                    element={renderRoute("/barcode", <BarcodePage />)}
+                  />
+                  <Route
+                    path="/hsn-code"
+                    element={renderRoute("/hsn-code", <HsnCode />)}
+                  />
+                  <Route
+                    path="/orders/view/:id"
+                    element={renderRoute("/orders/view", <OrderSummary />)}
+                  />
 
-              {/* ── Catalog Management — filtered product views ─────────── */}
-              <Route
-                path="/add-product"
-                element={renderRoute("/add-product", <ProductCatalog />)}
-              />
-              <Route
-                path="/draft-products"
-                element={renderRoute("/draft-products", <ProductCatalog />)}
-              />
-              <Route
-                path="/pending-products"
-                element={renderRoute("/pending-products", <ProductCatalog />)}
-              />
-              <Route
-                path="/rejected-products"
-                element={renderRoute("/rejected-products", <ProductCatalog />)}
-              />
-              <Route
-                path="/product-option-values"
-                element={renderRoute(
-                  "/product-option-values",
-                  <ProductOptionValue setModuleName={setModuleName} />,
-                )}
-              />
+                  {/* ── Catalog Management — filtered product views ─────────── */}
+                  <Route
+                    path="/add-product"
+                    element={renderRoute("/add-product", <ProductCatalog />)}
+                  />
+                  <Route
+                    path="/draft-products"
+                    element={renderRoute("/draft-products", <ProductCatalog />)}
+                  />
+                  <Route
+                    path="/pending-products"
+                    element={renderRoute(
+                      "/pending-products",
+                      <ProductCatalog />,
+                    )}
+                  />
+                  <Route
+                    path="/rejected-products"
+                    element={renderRoute(
+                      "/rejected-products",
+                      <ProductCatalog />,
+                    )}
+                  />
+                  <Route
+                    path="/product-option-values"
+                    element={renderRoute(
+                      "/product-option-values",
+                      <ProductOptionValue setModuleName={setModuleName} />,
+                    )}
+                  />
 
-              {/* ── Inventory Management ────────────────────────────────── */}
-              <Route
-                path="/inventory-overview"
-                element={renderRoute(
-                  "/inventory-overview",
-                  <InventoryOverview />,
-                )}
-              />
-              <Route
-                path="/variant-inventory"
-                element={renderRoute(
-                  "/variant-inventory",
-                  <VariantInventory />,
-                )}
-              />
-              <Route
-                path="/inventory-adjustment"
-                element={renderRoute(
-                  "/inventory-adjustment",
-                  <InventoryAdjustment />,
-                )}
-              />
-              <Route
-                path="/warehouse"
-                element={renderRoute("/warehouse", <WarehouseManagement />)}
-              />
-              <Route
-                path="/low-stock-alerts"
-                element={renderRoute("/low-stock-alerts", <LowStockAlerts />)}
-              />
+                  {/* ── Inventory Management ────────────────────────────────── */}
+                  <Route
+                    path="/inventory-overview"
+                    element={renderRoute(
+                      "/inventory-overview",
+                      <InventoryOverview />,
+                    )}
+                  />
+                  <Route
+                    path="/variant-inventory"
+                    element={renderRoute(
+                      "/variant-inventory",
+                      <VariantInventory />,
+                    )}
+                  />
+                  <Route
+                    path="/inventory-adjustment"
+                    element={renderRoute(
+                      "/inventory-adjustment",
+                      <InventoryAdjustment />,
+                    )}
+                  />
+                  <Route
+                    path="/warehouse"
+                    element={renderRoute("/warehouse", <WarehouseManagement />)}
+                  />
+                  <Route
+                    path="/low-stock-alerts"
+                    element={renderRoute(
+                      "/low-stock-alerts",
+                      <LowStockAlerts />,
+                    )}
+                  />
 
-              {/* ── Orders Management — new routes ──────────────────────── */}
-              <Route
-                path="/refunds"
-                element={renderRoute("/refunds", <UsersTransactions />)}
-              />
+                  {/* ── Orders Management — new routes ──────────────────────── */}
+                  <Route
+                    path="/refunds"
+                    element={renderRoute("/refunds", <UsersTransactions />)}
+                  />
 
-              {/* ── Users & Access — new routes ─────────────────────────── */}
-              <Route
-                path="/seller-staff"
-                element={renderRoute("/seller-users", <SellerUsers />)}
-              />
-              <Route
-                path="/roles-permissions"
-                element={renderRoute(
-                  "/roles-permissions",
-                  <RolesPermissions />,
-                )}
-              />
-              <Route
-                path="/module-management"
-                element={renderRoute(
-                  "/module-management",
-                  <ModuleManagement />,
-                )}
-              />
-              <Route
-                path="/activity-logs"
-                element={renderRoute("/activity-logs", <ActivityLogs />)}
-              />
+                  {/* ── Users & Access — new routes ─────────────────────────── */}
+                  <Route
+                    path="/seller-staff"
+                    element={renderRoute("/seller-users", <SellerUsers />)}
+                  />
+                  <Route
+                    path="/roles-permissions"
+                    element={renderRoute(
+                      "/roles-permissions",
+                      <RolesPermissions />,
+                    )}
+                  />
+                  <Route
+                    path="/module-management"
+                    element={renderRoute(
+                      "/module-management",
+                      <ModuleManagement />,
+                    )}
+                  />
+                  <Route
+                    path="/activity-logs"
+                    element={renderRoute("/activity-logs", <ActivityLogs />)}
+                  />
 
-              {/* ── Marketing — new routes ──────────────────────────────── */}
+                  {/* ── Marketing — new routes ──────────────────────────────── */}
 
-              {/* ── Reports & Analytics ─────────────────────────────────── */}
-              <Route
-                path="/reports-sales"
-                element={renderRoute("/reports-sales", <SalesReport />)}
-              />
-              <Route
-                path="/reports-products"
-                element={renderRoute("/reports-products", <ProductAnalytics />)}
-              />
-              <Route
-                path="/reports-inventory"
-                element={renderRoute(
-                  "/reports-inventory",
-                  <InventoryAnalytics />,
-                )}
-              />
-              <Route
-                path="/reports-sellers"
-                element={renderRoute("/reports-sellers", <SellerAnalytics />)}
-              />
-            </Routes>
+                  {/* ── Reports & Analytics ─────────────────────────────────── */}
+                  <Route
+                    path="/reports-sales"
+                    element={renderRoute("/reports-sales", <SalesReport />)}
+                  />
+                  <Route
+                    path="/reports-products"
+                    element={renderRoute(
+                      "/reports-products",
+                      <ProductAnalytics />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-inventory"
+                    element={renderRoute(
+                      "/reports-inventory",
+                      <InventoryAnalytics />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-sellers"
+                    element={renderRoute(
+                      "/reports-sellers",
+                      <SellerAnalytics />,
+                    )}
+                  />
+                </Routes>
               </motion.div>
             </AnimatePresence>
           </Suspense>
