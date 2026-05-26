@@ -255,10 +255,12 @@ const parseApiError = (error, fallbackMessage) => {
 
 const formatDateForDisplay = (value) => {
   if (!value) return "";
-  const [year, month, day] = value.split("-");
+  const [year, month, day] = String(value).slice(0, 10).split("-");
   if (!year || !month || !day) return value;
   return `${day}/${month}/${year}`;
 };
+
+const toDateInputValue = (value) => (value ? String(value).slice(0, 10) : "");
 
 const getIsoDateYearsAgo = (years) => {
   const date = new Date();
@@ -821,7 +823,8 @@ const SellerOnboarding = () => {
             prev.mobileNumber ||
             sellerProfile?.supportPhone ||
             "",
-          dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
+          dateOfBirth:
+            prev.dateOfBirth || toDateInputValue(sellerProfile?.dateOfBirth),
         }));
         setProfileForm((prev) => ({
           ...prev,
@@ -973,7 +976,8 @@ const SellerOnboarding = () => {
         prev.mobileNumber ||
         sellerProfile?.supportPhone ||
         "",
-      dateOfBirth: prev.dateOfBirth || sellerProfile?.dateOfBirth || "",
+      dateOfBirth:
+        prev.dateOfBirth || toDateInputValue(sellerProfile?.dateOfBirth),
     }));
     setProfileForm((prev) => ({
       ...prev,
