@@ -22,19 +22,51 @@ const profileToForm = (user = {}) => {
     };
 };
 
-const formatDate = (value) => {
+const formatDate = (value, withTime = true) => {
     if (!value) return '-';
     const date = new Date(value);
-    return Number.isNaN(date.getTime())
-        ? String(value)
-        : date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString('en-IN', withTime
+        ? { dateStyle: 'medium', timeStyle: 'short' }
+        : { dateStyle: 'medium' });
 };
 
 const formatValue = (value) => {
     if (value === true) return 'Yes';
     if (value === false) return 'No';
+    if (Array.isArray(value)) return value.length ? value.join(', ') : '-';
     return value === undefined || value === null || value === '' ? '-' : String(value);
 };
+
+const hasValue = (value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === 'object') return Object.values(value).some(hasValue);
+    return value !== undefined && value !== null && value !== '';
+};
+
+const hasAddressValue = (address = {}) => (
+    Boolean(
+        address.line1 ||
+        address.line2 ||
+        address.addressLine1 ||
+        address.addressLine2 ||
+        address.address ||
+        address.city ||
+        address.state ||
+        address.postalCode ||
+        address.zipCode ||
+        address.pincode ||
+        address.country
+    )
+);
+
+const getAddressValue = (address = {}, key) => (
+    address[key] ||
+    (key === 'line1' ? address.addressLine1 || address.address : '') ||
+    (key === 'line2' ? address.addressLine2 : '') ||
+    (key === 'postalCode' ? address.zipCode || address.pincode : '')
+);
 
 const DetailField = ({ label, value, className = '' }) => (
     <div className={className}>
@@ -43,16 +75,43 @@ const DetailField = ({ label, value, className = '' }) => (
     </div>
 );
 
+const EditableField = ({ label, name, value, onChange, disabled, className = '' }) => (
+    <div className={className}>
+        <label className="admin-label">{label}</label>
+        <input className="admin-input" name={name} value={value || ''} onChange={onChange} disabled={disabled} />
+    </div>
+);
+
 const ProfileSection = ({ number, title, children }) => (
-    <section className="mt-8 first:mt-0">
+    <section className="mt-9 first:mt-0">
         <h3 className="admin-section-title">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#e49e1c] text-[10px] text-white">
                 {number}
             </span>
             {title}
         </h3>
-        <div className="mt-5">{children}</div>
+        <div className="mt-5 space-y-5">{children}</div>
     </section>
+);
+
+const FieldGrid = ({ children }) => (
+    <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-12">
+        {children}
+    </div>
+);
+
+const AddressBlock = ({ title, address }) => (
+    <div className="rounded-lg border border-[#e8e2db] bg-[#fffdfa] p-4">
+        <p className="mb-4 text-xs font-semibold text-[#082f91]">{title}</p>
+        <FieldGrid>
+            <DetailField label="Address Line 1" value={getAddressValue(address, 'line1')} className="md:col-span-6" />
+            <DetailField label="Address Line 2" value={getAddressValue(address, 'line2')} className="md:col-span-6" />
+            <DetailField label="City" value={address.city} className="md:col-span-6" />
+            <DetailField label="State" value={address.state} className="md:col-span-3" />
+            <DetailField label="Zip Code" value={getAddressValue(address, 'postalCode')} className="md:col-span-3" />
+            <DetailField label="Country" value={address.country} className="md:col-span-6" />
+        </FieldGrid>
+    </div>
 );
 
 const Profile = () => {
@@ -164,14 +223,23 @@ const Profile = () => {
     const profile = formData.profile || {};
     const sellerProfile = formData.sellerProfile || {};
     const sellerSettings = formData.sellerSettings || {};
+    const bankDetails = sellerProfile.bankDetails || {};
+    const businessAddress = sellerProfile.businessAddress || {};
+    const pickupAddress = sellerProfile.pickupAddress || {};
+    const onboardingChecklist = sellerProfile.onboardingChecklist || {};
     const allowedModules = Array.isArray(formData.allowedModules) ? formData.allowedModules : [];
     const addresses = Array.isArray(formData.addresses) ? formData.addresses : [];
     const authProviders = Array.isArray(formData.authProviders) ? formData.authProviders : [];
-    const sessionCount = Array.isArray(formData.refreshSessions) ? formData.refreshSessions.length : 0;
-    const hasSellerProfile = Object.keys(sellerProfile).length > 0;
+    const refreshSessions = Array.isArray(formData.refreshSessions) ? formData.refreshSessions : [];
+    const latestSession = refreshSessions[refreshSessions.length - 1] || {};
+    const isSeller = formData.role === 'seller';
+    const hasSellerProfile = isSeller && Object.keys(sellerProfile).length > 0;
+    const hasSellerAddresses = isSeller && (hasAddressValue(businessAddress) || hasAddressValue(pickupAddress));
+    let currentSection = 0;
+    const nextSectionNumber = () => String(++currentSection).padStart(2, '0');
 
     return (
-        <div className="admin-page px-4 py-6 sm:px-8">
+        <div className="admin-page px-4 sm:px-8">
             <Loader loading={loading} />
             {showSuccess && (
                 <div className="fixed right-4 top-20 z-50 flex items-center gap-2 rounded-md bg-emerald-600 px-5 py-3 text-sm text-white shadow-lg">
@@ -180,11 +248,15 @@ const Profile = () => {
                 </div>
             )}
 
-            <div className="mx-auto max-w-[1040px]">
+            <div className="mb-7 mx-auto max-w-[1400px]">
                 <div className="mb-6">
-                    <p className="text-[10px] font-semibold text-[#e49e1c]">Seller profile &gt; Edit</p>
-                    <h1 className="mt-3 text-2xl font-bold text-[#082f91]">Seller Profile</h1>
-                    <p className="mt-1 text-xs text-slate-500">Manage your personal and business details</p>
+                    <p className="text-[10px] font-semibold text-[#e49e1c]">
+                        {isSeller ? 'Seller profile > Edit' : 'My profile > Edit'}
+                    </p>
+                    <h1 className="mt-3 text-2xl font-bold text-[#082f91]">
+                        {isSeller ? 'Seller Profile' : 'My Profile'}
+                    </h1>
+                    <p className="mt-1 text-xs text-slate-500">Manage your personal and account details</p>
                 </div>
 
                 <div className="admin-card px-5 py-6 sm:px-10">
@@ -219,44 +291,63 @@ const Profile = () => {
                         )}
                     </div>
 
-                    <ProfileSection number="01" title="Personal / Owner Details">
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                            <div>
-                                <label className="admin-label">Full Name</label>
-                                <input className="admin-input" name="full_name" value={formData.full_name || ''} onChange={handleChange} disabled={!isEditing} />
-                            </div>
-                            <DetailField label="Email Address" value={formData.email} />
-                            <DetailField label="First Name" value={profile.firstName} />
-                            <DetailField label="Last Name" value={profile.lastName} />
-                            <DetailField label="Username" value={formData.userName} />
-                            <DetailField label="Phone Number" value={formData.phone} />
-                        </div>
+                    <ProfileSection number={nextSectionNumber()} title="Personal / Owner Details">
+                        <FieldGrid>
+                            <EditableField
+                                label="Full Name"
+                                name="full_name"
+                                value={formData.full_name}
+                                onChange={handleChange}
+                                disabled={!isEditing}
+                                className="md:col-span-6"
+                            />
+                            <DetailField label="Email Address" value={formData.email} className="md:col-span-6" />
+                            {isSeller && (
+                                <>
+                                    <DetailField label="Date of Birth" value={formatDate(sellerProfile.dateOfBirth, false)} className="md:col-span-6" />
+                                    <DetailField label="City" value={pickupAddress.city || businessAddress.city} className="md:col-span-3" />
+                                    <DetailField label="Zip Code" value={pickupAddress.postalCode || businessAddress.postalCode} className="md:col-span-3" />
+                                </>
+                            )}
+                            <DetailField label="Phone Number" value={formData.phone} className="md:col-span-6" />
+                            <DetailField label="Primary Contact Name" value={sellerProfile.primaryContactName} className="md:col-span-6" />
+                            <DetailField label="First Name" value={profile.firstName} className="md:col-span-3" />
+                            <DetailField label="Last Name" value={profile.lastName} className="md:col-span-3" />
+                            <DetailField label="Username" value={formData.userName} className="md:col-span-6" />
+                        </FieldGrid>
                     </ProfileSection>
 
-                    <ProfileSection number="02" title="Account Information">
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                            <DetailField label="User ID" value={formData._id || formData.id} />
-                            <DetailField label="Role" value={formData.role} />
-                            <DetailField label="Account Status" value={formData.accountStatus} />
-                            <DetailField label="Email Verified" value={formData.emailVerified} />
-                            <DetailField label="Owner Admin ID" value={formData.ownerAdminId} />
-                            <DetailField label="Owner Seller ID" value={formData.ownerSellerId} />
-                            <DetailField label="Created At" value={formatDate(formData.createdAt)} />
-                            <DetailField label="Updated At" value={formatDate(formData.updatedAt)} />
-                            <DetailField label="Last Login At" value={formatDate(formData.lastLoginAt)} />
-                            <DetailField label="Active Sessions" value={sessionCount} />
-                        </div>
+                    <ProfileSection number={nextSectionNumber()} title="Account Information">
+                        <FieldGrid>
+                            <DetailField label="User ID" value={formData._id || formData.id} className="md:col-span-6" />
+                            <DetailField label="Role" value={formData.role} className="md:col-span-3" />
+                            <DetailField label="Account Status" value={formData.accountStatus} className="md:col-span-3" />
+                            <DetailField label="Referral Code" value={formData.referralCode} className="md:col-span-6" />
+                            <DetailField label="Hierarchy Level" value={formData.hierarchyLevel} className="md:col-span-3" />
+                            <DetailField label="Email Verified" value={formData.emailVerified} className="md:col-span-3" />
+                            <DetailField label="Created At" value={formatDate(formData.createdAt)} className="md:col-span-6" />
+                            <DetailField label="Updated At" value={formatDate(formData.updatedAt)} className="md:col-span-3" />
+                            <DetailField label="Last Login At" value={formatDate(formData.lastLoginAt)} className="md:col-span-3" />
+                        </FieldGrid>
                     </ProfileSection>
 
-                    <ProfileSection number="03" title="Access & Permissions">
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+                    <ProfileSection number={nextSectionNumber()} title="Access & Sessions">
+                        <FieldGrid>
                             <DetailField
                                 label="Authentication Providers"
-                                value={authProviders.map((provider) => provider.provider).join(', ') || 'Password'}
+                                value={authProviders.map((provider) => provider.provider || provider).join(', ') || 'Password'}
+                                className="md:col-span-6"
                             />
-                            <DetailField label="Allowed Modules Count" value={allowedModules.length} />
-                        </div>
-                        <div className="mt-4">
+                            <DetailField label="Allowed Modules Count" value={allowedModules.length} className="md:col-span-3" />
+                            <DetailField label="Active Sessions" value={refreshSessions.length} className="md:col-span-3" />
+                            <DetailField label="Latest Session Provider" value={latestSession.provider} className="md:col-span-6" />
+                            <DetailField label="Latest Platform" value={latestSession.platform} className="md:col-span-3" />
+                            <DetailField label="Latest IP Address" value={latestSession.ipAddress} className="md:col-span-3" />
+                            <DetailField label="Latest Used At" value={formatDate(latestSession.lastUsedAt)} className="md:col-span-6" />
+                            <DetailField label="Latest Created At" value={formatDate(latestSession.createdAt)} className="md:col-span-6" />
+                        </FieldGrid>
+
+                        <div>
                             <label className="admin-label">Allowed Modules</label>
                             <div className="min-h-[40px] rounded-[6px] border border-[#dad7ea] bg-[#faf8ff]/70 px-3 py-2">
                                 {allowedModules.length ? (
@@ -274,51 +365,90 @@ const Profile = () => {
                         </div>
                     </ProfileSection>
 
-                    <ProfileSection number="04" title="Seller Settings">
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
-                            <DetailField label="Auto Accept Orders" value={sellerSettings.autoAcceptOrders} />
-                            <DetailField label="Handling Time (Hours)" value={sellerSettings.handlingTimeHours} />
-                            <DetailField label="Return Window (Days)" value={sellerSettings.returnWindowDays} />
-                            <DetailField label="NDR Response (Hours)" value={sellerSettings.ndrResponseHours} />
-                            <DetailField label="Payout Schedule" value={sellerSettings.payoutSchedule} />
-                            <DetailField label="Shipping Modes" value={(sellerSettings.shippingModes || []).join(', ')} />
-                        </div>
-                    </ProfileSection>
+                    {isSeller && (
+                        <ProfileSection number={nextSectionNumber()} title="Seller Settings">
+                            <FieldGrid>
+                                <DetailField label="Auto Accept Orders" value={sellerSettings.autoAcceptOrders} className="md:col-span-6" />
+                                <DetailField label="Handling Time (Hours)" value={sellerSettings.handlingTimeHours} className="md:col-span-3" />
+                                <DetailField label="Return Window (Days)" value={sellerSettings.returnWindowDays} className="md:col-span-3" />
+                                <DetailField label="Payout Schedule" value={sellerSettings.payoutSchedule} className="md:col-span-6" />
+                                <DetailField label="NDR Response (Hours)" value={sellerSettings.ndrResponseHours} className="md:col-span-3" />
+                                <DetailField label="Shipping Modes" value={sellerSettings.shippingModes} className="md:col-span-3" />
+                            </FieldGrid>
+                        </ProfileSection>
+                    )}
 
                     {hasSellerProfile && (
-                        <ProfileSection number="05" title="Business Information">
-                            <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                                <DetailField label="Display Name" value={sellerProfile.displayName} />
-                                <DetailField label="Legal Business Name" value={sellerProfile.legalBusinessName} />
-                                <DetailField label="Business Type" value={sellerProfile.businessType} />
-                                <DetailField label="GST Number" value={sellerProfile.gstNumber} />
-                                <DetailField label="PAN Number" value={sellerProfile.panNumber} />
-                                <DetailField label="Support Email" value={sellerProfile.supportEmail} />
-                                <DetailField label="Support Phone" value={sellerProfile.supportPhone} />
-                                <DetailField label="Website" value={sellerProfile.businessWebsite} />
-                                <DetailField label="KYC Status" value={sellerProfile.kycStatus} />
-                                <DetailField label="Onboarding Status" value={sellerProfile.onboardingStatus} />
+                        <ProfileSection number={nextSectionNumber()} title="Business & KYC Details">
+                            <FieldGrid>
+                                <DetailField label="Display Name" value={sellerProfile.displayName} className="md:col-span-6" />
+                                <DetailField label="Legal Business Name" value={sellerProfile.legalBusinessName} className="md:col-span-6" />
+                                <DetailField label="Business Type" value={sellerProfile.businessType} className="md:col-span-6" />
+                                <DetailField label="Registration Number" value={sellerProfile.registrationNumber} className="md:col-span-3" />
+                                <DetailField label="Business Website" value={sellerProfile.businessWebsite} className="md:col-span-3" />
+                                <DetailField label="GST Number" value={sellerProfile.gstNumber} className="md:col-span-6" />
+                                <DetailField label="PAN Number" value={sellerProfile.panNumber} className="md:col-span-6" />
+                                <DetailField label="Aadhaar Number" value={sellerProfile.aadhaarNumber} className="md:col-span-6" />
+                                <DetailField label="Support Email" value={sellerProfile.supportEmail} className="md:col-span-6" />
+                                <DetailField label="Support Phone" value={sellerProfile.supportPhone} className="md:col-span-6" />
+                                <DetailField label="Description" value={sellerProfile.description} className="md:col-span-6" />
+                                <DetailField label="KYC Status" value={sellerProfile.kycStatus} className="md:col-span-3" />
+                                <DetailField label="Bank Verification Status" value={sellerProfile.bankVerificationStatus} className="md:col-span-3" />
+                                <DetailField label="Go Live Status" value={sellerProfile.goLiveStatus} className="md:col-span-3" />
+                                <DetailField label="Onboarding Status" value={sellerProfile.onboardingStatus} className="md:col-span-3" />
+                                <DetailField label="Profile Completed" value={sellerProfile.profileCompleted} className="md:col-span-6" />
+                                <DetailField label="Rejection Reason" value={sellerProfile.rejectionReason} className="md:col-span-6" />
+                                <DetailField label="Verified By" value={sellerProfile.verifiedBy} className="md:col-span-6" />
+                                <DetailField label="Verified At" value={formatDate(sellerProfile.verifiedAt)} className="md:col-span-6" />
+                                <DetailField label="Go Live Approved By" value={sellerProfile.goLiveApprovedBy} className="md:col-span-6" />
+                                <DetailField label="Go Live Approved At" value={formatDate(sellerProfile.goLiveApprovedAt)} className="md:col-span-6" />
+                            </FieldGrid>
+                        </ProfileSection>
+                    )}
+
+                    {hasSellerProfile && (
+                        <ProfileSection number={nextSectionNumber()} title="Onboarding Checklist">
+                            <FieldGrid>
+                                <DetailField label="Profile Completed" value={onboardingChecklist.profileCompleted} className="md:col-span-6" />
+                                <DetailField label="KYC Submitted" value={onboardingChecklist.kycSubmitted} className="md:col-span-3" />
+                                <DetailField label="GST Verified" value={onboardingChecklist.gstVerified} className="md:col-span-3" />
+                                <DetailField label="Bank Linked" value={onboardingChecklist.bankLinked} className="md:col-span-6" />
+                                <DetailField label="First Product Published" value={onboardingChecklist.firstProductPublished} className="md:col-span-6" />
+                            </FieldGrid>
+                        </ProfileSection>
+                    )}
+
+                    {isSeller && hasValue(bankDetails) && (
+                        <ProfileSection number={nextSectionNumber()} title="Bank Details">
+                            <FieldGrid>
+                                <DetailField label="Account Holder Name" value={bankDetails.accountHolderName} className="md:col-span-6" />
+                                <DetailField label="Account Number" value={bankDetails.accountNumber} className="md:col-span-6" />
+                                <DetailField label="IFSC Code" value={bankDetails.ifscCode} className="md:col-span-6" />
+                                <DetailField label="Bank Name" value={bankDetails.bankName} className="md:col-span-3" />
+                                <DetailField label="Branch Name" value={bankDetails.branchName} className="md:col-span-3" />
+                                <DetailField label="Bank Rejection Reason" value={sellerProfile.bankRejectionReason} className="md:col-span-12" />
+                            </FieldGrid>
+                        </ProfileSection>
+                    )}
+
+                    {hasSellerAddresses && (
+                        <ProfileSection number={nextSectionNumber()} title="Seller Addresses">
+                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                {hasAddressValue(businessAddress) && <AddressBlock title="Business Address" address={businessAddress} />}
+                                {hasAddressValue(pickupAddress) && <AddressBlock title="Pickup Address" address={pickupAddress} />}
                             </div>
                         </ProfileSection>
                     )}
 
-                    <ProfileSection number={hasSellerProfile ? '06' : '05'} title="Addresses">
+                    <ProfileSection number={nextSectionNumber()} title="Saved Addresses">
                         {addresses.length ? (
                             <div className="space-y-4">
                                 {addresses.map((address, index) => (
-                                    <div key={address._id || index} className="rounded-lg border border-[#e8e2db] bg-[#fffdfa] p-4">
-                                        <p className="mb-4 text-xs font-semibold text-[#082f91]">
-                                            Address {index + 1}{address.isDefault ? ' (Default)' : ''}
-                                        </p>
-                                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
-                                            <DetailField label="Address Line" value={address.line1 || address.addressLine1 || address.address} />
-                                            <DetailField label="City" value={address.city} />
-                                            <DetailField label="State" value={address.state} />
-                                            <DetailField label="Postal Code" value={address.postalCode || address.zipCode || address.pincode} />
-                                            <DetailField label="Country" value={address.country} />
-                                            <DetailField label="Type" value={address.type || address.addressType} />
-                                        </div>
-                                    </div>
+                                    <AddressBlock
+                                        key={address._id || index}
+                                        title={`Address ${index + 1}${address.isDefault ? ' (Default)' : ''}`}
+                                        address={address}
+                                    />
                                 ))}
                             </div>
                         ) : (
