@@ -49,7 +49,7 @@ const EmailInput = React.memo(
           });
         }
       },
-      [onChange, onlyNumber]
+      [onChange, onlyNumber],
     );
 
     const handleBlur = useCallback(
@@ -60,7 +60,7 @@ const EmailInput = React.memo(
           onBlur(event);
         }
       },
-      [email, onBlur]
+      [email, onBlur],
     );
 
     useEffect(() => {
@@ -79,12 +79,11 @@ const EmailInput = React.memo(
 
     return (
       <div className={`w-full ${containerClassName}`}>
-
         {/* LABEL */}
         {label && (
           <label
             htmlFor={id}
-           className={`
+            className={`
   mb-[6px] flex items-start gap-1
   font-[Inter] text-[13px] font-medium leading-[17px]
   tracking-[0.14px] align-middle text-[#484555]
@@ -95,14 +94,13 @@ const EmailInput = React.memo(
             {label}
 
             {required && (
-              <LuAsterisk className="mt-[2px] text-[10px] text-[#B42318]" />
+              <LuAsterisk className="mt-[2px] text-[10px]  text-[#B42318]" />
             )}
           </label>
         )}
 
         {/* INPUT WRAPPER */}
         <div className="relative">
-
           {/* ICON */}
           {Icon && (
             <Icon
@@ -132,18 +130,13 @@ const EmailInput = React.memo(
               disabled:cursor-not-allowed
               disabled:opacity-70
 
-              ${
-                errorMessage
-                  ? "border-red-400 focus:ring-red-100"
-                  : ""
-              }
+              ${errorMessage ? "border-red-400 focus:ring-red-100" : ""}
 
               ${inputClassName}
               ${className}
             `}
             {...rest}
           />
-
         </div>
 
         {/* ERROR MESSAGE */}
@@ -154,7 +147,7 @@ const EmailInput = React.memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default EmailInput;

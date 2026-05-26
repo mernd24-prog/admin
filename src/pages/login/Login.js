@@ -220,6 +220,14 @@ const Login = () => {
         isValid = false;
       }
 
+      if (!formFields.lastName.trim()) {
+        errors.lastName = "Last name is required";
+        isValid = false;
+      } else if (formFields.lastName.trim().length < 2) {
+        errors.lastName = "Last name must be at least 2 characters";
+        isValid = false;
+      }
+
       if (!formFields.phone.trim()) {
         errors.phone = "Phone is required";
         isValid = false;
@@ -295,10 +303,8 @@ const Login = () => {
       return;
     }
 
-    const [firstName, ...lastNameParts] = formFields.fullName
-      .trim()
-      .split(/\s+/);
-    const lastName = lastNameParts.join(" ");
+    const firstName = formFields.fullName.trim();
+    const lastName = formFields.lastName.trim();
 
     try {
       const response = await dispatch(
@@ -1179,9 +1185,20 @@ const Login = () => {
                   name="fullName"
                   label="Full Name"
                   value={formFields.fullName}
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. John"
                   onChange={handleInputChange}
                   errorMessage={formErrors.fullName}
+                  inputClassName={authInputClassName}
+                  labelClassName={authLabelClassName}
+                />
+                <EmailInput
+                  id="lastName"
+                  name="lastName"
+                  label="Last Name"
+                  value={formFields.lastName}
+                  placeholder="e.g. Doe"
+                  onChange={handleInputChange}
+                  errorMessage={formErrors.lastName}
                   inputClassName={authInputClassName}
                   labelClassName={authLabelClassName}
                 />
@@ -1212,7 +1229,6 @@ const Login = () => {
                   errorMessage={formErrors.phone}
                   inputClassName={authInputClassName}
                   labelClassName={authLabelClassName}
-                  containerClassName="md:col-span-2"
                 />
 
                 <PasswordInput
