@@ -59,6 +59,36 @@ export const TableSkeletonLoader = ({ columns = 5, rows = 10 }) => {
     </div>
   );
 };
+
+export const CardSkeletonLoader = ({ count = 4 }) => (
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Loading cards">
+    {Array.from({ length: count }).map((_, index) => (
+      <div key={index} className="admin-card p-4">
+        <SkeletonLoader height={18} width="45%" />
+        <div className="mt-4"><SkeletonLoader height={30} width="60%" /></div>
+      </div>
+    ))}
+  </div>
+);
+
+export const FormSkeletonLoader = ({ fields = 4 }) => (
+  <div className="admin-card space-y-5 p-5" aria-label="Loading form">
+    {Array.from({ length: fields }).map((_, index) => (
+      <div key={index}>
+        <SkeletonLoader height={12} width={100} />
+        <div className="mt-2"><SkeletonLoader height={40} /></div>
+      </div>
+    ))}
+  </div>
+);
+
+export const PageSkeletonLoader = () => (
+  <div className="space-y-5 p-6" aria-label="Loading page">
+    <SkeletonLoader height={26} width={220} />
+    <CardSkeletonLoader />
+    <TableSkeletonLoader rows={6} />
+  </div>
+);
 // import React from 'react';
 // import Skeleton from 'react-loading-skeleton';
 // import 'react-loading-skeleton/dist/skeleton.css';

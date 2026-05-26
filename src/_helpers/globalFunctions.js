@@ -1,10 +1,9 @@
 import { toast } from "sonner";
 import { apiRequestImage } from "./apiConfig";
-import { BsEyeFill } from "react-icons/bs";
 import { useState } from "react";
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { FiAlertCircle, FiAlignLeft, FiCornerLeftUp } from "react-icons/fi";
+import { FiAlertCircle } from "react-icons/fi";
 import { FaRegFileAlt } from "react-icons/fa";
 
 const keyData = "EcomAdmin";
@@ -346,12 +345,9 @@ export const DownloadExcelButton = ({
         headers.forEach((header, colIndex) => {
           const field = item[header];
           let value = '';
-          let hasError = false;
-
           if (field && typeof field === 'object' && 'value' in field) {
             value = field.value ?? '';
             if (field.error && field.color === 'red') {
-              hasError = true;
               value = `ERROR: ${value}`;
               errorCells.push({
                 row: rowIndex + 1,

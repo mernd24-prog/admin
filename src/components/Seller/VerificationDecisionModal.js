@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import DefaultMiddleModal from '../Atoms/Modal/DefaultMiddleModal ';
-import FormInput from '../Atoms/FormInput/FormInput';
 
 /**
  * Reusable modal for KYC / bank / onboarding verification decisions.

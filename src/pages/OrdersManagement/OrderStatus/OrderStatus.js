@@ -7,6 +7,7 @@ import TableData from '../../../components/Atoms/TableData/TableData';
 import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
 import { createContentPage, deleteContentPage, getContentPages, updateContentPage } from '../../../Redux/adminCoreSlice';
+import { dropdownApi } from '../../../_helpers/dropdownApi';
 
 const PAGE_TYPE = 'order_status';
 
@@ -29,19 +30,6 @@ const toStatusRow = (status) => ({
   },
 });
 
-const DEFAULT_ORDER_STATUSES = [
-  { slug: 'order-status-pending-payment', title: 'Pending Payment', status: 'pending_payment', priority: 1 },
-  { slug: 'order-status-payment-failed', title: 'Payment Failed', status: 'payment_failed', priority: 2 },
-  { slug: 'order-status-confirmed', title: 'Confirmed', status: 'confirmed', priority: 3 },
-  { slug: 'order-status-packed', title: 'Packed', status: 'packed', priority: 4 },
-  { slug: 'order-status-shipped', title: 'Shipped', status: 'shipped', priority: 5 },
-  { slug: 'order-status-delivered', title: 'Delivered', status: 'delivered', priority: 6 },
-  { slug: 'order-status-return-requested', title: 'Return Requested', status: 'return_requested', priority: 7 },
-  { slug: 'order-status-returned', title: 'Returned', status: 'returned', priority: 8 },
-  { slug: 'order-status-cancelled', title: 'Cancelled', status: 'cancelled', priority: 9 },
-  { slug: 'order-status-fulfilled', title: 'Fulfilled', status: 'fulfilled', priority: 10 },
-];
-
 const OrderStatus = () => {
   const dispatch = useDispatch();
   const adminCoreSelector = useSelector((state) => state.adminCore);
@@ -52,8 +40,18 @@ const OrderStatus = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const seedDefaultOrderStatuses = async () => {
-    await Promise.all(DEFAULT_ORDER_STATUSES.map((status) =>
+  const getSystemOrderStatuses = async () => {
+    const options = await dropdownApi.getSystemOptions('order-statuses');
+    return options.map((option, index) => ({
+      slug: `order-status-${option.value.replace(/_/g, '-')}`,
+      title: option.label,
+      status: option.value,
+      priority: index + 1,
+    }));
+  };
+
+  const seedDefaultOrderStatuses = async (systemStatuses) => {
+    await Promise.all(systemStatuses.map((status) =>
       dispatch(createContentPage({
         slug: status.slug,
         title: status.title,
@@ -73,16 +71,17 @@ const OrderStatus = () => {
   const loadOrderStatuses = async () => {
     try {
       setIsLoading(true);
+      const systemStatuses = await getSystemOrderStatuses();
       const response = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
       let list = extractList(response);
       if (!list.length) {
-        await seedDefaultOrderStatuses();
+        await seedDefaultOrderStatuses(systemStatuses);
         const seededResponse = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
         list = extractList(seededResponse);
       }
-      setApiRes(list.length ? list : DEFAULT_ORDER_STATUSES.map(toStatusRow));
+      setApiRes(list.length ? list : systemStatuses.map(toStatusRow));
     } catch (error) {
-      setApiRes(DEFAULT_ORDER_STATUSES.map(toStatusRow));
+      setApiRes([]);
       toast.error(error?.message || error || 'Failed to load order statuses');
     } finally {
       setIsLoading(false);

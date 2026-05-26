@@ -1,46 +1,39 @@
 import React from 'react';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
-const PRODUCT_TYPES = [
-  {
-    value: 'simple',
-    label: 'Simple Product',
+const TYPE_PRESENTATION = {
+  simple: {
     description: 'Single product with no variants. E.g. a book, pen, charger.',
     icon: '📦',
   },
-  {
-    value: 'variable',
-    label: 'Variable Product',
+  variable: {
     description: 'Has variants like size, color, storage. E.g. T-shirt, Mobile.',
     icon: '🎨',
   },
-  {
-    value: 'digital',
-    label: 'Digital Product',
+  digital: {
     description: 'Downloadable file, software license, course, or e-book.',
     icon: '💾',
   },
-  {
-    value: 'bundle',
-    label: 'Bundle / Combo',
+  bundle: {
     description: 'A kit of multiple products sold together at a combo price.',
     icon: '🎁',
   },
-  {
-    value: 'subscription',
-    label: 'Subscription',
+  subscription: {
     description: 'Recurring billing product with trial, monthly/yearly plans.',
     icon: '🔄',
   },
-];
+};
 
 const ProductTypeSelector = ({ value, onChange, disabled = false }) => {
+  const productTypes = useDropdownOptions('product-types');
   return (
     <div>
       <p className="text-sm font-medium text-gray-700 mb-3">
         Product Type <span className="text-red-500">*</span>
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {PRODUCT_TYPES.map((type) => {
+        {productTypes.options.map((option) => {
+          const type = { ...option, ...(TYPE_PRESENTATION[option.value] || {}) };
           const selected = value === type.value;
           return (
             <button

@@ -3,8 +3,10 @@ import { MdOutlineClose } from 'react-icons/md';
 import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
+import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 const AddEditCoupons = ({ isOpen, onClose }) => {
+  const discountTypes = useDropdownOptions('discount-types');
   const today = new Date().toISOString().split('T')[0];
   const maxDate = '2099-12-31';
 
@@ -110,7 +112,7 @@ const AddEditCoupons = ({ isOpen, onClose }) => {
               type="select"
               value={formData.discountType}
               onChange={handleChange}
-              options={['percentage', 'fixed']}
+              options={discountTypes.options}
             />
 
             <FormInput

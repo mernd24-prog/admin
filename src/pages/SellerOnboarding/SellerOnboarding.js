@@ -16,6 +16,7 @@ import { useKYC } from "../../context/KycContext";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import SellerStatusScreen from "../../components/StatusScreen/SellerStatusScreen";
+import useDropdownOptions, { withSelectedOption } from "../../hooks/useDropdownOptions";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
@@ -89,6 +90,45 @@ const ONBOARDING_STEP_META = {
 
 const getOnboardingStepMeta = (step) =>
   ONBOARDING_STEP_META[step] || ONBOARDING_STEP_META[1];
+
+const OnboardingSelect = ({
+  name,
+  label,
+  value,
+  options,
+  onChange,
+  loading,
+  error,
+  required = false,
+  disabled = false,
+  placeholder,
+}) => (
+  <div>
+    <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+      {label} {required && STEP_ONE_REQUIRED}
+    </label>
+    <div className="relative">
+      <select
+        name={name}
+        className={`${STEP_ONE_INPUT_CLASS} appearance-none pr-10`}
+        value={value}
+        onChange={onChange}
+        disabled={disabled || loading}
+      >
+        <option value="">{loading ? "Loading..." : placeholder || `Select ${label}`}</option>
+        {withSelectedOption(options, value).map((option) => (
+          <option key={`${name}-${option.id || option.value}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-3 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full bg-[#082f91] text-white">
+        <ChevronDown size={12} />
+      </span>
+    </div>
+    {error && <p className={ERROR_CLASS}>{error}</p>}
+  </div>
+);
 
 const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
   const meta = { ...getOnboardingStepMeta(step), ...metaOverride };
@@ -564,6 +604,22 @@ const SellerOnboarding = () => {
     bankName: "",
     branchName: "",
   });
+  const businessTypes = useDropdownOptions("business-types");
+  const countries = useDropdownOptions("countries", { limit: 250 });
+  const optionIdByValue = (options, value) =>
+    options.find((option) => String(option.value) === String(value))?.id || "";
+  const pickupCountryId = optionIdByValue(countries.options, profileForm.pickupCountry);
+  const pickupStates = useDropdownOptions("states", { parentId: pickupCountryId, limit: 250 }, { enabled: Boolean(pickupCountryId) });
+  const pickupStateId = optionIdByValue(pickupStates.options, profileForm.pickupState);
+  const pickupCities = useDropdownOptions("cities", { parentId: pickupStateId, limit: 250 }, { enabled: Boolean(pickupStateId) });
+  const pickupCityId = optionIdByValue(pickupCities.options, profileForm.pickupCity);
+  const pickupPincodes = useDropdownOptions("pincodes", { parentId: pickupCityId, limit: 250 }, { enabled: Boolean(pickupCityId) });
+  const businessCountryId = optionIdByValue(countries.options, profileForm.businessAddressCountry);
+  const businessStates = useDropdownOptions("states", { parentId: businessCountryId, limit: 250 }, { enabled: Boolean(businessCountryId) });
+  const businessStateId = optionIdByValue(businessStates.options, profileForm.businessAddressState);
+  const businessCities = useDropdownOptions("cities", { parentId: businessStateId, limit: 250 }, { enabled: Boolean(businessStateId) });
+  const businessCityId = optionIdByValue(businessCities.options, profileForm.businessAddressCity);
+  const businessPincodes = useDropdownOptions("pincodes", { parentId: businessCityId, limit: 250 }, { enabled: Boolean(businessCityId) });
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -1141,6 +1197,15 @@ const SellerOnboarding = () => {
               : normalized,
     }));
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
+  };
+  const onAddressSelectChange = (field, resetFields = []) => (event) => {
+    const { value } = event.target;
+    setProfileForm((prev) => ({
+      ...prev,
+      [field]: value,
+      ...resetFields.reduce((result, childField) => ({ ...result, [childField]: "" }), {}),
+    }));
+    setProfileErrors((prev) => ({ ...prev, [field]: null }));
   };
   const onBankChange = (event) => {
     const { name, value } = event.target;

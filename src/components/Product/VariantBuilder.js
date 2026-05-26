@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { uploadFile } from '../../_helpers/globalFunctions';
 import { toast } from 'sonner';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
 const DISPLAY_TYPES = [
   { value: 'button', label: 'Button' },
@@ -41,6 +42,7 @@ const VariantBuilder = ({
   onOptionSearch,
   onValueSearch,
 }) => {
+  const productStatuses = useDropdownOptions('product-statuses');
   const [optionSearch, setOptionSearch] = useState('');
   const [showOptionDropdown, setShowOptionDropdown] = useState(false);
   const [activeOptionIdx, setActiveOptionIdx] = useState(null);
@@ -439,9 +441,9 @@ const VariantBuilder = ({
                 <input type="number" min={0} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-full" value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
                 <input type="number" min={0} max={100} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-full" value={variant.gstRate ?? 18} onChange={(e) => updateVariant(idx, 'gstRate', Number(e.target.value))} />
                 <select className="border border-gray-300 rounded px-1 py-1 text-xs w-full" value={variant.status || 'active'} onChange={(e) => updateVariant(idx, 'status', e.target.value)}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="out_of_stock">OOS</option>
+                  {productStatuses.options
+                    .filter((option) => ['active', 'inactive'].includes(option.value))
+                    .map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button type="button" title="Manage images" onClick={() => toggleExpandVariant(idx)}

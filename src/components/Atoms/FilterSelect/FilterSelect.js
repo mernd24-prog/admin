@@ -1,19 +1,20 @@
 import React from 'react';
 import Select from 'react-select';
+import AsyncSelect from 'react-select/async';
 
 const customStyles = (error) => ({
   control: (provided, state) => ({
     ...provided,
-    backgroundColor: '#F7FAFC',
-    borderColor: error ? '' : 'transparent',
-    boxShadow: error ? '0 0 0 1px #E53E3E' : 'none',
+    backgroundColor: 'var(--admin-field)',
+    borderColor: error ? 'var(--admin-danger)' : state.isFocused ? 'var(--admin-navy)' : 'var(--admin-field-line)',
+    boxShadow: error ? '0 0 0 1px var(--admin-danger)' : state.isFocused ? '0 0 0 2px rgba(8, 47, 145, 0.1)' : 'none',
     borderRadius: '0.375rem',
     minHeight: '42px',
     paddingLeft: '0.5rem',
     paddingRight: '0.5rem',
     cursor: 'pointer',
     '&:hover': {
-      borderColor: error ? '' : '#CBD5E0',
+      borderColor: error ? 'var(--admin-danger)' : 'var(--admin-navy)',
     },
   }),
   placeholder: (provided) => ({
@@ -49,27 +50,48 @@ const FilterSelect = ({
   isDisabled = false,
   placeholder = label ? label : "Search by User's Name or Username",
   isMulti = false,
-  error = "", // <-- new prop
-  required
+  error = "",
+  required,
+  name,
+  inputId = name,
+  isLoading = false,
+  isClearable = false,
+  isSearchable = true,
+  onBlur,
+  helperText,
+  className = "",
+  loadOptions,
+  defaultOptions = true,
+  cacheOptions = true,
 }) => {
+  const SelectComponent = loadOptions ? AsyncSelect : Select;
   return (
-    <div className='relative'>
-      <label className="label block text-sm font-medium text-gray-700 mb-3">
+    <div className={`admin-field relative ${className}`}>
+      {label && <label htmlFor={inputId} className="admin-label">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {required && <span className="admin-required">*</span>}
+      </label>}
       <div className="relative text-sm min-w-40">
-        <Select
+        <SelectComponent
           styles={customStyles(error)}
           className='capitalize'
-          options={options}
+          inputId={inputId}
+          name={name}
+          {...(loadOptions
+            ? { loadOptions, defaultOptions, cacheOptions }
+            : { options })}
           value={value}
           onChange={onChange}
+          onBlur={onBlur}
           isDisabled={isDisabled}
           placeholder={placeholder}
           isMulti={isMulti}
+          isLoading={isLoading}
+          isClearable={isClearable}
+          isSearchable={isSearchable}
+          aria-invalid={Boolean(error)}
         />
-        <span className='text-xs text-red-500'>{error}</span>
+        {error ? <p className="admin-field-error" role="alert">{error}</p> : helperText && <p className="admin-field-help">{helperText}</p>}
       </div>
     </div>
   );

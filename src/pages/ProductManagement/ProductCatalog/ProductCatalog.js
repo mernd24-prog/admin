@@ -25,6 +25,8 @@ import UploadFile from '../../../components/Atoms/UploadFile/UploadFile';
 import Button from '../../../components/Atoms/buttons/button';
 import ProductReviewModal from '../../../components/Product/ProductReviewModal';
 import ProductStatusBadge from '../../../components/Product/ProductStatusBadge';
+import PermissionGuard from '../../../components/Atoms/PermissionGuard/PermissionGuard';
+import { ExportButton } from '../../../components/Shared';
 import { getShopList } from '../../../Redux/StoreSlice';
 // import { GoDesktopDownload } from "react-icons/go";
 
@@ -225,10 +227,6 @@ const ProductCatalog = () => {
     setReviewModal({ open: true, product: data });
   };
 
-  const handleRejectProduct = (data) => {
-    setReviewModal({ open: true, product: data });
-  };
-
   const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
     const product = reviewModal.product;
     const apiPayload = {
@@ -370,7 +368,7 @@ const ProductCatalog = () => {
         <span>{product?.stock ?? 'N/A'}</span>,
         <ProductStatusBadge status={product?.status} />,
         <span key={`date-${product._id}`}>{formatDate(product.createdAt)}</span>,
-        <ToggleButton key={`toggle-${product._id}`} isToggle={!product?.isDisable} handleClick={() => handleToggle(product)} />,
+        <ToggleButton key={`toggle-${product._id}`} isToggle={!product?.isDisable} handleClick={() => handleToggle(product)} requiredModule="products" />,
         <span>
           <div className="flex flex-wrap gap-2">
             <ActionButtons
@@ -379,13 +377,16 @@ const ProductCatalog = () => {
               onViewClick={() => navigate(`/app/product-catalog/view/${product?._id}`)}
               showLinkButton={false}
               onDelete={() => handleDelete(product)}
+              requiredModule="products"
             />
-            <button
-              className="text-xs px-2 py-1 rounded bg-[#3E4094] text-white hover:bg-[#2e3074]"
-              onClick={() => handleApproveToggle(product)}
-            >
-              Review
-            </button>
+            <PermissionGuard module="products" action="approve" hide>
+              <button
+                className="text-xs px-2 py-1 rounded bg-[#3E4094] text-white hover:bg-[#2e3074]"
+                onClick={() => handleApproveToggle(product)}
+              >
+                Review
+              </button>
+            </PermissionGuard>
           </div>
         </span>
       ];
@@ -451,8 +452,9 @@ const ProductCatalog = () => {
         <h1 className="text-xl font-bold">Product Catalog</h1>
         <div className='flex justify-end gap-2'>
           <Button onClick={() => navigate(`/app/product-catalog/bulk-history`)}>Bulk History</Button>
-          <AddButton onClick={handleAddBulkUpload} labelName={`Add in bulk`} />
-          <AddButton onClick={handleAddNavigate} />
+          <ExportButton data={apiRes?.list || []} filename="products" requiredModule="products" />
+          <AddButton onClick={handleAddBulkUpload} labelName={`Add in bulk`} requiredModule="products" requiredAction="import" />
+          <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
       <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
@@ -484,6 +486,7 @@ const ProductCatalog = () => {
             isProduct={true} isProductType={true} isUser={true}
             applyFilters={handleSearchApply} handleSearchRemove={clearFilters}
             isActionButton={true} isStatusAction={true} handleAction={handleBulkAction}
+            requiredModule="products"
           />
         </section>
         <section>

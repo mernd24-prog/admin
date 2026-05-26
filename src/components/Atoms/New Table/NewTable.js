@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import Button from '../buttons/button';
 import SearchInput from '../SearchInput/SearchInput';
 import FilterSelect from '../FilterSelect/FilterSelect';
@@ -35,21 +35,14 @@ export default function SearchComponent({
   approvalOptions = [],
   productTypeOptions = [], activationStatus, approvalStatus, orderFrom, orderTo, fromLabel, toLabel, isDelete, deleteLable, placeholder, isSelectNearSearch = false, applyFilters,
   countryLabel, countryOptions = [], handleSearchRemove, productLabel, brandOption, isBrand,
-  mobailClassName
+  mobailClassName,
+  requiredModule,
+  searchDebounce = 0,
 
 }) {
   const [searchDown, setSearchDown] = useState(false);
   const [, setFilteredProducts] = useState([]);
-  const filterContainerRef = useRef(null);
-  const [filterHeight, setFilterHeight] = useState(0);
   const [isFiltering] = useState(false);
-
-
-  useEffect(() => {
-    if (filterContainerRef.current) {
-      setFilterHeight(filterContainerRef.current.scrollHeight);
-    }
-  }, [searchDown]);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -101,6 +94,7 @@ export default function SearchComponent({
               handleChange={(e) => handleFilterChange('search', e.target.value)}
               disabled={isFiltering}
               handleRemove={handleSearchRemove}
+              debounce={searchDebounce}
             />
           </div>
           {
@@ -148,6 +142,8 @@ export default function SearchComponent({
                     <Button
                       onClick={() => handleBulkAction('Active')}
                       disabled={selectedRow.length === 0 || loading || isFiltering}
+                      requiredModule={requiredModule}
+                      requiredAction="status"
                       className={selectedRow.length === 0 ? ' cursor-not-allowed border-[#dee2e6] gap-2' : 'border-blue-500 text-blue-500 gap-2'}
                     >
                       <PiToggleRightThin />
@@ -156,6 +152,8 @@ export default function SearchComponent({
                     <Button
                       onClick={() => handleBulkAction('Inactive')}
                       disabled={selectedRow.length === 0 || loading || isFiltering}
+                      requiredModule={requiredModule}
+                      requiredAction="status"
                       className={selectedRow.length === 0 ? ' cursor-not-allowed border-[#dee2e6] gap-2' : 'border-blue-500 text-blue-500 gap-2'}
                     >
                       <PiToggleLeftThin /> Deactivate
@@ -168,6 +166,8 @@ export default function SearchComponent({
                   < Button
                     onClick={() => handleBulkAction('Delete')}
                     disabled={selectedRow.length === 0 || loading || isFiltering}
+                    requiredModule={requiredModule}
+                    requiredAction="delete"
                     className={selectedRow.length === 0 ? ' cursor-not-allowed border-[#dee2e6] gap-2' : 'border-blue-500 text-blue-500 gap-2'}
                   >
                     <MdOutlineDeleteOutline /> Delete
@@ -183,7 +183,7 @@ export default function SearchComponent({
 
       {
         isSearchShow && (
-          <div ref={filterContainerRef} className={` transition-all duration-300 ease-in-out ${searchDown ? 'opacity-100 mb-4 ' : 'opacity-0 max-h-0'}`}   >
+          <div className={` transition-all duration-300 ease-in-out ${searchDown ? 'opacity-100 mb-4 ' : 'opacity-0 max-h-0'}`}   >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end text-xs">
 
 

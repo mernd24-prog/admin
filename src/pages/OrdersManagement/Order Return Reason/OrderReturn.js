@@ -9,8 +9,8 @@ import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import Loader from '../../../components/Loader/Loader';
 import Pagination from '../../../components/Pagination/Pagination';
-import selectJson from '../../../_helpers/SelectJson.json';
 import { getOrderList } from '../../../Redux/orderSlice';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 const PAGE_SIZE = 10;
 
@@ -35,6 +35,7 @@ const OrderReturn = () => {
   const [selectedRow, setSelectedRow] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pageNo, setPageNo] = useState(1);
+  const orderStatuses = useDropdownOptions('order-statuses');
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -148,7 +149,7 @@ const OrderReturn = () => {
             dateTo={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
-            activationStatusOptions={selectJson?.ORDER_STATUS || []}
+            activationStatusOptions={orderStatuses.options}
             handleFilterChange={handleFilterChange}
           />
           <div className="bg-white border border-[#E6E6E6]">

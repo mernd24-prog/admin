@@ -1,22 +1,5 @@
 import React from 'react';
-
-const FILE_TYPES = [
-  { value: 'pdf', label: 'PDF' },
-  { value: 'epub', label: 'ePub' },
-  { value: 'zip', label: 'ZIP Archive' },
-  { value: 'mp4', label: 'MP4 Video' },
-  { value: 'mp3', label: 'MP3 Audio' },
-  { value: 'software', label: 'Software' },
-  { value: 'image', label: 'Image' },
-  { value: 'other', label: 'Other' },
-];
-
-const LICENSE_TYPES = [
-  { value: 'single', label: 'Single Device' },
-  { value: 'multi', label: 'Multi Device' },
-  { value: 'unlimited', label: 'Unlimited' },
-  { value: 'subscription', label: 'Subscription-Based' },
-];
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
 const Field = ({ label, hint, children }) => (
   <div className="space-y-1">
@@ -34,6 +17,8 @@ const Field = ({ label, hint, children }) => (
  *  onChange - (field, value) => void  (field = 'digital.xxx')
  */
 const DigitalProductPanel = ({ digital = {}, onChange }) => {
+  const fileTypes = useDropdownOptions('digital-file-types');
+  const licenseTypes = useDropdownOptions('digital-license-types');
   const set = (key, val) => onChange(`digital.${key}`, val);
 
   return (
@@ -76,7 +61,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
             onChange={(e) => set('fileType', e.target.value)}
           >
             <option value="">Select type…</option>
-            {FILE_TYPES.map((t) => (
+            {fileTypes.options.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
@@ -124,10 +109,10 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       <Field label="License Type">
         <select
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
-          value={digital.licenseType || 'single'}
+          value={digital.licenseType || 'single_use'}
           onChange={(e) => set('licenseType', e.target.value)}
         >
-          {LICENSE_TYPES.map((l) => (
+          {licenseTypes.options.map((l) => (
             <option key={l.value} value={l.value}>{l.label}</option>
           ))}
         </select>

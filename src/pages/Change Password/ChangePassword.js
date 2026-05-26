@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Input from '../../components/Atoms/Input/Input';
 import Button from '../../components/Atoms/buttons/button';
 import { changePassword } from '../../Redux/userManagementSlice';
 import { useDispatch, useSelector } from 'react-redux';

@@ -5,16 +5,12 @@ import PermissionGuard from '../../components/Atoms/PermissionGuard/PermissionGu
 import { ACTIONS } from '../../_helpers/usePermission';
 import { axiosPrivate as axiosProvider } from '../../_helpers/axiosProvider';
 import { toast } from 'react-toastify';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 
 const TYPES = [
   { value: 'add',       label: 'Add Stock',        icon: MdAdd,    color: 'text-green-600' },
   { value: 'remove',    label: 'Remove Stock',      icon: MdRemove, color: 'text-red-500'   },
   { value: 'set',       label: 'Set Exact',         icon: MdCheck,  color: 'text-blue-500'  },
-];
-
-const REASONS = [
-  'Purchase / Restock', 'Return from Customer', 'Damaged Goods',
-  'Stock Count Correction', 'Transfer', 'Other',
 ];
 
 const InventoryAdjustment = () => {
@@ -28,6 +24,7 @@ const InventoryAdjustment = () => {
   const [reason, setReason]     = useState('');
   const [note, setNote]         = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const adjustmentReasons = useDropdownOptions('inventory-adjustment-reasons');
 
   const searchProducts = async () => {
     if (!search.trim()) return;
@@ -166,7 +163,7 @@ const InventoryAdjustment = () => {
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF] bg-white"
                 >
                   <option value="">Select reason…</option>
-                  {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {adjustmentReasons.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </div>
 

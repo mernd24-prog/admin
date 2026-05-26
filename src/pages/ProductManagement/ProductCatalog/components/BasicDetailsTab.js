@@ -9,6 +9,7 @@ import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../../components/Atoms/Input/Input';
 import Loader from '../../../../components/Loader/Loader';
+import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 // Modals
 import AddStoreModal from './Modals/AddStoreModal';
@@ -88,6 +89,7 @@ export default function BasicDetailsTab({
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector(state => state);
+  const warrantyUnits = useDropdownOptions('warranty-units');
 
   const modifiedCountry = transformArray(getListPayload(selector?.country?.getAllCountryListData));
   const modifiedState = transformArray(getListPayload(selector?.state?.getAllStateListData));
@@ -753,20 +755,11 @@ export default function BasicDetailsTab({
             />
             <FilterSelect
               label="Warranty Unit"
-              value={[
-                { value: 'days', label: 'Days' },
-                { value: 'weeks', label: 'Weeks' },
-                { value: 'months', label: 'Months' },
-                { value: 'years', label: 'Years' },
-              ].find(opt => opt.value === formData.warranty?.periodUnit) || null}
+              value={warrantyUnits.options.find(opt => opt.value === formData.warranty?.periodUnit) || null}
               onChange={(e) => handleChange({ target: { name: 'warranty.periodUnit', value: e?.value || '' } })}
-              options={[
-                { value: 'days', label: 'Days' },
-                { value: 'weeks', label: 'Weeks' },
-                { value: 'months', label: 'Months' },
-                { value: 'years', label: 'Years' },
-              ]}
+              options={warrantyUnits.options}
               placeholder="Select unit"
+              isLoading={warrantyUnits.loading}
             />
             <Input
               labelName="Warranty Provider"

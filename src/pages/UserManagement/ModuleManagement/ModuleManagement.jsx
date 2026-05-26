@@ -9,6 +9,7 @@ import {
   updateRbacModule,
   updateRbacModuleStatus,
 } from "../../../Redux/adminCoreSlice";
+import useDropdownOptions from "../../../hooks/useDropdownOptions";
 
 const emptyForm = {
   moduleName: "",
@@ -53,6 +54,8 @@ export default function ModuleManagement() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const recordStatuses = useDropdownOptions("record-statuses");
+  const moduleTypes = useDropdownOptions("module-types");
 
   const payload = useMemo(() => getPayload(selector?.rbacModulesData), [selector?.rbacModulesData]);
   const modules = useMemo(() => payload.list || payload.items || [], [payload]);
@@ -233,9 +236,7 @@ export default function ModuleManagement() {
         />
         <select value={status} onChange={(event) => setStatus(event.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
           <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="draft">Draft</option>
+          {recordStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <button onClick={load} className="px-4 py-2 text-sm rounded border border-[#3E4094] text-[#3E4094] bg-white">Apply</button>
       </div>
@@ -316,10 +317,7 @@ export default function ModuleManagement() {
               </label>
               <label className="text-sm">Module Type
                 <select value={form.moduleType} onChange={(e) => setForm((p) => ({ ...p, moduleType: e.target.value }))} className="mt-1 w-full border rounded px-3 py-2">
-                  <option value="group">Group</option>
-                  <option value="module">Module</option>
-                  <option value="page">Page</option>
-                  <option value="action">Action</option>
+                  {moduleTypes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </label>
               <label className="text-sm">Order
@@ -327,9 +325,7 @@ export default function ModuleManagement() {
               </label>
               <label className="text-sm">Status
                 <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="mt-1 w-full border rounded px-3 py-2">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="draft">Draft</option>
+                  {recordStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </label>
               <label className="text-sm">Permissions

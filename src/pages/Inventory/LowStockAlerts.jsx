@@ -3,6 +3,8 @@ import { MdNotifications, MdAddCircleOutline } from 'react-icons/md';
 import { PageHeader, DataTable, StatusBadge } from '../../components/Shared';
 import { axiosPrivate as axiosProvider } from '../../_helpers/axiosProvider';
 import { toast } from 'react-toastify';
+import PermissionGuard from '../../components/Atoms/PermissionGuard/PermissionGuard';
+import { ACTIONS } from '../../_helpers/usePermission';
 
 const COLUMNS = [
   { key: 'title',      label: 'Product',   sortable: true },
@@ -68,9 +70,11 @@ const LowStockAlerts = () => {
         subtitle="Products that need to be restocked soon"
         breadcrumbs={[{ label: 'Inventory Management' }, { label: 'Low Stock Alerts' }]}
         actions={
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#989AFF] text-white text-sm rounded-lg hover:bg-[#7b7de8]">
-            <MdAddCircleOutline size={16} /> Restock All
-          </button>
+          <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
+            <button className="admin-btn-primary">
+              <MdAddCircleOutline size={16} /> Restock All
+            </button>
+          </PermissionGuard>
         }
       />
 
@@ -91,6 +95,8 @@ const LowStockAlerts = () => {
         pageSize={20}
         onPageChange={setPage}
         emptyText="No low stock alerts — all products are well stocked!"
+        requiredModule="inventory"
+        exportConfig={{ filename: 'low-stock-alerts', columns: COLUMNS }}
       />
     </div>
   );

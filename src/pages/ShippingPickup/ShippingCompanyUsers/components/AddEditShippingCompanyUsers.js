@@ -3,6 +3,7 @@ import { MdOutlineClose } from 'react-icons/md';
 import ButtonTransparent from '../../../../components/ButtonTransparent/button';
 import NewButton from '../../../../components/Button/NewButton';
 import FormInput from '../../../../components/Atoms/FormInput/FormInput';
+import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 const AddEditShippingCompanyUsers = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -11,16 +12,27 @@ const AddEditShippingCompanyUsers = ({ isOpen, onClose }) => {
     dob: '',
     phone: '',
     email: '',
-    country: 'United States',
+    country: '',
     state: '',
     city: '',
     trackingUrl: '',
   });
+  const countries = useDropdownOptions('countries', { limit: 250 });
+  const countryId = countries.options.find((option) => option.value === formData.country)?.id || '';
+  const states = useDropdownOptions('states', { parentId: countryId, limit: 250 }, { enabled: Boolean(countryId) });
+  const stateId = states.options.find((option) => option.value === formData.state)?.id || '';
+  const cities = useDropdownOptions('cities', { parentId: stateId, limit: 250 }, { enabled: Boolean(stateId) });
 
 
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+      ...(name === 'country' ? { state: '', city: '' } : {}),
+      ...(name === 'state' ? { city: '' } : {}),
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -86,7 +98,7 @@ const AddEditShippingCompanyUsers = ({ isOpen, onClose }) => {
               type="select"
               value={formData.country}
               onChange={handleChange}
-              options={['United States', 'Canada', 'Mexico']}
+              options={[{ label: 'Select Country', value: '' }, ...countries.options]}
             />
             <FormInput
               label="State*"
@@ -94,14 +106,17 @@ const AddEditShippingCompanyUsers = ({ isOpen, onClose }) => {
               type="select"
               value={formData.state}
               onChange={handleChange}
-              options={['Select State', 'California', 'Texas', 'Florida', 'New York']}
+              options={[{ label: 'Select State', value: '' }, ...states.options]}
+              disabled={!countryId || states.loading}
             />
             <FormInput
               label="City"
               name="city"
+              type="select"
               value={formData.city}
               onChange={handleChange}
-              placeholder="Enter city"
+              options={[{ label: 'Select City', value: '' }, ...cities.options]}
+              disabled={!stateId || cities.loading}
             />
 
             {/* Full-width tracking URL */}

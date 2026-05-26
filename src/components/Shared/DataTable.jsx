@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { MdSearch, MdChevronLeft, MdChevronRight, MdUnfoldMore } from 'react-icons/md';
+import React, { useEffect, useState } from 'react';
+import { MdSearch, MdRefresh, MdUnfoldMore } from 'react-icons/md';
+import Pagination from '../Pagination/Pagination';
+import CustomCheckbox from '../Atoms/Checkbox/Checkbox';
+import { ExportButton, ImportButton } from './TableTools';
 
 const SkeletonRow = ({ cols }) => (
   <tr className="animate-pulse">
@@ -44,12 +47,29 @@ const DataTable = ({
   onSort,
   sortKey,
   sortDir = 'asc',
+  selectable = false,
+  selectedKeys = [],
+  onSelectionChange,
+  onRefresh,
+  error,
+  pageSizeOptions = [10, 20, 50, 100],
+  onPageSizeChange,
+  exportConfig,
+  importConfig,
+  requiredModule,
 }) => {
   const [searchValue, setSearchValue] = useState('');
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  const getKey = (row) =>
-    typeof rowKey === 'function' ? rowKey(row) : row[rowKey] ?? Math.random();
+  const getKey = (row, index) =>
+    typeof rowKey === 'function' ? rowKey(row) : row[rowKey] ?? row.id ?? index;
+  const pageKeys = data.map((row, index) => getKey(row, index));
+  const allSelected = pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
+  const selectedData = data.filter((row, index) => selectedKeys.includes(getKey(row, index)));
+
+  useEffect(() => {
+    if (page > totalPages && onPageChange) onPageChange(totalPages);
+  }, [onPageChange, page, totalPages]);
 
   const handleSearch = (e) => {
     const v = e.target.value;
@@ -61,10 +81,42 @@ const DataTable = ({
     if (col.sortable && onSort) onSort(col.key, sortKey === col.key && sortDir === 'asc' ? 'desc' : 'asc');
   };
 
+  const toggleAll = (checked) => {
+    if (!onSelectionChange) return;
+    const remaining = selectedKeys.filter((key) => !pageKeys.includes(key));
+    onSelectionChange(checked ? [...remaining, ...pageKeys] : remaining);
+  };
+
+  const toggleRow = (key, checked) => {
+    if (!onSelectionChange) return;
+    onSelectionChange(checked ? [...new Set([...selectedKeys, key])] : selectedKeys.filter((item) => item !== key));
+  };
+
+  const tools = (
+    <>
+      {exportConfig && (
+        <ExportButton
+          {...exportConfig}
+          data={exportConfig.data || data}
+          selectedData={selectedData}
+          columns={exportConfig.columns || columns}
+          requiredModule={requiredModule}
+        />
+      )}
+      {importConfig && <ImportButton {...importConfig} requiredModule={requiredModule} />}
+      {onRefresh && (
+        <button type="button" onClick={onRefresh} className="admin-btn-secondary" aria-label="Refresh records">
+          <MdRefresh size={17} /> Refresh
+        </button>
+      )}
+      {actions}
+    </>
+  );
+
   return (
     <div className="admin-card overflow-hidden">
       {/* Toolbar */}
-      {(onSearch || actions) && (
+      {(onSearch || actions || exportConfig || importConfig || onRefresh) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
           {onSearch && (
             <div className="relative w-full sm:w-72">
@@ -77,7 +129,7 @@ const DataTable = ({
               />
             </div>
           )}
-          {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">{tools}</div>
         </div>
       )}
 
@@ -86,6 +138,11 @@ const DataTable = ({
         <table className="w-full text-sm">
           <thead className="admin-table-head">
             <tr>
+              {selectable && (
+                <th className="px-4 py-3 text-left">
+                  <CustomCheckbox checked={allSelected} onChange={(event) => toggleAll(event.target.checked)} />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -107,17 +164,24 @@ const DataTable = ({
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading
-              ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={columns.length} />)
+              ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={columns.length + (selectable ? 1 : 0)} />)
+              : error
+                ? (
+                  <tr><td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-red-600">{error}</td></tr>
+                )
               : data.length === 0
                 ? (
                   <tr>
-                    <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-gray-400 text-sm">
                       {emptyText}
                     </td>
                   </tr>
                 )
-                : data.map((row) => (
-                  <tr key={getKey(row)} className="hover:bg-[#f7f9ff] transition-colors">
+                : data.map((row, index) => (
+                  <tr key={getKey(row, index)} className="hover:bg-[#f7f9ff] transition-colors">
+                    {selectable && (
+                      <td className="px-4 py-3"><CustomCheckbox checked={selectedKeys.includes(getKey(row, index))} onChange={(event) => toggleRow(getKey(row, index), event.target.checked)} /></td>
+                    )}
                     {columns.map((col) => (
                       <td key={col.key} className="px-4 py-3 text-gray-700">
                         {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
@@ -131,44 +195,12 @@ const DataTable = ({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {(totalPages > 1 || onPageSizeChange) && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
           <span>
-            Showing {Math.min((page - 1) * pageSize + 1, totalCount)}–{Math.min(page * pageSize, totalCount)} of {totalCount}
+            Showing {totalCount ? Math.min((page - 1) * pageSize + 1, totalCount) : 0}-{Math.min(page * pageSize, totalCount)} of {totalCount}
           </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onPageChange?.(page - 1)}
-              disabled={page <= 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <MdChevronLeft size={18} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              let p = i + 1;
-              if (totalPages > 7) {
-                if (page <= 4) p = i + 1;
-                else if (page >= totalPages - 3) p = totalPages - 6 + i;
-                else p = page - 3 + i;
-              }
-              return (
-                <button
-                  key={p}
-                  onClick={() => onPageChange?.(p)}
-                  className={`w-8 h-8 rounded text-xs font-medium transition-colors ${p === page ? 'bg-[#082f91] text-white' : 'hover:bg-[#eef2ff]'}`}
-                >
-                  {p}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => onPageChange?.(page + 1)}
-              disabled={page >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <MdChevronRight size={18} />
-            </button>
-          </div>
+          <Pagination totalPages={totalPages} currentPage={page} onPageChange={onPageChange} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={onPageSizeChange} compact />
         </div>
       )}
     </div>

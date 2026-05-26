@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { AnimatePresence, motion } from "framer-motion";
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
@@ -17,6 +18,7 @@ import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
+import { PageSkeletonLoader } from "../Loader/SkeletonLoader";
 
 const Dashboard = React.lazy(() => import("../../pages/dashboard/Dashboard"));
 const AdminUsers = React.lazy(
@@ -270,6 +272,7 @@ const getStoredSidebarState = () => {
 };
 
 function Layout() {
+  const location = useLocation();
   const [navbarOpen, setNavbarOpen] = useState(getStoredSidebarState);
   const [moduleName, setModuleName] = useState("");
   const [isExpanded, setIsExpanded] = useState(getStoredSidebarState);
@@ -402,8 +405,17 @@ function Layout() {
         />
 
         <main className="flex-1 bg-[#fffdfa] overflow-y-auto pt-16 sidebar-scrollbar">
-          <Suspense fallback={<div>Loading...</div>}>
-            <Routes>
+          <Suspense fallback={<PageSkeletonLoader />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                className="admin-page-transition"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -3 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+              >
+            <Routes location={location}>
               <Route
                 path="/home"
                 element={renderRoute("/home", <Dashboard />)}
@@ -874,6 +886,8 @@ function Layout() {
                 element={renderRoute("/reports-sellers", <SellerAnalytics />)}
               />
             </Routes>
+              </motion.div>
+            </AnimatePresence>
           </Suspense>
         </main>
       </div>

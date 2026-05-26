@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  MdInventory, MdWarning, MdAddCircleOutline, MdTrendingDown, MdFileDownload,
+  MdInventory, MdWarning, MdAddCircleOutline, MdTrendingDown,
 } from 'react-icons/md';
 import { PageHeader, DataTable, StatusBadge } from '../../components/Shared';
 import PermissionGuard from '../../components/Atoms/PermissionGuard/PermissionGuard';
-import { usePermission, ACTIONS } from '../../_helpers/usePermission';
+import { ACTIONS } from '../../_helpers/usePermission';
 import { axiosPrivate as axiosProvider } from '../../_helpers/axiosProvider';
 import { toast } from 'react-toastify';
 
@@ -43,7 +43,6 @@ const COLUMNS = [
 ];
 
 const InventoryOverview = () => {
-  const { can } = usePermission();
   const [products, setProducts] = useState([]);
   const [stats, setStats]       = useState({});
   const [loading, setLoading]   = useState(true);
@@ -59,10 +58,11 @@ const InventoryOverview = () => {
         const params = { page, limit: 20, search, status: filter !== 'all' ? filter : undefined };
         const res = await axiosProvider.get('/products', { params });
         const items = res.data?.data?.products || res.data?.data || [];
+        const nextTotal = res.data?.data?.total || items.length;
         setProducts(items);
-        setTotal(res.data?.data?.total || items.length);
+        setTotal(nextTotal);
 
-        const s = { totalSkus: total, inStock: 0, lowStock: 0, outOfStock: 0 };
+        const s = { totalSkus: nextTotal, inStock: 0, lowStock: 0, outOfStock: 0 };
         items.forEach((p) => {
           const avail = (p.stock ?? 0) - (p.reservedStock ?? 0);
           if (avail <= 0) s.outOfStock++;
@@ -134,13 +134,6 @@ const InventoryOverview = () => {
             {f.replace(/_/g, ' ')}
           </button>
         ))}
-        <div className="ml-auto">
-          <PermissionGuard module="inventory" action={ACTIONS.EXPORT}>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
-              <MdFileDownload size={14} /> Export CSV
-            </button>
-          </PermissionGuard>
-        </div>
       </div>
 
       <DataTable
@@ -153,6 +146,8 @@ const InventoryOverview = () => {
         onPageChange={setPage}
         onSearch={(q) => { setSearch(q); setPage(1); }}
         searchPlaceholder="Search products…"
+        requiredModule="inventory"
+        exportConfig={{ filename: 'inventory-products', columns: COLUMNS }}
       />
     </div>
   );

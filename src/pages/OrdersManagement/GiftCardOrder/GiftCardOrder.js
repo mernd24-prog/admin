@@ -9,9 +9,9 @@ import TableData from '../../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import Loader from '../../../components/Loader/Loader';
 import Pagination from '../../../components/Pagination/Pagination';
-import selectJson from '../../../_helpers/SelectJson.json';
 import { getOrderList } from '../../../Redux/orderSlice';
 import { getAllUserList } from '../../../Redux/userManagementSlice';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 const PAGE_SIZE = 10;
 
@@ -38,6 +38,7 @@ const GiftCardOrder = () => {
   const [selectedRow, setSelectedRow] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pageNo, setPageNo] = useState(1);
+  const paymentStatuses = useDropdownOptions('payment-statuses');
 
   const userListData = useMemo(() =>
     (userSelector?.getAllUserListData?.data?.data?.list || []).map((user) => ({
@@ -171,7 +172,7 @@ const GiftCardOrder = () => {
             dateTo={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
-            activationStatusOptions={selectJson?.PAYMENT_STATUS || []}
+            activationStatusOptions={paymentStatuses.options}
             handleFilterChange={handleFilterChange}
           />
           <div className="bg-white border border-[#E6E6E6]">

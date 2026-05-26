@@ -26,6 +26,8 @@ import {
 import { uploadFile } from '../../../_helpers/globalFunctions';
 import ImageUpload from '../../../components/Atoms/ImageGallery/ImageUpload';
 import Pagination from '../../../components/Pagination/Pagination';
+import { ExportButton } from '../../../components/Shared';
+import { validateValues } from '../../../_helpers/validation';
 
 const TABLE_HEADINGS = ["Logo", "Brand", "Thumbnail", "Status", "Action"];
 
@@ -40,14 +42,17 @@ const INITIAL_FORM_VALUES = {
 
 const VALIDATION_RULES = {
   name: {
+    label: 'Brand name',
     required: true,
     minLength: 2,
     maxLength: 50
   },
   logo: {
+    label: 'Logo',
     required: true
   },
   thumbnails: {
+    label: 'Thumbnail',
     required: true
   }
 };
@@ -83,39 +88,11 @@ const Brands = () => {
     [selectedRow.length, brands?.list?.length]
   );
 
-  // Validation functions
-  const validateField = useCallback((name, value) => {
-    const rule = VALIDATION_RULES[name];
-    if (!rule) return "";
-
-    if (rule.required && (!value || value.toString().trim() === "")) {
-      return `${name} is required`;
-    }
-
-    if (rule.minLength && value.length < rule.minLength) {
-      return `${name} must be at least ${rule.minLength} characters`;
-    }
-
-    if (rule.maxLength && value.length > rule.maxLength) {
-      return `${name} must not exceed ${rule.maxLength} characters`;
-    }
-
-    return "";
-  }, []);
-
   const validateForm = useCallback(() => {
-    const newErrors = {};
-
-    Object.keys(VALIDATION_RULES).forEach(field => {
-      const error = validateField(field, formValues[field]);
-      if (error) {
-        newErrors[field] = error;
-      }
-    });
-
+    const newErrors = validateValues(formValues, VALIDATION_RULES);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formValues, validateField]);
+  }, [formValues]);
 
   // API functions
   const fetchBrandList = useCallback(async (searchKeyword = filters?.search) => {
@@ -466,6 +443,7 @@ const Brands = () => {
         key={`toggle-${brand._id}`}
         isToggle={!brand.isDisable}
         handleClick={() => handleToggleBrandStatus(brand)}
+        requiredModule="products"
       />,
       <ActionButtons
         key={`actions-${brand._id}`}
@@ -475,6 +453,7 @@ const Brands = () => {
         }}
         showLinkButton={false}
         onEdit={() => handleAction('EDIT', brand)}
+        requiredModule="products"
       />
     ]) || [],
     [brands?.list, selectedRow, handleRowCheckboxChange, handleImageClick, handleToggleBrandStatus, handleAction]
@@ -490,7 +469,10 @@ const Brands = () => {
 
       <div className='flex items-center justify-between'>
         <h3 className='text-sm'>Product / Brand</h3>
-        <AddButton onClick={() => handleAction('ADD')} />
+        <div className="flex items-center gap-2">
+          <ExportButton data={brands?.list || []} filename="brands" requiredModule="products" />
+          <AddButton onClick={() => handleAction('ADD')} requiredModule="products" />
+        </div>
       </div>
 
       <div className='overflow-auto overflow-y-auto bg-white'>
@@ -509,6 +491,7 @@ const Brands = () => {
             handleAction={handleBulkAction}
             handleSearchRemove={handleSearchRemove}
             applyFilters={handleApplySearchFilters}
+            requiredModule="products"
           />
         </div>
 

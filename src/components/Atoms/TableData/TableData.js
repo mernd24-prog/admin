@@ -18,7 +18,13 @@ const TableData = ({
   currentPage,
   onPageChange,
   loading = false,
-  sortableColumns = [], allRowsSelected, handleHeaderCheckboxChange
+  sortableColumns = [], allRowsSelected, handleHeaderCheckboxChange,
+  error = "",
+  emptyMessage = "No Data found",
+  rowKey,
+  stickyHeader = true,
+  actions,
+  onRefresh,
 
 }) => {
 
@@ -26,17 +32,25 @@ const TableData = ({
   return (
     <>
       <section className="admin-card w-full overflow-hidden">
+        {(actions || onRefresh) && (
+          <div className="admin-table-toolbar">
+            {actions}
+            {onRefresh && <button type="button" className="admin-btn-secondary" onClick={onRefresh}>Refresh</button>}
+          </div>
+        )}
         <div className="w-full">
           {loading ? (
             <TableSkeletonLoader
               columns={tableHeadings.length}
               rows={totalSize || 10}
             />
+          ) : error ? (
+            <div className="admin-table-error" role="alert">{error}</div>
           ) : data && Array.isArray(data) && data.length > 0 ? (
             <>
               <div className="hidden w-full border-b-[#ebedf0] lg:block overflow-hidden overflow-x-auto overflow-y-auto">
                 <table className="w-full text-sm text-gray-800 bg-transparent border-collapse table-auto">
-                  <thead className="admin-table-head">
+                  <thead className={`admin-table-head ${stickyHeader ? "sticky top-0 z-10" : ""}`}>
                     <tr>
                       {
                         isHeaderCheckbox && (
@@ -93,7 +107,7 @@ const TableData = ({
                   <tbody className="">
                     {data.map((row, rowIndex) => (
                       <tr
-                        key={`row-${rowIndex}`}
+                        key={typeof rowKey === "function" ? rowKey(row, rowIndex) : `row-${rowIndex}`}
                         className="border-t border-[#edeff1] hover:bg-[#f7f9ff]"
                       >
                         {row && Array.isArray(row) && row.length > 0 ? (
@@ -141,7 +155,7 @@ const TableData = ({
                           className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200"
                         >
                           <span className="text-xs font-medium text-gray-700">
-                            {tableHeadings[cellIndex - 1] || "Select"} {/* Adjust for checkbox column */}
+                            {tableHeadings[isHeaderCheckbox ? cellIndex - 1 : cellIndex] || "Select"}
                           </span>
                           <span className="text-sm font-medium">{cell}</span>
                         </div>
@@ -158,7 +172,7 @@ const TableData = ({
           ) : (
             <div className="mt-2">
               <Nodata
-                nodataLabel={"No Data found"}
+                nodataLabel={emptyMessage}
                 nodataDesc={"There are no Data to display"}
               />
             </div>

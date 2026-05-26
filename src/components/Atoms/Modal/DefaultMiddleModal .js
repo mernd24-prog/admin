@@ -12,7 +12,9 @@ const DefaultMiddleModal = ({
     submitButtonText = "Submit",
     closeButtonText = "Reset",
     title,
-    buttonsClassName
+    buttonsClassName,
+    loading = false,
+    closeOnOutsideClick = true
 }) => {
     useEffect(() => {
         document.body.style.overflow = isOpen ? "hidden" : "auto";
@@ -21,13 +23,20 @@ const DefaultMiddleModal = ({
         };
     }, [isOpen]);
 
+    useEffect(() => {
+        if (!isOpen || loading) return undefined;
+        const closeOnEscape = (event) => event.key === "Escape" && onClose?.();
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [isOpen, loading, onClose]);
+
     return (
         <>
             <div
                 className={`fixed inset-0 z-40 transition-all duration-300 ease-in-out 
                     ${isOpen ? "bg-black bg-opacity-30 backdrop-blur-sm" : "bg-transparent backdrop-blur-0 pointer-events-none"}
                 `}
-                onClick={onClose}
+                onClick={!loading && closeOnOutsideClick ? onClose : undefined}
             />
 
             <div
@@ -40,11 +49,15 @@ const DefaultMiddleModal = ({
                     max-h-[calc(100vh-4rem)]  
                 `}
                 style={{ willChange: "transform, opacity" }}
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
             >
                 <div className="admin-card-header flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
                     <h2 className="text-lg md:text-xl font-semibold text-[#082f91]">{title}</h2>
                     <button
                         onClick={onClose}
+                        disabled={loading}
                         className="text-gray-500 hover:text-gray-700 transition-colors duration-150"
                         aria-label="Close modal"
                     >
@@ -56,8 +69,8 @@ const DefaultMiddleModal = ({
 
                 {isButtonView && (
                     <div className={`sticky bottom-0 left-0 right-0 bg-white p-3 md:p-4 flex justify-between items-center border-t border-[#e8e2db] ${buttonsClassName}`}>
-                        <TransparentButton onClick={onClose} label={closeButtonText} />
-                        <Button onClick={onSubmit}>{submitButtonText}</Button>
+                        <TransparentButton onClick={onClose} label={closeButtonText} isDisable={loading} />
+                        <Button onClick={onSubmit} loading={loading} isDisable={loading} variant="primary">{submitButtonText}</Button>
                     </div>
                 )}
             </div>
