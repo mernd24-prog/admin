@@ -13,6 +13,7 @@ import Input from '../../../components/Atoms/Input/Input'
 import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect'
 import { create, edit, enableDisableCity, getCityList } from '../../../Redux/citySlice'
 import { getAllStateList } from '../../../Redux/stateSlice'
+import { getAllCountryList } from '../../../Redux/CountrySlice'
 import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
 import { Link } from 'react-router-dom'
 
@@ -40,6 +41,7 @@ const ManageCity = () => {
   const [isLoading, setIsLoading] = useState(false)
   const initialFormState = {
     name: '',
+    country_code: null,
     state_code: null,
     _id: null
   };
@@ -47,14 +49,24 @@ const ManageCity = () => {
   const [formData, setFormData] = useState(initialFormState)
   const [errors, setErrors] = useState({});
 
-  const mappedCountries = selector?.state?.getAllStateListData?.data?.data?.list?.map((e) => ({
+  const countryOptions = selector?.country?.getAllCountryListData?.data?.data?.list?.map((e) => ({
     value: e?._id,
     label: e?.name,
   })) || [];
 
+  const allStateOptions = selector?.state?.getAllStateListData?.data?.data?.list?.map((e) => ({
+    value: e?._id,
+    label: e?.name,
+    countryId: e?.countryId?._id || e?.countryId || e?.country_code?._id || e?.country_code || null,
+  })) || [];
+
+  const stateOptions = formData.country_code
+    ? allStateOptions.filter((state) => String(state.countryId || '') === String(formData.country_code))
+    : [];
+
   const modifiedData = [
-    { value: "", label: "All States" },
-    ...mappedCountries
+    { value: "", label: "All Countries" },
+    ...countryOptions
   ];
 
   const fetchCityList = useCallback(() => {
@@ -64,7 +76,7 @@ const ManageCity = () => {
       keyWord: filters?.search,
       searchFields: "name",
       populate: 'state_code:name',
-      stateId: filters?.country?.value || undefined,
+      countryId: filters?.country?.value || undefined,
     };
     setIsLoading(true)
     dispatch(getCityList(query))
@@ -81,6 +93,7 @@ const ManageCity = () => {
 
   useEffect(() => {
     fetchCityList();
+    dispatch(getAllCountryList())
     dispatch(getAllStateList())
   }, [fetchCityList, dispatch]);
 
@@ -108,10 +121,16 @@ const ManageCity = () => {
   };
 
   const handleSelectChange = (selectedOption, { name }) => {
-    setFormData(prev => ({
-      ...prev,
-      state_code: selectedOption?.value || null
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: selectedOption?.value || null
+      };
+      if (name === 'country_code') {
+        updated.state_code = null;
+      }
+      return updated;
+    });
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -135,6 +154,7 @@ const ManageCity = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.country_code) newErrors.country_code = 'Country is required';
     if (!formData.state_code) newErrors.state_code = 'State is required';
     return newErrors;
   };
@@ -149,6 +169,7 @@ const ManageCity = () => {
 
     const payload = {
       name: formData.name,
+      country_code: formData.country_code,
       state_code: formData.state_code
     };
 
@@ -199,7 +220,7 @@ const ManageCity = () => {
     fetchCityList();
   }, [fetchCityList]);
 
-  const tableHeadings = ["City Name", "State Name", "Status", "Action"];
+  const tableHeadings = ["City Name", "Country Name", "State Name", "Status", "Action"];
 
   const tableRows = apiRes?.list?.map((ele) => [
     <input
@@ -208,15 +229,19 @@ const ManageCity = () => {
       onChange={(e) => handleRowCheckboxChange(e, ele._id)}
     />,
     <span className='capitalize'>{ele?.name}</span>,
+    <span className='capitalize'>{ele?.countryId?.name || ele?.country_code?.name || ele?.stateId?.countryId?.name || ele?.state_code?.countryId?.name || 'N/A'}</span>,
     <span className='capitalize'>{ele?.stateId?.name || ele?.state_code?.name || 'N/A'}</span>,
     <div className='flex flex-col'>
       <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
     </div>,
     <ActionButtons
       onEdit={() => {
+        const stateId = ele.stateId?._id || ele.state_code?._id;
+        const matchingState = allStateOptions.find((state) => String(state.value) === String(stateId));
         setFormData({
           name: ele.name,
-          state_code: ele.stateId?._id || ele.state_code?._id,
+          country_code: ele.countryId?._id || ele.country_code?._id || ele.stateId?.countryId?._id || ele.state_code?.countryId?._id || matchingState?.countryId || null,
+          state_code: stateId,
           _id: ele._id
         });
         setIsEditMode(true);
@@ -332,17 +357,36 @@ const ManageCity = () => {
             </div>
             <div className='col-span-2'>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Country <span className='text-red-500'>*</span>
+              </label>
+              <FilterSelect
+                options={countryOptions}
+                value={countryOptions?.find(option => option.value === formData.country_code) || null}
+                onChange={handleSelectChange}
+                name="country_code"
+                className="basic-single"
+                classNamePrefix="select"
+                isSearchable
+                placeholder="Select Country"
+              />
+              {errors.country_code && (
+                <p className="mt-1 text-sm text-red-600">{errors.country_code}</p>
+              )}
+            </div>
+            <div className='col-span-2'>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
                 State <span className='text-red-500'>*</span>
               </label>
               <FilterSelect
-                options={modifiedData}
-                value={modifiedData?.find(option => option.value === formData.state_code) || null}
+                options={stateOptions}
+                value={stateOptions?.find(option => option.value === formData.state_code) || null}
                 onChange={handleSelectChange}
                 name="state_code"
                 className="basic-single"
                 classNamePrefix="select"
                 isSearchable
                 placeholder="Select State"
+                isDisabled={!formData.country_code}
               />
               {errors.state_code && (
                 <p className="mt-1 text-sm text-red-600">{errors.state_code}</p>

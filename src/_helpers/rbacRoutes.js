@@ -167,9 +167,7 @@ const ROUTE_MODULES = [
     [
       "/product-catalog", "/add-product", "/draft-products",
       "/pending-products", "/rejected-products",
-      "/product-families", "/product-option-value", "/product-option-values",
-      "/product-options", "/product-tags", "/threshold-products",
-      "/store", "/finish", "/batch", "/bar-code", "/qty-head",
+      "/product-tags", "/store", "/bar-code", "/qty-head",
       "/seo-media",
     ],
     ["products"],
@@ -179,7 +177,9 @@ const ROUTE_MODULES = [
   [
     [
       "/categories", "/category-attributes", "/collections",
-      "/product-variants", "/product-dimensions",
+      "/brands", "/product-families", "/product-option-value",
+      "/product-option-values", "/product-options", "/product-variants",
+      "/product-dimensions", "/finish", "/batch",
       "/tax-structure", "/tax-category", "/tax-category-rules",
       "/shipping-duration",
     ],
@@ -190,7 +190,8 @@ const ROUTE_MODULES = [
   [
     [
       "/inventory-overview", "/variant-inventory",
-      "/inventory-adjustment", "/warehouse", "/low-stock-alerts",
+      "/seller-Product-Inventory", "/inventory-adjustment",
+      "/warehouse", "/low-stock-alerts", "/threshold-products",
     ],
     ["inventory", "products"],
   ],
@@ -211,14 +212,15 @@ const ROUTE_MODULES = [
   [
     [
       "/discount-coupons", "/special-price", "/volume-discounts",
-      "/similar-products", "/frequently-bought-together",
-      "/PPC-promotions-management", "/reward-on-purchase",
+      "/PPC-promotions-management",
       "/product-event-weightages", "/recommended-product-tag-weightages",
       "/badges", "/ribbons", "/campaigns",
     ],
     ["pricing"],
   ],
-  [["/referral-commerce"], ["referral", "pricing"]],
+  [["/similar-products", "/frequently-bought-together"], ["recommendations"]],
+  [["/reward-on-purchase"], ["loyalty"]],
+  [["/referral-commerce"], ["referral"]],
   [["/promotions-banners"], ["cms", "pricing"]],
 
   // Tax & Compliance

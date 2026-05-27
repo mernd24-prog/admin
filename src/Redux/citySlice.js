@@ -20,6 +20,15 @@ const getStateId = (payload = {}) =>
     payload.state?._id ||
     payload.state;
 
+const getCountryId = (payload = {}) =>
+    payload.countryId ||
+    payload.country_code?.value ||
+    payload.country_code?._id ||
+    payload.country_code ||
+    payload.country?.value ||
+    payload.country?._id ||
+    payload.country;
+
 const parseLegacyQuery = (payload = {}) => {
     if (!payload.query) return {};
     if (typeof payload.query === 'object') return payload.query;
@@ -33,6 +42,7 @@ const parseLegacyQuery = (payload = {}) => {
 const toCityBody = (payload = {}) => ({
     name: payload.name,
     stateId: getStateId(payload),
+    ...(getCountryId(payload) ? { countryId: getCountryId(payload) } : {}),
     ...(payload.active !== undefined ? { active: payload.active } : {}),
     ...(payload.isDisable !== undefined ? { isDisable: payload.isDisable } : {}),
 });
@@ -45,6 +55,9 @@ export const getCityList = createApiThunkPrivate(
     {
         transformParams: (params = {}) => ({
             ...toListParams(params),
+            ...(getCountryId(params) || parseLegacyQuery(params).country_code
+                ? { countryId: getCountryId(params) || parseLegacyQuery(params).country_code }
+                : {}),
             ...(getStateId(params) || parseLegacyQuery(params).state_code
                 ? { stateId: getStateId(params) || parseLegacyQuery(params).state_code }
                 : {}),
@@ -89,6 +102,9 @@ export const getAllCityList = createApiThunkPrivate(
     {
         transformParams: (params = {}) => ({
             ...toListParams(params, { limit: 100 }),
+            ...(getCountryId(params) || parseLegacyQuery(params).country_code
+                ? { countryId: getCountryId(params) || parseLegacyQuery(params).country_code }
+                : {}),
             ...(getStateId(params) || parseLegacyQuery(params).state_code
                 ? { stateId: getStateId(params) || parseLegacyQuery(params).state_code }
                 : {}),

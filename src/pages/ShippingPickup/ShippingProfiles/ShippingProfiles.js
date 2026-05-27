@@ -2,25 +2,27 @@
 import React, { useEffect, useState } from 'react';
 import TableData from '../../../components/Atoms/TableData/TableData';
 import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
+import useDropdownOptions from '../../../hooks/useDropdownOptions';
 
 const ShippingProfiles = () => {
   const [profiles, setProfiles] = useState([]);
+  const { options: countryOptions } = useDropdownOptions('countries');
 
   const initialProfiles = [
     {
       name: "Item Level Shipping",
       products: 155,
-      country: ['usa,germany,austrilia, america']
+      countryIndexes: [0, 1, 2, 3],
     },
     {
       name: "Box Shipping",
       products: 78,
-      country: ["Germany", "Central America"]
+      countryIndexes: [1, 2],
     },
     {
       name: "Express Shipping",
       products: 22,
-      country: "Japan"
+      countryIndexes: [0],
     }
   ];
 
@@ -30,15 +32,15 @@ const ShippingProfiles = () => {
 
   const tableHeadings = ['Name', 'Products', 'Rates For', 'Actions'];
   const tableRows = profiles.map((profile) => {
-    const countries = Array.isArray(profile.country)
-      ? profile.country.flatMap(c => c.split(',').map(c => c.trim()))
-      : profile.country.split(',').map(c => c.trim());
+    const countries = profile.countryIndexes
+      .map((index) => countryOptions[index]?.label)
+      .filter(Boolean);
 
     return [
       profile.name,
       profile.products,
       <div className="flex flex-wrap gap-2">
-        {countries.map((country, index) => (
+        {(countries.length ? countries : ['No countries configured']).map((country, index) => (
           <span
             key={index}
             className="px-3 py-1 text-sm text-gray-700 border border-gray-300 rounded-full"

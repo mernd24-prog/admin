@@ -67,7 +67,6 @@ const ManageZipCode = () => {
   })) || [];
 
   const allStates = selector?.state?.getAllStateListData?.data?.data?.list || [];
-  const allCities = selector?.city?.getAllCityListData?.data?.data?.list || [];
 
   useEffect(() => {
     dispatch(getAllCountryList());

@@ -131,6 +131,9 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
     return [...self, ...children];
   });
 
+const firstArray = (...values) =>
+  values.find((value) => Array.isArray(value)) || [];
+
 const filterSidebarTreeByAccess = (items = [], options = {}) =>
   items
     .map((item) => {
@@ -222,16 +225,15 @@ const Sidebar = ({
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const dynamicSidebarModules = useMemo(() => {
     const sd = adminCoreSelector?.rbacSidebarModulesData;
-    // After asLegacyData: data.normalized.data is the original server array
-    if (Array.isArray(sd?.data?.normalized?.data))
-      return sd.data.normalized.data;
-    // Legacy list format
-    if (Array.isArray(sd?.data?.data?.list)) return sd.data.data.list;
-    // Direct array (some response shapes)
-    if (Array.isArray(sd?.data?.data)) return sd.data.data;
-    if (Array.isArray(sd?.normalized?.normalized?.data))
-      return sd.normalized.normalized.data;
-    return [];
+    return firstArray(
+      sd?.data?.normalized?.data,
+      sd?.normalized?.normalized?.data,
+      sd?.normalized?.data,
+      sd?.data?.data?.list,
+      sd?.data?.list,
+      sd?.data?.data,
+      sd?.data,
+    );
   }, [adminCoreSelector?.rbacSidebarModulesData]);
   const sellerPanel = isSellerPanel();
 
@@ -491,7 +493,7 @@ const Sidebar = ({
                 >
                   {/* Section header */}
                   <div
-                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? "bg-[#082f91] text-white" : "text-[#082f91] hover:bg-[#eef2ff]"}`}
+                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
@@ -504,7 +506,7 @@ const Sidebar = ({
                           {item.label}
                         </span>
                         <MdChevronRight
-                          className={`ml-auto transition-transform duration-200 ${hasActiveChild ? "text-white" : "text-[#082f91]"} ${isTabActive ? "rotate-90" : ""}`}
+                          className={`ml-auto transition-transform duration-200 ${hasActiveChild ? "" : "text-[#082f91]"} ${isTabActive ? "rotate-90" : ""}`}
                         />
                       </>
                     )}
