@@ -107,14 +107,17 @@ const KYCStatusLayout = ({
   useEffect(() => {
     const nav = stepsNavRef.current;
     const activeStep = activeStepRef.current;
-    if (!nav || !activeStep || window.matchMedia("(min-width: 1024px)").matches) {
+    if (
+      !nav ||
+      !activeStep ||
+      window.matchMedia("(min-width: 1024px)").matches
+    ) {
       return;
     }
 
     nav.scrollTo({
       left:
-        activeStep.offsetLeft -
-        (nav.clientWidth - activeStep.offsetWidth) / 2,
+        activeStep.offsetLeft - (nav.clientWidth - activeStep.offsetWidth) / 2,
       behavior: "smooth",
     });
   }, [currentSection]);
@@ -124,10 +127,10 @@ const KYCStatusLayout = ({
       <aside className="w-full bg-[#FEFEFE] shadow-[2px_2px_50px_0px_#0000001A] lg:min-h-screen">
         <div className="flex h-full flex-col">
           <div className="border border-[#f8e0c1] bg-[#F4F1ED] pb-5 shadow-[2px_2px_50px_0px_#0000001A] sm:pb-7 lg:pb-10">
-            <div className="flex h-[118px] items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
+            <div className="flex h-[118px]  items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
               <BrandLogo
                 src={logo}
-                className="m-0 h-[82px] w-[108px] bg-white p-[8px] shadow-[0_8px_18px_rgba(78,53,23,0.18)] sm:h-[96px] sm:w-[126px] lg:h-[112px] lg:w-[146px] lg:p-[10px]"
+                className="m-0 h-[82px] w-[108px]  bg-white p-[8px] shadow-[0_8px_18px_rgba(78,53,23,0.18)] sm:h-[96px] sm:w-[126px] lg:h-[112px] lg:w-[146px] lg:p-[10px]"
                 imageClassName="p-[6px] lg:p-[9px]"
               />
             </div>
@@ -151,18 +154,20 @@ const KYCStatusLayout = ({
                     className="relative z-10 min-w-[205px] sm:min-w-[225px] lg:min-w-0"
                   >
                     <div
-                      className={`relative flex items-center gap-[10px] transition ${item.id === currentSection
-                        ? "h-[46px] rounded-l-[4px] rounded-r-[12px] border-l-[4px] border-[#E49E1C] bg-[#042586] px-[8px] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)] lg:h-[50px]"
-                        : "h-[42px] bg-transparent pl-[11px] pr-[2px] text-[#042586]"
-                        }`}
+                      className={`relative flex items-center gap-[10px] transition ${
+                        item.id === currentSection
+                          ? "h-[46px] rounded-l-[4px] rounded-r-[12px] border-l-[4px] border-[#E49E1C] bg-[#042586] px-[8px] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)] lg:h-[50px]"
+                          : "h-[42px] bg-transparent pl-[11px] pr-[2px] text-[#042586]"
+                      }`}
                     >
                       <span
-                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${index < currentIndex
-                          ? "border-[#042586] bg-white text-[#042586]"
-                          : item.id === currentSection
-                            ? "border-[#E49E1C] bg-[#E49E1C] text-white"
-                            : "border-[#042586] bg-white text-[#042586]"
-                          }`}
+                        className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${
+                          index < currentIndex
+                            ? "border-[#042586] bg-white text-[#042586]"
+                            : item.id === currentSection
+                              ? "border-[#E49E1C] bg-[#E49E1C] text-white"
+                              : "border-[#042586] bg-white text-[#042586]"
+                        }`}
                       >
                         {index < currentIndex ? (
                           <Check size={14} />
@@ -172,20 +177,21 @@ const KYCStatusLayout = ({
                       </span>
                       <span className="flex min-w-0 flex-col justify-center">
                         <span
-                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${item.id === currentSection
-                            ? "text-white"
-                            : "text-[#042586]"
-                            }`}
+                          className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${
+                            item.id === currentSection
+                              ? "text-white"
+                              : "text-[#042586]"
+                          }`}
                         >
                           Step {String(index + 1).padStart(2, "0")}
                         </span>
                         <span
-                          className={`mt-[2px] block max-w-[170px] truncate text-[11px] font-semibold leading-[12px] ${item.id === currentSection
-                            ? "text-white"
-                            : "text-[#000000]"
-                            }`}
+                          className={`mt-[2px] block max-w-[170px] truncate text-[11px] font-semibold leading-[12px] ${
+                            item.id === currentSection
+                              ? "text-white"
+                              : "text-[#000000]"
+                          }`}
                         >
-
                           {item.label}
                         </span>
                       </span>
@@ -201,7 +207,8 @@ const KYCStatusLayout = ({
                 className="mx-auto mt-5 hidden max-w-[285px] lg:mt-8 lg:block lg:max-w-none"
               />
             </div>
-          </div></div>
+          </div>
+        </div>
       </aside>
 
       <main className="min-w-0 bg-[#f8f6f3]">
