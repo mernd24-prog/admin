@@ -158,10 +158,10 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
           <div className="relative">
             <div className="flex items-center gap-2.5">
               <div className="hidden md:block text-right leading-tight">
-                <p className="max-w-32  text-[14px] font-bold font-inter text-white">
+                <p className="max-w-44 text-[14px] font-bold font-inter text-white">
                   {getDisplayName(userData)}
                 </p>
-                <p className="max-w-32 truncate text-[10px] font-inter mt-[2px] font-medium capitalize text-white/60">
+                <p className=" truncate text-[10px] font-inter mt-[2px] font-medium capitalize text-white/60">
                   {userData?.role || "Admin"}
                 </p>
               </div>

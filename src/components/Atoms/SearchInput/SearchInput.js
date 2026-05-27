@@ -1,32 +1,27 @@
+import React, { useEffect, useRef } from "react";
 
-import React, { useEffect, useRef } from 'react'
-import { IoClose, IoSearchOutline } from 'react-icons/io5'
-
-const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange, debounce = 0, disabled = false }) => {
+const SearchInput = ({
+  placeholder,
+  searchTerm,
+  handleChange,
+  debounce = 0,
+  disabled = false,
+}) => {
   const timerRef = useRef();
   useEffect(() => () => clearTimeout(timerRef.current), []);
   const onChange = (event) => {
-    event.target.value = event.target.value.replace(/^\s+/, '');
+    event.target.value = event.target.value.replace(/^\s+/, "");
     if (!debounce) return handleChange?.(event);
     const value = event.target.value;
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => handleChange?.({ target: { value } }), debounce);
+    timerRef.current = setTimeout(
+      () => handleChange?.({ target: { value } }),
+      debounce,
+    );
   };
 
   return (
     <div className="relative w-full ">
-
-      {
-        searchTerm ? <IoClose
-          className="absolute z-10 text-gray-800 transform -translate-y-1/2 right-3 top-1/2"
-          size={20} onClick={handleRemove}
-          role="button"
-          aria-label="Clear search"
-        /> : <IoSearchOutline
-          className="absolute z-10 transform -translate-y-1/2 left-3 top-1/2 text-[#082f91]"
-          size={20}
-        />
-      }
       <input
         type="text"
         placeholder={placeholder || "Search..."}
@@ -36,9 +31,8 @@ const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange, debo
         aria-label={placeholder || "Search"}
         className="admin-input block pr-10 pl-10"
       />
-
     </div>
-  )
-}
+  );
+};
 
-export default SearchInput
+export default SearchInput;

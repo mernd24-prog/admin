@@ -5,8 +5,56 @@ import Nodata from "../NoData/NoData";
 import { TableSkeletonLoader } from "../../Loader/SkeletonLoader";
 import CustomCheckbox from "../Checkbox/Checkbox";
 
+const getMobileHeading = (tableHeadings, cellIndex, isHeaderCheckbox) =>
+  tableHeadings[isHeaderCheckbox ? cellIndex - 1 : cellIndex] || "Select";
+
+const isActionHeading = (heading) =>
+  String(heading?.props?.children ?? heading)
+    .toLowerCase()
+    .includes("action");
+
+const getHeadingText = (heading) =>
+  String(heading?.props?.children ?? heading).toLowerCase();
+
+const getColumnMeta = (heading) => {
+  const headingText = getHeadingText(heading);
+
+  if (headingText.includes("description")) {
+    return {
+      headerClass: "min-w-[360px] max-w-[420px] w-[380px]",
+      cellClass:
+        "admin-table-description-cell min-w-[360px] max-w-[420px] w-[380px]",
+      contentClass:
+        "block max-w-[380px] overflow-hidden text-ellipsis whitespace-nowrap",
+    };
+  }
+
+  if (headingText.includes("status")) {
+    return {
+      headerClass: "min-w-[120px] w-[120px] text-center",
+      cellClass: "min-w-[120px] w-[120px] text-center",
+      contentClass: "flex justify-center",
+    };
+  }
+
+  if (headingText.includes("action")) {
+    return {
+      headerClass: "min-w-[140px] text-center",
+      cellClass: "admin-table-action-cell min-w-[140px] text-center",
+      contentClass: "flex justify-center",
+    };
+  }
+
+  return {
+    headerClass: "min-w-[130px]",
+    cellClass: "whitespace-nowrap",
+    contentClass: "max-w-[240px]",
+  };
+};
+
 const TableData = ({
-  tableHeadings = [], isHeaderCheckbox = false,
+  tableHeadings = [],
+  isHeaderCheckbox = false,
   showExtraHeading,
   data,
   sortColumn,
@@ -18,24 +66,36 @@ const TableData = ({
   currentPage,
   onPageChange,
   loading = false,
-  sortableColumns = [], allRowsSelected, handleHeaderCheckboxChange,
+  sortableColumns = [],
+  allRowsSelected,
+  handleHeaderCheckboxChange,
   error = "",
   emptyMessage = "No Data found",
   rowKey,
   stickyHeader = true,
   actions,
   onRefresh,
-
 }) => {
-
+  const visibleColumnCount =
+    tableHeadings.length +
+    (isHeaderCheckbox ? 1 : 0) +
+    (showExtraHeading ? Math.max(0, 10 - tableHeadings.length) : 0);
 
   return (
     <>
-      <section className="admin-card w-full overflow-hidden">
+      <section className="admin-card  w-full overflow-hidden bg-gradient-to-br from-white to-[#F4F1ED]">
         {(actions || onRefresh) && (
-          <div className="admin-table-toolbar">
-            {actions}
-            {onRefresh && <button type="button" className="admin-btn-secondary" onClick={onRefresh}>Refresh</button>}
+          <div className="admin-table-toolbar flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">{actions}</div>
+            {onRefresh && (
+              <button
+                type="button"
+                className="admin-btn-secondary"
+                onClick={onRefresh}
+              >
+                Refresh
+              </button>
+            )}
           </div>
         )}
         <div className="w-full">
@@ -45,86 +105,137 @@ const TableData = ({
               rows={totalSize || 10}
             />
           ) : error ? (
-            <div className="admin-table-error" role="alert">{error}</div>
+            <div className="admin-table-error" role="alert">
+              {error}
+            </div>
           ) : data && Array.isArray(data) && data.length > 0 ? (
             <>
-              <div className="hidden w-full border-b-[#ebedf0] lg:block overflow-hidden overflow-x-auto overflow-y-auto">
-                <table className="w-full text-sm text-gray-800 bg-transparent border-collapse table-auto">
-                  <thead className={`admin-table-head ${stickyHeader ? "sticky top-0 z-10" : ""}`}>
+              <div className="hidden w-full lg:block overflow-x-auto">
+                <table className="w-full min-w-max table-auto border-collapse text-left font-inter">
+                  <thead
+                    className={`admin-table-head text-[14px] ${stickyHeader ? "sticky top-0 z-10 shadow-sm" : ""}`}
+                  >
                     <tr>
-                      {
-                        isHeaderCheckbox && (
-                          <th key="checkbox-header" className="px-4 py-4 font-semibold text-left text-white whitespace-nowrap">
-                            <CustomCheckbox checked={allRowsSelected} onChange={handleHeaderCheckboxChange} />
-                          </th>
-                        )
-                      }
-                      {tableHeadings.map((heading, index) => (
+                      {isHeaderCheckbox && (
                         <th
-                          key={`heading-${index}`}
-                          className={` px-4 py-4 font-medium text-left text-white whitespace-nowrap ${sortableColumns.includes(index)
-                            ? "cursor-pointer"
-                            : "cursor-default"
-                            }`}
-                          onClick={
-                            sortableColumns.includes(index)
-                              ? () => handleSort && handleSort(index)
-                              : undefined
-                          }
+                          key="checkbox-header"
+                          className="w-12 px-4 py-3 text-left align-middle"
                         >
-                          <div className="flex items-center gap-1">
-                            {heading}
-                            {sortableColumns.includes(index) &&
-                              showTableSorting && (
-                                <div className="flex flex-col">
-                                  <IoCaretUpOutline
-                                    size={8}
-                                    className={`${sortColumn === index &&
-                                      sortDirection === "asc"
-                                      ? "text-blue-600"
-                                      : "text-gray-400"
-                                      }`}
-                                  />
-                                  <IoCaretDownOutline
-                                    size={8}
-                                    className={`${sortColumn === index &&
-                                      sortDirection === "desc"
-                                      ? "text-blue-600"
-                                      : "text-gray-400"
-                                      }`}
-                                  />
-                                </div>
-                              )}
-                          </div>
+                          <CustomCheckbox
+                            checked={allRowsSelected}
+                            onChange={handleHeaderCheckboxChange}
+                          />
                         </th>
-                      ))}
+                      )}
+                      {tableHeadings.map((heading, index) => {
+                        const columnMeta = getColumnMeta(heading);
+                        const isActions = isActionHeading(heading);
+
+                        return (
+                          <th
+                            key={`heading-${index}`}
+                            className={`px-5 py-3 text-left font-semibold text-white whitespace-nowrap select-none ${
+                              columnMeta.headerClass
+                            } ${
+                              sortableColumns.includes(index)
+                                ? "cursor-pointer hover:bg-white/10"
+                                : "cursor-default"
+                            }`}
+                            onClick={
+                              sortableColumns.includes(index)
+                                ? () => handleSort && handleSort(index)
+                                : undefined
+                            }
+                          >
+                            <div
+                              className={`flex items-center gap-2 ${
+                                isActions ? "justify-center" : ""
+                              }`}
+                            >
+                              <span>{heading}</span>
+                              {sortableColumns.includes(index) &&
+                                showTableSorting && (
+                                  <div className="flex flex-col text-white/50">
+                                    <IoCaretUpOutline
+                                      size={8}
+                                      className={`${
+                                        sortColumn === index &&
+                                        sortDirection === "asc"
+                                          ? "text-[#e49e1c]"
+                                          : ""
+                                      }`}
+                                    />
+                                    <IoCaretDownOutline
+                                      size={8}
+                                      className={`${
+                                        sortColumn === index &&
+                                        sortDirection === "desc"
+                                          ? "text-[#e49e1c]"
+                                          : ""
+                                      }`}
+                                    />
+                                  </div>
+                                )}
+                            </div>
+                          </th>
+                        );
+                      })}
                       {showExtraHeading &&
                         [...Array(Math.max(0, 10 - tableHeadings.length))].map(
-                          (_, index) => <th key={`extra-${index}`} className="p-2"></th>
+                          (_, index) => (
+                            <th
+                              key={`extra-${index}`}
+                              className="px-4 py-3"
+                            ></th>
+                          ),
                         )}
                     </tr>
                   </thead>
-                  <tbody className="">
+                  <tbody className="bg-white text-[12px] text-slate-600">
                     {data.map((row, rowIndex) => (
                       <tr
-                        key={typeof rowKey === "function" ? rowKey(row, rowIndex) : `row-${rowIndex}`}
-                        className="border-t border-[#edeff1] hover:bg-[#f7f9ff]"
+                        key={
+                          typeof rowKey === "function"
+                            ? rowKey(row, rowIndex)
+                            : `row-${rowIndex}`
+                        }
+                        className="border-b border-slate-50 last:border-0 transition-colors hover:bg-[#f7f9ff]"
                       >
                         {row && Array.isArray(row) && row.length > 0 ? (
-                          row.map((cell, cellIndex) => (
-                            <td
-                              key={`cell-${rowIndex}-${cellIndex}`}
-                              className="px-4 py-4 text-gray-700 align-top"
-                            >
-                              {cell}
-                            </td>
-                          ))
+                          row.map((cell, cellIndex) => {
+                            const headingIndex = isHeaderCheckbox
+                              ? cellIndex - 1
+                              : cellIndex;
+                            const isActions = isActionHeading(
+                              tableHeadings[headingIndex],
+                            );
+                            const columnMeta = getColumnMeta(
+                              tableHeadings[headingIndex],
+                            );
+
+                            return (
+                              <td
+                                key={`cell-${rowIndex}-${cellIndex}`}
+                                className={`px-5 py-3 align-middle text-slate-700 ${
+                                  columnMeta.cellClass
+                                }`}
+                              >
+                                <div
+                                  className={`min-w-0 ${
+                                    isActions
+                                      ? "flex justify-center"
+                                      : columnMeta.contentClass
+                                  }`}
+                                >
+                                  {cell}
+                                </div>
+                              </td>
+                            );
+                          })
                         ) : (
                           <td
-                            colSpan={
-                              tableHeadings.length + (showExtraHeading ? 5 : 0)
-                            }
-                            className="p-2 text-center text-gray-500 whitespace-nowrap"
+                            colSpan={visibleColumnCount}
+                            className="px-4 py-8 text-center text-sm text-gray-500"
                           >
                             No Data Available
                           </td>
@@ -133,40 +244,56 @@ const TableData = ({
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-start gap-4 p-2 text-sm text-gray-500">
-                  <p>Total Records :</p>
-                  <p>{totalData}</p>
+                <div className="flex items-center justify-between border-t border-[#edeff1] bg-white/70 px-5 py-3 text-sm text-gray-500">
+                  <span>Total Records</span>
+                  <span className="font-semibold text-gray-700">
+                    {totalData ?? data.length}
+                  </span>
                 </div>
               </div>
 
-              <div className="mt-4 overflow-hidden overflow-y-auto lg:hidden">
+              <div className="space-y-3 p-3 lg:hidden">
                 {data.map((row, rowIndex) => (
                   <div
                     key={`mobile-row-${rowIndex}`}
-                    className="admin-card p-4 mb-4"
+                    className="overflow-hidden rounded-lg border border-[#e8e2db] bg-white"
                   >
-                    <div className="flex items-center justify-between pb-3 mb-3">
-                      {/* Mobile row header area */}
+                    <div className="flex items-center justify-between border-b border-[#edeff1] bg-[#f7f9ff] px-4 py-3">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-[#082f91]">
+                        Record {rowIndex + 1}
+                      </span>
                     </div>
                     {row && Array.isArray(row) && row.length > 0 ? (
                       row.map((cell, cellIndex) => (
                         <div
                           key={`mobile-cell-${rowIndex}-${cellIndex}`}
-                          className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200"
+                          className="grid grid-cols-[minmax(96px,42%)_1fr] gap-3 border-b border-[#f0f2f5] px-4 py-3 last:border-b-0"
                         >
-                          <span className="text-xs font-medium text-gray-700">
-                            {tableHeadings[isHeaderCheckbox ? cellIndex - 1 : cellIndex] || "Select"}
+                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {getMobileHeading(
+                              tableHeadings,
+                              cellIndex,
+                              isHeaderCheckbox,
+                            )}
                           </span>
-                          <span className="text-sm font-medium">{cell}</span>
+                          <span className="min-w-0 text-right text-sm font-medium text-gray-800">
+                            {cell}
+                          </span>
                         </div>
                       ))
                     ) : (
-                      <div className="h-4 p-4 text-sm text-center text-gray-500">
+                      <div className="p-4 text-center text-sm text-gray-500">
                         No Data Available
                       </div>
                     )}
                   </div>
                 ))}
+                <div className="flex items-center justify-between rounded-lg border border-[#e8e2db] bg-[#fafbff] px-4 py-3 text-sm text-gray-500">
+                  <span>Total Records</span>
+                  <span className="font-semibold text-gray-700">
+                    {totalData ?? data.length}
+                  </span>
+                </div>
               </div>
             </>
           ) : (

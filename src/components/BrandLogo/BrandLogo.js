@@ -18,7 +18,7 @@ const BrandLogo = ({
         src={src}
         alt={alt}
         className={twMerge(
-          "h-full w-full rounded-[6px] border border-[#eadbc8] object-contain object-center p-[6px]",
+          "h-full w-full rounded-[6px]  border border-[#eadbc8] object-contain object-center p-[6px]",
           imageClassName,
         )}
       />
