@@ -48,6 +48,10 @@ const customStyles = (error) => ({
     zIndex: 9999,
     position: "absolute",
   }),
+  menuPortal: (provided) => ({
+    ...provided,
+    zIndex: 10000,
+  }),
 });
 
 const FilterSelect = ({
@@ -73,6 +77,9 @@ const FilterSelect = ({
   cacheOptions = true,
 }) => {
   const SelectComponent = loadOptions ? AsyncSelect : Select;
+  const menuPortalTarget =
+    typeof document !== "undefined" ? document.body : undefined;
+
   return (
     <div className={`admin-field relative  ${className}`}>
       {label && (
@@ -99,6 +106,8 @@ const FilterSelect = ({
           isLoading={isLoading}
           isClearable={isClearable}
           isSearchable={isSearchable}
+          menuPortalTarget={menuPortalTarget}
+          menuPosition="fixed"
           aria-invalid={Boolean(error)}
         />
         {error ? (

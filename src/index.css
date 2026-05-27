@@ -14,6 +14,10 @@ body {
   background: #fffdfa;
 }
 
+.d {
+  border: 2px solid red;
+}
+
 :root {
   --admin-navy: #082f91;
   --admin-navy-dark: #062779;
@@ -187,7 +191,8 @@ select:active {
 }
 
 /* Also remove Tailwind ring effect for our step input selects specifically */
-.h-\[46px\]\.w-full\.rounded-\[6px\]\.border\.border-\#DAD7EA\.bg-\#FAF8FFB2\/70\.px-3\.text-\[14px\]\.text-\#344054\.outline-none\.transition select:focus {
+.h-\[46px\]\.w-full\.rounded-\[6px\]\.border\.border-\#DAD7EA\.bg-\#FAF8FFB2\/70\.px-3\.text-\[14px\]\.text-\#344054\.outline-none\.transition
+  select:focus {
   box-shadow: none !important;
 }
 
@@ -222,7 +227,9 @@ select:active {
   color: #344054;
   font-size: 13px;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .admin-input:focus {
@@ -238,6 +245,10 @@ select:active {
 
 .admin-field {
   margin-bottom: 8px;
+}
+
+.admin-field.admin-field-inline {
+  margin-bottom: 0;
 }
 
 .admin-field-error {
@@ -309,7 +320,9 @@ select:active {
   background: var(--admin-field);
   color: var(--admin-muted);
   cursor: pointer;
-  transition: border-color var(--admin-transition), background var(--admin-transition);
+  transition:
+    border-color var(--admin-transition),
+    background var(--admin-transition);
 }
 
 .admin-dropzone-active,
@@ -423,9 +436,15 @@ select:active {
   font-weight: 600;
 }
 
-.admin-btn-danger { background: var(--admin-danger); }
-.admin-btn-success { background: var(--admin-success); }
-.admin-btn-warning { background: var(--admin-warning); }
+.admin-btn-danger {
+  background: var(--admin-danger);
+}
+.admin-btn-success {
+  background: var(--admin-success);
+}
+.admin-btn-warning {
+  background: var(--admin-warning);
+}
 
 .admin-button-spinner {
   width: 14px;
@@ -463,12 +482,20 @@ select:active {
 }
 
 @keyframes admin-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -520,7 +547,10 @@ select:active {
   content: "";
 }
 
-.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
+.admin-shell
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .admin-input
+  ),
 .admin-shell select:not(.admin-input),
 .admin-shell textarea:not(.admin-input) {
   border-color: var(--admin-field-line);
@@ -528,7 +558,8 @@ select:active {
   background-color: var(--admin-field);
 }
 
-.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.admin-shell
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 .admin-shell select:focus,
 .admin-shell textarea:focus {
   border-color: var(--admin-navy);
