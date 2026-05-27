@@ -427,6 +427,10 @@ function Layout() {
                     element={renderRoute("/admin-users", <AdminUsers />)}
                   />
                   <Route
+                    path="/admin-users/view/:id"
+                    element={renderRoute("/admin-users", <UserPermissions setModuleName={setModuleName} />)}
+                  />
+                  <Route
                     path="/seller-management"
                     element={renderRoute("/seller-users", <SellerUsers />)}
                   />
@@ -441,10 +445,6 @@ function Layout() {
                   <Route
                     path="/users/view/:id"
                     element={renderRoute("/users", <UserDetails />)}
-                  />
-                  <Route
-                    path="/admin-users/view/:id"
-                    element={renderRoute("/admin-users", <UserDetails />)}
                   />
                   <Route
                     path="/seller/view/:id"

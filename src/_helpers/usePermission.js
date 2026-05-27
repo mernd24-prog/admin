@@ -4,16 +4,25 @@ import { getStoredRole, hasModuleAccess } from './authStorage';
 import { getRouteModuleCandidates, isSelfServiceRoute } from './rbacRoutes';
 
 /**
- * PERMISSION ACTIONS — match backend RBAC action slugs.
+ * PERMISSION ACTIONS — match backend RBAC action slugs exactly.
+ * Covers all actions defined in the RBAC flow guide.
  */
 export const ACTIONS = {
-  VIEW:    'view',
-  CREATE:  'create',
-  EDIT:    'edit',
-  DELETE:  'delete',
-  APPROVE: 'approve',
-  ADJUST:  'adjust',
-  EXPORT:  'export',
+  VIEW:          'view',
+  CREATE:        'create',
+  ADD:           'create',        // alias → create
+  UPDATE:        'update',
+  EDIT:          'update',        // alias → update
+  DELETE:        'delete',
+  STATUS_CHANGE: 'status_change',
+  STATUS:        'status_change', // alias → status_change
+  APPROVE:       'approve',
+  REJECT:        'reject',
+  ASSIGN:        'assign',
+  EXPORT:        'export',
+  IMPORT:        'import',
+  BULK_ACTION:   'bulk_action',
+  ADJUST:        'adjust',
 };
 
 const ACTION_ALIASES = {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MdAdd, MdCheck, MdInfoOutline } from 'react-icons/md';
+import { MdAdd, MdCheck, MdInfoOutline, MdBarChart, MdClose, MdRefresh } from 'react-icons/md';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAdminUserDetails, updateModulePermission } from '../../../Redux/userManagementSlice';
 import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
@@ -15,6 +15,7 @@ import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
 import { getStoredRole, getStoredUser, normalizeRole } from '../../../_helpers/authStorage';
 import { MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
+import { axiosPrivate as axiosProvider } from '../../../_helpers/axiosProvider';
 
 const ACTION_ALIASES = {
     review: 'approval',
@@ -163,6 +164,152 @@ const buildAssignedActionMap = (modules = []) => {
     return result;
 };
 
+/* ─── Effective Permissions Modal ───────────────────────────────────────── */
+const ACTION_BADGE_COLORS = {
+  view:          'bg-blue-50 text-blue-600 border-blue-100',
+  create:        'bg-green-50 text-green-600 border-green-100',
+  update:        'bg-amber-50 text-amber-600 border-amber-100',
+  delete:        'bg-red-50 text-red-600 border-red-100',
+  status_change: 'bg-purple-50 text-purple-600 border-purple-100',
+  approve:       'bg-teal-50 text-teal-600 border-teal-100',
+  reject:        'bg-orange-50 text-orange-600 border-orange-100',
+  assign:        'bg-indigo-50 text-indigo-600 border-indigo-100',
+  export:        'bg-gray-50 text-gray-600 border-gray-200',
+};
+
+const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axiosProvider.get(`/rbac/users/${userId}/permissions/effective`);
+      setData(res.data?.data || {});
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || 'Failed to load effective permissions');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const modules = data?.permissionsByAction
+    ? Object.entries(
+        (data.effectivePermissions || []).reduce((acc, slug) => {
+          const [mod, action] = slug.split(':');
+          if (!acc[mod]) acc[mod] = [];
+          acc[mod].push(action);
+          return acc;
+        }, {})
+      )
+    : [];
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-[#e7dfd1]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl shrink-0">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">Effective Permissions</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{userName} — final computed access</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={load} className="p-1.5 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-white transition-colors" title="Reload">
+              <MdRefresh size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-white transition-colors">
+              <MdClose size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="space-y-3 animate-pulse">
+              {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[#faf6ee] rounded-lg" />)}
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600">{error}</div>
+          ) : (
+            <div className="space-y-4">
+              {/* Summary stats */}
+              {data && (
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Role Permissions',   count: (data.rolePermissions || []).length,   color: 'text-blue-600 bg-blue-50 border-blue-100' },
+                    { label: 'Extra User Grants',  count: (data.extraUserPermissions || []).length, color: 'text-green-600 bg-green-50 border-green-100' },
+                    { label: 'Denied',             count: (data.deniedPermissions || []).length,  color: 'text-red-600 bg-red-50 border-red-100' },
+                  ].map(({ label, count, color }) => (
+                    <div key={label} className={`rounded-lg border p-3 text-center ${color}`}>
+                      <p className="text-lg font-bold">{count}</p>
+                      <p className="text-xs mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Per-module breakdown */}
+              {modules.length ? (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Module Access Breakdown</h4>
+                  {modules.map(([mod, actions]) => (
+                    <div key={mod} className="flex items-start gap-3 p-3 rounded-lg border border-[#e7dfd1] bg-white">
+                      <div className="w-36 shrink-0">
+                        <p className="text-xs font-semibold text-gray-700 capitalize">{mod.replace(/_/g, ' ')}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">{mod}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {actions.map((action) => (
+                          <span
+                            key={action}
+                            className={`text-[10px] px-2 py-0.5 rounded-full border font-medium capitalize ${ACTION_BADGE_COLORS[action] || 'bg-gray-50 text-gray-500 border-gray-200'}`}
+                          >
+                            {action.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-gray-400">
+                  <MdBarChart size={32} className="mx-auto mb-2 text-gray-200" />
+                  No effective permissions found
+                </div>
+              )}
+
+              {/* Denied permissions */}
+              {data?.deniedPermissions?.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-semibold text-red-500 uppercase tracking-wide">Explicitly Denied</h4>
+                  <div className="flex flex-wrap gap-1.5 p-3 bg-red-50 rounded-lg border border-red-100">
+                    {data.deniedPermissions.map((slug) => (
+                      <span key={slug} className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200 font-mono">
+                        {slug}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-3 border-t border-[#e7dfd1] bg-[#faf6ee] rounded-b-2xl shrink-0">
+          <p className="text-[10px] text-gray-400">
+            Formula: Role permissions + User direct grants + Sidebar expansions − Denied permissions
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UserPermissions = ({ setModuleName }) => {
     const { id } = useParams();
     const dispatch = useDispatch();
@@ -179,6 +326,7 @@ const UserPermissions = ({ setModuleName }) => {
     const [selectedModules, setSelectedModules] = useState([]);
     const [selectedTabName, setSelectedTabName] = useState('');
     const [pendingBulkAction, setPendingBulkAction] = useState(null);
+    const [showEffective, setShowEffective] = useState(false);
     const hasActorPermissionCeiling = useMemo(
         () => Object.keys(actorPermissionMap || {}).length > 0,
         [actorPermissionMap],
@@ -562,15 +710,27 @@ const UserPermissions = ({ setModuleName }) => {
                     { label: 'Admin Users', to: '/app/admin-users' },
                     { label: 'Permissions' },
                 ]}
-                actions={canCreateSubSubAdmin && !sellerPanel && (
+                actions={
+                  <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => navigate('/app/admin-users')}
-                        className={PRIMARY_BUTTON_CLASS}
+                        onClick={() => setShowEffective(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#3E4094] border border-[#3E4094] rounded-lg hover:bg-[#eef3ff] transition-colors"
+                        title="View final computed permissions for this user"
                     >
-                        <MdAdd size={16} /> Add Sub-Admin
+                        <MdBarChart size={16} /> Effective Permissions
                     </button>
-                )}
+                    {canCreateSubSubAdmin && !sellerPanel && (
+                        <button
+                            type="button"
+                            onClick={() => navigate('/app/admin-users')}
+                            className={PRIMARY_BUTTON_CLASS}
+                        >
+                            <MdAdd size={16} /> Add Sub-Admin
+                        </button>
+                    )}
+                  </div>
+                }
             />
 
             {/* Info banner showing what this user can access */}
@@ -748,6 +908,14 @@ const UserPermissions = ({ setModuleName }) => {
                     This will update the user's module access.
                 </p>
             </DefaultModal>
+
+            {showEffective && (
+                <EffectivePermissionsModal
+                    userId={id}
+                    userName={userName}
+                    onClose={() => setShowEffective(false)}
+                />
+            )}
         </div>
     );
 };
