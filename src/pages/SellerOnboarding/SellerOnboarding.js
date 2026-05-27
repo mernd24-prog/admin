@@ -253,14 +253,20 @@ const parseApiError = (error, fallbackMessage) => {
   };
 };
 
-const formatDateForDisplay = (value) => {
+const toDateInputValue = (value) => {
   if (!value) return "";
-  const [year, month, day] = String(value).slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
+  const matchedDate = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return matchedDate
+    ? `${matchedDate[1]}-${matchedDate[2]}-${matchedDate[3]}`
+    : "";
 };
 
-const toDateInputValue = (value) => (value ? String(value).slice(0, 10) : "");
+const formatDateForDisplay = (value) => {
+  const dateValue = toDateInputValue(value);
+  if (!dateValue) return "";
+  const [year, month, day] = dateValue.split("-");
+  return `${day}/${month}/${year}`;
+};
 
 const getIsoDateYearsAgo = (years) => {
   const date = new Date();
@@ -671,7 +677,11 @@ const SellerOnboarding = () => {
 
       const draft = stripFileFieldsFromDraft(JSON.parse(savedDraft));
       if (draft.kycForm) {
-        setKycForm((prev) => ({ ...prev, ...draft.kycForm }));
+        setKycForm((prev) => ({
+          ...prev,
+          ...draft.kycForm,
+          dateOfBirth: toDateInputValue(draft.kycForm.dateOfBirth),
+        }));
       }
       if (draft.profileForm) {
         setProfileForm((prev) => ({ ...prev, ...draft.profileForm }));
@@ -823,8 +833,9 @@ const SellerOnboarding = () => {
             prev.mobileNumber ||
             sellerProfile?.supportPhone ||
             "",
-          dateOfBirth:
-            prev.dateOfBirth || toDateInputValue(sellerProfile?.dateOfBirth),
+          dateOfBirth: toDateInputValue(
+            prev.dateOfBirth || sellerProfile?.dateOfBirth,
+          ),
         }));
         setProfileForm((prev) => ({
           ...prev,
@@ -976,8 +987,9 @@ const SellerOnboarding = () => {
         prev.mobileNumber ||
         sellerProfile?.supportPhone ||
         "",
-      dateOfBirth:
-        prev.dateOfBirth || toDateInputValue(sellerProfile?.dateOfBirth),
+      dateOfBirth: toDateInputValue(
+        prev.dateOfBirth || sellerProfile?.dateOfBirth,
+      ),
     }));
     setProfileForm((prev) => ({
       ...prev,
@@ -1333,6 +1345,7 @@ const SellerOnboarding = () => {
 
   const validateKyc = () => {
     const errors = {};
+    const dateOfBirth = toDateInputValue(kycForm.dateOfBirth);
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
     if (!kycForm.mobileNumber.trim()) {
       errors.mobileNumber = "Mobile number is required";
@@ -1344,9 +1357,9 @@ const SellerOnboarding = () => {
     } else if (!EMAIL_REGEX.test(kycForm.emailAddress.trim())) {
       errors.emailAddress = "Email address is invalid";
     }
-    if (!kycForm.dateOfBirth.trim()) {
+    if (!dateOfBirth) {
       errors.dateOfBirth = "Date of birth is required";
-    } else if (kycForm.dateOfBirth > MAX_DOB_FOR_SELLER) {
+    } else if (dateOfBirth > MAX_DOB_FOR_SELLER) {
       errors.dateOfBirth = "Seller must be at least 18 years old";
     }
     if (!PAN_REGEX.test(kycForm.panNumber.trim()))
@@ -1379,7 +1392,7 @@ const SellerOnboarding = () => {
     ...(includeBusinessType && profileForm.businessType
       ? { businessType: profileForm.businessType }
       : {}),
-    dateOfBirth: kycForm.dateOfBirth,
+    dateOfBirth: toDateInputValue(kycForm.dateOfBirth),
     documents: {
       panDocumentUrl: await getDocumentUploadValue(
         kycForm.panDocumentFile,
@@ -1441,7 +1454,9 @@ const SellerOnboarding = () => {
     if (kycForm.aadhaarNumber.trim()) {
       payload.aadhaarNumber = kycForm.aadhaarNumber.trim();
     }
-    if (kycForm.dateOfBirth) payload.dateOfBirth = kycForm.dateOfBirth;
+    if (toDateInputValue(kycForm.dateOfBirth)) {
+      payload.dateOfBirth = toDateInputValue(kycForm.dateOfBirth);
+    }
     if (includeBankDetails) {
       payload.bankDetails = {
         accountHolderName: bankForm.accountHolderName.trim(),
@@ -1821,7 +1836,7 @@ const SellerOnboarding = () => {
                     name="dateOfBirth"
                     type="date"
                     className="pointer-events-none absolute inset-0 h-[40px] w-full opacity-0"
-                    value={kycForm.dateOfBirth}
+                    value={toDateInputValue(kycForm.dateOfBirth)}
                     max={MAX_DOB_FOR_SELLER}
                     onChange={onKycChange}
                     aria-label="Date of Birth"
