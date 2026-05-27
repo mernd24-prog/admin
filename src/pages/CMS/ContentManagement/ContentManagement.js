@@ -1,47 +1,59 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { toast } from 'sonner';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { toast } from "sonner";
 
-import { CONTENT_TYPE_MAP, CONTENT_TYPES } from './contentTypes';
-import ContentPageSetup from '../ContentPages/components/ContentPageSetup';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import Loader from '../../../components/Loader/Loader';
-import Pagination from '../../../components/Pagination/Pagination';
-import AddButton from '../../../components/Button/AddButton';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+import { CONTENT_TYPE_MAP, CONTENT_TYPES } from "./contentTypes";
+import ContentPageSetup from "../ContentPages/components/ContentPageSetup";
+import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import Loader from "../../../components/Loader/Loader";
+import Pagination from "../../../components/Pagination/Pagination";
+import AddButton from "../../../components/Button/AddButton";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import {
   getContentPages,
   createContentPage,
   updateContentPage,
   deleteContentPage,
-} from '../../../Redux/adminCoreSlice';
+} from "../../../Redux/adminCoreSlice";
 
 const PAGE_SIZE = 15;
 const FALLBACK_TYPE = {
-  key: 'all',
-  label: 'All Content',
+  key: "all",
+  label: "All Content",
   pageType: null,
   singleton: false,
   customerSlug: null,
-  defaultTitle: '',
-  description: 'View and manage content.',
+  defaultTitle: "",
+  description: "View and manage content.",
   customerRoute: null,
-  bodyHint: 'Write the page body here.',
+  bodyHint: "Write the page body here.",
 };
 
 const StatusBadge = ({ published }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-    {published ? 'Published' : 'Draft'}
+  <span
+    className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+  >
+    {published ? "Published" : "Draft"}
   </span>
 );
 
 const EmptyState = ({ type, onAdd }) => (
   <div className="flex flex-col items-center justify-center py-20 text-center">
     <div className="p-4 mb-4 bg-indigo-50 rounded-full">
-      <svg className="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <svg
+        className="w-10 h-10 text-indigo-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
       </svg>
     </div>
     <h3 className="mb-1 text-base font-semibold text-gray-700">{type.label}</h3>
@@ -55,35 +67,60 @@ const EmptyState = ({ type, onAdd }) => (
   </div>
 );
 
-const SingletonCard = ({ page, type, onEdit, onDelete, onTogglePublish, onView }) => (
+const SingletonCard = ({
+  page,
+  type,
+  onEdit,
+  onDelete,
+  onTogglePublish,
+  onView,
+}) => (
   <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
     <div className="flex items-start justify-between mb-4">
       <div>
-        <h3 className="text-base font-semibold text-gray-800">{page?.title || 'Untitled'}</h3>
-        <p className="mt-1 text-xs text-gray-400">/{page?.slug || '-'}</p>
+        <h3 className="text-base font-semibold text-gray-800">
+          {page?.title || "Untitled"}
+        </h3>
+        <p className="mt-1 text-xs text-gray-400">/{page?.slug || "-"}</p>
       </div>
       <StatusBadge published={Boolean(page?.published)} />
     </div>
     {type.customerRoute && (
       <p className="mb-4 text-xs text-gray-400">
-        Customer URL: <span className="font-mono text-indigo-600">{type.customerRoute}</span>
+        Customer URL:{" "}
+        <span className="font-mono text-indigo-600">{type.customerRoute}</span>
       </p>
     )}
     {page?.body && (
-      <div className="p-3 mb-4 text-xs text-gray-500 bg-gray-50 border rounded-lg line-clamp-3" dangerouslySetInnerHTML={{ __html: page.body }} />
+      <div
+        className="p-3 mb-4 text-xs text-gray-500 bg-gray-50 border rounded-lg line-clamp-3"
+        dangerouslySetInnerHTML={{ __html: page.body }}
+      />
     )}
     <div className="flex items-center gap-3">
-      <button onClick={() => onView(page)} className="px-4 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+      <button
+        onClick={() => onView(page)}
+        className="px-4 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+      >
         View
       </button>
-      <button onClick={() => onEdit(page)} className="px-4 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50">
+      <button
+        onClick={() => onEdit(page)}
+        className="px-4 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
+      >
         Edit
       </button>
-      <button onClick={() => onDelete(page)} className="px-4 py-1.5 text-sm font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50">
+      <button
+        onClick={() => onDelete(page)}
+        className="px-4 py-1.5 text-sm font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50"
+      >
         Delete
       </button>
       <div className="ml-auto">
-        <ToggleButton isToggle={Boolean(page?.published)} handleClick={() => onTogglePublish(page)} />
+        <ToggleButton
+          isToggle={Boolean(page?.published)}
+          handleClick={() => onTogglePublish(page)}
+        />
       </div>
     </div>
   </div>
@@ -93,14 +130,19 @@ const ContentManagement = () => {
   const { type: typeKey } = useParams();
   const dispatch = useDispatch();
 
-  const activeType = CONTENT_TYPE_MAP[typeKey] || CONTENT_TYPE_MAP['all'] || FALLBACK_TYPE;
+  const activeType =
+    CONTENT_TYPE_MAP[typeKey] || CONTENT_TYPE_MAP["all"] || FALLBACK_TYPE;
   const isSingleton = Boolean(activeType?.singleton);
-  const lockedFields = isSingleton ? ['slug', 'pageType'] : (activeType?.pageType ? ['pageType'] : []);
+  const lockedFields = isSingleton
+    ? ["slug", "pageType"]
+    : activeType?.pageType
+      ? ["pageType"]
+      : [];
 
   const [pages, setPages] = useState([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
@@ -110,13 +152,13 @@ const ContentManagement = () => {
   const normalizedPages = useMemo(
     () =>
       (pages || [])
-        .filter((item) => item && typeof item === 'object')
+        .filter((item) => item && typeof item === "object")
         .map((item, index) => ({
           ...item,
           _rowKey: item?._id || item?.id || item?.slug || `row-${index}`,
-          title: item?.title || '',
-          slug: item?.slug || item?.id || item?._id || '',
-          pageType: item?.pageType || item?.category_id || '',
+          title: item?.title || "",
+          slug: item?.slug || item?.id || item?._id || "",
+          pageType: item?.pageType || item?.category_id || "",
         })),
     [pages],
   );
@@ -130,11 +172,13 @@ const ContentManagement = () => {
 
       const res = await dispatch(getContentPages(query)).unwrap();
       const data = res?.data;
-      const items = Array.isArray(data) ? data : (data?.list || data?.items || []);
+      const items = Array.isArray(data)
+        ? data
+        : data?.list || data?.items || [];
       setPages(items);
       setTotal(res?.meta?.total || data?.total || items.length);
     } catch (err) {
-      toast.error(err?.message || 'Failed to load content pages');
+      toast.error(err?.message || "Failed to load content pages");
       setPages([]);
     } finally {
       setIsLoading(false);
@@ -143,7 +187,7 @@ const ContentManagement = () => {
 
   useEffect(() => {
     setPageNo(1);
-    setSearch('');
+    setSearch("");
   }, [typeKey]);
 
   useEffect(() => {
@@ -156,29 +200,31 @@ const ContentManagement = () => {
   };
 
   const openEdit = (page) => {
-    if (!page || typeof page !== 'object') return;
+    if (!page || typeof page !== "object") return;
     setEditingPage(page);
     setSetupOpen(true);
   };
 
   const handleSetupSubmit = async (form) => {
-    if (!form || typeof form !== 'object') {
-      toast.error('Invalid form data');
+    if (!form || typeof form !== "object") {
+      toast.error("Invalid form data");
       return;
     }
     setIsLoading(true);
     try {
       if (editingPage) {
-        await dispatch(updateContentPage({ id: editingPage.slug, ...form })).unwrap();
-        toast.success('Page updated');
+        await dispatch(
+          updateContentPage({ id: editingPage.slug, ...form }),
+        ).unwrap();
+        toast.success("Page updated");
       } else {
         await dispatch(createContentPage(form)).unwrap();
-        toast.success('Page created');
+        toast.success("Page created");
       }
       setSetupOpen(false);
       fetchPages();
     } catch (err) {
-      toast.error(err?.message || 'Save failed');
+      toast.error(err?.message || "Save failed");
     } finally {
       setIsLoading(false);
     }
@@ -189,11 +235,11 @@ const ContentManagement = () => {
     setIsLoading(true);
     try {
       await dispatch(deleteContentPage({ slug: deleteTarget.slug })).unwrap();
-      toast.success('Page deleted');
+      toast.success("Page deleted");
       setDeleteTarget(null);
       fetchPages();
     } catch (err) {
-      toast.error(err?.message || 'Delete failed');
+      toast.error(err?.message || "Delete failed");
     } finally {
       setIsLoading(false);
     }
@@ -201,19 +247,21 @@ const ContentManagement = () => {
 
   const handleTogglePublish = async (page) => {
     try {
-      await dispatch(updateContentPage({ id: page.slug, published: !page.published })).unwrap();
-      toast.success(`Page ${page.published ? 'unpublished' : 'published'}`);
+      await dispatch(
+        updateContentPage({ id: page.slug, published: !page.published }),
+      ).unwrap();
+      toast.success(`Page ${page.published ? "unpublished" : "published"}`);
       fetchPages();
     } catch (err) {
-      toast.error(err?.message || 'Status update failed');
+      toast.error(err?.message || "Status update failed");
     }
   };
 
   const singlePage = isSingleton ? pages[0] || null : null;
 
   const tabGroups = [
-    { title: 'All', items: CONTENT_TYPES.filter((t) => !t.singleton) },
-    { title: 'Policy Pages', items: CONTENT_TYPES.filter((t) => t.singleton) },
+    { title: "All", items: CONTENT_TYPES.filter((t) => !t.singleton) },
+    { title: "Policy Pages", items: CONTENT_TYPES.filter((t) => t.singleton) },
   ];
 
   return (
@@ -223,7 +271,9 @@ const ContentManagement = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-800">Content Management</h1>
+          <h1 className="text-xl font-semibold text-gray-800">
+            Content Management
+          </h1>
           <p className="text-sm text-gray-400">{activeType.label}</p>
         </div>
         {!isSingleton && <AddButton onClick={openAdd} />}
@@ -231,15 +281,17 @@ const ContentManagement = () => {
 
       {/* Type tabs */}
       <div className="flex flex-wrap gap-2 pb-1 border-b">
-        {tabGroups.flatMap((g) => g.items).map((t) => (
-          <Link
-            key={t.key}
-            to={`/app/content-management${t.key === 'all' ? '' : `/${t.key}`}`}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${activeType.key === t.key ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            {t.label}
-          </Link>
-        ))}
+        {tabGroups
+          .flatMap((g) => g.items)
+          .map((t) => (
+            <Link
+              key={t.key}
+              to={`/app/content-management${t.key === "all" ? "" : `/${t.key}`}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${activeType.key === t.key ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              {t.label}
+            </Link>
+          ))}
       </div>
 
       {/* Singleton view */}
@@ -263,10 +315,13 @@ const ContentManagement = () => {
       {/* List view */}
       {!isSingleton && (
         <>
-          <div className="flex gap-2">
+          <div className="flex  gap-2">
             <input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPageNo(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPageNo(1);
+              }}
               placeholder="Search by title or slug..."
               className="w-72 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
@@ -279,18 +334,38 @@ const ContentManagement = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {['Title', 'Slug', 'Type', 'Language', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    {[
+                      "Title",
+                      "Slug",
+                      "Type",
+                      "Language",
+                      "Status",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {normalizedPages.map((page) => (
                     <tr key={page._rowKey} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800 max-w-[200px] truncate">{page.title}</td>
-                      <td className="px-4 py-3 font-mono text-gray-500 text-xs max-w-[150px] truncate">{page.slug}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{page.pageType}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{page.language || 'en'}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800 max-w-[200px] truncate">
+                        {page.title}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-500 text-xs max-w-[150px] truncate">
+                        {page.slug}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">
+                        {page.pageType}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">
+                        {page.language || "en"}
+                      </td>
                       <td className="px-4 py-3">
                         <button onClick={() => handleTogglePublish(page)}>
                           <StatusBadge published={page.published} />
@@ -298,13 +373,22 @@ const ContentManagement = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <button onClick={() => openEdit(page)} className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50">
+                          <button
+                            onClick={() => openEdit(page)}
+                            className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
+                          >
                             Edit
                           </button>
-                          <button onClick={() => setViewingPage(page)} className="px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50">
+                          <button
+                            onClick={() => setViewingPage(page)}
+                            className="px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                          >
                             View
                           </button>
-                          <button onClick={() => setDeleteTarget(page)} className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50">
+                          <button
+                            onClick={() => setDeleteTarget(page)}
+                            className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
+                          >
                             Delete
                           </button>
                         </div>
@@ -331,8 +415,17 @@ const ContentManagement = () => {
         isOpen={setupOpen}
         onClose={() => setSetupOpen(false)}
         onSubmit={handleSetupSubmit}
-        initialData={editingPage || (isSingleton ? { slug: activeType.customerSlug, title: activeType.defaultTitle, pageType: activeType.pageType } : null)}
-        pageType={activeType.pageType || ''}
+        initialData={
+          editingPage ||
+          (isSingleton
+            ? {
+                slug: activeType.customerSlug,
+                title: activeType.defaultTitle,
+                pageType: activeType.pageType,
+              }
+            : null)
+        }
+        pageType={activeType.pageType || ""}
         lockedFields={lockedFields}
         bodyHint={activeType.bodyHint}
         isLoading={isLoading}
@@ -350,17 +443,32 @@ const ContentManagement = () => {
           <div className="relative w-full max-w-3xl max-h-[88vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-white border-b">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">{viewingPage?.title || 'Untitled'}</h3>
-                <p className="mt-1 text-xs text-gray-400">/{viewingPage?.slug || '-'} • {viewingPage?.pageType || '-'}</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {viewingPage?.title || "Untitled"}
+                </h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  /{viewingPage?.slug || "-"} • {viewingPage?.pageType || "-"}
+                </p>
               </div>
-              <button onClick={() => setViewingPage(null)} className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button
+                onClick={() => setViewingPage(null)}
+                className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
                 Close
               </button>
             </div>
             <div className="p-6 space-y-3">
-              {viewingPage?.description ? <p className="text-sm text-gray-600">{viewingPage.description}</p> : null}
+              {viewingPage?.description ? (
+                <p className="text-sm text-gray-600">
+                  {viewingPage.description}
+                </p>
+              ) : null}
               <div className="p-4 text-sm text-gray-700 bg-gray-50 border rounded-lg">
-                {viewingPage?.body ? <div dangerouslySetInnerHTML={{ __html: viewingPage.body }} /> : <p className="text-gray-400">No body content.</p>}
+                {viewingPage?.body ? (
+                  <div dangerouslySetInnerHTML={{ __html: viewingPage.body }} />
+                ) : (
+                  <p className="text-gray-400">No body content.</p>
+                )}
               </div>
             </div>
           </div>

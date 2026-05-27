@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { MdSearch, MdRefresh, MdUnfoldMore } from 'react-icons/md';
-import Pagination from '../Pagination/Pagination';
-import CustomCheckbox from '../Atoms/Checkbox/Checkbox';
-import { ExportButton, ImportButton } from './TableTools';
+import React, { useEffect, useState } from "react";
+import { MdSearch, MdRefresh, MdUnfoldMore } from "react-icons/md";
+import Pagination from "../Pagination/Pagination";
+import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
+import { ExportButton, ImportButton } from "./TableTools";
 
 const SkeletonRow = ({ cols }) => (
   <tr className="animate-pulse">
@@ -40,13 +40,13 @@ const DataTable = ({
   pageSize = 20,
   onPageChange,
   onSearch,
-  searchPlaceholder = 'Search…',
-  rowKey = '_id',
+  searchPlaceholder = "Search…",
+  rowKey = "_id",
   actions,
-  emptyText = 'No records found.',
+  emptyText = "No records found.",
   onSort,
   sortKey,
-  sortDir = 'asc',
+  sortDir = "asc",
   selectable = false,
   selectedKeys = [],
   onSelectionChange,
@@ -58,14 +58,19 @@ const DataTable = ({
   importConfig,
   requiredModule,
 }) => {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const getKey = (row, index) =>
-    typeof rowKey === 'function' ? rowKey(row) : row[rowKey] ?? row.id ?? index;
+    typeof rowKey === "function"
+      ? rowKey(row)
+      : (row[rowKey] ?? row.id ?? index);
   const pageKeys = data.map((row, index) => getKey(row, index));
-  const allSelected = pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
-  const selectedData = data.filter((row, index) => selectedKeys.includes(getKey(row, index)));
+  const allSelected =
+    pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
+  const selectedData = data.filter((row, index) =>
+    selectedKeys.includes(getKey(row, index)),
+  );
 
   useEffect(() => {
     if (page > totalPages && onPageChange) onPageChange(totalPages);
@@ -78,7 +83,11 @@ const DataTable = ({
   };
 
   const handleSort = (col) => {
-    if (col.sortable && onSort) onSort(col.key, sortKey === col.key && sortDir === 'asc' ? 'desc' : 'asc');
+    if (col.sortable && onSort)
+      onSort(
+        col.key,
+        sortKey === col.key && sortDir === "asc" ? "desc" : "asc",
+      );
   };
 
   const toggleAll = (checked) => {
@@ -89,7 +98,11 @@ const DataTable = ({
 
   const toggleRow = (key, checked) => {
     if (!onSelectionChange) return;
-    onSelectionChange(checked ? [...new Set([...selectedKeys, key])] : selectedKeys.filter((item) => item !== key));
+    onSelectionChange(
+      checked
+        ? [...new Set([...selectedKeys, key])]
+        : selectedKeys.filter((item) => item !== key),
+    );
   };
 
   const tools = (
@@ -103,9 +116,16 @@ const DataTable = ({
           requiredModule={requiredModule}
         />
       )}
-      {importConfig && <ImportButton {...importConfig} requiredModule={requiredModule} />}
+      {importConfig && (
+        <ImportButton {...importConfig} requiredModule={requiredModule} />
+      )}
       {onRefresh && (
-        <button type="button" onClick={onRefresh} className="admin-btn-secondary" aria-label="Refresh records">
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="admin-btn-secondary"
+          aria-label="Refresh records"
+        >
           <MdRefresh size={17} /> Refresh
         </button>
       )}
@@ -120,7 +140,6 @@ const DataTable = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
           {onSearch && (
             <div className="relative w-full sm:w-72">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 value={searchValue}
                 onChange={handleSearch}
@@ -129,7 +148,9 @@ const DataTable = ({
               />
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">{tools}</div>
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+            {tools}
+          </div>
         </div>
       )}
 
@@ -140,13 +161,16 @@ const DataTable = ({
             <tr>
               {selectable && (
                 <th className="px-4 py-3 text-left">
-                  <CustomCheckbox checked={allSelected} onChange={(event) => toggleAll(event.target.checked)} />
+                  <CustomCheckbox
+                    checked={allSelected}
+                    onChange={(event) => toggleAll(event.target.checked)}
+                  />
                 </th>
               )}
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wide whitespace-nowrap ${col.sortable ? 'cursor-pointer select-none hover:text-white/80' : ''} ${col.width ? `w-${col.width}` : ''}`}
+                  className={`px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wide whitespace-nowrap ${col.sortable ? "cursor-pointer select-none hover:text-white/80" : ""} ${col.width ? `w-${col.width}` : ""}`}
                   onClick={() => handleSort(col)}
                 >
                   <span className="flex items-center gap-1">
@@ -154,7 +178,11 @@ const DataTable = ({
                     {col.sortable && (
                       <MdUnfoldMore
                         size={14}
-                        className={sortKey === col.key ? 'text-[#e49e1c]' : 'text-white/50'}
+                        className={
+                          sortKey === col.key
+                            ? "text-[#e49e1c]"
+                            : "text-white/50"
+                        }
                       />
                     )}
                   </span>
@@ -163,33 +191,57 @@ const DataTable = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {loading
-              ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={columns.length + (selectable ? 1 : 0)} />)
-              : error
-                ? (
-                  <tr><td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-red-600">{error}</td></tr>
-                )
-              : data.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-gray-400 text-sm">
-                      {emptyText}
+            {loading ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonRow
+                  key={i}
+                  cols={columns.length + (selectable ? 1 : 0)}
+                />
+              ))
+            ) : error ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-12 text-center text-red-600"
+                >
+                  {error}
+                </td>
+              </tr>
+            ) : data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-12 text-center text-gray-400 text-sm"
+                >
+                  {emptyText}
+                </td>
+              </tr>
+            ) : (
+              data.map((row, index) => (
+                <tr
+                  key={getKey(row, index)}
+                  className="hover:bg-[#f7f9ff] transition-colors"
+                >
+                  {selectable && (
+                    <td className="px-4 py-3">
+                      <CustomCheckbox
+                        checked={selectedKeys.includes(getKey(row, index))}
+                        onChange={(event) =>
+                          toggleRow(getKey(row, index), event.target.checked)
+                        }
+                      />
                     </td>
-                  </tr>
-                )
-                : data.map((row, index) => (
-                  <tr key={getKey(row, index)} className="hover:bg-[#f7f9ff] transition-colors">
-                    {selectable && (
-                      <td className="px-4 py-3"><CustomCheckbox checked={selectedKeys.includes(getKey(row, index))} onChange={(event) => toggleRow(getKey(row, index), event.target.checked)} /></td>
-                    )}
-                    {columns.map((col) => (
-                      <td key={col.key} className="px-4 py-3 text-gray-700">
-                        {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-            }
+                  )}
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-4 py-3 text-gray-700">
+                      {col.render
+                        ? col.render(row[col.key], row)
+                        : (row[col.key] ?? "—")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -198,9 +250,19 @@ const DataTable = ({
       {(totalPages > 1 || onPageSizeChange) && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
           <span>
-            Showing {totalCount ? Math.min((page - 1) * pageSize + 1, totalCount) : 0}-{Math.min(page * pageSize, totalCount)} of {totalCount}
+            Showing{" "}
+            {totalCount ? Math.min((page - 1) * pageSize + 1, totalCount) : 0}-
+            {Math.min(page * pageSize, totalCount)} of {totalCount}
           </span>
-          <Pagination totalPages={totalPages} currentPage={page} onPageChange={onPageChange} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={onPageSizeChange} compact />
+          <Pagination
+            totalPages={totalPages}
+            currentPage={page}
+            onPageChange={onPageChange}
+            pageSize={pageSize}
+            pageSizeOptions={pageSizeOptions}
+            onPageSizeChange={onPageSizeChange}
+            compact
+          />
         </div>
       )}
     </div>

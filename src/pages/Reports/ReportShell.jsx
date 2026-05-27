@@ -15,7 +15,7 @@ const RANGE_OPTIONS = [
 ];
 
 const StatCard = ({ label, value, sub, trend, loading }) => (
-  <div className="bg-white  rounded-xl border shadow-[0_2px_6px_rgba(20,20,20,0.16)]  border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED]  p-8 ">
+  <div className="bg-white  rounded-xl border shadow-[0_2px_6px_rgba(20,20,20,0.16)]  border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED]  p-10 ">
     {loading ? (
       <div className="space-y-2 animate-pulse">
         <div className="h-4 w-20 bg-gray-200 rounded" />
@@ -27,7 +27,7 @@ const StatCard = ({ label, value, sub, trend, loading }) => (
         <div className="text-sm md:text-lg font-inter font-semibold  text-[#182D5099]/60 ">
           {label}
         </div>
-        <div className="text-xl md:text-3xl font-bold text-[#042586]  my-2">
+        <div className="text-xl md:text-3xl font-inter font-bold text-[#042586]  my-3">
           {value}
         </div>
         {sub && <div className="text-xs font-medum font-inter mt-1">{sub}</div>}

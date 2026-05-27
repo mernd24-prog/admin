@@ -38,10 +38,6 @@ body {
   --admin-transition: 180ms ease;
 }
 
-.d {
-  border: 2px solid red;
-}
-
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -482,6 +478,30 @@ select:active {
 .admin-table-head {
   background: var(--admin-navy);
   color: white;
+}
+
+.admin-table-action-cell > div,
+.admin-table-action-cell > div > span,
+.admin-table-action-cell > div > span > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap !important;
+  gap: 6px;
+}
+
+.admin-table-action-cell button {
+  min-height: 28px;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.admin-table-description-cell > div,
+.admin-table-description-cell > div > * {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-section-title {
