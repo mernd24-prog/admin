@@ -98,10 +98,10 @@ export default function SearchComponent({
   return (
     <div className="w-full bg-white p-1 ">
       <div
-        className={`flex md:flex-row flex-col   justify-between gap-10  mb-4 ${mobailClassName}`}
+        className={`flex flex-col gap-3 mb-4 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
-        <div className="flex justify-center   items-center w-full gap-3">
-          <div className="w-full">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start md:flex-1">
+          <div className="w-full min-w-0">
             <SearchInput
               type="text"
               placeholder={placeholder ? placeholder : "Search"}
@@ -113,14 +113,14 @@ export default function SearchComponent({
             />
           </div>
           {isSelectNearSearch && (
-            <div>
+            <div className="shrink-0">
               <FilterSelect
                 label={""}
                 value={filters.country}
                 options={countryOptions}
                 onChange={(option) => handleFilterChange("country", option)}
                 placeholder={`All `}
-                className={`w-44 `}
+                className={`admin-field-inline w-full sm:w-44`}
               />
             </div>
           )}
@@ -138,14 +138,14 @@ export default function SearchComponent({
 
           <Button
             onClick={applyFilters}
-            className={`button-primary  `}
+            className={`button-primary h-10 shrink-0`}
             disabled={isFiltering}
           >
             {isFiltering ? "Searching..." : "Search"}
           </Button>
         </div>
         {isActionButton && (
-          <div className="flex justify-end items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
             {isStatusAction && (
               <>
                 <Button
@@ -155,8 +155,8 @@ export default function SearchComponent({
                   requiredAction="status"
                   className={
                     selectedRow.length === 0
-                      ? " cursor-not-allowed border-[#dee2e6] gap-2"
-                      : "border-blue-500 text-blue-500 gap-2"
+                      ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
+                      : "h-10 border-blue-500 text-blue-500 gap-2"
                   }
                 >
                   <PiToggleRightThin />
@@ -169,8 +169,8 @@ export default function SearchComponent({
                   requiredAction="status"
                   className={
                     selectedRow.length === 0
-                      ? " cursor-not-allowed border-[#dee2e6] gap-2"
-                      : "border-blue-500 text-blue-500 gap-2"
+                      ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
+                      : "h-10 border-blue-500 text-blue-500 gap-2"
                   }
                 >
                   <PiToggleLeftThin /> Deactivate
@@ -185,8 +185,8 @@ export default function SearchComponent({
                 requiredAction="delete"
                 className={
                   selectedRow.length === 0
-                    ? " cursor-not-allowed border-[#dee2e6] gap-2"
-                    : "border-blue-500 text-blue-500 gap-2"
+                    ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
+                    : "h-10 border-blue-500 text-blue-500 gap-2"
                 }
               >
                 <MdOutlineDeleteOutline /> Delete

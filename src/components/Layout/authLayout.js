@@ -47,12 +47,12 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
               <h4 className="mt-2 max-w-full text-blue truncate font-inter text-lg font-bold sm:text-xl">
                 {activeUser.name}
               </h4>
-              <div className="mt-2 flex flex-row justify-center  md:mt-0 gap-1">
+              <div className="mt-2 flex flex-row justify-center   md:mt-0 gap-1">
                 {Array.from({ length: Math.round(activeUser.rating) }).map(
                   (_, index) => (
                     <IoStarSharp
                       key={`star-${index}`}
-                      className="h-6 w-6 text-primary "
+                      className="h-6 w-6  text-primary "
                     />
                   ),
                 )}

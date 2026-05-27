@@ -19,6 +19,46 @@ const getHeadingText = (heading) =>
 const getColumnMeta = (heading) => {
   const headingText = getHeadingText(heading);
 
+  if (headingText === "sku") {
+    return {
+      headerClass: "min-w-[260px] w-[260px]",
+      cellClass: "min-w-[260px] w-[260px] whitespace-nowrap",
+      contentClass:
+        "block max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap",
+    };
+  }
+
+  if (headingText.includes("family") || headingText.includes("product")) {
+    return {
+      headerClass: "min-w-[280px] w-[280px]",
+      cellClass: "min-w-[280px] w-[280px] whitespace-nowrap",
+      contentClass:
+        "block max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap",
+    };
+  }
+
+  if (headingText.includes("seller")) {
+    return {
+      headerClass: "min-w-[180px] w-[180px]",
+      cellClass: "min-w-[180px] w-[180px] whitespace-nowrap",
+      contentClass:
+        "block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap",
+    };
+  }
+
+  if (
+    headingText.includes("stock") ||
+    headingText.includes("reserved") ||
+    headingText.includes("attributes")
+  ) {
+    return {
+      headerClass: "min-w-[120px] w-[120px]",
+      cellClass: "min-w-[120px] w-[120px] whitespace-nowrap",
+      contentClass:
+        "block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap",
+    };
+  }
+
   if (headingText.includes("description")) {
     return {
       headerClass: "min-w-[360px] max-w-[420px] w-[380px]",
@@ -46,9 +86,10 @@ const getColumnMeta = (heading) => {
   }
 
   return {
-    headerClass: "min-w-[130px]",
-    cellClass: "whitespace-nowrap",
-    contentClass: "max-w-[240px]",
+    headerClass: "min-w-[160px] w-[160px]",
+    cellClass: "min-w-[160px] w-[160px] whitespace-nowrap",
+    contentClass:
+      "block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap",
   };
 };
 
@@ -206,12 +247,27 @@ const TableData = ({
                             const headingIndex = isHeaderCheckbox
                               ? cellIndex - 1
                               : cellIndex;
+                            const isCheckboxCell =
+                              isHeaderCheckbox && cellIndex === 0;
                             const isActions = isActionHeading(
                               tableHeadings[headingIndex],
                             );
                             const columnMeta = getColumnMeta(
                               tableHeadings[headingIndex],
                             );
+
+                            if (isCheckboxCell) {
+                              return (
+                                <td
+                                  key={`cell-${rowIndex}-${cellIndex}`}
+                                  className="w-12 px-4 py-3 align-middle"
+                                >
+                                  <div className="flex justify-start">
+                                    {cell}
+                                  </div>
+                                </td>
+                              );
+                            }
 
                             return (
                               <td

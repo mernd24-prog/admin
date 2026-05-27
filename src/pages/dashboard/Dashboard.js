@@ -1,13 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { IoMdTrendingDown } from "react-icons/io";
 import { IoTrendingUp } from "react-icons/io5";
-import {
-  MdAdd,
-  MdCalendarToday,
-  MdMoreVert,
-  MdOutlineFileDownload,
-} from "react-icons/md";
+import { MdCalendarToday, MdMoreVert } from "react-icons/md";
 import {
   Area,
   AreaChart,
@@ -124,6 +119,19 @@ function EmptyTableRow({ colSpan, children }) {
 }
 
 export default function Dashboard() {
+  const [showZoom, setShowZoom] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const image = "/Img/auth-img/user3.png";
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setPosition({ x, y });
+  };
   const dispatch = useDispatch();
   const dashboardState = useSelector(
     (state) => state.adminCore?.dashboardOverviewData,

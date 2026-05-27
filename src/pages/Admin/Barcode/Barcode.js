@@ -1,55 +1,51 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Loader from '../../../components/Loader/Loader';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import { useDispatch, useSelector } from 'react-redux';
-import { getAllBrandList, getList, getProducts } from '../../../Redux/productSlice';
-import { toast } from 'sonner';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Loader from "../../../components/Loader/Loader";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  getAllBrandList,
+  getList,
+  getProducts,
+} from "../../../Redux/productSlice";
+import { toast } from "sonner";
 
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { transformArray } from '../../../_helpers/globalFunctions';
-import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
-import ImageGallery from '../../../components/Atoms/ImageGallery/ImageGallery';
-import Pagination from '../../../components/Pagination/Pagination';
-import Code128Barcode from './Code128Barcode';
-import Button from '../../../components/Atoms/buttons/button';
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import { transformArray } from "../../../_helpers/globalFunctions";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
+import Pagination from "../../../components/Pagination/Pagination";
+import Code128Barcode from "./Code128Barcode";
+import Button from "../../../components/Atoms/buttons/button";
 
-
-
-const TABLE_HEADINGS = [
-    "Image",
-    "Name",
-    "Barcode Label",
-    "Actions"
-];
+const TABLE_HEADINGS = ["Image", "Name", "Barcode Label", "Actions"];
 
 const SIZE_OPTIONS = [
-    { value: "1", label: "1" },
-    { value: "3", label: "3" },
-    { value: "10", label: "10" },
-    { value: "16", label: "16" },
-    { value: "50", label: "50" },
-    { value: "100", label: "100" }
+  { value: "1", label: "1" },
+  { value: "3", label: "3" },
+  { value: "10", label: "10" },
+  { value: "16", label: "16" },
+  { value: "50", label: "50" },
+  { value: "100", label: "100" },
 ];
 
 const INITIAL_FILTERS = {
-    search: "",
-    product: null,
-    category: null,
-    brand: null,
+  search: "",
+  product: null,
+  category: null,
+  brand: null,
 };
 
-
 const formatDate = (date) => {
-    try {
-        return new Date(date).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: '2-digit'
-        });
-    } catch (error) {
-        console.error('Date formatting error:', error);
-        return 'N/A';
-    }
+  try {
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "2-digit",
+    });
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "N/A";
+  }
 };
 
 const getPrintStyles = () => `
@@ -223,131 +219,129 @@ const getPrintStyles = () => `
     }
 `;
 
-
-
-
-
 const BarcodePage = () => {
-    const dispatch = useDispatch();
-    const selector = useSelector(state => state.product);
+  const dispatch = useDispatch();
+  const selector = useSelector((state) => state.product);
 
-    const [apiRes, setApiRes] = useState({ list: [], total: 0 });
-    const [loading, setLoading] = useState(false);
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
-    const [pageNo, setPageNo] = useState(1);
-    const [size, setSize] = useState(10);
-    const [isProductView, setIsProductView] = useState(false);
-    const [isProductData, setIsProductData] = useState(null);
+  const [apiRes, setApiRes] = useState({ list: [], total: 0 });
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [pageNo, setPageNo] = useState(1);
+  const [size, setSize] = useState(10);
+  const [isProductView, setIsProductView] = useState(false);
+  const [isProductData, setIsProductData] = useState(null);
 
-    const modifiedBrandData = useMemo(() =>
-        transformArray(selector?.getAllBrandListData?.data?.data?.list),
-        [selector?.getAllBrandListData?.data?.data?.list]
-    );
+  const modifiedBrandData = useMemo(
+    () => transformArray(selector?.getAllBrandListData?.data?.data?.list),
+    [selector?.getAllBrandListData?.data?.data?.list],
+  );
 
-    const createSelectOptions = useMemo(() => {
-        const options = [];
+  const createSelectOptions = useMemo(() => {
+    const options = [];
 
-        const addOptions = (categories, prefix = '') => {
-            if (!Array.isArray(categories)) return;
+    const addOptions = (categories, prefix = "") => {
+      if (!Array.isArray(categories)) return;
 
-            categories.forEach(category => {
-                const label = prefix ? `${prefix} > ${category.name}` : category.name;
-                options.push({
-                    value: category._id,
-                    label,
-                });
+      categories.forEach((category) => {
+        const label = prefix ? `${prefix} > ${category.name}` : category.name;
+        options.push({
+          value: category._id,
+          label,
+        });
 
-                if (Array.isArray(category.subcategories) && category.subcategories.length > 0) {
-                    addOptions(category.subcategories, label);
-                }
-            });
-        };
-
-        addOptions(selector?.getListData?.data?.data);
-        return options;
-    }, [selector?.getListData]);
-
-    const fetchProductsList = useCallback(async () => {
-        setLoading(true);
-        try {
-            const query = {
-                page: pageNo,
-                size: size,
-                keyWord: filters.search || '',
-                searchFields: 'name',
-                populate: 'product_catalogs_id:images|product_image_id:images|brand_id:name|hsn_code:code',
-            };
-
-            // Add filters to query
-            const queryFilters = {};
-            if (filters.brand?.value) {
-                queryFilters.brand_id = filters.brand.value;
-            }
-            if (filters.category?.value) {
-                queryFilters.category_id = filters.category.value;
-            }
-
-            if (Object.keys(queryFilters).length > 0) {
-                query.query = JSON.stringify(queryFilters);
-            }
-
-            const response = await dispatch(getProducts(query));
-
-            if (response?.payload?.data) {
-                setApiRes(response.payload.data);
-            } else {
-                setApiRes({ list: [], total: 0 });
-            }
-        } catch (error) {
-            console.error('Failed to fetch products:', error);
-            toast.error('Failed to fetch products');
-            setApiRes({ list: [], total: 0 });
-        } finally {
-            setLoading(false);
+        if (
+          Array.isArray(category.subcategories) &&
+          category.subcategories.length > 0
+        ) {
+          addOptions(category.subcategories, label);
         }
-    }, [dispatch, filters, size, pageNo]);
+      });
+    };
 
-    useEffect(() => {
-        const initializeData = async () => {
-            try {
-                await Promise.all([
-                    dispatch(getAllBrandList()),
-                    dispatch(getList())
-                ]);
-            } catch (error) {
-                console.error('Failed to initialize data:', error);
-                toast.error('Failed to load initial data');
-            }
-        };
+    addOptions(selector?.getListData?.data?.data);
+    return options;
+  }, [selector?.getListData]);
 
-        initializeData();
-    }, [dispatch]);
+  const fetchProductsList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const query = {
+        page: pageNo,
+        size: size,
+        keyWord: filters.search || "",
+        searchFields: "name",
+        populate:
+          "product_catalogs_id:images|product_image_id:images|brand_id:name|hsn_code:code",
+      };
 
-    useEffect(() => {
-        fetchProductsList();
-    }, [fetchProductsList]);
+      // Add filters to query
+      const queryFilters = {};
+      if (filters.brand?.value) {
+        queryFilters.brand_id = filters.brand.value;
+      }
+      if (filters.category?.value) {
+        queryFilters.category_id = filters.category.value;
+      }
 
-    const printBarcodeLabel = useCallback((product) => {
-        if (!product?._id) {
-            toast.error('Invalid product data');
-            return;
-        }
+      if (Object.keys(queryFilters).length > 0) {
+        query.query = JSON.stringify(queryFilters);
+      }
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            toast.error('Unable to open print window. Please check popup blocker.');
-            return;
-        }
+      const response = await dispatch(getProducts(query));
 
-        const barcodeNumber = product._id.toUpperCase();
-        const productCode = product?.name?.substring(0, 15).toUpperCase() || 'PRODUCT';
-        const currentDate = formatDate(new Date());
+      if (response?.payload?.data) {
+        setApiRes(response.payload.data);
+      } else {
+        setApiRes({ list: [], total: 0 });
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      toast.error("Failed to fetch products");
+      setApiRes({ list: [], total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, filters, size, pageNo]);
 
-        const printContent = `
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await Promise.all([dispatch(getAllBrandList()), dispatch(getList())]);
+      } catch (error) {
+        console.error("Failed to initialize data:", error);
+        toast.error("Failed to load initial data");
+      }
+    };
+
+    initializeData();
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetchProductsList();
+  }, [fetchProductsList]);
+
+  const printBarcodeLabel = useCallback((product) => {
+    if (!product?._id) {
+      toast.error("Invalid product data");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Unable to open print window. Please check popup blocker.");
+      return;
+    }
+
+    const barcodeNumber = product._id.toUpperCase();
+    const productCode =
+      product?.name?.substring(0, 15).toUpperCase() || "PRODUCT";
+    const currentDate = formatDate(new Date());
+
+    const printContent = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Thermal Label - ${product.name || 'Product'}</title>
+            <title>Thermal Label - ${product.name || "Product"}</title>
             <meta charset="UTF-8">
             <style>${getPrintStyles()}</style>
             <script src="https://cdn.jsdelivr.net/npm/bwip-js@3.0.2/dist/bwip-js.min.js"></script>
@@ -356,11 +350,11 @@ const BarcodePage = () => {
             <div class="label-container">
                 <div class="header">
                     <span>BRAND</span>
-                    <span class="brand-name">${product?.brand_id?.name || 'N/A'}</span>
+                    <span class="brand-name">${product?.brand_id?.name || "N/A"}</span>
                 </div>
                 
                 <div class="product-section">
-                    <div class="product-name">${product.name || 'N/A'}</div>
+                    <div class="product-name">${product.name || "N/A"}</div>
                     <div class="product-id">ID: ${product._id}</div>
                 </div>
                 
@@ -372,11 +366,11 @@ const BarcodePage = () => {
                 <div class="pricing-section">
                     <div class="price-row">
                         <span>MRP:</span>
-                        <span>₹${product.basePrice || 'N/A'}</span>
+                        <span>₹${product.basePrice || "N/A"}</span>
                     </div>
                     <div class="price-row">
                         <span>SALE:</span>
-                        <span>₹${product.salePrice || 'N/A'}</span>
+                        <span>₹${product.salePrice || "N/A"}</span>
                     </div>
                     
                     <div class="info-grid">
@@ -386,11 +380,11 @@ const BarcodePage = () => {
                         </div>
                         <div class="info-item">
                             <div>COD</div>
-                            <div>${product.cod ? 'YES' : 'NO'}</div>
+                            <div>${product.cod ? "YES" : "NO"}</div>
                         </div>
                         <div class="info-item">
                             <div>HSN</div>
-                            <div>${product.hsn_code?.code || 'N/A'}</div>
+                            <div>${product.hsn_code?.code || "N/A"}</div>
                         </div>
                         <div class="info-item">
                             <div>PKD</div>
@@ -433,17 +427,17 @@ const BarcodePage = () => {
         </html>
     `;
 
-        try {
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-        } catch (error) {
-            console.error('Print window error:', error);
-            toast.error('Error opening print window');
-            printWindow.close();
-        }
-    }, []);
+    try {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Print window error:", error);
+      toast.error("Error opening print window");
+      printWindow.close();
+    }
+  }, []);
 
-    const getBulkPrintStyles = () => `
+  const getBulkPrintStyles = () => `
     @page {
         size: 80mm 210mm;  
         margin: 2mm;
@@ -618,21 +612,21 @@ const BarcodePage = () => {
     }
 `;
 
-    const printAllBarcodes = useCallback(() => {
-        if (apiRes.list.length === 0) {
-            toast.warning("No products to print");
-            return;
-        }
+  const printAllBarcodes = useCallback(() => {
+    if (apiRes.list.length === 0) {
+      toast.warning("No products to print");
+      return;
+    }
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            toast.error('Unable to open print window. Please check popup blocker.');
-            return;
-        }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Unable to open print window. Please check popup blocker.");
+      return;
+    }
 
-        const currentDate = formatDate(new Date());
+    const currentDate = formatDate(new Date());
 
-        let htmlContent = `
+    let htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -649,19 +643,19 @@ const BarcodePage = () => {
         <div class="labels-container">
     `;
 
-        for (let i = 0; i < apiRes.list.length; i++) {
-            const product = apiRes.list[i];
-            const barcodeNumber = product._id.toUpperCase();
+    for (let i = 0; i < apiRes.list.length; i++) {
+      const product = apiRes.list[i];
+      const barcodeNumber = product._id.toUpperCase();
 
-            htmlContent += `
+      htmlContent += `
         <div class="label-container">
             <div class="header">
                 <span>BRAND</span>
-                <span class="brand-name">${product?.brand_id?.name || 'N/A'}</span>
+                <span class="brand-name">${product?.brand_id?.name || "N/A"}</span>
             </div>
             
             <div class="product-section">
-                <div class="product-name">${product.name || 'N/A'}</div>
+                <div class="product-name">${product.name || "N/A"}</div>
              
             </div>
             
@@ -673,11 +667,11 @@ const BarcodePage = () => {
             <div class="pricing-section">
                 <div class="price-row">
                     <span>MRP:</span>
-                    <span>₹${product.basePrice || 'N/A'}</span>
+                    <span>₹${product.basePrice || "N/A"}</span>
                 </div>
                 <div class="price-row">
                     <span>SALE:</span>
-                    <span>₹${product.salePrice || 'N/A'}</span>
+                    <span>₹${product.salePrice || "N/A"}</span>
                 </div>
                 
                 <div class="info-grid">
@@ -687,11 +681,11 @@ const BarcodePage = () => {
                     </div>
                     <div class="info-item">
                         <div>COD</div>
-                        <div>${product.cod ? 'YES' : 'NO'}</div>
+                        <div>${product.cod ? "YES" : "NO"}</div>
                     </div>
                     <div class="info-item">
                         <div>HSN</div>
-                        <div>${product.hsn_code?.code || 'N/A'}</div>
+                        <div>${product.hsn_code?.code || "N/A"}</div>
                     </div>
                     <div class="info-item">
                         <div>PKD</div>
@@ -702,19 +696,21 @@ const BarcodePage = () => {
         </div>
         `;
 
-            if ((i + 1) % 3 === 0 && i !== apiRes.list.length - 1) {
-                htmlContent += `
+      if ((i + 1) % 3 === 0 && i !== apiRes.list.length - 1) {
+        htmlContent += `
             <div style="page-break-after: always;"></div>
             `;
-            }
-        }
+      }
+    }
 
-        htmlContent += `
+    htmlContent += `
         </div>
         <script>
             window.onload = function () {
                 try {
-                    ${apiRes.list.map(product => `
+                    ${apiRes.list
+                      .map(
+                        (product) => `
                         bwipjs.toCanvas(document.getElementById('barcode-${product._id}'), {
                             bcid: 'code128',
                             text: '${product._id.toUpperCase()}',
@@ -724,7 +720,9 @@ const BarcodePage = () => {
                             textxalign: 'center',
                             backgroundcolor: 'ffffff'
                         });
-                    `).join('\n')}
+                    `,
+                      )
+                      .join("\n")}
                 } catch (error) {
                     console.error('Barcode generation error:', error);
                 }
@@ -734,29 +732,29 @@ const BarcodePage = () => {
     </html>
 `;
 
-        try {
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-        } catch (error) {
-            console.error('Print window error:', error);
-            toast.error('Error opening print window');
-            printWindow.close();
-        }
-    }, [apiRes.list]);
+    try {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Print window error:", error);
+      toast.error("Error opening print window");
+      printWindow.close();
+    }
+  }, [apiRes.list]);
 
-    const printBarcodes = useCallback(() => {
-        if (apiRes.list.length === 0) {
-            toast.warning("No products to print");
-            return;
-        }
+  const printBarcodes = useCallback(() => {
+    if (apiRes.list.length === 0) {
+      toast.warning("No products to print");
+      return;
+    }
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            toast.error('Unable to open print window. Please check popup blocker.');
-            return;
-        }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Unable to open print window. Please check popup blocker.");
+      return;
+    }
 
-        let htmlContent = `
+    let htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -930,39 +928,42 @@ const BarcodePage = () => {
     <div class="labels-container">
 `;
 
-        for (let i = 0; i < apiRes.list.length; i += 2) {
-            const rowClass = Math.floor(i / 2) % 10 === 9 ? 'label-row page-break' : 'label-row';
-            htmlContent += `<div class="${rowClass}">`;
+    for (let i = 0; i < apiRes.list.length; i += 2) {
+      const rowClass =
+        Math.floor(i / 2) % 10 === 9 ? "label-row page-break" : "label-row";
+      htmlContent += `<div class="${rowClass}">`;
 
-            const product1 = apiRes.list[i];
-            htmlContent += `
+      const product1 = apiRes.list[i];
+      htmlContent += `
     <div class="label-container">
         <div class="barcode-section border-2">
             <canvas id="barcode-${product1.product_no}" class="barcode-canvas"></canvas>
         </div>
     </div>`;
 
-            if (i + 1 < apiRes.list.length) {
-                const product2 = apiRes.list[i + 1];
-                htmlContent += `
+      if (i + 1 < apiRes.list.length) {
+        const product2 = apiRes.list[i + 1];
+        htmlContent += `
         <div class="label-container">
             <div class="barcode-section ">
                 <canvas id="barcode-${product2.product_no}" class="barcode-canvas"></canvas>
             </div>
         </div>`;
-            } else {
-                htmlContent += `<div class="label-container empty-label"></div>`;
-            }
+      } else {
+        htmlContent += `<div class="label-container empty-label"></div>`;
+      }
 
-            htmlContent += `</div>`;
-        }
+      htmlContent += `</div>`;
+    }
 
-        htmlContent += `
+    htmlContent += `
     </div>
     <script>
         window.onload = function() {
             try {
-                ${apiRes.list.map(product => `
+                ${apiRes.list
+                  .map(
+                    (product) => `
                  bwipjs.toCanvas(document.getElementById('barcode-${product.product_no}'), {
     bcid: 'code128',
     text: '${product.product_no}',
@@ -975,7 +976,9 @@ const BarcodePage = () => {
 });
 
 
-                `).join('\n')}
+                `,
+                  )
+                  .join("\n")}
             } catch (error) {
                 console.error('Barcode generation error:', error);
             }
@@ -985,117 +988,120 @@ const BarcodePage = () => {
 </html>
 `;
 
-        try {
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-        } catch (error) {
-            console.error('Print window error:', error);
-            toast.error('Error opening print window');
-            printWindow.close();
-        }
-    }, [apiRes.list]);
+    try {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Print window error:", error);
+      toast.error("Error opening print window");
+      printWindow.close();
+    }
+  }, [apiRes.list]);
 
+  const handlePageSize = useCallback((value) => {
+    setSize(Number(value.value));
+    setPageNo(1);
+  }, []);
 
+  const handleSearchRemove = useCallback(async () => {
+    setFilters(INITIAL_FILTERS);
+    setPageNo(1);
+  }, []);
 
-    const handlePageSize = useCallback((value) => {
-        setSize(Number(value.value));
-        setPageNo(1);
-    }, []);
+  const handleImageClick = (data) => {
+    if (!data) return toast.info("No Image Available!");
+    setIsProductData(data);
+    setIsProductView(true);
+  };
 
-    const handleSearchRemove = useCallback(async () => {
-        setFilters(INITIAL_FILTERS);
-        setPageNo(1);
-    }, []);
+  const tableRows = useMemo(
+    () =>
+      apiRes.list.map((product) => [
+        <div
+          className="text-blue-500 font-semibold cursor-pointer"
+          onClick={() => handleImageClick(product?.product_image_id?.images)}
+        >
+          View
+        </div>,
+        <span key={`name-${product._id}`} className="capitalize">
+          {product?.name || "N/A"}
+        </span>,
+        <Code128Barcode key={`barcode-${product._id}`} product={product} />,
+        <div key={`actions-${product._id}`} className="flex space-x-2">
+          <button
+            onClick={() => printBarcodeLabel(product)}
+            className="px-3 py-1 bg-blue-500 text-black text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
+            disabled={loading}
+          >
+            Print
+          </button>
+        </div>,
+      ]),
+    [apiRes.list, printBarcodeLabel, loading],
+  );
 
-    const handleImageClick = (data) => {
-        if (!data) return toast.info("No Image Available!");
-        setIsProductData(data);
-        setIsProductView(true);
-    };
+  const onPageChange = (newPageNo) => {
+    setPageNo(newPageNo);
+  };
 
-    const tableRows = useMemo(() =>
-        apiRes.list.map((product) => [
-            <div className='text-blue-500 font-semibold cursor-pointer' onClick={() => handleImageClick(product?.product_image_id?.images)}>View</div>,
-            <span key={`name-${product._id}`} className='capitalize'>
-                {product?.name || 'N/A'}
-            </span>,
-            <Code128Barcode key={`barcode-${product._id}`} product={product} />,
-            <div key={`actions-${product._id}`} className="flex space-x-2">
-                <button
-                    onClick={() => printBarcodeLabel(product)}
-                    className="px-3 py-1 bg-blue-500 text-black text-sm rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
-                    disabled={loading}
-                >
-                    Print
-                </button>
-            </div>
-        ]),
-        [apiRes.list, printBarcodeLabel, loading]
-    );
+  return (
+    <div className="p-6 mx-auto max-w-7xl space-y-3">
+      <Loader loading={loading} />
 
-    const onPageChange = (newPageNo) => {
-        setPageNo(newPageNo);
-    };
-
-    return (
-        <div className='p-6 mx-auto max-w-7xl space-y-3'>
-            <Loader loading={loading} />
-
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-2">
-                    <FilterSelect
-                        options={SIZE_OPTIONS}
-                        value={SIZE_OPTIONS.find(opt => opt.value === String(size))}
-                        onChange={handlePageSize}
-                        placeholder="Page Size"
-                    />
-                </div>
-
-                <div className="flex gap-2">
-                    <Button onClick={printAllBarcodes}> Print All</Button>
-                    <Button onClick={printBarcodes}> Print Barcode</Button>
-
-                </div>
-            </div>
-
-            <div className='bg-white p-4 border rounded shadow-sm'>
-                <SearchComponent
-                    isSearchDown={true}
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isBrand={true}
-                    brandOption={modifiedBrandData}
-                    handleSearchRemove={handleSearchRemove}
-                    isCategory={true}
-                    categoryOptions={createSelectOptions}
-                />
-
-                <TableData
-                    tableHeadings={TABLE_HEADINGS}
-                    data={tableRows}
-                    rowDataKey="_id"
-                    showHeadingDiv={false}
-                    sortableColumns={[1]}
-                    totalData={apiRes.total}
-                />
-            </div>
-
-            {apiRes?.total > size && (
-                <Pagination
-                    totalPages={Math.ceil(apiRes?.total / size)}
-                    currentPage={pageNo}
-                    onPageChange={onPageChange}
-                />
-            )}
-
-            <ImageGallery
-                images={isProductData}
-                isOpen={isProductView}
-                onClose={() => setIsProductView(false)}
-            />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          <FilterSelect
+            options={SIZE_OPTIONS}
+            value={SIZE_OPTIONS.find((opt) => opt.value === String(size))}
+            onChange={handlePageSize}
+            placeholder="Page Size"
+          />
         </div>
-    );
+
+        <div className="flex gap-2">
+          <Button onClick={printAllBarcodes}> Print All</Button>
+          <Button onClick={printBarcodes}> Print Barcode</Button>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 border rounded shadow-sm">
+        <SearchComponent
+          isSearchDown={true}
+          isSearchShow={true}
+          filters={filters}
+          setFilters={setFilters}
+          isBrand={true}
+          brandOption={modifiedBrandData}
+          handleSearchRemove={handleSearchRemove}
+          isCategory={true}
+          categoryOptions={createSelectOptions}
+        />
+
+        <TableData
+          tableHeadings={TABLE_HEADINGS}
+          data={tableRows}
+          rowDataKey="_id"
+          showHeadingDiv={false}
+          sortableColumns={[1]}
+          totalData={apiRes.total}
+        />
+      </div>
+
+      {apiRes?.total > size && (
+        <Pagination
+          totalPages={Math.ceil(apiRes?.total / size)}
+          currentPage={pageNo}
+          onPageChange={onPageChange}
+        />
+      )}
+
+      <ImageGallery
+        images={isProductData}
+        isOpen={isProductView}
+        onClose={() => setIsProductView(false)}
+      />
+    </div>
+  );
 };
 
 export default BarcodePage;
