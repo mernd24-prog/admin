@@ -300,9 +300,9 @@ const Sidebar = ({
 
     return Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length
       ? buildDynamicSidebarData(dynamicSidebarModules, {
-          superAdmin: isSuperAdmin,
-          allowedModules: assignedSidebarModules,
-        })
+        superAdmin: isSuperAdmin,
+        allowedModules: assignedSidebarModules,
+      })
       : [];
   }, [
     sellerPanel,
@@ -390,6 +390,15 @@ const Sidebar = ({
     sessionStorage.setItem("sidebarExpandedState", JSON.stringify(next));
   };
 
+  const handleDesktopCollapse = () => {
+    setNavbarOpen(true);
+    setIsExpanded(false);
+    setIsPermanentlyOpen(false);
+    setHasPermanentOpen(true);
+    sessionStorage.setItem('sidebarPermanentState', JSON.stringify(true));
+    sessionStorage.setItem('sidebarExpandedState', JSON.stringify(false));
+  };
+
   const handleNavClick = (code) => {
     setModuleName(code);
     if (!isPermanentlyOpen) setNavbarOpen(false);
@@ -411,10 +420,21 @@ const Sidebar = ({
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? "" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
+      className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
     >
       {/* Logo / toggle */}
-      <div className="sticky top-0 z-10 flex items-center justify-center h-[102px] px-3 bg-[#faf8f5] w-full mb-2">
+      <div className="sticky top-0 z-10 flex h-[170px] w-full items-start justify-center bg-[#faf8f5] px-3 pt-[26px] sm:h-[190px] sm:pt-[28px]">
+        {isExpanded && (
+          <button
+            type="button"
+            aria-label="Collapse sidebar"
+            className="absolute right-4 top-4 z-20 hidden h-9 w-9 items-center justify-center rounded text-[#082f91] transition hover:bg-[#f3f6ff] lg:flex"
+            onClick={handleDesktopCollapse}
+          >
+            <TbLayoutSidebarLeftCollapse size={24} />
+          </button>
+        )}
+
         {isExpanded ? (
           <div className="flex justify-center items-center gap-8">
             <div className="rounded-md border  border-[#e8d6b7] bg-white p-2 shadow-sm">
@@ -429,12 +449,19 @@ const Sidebar = ({
             />
           </div>
         )}
+
         {isExpanded && (
           <button
-            className="text-gray-500 focus:outline-none lg:hidden"
-            onClick={() => setNavbarOpen(false)}
+            type="button"
+            aria-label="Close sidebar"
+            className="absolute right-[6px] top-[26px] flex h-8 w-8 items-center justify-center text-[#5d667a] transition hover:text-[#082f91] focus:outline-none sm:right-3 sm:top-[28px] lg:hidden"
+            onClick={() => {
+              setNavbarOpen(false);
+              setIsExpanded(false);
+              setHasPermanentOpen(false);
+            }}
           >
-            <RxCross2 size={24} />
+            <RxCross2 size={22} />
           </button>
         )}
       </div>
@@ -442,7 +469,7 @@ const Sidebar = ({
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto sidebar-scrollbar">
         <nav
-          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-4 pb-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
+          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-6 pb-4 sm:px-[28px]" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
         >
           <ul>
             {sidebarData.map((item, index) => {
@@ -465,7 +492,7 @@ const Sidebar = ({
                 return (
                   <li
                     key={index}
-                    className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
+                    className={`flex flex-col border-b border-[#ece6e0] py-[6px] uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
                       className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} p-2 rounded-md transition-colors duration-200 ${isActive ? "bg-[#082f91] text-white" : "text-[#082f91] hover:bg-[#eef2ff]"}`}
@@ -493,7 +520,7 @@ const Sidebar = ({
                 >
                   {/* Section header */}
                   <div
-                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
+                    className={`flex w-full min-w-0 items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
@@ -525,7 +552,7 @@ const Sidebar = ({
                     }}
                   >
                     {isExpanded && (
-                      <ul className="mt-1 ml-6 space-y-1">
+                      <ul className="mt-2 ml-6 space-y-1">
                         {item.subItems.map((sub, si) => {
                           const path = `/app/${sub.module_code}`;
                           const isSubActive =

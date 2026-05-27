@@ -141,7 +141,9 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
           className={`flex items-center ${hasPermanentOpen ? "lg:ps-0" : "lg:ps-10 space-x-3"} ps-0`}
         >
           <button
-            className="p-2 text-white rounded-md focus:outline-none hover:bg-white/10 md:hidden"
+            type="button"
+            aria-label="Toggle sidebar"
+            className="p-2 text-white rounded-md focus:outline-none hover:bg-white/10 lg:hidden"
             onClick={handleNavbar}
           >
             <MdOutlineMenu className="w-6 h-6" />

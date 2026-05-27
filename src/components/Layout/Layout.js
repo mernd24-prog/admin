@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
@@ -381,6 +381,20 @@ function Layout() {
     return renderRoute(path, element);
   };
 
+  const handleSidebarToggle = useCallback(() => {
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    const nextOpen = isDesktop ? !hasPermanentOpen : !navbarOpen;
+
+    setNavbarOpen(nextOpen);
+    setIsExpanded(nextOpen);
+    setHasPermanentOpen(isDesktop ? nextOpen : false);
+
+    if (isDesktop) {
+      sessionStorage.setItem("sidebarPermanentState", JSON.stringify(nextOpen));
+      sessionStorage.setItem("sidebarExpandedState", JSON.stringify(nextOpen));
+    }
+  }, [hasPermanentOpen, navbarOpen]);
+
   return (
     <div className="admin-shell relative flex h-screen overflow-hidden bg-[#fffdfa]">
       <div className={`z-50`}>
@@ -401,7 +415,7 @@ function Layout() {
         }`}
       >
         <Header
-          handleNavbar={() => setNavbarOpen((prev) => !prev)}
+          handleNavbar={handleSidebarToggle}
           moduleName={moduleName}
           hasPermanentOpen={hasPermanentOpen}
         />
