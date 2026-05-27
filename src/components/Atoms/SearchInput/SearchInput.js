@@ -22,18 +22,6 @@ const SearchInput = ({
 
   return (
     <div className="relative w-full ">
-
-      {
-        searchTerm ? <IoClose
-          className="absolute z-10 text-gray-800 transform -translate-y-1/2 right-3 top-1/2"
-          size={20} onClick={handleRemove}
-          role="button"
-          aria-label="Clear search"
-        /> : <IoSearchOutline
-          className="absolute z-10 transform -translate-y-1/2 right-3 top-1/2 text-[#082f91]"
-          size={20}
-        />
-      }
       <input
         type="text"
         placeholder={placeholder || "Search..."}

@@ -12,6 +12,7 @@ import {
   MdAccountBalance,
   MdBarChart,
   MdLocationOn,
+  MdChevronLeft,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -26,6 +27,8 @@ import {
 import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import BrandLogo from "../BrandLogo/BrandLogo";
+import NeedHelpCard from "../Shared/NeedHelpCard";
 
 // ─── Seller panel sections ────────────────────────────────────────────────────
 const SELLER_SIDEBAR_SECTIONS = [
@@ -119,14 +122,14 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
     const children = flattenSidebarChildren(item.children || [], label);
     const self = route
       ? [
-          {
-            name: label,
-            label,
-            module_code: route,
-            module:
-              item.metadata?.requiredModule || item.moduleKey || item.slug,
-          },
-        ]
+        {
+          name: label,
+          label,
+          module_code: route,
+          module:
+            item.metadata?.requiredModule || item.moduleKey || item.slug,
+        },
+      ]
       : [];
     return [...self, ...children];
   });
@@ -139,9 +142,9 @@ const filterSidebarTreeByAccess = (items = [], options = {}) =>
     .map((item) => {
       const requiredModule = normalizeModuleCode(
         item.metadata?.requiredModule ||
-          item.requiredModule ||
-          item.moduleKey ||
-          item.slug,
+        item.requiredModule ||
+        item.moduleKey ||
+        item.slug,
       );
       const children = filterSidebarTreeByAccess(item.children || [], options);
       const allowedModules = options.allowedModules || new Set();
@@ -170,12 +173,12 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
         icon: getIconForTab(item.moduleName || item.name),
         subItems: isSingleItem
           ? [
-              {
-                name: item.moduleName || item.name,
-                label: item.moduleName || item.name,
-                module_code: route,
-              },
-            ]
+            {
+              name: item.moduleName || item.name,
+              label: item.moduleName || item.name,
+              module_code: route,
+            },
+          ]
           : subItems,
         isSingleItem,
       };
@@ -415,7 +418,9 @@ const Sidebar = ({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const sidebarWidth = isExpanded ? "w-[270px]" : "w-16";
+  const sidebarWidth = isExpanded
+    ? 'w-full max-w-[350px] lg:w-[350px]'
+    : 'w-16';
 
   return (
     <div
@@ -423,7 +428,7 @@ const Sidebar = ({
       className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
     >
       {/* Logo / toggle */}
-      <div className="sticky top-0 z-10 flex h-[170px] w-full items-start justify-center bg-[#faf8f5] px-3 pt-[26px] sm:h-[190px] sm:pt-[28px]">
+      <div className={`sticky top-0 z-10 flex  w-full items-start justify-center bg-[#faf8f5] px-3 pt-[26px] ${navbarOpen ? "sm:h-[190px] h-[170px]" : "sm:h-[90px]  h-[70px]"}  sm:pt-[28px]`}>
         {isExpanded && (
           <button
             type="button"
@@ -431,15 +436,16 @@ const Sidebar = ({
             className="absolute right-4 top-4 z-20 hidden h-9 w-9 items-center justify-center rounded text-[#082f91] transition hover:bg-[#f3f6ff] lg:flex"
             onClick={handleDesktopCollapse}
           >
-            <TbLayoutSidebarLeftCollapse size={24} />
+            <MdChevronLeft size={24} />
           </button>
         )}
 
         {isExpanded ? (
-          <div className="flex justify-center items-center gap-8">
-            <div className="rounded-md border  border-[#e8d6b7] bg-white p-2 shadow-sm">
-              <img src="/logo.png" alt="logo" className="w-auto h-[62px]" />
-            </div>
+          <div className="flex items-center justify-center gap-8">
+            <BrandLogo
+              className=" mb-10 h-[140px] w-[150px] p-[6px]  "
+              imageClassName="!h-[80%] w-[90%] !my-[10px]"
+            />
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
@@ -593,20 +599,15 @@ const Sidebar = ({
         </nav>
       </div>
       {isExpanded && (
-        <div className="m-4 rounded-lg border border-[#ead9bf] bg-[#fff5df] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#082f91]">
-            Need Help?
-          </p>
-          <p className="mt-2 text-[10px] leading-4 text-[#43506a]">
-            Our support team is available to help with your account.
-          </p>
-          <button
-            type="button"
-            className="mt-3 h-8 w-full rounded bg-[#082f91] text-[10px] font-semibold text-white hover:bg-[#062779]"
-          >
-            Contact Support
-          </button>
-        </div>
+        <NeedHelpCard
+          title="Need Help?"
+          description="Our verification team is available 24/7 to help you complete KYC."
+          buttonText="Contact Support"
+          className="mx-[28px] mb-[36px] mt-[28px] border-[#ead9bf] bg-[#fff5df]"
+          titleClassName="text-[10px] tracking-[0.1em] text-[#082f91]"
+          descriptionClassName="text-[10px] leading-4 text-[#43506a]"
+          buttonClassName="mt-3 h-8 rounded bg-[#082f91] text-[10px] font-semibold hover:bg-[#062779]"
+        />
       )}
     </div>
   );
