@@ -292,11 +292,11 @@ export const useAuthFlow = ({
             "Registration is available only on the seller panel.";
           isValid = false;
         }
-        if (!formFields.fullName.trim()) {
-          errors.fullName = "Full name is required";
+        if (!formFields.firstName.trim()) {
+          errors.firstName = "First name is required";
           isValid = false;
-        } else if (formFields.fullName.trim().length < 2) {
-          errors.fullName = "Full name must be at least 2 characters";
+        } else if (formFields.firstName.trim().length < 2) {
+          errors.firstName = "First name must be at least 2 characters";
           isValid = false;
         }
 
@@ -824,7 +824,7 @@ export const useAuthFlow = ({
         return;
       }
 
-      const firstName = formFields.fullName.trim();
+      const firstName = formFields.firstName.trim();
       const lastName = formFields.lastName.trim();
 
       try {

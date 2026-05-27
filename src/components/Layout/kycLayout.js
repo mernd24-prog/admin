@@ -98,7 +98,7 @@ const KYCStatusLayout = ({
     { id: "business", label: "Business Details" },
     { id: "bank", label: "Bank Details" },
     { id: "review", label: "Review Details" },
-    { id: "status", label: "Status Status" },
+    { id: "status", label: "Status" },
   ];
   const currentIndex = menuItems.findIndex(
     (item) => item.id === currentSection,
@@ -217,7 +217,7 @@ const KYCStatusLayout = ({
             <span>Onboarding</span>
             <span className="mx-1 sm:mx-[10px]">›</span>
             <span className="truncate">
-              {menuItems[currentIndex]?.label || "Status Status"}
+              {menuItems[currentIndex]?.label || "Status"}
             </span>
           </div>
           <div className="flex items-center gap-4">

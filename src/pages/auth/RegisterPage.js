@@ -144,6 +144,7 @@ const RegisterPage = () => {
                   : "Continue to Verification"
               }
               className="h-[40px] rounded-[7px] font-inter text-[12px]"
+              disabled={auth.isBusy}
             />
           </div>
         </form>

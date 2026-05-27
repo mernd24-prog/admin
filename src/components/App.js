@@ -12,6 +12,7 @@ import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import RegisterVerifyOtpPage from "../pages/auth/RegisterVerifyOtpPage";
 import VerificationCompletePage from "../pages/auth/VerificationCompletePage";
+import SellerStatusPage from "../pages/SellerStatus/SellerStatusPage";
 import { useLoader } from "../context/LoaderContext";
 import Loader from "./Loader/Loader";
 import AuthLayout from "./Layout/authLayout";
@@ -31,6 +32,10 @@ import {
 import { forceLogout } from "../_helpers/authSession";
 import { isSellerPanel } from "../_helpers/panelConfig";
 import { clearSellerOnboarding } from "../Redux/seller-slice";
+import {
+  getSellerStatusRoute,
+  isSellerFlowPath,
+} from "./Seller/sellerVerificationStatus";
 const App = () => {
   const dispatch = useDispatch();
   const { currentSection } = useKYC();
@@ -67,9 +72,9 @@ const App = () => {
         if (
           flowState?.requiresOnboarding &&
           isSellerPanel() &&
-          !window.location.pathname.startsWith("/seller/onboarding")
+          !isSellerFlowPath(window.location.pathname)
         ) {
-          window.location.replace("/seller/onboarding");
+          window.location.replace(AUTH_ROUTES.ONBOARDING);
           return;
         }
       }
@@ -191,6 +196,25 @@ const App = () => {
             />
           }
         />
+        <Route
+          path={AUTH_ROUTES.ONBOARDING_COMPLETE}
+          element={
+            <SellerStatusRoute
+              component={SellerStatusPage}
+              flowState={seller?.flowState}
+              statusOverride="complete"
+            />
+          }
+        />
+        <Route
+          path={AUTH_ROUTES.SELLER_STATUS}
+          element={
+            <SellerStatusRoute
+              component={SellerStatusPage}
+              flowState={seller?.flowState}
+            />
+          }
+        />
 
         <Route
           path={AUTH_ROUTES.ONBOARDING}
@@ -232,11 +256,34 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
     const accountActive = flowState.accountStatus === "active";
 
     if (!(kycApproved && bankApproved && accountActive)) {
-      return <Navigate to="/seller/onboarding" replace />;
+      return <Navigate to={getSellerStatusRoute(flowState)} replace />;
     }
   }
 
   return isAuthenticated ? <Component {...rest} /> : <Navigate to="/login" />;
+};
+
+const SellerStatusRoute = ({ component: Component, flowState, ...rest }) => {
+  const hasAccessToken = !!localStorage.getItem("accessToken");
+  const hasOnboardingToken = !!localStorage.getItem("sellerOnboardingToken");
+  const hasStoredStatus = !!flowState;
+
+  if (!isSellerPanel()) {
+    return <Navigate to={AUTH_ROUTES.LOGIN} replace />;
+  }
+
+  if (!hasAccessToken && !hasOnboardingToken && !hasStoredStatus) {
+    return <Navigate to={AUTH_ROUTES.LOGIN} replace />;
+  }
+
+  return (
+    <>
+      <LoaderWrapper />
+      <KYCStatusLayout currentSection="status">
+        <Component flowState={flowState} {...rest} />
+      </KYCStatusLayout>
+    </>
+  );
 };
 
 const LegacyAuthRedirect = ({ to }) => {
