@@ -64,9 +64,9 @@ const ManageCity = () => {
     ? allStateOptions.filter((state) => String(state.countryId || '') === String(formData.country_code))
     : [];
 
-  const modifiedData = [
-    { value: "", label: "All Countries" },
-    ...countryOptions
+  const stateFilterOptions = [
+    { value: "", label: "All States" },
+    ...allStateOptions
   ];
 
   const fetchCityList = useCallback(() => {
@@ -76,7 +76,7 @@ const ManageCity = () => {
       keyWord: filters?.search,
       searchFields: "name",
       populate: 'state_code:name',
-      countryId: filters?.country?.value || undefined,
+      stateId: filters?.country?.value || undefined,
     };
     setIsLoading(true)
     dispatch(getCityList(query))
@@ -306,7 +306,7 @@ const ManageCity = () => {
             setSelectedRow={setSelectedRow}
             placeholder={`Search by name`}
             handleAction={handleBulkAction}
-            countryOptions={modifiedData}
+            countryOptions={stateFilterOptions}
             isSelectNearSearch={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}

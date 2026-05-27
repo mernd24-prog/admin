@@ -7,37 +7,40 @@ import {
   MdBarChart, MdLocationOn,
 } from 'react-icons/md';
 import { CiSettings } from 'react-icons/ci';
+import { TbLayoutSidebarLeftCollapse } from 'react-icons/tb';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
 import { getRbacSidebarModules } from '../../Redux/adminCoreSlice';
 import { getAccessToken, getStoredRole, getStoredUser, hasModuleAccess, normalizeRole } from '../../_helpers/authStorage';
 import { IoIosMenu } from 'react-icons/io';
 import { RxCross2 } from 'react-icons/rx';
 import { isSellerPanel } from '../../_helpers/panelConfig';
+import BrandLogo from '../BrandLogo/BrandLogo';
+import NeedHelpCard from '../Shared/NeedHelpCard';
 
 // ─── Seller panel sections ────────────────────────────────────────────────────
 const SELLER_SIDEBAR_SECTIONS = [
-  { module: 'analytics',          tab: 'Dashboard',          label: 'Dashboard',      route: 'home'              },
-  { module: 'products',           tab: 'Catalog Management', label: 'Products',       route: 'product-catalog'   },
-  { module: 'orders',             tab: 'Orders Management',  label: 'Orders',         route: 'orders'            },
-  { module: 'pricing',            tab: 'Marketing',          label: 'Coupons',        route: 'discount-coupons'  },
-  { module: 'delivery',           tab: 'Tax & Compliance',   label: 'Delivery',       route: 'shipping-packages' },
-  { module: 'returns',            tab: 'Orders Management',  label: 'Returns',        route: 'order-return-reasons' },
-  { module: 'sellers',            tab: 'Users & Access',     label: 'Profile',        route: 'profile'           },
-  { module: 'sellers/commissions',tab: 'Orders Management',  label: 'Commissions',    route: 'transactions'      },
-  { module: 'notifications',      tab: 'Marketing',          label: 'Notifications',  route: 'messages'          },
+  { module: 'analytics', tab: 'Dashboard', label: 'Dashboard', route: 'home' },
+  { module: 'products', tab: 'Catalog Management', label: 'Products', route: 'product-catalog' },
+  { module: 'orders', tab: 'Orders Management', label: 'Orders', route: 'orders' },
+  { module: 'pricing', tab: 'Marketing', label: 'Coupons', route: 'discount-coupons' },
+  { module: 'delivery', tab: 'Tax & Compliance', label: 'Delivery', route: 'shipping-packages' },
+  { module: 'returns', tab: 'Orders Management', label: 'Returns', route: 'order-return-reasons' },
+  { module: 'sellers', tab: 'Users & Access', label: 'Profile', route: 'profile' },
+  { module: 'sellers/commissions', tab: 'Orders Management', label: 'Commissions', route: 'transactions' },
+  { module: 'notifications', tab: 'Marketing', label: 'Notifications', route: 'messages' },
 ];
 
 // ─── Section icon map ─────────────────────────────────────────────────────────
 const SECTION_ICONS = {
-  'dashboard':           MdOutlineDashboard,
-  'catalog management':  MdInventory,
-  'inventory management':MdWarehouse,
-  'orders management':   MdShoppingCart,
-  'users & access':      MdPeople,
-  'marketing':           MdCampaign,
-  'tax & compliance':    MdAccountBalance,
+  'dashboard': MdOutlineDashboard,
+  'catalog management': MdInventory,
+  'inventory management': MdWarehouse,
+  'orders management': MdShoppingCart,
+  'users & access': MdPeople,
+  'marketing': MdCampaign,
+  'tax & compliance': MdAccountBalance,
   'reports & analytics': MdBarChart,
-  'settings':            CiSettings,
+  'settings': CiSettings,
   'location management': MdLocationOn,
 };
 
@@ -64,11 +67,11 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
     const children = flattenSidebarChildren(item.children || [], label);
     const self = route
       ? [{
-          name: label,
-          label,
-          module_code: route,
-          module: item.metadata?.requiredModule || item.moduleKey || item.slug,
-        }]
+        name: label,
+        label,
+        module_code: route,
+        module: item.metadata?.requiredModule || item.moduleKey || item.slug,
+      }]
       : [];
     return [...self, ...children];
   });
@@ -152,11 +155,11 @@ const Sidebar = ({
   }, [adminCoreSelector?.rbacSidebarModulesData]);
   const sellerPanel = isSellerPanel();
 
-  const [activeTab, setActiveTab]   = useState(null);
-  const [userData, setUserData]     = useState(null);
+  const [activeTab, setActiveTab] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(getStoredSidebarState);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [heights, setHeights]         = useState({});
+  const [heights, setHeights] = useState({});
   const [visibleSubItems, setVisibleSubItems] = useState({});
 
   const location = useLocation();
@@ -203,9 +206,9 @@ const Sidebar = ({
 
     return Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length
       ? buildDynamicSidebarData(dynamicSidebarModules, {
-          superAdmin: isSuperAdmin,
-          allowedModules: assignedSidebarModules,
-        })
+        superAdmin: isSuperAdmin,
+        allowedModules: assignedSidebarModules,
+      })
       : [];
   }, [sellerPanel, dynamicSidebarModules, isSuperAdmin, assignedSidebarModules]);
 
@@ -273,6 +276,15 @@ const Sidebar = ({
     sessionStorage.setItem('sidebarExpandedState', JSON.stringify(next));
   };
 
+  const handleDesktopCollapse = () => {
+    setNavbarOpen(true);
+    setIsExpanded(false);
+    setIsPermanentlyOpen(false);
+    setHasPermanentOpen(true);
+    sessionStorage.setItem('sidebarPermanentState', JSON.stringify(true));
+    sessionStorage.setItem('sidebarExpandedState', JSON.stringify(false));
+  };
+
   const handleNavClick = (code) => {
     setModuleName(code);
     if (!isPermanentlyOpen) setNavbarOpen(false);
@@ -289,29 +301,57 @@ const Sidebar = ({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const sidebarWidth = isExpanded ? 'w-[270px]' : 'w-16';
+  const sidebarWidth = isExpanded
+    ? 'w-full max-w-[350px] lg:w-[350px]'
+    : 'w-16';
 
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? '' : 'hidden lg:flex'} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
+      className={`fixed lg:static inset-y-0 left-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? 'flex' : 'hidden lg:flex'
+        } shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
     >
       {/* Logo / toggle */}
-      <div className="sticky top-0 z-10 flex items-center justify-center h-[102px] px-3 bg-[#faf8f5] w-full mb-2">
+      <div className="sticky top-0 z-10 flex h-[170px] w-full items-start justify-center bg-[#faf8f5] px-3 pt-[26px] sm:h-[190px] sm:pt-[28px]">
+        {isExpanded && (
+          <button
+            type="button"
+            aria-label="Collapse sidebar"
+            className="absolute right-4 top-4 z-20 hidden h-9 w-9 items-center justify-center rounded text-[#082f91] transition hover:bg-[#f3f6ff] lg:flex"
+            onClick={handleDesktopCollapse}
+          >
+            <TbLayoutSidebarLeftCollapse size={24} />
+          </button>
+        )}
+
         {isExpanded ? (
-          <div className="flex justify-center items-center gap-8">
-            <div className="rounded-md border border-[#e8d6b7] bg-white p-2 shadow-sm">
-              <img src="/logo.png" alt="logo" className="w-auto h-[62px]" />
-            </div>
+          <div className="flex items-center justify-center gap-8">
+            <BrandLogo
+              className=" mb-10 h-[140px] w-[150px] p-[6px]  "
+              imageClassName="!h-[80%] w-[90%] !my-[10px]"
+            />
           </div>
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <IoIosMenu className="text-2xl cursor-pointer text-[#082f91]" onClick={handleMenuClick} />
+          <div className="flex w-full items-center justify-center">
+            <IoIosMenu
+              className=" cursor-pointer text-2xl text-[#082f91]"
+              onClick={handleMenuClick}
+            />
           </div>
         )}
+
         {isExpanded && (
-          <button className="text-gray-500 focus:outline-none lg:hidden" onClick={() => setNavbarOpen(false)}>
-            <RxCross2 size={24} />
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            className="absolute right-[6px] top-[26px] flex h-8 w-8 items-center justify-center text-[#5d667a] transition hover:text-[#082f91] focus:outline-none sm:right-3 sm:top-[28px] lg:hidden"
+            onClick={() => {
+              setNavbarOpen(false);
+              setIsExpanded(false);
+              setHasPermanentOpen(false);
+            }}
+          >
+            <RxCross2 size={22} />
           </button>
         )}
       </div>
@@ -319,7 +359,7 @@ const Sidebar = ({
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto sidebar-scrollbar">
         <nav
-          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-4 pb-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
+          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-6 pb-4 sm:px-[28px]" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
         >
           <ul>
             {sidebarData.map((item, index) => {
@@ -337,10 +377,10 @@ const Sidebar = ({
                 return (
                   <li
                     key={index}
-                    className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
+                    className={`flex flex-col border-b border-[#ece6e0] py-[6px] uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
-                      className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'} p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#082f91] text-white' : 'text-[#082f91] hover:bg-[#eef2ff]'}`}
+                      className={`flex w-full min-w-0 items-center ${isExpanded ? 'gap-3' : 'justify-center'} p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#082f91] text-white' : 'text-[#082f91] hover:bg-[#eef2ff]'}`}
                       to={`/app/${sub.module_code}`}
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ''}
@@ -348,17 +388,17 @@ const Sidebar = ({
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#082f91] bg-white text-[#082f91] shadow-[0_2px_5px_rgba(8,47,145,0.12)]">
                         <Icon size={18} />
                       </span>
-                      {isExpanded && <span className="text-[11px] font-semibold">{item.label}</span>}
+                      {isExpanded && <span className="min-w-0 truncate text-[11px] font-semibold">{item.label}</span>}
                     </Link>
                   </li>
                 );
               }
 
               return (
-                <li key={index} className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? '' : 'items-center'}`}>
+                <li key={index} className={`flex flex-col border-b border-[#ece6e0] py-[6px] uppercase text-[14px] ${isExpanded ? '' : 'items-center'}`}>
                   {/* Section header */}
                   <div
-                    className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
+                    className={`flex w-full min-w-0 items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
@@ -367,7 +407,7 @@ const Sidebar = ({
                     </span>
                     {isExpanded && (
                       <>
-                        <span className="text-[11px] font-semibold">{item.label}</span>
+                        <span className="min-w-0 truncate text-[11px] font-semibold">{item.label}</span>
                         <MdChevronRight className={`ml-auto transition-transform duration-200 ${hasActiveChild ? '' : 'text-[#082f91]'} ${isTabActive ? 'rotate-90' : ''}`} />
                       </>
                     )}
@@ -386,7 +426,7 @@ const Sidebar = ({
                     }}
                   >
                     {isExpanded && (
-                      <ul className="mt-1 ml-6 space-y-1">
+                      <ul className="mt-2 ml-6 space-y-1">
                         {item.subItems.map((sub, si) => {
                           const path = `/app/${sub.module_code}`;
                           const isSubActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -422,15 +462,15 @@ const Sidebar = ({
         </nav>
       </div>
       {isExpanded && (
-        <div className="m-4 rounded-lg border border-[#ead9bf] bg-[#fff5df] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#082f91]">Need Help?</p>
-          <p className="mt-2 text-[10px] leading-4 text-[#43506a]">
-            Our support team is available to help with your account.
-          </p>
-          <button type="button" className="mt-3 h-8 w-full rounded bg-[#082f91] text-[10px] font-semibold text-white hover:bg-[#062779]">
-            Contact Support
-          </button>
-        </div>
+        <NeedHelpCard
+          title="Need Help?"
+          description="Our verification team is available 24/7 to help you complete KYC."
+          buttonText="Contact Support"
+          className="mx-[28px] mb-[36px] mt-[28px] border-[#ead9bf] bg-[#fff5df]"
+          titleClassName="text-[10px] tracking-[0.1em] text-[#082f91]"
+          descriptionClassName="text-[10px] leading-4 text-[#43506a]"
+          buttonClassName="mt-3 h-8 rounded bg-[#082f91] text-[10px] font-semibold hover:bg-[#062779]"
+        />
       )}
     </div>
   );

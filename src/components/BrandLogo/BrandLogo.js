@@ -10,7 +10,7 @@ const BrandLogo = ({
   return (
     <div
       className={twMerge(
-        "mb-[26px] flex h-[155px] w-[210px] items-center justify-center rounded-[8px] border border-[#e6cda9] bg-[#f7f5f2] p-[10px] shadow-[0_7px_12px_rgba(78,53,23,0.16)]",
+        "mb-[26px] flex h-[155px] w-[210px] items-center justify-center rounded-[8px] border border-[#e6cda9] bg-[#f7f5f2] p-[10px] shadow-[0_7px_12px_rgba(78,53,23,0.16)] box-shadow: 4px 4px 8px 10px #0000001A",
         className,
       )}
     >

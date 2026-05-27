@@ -23,7 +23,7 @@ const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange, debo
           role="button"
           aria-label="Clear search"
         /> : <IoSearchOutline
-          className="absolute z-10 transform -translate-y-1/2 left-3 top-1/2 text-[#082f91]"
+          className="absolute z-10 transform -translate-y-1/2 right-3 top-1/2 text-[#082f91]"
           size={20}
         />
       }
@@ -34,7 +34,7 @@ const SearchInput = ({ placeholder, searchTerm, handleRemove, handleChange, debo
         onChange={onChange}
         disabled={disabled}
         aria-label={placeholder || "Search"}
-        className="admin-input block pr-10 pl-10"
+        className="admin-input block pl-4 pr-10"
       />
 
     </div>
