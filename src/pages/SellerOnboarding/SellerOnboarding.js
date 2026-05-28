@@ -1860,13 +1860,6 @@ const SellerOnboarding = () => {
           <OnboardingActions>
             <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-start sm:gap-4">
               <button
-                className={SECONDARY_BUTTON_CLASS}
-                type="button"
-                onClick={() => setStep(0)}
-              >
-                Back
-              </button>
-              <button
                 disabled={loading}
                 className={PRIMARY_BUTTON_CLASS}
                 type="submit"

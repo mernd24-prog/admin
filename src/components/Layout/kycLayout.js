@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { Check } from "lucide-react";
 import BrandLogo from "../BrandLogo";
@@ -72,6 +72,7 @@ const KYCStatusLayout = ({
 }) => {
   const stepsNavRef = useRef(null);
   const activeStepRef = useRef(null);
+  const contentRef = useRef(null);
   const { seller, authSlice } = useSelector((state) => state || {});
   const storedUser = readStoredJson("currentUser");
   const storedOnboardingUser = readStoredJson("sellerOnboardingUser");
@@ -104,6 +105,30 @@ const KYCStatusLayout = ({
     (item) => item.id === currentSection,
   );
 
+  const scrollContentToTop = useCallback(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const startTop = content.scrollTop;
+    if (startTop <= 0) return;
+
+    const duration = 280;
+    const startTime = performance.now();
+
+    const animate = (time) => {
+      const elapsed = Math.min((time - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+
+      content.scrollTop = startTop * (1 - eased);
+
+      if (elapsed < 1) {
+        window.requestAnimationFrame(animate);
+      }
+    };
+
+    window.requestAnimationFrame(animate);
+  }, []);
+
   useEffect(() => {
     const nav = stepsNavRef.current;
     const activeStep = activeStepRef.current;
@@ -121,6 +146,16 @@ const KYCStatusLayout = ({
       behavior: "smooth",
     });
   }, [currentSection]);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      scrollContentToTop();
+
+      if (window.scrollY > 0) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+    });
+  }, [currentSection, scrollContentToTop]);
 
   return (
     <div className="min-h-screen bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
@@ -236,7 +271,10 @@ const KYCStatusLayout = ({
           </div>
         </header>
 
-        <div className="hide-scrollbar min-h-[calc(100vh-64px)] overflow-y-auto px-4 py-6 sm:px-8 lg:h-[calc(100vh-75px)] lg:px-10">
+        <div
+          ref={contentRef}
+          className="hide-scrollbar min-h-[calc(90vh-64px)] overflow-y-auto px-4 py-6 sm:px-8 lg:h-[calc(100vh-75px)] lg:px-10"
+        >
           {children}
         </div>
       </main>

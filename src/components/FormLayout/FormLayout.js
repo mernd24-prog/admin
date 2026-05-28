@@ -29,7 +29,7 @@ const FormLayout = ({
 }) => {
   return (
     <div
-      className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#f3f0ec] px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}
+      className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}
     >
       <div
         className={`relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}

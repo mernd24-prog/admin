@@ -37,7 +37,7 @@ const RegisterPage = () => {
 
         <form
           onSubmit={auth.handleRegisterSubmit}
-          className="mx-auto min-h-[440px] w-full rounded-[8px] bg-white/25 px-5 py-10 shadow-[0_0_15px_rgba(0,0,0,0.15)] sm:px-10 md:min-h-[480px] md:px-[64px] md:py-[70px] xl:min-h-[400px]"
+          className="mx-auto min-h-[440px] w-full rounded-[14px] border border-[#dedede] bg-[#f7f5f2] px-5 py-10 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:px-10 md:min-h-[480px] md:px-[64px] md:py-[70px] xl:min-h-[400px]"
         >
           <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
            <EmailInput
