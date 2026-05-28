@@ -45,7 +45,6 @@ export default function SearchComponent({
   placeholder,
   isSelectNearSearch = false,
   applyFilters,
-  countryLabel,
   countryOptions = [],
   handleSearchRemove,
   productLabel,
@@ -54,6 +53,7 @@ export default function SearchComponent({
   mobailClassName,
   requiredModule,
   searchDebounce = 0,
+  searchActions,
 }) {
   const [searchDown, setSearchDown] = useState(false);
   const [, setFilteredProducts] = useState([]);
@@ -143,6 +143,11 @@ export default function SearchComponent({
           >
             {isFiltering ? "Searching..." : "Search"}
           </Button>
+          {searchActions && (
+            <div className="flex shrink-0 flex-wrap items-start gap-2">
+              {searchActions}
+            </div>
+          )}
         </div>
         {isActionButton && (
           <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
@@ -159,7 +164,7 @@ export default function SearchComponent({
                       : "h-10 border-blue-500 text-blue-500 gap-2"
                   }
                 >
-                  <PiToggleRightThin />
+                  <PiToggleRightThin className="text-xl" />
                   Activate
                 </Button>
                 <Button
@@ -173,7 +178,7 @@ export default function SearchComponent({
                       : "h-10 border-blue-500 text-blue-500 gap-2"
                   }
                 >
-                  <PiToggleLeftThin /> Deactivate
+                  <PiToggleLeftThin className="text-xl" /> Deactivate
                 </Button>
               </>
             )}
@@ -189,7 +194,7 @@ export default function SearchComponent({
                     : "h-10 border-blue-500 text-blue-500 gap-2"
                 }
               >
-                <MdOutlineDeleteOutline /> Delete
+                <MdOutlineDeleteOutline className="text-xl" /> Delete
               </Button>
             )}
           </div>

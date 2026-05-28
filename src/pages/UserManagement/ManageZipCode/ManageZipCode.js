@@ -1,22 +1,27 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'sonner';
-import Loader from '../../../components/Loader/Loader';
-import Button from '../../../components/Atoms/buttons/button';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import Pagination from '../../../components/Pagination/Pagination';
-import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
-import Input from '../../../components/Atoms/Input/Input';
-import FilterSelect from '../../../components/Atoms/FilterSelect/FilterSelect';
-import { create, edit, enableDisableZipCode, getZipCodeList } from '../../../Redux/zipCodeSlice';
-import { getAllCountryList } from '../../../Redux/CountrySlice';
-import { getAllStateList } from '../../../Redux/stateSlice';
-import { getAllCityList } from '../../../Redux/citySlice';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from "react";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
+import Loader from "../../../components/Loader/Loader";
+import Button from "../../../components/Atoms/buttons/button";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import Pagination from "../../../components/Pagination/Pagination";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import Input from "../../../components/Atoms/Input/Input";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import {
+  create,
+  edit,
+  enableDisableZipCode,
+  getZipCodeList,
+} from "../../../Redux/zipCodeSlice";
+import { getAllCountryList } from "../../../Redux/CountrySlice";
+import { getAllStateList } from "../../../Redux/stateSlice";
+import { getAllCityList } from "../../../Redux/citySlice";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { Link } from "react-router-dom";
 
 const size = 10;
 
@@ -32,8 +37,8 @@ const extractListPayload = (payload = {}) => {
 
 const initialFormState = {
   _id: null,
-  zipCode: '',
-  areaName: '',
+  zipCode: "",
+  areaName: "",
   countryId: null,
   stateId: null,
   cityId: null,
@@ -47,13 +52,13 @@ const initialFormState = {
 
 const ManageZipCode = () => {
   const dispatch = useDispatch();
-  const selector = useSelector(state => state);
+  const selector = useSelector((state) => state);
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedRow, setSelectedRow] = useState([]);
   const [isAddModal, setIsAddModal] = useState(false);
   const [pageNo, setPageNo] = useState(1);
-  const [filters, setFilters] = useState({ search: '', country: '' });
+  const [filters, setFilters] = useState({ search: "", country: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
@@ -61,12 +66,14 @@ const ManageZipCode = () => {
   const [filteredStates, setFilteredStates] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
 
-  const allCountries = selector?.country?.getAllCountryListData?.data?.data?.list?.map(e => ({
-    value: e?._id,
-    label: e?.name,
-  })) || [];
+  const allCountries =
+    selector?.country?.getAllCountryListData?.data?.data?.list?.map((e) => ({
+      value: e?._id,
+      label: e?.name,
+    })) || [];
 
-  const allStates = selector?.state?.getAllStateListData?.data?.data?.list || [];
+  const allStates =
+    selector?.state?.getAllStateListData?.data?.data?.list || [];
 
   useEffect(() => {
     dispatch(getAllCountryList());
@@ -76,18 +83,24 @@ const ManageZipCode = () => {
   useEffect(() => {
     if (formData.countryId) {
       const states = allStates
-        .filter(s => s.countryId === formData.countryId || s.countryId?._id === formData.countryId)
-        .map(s => ({ value: s._id, label: s.name }));
+        .filter(
+          (s) =>
+            s.countryId === formData.countryId ||
+            s.countryId?._id === formData.countryId,
+        )
+        .map((s) => ({ value: s._id, label: s.name }));
       setFilteredStates(states);
     } else {
-      setFilteredStates(allStates.map(s => ({ value: s._id, label: s.name })));
+      setFilteredStates(
+        allStates.map((s) => ({ value: s._id, label: s.name })),
+      );
     }
   }, [formData.countryId, allStates.length]);
 
   useEffect(() => {
     if (formData.stateId) {
-      dispatch(getAllCityList({ stateId: formData.stateId })).then(res => {
-        const cities = extractListPayload(res?.payload).list.map(c => ({
+      dispatch(getAllCityList({ stateId: formData.stateId })).then((res) => {
+        const cities = extractListPayload(res?.payload).list.map((c) => ({
           value: c._id,
           label: c.name,
         }));
@@ -106,7 +119,7 @@ const ManageZipCode = () => {
     };
     setIsLoading(true);
     dispatch(getZipCodeList(query))
-      .then(res => setApiRes(extractListPayload(res?.payload)))
+      .then((res) => setApiRes(extractListPayload(res?.payload)))
       .catch(() => setApiRes({ list: [], total: 0 }))
       .finally(() => setIsLoading(false));
   }, [dispatch, pageNo, filters.search]);
@@ -115,30 +128,38 @@ const ManageZipCode = () => {
     fetchList();
   }, [fetchList]);
 
-  const onPageChange = newPage => setPageNo(newPage);
+  const onPageChange = (newPage) => setPageNo(newPage);
 
-  const getAllRowIds = useCallback(() => apiRes?.list?.map(r => r?._id) || [], [apiRes?.list]);
+  const getAllRowIds = useCallback(
+    () => apiRes?.list?.map((r) => r?._id) || [],
+    [apiRes?.list],
+  );
 
-  const handleHeaderCheckboxChange = e => {
+  const handleHeaderCheckboxChange = (e) => {
     setSelectedRow(e.target.checked ? getAllRowIds() : []);
   };
 
-  const handleInputChange = e => {
+  const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const val = type === 'checkbox' ? checked : value;
-    setFormData(prev => ({ ...prev, [name]: val }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
+    const val = type === "checkbox" ? checked : value;
+    setFormData((prev) => ({ ...prev, [name]: val }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSelectChange = (option, { name }) => {
     const val = option?.value || null;
-    setFormData(prev => {
+    setFormData((prev) => {
       const updated = { ...prev, [name]: val };
-      if (name === 'countryId') { updated.stateId = null; updated.cityId = null; }
-      if (name === 'stateId') { updated.cityId = null; }
+      if (name === "countryId") {
+        updated.stateId = null;
+        updated.cityId = null;
+      }
+      if (name === "stateId") {
+        updated.cityId = null;
+      }
       return updated;
     });
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const closeModal = () => {
@@ -151,21 +172,21 @@ const ManageZipCode = () => {
   };
 
   const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow(prev =>
-      e.target.checked ? [...prev, rowId] : prev.filter(id => id !== rowId)
+    setSelectedRow((prev) =>
+      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
     );
   };
 
   const validateForm = () => {
     const errs = {};
-    if (!formData.zipCode) errs.zipCode = 'Zip/Pin code is required';
-    if (!formData.countryId) errs.countryId = 'Country is required';
-    if (!formData.stateId) errs.stateId = 'State is required';
-    if (!formData.cityId) errs.cityId = 'City is required';
+    if (!formData.zipCode) errs.zipCode = "Zip/Pin code is required";
+    if (!formData.countryId) errs.countryId = "Country is required";
+    if (!formData.stateId) errs.stateId = "State is required";
+    if (!formData.cityId) errs.cityId = "City is required";
     return errs;
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
@@ -175,15 +196,15 @@ const ManageZipCode = () => {
     try {
       if (isEditMode) {
         await dispatch(edit({ ...formData })).unwrap();
-        toast.success('Zip code updated successfully');
+        toast.success("Zip code updated successfully");
       } else {
         await dispatch(create(formData)).unwrap();
-        toast.success('Zip code created successfully');
+        toast.success("Zip code created successfully");
       }
       closeModal();
       fetchList();
     } catch (error) {
-      toast.error(error || 'Failed to save zip code');
+      toast.error(error || "Failed to save zip code");
       if (error.errors) setErrors(error.errors);
     }
   };
@@ -191,16 +212,18 @@ const ManageZipCode = () => {
   const isRowActive = (row = {}) =>
     row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
 
-  const handleToggle = async row => {
+  const handleToggle = async (row) => {
     try {
-      const res = await dispatch(enableDisableZipCode({
-        _id: [row?._id],
-        isDisable: isRowActive(row),
-      })).unwrap();
+      const res = await dispatch(
+        enableDisableZipCode({
+          _id: [row?._id],
+          isDisable: isRowActive(row),
+        }),
+      ).unwrap();
       if (res) toast.success(res?.message);
       fetchList();
     } catch (error) {
-      toast.error(error?.message || error || 'Failed');
+      toast.error(error?.message || error || "Failed");
     }
   };
 
@@ -210,54 +233,72 @@ const ManageZipCode = () => {
   }, [fetchList]);
 
   const handleSearchRemove = () => {
-    setFilters({ search: '', country: '' });
+    setFilters({ search: "", country: "" });
     setPageNo(1);
   };
 
-  const handleBulkAction = async action => {
-    if (action === 'Active' || action === 'Inactive') {
+  const handleBulkAction = async (action) => {
+    if (action === "Active" || action === "Inactive") {
       try {
-        const res = await dispatch(enableDisableZipCode({
-          _id: selectedRow,
-          isDisable: action === 'Inactive',
-        })).unwrap();
+        const res = await dispatch(
+          enableDisableZipCode({
+            _id: selectedRow,
+            isDisable: action === "Inactive",
+          }),
+        ).unwrap();
         if (res) toast.success(res?.message);
         setSelectedRow([]);
         fetchList();
       } catch (error) {
-        toast.error(error?.message || error || 'Failed');
+        toast.error(error?.message || error || "Failed");
         setSelectedRow([]);
       }
     }
   };
 
-  const tableHeadings = ['Zip/Pin Code', 'Area Name', 'City', 'State', 'Serviceable', 'COD', 'Status', 'Action'];
+  const tableHeadings = [
+    "Zip/Pin Code",
+    "Area Name",
+    "City",
+    "State",
+    "Serviceable",
+    "COD",
+    "Status",
+    "Action",
+  ];
 
-  const tableRows = apiRes?.list?.map(ele => [
+  const tableRows = apiRes?.list?.map((ele) => [
     <input
       type="checkbox"
       checked={selectedRow.includes(ele._id)}
-      onChange={e => handleRowCheckboxChange(e, ele._id)}
+      onChange={(e) => handleRowCheckboxChange(e, ele._id)}
     />,
     <span className="font-mono font-medium">{ele?.zipCode}</span>,
-    <span>{ele?.areaName || '—'}</span>,
-    <span className="capitalize">{ele?.cityId?.name || '—'}</span>,
-    <span className="capitalize">{ele?.stateId?.name || '—'}</span>,
-    <span className={`text-xs px-2 py-0.5 rounded-full ${ele?.serviceable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-      {ele?.serviceable ? 'Yes' : 'No'}
+    <span>{ele?.areaName || "—"}</span>,
+    <span className="capitalize">{ele?.cityId?.name || "—"}</span>,
+    <span className="capitalize">{ele?.stateId?.name || "—"}</span>,
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full ${ele?.serviceable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+    >
+      {ele?.serviceable ? "Yes" : "No"}
     </span>,
-    <span className={`text-xs px-2 py-0.5 rounded-full ${ele?.codAvailable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-      {ele?.codAvailable ? 'Yes' : 'No'}
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full ${ele?.codAvailable ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}
+    >
+      {ele?.codAvailable ? "Yes" : "No"}
     </span>,
     <div className="flex flex-col">
-      <ToggleButton isToggle={isRowActive(ele)} handleClick={() => handleToggle(ele)} />
+      <ToggleButton
+        isToggle={isRowActive(ele)}
+        handleClick={() => handleToggle(ele)}
+      />
     </div>,
     <ActionButtons
       onEdit={() => {
         setFormData({
           _id: ele._id,
           zipCode: ele.zipCode,
-          areaName: ele.areaName || '',
+          areaName: ele.areaName || "",
           countryId: ele.countryId?._id || ele.countryId || null,
           stateId: ele.stateId?._id || ele.stateId || null,
           cityId: ele.cityId?._id || ele.cityId || null,
@@ -281,13 +322,21 @@ const ManageZipCode = () => {
       <div className="p-6 overflow-hidden max-w-7xl mx-auto overflow-x-auto overflow-y-auto space-y-3">
         <Loader loading={isLoading} />
         <div className="flex justify-between items-center">
-          <h3>Home / <Link to="/app/setting">Settings</Link> / Zip Codes</h3>
-          <Button onClick={() => { setFormData(initialFormState); setIsEditMode(false); setIsAddModal(true); }}>
+          <h3>
+            Home / <Link to="/app/setting">Settings</Link> / Zip Codes
+          </h3>
+          <Button
+            onClick={() => {
+              setFormData(initialFormState);
+              setIsEditMode(false);
+              setIsAddModal(true);
+            }}
+          >
             Add
           </Button>
         </div>
 
-        <div className="p-4 overflow-auto bg-white rounded-lg border border-[#E6E6E6]">
+        <div className="overflow-auto bg-white rounded-lg ">
           <SearchComponent
             isSearchShow={true}
             isActionButton={true}
@@ -315,7 +364,10 @@ const ManageZipCode = () => {
             onPageChange={onPageChange}
             isHeaderCheckbox={true}
             handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            allRowsSelected={selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0}
+            allRowsSelected={
+              selectedRow.length === apiRes?.list?.length &&
+              apiRes?.list?.length > 0
+            }
           />
           {apiRes?.total > size && (
             <Pagination
@@ -327,7 +379,7 @@ const ManageZipCode = () => {
         </div>
 
         <DefaultModal
-          title={isEditMode ? 'Edit Zip Code' : 'Add Zip Code'}
+          title={isEditMode ? "Edit Zip Code" : "Add Zip Code"}
           isOpen={isAddModal}
           onClose={closeModal}
           onSubmit={handleSubmit}
@@ -363,13 +415,18 @@ const ManageZipCode = () => {
               </label>
               <FilterSelect
                 options={allCountries}
-                value={allCountries.find(o => o.value === formData.countryId) || null}
+                value={
+                  allCountries.find((o) => o.value === formData.countryId) ||
+                  null
+                }
                 onChange={handleSelectChange}
                 name="countryId"
                 isSearchable
                 placeholder="Select Country"
               />
-              {errors.countryId && <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>}
+              {errors.countryId && (
+                <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>
+              )}
             </div>
 
             <div>
@@ -378,14 +435,19 @@ const ManageZipCode = () => {
               </label>
               <FilterSelect
                 options={filteredStates}
-                value={filteredStates.find(o => o.value === formData.stateId) || null}
+                value={
+                  filteredStates.find((o) => o.value === formData.stateId) ||
+                  null
+                }
                 onChange={handleSelectChange}
                 name="stateId"
                 isSearchable
                 placeholder="Select State"
                 isDisabled={!formData.countryId}
               />
-              {errors.stateId && <p className="mt-1 text-sm text-red-600">{errors.stateId}</p>}
+              {errors.stateId && (
+                <p className="mt-1 text-sm text-red-600">{errors.stateId}</p>
+              )}
             </div>
 
             <div className="col-span-2">
@@ -394,14 +456,19 @@ const ManageZipCode = () => {
               </label>
               <FilterSelect
                 options={filteredCities}
-                value={filteredCities.find(o => o.value === formData.cityId) || null}
+                value={
+                  filteredCities.find((o) => o.value === formData.cityId) ||
+                  null
+                }
                 onChange={handleSelectChange}
                 name="cityId"
                 isSearchable
                 placeholder="Select City"
                 isDisabled={!formData.stateId}
               />
-              {errors.cityId && <p className="mt-1 text-sm text-red-600">{errors.cityId}</p>}
+              {errors.cityId && (
+                <p className="mt-1 text-sm text-red-600">{errors.cityId}</p>
+              )}
             </div>
 
             <div>
@@ -447,7 +514,9 @@ const ManageZipCode = () => {
                   onChange={handleInputChange}
                   className="w-4 h-4 accent-primary"
                 />
-                <span className="text-sm font-medium text-gray-700">Serviceable</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Serviceable
+                </span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -457,7 +526,9 @@ const ManageZipCode = () => {
                   onChange={handleInputChange}
                   className="w-4 h-4 accent-primary"
                 />
-                <span className="text-sm font-medium text-gray-700">COD Available</span>
+                <span className="text-sm font-medium text-gray-700">
+                  COD Available
+                </span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -467,7 +538,9 @@ const ManageZipCode = () => {
                   onChange={handleInputChange}
                   className="w-4 h-4 accent-primary"
                 />
-                <span className="text-sm font-medium text-gray-700">Express Delivery</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Express Delivery
+                </span>
               </label>
             </div>
           </div>

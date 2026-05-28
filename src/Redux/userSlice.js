@@ -26,11 +26,17 @@ const toProfileUpdateBody = (payload = {}) => {
     [profile.firstName, profile.lastName].filter(Boolean).join(" ")
   );
   const avatarUrl = payload.user_image || payload.avatarUrl || profile.avatarUrl;
+  const shouldClearAvatar =
+    (Object.prototype.hasOwnProperty.call(payload, "user_image") &&
+      !payload.user_image) ||
+    (Object.prototype.hasOwnProperty.call(payload, "avatarUrl") &&
+      !payload.avatarUrl);
 
   return {
     profile: {
       firstName: profile.firstName || nameParts.firstName,
       lastName: profile.lastName || nameParts.lastName,
+      ...(shouldClearAvatar ? { avatarUrl: null } : {}),
       ...(isUrl(avatarUrl) ? { avatarUrl } : {}),
     },
   };

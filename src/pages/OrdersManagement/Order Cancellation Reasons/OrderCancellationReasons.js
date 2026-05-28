@@ -1,21 +1,26 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import moment from 'moment';
-import { toast } from 'sonner';
-import { useDispatch, useSelector } from 'react-redux';
-import { ActionButtons, getStatusStyles } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import Loader from '../../../components/Loader/Loader';
-import Pagination from '../../../components/Pagination/Pagination';
-import { getOrderList } from '../../../Redux/orderSlice';
-import useDropdownOptions from '../../../hooks/useDropdownOptions';
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import moment from "moment";
+import { toast } from "sonner";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  ActionButtons,
+  getStatusStyles,
+} from "../../../components/Atoms/TableActionButton/TableActionButton";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import Loader from "../../../components/Loader/Loader";
+import Pagination from "../../../components/Pagination/Pagination";
+import { getOrderList } from "../../../Redux/orderSlice";
+import useDropdownOptions from "../../../hooks/useDropdownOptions";
 
 const PAGE_SIZE = 10;
 
-const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
-const orderIdOf = (order = {}) => firstDefined(order._id, order.id, order.order_no, order.orderId);
+const firstDefined = (...values) =>
+  values.find((value) => value !== undefined && value !== null && value !== "");
+const orderIdOf = (order = {}) =>
+  firstDefined(order._id, order.id, order.order_no, order.orderId);
 
 const OrderCancellationReasons = () => {
   const dispatch = useDispatch();
@@ -27,15 +32,15 @@ const OrderCancellationReasons = () => {
   const total = Number(listPayload?.total || 0);
 
   const [filters, setFilters] = useState({
-    search: '',
-    activationStatus: 'cancelled',
-    dateFrom: '',
-    dateTo: '',
+    search: "",
+    activationStatus: "cancelled",
+    dateFrom: "",
+    dateTo: "",
   });
   const [selectedRow, setSelectedRow] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pageNo, setPageNo] = useState(1);
-  const orderStatuses = useDropdownOptions('order-statuses');
+  const orderStatuses = useDropdownOptions("order-statuses");
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -44,14 +49,16 @@ const OrderCancellationReasons = () => {
         getOrderList({
           page: pageNo,
           limit: PAGE_SIZE,
-          status: filters.activationStatus || 'cancelled',
+          status: filters.activationStatus || "cancelled",
           fromDate: filters.dateFrom || undefined,
           toDate: filters.dateTo || undefined,
           keyWord: filters.search || undefined,
         }),
       ).unwrap();
     } catch (err) {
-      toast.error(err?.message || err || 'Failed to fetch cancellation records');
+      toast.error(
+        err?.message || err || "Failed to fetch cancellation records",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -61,21 +68,24 @@ const OrderCancellationReasons = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleViewOrder = useCallback((order) => {
-    const orderId = orderIdOf(order);
-    if (!orderId) {
-      toast.error('Order ID not found');
-      return;
-    }
-    navigate(`/app/orders/view/${orderId}`);
-  }, [navigate]);
+  const handleViewOrder = useCallback(
+    (order) => {
+      const orderId = orderIdOf(order);
+      if (!orderId) {
+        toast.error("Order ID not found");
+        return;
+      }
+      navigate(`/app/orders/view/${orderId}`);
+    },
+    [navigate],
+  );
 
   const handlePageChange = useCallback((newPageNo) => {
     setPageNo(newPageNo);
   }, []);
 
   const handleFilterChange = useCallback((field, option) => {
-    setFilters((prev) => ({ ...prev, [field]: option?.value || '' }));
+    setFilters((prev) => ({ ...prev, [field]: option?.value || "" }));
     setPageNo(1);
   }, []);
 
@@ -86,26 +96,47 @@ const OrderCancellationReasons = () => {
 
   const handleSearchRemove = useCallback(() => {
     setFilters({
-      search: '',
-      activationStatus: 'cancelled',
-      dateFrom: '',
-      dateTo: '',
+      search: "",
+      activationStatus: "cancelled",
+      dateFrom: "",
+      dateTo: "",
     });
     setPageNo(1);
   }, []);
 
-  const tableHeadings = ['Order ID', 'Cancellation Reason', 'Order Date & Time', 'Payment Status', 'Actions'];
+  const tableHeadings = [
+    "Order ID",
+    "Cancellation Reason",
+    "Order Date & Time",
+    "Payment Status",
+    "Actions",
+  ];
 
   const tableRows = list.map((order) => {
-    const paymentStatus = firstDefined(order?.paymentStatus, order?.status, 'N/A');
+    const paymentStatus = firstDefined(
+      order?.paymentStatus,
+      order?.status,
+      "N/A",
+    );
     const createdAt = firstDefined(order?.createdAt, order?.created_at);
-    const reason = firstDefined(order?.cancelReason, order?.cancellationReason, order?.reason, 'Not specified');
+    const reason = firstDefined(
+      order?.cancelReason,
+      order?.cancellationReason,
+      order?.reason,
+      "Not specified",
+    );
 
     return [
-      <span className='capitalize'>{firstDefined(order?.order_no, order?.id, order?._id, 'N/A')}</span>,
+      <span className="capitalize">
+        {firstDefined(order?.order_no, order?.id, order?._id, "N/A")}
+      </span>,
       <span>{reason}</span>,
-      <span>{createdAt ? moment(createdAt).format('DD-MM-YYYY HH:mm') : 'N/A'}</span>,
-      <span className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles({ status: paymentStatus })}`}>
+      <span>
+        {createdAt ? moment(createdAt).format("DD-MM-YYYY HH:mm") : "N/A"}
+      </span>,
+      <span
+        className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles({ status: paymentStatus })}`}
+      >
         {paymentStatus}
       </span>,
       <ActionButtons
@@ -123,11 +154,12 @@ const OrderCancellationReasons = () => {
     <>
       <Loader loading={isLoading} />
       <div className="p-3 max-w-7xl mx-auto">
-        <h3 className='text-gray-500 text-sm font-semibold py-6'>
-          <Link to={`/app/home`}>Home</Link> / <span className='text-[#181c32]'>Order Cancellation Reasons</span>
+        <h3 className="text-gray-500 text-sm font-semibold py-6">
+          <Link to={`/app/home`}>Home</Link> /{" "}
+          <span className="text-[#181c32]">Order Cancellation Reasons</span>
         </h3>
 
-        <section className='bg-white p-2'>
+        <section className="bg-white p-2">
           <SearchComponent
             tableHeadings={tableHeadings}
             data={tableRows}

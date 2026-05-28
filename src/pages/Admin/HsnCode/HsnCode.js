@@ -390,18 +390,18 @@ const HsnCode = () => {
   };
 
   return (
-    <div className="p-6 overflow-hidden max-w-8xl mx-auto overflow-x-auto overflow-y-auto space-y-3">
+    <div className="p-6 overflow-hidden max-w-7xl mx-auto overflow-x-auto overflow-y-auto space-y-3">
       <Loader loading={isLoading || selector?.loading} />
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center ">
         <h3 className="text-lg font-semibold text-gray-800">Home / HSN Code</h3>
         <AddButton onClick={handleAddNew} requiredModule="products">
           Add HSN Code
         </AddButton>
       </div>
 
-      <div className="p-4 overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
+      <div className=" overflow-auto overflow-y-auto  bg-white rounded-lg ">
         <SearchComponent
           isSearchShow={true}
           isActionButton={true}

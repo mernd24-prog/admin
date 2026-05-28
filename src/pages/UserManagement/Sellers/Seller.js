@@ -24,6 +24,26 @@ import AddButton from "../../../components/Button/AddButton";
 import DefaultMiddleModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
 import { useNavigate } from "react-router";
 import useDropdownOptions from "../../../hooks/useDropdownOptions";
+
+const SellerActionButton = ({ children, color, onClick }) => {
+  const colorClasses = {
+    green: "bg-green-50 text-green-700",
+    red: "bg-red-50 text-red-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    orange: "bg-orange-50 text-orange-700",
+    blue: "bg-blue-50 text-blue-700",
+  };
+
+  return (
+    <button
+      className={`rounded px-2 py-1 text-xs ${colorClasses[color] || colorClasses.blue}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+
 const Sellers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -464,12 +484,6 @@ const Sellers = () => {
 
   // Table data preparation
   const tableRows = getListData?.list?.map((user) => [
-    // <input
-    //     type='checkbox'
-    //     checked={selectedRow.includes(user._id)}
-    //     onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    //     key={`checkbox-${user._id}`}
-    // />,
     <input
       type="checkbox"
       className="w-4 h-4 border border-[#4a4a4f] rounded bg-transparent peer-checked:bg-[#0055ff] peer-checked:border-[#0055ff] transition-all duration-300"
@@ -529,25 +543,7 @@ const Sellers = () => {
     <span key={`go-live-${user._id}`}>
       {statusPill(getGoLiveStatus(user), "live")}
     </span>,
-    // <div key={`status-${user._id}`} className="flex flex-col">
-    //     <label className="relative inline-flex" title="Enable/Disable">
-    //         <input
-    //             type="checkbox"
-    //             className="sr-only peer"
-    //             checked={!user?.isDisable}
-    //             readOnly
-    //         />
-    //         <div
-    //             onClick={() => handleToggle(user)}
-    //             className="cursor-pointer w-9 h-5 bg-gray-200 hover:bg-red-600 peer-focus:outline-0 peer-focus:ring-transparent rounded-full peer transition-all ease-in-out duration-500 peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-600 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-400 hover:peer-checked:bg-green-200"
-    //             title="Enable/Disable"
-    //         ></div>
-    //     </label>
 
-    //     {/* <span className={`mt-1 capitalize ${!user?.isDisable ? "text-green-600" : "text-red-500"}`}>
-    //         {!user?.isDisable ? "Enabled" : "Disabled"}
-    //     </span> */}
-    // </div>,
     <ToggleButton
       key={`toggle-${user._id}`}
       isToggle={!user.isDisable}
@@ -573,36 +569,36 @@ const Sellers = () => {
           viewButton={true}
           onViewClick={() => navigate(`/app/seller/view/${user._id}`)}
         />
-        <button
-          className="text-xs px-2 py-1 rounded bg-green-50 text-green-700"
+        <SellerActionButton
+          color="green"
           onClick={() => handleOpenKycReview(user, "verified")}
         >
           KYC Approve
-        </button>
-        <button
-          className="text-xs px-2 py-1 rounded bg-red-50 text-red-700"
+        </SellerActionButton>
+        <SellerActionButton
+          color="red"
           onClick={() => handleOpenKycReview(user, "rejected")}
         >
           KYC Reject
-        </button>
-        <button
-          className="text-xs px-2 py-1 rounded bg-emerald-50 text-emerald-700"
+        </SellerActionButton>
+        <SellerActionButton
+          color="emerald"
           onClick={() => handleOpenBankReview(user, "verified")}
         >
           Bank Verify
-        </button>
-        <button
-          className="text-xs px-2 py-1 rounded bg-orange-50 text-orange-700"
+        </SellerActionButton>
+        <SellerActionButton
+          color="orange"
           onClick={() => handleOpenBankReview(user, "rejected")}
         >
           Bank Reject
-        </button>
-        <button
-          className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700"
+        </SellerActionButton>
+        <SellerActionButton
+          color="blue"
           onClick={() => handleActivateSeller(user)}
         >
           Go Live
-        </button>
+        </SellerActionButton>
       </div>
     </span>,
   ]);

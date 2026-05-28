@@ -1,38 +1,46 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import TableData from '../../../components/Atoms/TableData/TableData'
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import { useDispatch, useSelector } from 'react-redux';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import StatusPopup from '../../../components/Atoms/PopupData/StatusPopup';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import { createUser, enableDisableUser, getUserList, update } from '../../../Redux/userManagementSlice';
-import DefaultModal from '../../../components/Atoms/Modal/DefaultRightSideModal';
-import FormInput from '../../../components/Atoms/FormInput/FormInput';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
-import { toast } from 'sonner';
-import Pagination from '../../../components/Pagination/Pagination';
-import Loader from '../../../components/Loader/Loader';
-import { useNavigate } from 'react-router';
-import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox';
-import { Link } from 'react-router-dom';
-import { formatDateForDisplay, uploadFile } from '../../../_helpers/globalFunctions';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
+import { useDispatch, useSelector } from "react-redux";
+import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import {
+  createUser,
+  enableDisableUser,
+  getUserList,
+  update,
+} from "../../../Redux/userManagementSlice";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { toast } from "sonner";
+import Pagination from "../../../components/Pagination/Pagination";
+import Loader from "../../../components/Loader/Loader";
+import { useNavigate } from "react-router";
+import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
+import { Link } from "react-router-dom";
+import {
+  formatDateForDisplay,
+  uploadFile,
+} from "../../../_helpers/globalFunctions";
 
 const Users = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [toggleStates, setToggleStates] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pageNo, setPageNo] = useState(1);
   const [formData, setForm] = useState({
-    full_name: '',
-    userName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    avatarUrl: '',
-    isDisable: false
+    full_name: "",
+    userName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    avatarUrl: "",
+    isDisable: false,
   });
   const [errors, setErrors] = useState({});
   const [filters, setFilters] = useState({ search: "" });
@@ -44,33 +52,33 @@ const Users = () => {
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
   };
-  const size = 10
+  const size = 10;
   useEffect(() => {
     const reqData = {
       page: pageNo.toString(),
       size: size.toString(),
       keyWord: filters.search,
-      searchFields: 'userName,full_name,email',
+      searchFields: "userName,full_name,email",
       // select: 'userName full_name email isDisable'
-      select: 'userName full_name email isDisable phone createdAt'
+      select: "userName full_name email isDisable phone createdAt",
     };
     dispatch(getUserList(reqData));
   }, [size, pageNo, dispatch, isRefresh]);
 
-  const selector = useSelector(state => state.user);
+  const selector = useSelector((state) => state.user);
   const getListData = selector?.getUserListData?.data?.data;
   const totalUsers = getListData?.total || 0;
-  const handleInputChange = e => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm(prevData => ({
+    setForm((prevData) => ({
       ...prevData,
-      [name]: value
+      [name]: value,
     }));
 
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: undefined
+        [name]: undefined,
       }));
     }
   };
@@ -81,31 +89,32 @@ const Users = () => {
 
     // Full name validation
     if (!formData?.full_name) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = "Full name is required";
       isValid = false;
     } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = 'Full name must be at least 3 characters';
+      newErrors.full_name = "Full name must be at least 3 characters";
       isValid = false;
     }
 
     // Username validation
     if (!formData?.userName) {
-      newErrors.userName = 'Username is required';
+      newErrors.userName = "Username is required";
       isValid = false;
     } else if (formData?.userName.length < 5) {
-      newErrors.userName = 'Username must be at least 5 characters';
+      newErrors.userName = "Username must be at least 5 characters";
       isValid = false;
     } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName = 'Username can only contain letters, numbers and underscores';
+      newErrors.userName =
+        "Username can only contain letters, numbers and underscores";
       isValid = false;
     }
 
     // Email validation
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
       isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
       isValid = false;
     }
 
@@ -114,35 +123,34 @@ const Users = () => {
     return isValid;
   };
 
-
   const handleClose = () => {
     setIsOpenAddModal(false);
     setForm({
-      full_name: '',
-      userName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      avatarUrl: '',
-      isDisable: false
+      full_name: "",
+      userName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      avatarUrl: "",
+      isDisable: false,
     });
     setErrors({});
   };
 
   const handleAvatarUpload = async (event) => {
     const file = event.target.files?.[0] || null;
-    event.target.value = '';
+    event.target.value = "";
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Only JPG, PNG, and WEBP images are allowed');
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Only JPG, PNG, and WEBP images are allowed");
       return;
     }
     try {
-      const imageUrl = await uploadFile(file, 'USER_AVATAR');
+      const imageUrl = await uploadFile(file, "USER_AVATAR");
       setForm((prev) => ({ ...prev, avatarUrl: imageUrl }));
-      toast.success('Profile image uploaded');
+      toast.success("Profile image uploaded");
     } catch (error) {
-      toast.error(error?.message || error || 'Failed to upload profile image');
+      toast.error(error?.message || error || "Failed to upload profile image");
     }
   };
 
@@ -158,16 +166,15 @@ const Users = () => {
       password: formData.password,
       confirmPassword: formData.confirmPassword,
       avatarUrl: formData.avatarUrl,
-      isDisable: formData.isDisable
+      isDisable: formData.isDisable,
     };
 
     dispatch(createUser(reqData))
       .unwrap()
       .then((res) => {
         if (res.error) {
-          (toast.error(res.error));
-          return
-
+          toast.error(res.error);
+          return;
         } else {
           toast.success(res.message || "User created successfully");
           handleClose();
@@ -175,23 +182,18 @@ const Users = () => {
         }
       })
       .catch((error) => {
-        console.log("error", error)
+        console.log("error", error);
         toast.error(error || "Error in creating user");
       });
   };
-
-
 
   const handleUserPermission = (data) => {
     navigate(`/app/user-permissions/${data._id}`);
   };
 
-
   const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow(prev =>
-      e.target.checked
-        ? [...prev, rowId]
-        : prev.filter(id => id !== rowId)
+    setSelectedRow((prev) =>
+      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
     );
   };
   const tableRows = getListData?.list?.map((user) => [
@@ -202,18 +204,24 @@ const Users = () => {
     />,
     <span className="flex items-center gap-2 capitalize">
       <img
-        src={user?.profile?.avatarUrl || '/Img/noData.png'}
-        alt={user?.profile?.firstName || user?.full_name || 'User'}
+        src={user?.profile?.avatarUrl || "/Img/noData.png"}
+        alt={user?.profile?.firstName || user?.full_name || "User"}
         className="h-9 w-9 rounded-full border border-gray-200 object-cover bg-gray-50"
       />
-      <span>{user?.full_name || [user?.profile?.firstName, user?.profile?.lastName].filter(Boolean).join(' ') || "N/A"}</span>
+      <span>
+        {user?.full_name ||
+          [user?.profile?.firstName, user?.profile?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          "N/A"}
+      </span>
     </span>,
-    <span>{user?.email || 'N/A'}</span>,
-    <span key={`phone-${user._id}`}>
-      {user?.phone || "Not Available"}
+    <span>{user?.email || "N/A"}</span>,
+    <span key={`phone-${user._id}`}>{user?.phone || "Not Available"}</span>,
+    <span className="capitalize">{user?.role || "N/A"}</span>,
+    <span className="capitalize">
+      {user?.accountStatus || (user?.isDisable ? "suspended" : "active")}
     </span>,
-    <span className='capitalize'>{user?.role || "N/A"}</span>,
-    <span className='capitalize'>{user?.accountStatus || (user?.isDisable ? "suspended" : "active")}</span>,
     <span>{user?.emailVerified ? "Yes" : "No"}</span>,
     <span key={`created-${user._id}`}>
       {formatDateForDisplay(user?.createdAt)}
@@ -221,20 +229,26 @@ const Users = () => {
     <span key={`last-login-${user._id}`}>
       {user?.lastLoginAt ? formatDateForDisplay(user?.lastLoginAt) : "N/A"}
     </span>,
-    <div className='flex flex-col'>
-      <ToggleButton isToggle={!user?.isDisable} handleClick={() => handleToggle(user)} />
-
+    <div className="flex flex-col">
+      <ToggleButton
+        isToggle={!user?.isDisable}
+        handleClick={() => handleToggle(user)}
+      />
     </div>,
     <span key={`actions-${user._id}`}>
       <ActionButtons
         onEdit={() => {
           setForm({
             _id: user._id,
-            full_name: user.full_name || [user?.profile?.firstName, user?.profile?.lastName].filter(Boolean).join(' '),
+            full_name:
+              user.full_name ||
+              [user?.profile?.firstName, user?.profile?.lastName]
+                .filter(Boolean)
+                .join(" "),
             userName: user.userName,
             email: user.email,
-            avatarUrl: user?.profile?.avatarUrl || '',
-            isDisable: user.isDisable
+            avatarUrl: user?.profile?.avatarUrl || "",
+            isDisable: user.isDisable,
           });
           setIsEditModal(true);
         }}
@@ -246,7 +260,6 @@ const Users = () => {
         onViewClick={() => navigate(`/app/users/view/${user._id}`)}
         userPermissions={false}
         onPermissionClick={() => handleUserPermission(user)}
-
       />
     </span>,
   ]);
@@ -255,11 +268,10 @@ const Users = () => {
   };
 
   const handleDisableFunc = () => {
-
     if (!toggleStates) return;
     const obj = {
       _id: Array(toggleStates._id),
-      isDisable: !toggleStates.isDisable
+      isDisable: !toggleStates.isDisable,
     };
 
     dispatch(enableDisableUser(obj))
@@ -288,16 +300,15 @@ const Users = () => {
     if (action === "Active" || action === "Inactive") {
       let apiPayload = {
         _id: selectedRow,
-        isDisable: action === "Active" ? false : true
+        isDisable: action === "Active" ? false : true,
       };
       try {
         const res = await dispatch(enableDisableUser(apiPayload)).unwrap();
         if (res) {
           toast.success(res?.message);
-          setSelectedRow([])
-          setIsRefresh(!isRefresh)
+          setSelectedRow([]);
+          setIsRefresh(!isRefresh);
         }
-
       } catch (error) {
         toast.error(error?.message || error || "Failed...!");
         if (error.errors) {
@@ -310,13 +321,13 @@ const Users = () => {
   const handleEditClose = () => {
     setIsEditModal(false);
     setForm({
-      full_name: '',
-      userName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      avatarUrl: '',
-      isDisable: false
+      full_name: "",
+      userName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      avatarUrl: "",
+      isDisable: false,
     });
     setErrors({});
   };
@@ -334,36 +345,37 @@ const Users = () => {
 
     // Full name validation
     if (!formData?.full_name) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = "Full name is required";
       isValid = false;
     } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = 'Full name must be at least 3 characters';
+      newErrors.full_name = "Full name must be at least 3 characters";
       isValid = false;
     }
 
     // Username validation
     if (!formData?.userName) {
-      newErrors.userName = 'Username is required';
+      newErrors.userName = "Username is required";
       isValid = false;
     } else if (formData?.userName.length < 5) {
-      newErrors.userName = 'Username must be at least 5 characters';
+      newErrors.userName = "Username must be at least 5 characters";
       isValid = false;
     } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName = 'Username can only contain letters, numbers and underscores';
+      newErrors.userName =
+        "Username can only contain letters, numbers and underscores";
       isValid = false;
     }
 
     // Email validation
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
       isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.(com)$/.test(formData.email)) {
-      newErrors.email = 'Email must be a valid .com address';
+      newErrors.email = "Email must be a valid .com address";
       isValid = false;
     }
     setErrors(newErrors);
     return isValid;
-  }
+  };
   const handleEditUserSubmit = (e) => {
     e.preventDefault();
 
@@ -375,7 +387,7 @@ const Users = () => {
       // userName: formData.userName,
       email: formData.email,
       avatarUrl: formData.avatarUrl,
-      isDisable: formData.isDisable
+      isDisable: formData.isDisable,
     };
 
     dispatch(update(reqData))
@@ -395,7 +407,7 @@ const Users = () => {
   };
   const handleSelectAllChange = (e) => {
     if (e.target.checked) {
-      const allIds = getListData?.list?.map(user => user._id) || [];
+      const allIds = getListData?.list?.map((user) => user._id) || [];
       setSelectedRow(allIds);
     } else {
       setSelectedRow([]);
@@ -406,30 +418,37 @@ const Users = () => {
       page: pageNo.toString(),
       size: size.toString(),
       keyWord: filters.search,
-      searchFields: 'email',
+      searchFields: "email",
       // populate: 'user:id|userName|full_name'
-      select: 'userName full_name email isDisable phone createdAt'
+      select: "userName full_name email isDisable phone createdAt",
     };
     dispatch(getUserList(reqData));
-  }
+  };
   const handleSearchRemove = useCallback(() => {
-    setFilters(prev => ({ ...prev, search: "" }));
-    setIsRefresh(!isRefresh)
+    setFilters((prev) => ({ ...prev, search: "" }));
+    setIsRefresh(!isRefresh);
   }, [isRefresh]);
 
-  const isAllRowsSelected = useMemo(() =>
-    selectedRow.length === getListData?.list?.length && getListData?.list?.length > 0,
-    [selectedRow.length, getListData?.list?.length]
-  )
+  const isAllRowsSelected = useMemo(
+    () =>
+      selectedRow.length === getListData?.list?.length &&
+      getListData?.list?.length > 0,
+    [selectedRow.length, getListData?.list?.length],
+  );
   return (
     <>
       <Loader loading={selector.loading} />
-      <div className='max-w-7xl mx-auto'>
-        <div className=' overflow-hidden overflow-y-auto py-6'>
+      <div className="max-w-7xl mx-auto">
+        <div className=" overflow-hidden overflow-y-auto py-6">
           <div className="flex justify-between items-center">
-            <h3><Link to="/app/home" className='cursor-pointer'>Home</Link> / <b>Users</b></h3>
+            <h3>
+              <Link to="/app/home" className="cursor-pointer">
+                Home
+              </Link>{" "}
+              / <b>Users</b>
+            </h3>
           </div>
-          <div className='overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
+          <div className="overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
             <div className="max-w-auto mx-auto space-y-6">
               <div className="bg-white p-2">
                 <div className="border-b mb-4">
@@ -450,10 +469,20 @@ const Users = () => {
               </div>
             </div>
             <TableData
-              tableHeadings={["Name", "Email", "Mobile No.", "Role", "Account Status", "Email Verified", "Created", "Last Login", "Actions"]}
+              tableHeadings={[
+                "Name",
+                "Email",
+                "Mobile No.",
+                "Role",
+                "Account Status",
+                "Email Verified",
+                "Created",
+                "Last Login",
+                "Actions",
+              ]}
               data={tableRows}
               showSearch={true}
-              placeholder='Search by...'
+              placeholder="Search by..."
               showFilter={false}
               showSummary={false}
               totalData={totalUsers}
@@ -463,17 +492,18 @@ const Users = () => {
               isHeaderCheckbox={true}
               handleHeaderCheckboxChange={handleSelectAllChange}
               allRowsSelected={isAllRowsSelected}
-
             />
           </div>
           <div className="flex justify-center my-6">
-            {getListData?.total && size && Math.ceil(getListData.total / size) > 1 && (
-              <Pagination
-                totalPages={Math.ceil(getListData.total / size)}
-                currentPage={pageNo}
-                onPageChange={onPageChange}
-              />
-            )}
+            {getListData?.total &&
+              size &&
+              Math.ceil(getListData.total / size) > 1 && (
+                <Pagination
+                  totalPages={Math.ceil(getListData.total / size)}
+                  currentPage={pageNo}
+                  onPageChange={onPageChange}
+                />
+              )}
           </div>
         </div>
 
@@ -488,7 +518,7 @@ const Users = () => {
           title="Admin User Setup"
           titleClassName="mt-5 font-medium"
         >
-          <div className='p-4 flex space-x-4'>
+          <div className="p-4 flex space-x-4">
             <div className="w-1/2">
               <FormInput
                 label="Full Name"
@@ -514,7 +544,7 @@ const Users = () => {
               />
             </div>
           </div>
-          <div className='p-4'>
+          <div className="p-4">
             <FormInput
               label="Email"
               name="email"
@@ -526,13 +556,13 @@ const Users = () => {
               required
             />
           </div>
-          <div className='p-4'>
+          <div className="p-4">
             <label className="label block text-sm font-medium text-gray-700 mb-1">
               Profile Image
             </label>
             <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
               <img
-                src={formData.avatarUrl || '/Img/noData.png'}
+                src={formData.avatarUrl || "/Img/noData.png"}
                 alt="Profile preview"
                 className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
               />
@@ -550,7 +580,9 @@ const Users = () => {
                   <button
                     type="button"
                     className="ml-3 text-xs text-red-600 hover:underline"
-                    onClick={() => setForm((prev) => ({ ...prev, avatarUrl: '' }))}
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, avatarUrl: "" }))
+                    }
                   >
                     Remove
                   </button>
@@ -558,7 +590,7 @@ const Users = () => {
               </div>
             </div>
           </div>
-          <div className='p-4 flex space-x-4'>
+          <div className="p-4 flex space-x-4">
             <div className="w-1/2">
               <FormInput
                 label="Password"
@@ -590,9 +622,12 @@ const Users = () => {
               handleClick={handleToggleAdd}
             />
           </div> */}
-          <div className='flex justify-between items-center border p-3'>
+          <div className="flex justify-between items-center border p-3">
             <p className="font-medium text-sm">Status</p>
-            <ToggleButton isToggle={!formData.isDisable} handleClick={handleToggleAdd} />
+            <ToggleButton
+              isToggle={!formData.isDisable}
+              handleClick={handleToggleAdd}
+            />
           </div>
         </DefaultModal>
 
@@ -607,7 +642,7 @@ const Users = () => {
           title="Edit Admin User"
           titleClassName="mt-5 font-medium"
         >
-          <div className='p-4 flex space-x-4'>
+          <div className="p-4 flex space-x-4">
             <div className="w-1/2">
               <FormInput
                 label="Full Name"
@@ -634,7 +669,7 @@ const Users = () => {
               />
             </div>
           </div>
-          <div className='p-4'>
+          <div className="p-4">
             <FormInput
               label="Email"
               name="email"
@@ -646,13 +681,13 @@ const Users = () => {
               required
             />
           </div>
-          <div className='p-4'>
+          <div className="p-4">
             <label className="label block text-sm font-medium text-gray-700 mb-1">
               Profile Image
             </label>
             <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
               <img
-                src={formData.avatarUrl || '/Img/noData.png'}
+                src={formData.avatarUrl || "/Img/noData.png"}
                 alt="Profile preview"
                 className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
               />
@@ -670,7 +705,9 @@ const Users = () => {
                   <button
                     type="button"
                     className="ml-3 text-xs text-red-600 hover:underline"
-                    onClick={() => setForm((prev) => ({ ...prev, avatarUrl: '' }))}
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, avatarUrl: "" }))
+                    }
                   >
                     Remove
                   </button>
@@ -678,9 +715,12 @@ const Users = () => {
               </div>
             </div>
           </div>
-          <div className='flex justify-between items-center border p-3'>
+          <div className="flex justify-between items-center border p-3">
             <p className="font-medium text-sm">Status</p>
-            <ToggleButton isToggle={!formData.isDisable} handleClick={handleToggleAdd} />
+            <ToggleButton
+              isToggle={!formData.isDisable}
+              handleClick={handleToggleAdd}
+            />
           </div>
         </DefaultModal>
 
@@ -688,19 +728,18 @@ const Users = () => {
           isDeleteModalOpen={showDeleteConfirmation}
           closeDeleteModal={() => setShowDeleteConfirmation(false)}
           confirmDelete={confirmDelete}
-          DeleteHeading={'Are you sure you want to delete this user?'}
+          DeleteHeading={"Are you sure you want to delete this user?"}
         />
 
         <StatusPopup
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? 'enable' : 'disable'} this user?`}
+          heading={`Are you sure you want to ${toggleStates?.isDisable ? "enable" : "disable"} this user?`}
         />
-
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Users
+export default Users;
