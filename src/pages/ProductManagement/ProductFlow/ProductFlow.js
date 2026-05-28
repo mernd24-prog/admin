@@ -70,14 +70,20 @@ const ProductFlow = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-6">
-      <h3 className="mb-3">Home / <b>Product Setup Flow</b></h3>
+      <h3 className="mb-3">
+        Home / <b>Product Setup Flow</b>
+      </h3>
       <div className="rounded-lg border border-[#E6E6E6] bg-white p-4">
         <p className="mb-4 text-sm text-gray-600">
-          Follow this order to avoid broken product mappings and missing references.
+          Follow this order to avoid broken product mappings and missing
+          references.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           {steps.map((step) => (
-            <div key={step.title} className="rounded-lg border border-gray-200 p-4">
+            <div
+              key={step.title}
+              className="rounded-lg border border-gray-200 p-4"
+            >
               <p className="font-semibold text-[#2E2E2E]">{step.title}</p>
               <p className="mt-1 text-sm text-gray-600">{step.description}</p>
               <div className="mt-3 flex flex-wrap gap-2">

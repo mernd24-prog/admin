@@ -362,17 +362,6 @@ const TableData = ({
           )}
         </div>
       </section>
-      {/* {!loading && (
-        <div className="flex justify-center my-6">
-          {totalData && totalSize && Math.ceil(totalData / totalSize) > 1 && (
-            <Pagination
-              totalPages={Math.ceil(totalData / totalSize)}
-              currentPage={currentPage}
-              onPageChange={onPageChange}
-            />
-          )}
-        </div>
-      )} */}
     </>
   );
 };

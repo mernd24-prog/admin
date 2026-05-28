@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
   updateContentPage,
   deleteContentPage,
 } from "../../../Redux/adminCoreSlice";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 
 const PAGE_SIZE = 15;
 const FALLBACK_TYPE = {
@@ -143,6 +144,7 @@ const ContentManagement = () => {
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({ search: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
@@ -188,7 +190,19 @@ const ContentManagement = () => {
   useEffect(() => {
     setPageNo(1);
     setSearch("");
+    setFilters({ search: "" });
   }, [typeKey]);
+
+  const applyFilters = useCallback(() => {
+    setSearch(filters.search?.trim() || "");
+    setPageNo(1);
+  }, [filters.search]);
+
+  const handleSearchRemove = useCallback(() => {
+    setFilters({ search: "" });
+    setSearch("");
+    setPageNo(1);
+  }, []);
 
   useEffect(() => {
     fetchPages();
@@ -296,7 +310,7 @@ const ContentManagement = () => {
 
       {/* Singleton view */}
       {isSingleton && (
-        <div className="max-w-2xl">
+        <div className="max-w-2xl ">
           {singlePage ? (
             <SingletonCard
               page={singlePage}
@@ -315,17 +329,15 @@ const ContentManagement = () => {
       {/* List view */}
       {!isSingleton && (
         <>
-          <div className="flex  gap-2">
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPageNo(1);
-              }}
-              placeholder="Search by title or slug..."
-              className="w-72 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
+          <SearchComponent
+            isSearchShow={true}
+            filters={filters}
+            setFilters={setFilters}
+            placeholder="Search by title, slug, or content"
+            applyFilters={applyFilters}
+            handleSearchRemove={handleSearchRemove}
+            searchDebounce={400}
+          />
 
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {normalizedPages.length === 0 && !isLoading ? (

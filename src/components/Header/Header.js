@@ -21,15 +21,21 @@ const getDisplayName = (user = {}) => {
 
 const getUserInitial = (user = {}) => {
   const profile = user.profile || {};
-  const name =
-    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
-    getDisplayName(user) ||
-    "U";
-  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  const firstName = profile.firstName || user.firstName || "";
+  const lastName = profile.lastName || user.lastName || "";
 
-  return (
-    parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0]?.[0] || "U"
-  ).toUpperCase();
+  if (firstName || lastName) {
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+  }
+
+  const parts = String(getDisplayName(user) || "U")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const firstInitial = parts[0]?.[0] || "U";
+  const lastInitial = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+
+  return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
 const getAvatarUrl = (user = {}) =>
@@ -134,7 +140,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
   return (
     <div
-      className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-16 bg-[#082f91] text-white shadow-[0_2px_10px_rgba(8,47,145,0.22)]`}
+      className={`  ${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-16 bg-[#082f91] text-white shadow-[0_2px_10px_rgba(8,47,145,0.22)]`}
     >
       <div className="flex items-center justify-between flex-1 px-5 md:px-7 w-full">
         <div
@@ -156,8 +162,8 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-5">
-          <div className="relative">
+        <div className="flex  items-center gap-3 md:gap-5">
+          <div className="relative ">
             <div className="flex items-center gap-2.5">
               <div className="hidden md:block text-right leading-tight">
                 <p className="max-w-44 text-[14px] font-bold font-inter text-white">
@@ -186,7 +192,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
               </button>
             </div>
             <div
-              className={`absolute right-0 w-64 mt-3 bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
+              className={`absolute  right-0 w-64 mt-3 bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
               ref={dropDownRef}
             >
               {openModel && (
@@ -225,7 +231,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
                         className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-semibold hover:bg-gray-100 hover:text-blue-600 "
                       >
                         <FiUser className="mr-3" />
-                        My Profile
+                        no
                       </Link>
                       <Link
                         to={`/app/changePassword`}

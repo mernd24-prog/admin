@@ -1,24 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
   getPlatformOptions,
   getPlatformOptionValues,
   createPlatformOptionValue,
   updatePlatformOptionValue,
   deletePlatformOptionValue,
-} from '../../../Redux/adminCoreSlice';
-import Loader from '../../../components/Loader/Loader';
-import Pagination from '../../../components/Pagination/Pagination';
-import AddButton from '../../../components/Button/AddButton';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
+} from "../../../Redux/adminCoreSlice";
+import Loader from "../../../components/Loader/Loader";
+import Pagination from "../../../components/Pagination/Pagination";
+import AddButton from "../../../components/Button/AddButton";
+import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 
 const PAGE_SIZE = 20;
-const idOf = (r) => r?._id || r?.id || '';
+const idOf = (r) => r?._id || r?.id || "";
 
-const emptyForm = { name: '', valueCode: '', colorHex: '', imageUrl: '', sortOrder: 0, active: true };
+const emptyForm = {
+  name: "",
+  valueCode: "",
+  colorHex: "",
+  imageUrl: "",
+  sortOrder: 0,
+  active: true,
+};
 
 const getListPayload = (sliceData = {}) => {
   const payload =
@@ -44,9 +51,9 @@ export default function ProductOptionValue() {
   const selector = useSelector((s) => s.adminCore);
 
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [parentOption, setParentOption] = useState(null);
-  const [optionFilter, setOptionFilter] = useState(optionId || '');
+  const [optionFilter, setOptionFilter] = useState(optionId || "");
   const [optionMasters, setOptionMasters] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -60,19 +67,22 @@ export default function ProductOptionValue() {
   const loading = selector?.loading;
 
   const selectedOptionId = optionId || optionFilter;
-  const isColorSwatch = parentOption?.displayType === 'color_swatch';
-  const isThumbnail = parentOption?.displayType === 'thumbnail';
+  const isColorSwatch = parentOption?.displayType === "color_swatch";
+  const isThumbnail = parentOption?.displayType === "thumbnail";
 
   // Load parent option info
   useEffect(() => {
     dispatch(getPlatformOptions({ limit: 100 }))
       .unwrap()
       .then((res) => {
-        const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.list || res?.data?.items || [];
         setOptionMasters(list);
         const found = list.find((o) => idOf(o) === selectedOptionId);
         if (found) setParentOption(found);
-        if (!optionId && !optionFilter && list[0]) setOptionFilter(idOf(list[0]));
+        if (!optionId && !optionFilter && list[0])
+          setOptionFilter(idOf(list[0]));
       })
       .catch(() => {});
   }, [dispatch, optionId, optionFilter, selectedOptionId]);
@@ -84,10 +94,19 @@ export default function ProductOptionValue() {
 
   const load = useCallback(() => {
     if (!selectedOptionId) return;
-    dispatch(getPlatformOptionValues({ optionId: selectedOptionId, page, limit: PAGE_SIZE, q: search || undefined }));
+    dispatch(
+      getPlatformOptionValues({
+        optionId: selectedOptionId,
+        page,
+        limit: PAGE_SIZE,
+        q: search || undefined,
+      }),
+    );
   }, [dispatch, selectedOptionId, page, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const openAdd = () => {
     setEditing(null);
@@ -99,10 +118,10 @@ export default function ProductOptionValue() {
   const openEdit = (row) => {
     setEditing(row);
     setForm({
-      name: row.name || '',
-      valueCode: row.valueCode || '',
-      colorHex: row.colorHex || '',
-      imageUrl: row.imageUrl || '',
+      name: row.name || "",
+      valueCode: row.valueCode || "",
+      colorHex: row.colorHex || "",
+      imageUrl: row.imageUrl || "",
       sortOrder: row.sortOrder ?? 0,
       active: row.active !== false,
     });
@@ -110,11 +129,14 @@ export default function ProductOptionValue() {
     setModalOpen(true);
   };
 
-  const closeModal = () => { setModalOpen(false); setEditing(null); };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+  };
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Value name is required';
+    if (!form.name.trim()) e.name = "Value name is required";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -124,16 +146,29 @@ export default function ProductOptionValue() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(updatePlatformOptionValue({ id: idOf(editing), optionId: selectedOptionId, optionName: parentOption?.name || '', ...form })).unwrap();
-        toast.success('Value updated');
+        await dispatch(
+          updatePlatformOptionValue({
+            id: idOf(editing),
+            optionId: selectedOptionId,
+            optionName: parentOption?.name || "",
+            ...form,
+          }),
+        ).unwrap();
+        toast.success("Value updated");
       } else {
-        await dispatch(createPlatformOptionValue({ optionId: selectedOptionId, optionName: parentOption?.name || '', ...form })).unwrap();
-        toast.success('Value created');
+        await dispatch(
+          createPlatformOptionValue({
+            optionId: selectedOptionId,
+            optionName: parentOption?.name || "",
+            ...form,
+          }),
+        ).unwrap();
+        toast.success("Value created");
       }
       closeModal();
       load();
     } catch (err) {
-      toast.error(err?.message || 'Save failed');
+      toast.error(err?.message || "Save failed");
     } finally {
       setSaving(false);
     }
@@ -142,22 +177,30 @@ export default function ProductOptionValue() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await dispatch(deletePlatformOptionValue({ id: idOf(deleteTarget) })).unwrap();
-      toast.success('Value deleted');
+      await dispatch(
+        deletePlatformOptionValue({ id: idOf(deleteTarget) }),
+      ).unwrap();
+      toast.success("Value deleted");
       setDeleteTarget(null);
       load();
     } catch (err) {
-      toast.error(err?.message || 'Delete failed');
+      toast.error(err?.message || "Delete failed");
     }
   };
 
   const handleToggleActive = async (row) => {
     try {
-      await dispatch(updatePlatformOptionValue({ id: idOf(row), optionId: selectedOptionId, active: !row.active })).unwrap();
-      toast.success(row.active ? 'Disabled' : 'Enabled');
+      await dispatch(
+        updatePlatformOptionValue({
+          id: idOf(row),
+          optionId: selectedOptionId,
+          active: !row.active,
+        }),
+      ).unwrap();
+      toast.success(row.active ? "Disabled" : "Enabled");
       load();
     } catch (err) {
-      toast.error(err?.message || 'Failed');
+      toast.error(err?.message || "Failed");
     }
   };
 
@@ -166,7 +209,7 @@ export default function ProductOptionValue() {
     setForm((f) => ({
       ...f,
       name: value,
-      valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, '_'),
+      valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, "_"),
     }));
   };
 
@@ -178,20 +221,23 @@ export default function ProductOptionValue() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/app/product-options')}
+            onClick={() => navigate("/app/product-options")}
             className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             ← Option Masters
           </button>
           <div>
             <h1 className="text-xl font-semibold text-gray-800">
-              {parentOption?.name || 'Option'} Values
+              {parentOption?.name || "Option"} Values
             </h1>
             {parentOption?.displayType && (
               <p className="text-xs text-gray-400 mt-0.5">
-                Display type: <span className="font-medium capitalize">{parentOption.displayType.replace('_', ' ')}</span>
-                {isColorSwatch && ' · Enter hex codes for swatches'}
-                {isThumbnail && ' · Enter image URLs for thumbnails'}
+                Display type:{" "}
+                <span className="font-medium capitalize">
+                  {parentOption.displayType.replace("_", " ")}
+                </span>
+                {isColorSwatch && " · Enter hex codes for swatches"}
+                {isThumbnail && " · Enter image URLs for thumbnails"}
               </p>
             )}
           </div>
@@ -204,17 +250,25 @@ export default function ProductOptionValue() {
         {!optionId && (
           <select
             value={selectedOptionId}
-            onChange={(e) => { setOptionFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setOptionFilter(e.target.value);
+              setPage(1);
+            }}
             className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             {optionMasters.map((option) => (
-              <option key={idOf(option)} value={idOf(option)}>{option.name}</option>
+              <option key={idOf(option)} value={idOf(option)}>
+                {option.name}
+              </option>
             ))}
           </select>
         )}
         <input
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder="Search values…"
           className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
@@ -225,19 +279,35 @@ export default function ProductOptionValue() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Preview</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Value Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Code</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Sort</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Preview
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Value Name
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Code
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Sort
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {items.length === 0 && !loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-400">
-                  No values yet. Click "Add" to create the first reusable value for this option.
+                <td
+                  colSpan={6}
+                  className="px-4 py-16 text-center text-sm text-gray-400"
+                >
+                  No values yet. Click "Add" to create the first reusable value
+                  for this option.
                 </td>
               </tr>
             ) : (
@@ -252,25 +322,44 @@ export default function ProductOptionValue() {
                         title={row.colorHex}
                       />
                     ) : isThumbnail && row.imageUrl ? (
-                      <img src={row.imageUrl} alt={row.name} className="w-8 h-8 rounded object-cover border border-gray-200" />
+                      <img
+                        src={row.imageUrl}
+                        alt={row.name}
+                        className="w-8 h-8 rounded object-cover border border-gray-200"
+                      />
                     ) : (
                       <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md font-medium">
                         {row.name}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{row.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{row.valueCode || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{row.sortOrder ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800">
+                    {row.name}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                    {row.valueCode || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {row.sortOrder ?? "—"}
+                  </td>
                   <td className="px-4 py-3">
-                    <ToggleButton isToggle={row.active !== false} handleClick={() => handleToggleActive(row)} />
+                    <ToggleButton
+                      isToggle={row.active !== false}
+                      handleClick={() => handleToggleActive(row)}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(row)} className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50">
+                      <button
+                        onClick={() => openEdit(row)}
+                        className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
+                      >
                         Edit
                       </button>
-                      <button onClick={() => setDeleteTarget(row)} className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50">
+                      <button
+                        onClick={() => setDeleteTarget(row)}
+                        className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
+                      >
                         Delete
                       </button>
                     </div>
@@ -283,7 +372,11 @@ export default function ProductOptionValue() {
       </div>
 
       {total > PAGE_SIZE && (
-        <Pagination totalPages={Math.ceil(total / PAGE_SIZE)} currentPage={page} onPageChange={setPage} />
+        <Pagination
+          totalPages={Math.ceil(total / PAGE_SIZE)}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Add / Edit Modal */}
@@ -291,7 +384,9 @@ export default function ProductOptionValue() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-5">
-              {editing ? `Edit "${editing.name}"` : `Add value to "${parentOption?.name || 'Option'}"`}
+              {editing
+                ? `Edit "${editing.name}"`
+                : `Add value to "${parentOption?.name || "Option"}"`}
             </h2>
 
             <div className="space-y-4">
@@ -304,26 +399,40 @@ export default function ProductOptionValue() {
                   autoFocus
                   value={form.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder={isColorSwatch ? 'e.g. Black, Red, Navy Blue' : isThumbnail ? 'e.g. Small, Large' : 'e.g. S, M, L, XL, 128GB'}
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
+                  placeholder={
+                    isColorSwatch
+                      ? "e.g. Black, Red, Navy Blue"
+                      : isThumbnail
+                        ? "e.g. Small, Large"
+                        : "e.g. S, M, L, XL, 128GB"
+                  }
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                )}
               </div>
 
               {/* Color Hex — shown only for color_swatch type */}
               {isColorSwatch && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Color (Hex)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color (Hex)
+                  </label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
-                      value={form.colorHex || '#000000'}
-                      onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))}
+                      value={form.colorHex || "#000000"}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, colorHex: e.target.value }))
+                      }
                       className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
                     />
                     <input
                       value={form.colorHex}
-                      onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, colorHex: e.target.value }))
+                      }
                       placeholder="#1A1919"
                       className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     />
@@ -340,26 +449,40 @@ export default function ProductOptionValue() {
               {/* Image URL — shown only for thumbnail type */}
               {isThumbnail && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Image URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Thumbnail Image URL
+                  </label>
                   <input
                     value={form.imageUrl}
-                    onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
+                    }
                     placeholder="https://example.com/image.jpg"
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                   {form.imageUrl && (
-                    <img src={form.imageUrl} alt="Preview" className="mt-2 h-12 w-12 object-cover rounded border border-gray-200" />
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview"
+                      className="mt-2 h-12 w-12 object-cover rounded border border-gray-200"
+                    />
                   )}
                 </div>
               )}
 
               {/* Value Code */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Value Code</label>
-                <p className="text-xs text-gray-400 mb-1">Auto-generated from name. Used in APIs and filters.</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Value Code
+                </label>
+                <p className="text-xs text-gray-400 mb-1">
+                  Auto-generated from name. Used in APIs and filters.
+                </p>
                 <input
                   value={form.valueCode}
-                  onChange={(e) => setForm((f) => ({ ...f, valueCode: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, valueCode: e.target.value }))
+                  }
                   placeholder="e.g. black, size_xl, 128gb"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
@@ -367,12 +490,19 @@ export default function ProductOptionValue() {
 
               {/* Sort Order */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sort Order
+                </label>
                 <input
                   type="number"
                   min={0}
                   value={form.sortOrder}
-                  onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      sortOrder: Number(e.target.value),
+                    }))
+                  }
                   className="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
@@ -382,7 +512,9 @@ export default function ProductOptionValue() {
                 <input
                   type="checkbox"
                   checked={form.active}
-                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, active: e.target.checked }))
+                  }
                   className="w-4 h-4 accent-indigo-600"
                 />
                 <span className="text-sm text-gray-700">Active</span>
@@ -390,7 +522,10 @@ export default function ProductOptionValue() {
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
                 Cancel
               </button>
               <button
@@ -398,7 +533,7 @@ export default function ProductOptionValue() {
                 disabled={saving}
                 className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
               >
-                {saving ? 'Saving…' : editing ? 'Update' : 'Add Value'}
+                {saving ? "Saving…" : editing ? "Update" : "Add Value"}
               </button>
             </div>
           </div>

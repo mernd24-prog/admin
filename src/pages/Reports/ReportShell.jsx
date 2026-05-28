@@ -1,5 +1,7 @@
 import React from "react";
 import { MdFileDownload } from "react-icons/md";
+import Cards from "../../components/Cards/Cards";
+import { StatCardSkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import { PageHeader } from "../../components/Shared";
 
 /**
@@ -15,30 +17,17 @@ const RANGE_OPTIONS = [
 ];
 
 const StatCard = ({ label, value, sub, trend, loading }) => (
-  <div className="bg-white  rounded-xl border shadow-[0_2px_6px_rgba(20,20,20,0.16)]  border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED]  p-10 ">
+  <div className="h-full">
     {loading ? (
-      <div className="space-y-2 animate-pulse">
-        <div className="h-4 w-20 bg-gray-200 rounded" />
-        <div className="h-7 w-28 bg-gray-200 rounded" />
-        <div className="h-3 w-16 bg-gray-100 rounded" />
-      </div>
+      <StatCardSkeletonLoader />
     ) : (
-      <>
-        <div className="text-sm md:text-lg font-inter font-semibold  text-[#182D5099]/60 ">
-          {label}
-        </div>
-        <div className="text-xl md:text-3xl font-inter font-bold text-[#042586]  my-3">
-          {value}
-        </div>
-        {sub && <div className="text-xs font-medum font-inter mt-1">{sub}</div>}
-        {trend != null && (
-          <div
-            className={`text-xs font-medium mt-1 ${trend >= 0 ? "text-green-600" : "text-red-500"}`}
-          >
-            {trend >= 0 ? "▲" : "▼"} {Math.abs(trend)}% vs prev period
-          </div>
-        )}
-      </>
+      <Cards
+        label={label}
+        value={value}
+        helper={trend != null ? sub || "vs prev period" : sub}
+        trend={trend != null ? `${Math.abs(trend)}%` : undefined}
+        trendNegative={trend < 0}
+      />
     )}
   </div>
 );
@@ -63,7 +52,7 @@ export const ReportShell = ({
   const [range, setRange] = React.useState("Last 30 days");
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 ">
       <PageHeader
         title={title}
         subtitle={subtitle}

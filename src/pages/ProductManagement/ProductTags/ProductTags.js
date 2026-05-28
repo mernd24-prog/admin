@@ -1,16 +1,17 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
-import { useDispatch, useSelector } from 'react-redux';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import SearchComponent from '../../../components/Atoms/New Table/NewTable';
-import Loader from '../../../components/Loader/Loader';
-import Pagination from '../../../components/Pagination/Pagination';
-import { getProducts } from '../../../Redux/productSlice';
+import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { useDispatch, useSelector } from "react-redux";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import Loader from "../../../components/Loader/Loader";
+import Pagination from "../../../components/Pagination/Pagination";
+import { getProducts } from "../../../Redux/productSlice";
 
 const PAGE_SIZE = 10;
-const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+const firstDefined = (...values) =>
+  values.find((value) => value !== undefined && value !== null && value !== "");
 
 const ProductTags = () => {
   const dispatch = useDispatch();
@@ -20,7 +21,7 @@ const ProductTags = () => {
   const list = listResponse?.list || [];
   const total = Number(listResponse?.total || 0);
 
-  const [filters, setFilters] = useState({ search: '' });
+  const [filters, setFilters] = useState({ search: "" });
   const [selectedRow, setSelectedRow] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pageNo, setPageNo] = useState(1);
@@ -36,7 +37,7 @@ const ProductTags = () => {
         }),
       ).unwrap();
     } catch (err) {
-      toast.error(err?.message || err || 'Failed to fetch product tags');
+      toast.error(err?.message || err || "Failed to fetch product tags");
     } finally {
       setIsLoading(false);
     }
@@ -56,24 +57,36 @@ const ProductTags = () => {
   }, [fetchProducts]);
 
   const handleSearchRemove = useCallback(() => {
-    setFilters({ search: '' });
+    setFilters({ search: "" });
     setPageNo(1);
   }, []);
 
-  const tableHeadings = ['Product Name', 'Tags'];
+  const tableHeadings = ["Product Name", "Tags"];
 
   const tableRows = list.map((product) => {
-    const title = firstDefined(product?.title, product?.name, product?.productName, 'N/A');
+    const title = firstDefined(
+      product?.title,
+      product?.name,
+      product?.productName,
+      "N/A",
+    );
     const tags = Array.isArray(product?.tags) ? product.tags : [];
 
     return [
-      <span className='text-sm font-medium'>{title}</span>,
-      <div className='flex flex-wrap gap-1'>
-        {tags.length > 0 ? tags.map((tag) => (
-          <span key={`${product?._id || product?.id || title}-${tag}`} className='inline-flex px-2 py-0.5 rounded-full text-xs bg-[#eef3ff] text-[#2d4db3]'>
-            #{tag}
-          </span>
-        )) : <span className='text-xs text-gray-500'>No tags</span>}
+      <span className="text-sm font-medium">{title}</span>,
+      <div className="flex flex-wrap gap-1">
+        {tags.length > 0 ? (
+          tags.map((tag) => (
+            <span
+              key={`${product?._id || product?.id || title}-${tag}`}
+              className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[#eef3ff] text-[#2d4db3]"
+            >
+              #{tag}
+            </span>
+          ))
+        ) : (
+          <span className="text-xs text-gray-500">No tags</span>
+        )}
       </div>,
     ];
   });
@@ -81,12 +94,13 @@ const ProductTags = () => {
   return (
     <>
       <Loader loading={isLoading} />
-      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3'>
-        <h3 className='text-gray-500 text-sm font-semibold py-3'>
-          <Link to='/app/home'>Home</Link> / <span className='text-[#181c32]'>Product Tags</span>
+      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3">
+        <h3 className="text-gray-500 text-sm font-semibold py-3">
+          <Link to="/app/home">Home</Link> /{" "}
+          <span className="text-[#181c32]">Product Tags</span>
         </h3>
-        <div className='overflow-auto overflow-y-auto bg-white'>
-          <div className='p-2 border-b'>
+        <div className="overflow-auto overflow-y-auto bg-white">
+          <div className="p-2 border-b">
             <SearchComponent
               tableHeadings={tableHeadings}
               data={tableRows}
@@ -109,11 +123,11 @@ const ProductTags = () => {
             />
           </div>
           <TableData
-            Heading='Product Tags'
+            Heading="Product Tags"
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
-            placeholder='Search by product name...'
+            placeholder="Search by product name..."
             showFilter={false}
             showSummary={false}
             showAddButton={false}

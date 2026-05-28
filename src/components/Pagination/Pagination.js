@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo } from "react";
 import { LuChevronRight, LuChevronLeft } from "react-icons/lu";
 
 const pageButtonBase =
@@ -26,24 +26,24 @@ const Pagination = ({
     safeTotalPages,
   );
 
-  const handlePageChange = page => {
+  const handlePageChange = (page) => {
     if (typeof page !== "number" || page === safeCurrentPage) return;
     if (page >= 1 && page <= safeTotalPages) {
-      onPageChange?.(page)
+      onPageChange?.(page);
     }
-  }
+  };
 
   const renderPageNumbers = () => {
-    const pageNumbers = []
-    const maxPagesToShow = 5
-    const isTruncated = safeTotalPages > maxPagesToShow
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    const isTruncated = safeTotalPages > maxPagesToShow;
 
     for (let i = 1; i <= Math.min(2, safeTotalPages); i++) {
-      pageNumbers.push(i)
+      pageNumbers.push(i);
     }
 
     if (isTruncated && safeCurrentPage > 4) {
-      pageNumbers.push('...')
+      pageNumbers.push("...");
     }
 
     for (
@@ -51,31 +51,33 @@ const Pagination = ({
       i <= Math.min(safeTotalPages - 2, safeCurrentPage + 1);
       i++
     ) {
-      pageNumbers.push(i)
+      pageNumbers.push(i);
     }
 
     if (isTruncated && safeCurrentPage < safeTotalPages - 3) {
-      pageNumbers.push('...')
+      pageNumbers.push("...");
     }
 
     for (let i = Math.max(safeTotalPages - 1, 3); i <= safeTotalPages; i++) {
       if (i > 2) {
-        pageNumbers.push(i)
+        pageNumbers.push(i);
       }
     }
 
-    return pageNumbers
-  }
+    return pageNumbers;
+  };
 
-  const pageNumbers = renderPageNumbers()
+  const pageNumbers = renderPageNumbers();
   const rangeStart =
     totalRecords && pageSize ? (safeCurrentPage - 1) * pageSize + 1 : 0;
   const rangeEnd =
-    totalRecords && pageSize ? Math.min(safeCurrentPage * pageSize, totalRecords) : 0;
+    totalRecords && pageSize
+      ? Math.min(safeCurrentPage * pageSize, totalRecords)
+      : 0;
 
   const wrapperClass = compact
     ? "admin-pagination flex flex-wrap items-center justify-end gap-3"
-    : "admin-pagination flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e6ebf3] bg-white px-3 py-2 shadow-sm";
+    : "admin-pagination flex w-full flex-wrap items-center justify-end gap-3 rounded-lg   px-3 py-2";
 
   return (
     <div className={wrapperClass}>
@@ -90,7 +92,7 @@ const Pagination = ({
         </div>
       )}
       {onPageSizeChange && (
-        <label className="inline-flex items-center gap-2 rounded-md border border-[#e6ebf3] bg-[#f8fafc] px-2 py-1 text-xs font-medium text-slate-500">
+        <label className="inline-flex items-center gap-2 rounded-md  bg-[#f8fafc] px-2 py-1 text-xs font-medium text-slate-500">
           Rows per page
           <select
             className="admin-input !h-8 !w-auto !min-w-[68px] !border-[#dce2ef] !bg-white !px-2"
@@ -98,13 +100,17 @@ const Pagination = ({
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             aria-label="Rows per page"
           >
-            {pageSizeOptions.map((size) => <option key={size} value={size}>{size}</option>)}
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
           </select>
         </label>
       )}
       <nav
-        className='flex flex-row items-center justify-end gap-1 overflow-x-auto'
-        aria-label='Pagination'
+        className="flex flex-row items-center justify-end gap-1 overflow-x-auto"
+        aria-label="Pagination"
       >
         <button
           className={`${pageButtonBase} ${pageButtonIdle} hidden sm:inline-flex`}
@@ -112,7 +118,7 @@ const Pagination = ({
           disabled={safeCurrentPage === 1}
           aria-label="First page"
         >
-         First
+          First
         </button>
         <button
           className={`${pageButtonBase} ${pageButtonIdle} !px-0`}
@@ -128,9 +134,9 @@ const Pagination = ({
             key={`${page}-${index}`}
             className={`${pageButtonBase} ${
               safeCurrentPage === page ? pageButtonActive : pageButtonIdle
-            } ${page === '...' ? "!min-w-7 !border-transparent !bg-transparent !px-1 !text-slate-400 !opacity-100" : ""}`}
+            } ${page === "..." ? "!min-w-7 !border-transparent !bg-transparent !px-1 !text-slate-400 !opacity-100" : ""}`}
             onClick={() => handlePageChange(page)}
-            disabled={page === '...'}
+            disabled={page === "..."}
             aria-current={safeCurrentPage === page ? "page" : undefined}
             aria-label={page === "..." ? "More pages" : `Page ${page}`}
           >
@@ -156,7 +162,7 @@ const Pagination = ({
         </button>
       </nav>
     </div>
-  )
-}
+  );
+};
 
-export default memo(Pagination)
+export default memo(Pagination);

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { IoMdTrendingDown } from "react-icons/io";
-import { IoTrendingUp } from "react-icons/io5";
-import { MdCalendarToday, MdMoreVert } from "react-icons/md";
+import { MdCalendarToday } from "react-icons/md";
 import {
   Area,
   AreaChart,
@@ -13,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { getDashboardOverview } from "../../Redux/adminCoreSlice";
+import Cards from "../../components/Cards/Cards";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0 },
@@ -61,49 +60,6 @@ const statusStyle = (status = "") => {
   }
   return "border-amber-200 bg-amber-50 text-amber-600";
 };
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  helper,
-  trend,
-  trendNegative = false,
-  warning = false,
-}) {
-  const trendColor = trendNegative ? "text-red-600" : "text-[#082f91]";
-
-  return (
-    <div className=" rounded-[10px] border border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED] px-[26px] py-8 shadow-[0_2px_6px_rgba(20,20,20,0.16)] flex justify-between flex-col">
-      <div className="mb-[24px]  flex items-start justify-between">
-        <span
-          className={`flex h-10 w-10 items-center justify-center rounded-full ${warning ? "bg-[#d71920]" : "bg-[#e99f13]"} text-white`}
-        >
-          <img className="h-5 w-5 object-contain" src={icon} alt="" />
-        </span>
-        <MdMoreVert className="h-6 w-6 text-[#757683]" />
-      </div>
-
-      <div>
-        <p className="text-lg  font-semibold  font-inter text-[#182D5099]/60">
-          {label}
-        </p>
-        <p className=" text-[28px] font-extrabold  text-[#042586]">{value}</p>
-        <p className="mt-[6px] text-[12px] font-semibold text-[#6f7482]">
-          <span className={`inline-flex items-center gap-1 ${trendColor}`}>
-            {trendNegative ? (
-              <IoMdTrendingDown className="h-3 w-3" />
-            ) : (
-              <IoTrendingUp className="h-3 w-3" />
-            )}
-            {trend}
-          </span>{" "}
-          <span className="font-medium  ">{helper}</span>
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function EmptyTableRow({ colSpan, children }) {
   return (
@@ -242,6 +198,7 @@ export default function Dashboard() {
     <div className="admin-page min-h-screen w-full px-4 py-5 sm:px-6 lg:px-14">
       <div>
         <div className="my-4 flex flex-wrap items-end justify-between gap-4">
+          {/* Top Heading Section */}
           <div>
             <span className="mb-2 inline-flex items-center rounded-sm bg-[#FBEBD7] px-2 py-1 text-[12px] font-inter font-bold uppercase tracking-[0.12em] text-[#DB971A]">
               Global Dashboard
@@ -258,11 +215,14 @@ export default function Dashboard() {
           </p>
         )}
 
+        {/* Cards UI */}
         <div className="my-12  grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
-            <MetricCard key={metric.label} {...metric} />
+            <Cards key={metric.label} {...metric} />
           ))}
         </div>
+
+        {/* Performance Chart */}
 
         <section
           className="mb-6 rounded-xl border border-[#ebeaf1] p-5 shadow-[0_1px_4px_rgba(18,37,80,0.05)]"
@@ -343,6 +303,7 @@ export default function Dashboard() {
           )}
         </section>
 
+        {/* Tables */}
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 ">
           <section
             className="admin-card overflow-hidden"

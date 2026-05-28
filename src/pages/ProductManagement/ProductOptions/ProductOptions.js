@@ -1,40 +1,46 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   getPlatformOptions,
   createPlatformOption,
   updatePlatformOption,
   deletePlatformOption,
-} from '../../../Redux/adminCoreSlice';
-import Loader from '../../../components/Loader/Loader';
-import Pagination from '../../../components/Pagination/Pagination';
-import AddButton from '../../../components/Button/AddButton';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
-import useDropdownOptions from '../../../hooks/useDropdownOptions';
+} from "../../../Redux/adminCoreSlice";
+import Loader from "../../../components/Loader/Loader";
+import Pagination from "../../../components/Pagination/Pagination";
+import AddButton from "../../../components/Button/AddButton";
+import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import useDropdownOptions from "../../../hooks/useDropdownOptions";
 
 const PAGE_SIZE = 15;
 
 const DISPLAY_TYPE_META = {
-  button:       { label: 'Button',       color: 'bg-blue-100 text-blue-700' },
-  dropdown:     { label: 'Dropdown',     color: 'bg-gray-100 text-gray-600' },
-  color_swatch: { label: 'Color Swatch', color: 'bg-pink-100 text-pink-700' },
-  radio:        { label: 'Radio',        color: 'bg-purple-100 text-purple-700' },
-  thumbnail:    { label: 'Thumbnail',    color: 'bg-yellow-100 text-yellow-700' },
+  button: { label: "Button", color: "bg-blue-100 text-blue-700" },
+  dropdown: { label: "Dropdown", color: "bg-gray-100 text-gray-600" },
+  color_swatch: { label: "Color Swatch", color: "bg-pink-100 text-pink-700" },
+  radio: { label: "Radio", color: "bg-purple-100 text-purple-700" },
+  thumbnail: { label: "Thumbnail", color: "bg-yellow-100 text-yellow-700" },
 };
 
-const slugify = (value = '') =>
-  String(value || '')
+const slugify = (value = "") =>
+  String(value || "")
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-const emptyForm = { name: '', slug: '', displayType: 'dropdown', description: '', active: true };
+const emptyForm = {
+  name: "",
+  slug: "",
+  displayType: "dropdown",
+  description: "",
+  active: true,
+};
 
-const idOf = (r) => r?._id || r?.id || '';
+const idOf = (r) => r?._id || r?.id || "";
 
 const getListPayload = (sliceData = {}) => {
   const payload =
@@ -59,24 +65,28 @@ export default function ProductOptions() {
   const selector = useSelector((s) => s.adminCore);
 
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
-  const displayTypes = useDropdownOptions('product-option-display-types');
+  const displayTypes = useDropdownOptions("product-option-display-types");
 
   const items = getListPayload(selector?.platformOptionsData);
   const total = getTotal(selector?.platformOptionsData, items.length);
   const loading = selector?.loading;
 
   const load = useCallback(() => {
-    dispatch(getPlatformOptions({ page, limit: PAGE_SIZE, q: search || undefined }));
+    dispatch(
+      getPlatformOptions({ page, limit: PAGE_SIZE, q: search || undefined }),
+    );
   }, [dispatch, page, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const openAdd = () => {
     setEditing(null);
@@ -88,21 +98,24 @@ export default function ProductOptions() {
   const openEdit = (row) => {
     setEditing(row);
     setForm({
-      name: row.name || '',
+      name: row.name || "",
       slug: row.slug || slugify(row.name),
-      displayType: row.displayType || 'dropdown',
-      description: row.description || '',
+      displayType: row.displayType || "dropdown",
+      description: row.description || "",
       active: row.active !== false,
     });
     setErrors({});
     setModalOpen(true);
   };
 
-  const closeModal = () => { setModalOpen(false); setEditing(null); };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+  };
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'Name is required';
+    if (!form.name.trim()) e.name = "Name is required";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -112,16 +125,18 @@ export default function ProductOptions() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(updatePlatformOption({ id: idOf(editing), ...form })).unwrap();
-        toast.success('Option master updated');
+        await dispatch(
+          updatePlatformOption({ id: idOf(editing), ...form }),
+        ).unwrap();
+        toast.success("Option master updated");
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
-        toast.success('Option master created');
+        toast.success("Option master created");
       }
       closeModal();
       load();
     } catch (err) {
-      toast.error(err?.message || 'Save failed');
+      toast.error(err?.message || "Save failed");
     } finally {
       setSaving(false);
     }
@@ -131,21 +146,23 @@ export default function ProductOptions() {
     if (!deleteTarget) return;
     try {
       await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
-      toast.success('Option master deleted');
+      toast.success("Option master deleted");
       setDeleteTarget(null);
       load();
     } catch (err) {
-      toast.error(err?.message || 'Delete failed');
+      toast.error(err?.message || "Delete failed");
     }
   };
 
   const handleToggleActive = async (row) => {
     try {
-      await dispatch(updatePlatformOption({ id: idOf(row), active: !row.active })).unwrap();
-      toast.success(row.active ? 'Disabled' : 'Enabled');
+      await dispatch(
+        updatePlatformOption({ id: idOf(row), active: !row.active }),
+      ).unwrap();
+      toast.success(row.active ? "Disabled" : "Enabled");
       load();
     } catch (err) {
-      toast.error(err?.message || 'Failed');
+      toast.error(err?.message || "Failed");
     }
   };
 
@@ -156,9 +173,12 @@ export default function ProductOptions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-800">Product Option Masters</h1>
+          <h1 className="text-xl font-semibold text-gray-800">
+            Product Option Masters
+          </h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            Define reusable option masters like Size, Color, RAM, Material, Warranty, Country, State, and City.
+            Define reusable option masters like Size, Color, RAM, Material,
+            Warranty, Country, State, and City.
           </p>
         </div>
         <AddButton onClick={openAdd} />
@@ -168,7 +188,10 @@ export default function ProductOptions() {
       <div className="flex gap-2">
         <input
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder="Search attributes…"
           className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
@@ -179,8 +202,17 @@ export default function ProductOptions() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {['Attribute Name', 'Display Type', 'Description', 'Status', 'Actions'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {[
+                "Attribute Name",
+                "Display Type",
+                "Description",
+                "Status",
+                "Actions",
+              ].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                >
                   {h}
                 </th>
               ))}
@@ -189,26 +221,35 @@ export default function ProductOptions() {
           <tbody className="divide-y divide-gray-100">
             {items.length === 0 && !loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-16 text-center text-sm text-gray-400">
+                <td
+                  colSpan={5}
+                  className="px-4 py-16 text-center text-sm text-gray-400"
+                >
                   No option masters yet. Click "Add" to create your first one.
                 </td>
               </tr>
             ) : (
               items.map((row) => {
-                const dtMeta = DISPLAY_TYPE_META[row.displayType] || DISPLAY_TYPE_META.button;
+                const dtMeta =
+                  DISPLAY_TYPE_META[row.displayType] ||
+                  DISPLAY_TYPE_META.button;
                 return (
                   <tr key={idOf(row)} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-800">{row.name}</p>
-                      <p className="font-mono text-xs text-gray-400">{row.slug || '—'}</p>
+                      <p className="font-mono text-xs text-gray-400">
+                        {row.slug || "—"}
+                      </p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dtMeta.color}`}>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dtMeta.color}`}
+                      >
                         {dtMeta.label}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">
-                      {row.description || '—'}
+                      {row.description || "—"}
                     </td>
                     <td className="px-4 py-3">
                       <ToggleButton
@@ -219,7 +260,9 @@ export default function ProductOptions() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => navigate(`/app/product-option-value/${idOf(row)}`)}
+                          onClick={() =>
+                            navigate(`/app/product-option-value/${idOf(row)}`)
+                          }
                           className="px-3 py-1 text-xs font-medium text-green-600 border border-green-200 rounded hover:bg-green-50"
                         >
                           Manage Values →
@@ -247,7 +290,11 @@ export default function ProductOptions() {
       </div>
 
       {total > PAGE_SIZE && (
-        <Pagination totalPages={Math.ceil(total / PAGE_SIZE)} currentPage={page} onPageChange={setPage} />
+        <Pagination
+          totalPages={Math.ceil(total / PAGE_SIZE)}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Add / Edit Modal */}
@@ -255,7 +302,7 @@ export default function ProductOptions() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-5">
-              {editing ? 'Edit Option Master' : 'New Option Master'}
+              {editing ? "Edit Option Master" : "New Option Master"}
             </h2>
 
             <div className="space-y-4">
@@ -267,18 +314,30 @@ export default function ProductOptions() {
                 <input
                   autoFocus
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: f.slug || slugify(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      name: e.target.value,
+                      slug: f.slug || slugify(e.target.value),
+                    }))
+                  }
                   placeholder="e.g. Color, Size, RAM, Material"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Slug
+                </label>
                 <input
                   value={form.slug}
-                  onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, slug: slugify(e.target.value) }))
+                  }
                   placeholder="e.g. size, color, storage"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
@@ -286,18 +345,25 @@ export default function ProductOptions() {
 
               {/* Display Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
-                <p className="text-xs text-gray-400 mb-2">How values from this option appear on product and variant forms</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Type
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  How values from this option appear on product and variant
+                  forms
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   {displayTypes.options.map((dt) => (
                     <button
                       key={dt.value}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, displayType: dt.value }))}
+                      onClick={() =>
+                        setForm((f) => ({ ...f, displayType: dt.value }))
+                      }
                       className={`px-3 py-2 text-sm rounded-lg border text-left transition-colors ${
                         form.displayType === dt.value
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 font-medium"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
                       }`}
                     >
                       {dt.label}
@@ -308,10 +374,14 @@ export default function ProductOptions() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (optional)
+                </label>
                 <input
                   value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="e.g. Available color options for this product"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
@@ -322,15 +392,22 @@ export default function ProductOptions() {
                 <input
                   type="checkbox"
                   checked={form.active}
-                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, active: e.target.checked }))
+                  }
                   className="w-4 h-4 accent-indigo-600"
                 />
-                <span className="text-sm text-gray-700">Active (visible to sellers)</span>
+                <span className="text-sm text-gray-700">
+                  Active (visible to sellers)
+                </span>
               </label>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
                 Cancel
               </button>
               <button
@@ -338,7 +415,7 @@ export default function ProductOptions() {
                 disabled={saving}
                 className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
               >
-                {saving ? 'Saving…' : editing ? 'Update' : 'Create'}
+                {saving ? "Saving…" : editing ? "Update" : "Create"}
               </button>
             </div>
           </div>

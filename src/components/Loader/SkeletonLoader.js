@@ -71,6 +71,25 @@ export const CardSkeletonLoader = ({ count = 4 }) => (
   </div>
 );
 
+export const StatCardSkeletonLoader = () => (
+  <div
+    className="h-full min-h-[190px] w-full min-w-0 rounded-[10px] border border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED] px-[26px] py-8 shadow-[0_2px_6px_rgba(20,20,20,0.16)]"
+    aria-label="Loading stat card"
+  >
+    <div className="mb-[24px] flex min-h-10 justify-between">
+      <SkeletonLoader circle height={40} width={40} />
+      <SkeletonLoader height={24} width={24} />
+    </div>
+    <SkeletonLoader height={18} width="45%" />
+    <div className="mt-3">
+      <SkeletonLoader height={30} width="60%" />
+    </div>
+    <div className="mt-2">
+      <SkeletonLoader height={12} width="35%" />
+    </div>
+  </div>
+);
+
 export const FormSkeletonLoader = ({ fields = 4 }) => (
   <div className="admin-card space-y-5 p-5" aria-label="Loading form">
     {Array.from({ length: fields }).map((_, index) => (

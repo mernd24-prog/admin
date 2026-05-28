@@ -1,15 +1,20 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useMemo, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup';
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton';
-import { createContentPage, deleteContentPage, getContentPages, updateContentPage } from '../../../Redux/adminCoreSlice';
-import { dropdownApi } from '../../../_helpers/dropdownApi';
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
+import TableData from "../../../components/Atoms/TableData/TableData";
+import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import {
+  createContentPage,
+  deleteContentPage,
+  getContentPages,
+  updateContentPage,
+} from "../../../Redux/adminCoreSlice";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
-const PAGE_TYPE = 'order_status';
+const PAGE_TYPE = "order_status";
 
 const extractList = (payload) => {
   const root = payload?.data?.data || payload?.data || payload || {};
@@ -41,9 +46,9 @@ const OrderStatus = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const getSystemOrderStatuses = async () => {
-    const options = await dropdownApi.getSystemOptions('order-statuses');
+    const options = await dropdownApi.getSystemOptions("order-statuses");
     return options.map((option, index) => ({
-      slug: `order-status-${option.value.replace(/_/g, '-')}`,
+      slug: `order-status-${option.value.replace(/_/g, "-")}`,
       title: option.label,
       status: option.value,
       priority: index + 1,
@@ -51,38 +56,48 @@ const OrderStatus = () => {
   };
 
   const seedDefaultOrderStatuses = async (systemStatuses) => {
-    await Promise.all(systemStatuses.map((status) =>
-      dispatch(createContentPage({
-        slug: status.slug,
-        title: status.title,
-        pageType: PAGE_TYPE,
-        body: `${status.title} order status`,
-        published: true,
-        metadata: {
-          name: status.title,
-          status: status.status,
-          priority: status.priority,
-          active: true,
-        },
-      })).unwrap().catch(() => null),
-    ));
+    await Promise.all(
+      systemStatuses.map((status) =>
+        dispatch(
+          createContentPage({
+            slug: status.slug,
+            title: status.title,
+            pageType: PAGE_TYPE,
+            body: `${status.title} order status`,
+            published: true,
+            metadata: {
+              name: status.title,
+              status: status.status,
+              priority: status.priority,
+              active: true,
+            },
+          }),
+        )
+          .unwrap()
+          .catch(() => null),
+      ),
+    );
   };
 
   const loadOrderStatuses = async () => {
     try {
       setIsLoading(true);
       const systemStatuses = await getSystemOrderStatuses();
-      const response = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
+      const response = await dispatch(
+        getContentPages({ pageType: PAGE_TYPE, limit: 100 }),
+      ).unwrap();
       let list = extractList(response);
       if (!list.length) {
         await seedDefaultOrderStatuses(systemStatuses);
-        const seededResponse = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
+        const seededResponse = await dispatch(
+          getContentPages({ pageType: PAGE_TYPE, limit: 100 }),
+        ).unwrap();
         list = extractList(seededResponse);
       }
       setApiRes(list.length ? list : systemStatuses.map(toStatusRow));
     } catch (error) {
       setApiRes([]);
-      toast.error(error?.message || error || 'Failed to load order statuses');
+      toast.error(error?.message || error || "Failed to load order statuses");
     } finally {
       setIsLoading(false);
     }
@@ -94,18 +109,24 @@ const OrderStatus = () => {
 
   const loading = isLoading || adminCoreSelector?.loading;
 
-  const tableHeadings = useMemo(() => ([
-    <div className="flex items-center gap-2" key="order-status-priority-header">
-      <input
-        type="checkbox"
-        className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
-      />
-      <span>Order status priority</span>
-    </div>,
-    'Order Status Name',
-    'Status',
-    'Action',
-  ]), []);
+  const tableHeadings = useMemo(
+    () => [
+      <div
+        className="flex items-center gap-2"
+        key="order-status-priority-header"
+      >
+        <input
+          type="checkbox"
+          className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+        />
+        <span>Order status priority</span>
+      </div>,
+      "Order Status Name",
+      "Status",
+      "Action",
+    ],
+    [],
+  );
 
   const handleRowCheckboxChange = (e, rowId) => {
     if (e.target.checked) {
@@ -118,20 +139,22 @@ const OrderStatus = () => {
   const handleToggleStatus = async (item) => {
     try {
       const currentMetadata = item?.metadata || {};
-      await dispatch(updateContentPage({
-        slug: item.slug,
-        title: item.title,
-        pageType: item.pageType || PAGE_TYPE,
-        body: item.body || `${item.title || item.slug} order status`,
-        metadata: {
-          ...currentMetadata,
-          active: !(currentMetadata.active ?? true),
-        },
-      })).unwrap();
+      await dispatch(
+        updateContentPage({
+          slug: item.slug,
+          title: item.title,
+          pageType: item.pageType || PAGE_TYPE,
+          body: item.body || `${item.title || item.slug} order status`,
+          metadata: {
+            ...currentMetadata,
+            active: !(currentMetadata.active ?? true),
+          },
+        }),
+      ).unwrap();
       await loadOrderStatuses();
-      toast.success('Status updated successfully');
+      toast.success("Status updated successfully");
     } catch (error) {
-      toast.error(error?.message || 'Failed to update status');
+      toast.error(error?.message || "Failed to update status");
     }
   };
 
@@ -139,24 +162,28 @@ const OrderStatus = () => {
     if (!selectedRecord?.slug) return;
     try {
       await dispatch(deleteContentPage({ slug: selectedRecord.slug })).unwrap();
-      toast.success('Order status deleted successfully');
+      toast.success("Order status deleted successfully");
       setShowDeleteConfirmation(false);
       setSelectedRecord(null);
       await loadOrderStatuses();
     } catch (error) {
-      toast.error(error?.message || 'Failed to delete order status');
+      toast.error(error?.message || "Failed to delete order status");
     }
   };
 
   const tableRows = apiRes?.map((item) => {
     const rowId = item?._id || item?.slug;
     const isSelected = selectedRow.includes(rowId);
-    const statusPriority = item?.metadata?.priority || item?.metadata?.order || '-';
-    const statusName = item?.title || item?.metadata?.name || item?.slug || '-';
+    const statusPriority =
+      item?.metadata?.priority || item?.metadata?.order || "-";
+    const statusName = item?.title || item?.metadata?.name || item?.slug || "-";
     const isDefaultFallback = item?.metadata?.isDefault && !item?._id;
 
     return [
-      <span className="inline-flex items-center gap-x-5" key={`priority-${rowId}`}>
+      <span
+        className="inline-flex items-center gap-x-5"
+        key={`priority-${rowId}`}
+      >
         <input
           key={`checkbox-${rowId}`}
           type="checkbox"
@@ -168,7 +195,12 @@ const OrderStatus = () => {
       </span>,
       statusName,
       <span key={`status-${rowId}`}>
-        <ToggleButton isToggle={Boolean(item?.metadata?.active ?? true)} handleClick={isDefaultFallback ? undefined : () => handleToggleStatus(item)} />
+        <ToggleButton
+          isToggle={Boolean(item?.metadata?.active ?? true)}
+          handleClick={
+            isDefaultFallback ? undefined : () => handleToggleStatus(item)
+          }
+        />
       </span>,
       <span key={`action-${rowId}`}>
         <ActionButtons
@@ -185,14 +217,14 @@ const OrderStatus = () => {
 
   return (
     <>
-      <div className='p-6 overflow-hidden overflow-x-auto overflow-y-auto'>
-        <div className='p-4 overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]'>
+      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto">
+        <div className=" overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
           <TableData
             Heading="Order Status"
             tableHeadings={tableHeadings}
             data={tableRows}
             showSearch={true}
-            placeholder='Search by status...'
+            placeholder="Search by status..."
             showFilter={false}
             showSummary={false}
             showAddButton={false}
@@ -208,10 +240,10 @@ const OrderStatus = () => {
           setSelectedRecord(null);
         }}
         confirmDelete={confirmDelete}
-        DeleteHeading={'Are you sure you want to delete?'}
+        DeleteHeading={"Are you sure you want to delete?"}
       />
     </>
-  )
-}
+  );
+};
 
-export default OrderStatus
+export default OrderStatus;

@@ -26,7 +26,7 @@ const AddButton = React.memo(
         type={type}
         onClick={onClick}
         disabled={isDisable || loading}
-        className={`admin-btn-secondary group w-auto ${className} `}
+        className={`admin-btn-secondary  group w-auto ${className} `}
         {...rest}
       >
         {loading ? (
