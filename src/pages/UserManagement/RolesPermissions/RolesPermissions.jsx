@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   MdSecurity, MdAdd, MdEdit, MdCheck, MdExpandMore, MdExpandLess,
-  MdLock, MdLockOpen, MdRefresh,
+  MdLock, MdRefresh, MdPerson, MdGroups, MdInfo, MdArrowRightAlt,
 } from 'react-icons/md';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../../../components/Shared';
 import PermissionGuard from '../../../components/Atoms/PermissionGuard/PermissionGuard';
 import { usePermission, ACTIONS, ROLES } from '../../../_helpers/usePermission';
@@ -10,54 +11,38 @@ import { axiosPrivate as axiosProvider } from '../../../_helpers/axiosProvider';
 import { toast } from 'sonner';
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
-const ROLE_COLORS = {
-  'super-admin':      'bg-purple-100 text-purple-700 border-purple-200',
-  'admin':            'bg-blue-100 text-[#3E4094] border-blue-200',
-  'sub-admin':        'bg-indigo-100 text-indigo-600 border-indigo-200',
-  'seller':           'bg-amber-100 text-amber-700 border-amber-200',
-  'seller-admin':     'bg-yellow-100 text-yellow-700 border-yellow-200',
-  'seller-sub-admin': 'bg-gray-100 text-gray-600 border-gray-200',
+
+const ROLE_META = {
+  'super-admin':      { color: 'bg-purple-100 text-purple-700 border-purple-200', model: 'unrestricted', label: 'Super Admin',       desc: 'Bypasses all permission checks' },
+  'admin':            { color: 'bg-blue-100 text-[#3E4094] border-blue-200',      model: 'per-user',     label: 'Admin',             desc: 'Permissions set individually per admin' },
+  'sub-admin':        { color: 'bg-indigo-100 text-indigo-600 border-indigo-200', model: 'per-user',     label: 'Sub Admin',         desc: 'Permissions set individually per sub-admin' },
+  'seller':           { color: 'bg-amber-100 text-amber-700 border-amber-200',    model: 'role-wide',    label: 'Seller',            desc: 'All sellers share these permissions' },
+  'seller-admin':     { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', model: 'per-user',     label: 'Seller Admin',      desc: 'Permissions set individually per seller admin' },
+  'seller-sub-admin': { color: 'bg-gray-100 text-gray-600 border-gray-200',       model: 'per-user',     label: 'Seller Sub Admin',  desc: 'Permissions set individually' },
+  'buyer':            { color: 'bg-green-100 text-green-700 border-green-200',    model: 'no-access',    label: 'Buyer',             desc: 'Customer account — no admin panel access' },
 };
 
-const STANDARD_ROLE_NAMES = {
-  [ROLES.SUPER_ADMIN]:      'Super Admin',
-  [ROLES.ADMIN]:            'Admin',
-  [ROLES.SUB_ADMIN]:        'Sub Admin',
-  [ROLES.SELLER]:           'Seller',
-  [ROLES.SELLER_ADMIN]:     'Seller Admin',
-  [ROLES.SELLER_SUB_ADMIN]: 'Seller Sub Admin',
+const MODEL_BADGE = {
+  'unrestricted': 'bg-purple-50 text-purple-600 border-purple-200',
+  'role-wide':    'bg-teal-50 text-teal-600 border-teal-200',
+  'per-user':     'bg-blue-50 text-blue-600 border-blue-200',
+  'no-access':    'bg-gray-50 text-gray-400 border-gray-200',
+  'custom':       'bg-orange-50 text-orange-600 border-orange-200',
+};
+const MODEL_LABEL = {
+  'unrestricted': 'Unrestricted',
+  'role-wide':    'Role-Wide',
+  'per-user':     'Per-User',
+  'no-access':    'No Access',
+  'custom':       'Custom Role',
 };
 
 const STANDARD_SLUGS = Object.values(ROLES);
-
 const ALL_ACTIONS = ['view', 'create', 'update', 'delete', 'status_change', 'approve', 'reject', 'assign', 'export', 'import'];
-const ACTION_ALIASES = {
-  add: 'create',
-  edit: 'update',
-  status: 'status_change',
-  approval: 'approve',
-  action: 'status_change',
-  review: 'approve',
-  manage: 'status_change',
-};
+const ACTION_ALIASES = { add: 'create', edit: 'update', status: 'status_change', approval: 'approve', action: 'status_change', review: 'approve', manage: 'status_change' };
+const ACTION_LABELS  = { status_change: 'Status', create: 'Create', update: 'Update', delete: 'Delete', approve: 'Approve', reject: 'Reject', export: 'Export', import: 'Import', assign: 'Assign', view: 'View' };
 
-const normalizeAction = (action = '') => {
-  const value = String(action || '').trim().toLowerCase();
-  return ACTION_ALIASES[value] || value;
-};
-
-const ACTION_LABELS = {
-  status_change: 'Status',
-  create:        'Create',
-  update:        'Update',
-  delete:        'Delete',
-  approve:       'Approve',
-  reject:        'Reject',
-  export:        'Export',
-  import:        'Import',
-  assign:        'Assign',
-  view:          'View',
-};
+const normalizeAction = (a = '') => { const v = String(a).trim().toLowerCase(); return ACTION_ALIASES[v] || v; };
 
 /* ─── Permission Matrix ──────────────────────────────────────────────────── */
 const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, onChange, readOnly = false }) => {
@@ -66,13 +51,9 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
   const visibleActions = useMemo(() => {
     const used = new Set();
     modules.forEach((mod) => {
-      Object.keys(mod.permissionsByAction || {}).forEach((action) => {
-        const normalized = normalizeAction(action);
-        if (mod.permissionsByAction[action] && ALL_ACTIONS.includes(normalized)) used.add(normalized);
-      });
       (mod.permissions || []).forEach((p) => {
-        const normalized = normalizeAction(p.action);
-        if (p.id && ALL_ACTIONS.includes(normalized)) used.add(normalized);
+        const n = normalizeAction(p.action);
+        if (p.id && ALL_ACTIONS.includes(n)) used.add(n);
       });
     });
     return ALL_ACTIONS.filter((a) => used.has(a));
@@ -81,22 +62,19 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
   const toggleAll = (modSlug, checked) => {
     visibleActions.forEach((action) => {
       const perm = permissionMap[modSlug]?.[action];
-      if (perm) onChange?.(perm.id, checked);
+      if (perm) onChange?.(perm.id, checked, modSlug, action);
     });
   };
 
   const allChecked = (modSlug) =>
-    visibleActions.every((a) => {
-      const perm = permissionMap[modSlug]?.[a];
-      return !perm || matrixState[perm.id] === true;
-    });
+    visibleActions.every((a) => { const perm = permissionMap[modSlug]?.[a]; return !perm || matrixState[perm.id] === true; });
 
   if (!modules.length) {
     return (
       <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm p-10 text-center">
         <MdSecurity size={40} className="mx-auto mb-3 text-[#e7dfd1]" />
         <p className="text-sm text-gray-400 font-medium">No modules found in database.</p>
-        <p className="text-xs text-gray-300 mt-1">Run the RBAC seed to populate modules.</p>
+        <p className="text-xs text-gray-300 mt-1">Run <code className="font-mono bg-gray-100 px-1 rounded">node scripts/db/seed-rbac.js</code> to populate.</p>
       </div>
     );
   }
@@ -107,10 +85,10 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
         className="w-full flex items-center justify-between px-5 py-3 border-b border-[#e7dfd1] hover:bg-[#faf6ee] transition-colors"
         onClick={() => setExpanded((o) => !o)}
       >
-        <span className="text-sm font-semibold text-gray-700">
-          Permission Matrix
-          <span className="ml-2 text-xs font-normal text-gray-400">({modules.length} modules)</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-700">Permission Matrix</span>
+          <span className="text-xs text-gray-400">({modules.length} modules, {visibleActions.length} actions)</span>
+        </div>
         {expanded ? <MdExpandLess size={18} className="text-gray-400" /> : <MdExpandMore size={18} className="text-gray-400" />}
       </button>
 
@@ -119,15 +97,13 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-[#faf6ee] border-b border-[#e7dfd1]">
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide w-48 sticky left-0 bg-[#faf6ee]">Module</th>
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide w-44 sticky left-0 bg-[#faf6ee]">Module</th>
                 {visibleActions.map((a) => (
                   <th key={a} className="px-3 py-2.5 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
                     {ACTION_LABELS[a] || a.replace('_', ' ')}
                   </th>
                 ))}
-                {!readOnly && (
-                  <th className="px-3 py-2.5 text-center font-semibold text-gray-500 uppercase tracking-wide w-14">All</th>
-                )}
+                {!readOnly && <th className="px-3 py-2.5 text-center text-gray-400 font-semibold uppercase tracking-wide w-12">All</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f7efde]">
@@ -135,9 +111,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                 <tr key={mod.id || mod.slug} className="hover:bg-[#faf6ee]/60 transition-colors">
                   <td className="px-4 py-2.5 sticky left-0 bg-white">
                     <span className="font-medium text-gray-700 text-xs">{mod.moduleName || mod.name}</span>
-                    {mod.moduleKey && (
-                      <span className="block text-[10px] text-gray-400 font-mono">{mod.moduleKey || mod.slug}</span>
-                    )}
+                    <span className="block text-[10px] text-gray-400 font-mono">{mod.moduleKey || mod.slug}</span>
                   </td>
                   {visibleActions.map((action) => {
                     const perm = permissionMap[mod.slug || mod.moduleKey]?.[action];
@@ -153,7 +127,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                             className="w-4 h-4 accent-[#3E4094] cursor-pointer disabled:cursor-default rounded"
                           />
                         ) : (
-                          <span className="text-gray-200 text-base">—</span>
+                          <span className="text-gray-200">—</span>
                         )}
                       </td>
                     );
@@ -165,7 +139,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                         checked={allChecked(mod.slug || mod.moduleKey)}
                         onChange={(e) => toggleAll(mod.slug || mod.moduleKey, e.target.checked)}
                         className="w-4 h-4 accent-[#CE9F2D] cursor-pointer rounded"
-                        title="Toggle all actions for this module"
+                        title="Toggle all"
                       />
                     </td>
                   )}
@@ -181,14 +155,11 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
 
 /* ─── Create / Edit Role Modal ───────────────────────────────────────────── */
 const RoleModal = ({ role, onClose, onSave }) => {
-  const [form, setForm] = useState({
-    name:        role?.name        || '',
-    slug:        role?.slug        || '',
-    description: role?.description || '',
-    type:        role?.type        || 'custom',
-  });
+  const [form, setForm] = useState({ name: role?.name || '', slug: role?.slug || '', description: role?.description || '' });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const autoSlug = (name) => name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
   const validate = () => {
     const e = {};
@@ -204,83 +175,56 @@ const RoleModal = ({ role, onClose, onSave }) => {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
-      if (role?.id) {
-        await axiosProvider.patch(`/rbac/roles/${role.id}`, form);
-        toast.success('Role updated');
-      } else {
-        await axiosProvider.post('/rbac/roles', form);
-        toast.success('Role created');
-      }
+      if (role?.id) { await axiosProvider.patch(`/rbac/roles/${role.id}`, form); toast.success('Role updated'); }
+      else { await axiosProvider.post('/rbac/roles', form); toast.success('Role created'); }
       onSave?.();
       onClose();
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || 'Failed to save role');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const autoSlug = (name) =>
-    name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const isStandard = role?.id && STANDARD_SLUGS.includes(role?.slug);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-[#e7dfd1]">
         <div className="px-6 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl">
-          <h3 className="text-base font-semibold text-gray-800">{role?.id ? 'Edit Role' : 'Create Role'}</h3>
-          <p className="text-xs text-gray-400 mt-0.5">Configure role name, slug, and description</p>
+          <h3 className="text-sm font-semibold text-gray-800">{role?.id ? 'Edit Role' : 'Create Custom Role'}</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{role?.id ? 'Update role name and description' : 'A custom role lets you group a reusable set of permissions'}</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Role Name <span className="text-red-500">*</span></label>
             <input
               value={form.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setForm((p) => ({ ...p, name, ...(!role?.id ? { slug: autoSlug(name) } : {}) }));
-                setErrors((p) => ({ ...p, name: undefined }));
-              }}
-              className={`w-full border ${errors.name ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 bg-white`}
+              onChange={(e) => { const n = e.target.value; setForm((p) => ({ ...p, name: n, ...(!role?.id ? { slug: autoSlug(n) } : {}) })); setErrors((p) => ({ ...p, name: undefined })); }}
+              className={`w-full border ${errors.name ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30`}
               placeholder="e.g. Content Manager"
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
-
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Slug <span className="text-red-500">*</span></label>
             <input
               value={form.slug}
               onChange={(e) => { setForm((p) => ({ ...p, slug: e.target.value })); setErrors((p) => ({ ...p, slug: undefined })); }}
-              disabled={Boolean(role?.id && STANDARD_SLUGS.includes(role?.slug))}
-              className={`w-full border ${errors.slug ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 bg-white disabled:bg-[#faf6ee] disabled:text-gray-400`}
-              placeholder="e.g. content-manager"
+              disabled={isStandard}
+              className={`w-full border ${errors.slug ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 disabled:bg-[#faf6ee] disabled:text-gray-400`}
+              placeholder="content-manager"
             />
             {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug}</p>}
-            {STANDARD_SLUGS.includes(role?.slug) && (
-              <p className="text-[10px] text-amber-500 mt-1">Standard role slug — cannot be changed</p>
-            )}
+            {isStandard && <p className="text-[10px] text-amber-500 mt-1">System role slug — cannot be changed</p>}
           </div>
-
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              rows={2}
-              className="w-full border border-[#e7dfd1] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 resize-none bg-white"
-              placeholder="Short description of this role"
-            />
+            <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2}
+              className="w-full border border-[#e7dfd1] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 resize-none"
+              placeholder="What this role is for" />
           </div>
-
           <div className="flex justify-end gap-3 pt-2 border-t border-[#e7dfd1]">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-50 transition-colors"
-            >
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
+            <button type="submit" disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-50">
               {saving ? 'Saving…' : (role?.id ? 'Update Role' : 'Create Role')}
             </button>
           </div>
@@ -296,30 +240,95 @@ const SaveConfirmModal = ({ onConfirm, onCancel, changedCount }) => (
     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-[#e7dfd1]">
       <div className="px-6 py-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-[#3E4094]/10 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-[#3E4094]/10 flex items-center justify-center shrink-0">
             <MdLock size={20} className="text-[#3E4094]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-800">Save Permissions</h3>
-            <p className="text-xs text-gray-400">This will update role access for all assigned users</p>
+            <h3 className="text-sm font-semibold text-gray-800">Save Role Permissions</h3>
+            <p className="text-xs text-gray-400">This affects every user assigned to this role</p>
           </div>
         </div>
         <p className="text-sm text-gray-600 mt-2">
           {changedCount > 0
-            ? `You have modified ${changedCount} permission${changedCount !== 1 ? 's' : ''}. Saving will invalidate sessions for all users with this role.`
-            : 'Save the current permission matrix for this role?'
-          }
+            ? `${changedCount} permission${changedCount !== 1 ? 's' : ''} changed. All users with this role will have their sessions refreshed.`
+            : 'Save the current permission matrix for this role?'}
         </p>
       </div>
       <div className="px-6 pb-5 flex justify-end gap-3">
         <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-        <button
-          onClick={onConfirm}
-          className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] transition-colors"
-        >
-          Save Permissions
-        </button>
+        <button onClick={onConfirm} className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070]">Save</button>
       </div>
+    </div>
+  </div>
+);
+
+/* ─── How-It-Works Banner ────────────────────────────────────────────────── */
+const HowItWorksBanner = () => {
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('rbac_howto_dismissed') === '1');
+  if (dismissed) return null;
+  return (
+    <div className="bg-[#f0f4ff] border border-[#c7d4f5] rounded-xl px-5 py-4 mb-5 flex gap-4 items-start">
+      <div className="w-8 h-8 rounded-lg bg-[#3E4094]/15 flex items-center justify-center shrink-0 mt-0.5">
+        <MdInfo size={18} className="text-[#3E4094]" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-[#3E4094] mb-2">How the two permission levels work</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white rounded-lg border border-[#c7d4f5] p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <MdGroups size={15} className="text-teal-600" />
+              <span className="text-xs font-semibold text-teal-700">This page — Role-Level Defaults</span>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Permissions you set here apply to <strong>every user</strong> who has this role.
+              Useful for <strong>seller</strong> role and custom roles. For admin/sub-admin, this is typically left empty.
+            </p>
+          </div>
+          <div className="bg-white rounded-lg border border-[#c7d4f5] p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <MdPerson size={15} className="text-indigo-600" />
+              <span className="text-xs font-semibold text-indigo-700">Admin Users page — Per-User</span>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Set permissions for a <strong>specific admin or sub-admin</strong>.
+              This is the primary way to control what each person can access. Stacks on top of role defaults.
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-2">
+          <strong>Quick rule:</strong> If you want "all sellers can view products" → set it here on Seller role. If you want "only this one sub-admin can create orders" → set it in Admin Users for that person.
+        </p>
+      </div>
+      <button onClick={() => { setDismissed(true); localStorage.setItem('rbac_howto_dismissed', '1'); }} className="text-gray-300 hover:text-gray-500 text-lg leading-none shrink-0 mt-0.5">×</button>
+    </div>
+  );
+};
+
+/* ─── Role context panel for per-user roles ─────────────────────────────── */
+const PerUserRolePanel = ({ role }) => (
+  <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-4">
+    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+      <MdPerson size={20} className="text-blue-600" />
+    </div>
+    <div>
+      <p className="text-sm font-semibold text-blue-800 mb-1">
+        {ROLE_META[role.slug]?.label || role.name} uses per-user permissions
+      </p>
+      <p className="text-xs text-blue-600 leading-relaxed mb-3">
+        For the <strong>{ROLE_META[role.slug]?.label || role.name}</strong> role, permissions are configured
+        <strong> individually per user</strong> — not at the role level. The matrix below shows role-level defaults
+        (usually all unchecked), which is intentional.
+      </p>
+      <p className="text-xs text-blue-500 mb-3">
+        To set what a specific admin or sub-admin can do, go to <strong>Admin Users</strong> and use the
+        "User Permissions" or "Copy From / Apply Template" actions.
+      </p>
+      <Link
+        to="/app/admin-users"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 bg-white border border-blue-200 rounded-lg px-3 py-1.5 transition-colors"
+      >
+        Go to Admin Users <MdArrowRightAlt size={14} />
+      </Link>
     </div>
   </div>
 );
@@ -344,11 +353,8 @@ const RolesPermissions = () => {
     try {
       const res = await axiosProvider.get('/rbac/roles', { params: { active: null, limit: 200 } });
       setRoles(res.data?.data || []);
-    } catch {
-      toast.error('Failed to load roles');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load roles'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { loadRoles(); }, [loadRoles]);
@@ -356,12 +362,16 @@ const RolesPermissions = () => {
   const displayRoles = useMemo(() => {
     const standard = STANDARD_SLUGS.map((slug) => {
       const found = roles.find((r) => r.slug === slug);
+      const meta = ROLE_META[slug] || {};
       return found
-        ? { ...found, displayName: STANDARD_ROLE_NAMES[slug] || found.name }
-        : { slug, displayName: STANDARD_ROLE_NAMES[slug] || slug, _placeholder: true };
+        ? { ...found, displayName: meta.label || found.name, _model: meta.model || 'custom' }
+        : { slug, displayName: meta.label || slug, _placeholder: true, _model: meta.model || 'custom' };
     });
     const custom = roles.filter((r) => !STANDARD_SLUGS.includes(r.slug));
-    return [...standard, ...custom.map((r) => ({ ...r, displayName: r.name }))];
+    return [
+      ...standard,
+      ...custom.map((r) => ({ ...r, displayName: r.name, _model: 'custom' })),
+    ];
   }, [roles]);
 
   const selectRole = async (role) => {
@@ -376,35 +386,28 @@ const RolesPermissions = () => {
     setSelected(role);
     setPermLoading(true);
     try {
-      // Use roleSlug per RBAC guide — no scope filter so all modules appear
       const res = await axiosProvider.get('/rbac/permission-management/modules', {
-        params: {
-          ...(role.slug ? { roleSlug: role.slug } : { roleId: role.id }),
-        },
+        params: role.slug ? { roleSlug: role.slug } : { roleId: role.id },
       });
-      const matrix = res.data?.data || {};
-      const mods   = matrix.modules || [];
-      const map    = {};
-      const state  = {};
+      const mods  = res.data?.data?.modules || [];
+      const map   = {};
+      const state = {};
 
       mods.forEach((mod) => {
         const key = mod.slug || mod.moduleKey;
         map[key] = {};
-        const canonicalPermissions = {};
-        const assignedByAction = {};
-        (mod.permissions || []).forEach((permission) => {
-          const action = normalizeAction(permission.action);
-          if (!permission.id || !ALL_ACTIONS.includes(action)) return;
-          assignedByAction[action] = assignedByAction[action] || Boolean(permission.assigned);
-          if (!canonicalPermissions[action] || permission.action === action) {
-            canonicalPermissions[action] = { ...permission, action };
-          }
+        const canonical = {};
+        const assignedBy = {};
+        (mod.permissions || []).forEach((p) => {
+          const action = normalizeAction(p.action);
+          if (!p.id || !ALL_ACTIONS.includes(action)) return;
+          assignedBy[action] = assignedBy[action] || Boolean(p.assigned);
+          if (!canonical[action] || p.action === action) canonical[action] = { ...p, action };
         });
-
-        Object.entries(canonicalPermissions).forEach(([action, permission]) => {
-          const assigned = Boolean(permission.assigned) || Boolean(assignedByAction[action]);
-          map[key][action] = { ...permission, assigned };
-          state[permission.id] = assigned;
+        Object.entries(canonical).forEach(([action, p]) => {
+          const assigned = Boolean(p.assigned) || Boolean(assignedBy[action]);
+          map[key][action] = { ...p, assigned };
+          state[p.id] = assigned;
         });
       });
 
@@ -418,26 +421,15 @@ const RolesPermissions = () => {
       setMatrixState({});
       setOriginalState({});
       setPermissionMap({});
-    } finally {
-      setPermLoading(false);
-    }
+    } finally { setPermLoading(false); }
   };
 
   const handlePermChange = (permissionId, checked, moduleSlug, action) => {
     setMatrixState((prev) => {
       const next = { ...prev, [permissionId]: checked };
-      const modulePermissions = permissionMap[moduleSlug] || {};
-
-      if (checked && action !== 'view' && modulePermissions.view?.id) {
-        next[modulePermissions.view.id] = true;
-      }
-
-      if (!checked && action === 'view') {
-        Object.values(modulePermissions).forEach((permission) => {
-          if (permission?.id) next[permission.id] = false;
-        });
-      }
-
+      const modulePerm = permissionMap[moduleSlug] || {};
+      if (checked && action !== 'view' && modulePerm.view?.id) next[modulePerm.view.id] = true;
+      if (!checked && action === 'view') Object.values(modulePerm).forEach((p) => { if (p?.id) next[p.id] = false; });
       return next;
     });
   };
@@ -452,30 +444,27 @@ const RolesPermissions = () => {
     setSaving(true);
     setShowSaveConfirm(false);
     try {
-      const permissionIds = Object.entries(matrixState)
-        .filter(([, assigned]) => assigned)
-        .map(([id]) => id);
-
+      const permissionIds = Object.entries(matrixState).filter(([, v]) => v).map(([id]) => id);
       await axiosProvider.put(`/rbac/roles/${selected.id}/permissions`, { permissionIds });
-      toast.success('Permissions saved — affected sessions will refresh');
+      toast.success('Permissions saved — affected user sessions will refresh');
       await selectRole(selected);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || 'Failed to save permissions');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const canEdit = isSuperAdmin || isAdmin;
+  const isSelectedRole = (role) => selected && ((role.id && selected.id === role.id) || (!role.id && selected.slug === role.slug));
 
-  const isSelectedRole = (role) =>
-    selected && ((role.id && selected.id === role.id) || (role.slug && selected.slug === role.slug));
+  const assignedCount = useMemo(() =>
+    Object.values(matrixState).filter(Boolean).length,
+  [matrixState]);
 
   return (
     <div className="p-6">
       <PageHeader
         title="Roles & Permissions"
-        subtitle="Manage roles and configure module-level action access per role"
+        subtitle="Set role-wide default permissions and manage custom roles"
         breadcrumbs={[{ label: 'Users & Access' }, { label: 'Roles & Permissions' }]}
         actions={
           <PermissionGuard module="rbac" action={ACTIONS.CREATE}>
@@ -483,167 +472,195 @@ const RolesPermissions = () => {
               onClick={() => setModal('create')}
               className="flex items-center gap-2 px-4 py-2 bg-[#3E4094] text-white text-sm rounded-lg hover:bg-[#2d3070] transition-colors shadow-sm"
             >
-              <MdAdd size={16} /> New Role
+              <MdAdd size={16} /> New Custom Role
             </button>
           </PermissionGuard>
         }
       />
 
+      <HowItWorksBanner />
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* ── Roles list ── */}
+        {/* ── Left: Roles list ── */}
         <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-[#e7dfd1] bg-[#faf6ee]">
-            <h3 className="text-sm font-semibold text-gray-700">All Roles</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Select a role to configure its permissions</p>
+            <h3 className="text-sm font-semibold text-gray-700">Roles</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Select a role to view or edit its permissions</p>
           </div>
 
           {loading ? (
             <div className="p-4 space-y-2 animate-pulse">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-10 bg-[#faf6ee] rounded-lg" />
-              ))}
+              {[1,2,3,4,5,6,7].map((i) => <div key={i} className="h-12 bg-[#faf6ee] rounded-lg" />)}
             </div>
           ) : (
             <ul className="divide-y divide-[#f7efde]">
-              {displayRoles.map((role) => (
-                <li
-                  key={role.id || role.slug}
-                  onClick={() => selectRole(role)}
-                  className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#faf6ee] transition-colors ${
-                    isSelectedRole(role) ? 'bg-[#faf6ee] border-l-2 border-l-[#3E4094]' : 'border-l-2 border-l-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium border truncate max-w-[140px] ${
-                        ROLE_COLORS[role.slug] || 'bg-gray-100 text-gray-600 border-gray-200'
-                      }`}
-                    >
-                      {role.displayName || role.name || role.slug}
-                    </span>
-                    {role._placeholder && (
-                      <span className="text-gray-300 text-xs shrink-0" title="Not in database yet — run RBAC seed">○</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {isSelectedRole(role) && <MdCheck size={15} className="text-[#3E4094]" />}
-                    {!role._placeholder && canEdit && !role.isSuperAdmin && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setModal(role); }}
-                        className="p-1 text-gray-300 hover:text-[#3E4094] rounded transition-colors"
-                        title="Edit role"
-                      >
-                        <MdEdit size={14} />
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {displayRoles.map((role) => {
+                const meta = ROLE_META[role.slug];
+                const model = role._model || 'custom';
+                return (
+                  <li
+                    key={role.id || role.slug}
+                    onClick={() => selectRole(role)}
+                    className={`flex items-start justify-between px-3 py-3 cursor-pointer hover:bg-[#faf6ee] transition-colors border-l-2 ${
+                      isSelectedRole(role) ? 'bg-[#faf6ee] border-l-[#3E4094]' : 'border-l-transparent'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium border ${meta?.color || 'bg-orange-100 text-orange-600 border-orange-200'}`}>
+                          {role.displayName || role.name || role.slug}
+                        </span>
+                        {role._placeholder && <span className="text-gray-300 text-[10px]" title="Not in database">○</span>}
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${MODEL_BADGE[model]}`}>
+                          {MODEL_LABEL[model]}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                      {isSelectedRole(role) && <MdCheck size={14} className="text-[#3E4094]" />}
+                      {!role._placeholder && canEdit && !role.isSuperAdmin && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setModal(role); }}
+                          className="p-1 text-gray-300 hover:text-[#3E4094] rounded transition-colors"
+                          title="Edit role"
+                        >
+                          <MdEdit size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        {/* ── Permission matrix ── */}
+        {/* ── Right: Permission detail ── */}
         <div className="lg:col-span-3">
-          {selected ? (
+          {!selected ? (
+            <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm h-64 flex items-center justify-center">
+              <div className="text-center">
+                <MdSecurity size={40} className="mx-auto mb-3 text-[#e7dfd1]" />
+                <p className="text-sm font-medium text-gray-400">Select a role from the left</p>
+                <p className="text-xs text-gray-300 mt-1">Configure role-wide permission defaults</p>
+              </div>
+            </div>
+          ) : (
             <div className="space-y-4">
               {/* Header bar */}
-              <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm px-5 py-4 flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#3E4094]/10 flex items-center justify-center">
-                    <MdSecurity size={18} className="text-[#3E4094]" />
+              <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm px-5 py-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#3E4094]/10 flex items-center justify-center shrink-0">
+                      <MdSecurity size={18} className="text-[#3E4094]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-semibold text-gray-800">
+                          {selected.displayName || selected.name || selected.slug}
+                        </h3>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${MODEL_BADGE[selected._model]}`}>
+                          {MODEL_LABEL[selected._model]}
+                        </span>
+                        {selected.isSuperAdmin && (
+                          <span className="text-[10px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full border border-purple-200">Bypasses all checks</span>
+                        )}
+                        {selected._placeholder && (
+                          <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full border border-amber-200">Needs DB seed</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {ROLE_META[selected.slug]?.desc || selected.description || 'Custom role'}
+                        {!selected._placeholder && !selected.isSuperAdmin && ` · ${assignedCount} permission${assignedCount !== 1 ? 's' : ''} assigned at role level`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800">
-                      {selected.displayName || selected.name || selected.slug}
-                      {selected.isSuperAdmin && (
-                        <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Unrestricted</span>
-                      )}
-                      {selected._placeholder && (
-                        <span className="ml-2 text-xs px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full">Needs DB Seed</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {selected._placeholder
-                        ? 'Run the RBAC seed script to create this role in the database'
-                        : selected.isSuperAdmin
-                          ? 'Super Admin bypasses all permission restrictions'
-                          : 'Toggle checkboxes to grant or revoke module actions for this role'}
-                    </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {changedCount > 0 && canEdit && !selected._placeholder && !selected.isSuperAdmin && (
+                      <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                        {changedCount} unsaved
+                      </span>
+                    )}
+                    {canEdit && !selected._placeholder && !selected.isSuperAdmin && (
+                      <>
+                        <button
+                          onClick={() => selectRole(selected)}
+                          disabled={permLoading}
+                          className="p-2 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-[#faf6ee] transition-colors"
+                          title="Reload"
+                        >
+                          <MdRefresh size={16} className={permLoading ? 'animate-spin' : ''} />
+                        </button>
+                        <button
+                          onClick={() => setShowSaveConfirm(true)}
+                          disabled={saving || permLoading || changedCount === 0}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-40 transition-colors shadow-sm"
+                        >
+                          {saving ? 'Saving…' : 'Save Changes'}
+                        </button>
+                      </>
+                    )}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {changedCount > 0 && canEdit && !selected._placeholder && !selected.isSuperAdmin && (
-                    <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
-                      {changedCount} unsaved change{changedCount !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                  {canEdit && !selected._placeholder && !selected.isSuperAdmin && (
-                    <>
-                      <button
-                        onClick={() => selectRole(selected)}
-                        disabled={permLoading}
-                        className="p-2 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-[#faf6ee] transition-colors"
-                        title="Reload permissions"
-                      >
-                        <MdRefresh size={16} className={permLoading ? 'animate-spin' : ''} />
-                      </button>
-                      <button
-                        onClick={() => setShowSaveConfirm(true)}
-                        disabled={saving || permLoading}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                        <MdLockOpen size={15} />
-                        {saving ? 'Saving…' : 'Save Permissions'}
-                      </button>
-                    </>
-                  )}
                 </div>
               </div>
 
-              {/* Matrix body */}
+              {/* Content area */}
               {selected.isSuperAdmin ? (
                 <div className="bg-purple-50 border border-purple-100 rounded-xl p-8 text-center">
                   <MdSecurity size={36} className="mx-auto mb-3 text-purple-300" />
-                  <p className="text-sm font-medium text-purple-700">Super Admin has unrestricted access to all modules</p>
-                  <p className="text-xs text-purple-400 mt-1">Permission matrix is not enforced for this role</p>
+                  <p className="text-sm font-semibold text-purple-700">Super Admin bypasses all permission checks</p>
+                  <p className="text-xs text-purple-400 mt-1">The permission matrix is not enforced for this role. Super admins can do everything.</p>
                 </div>
               ) : selected._placeholder ? (
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-8 text-center">
                   <MdSecurity size={36} className="mx-auto mb-3 text-amber-300" />
-                  <p className="text-sm font-medium text-amber-700">Role not found in database</p>
-                  <p className="text-xs text-amber-500 mt-1">Run <code className="font-mono bg-amber-100 px-1 rounded">scripts/db/seed-rbac.js</code> to create standard roles</p>
+                  <p className="text-sm font-semibold text-amber-700">Role not in database yet</p>
+                  <p className="text-xs text-amber-500 mt-1 mb-3">Run the RBAC seed to create standard roles.</p>
+                  <code className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-mono">
+                    node scripts/db/seed-rbac.js
+                  </code>
+                </div>
+              ) : selected._model === 'no-access' ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                  <MdSecurity size={36} className="mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm font-semibold text-gray-600">Buyers have no admin panel access</p>
+                  <p className="text-xs text-gray-400 mt-1">This role is for customer accounts only.</p>
                 </div>
               ) : permLoading ? (
                 <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm p-8 animate-pulse">
                   <div className="space-y-3">
-                    {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-8 bg-[#faf6ee] rounded" />)}
+                    {[1,2,3,4,5].map((i) => <div key={i} className="h-8 bg-[#faf6ee] rounded" />)}
                   </div>
                 </div>
               ) : (
-                <PermissionMatrix
-                  modules={matrixModules}
-                  matrixState={matrixState}
-                  permissionMap={permissionMap}
-                  onChange={canEdit ? handlePermChange : undefined}
-                  readOnly={!canEdit}
-                />
+                <div className="space-y-4">
+                  {/* Context callout for per-user roles */}
+                  {selected._model === 'per-user' && <PerUserRolePanel role={selected} />}
+
+                  {/* Matrix */}
+                  <PermissionMatrix
+                    modules={matrixModules}
+                    matrixState={matrixState}
+                    permissionMap={permissionMap}
+                    onChange={canEdit ? handlePermChange : undefined}
+                    readOnly={!canEdit}
+                  />
+
+                  {/* Footer guidance */}
+                  {selected._model === 'per-user' && assignedCount === 0 && !permLoading && (
+                    <p className="text-xs text-gray-400 text-center py-2">
+                      All unchecked is expected for this role — individual permissions are set in Admin Users.
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm h-80 flex items-center justify-center">
-              <div className="text-center">
-                <MdSecurity size={44} className="mx-auto mb-3 text-[#e7dfd1]" />
-                <p className="text-sm font-medium text-gray-400">Select a role to configure its permissions</p>
-                <p className="text-xs text-gray-300 mt-1">All module actions are managed here</p>
-              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modals */}
       {modal && (
         <RoleModal
           role={modal === 'create' ? null : modal}

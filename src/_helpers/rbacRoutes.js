@@ -243,6 +243,8 @@ const ROUTE_MODULES = [
   [["/roles-permissions"], ["rbac"]],
   [["/module-management"], ["rbac"]],
   [["/activity-logs"], ["rbac"]],
+  [["/rbac-audit-log"], ["rbac"]],
+  [["/permission-templates"], ["rbac"]],
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller", "/seller-staff", "/seller-users"], ["sellers"]],

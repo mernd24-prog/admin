@@ -260,6 +260,12 @@ const ModuleManagement = React.lazy(
 const ActivityLogs = React.lazy(
   () => import("../../pages/UserManagement/ActivityLogs/ActivityLogs"),
 );
+const RbacAuditLog = React.lazy(
+  () => import("../../pages/UserManagement/RbacAuditLog/RbacAuditLog"),
+);
+const PermissionTemplates = React.lazy(
+  () => import("../../pages/UserManagement/PermissionTemplates/PermissionTemplates"),
+);
 
 const getStoredSidebarState = () => {
   try {
@@ -933,6 +939,14 @@ function Layout() {
                   <Route
                     path="/activity-logs"
                     element={renderRoute("/activity-logs", <ActivityLogs />)}
+                  />
+                  <Route
+                    path="/rbac-audit-log"
+                    element={renderRoute("/rbac-audit-log", <RbacAuditLog />)}
+                  />
+                  <Route
+                    path="/permission-templates"
+                    element={renderRoute("/permission-templates", <PermissionTemplates />)}
                   />
 
                   {/* ── Marketing — new routes ──────────────────────────────── */}
