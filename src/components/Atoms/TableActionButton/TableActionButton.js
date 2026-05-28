@@ -6,9 +6,11 @@ import { IoWarningOutline } from "react-icons/io5";
 import { BsListTask } from "react-icons/bs";
 import { FaEye, FaUserLock } from "react-icons/fa6";
 import { MdListAlt, MdPassword } from "react-icons/md";
+import { useLocation } from "react-router-dom";
 import Tooltip from "../tooltip/Tooltip";
 import { MdLocalPrintshop } from "react-icons/md";
 import PermissionGuard from "../PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 
 export const ActionButtons = ({
   onEdit,
@@ -44,12 +46,27 @@ export const ActionButtons = ({
   showPrintIcon = false,
   viewButton=false,onViewClick,
   requiredModule,
-  editAction = "edit",
+  editAction = "update",
   deleteAction = "delete",
   viewAction = "view",
+  addAction = "create",
+  optionValueAction = "view",
+  permissionAction = "assign",
+  warningAction = "status_change",
+  bannerAction = "view",
+  passwordAction = "update",
+  listingAction = "view",
+  linkAction = "view",
+  historyAction = "view",
+  printAction = "export",
+  replaceAction = "update",
+  statusAction = "status_change",
 }) => {
-  const guard = (action, node) => requiredModule ? (
-    <PermissionGuard module={requiredModule} action={action} hide>{node}</PermissionGuard>
+  const location = useLocation();
+  const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+  const guardModule = requiredModule || inferredModule;
+  const guard = (action, node) => guardModule ? (
+    <PermissionGuard module={guardModule} action={action} hide>{node}</PermissionGuard>
   ) : node;
   return (
     <div className="flex items-center space-x-2">
@@ -77,7 +94,7 @@ export const ActionButtons = ({
       ))}
 
 
-      {showAddButton && (
+      {showAddButton && guard(addAction, (
         <Tooltip text="Add" position="top">
           <button
             onClick={onAdd}
@@ -86,48 +103,48 @@ export const ActionButtons = ({
             <IoAddCircleOutline size={20} />
           </button>
         </Tooltip>
-      )}
-      {showOptionValues && (
+      ))}
+      {showOptionValues && guard(optionValueAction, (
         <button
           onClick={onOptionValue}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <BsListTask size={20} />
         </button>
-      )}
-      {userPermissions && <FaUserLock size={20} onClick={onPermissionClick} />}
-      {showWarningButton && (
+      ))}
+      {userPermissions && guard(permissionAction, <FaUserLock size={20} onClick={onPermissionClick} />)}
+      {showWarningButton && guard(warningAction, (
         <button
           onClick={onWarning}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <IoWarningOutline size={20} />
         </button>
-      )}
-      {showViewButton && (
+      ))}
+      {showViewButton && guard(viewAction, (
         <button
           onClick={onView}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <FaEye size={20} />
         </button>
-      )}
-      {showLinkButton && (
+      ))}
+      {showLinkButton && guard(linkAction, (
         <button
           onClick={onLink}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <IoMdLink size={20} />
         </button>
-      )}
-      {showHistoryButton && (
+      ))}
+      {showHistoryButton && guard(historyAction, (
         <button
           onClick={onHistory}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <RxCountdownTimer size={20} />
         </button>
-      )}
+      ))}
       {showDeleteButton && guard(deleteAction, (
         <button
           onClick={onDelete}
@@ -136,15 +153,15 @@ export const ActionButtons = ({
           <FiTrash2 size={18} />
         </button>
       ))}
-      {showBannerButton && (
+      {showBannerButton && guard(bannerAction, (
         <button
           onClick={onBanner}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <MdListAlt size={18} />
         </button>
-      )}
-      {showPasswordButton && (
+      ))}
+      {showPasswordButton && guard(passwordAction, (
         <Tooltip text="Change Password" position="top">
           <button
             onClick={onPasswordChange}
@@ -153,38 +170,38 @@ export const ActionButtons = ({
             <MdPassword size={20} />
           </button>
         </Tooltip>
-      )}
-      {showListing && (
+      ))}
+      {showListing && guard(listingAction, (
         <button
           onClick={onListing}
           className="p-1 text-black duration-200 rounded hover:bg-blue-100 hover:text-blue-500"
         >
           <IoIosList size={20} />
         </button>
-      )}
-      {showPrint && (
+      ))}
+      {showPrint && guard(printAction, (
         <p className="" onClick={onPrint}>
           Print
         </p>
-      )}
-      {showPrintIcon && (
+      ))}
+      {showPrintIcon && guard(printAction, (
         <button
           onClick={onPrint}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
           <MdLocalPrintshop size={18} />
         </button>
-      )}
-      {showReplace && (
+      ))}
+      {showReplace && guard(replaceAction, (
         <p className="" onClick={onReplace}>
           Replace
         </p>
-      )}
-      {showActivateAndDeActivate && (
+      ))}
+      {showActivateAndDeActivate && guard(statusAction, (
         <p className={activate ? "text-green-500" : "text-red-500"}>
           {activate ? "Activate" : "DeActivate"}
         </p>
-      )}
+      ))}
     </div>
   );
 };

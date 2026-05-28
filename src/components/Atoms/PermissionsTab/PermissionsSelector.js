@@ -4,42 +4,47 @@ const ACTION_ORDER = [
   'none',
   'view',
   'create',
-  'add',
-  'edit',
   'update',
   'delete',
   'approve',
-  'approval',
   'reject',
   'assign',
   'export',
   'import',
   'status_change',
-  'status',
   'restore',
   'bulk_action',
-  'action',
 ];
+
+const ACTION_ALIASES = {
+  add: 'create',
+  edit: 'update',
+  status: 'status_change',
+  approval: 'approve',
+  action: 'status_change',
+  review: 'approve',
+  manage: 'status_change',
+};
 
 const ACTION_LABELS = {
   none: 'None',
   view: 'View',
   create: 'Create',
-  add: 'Add',
-  edit: 'Edit',
   update: 'Update',
   delete: 'Delete',
   approve: 'Approve',
-  approval: 'Approval',
   reject: 'Reject',
   assign: 'Assign',
   export: 'Export',
   import: 'Import',
   status_change: 'Status Change',
-  status: 'Status',
   restore: 'Restore',
   bulk_action: 'Bulk Action',
-  action: 'Action',
+};
+
+const normalizeAction = (value = '') => {
+  const action = String(value || '').trim().toLowerCase();
+  return ACTION_ALIASES[action] || action;
 };
 
 const formatActionLabel = (value = '') =>
@@ -49,11 +54,12 @@ const formatActionLabel = (value = '') =>
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const PermissionsSelector = ({ module, selected, availablePermissions = [], onChange, disabled = false }) => {
+    const selectedSet = new Set((selected || []).map(normalizeAction));
     const normalizedAvailable = Array.from(
         new Set(
             ['none', ...(availablePermissions || [])]
-                .map((permission) => String(permission || '').trim().toLowerCase())
-                .filter(Boolean),
+                .map(normalizeAction)
+                .filter((permission) => permission && ACTION_ORDER.includes(permission)),
         ),
     );
     const available = new Set(normalizedAvailable);
@@ -70,20 +76,27 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
         if (optionValue === 'none') {
             // If "none" is clicked, only select "none" and uncheck all others
             onChange(['none']);
+        } else if (optionValue === 'view' && selectedSet.has('view')) {
+            // Removing view removes page access, so all action access goes too.
+            onChange(['none']);
         } else {
             // If any other permission is clicked
             let newSelected;
+            const normalizedSelected = Array.from(selectedSet);
             
-            if (selected.includes(optionValue)) {
+            if (selectedSet.has(optionValue)) {
                 // If clicking to uncheck this permission
-                newSelected = selected.filter(perm => perm !== optionValue);
+                newSelected = normalizedSelected.filter(perm => perm !== optionValue);
             } else {
                 // If clicking to check this permission
-                newSelected = [...selected.filter(perm => perm !== 'none'), optionValue];
+                newSelected = [...normalizedSelected.filter(perm => perm !== 'none'), optionValue];
             }
             
             // Remove "none" when any other permission is selected
             newSelected = newSelected.filter(perm => perm !== 'none');
+            if (newSelected.length && !newSelected.includes('view')) {
+                newSelected = ['view', ...newSelected];
+            }
             
             onChange(newSelected);
         }
@@ -94,7 +107,7 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
                 {sortedPermissions
                     .filter((option) => available.has(option))
                     .map((option) => {
-                    const isSelected = selected.includes(option);
+                    const isSelected = selectedSet.has(option);
                     return (
                         <label
                             key={option}

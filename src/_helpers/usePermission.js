@@ -26,21 +26,20 @@ export const ACTIONS = {
 };
 
 const ACTION_ALIASES = {
-  review: 'approval',
-  manage: 'status',
+  add: 'create',
+  edit: 'update',
+  status: 'status_change',
+  approval: 'approve',
+  action: 'status_change',
+  review: 'approve',
+  manage: 'status_change',
 };
 
 const ACTION_EQUIVALENTS = {
   create: ['add'],
-  add: ['create'],
-  edit: ['update'],
   update: ['edit'],
-  approve: ['approval'],
-  approval: ['approve'],
-  status: ['status_change', 'action'],
-  status_change: ['status', 'action'],
-  manage: ['status', 'action'],
-  action: ['status', 'status_change', 'manage'],
+  approve: ['approval', 'review'],
+  status_change: ['status', 'action', 'manage'],
 };
 
 const normalizeAction = (action = '') => {
@@ -107,13 +106,21 @@ export function usePermission() {
       );
       if (!slug) return;
 
-      map[slug] = { _assigned: mod.assigned !== false };
+      if (!map[slug]) map[slug] = { _assigned: false };
+      if (mod.assigned === true && !Array.isArray(mod.permissions)) {
+        map[slug]._assigned = true;
+        map[slug].view = true;
+      }
 
       if (Array.isArray(mod.permissions)) {
         mod.permissions.forEach((p) => {
           const action = normalizeAction(p.action);
           if (!action) return;
-          map[slug][action] = p.assigned !== false;
+          const assigned = p.assigned === true;
+          map[slug][action] = map[slug][action] === true || assigned;
+          if (action === 'view' && assigned) {
+            map[slug]._assigned = true;
+          }
         });
       }
     });
@@ -132,25 +139,23 @@ export function usePermission() {
     // Super-admin bypasses permission matrix checks.
     if (role === ROLES.SUPER_ADMIN) return true;
 
-    // Module-level check via authStorage alias resolution
-    if (!hasModuleAccess(normalizedModule || moduleSlug)) return false;
-
-    // Action-level check
-    if (!action) return true;
-
     const mod = permMap[normalizedModule] || permMap[moduleSlug];
-    if (!mod) return false;
-    if (!mod._assigned) return false;
+    const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
 
-    const actionCandidates = expandActionCandidates(action);
+    // Module/page access is view access. During bootstrap, fall back to stored
+    // auth data so routes don't flicker before the permission matrix arrives.
+    if (!action || normalizedAction === ACTIONS.VIEW) {
+      if (mod) return mod.view === true || mod._assigned === true;
+      return hasModuleAccess(normalizedModule || moduleSlug);
+    }
+
+    if (!mod || !mod._assigned) return false;
+
+    const actionCandidates = expandActionCandidates(normalizedAction);
     const hasExplicitGrant = actionCandidates.some((candidate) => mod[candidate] === true);
     if (hasExplicitGrant) return true;
 
-    const hasExplicitDeny = actionCandidates.some((candidate) => mod[candidate] === false);
-    if (hasExplicitDeny) return false;
-
-    // If action isn't present in the matrix, fall back to module-level assignment
-    return mod._assigned === true;
+    return false;
   };
 
   /**

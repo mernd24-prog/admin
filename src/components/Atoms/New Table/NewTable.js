@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import Button from "../buttons/button";
 import SearchInput from "../SearchInput/SearchInput";
 import FilterSelect from "../FilterSelect/FilterSelect";
@@ -8,6 +9,7 @@ import { MdOutlineDeleteOutline } from "react-icons/md";
 import Input from "../Input/Input";
 import selectJson from "../../../_helpers/SelectJson.json";
 import { PiToggleLeftThin, PiToggleRightThin } from "react-icons/pi";
+import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 
 export default function SearchComponent({
   userLabel,
@@ -55,6 +57,9 @@ export default function SearchComponent({
   requiredModule,
   searchDebounce = 0,
 }) {
+  const location = useLocation();
+  const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+  const guardModule = requiredModule || inferredModule;
   const [searchDown, setSearchDown] = useState(false);
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
@@ -151,8 +156,8 @@ export default function SearchComponent({
                 <Button
                   onClick={() => handleBulkAction("Active")}
                   disabled={selectedRow.length === 0 || loading || isFiltering}
-                  requiredModule={requiredModule}
-                  requiredAction="status"
+                  requiredModule={guardModule}
+                  requiredAction="status_change"
                   className={
                     selectedRow.length === 0
                       ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
@@ -165,8 +170,8 @@ export default function SearchComponent({
                 <Button
                   onClick={() => handleBulkAction("Inactive")}
                   disabled={selectedRow.length === 0 || loading || isFiltering}
-                  requiredModule={requiredModule}
-                  requiredAction="status"
+                  requiredModule={guardModule}
+                  requiredAction="status_change"
                   className={
                     selectedRow.length === 0
                       ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
@@ -181,7 +186,7 @@ export default function SearchComponent({
               <Button
                 onClick={() => handleBulkAction("Delete")}
                 disabled={selectedRow.length === 0 || loading || isFiltering}
-                requiredModule={requiredModule}
+                requiredModule={guardModule}
                 requiredAction="delete"
                 className={
                   selectedRow.length === 0

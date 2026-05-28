@@ -261,10 +261,12 @@ const Sidebar = ({
       modules
         .filter(
           (module) =>
-            module.assigned !== false ||
             (module.permissions || []).some(
-              (permission) => permission.assigned,
-            ),
+              (permission) =>
+                String(permission.action || "").toLowerCase() === "view" &&
+                permission.assigned === true,
+            ) ||
+            (!Array.isArray(module.permissions) && module.assigned !== false),
         )
         .flatMap((module) => [
           module.slug,

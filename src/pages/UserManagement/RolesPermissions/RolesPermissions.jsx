@@ -31,6 +31,20 @@ const STANDARD_ROLE_NAMES = {
 const STANDARD_SLUGS = Object.values(ROLES);
 
 const ALL_ACTIONS = ['view', 'create', 'update', 'delete', 'status_change', 'approve', 'reject', 'assign', 'export', 'import'];
+const ACTION_ALIASES = {
+  add: 'create',
+  edit: 'update',
+  status: 'status_change',
+  approval: 'approve',
+  action: 'status_change',
+  review: 'approve',
+  manage: 'status_change',
+};
+
+const normalizeAction = (action = '') => {
+  const value = String(action || '').trim().toLowerCase();
+  return ACTION_ALIASES[value] || value;
+};
 
 const ACTION_LABELS = {
   status_change: 'Status',
@@ -53,9 +67,13 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
     const used = new Set();
     modules.forEach((mod) => {
       Object.keys(mod.permissionsByAction || {}).forEach((action) => {
-        if (mod.permissionsByAction[action]) used.add(action);
+        const normalized = normalizeAction(action);
+        if (mod.permissionsByAction[action] && ALL_ACTIONS.includes(normalized)) used.add(normalized);
       });
-      (mod.permissions || []).forEach((p) => { if (p.id) used.add(p.action); });
+      (mod.permissions || []).forEach((p) => {
+        const normalized = normalizeAction(p.action);
+        if (p.id && ALL_ACTIONS.includes(normalized)) used.add(normalized);
+      });
     });
     return ALL_ACTIONS.filter((a) => used.has(a));
   }, [modules]);
@@ -131,7 +149,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                             type="checkbox"
                             checked={isChecked}
                             disabled={readOnly}
-                            onChange={(e) => onChange?.(perm.id, e.target.checked)}
+                            onChange={(e) => onChange?.(perm.id, e.target.checked, mod.slug || mod.moduleKey, action)}
                             className="w-4 h-4 accent-[#3E4094] cursor-pointer disabled:cursor-default rounded"
                           />
                         ) : (
@@ -372,9 +390,21 @@ const RolesPermissions = () => {
       mods.forEach((mod) => {
         const key = mod.slug || mod.moduleKey;
         map[key] = {};
-        (mod.permissions || []).forEach((p) => {
-          map[key][p.action] = p;
-          state[p.id] = Boolean(p.assigned);
+        const canonicalPermissions = {};
+        const assignedByAction = {};
+        (mod.permissions || []).forEach((permission) => {
+          const action = normalizeAction(permission.action);
+          if (!permission.id || !ALL_ACTIONS.includes(action)) return;
+          assignedByAction[action] = assignedByAction[action] || Boolean(permission.assigned);
+          if (!canonicalPermissions[action] || permission.action === action) {
+            canonicalPermissions[action] = { ...permission, action };
+          }
+        });
+
+        Object.entries(canonicalPermissions).forEach(([action, permission]) => {
+          const assigned = Boolean(permission.assigned) || Boolean(assignedByAction[action]);
+          map[key][action] = { ...permission, assigned };
+          state[permission.id] = assigned;
         });
       });
 
@@ -393,8 +423,23 @@ const RolesPermissions = () => {
     }
   };
 
-  const handlePermChange = (permissionId, checked) => {
-    setMatrixState((prev) => ({ ...prev, [permissionId]: checked }));
+  const handlePermChange = (permissionId, checked, moduleSlug, action) => {
+    setMatrixState((prev) => {
+      const next = { ...prev, [permissionId]: checked };
+      const modulePermissions = permissionMap[moduleSlug] || {};
+
+      if (checked && action !== 'view' && modulePermissions.view?.id) {
+        next[modulePermissions.view.id] = true;
+      }
+
+      if (!checked && action === 'view') {
+        Object.values(modulePermissions).forEach((permission) => {
+          if (permission?.id) next[permission.id] = false;
+        });
+      }
+
+      return next;
+    });
   };
 
   const changedCount = useMemo(

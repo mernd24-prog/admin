@@ -1,13 +1,19 @@
 import React, { useMemo, useState } from "react";
 import { MdFileDownload, MdFileUpload } from "react-icons/md";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
 import DefaultMiddleModal from "../Atoms/Modal/DefaultMiddleModal ";
 import Input from "../Atoms/Input/Input";
 import { exportToCsv, exportToExcel, findDuplicateRows, parseImportFile } from "../../_helpers/exportToCsv";
+import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 
-const MaybeGuard = ({ module, action, children }) =>
-  module ? <PermissionGuard module={module} action={action} hide>{children}</PermissionGuard> : children;
+const MaybeGuard = ({ module, action, children }) => {
+  const location = useLocation();
+  const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+  const guardModule = module || inferredModule;
+  return guardModule ? <PermissionGuard module={guardModule} action={action} hide>{children}</PermissionGuard> : children;
+};
 
 export const ExportButton = ({
   data = [],

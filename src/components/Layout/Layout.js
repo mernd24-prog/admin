@@ -317,12 +317,14 @@ function Layout() {
 
         if (!moduleCode) return;
 
-        const hasAssignedAction = Array.isArray(module.permissions)
+        const hasViewAction = Array.isArray(module.permissions)
           ? module.permissions.some(
-              (permission) => permission.assigned !== false,
+              (permission) =>
+                String(permission.action || "").toLowerCase() === "view" &&
+                permission.assigned === true,
             )
           : module.assigned !== false;
-        const isAssigned = module.assigned !== false && hasAssignedAction;
+        const isAssigned = module.assigned !== false && hasViewAction;
 
         [
           moduleCode,

@@ -1,7 +1,12 @@
 import { IoIosCheckmark } from "react-icons/io";
+import { useLocation } from "react-router-dom";
 import PermissionGuard from "../PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 
-const ToggleButton = ({ handleClick, isToggle, requiredModule, requiredAction = "status" }) => {
+const ToggleButton = ({ handleClick, isToggle, requiredModule, requiredAction = "status_change" }) => {
+  const location = useLocation();
+  const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+  const guardModule = requiredModule || inferredModule;
   const toggle = (
     <div className="flex">
       <label className="relative inline-flex items-center w-11 h-6">
@@ -28,8 +33,8 @@ const ToggleButton = ({ handleClick, isToggle, requiredModule, requiredAction = 
       </label>
     </div>
   );
-  return requiredModule ? (
-    <PermissionGuard module={requiredModule} action={requiredAction} hide>
+  return guardModule ? (
+    <PermissionGuard module={guardModule} action={requiredAction} hide>
       {toggle}
     </PermissionGuard>
   ) : toggle;

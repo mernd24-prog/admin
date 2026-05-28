@@ -1,6 +1,8 @@
 import React from "react";
 import { IoMdAddCircleOutline } from "react-icons/io";
+import { useLocation } from "react-router-dom";
 import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 
 const AddButton = React.memo(
   ({
@@ -16,6 +18,9 @@ const AddButton = React.memo(
     requiredAction = "create",
     ...rest
   }) => {
+    const location = useLocation();
+    const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+    const guardModule = requiredModule || inferredModule;
     const button = (
       <button
         type={type}
@@ -32,8 +37,8 @@ const AddButton = React.memo(
         {labelName ? <span>{labelName}</span> : <span>Add</span>}
       </button>
     );
-    return requiredModule ? (
-      <PermissionGuard module={requiredModule} action={requiredAction} hide>
+    return guardModule ? (
+      <PermissionGuard module={guardModule} action={requiredAction} hide>
         {button}
       </PermissionGuard>
     ) : (

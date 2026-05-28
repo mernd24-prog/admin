@@ -111,10 +111,11 @@ const getModuleSlug = (module = {}) =>
 
 const toModuleOption = (module) => {
   if (typeof module === "string") {
+    const meta = getModuleMeta(module);
     return {
       slug: module,
-      name: MODULE_LABELS[module] || module,
-      tab: MODULE_TABS[module] || "Settings",
+      name: MODULE_LABELS[module] || meta.name || module,
+      tab: meta.tab || MODULE_TABS[module] || "Settings",
     };
   }
 

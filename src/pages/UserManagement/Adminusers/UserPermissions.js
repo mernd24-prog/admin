@@ -3,8 +3,9 @@ import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdAdd, MdCheck, MdInfoOutline, MdBarChart, MdClose, MdRefresh } from 'react-icons/md';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAdminUserDetails, updateModulePermission } from '../../../Redux/userManagementSlice';
+import { getAdminUserDetails, getMyModulePermission, updateModulePermission } from '../../../Redux/userManagementSlice';
 import { listSellerSubAdmins } from '../../../Redux/sellerSubAdminsSlice';
+import { getRbacSidebarModules } from '../../../Redux/adminCoreSlice';
 import { toast } from 'sonner';
 import Loader from '../../../components/Loader/Loader';
 import PermissionsSelector from '../../../components/Atoms/PermissionsTab/PermissionsSelector';
@@ -18,39 +19,33 @@ import { MODULE_TAB_ORDER } from '../../../_helpers/rbacRoutes';
 import { axiosPrivate as axiosProvider } from '../../../_helpers/axiosProvider';
 
 const ACTION_ALIASES = {
-    review: 'approval',
-    manage: 'status',
+    add: 'create',
+    edit: 'update',
+    status: 'status_change',
+    approval: 'approve',
+    action: 'status_change',
+    review: 'approve',
+    manage: 'status_change',
 };
 const ACTION_EQUIVALENTS = {
     create: ['add'],
-    add: ['create'],
-    edit: ['update'],
     update: ['edit'],
-    approve: ['approval'],
-    approval: ['approve'],
-    status: ['status_change', 'action'],
-    status_change: ['status', 'action'],
-    manage: ['status', 'action'],
-    action: ['status', 'status_change', 'manage'],
+    approve: ['approval', 'review'],
+    status_change: ['status', 'action', 'manage'],
 };
 const BACKEND_PERMISSION_ACTIONS = [
     'view',
     'create',
-    'add',
-    'edit',
     'update',
     'delete',
     'approve',
-    'approval',
     'reject',
     'assign',
     'export',
     'import',
     'status_change',
-    'status',
     'restore',
     'bulk_action',
-    'action',
 ];
 const SEARCH_ACCENT = '#082f91';
 const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#082f91] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
@@ -132,7 +127,7 @@ const normalizeActionsForBackend = (actions = []) => {
     return Array.from(new Set(withView));
 };
 
-const ASSIGNMENT_ACTIONS = ['assign', 'create', 'add', 'edit', 'update', 'approval', 'approve', 'status', 'status_change', 'action', 'delete'];
+const ASSIGNMENT_ACTIONS = ['assign', 'create', 'update', 'approve', 'status_change', 'delete'];
 
 const getModuleCode = (module) =>
     normalizeModuleCode(
@@ -145,9 +140,70 @@ const getModuleCode = (module) =>
         module?.metadata?.requiredModule
     );
 
+const firstArray = (...values) => values.find((value) => Array.isArray(value)) || [];
+
+const getSessionUser = () => {
+    try {
+        if (typeof sessionStorage === 'undefined') return null;
+        return JSON.parse(sessionStorage.getItem('EcomAdmin') || 'null');
+    } catch {
+        return null;
+    }
+};
+
+const getCurrentStoredUser = () => ({
+    ...(getStoredUser() || {}),
+    ...(getSessionUser() || {}),
+});
+
+const getSidebarNodeLabel = (item = {}) =>
+    item.moduleName || item.name || item.label || '';
+
+const getSidebarNodeCodes = (item = {}) =>
+    [
+        item.metadata?.requiredModule,
+        item.requiredModule,
+        item.moduleKey,
+        item.moduleSlug,
+        item.slug,
+        item.metadata?.routeKey,
+    ]
+        .map(normalizeModuleCode)
+        .filter(Boolean);
+
+const buildSidebarModuleMeta = (items = []) => {
+    const tabByModule = {};
+    const tabOrder = [];
+
+    const visit = (nodes = [], rootLabel = '') => {
+        nodes.forEach((item = {}) => {
+            const label = getSidebarNodeLabel(item);
+            const tabName = rootLabel || label;
+            if (!rootLabel && tabName && !tabOrder.includes(tabName)) {
+                tabOrder.push(tabName);
+            }
+
+            getSidebarNodeCodes(item).forEach((code) => {
+                if (code && tabName && !tabByModule[code]) {
+                    tabByModule[code] = tabName;
+                }
+            });
+
+            visit(item.children || [], tabName);
+        });
+    };
+
+    visit(items);
+    return { tabByModule, tabOrder };
+};
+
 const hasAssignedModuleAccess = (module = {}) => {
-    if (module.assigned) return true;
-    return (module.permissions || []).some((permission) => permission?.assigned);
+    if (!Array.isArray(module.permissions)) {
+        return module.assigned === true;
+    }
+    return (module.permissions || []).some((permission) =>
+        normalizeAction(permission?.action) === 'view' && permission?.assigned === true
+    );
 };
 
 const buildAssignedActionMap = (modules = []) => {
@@ -207,6 +263,12 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
         }, {})
       )
     : [];
+  const sourceSections = [
+    { label: 'Role permissions', items: data?.rolePermissions || [], color: 'bg-blue-50 text-blue-600 border-blue-100' },
+    { label: 'Direct user grants', items: data?.extraUserPermissions || [], color: 'bg-green-50 text-green-600 border-green-100' },
+    { label: 'Denied permissions', items: data?.deniedPermissions || [], color: 'bg-red-50 text-red-600 border-red-100' },
+    { label: 'Final effective permissions', items: data?.effectivePermissions || [], color: 'bg-gray-50 text-gray-600 border-gray-200' },
+  ];
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
@@ -248,6 +310,30 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
                     <div key={label} className={`rounded-lg border p-3 text-center ${color}`}>
                       <p className="text-lg font-bold">{count}</p>
                       <p className="text-xs mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {data && (
+                <div className="space-y-2">
+                  {sourceSections.map(({ label, items, color }) => (
+                    <div key={label} className="rounded-lg border border-[#e7dfd1] bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</h4>
+                        <span className="text-[10px] font-medium text-gray-400">{items.length}</span>
+                      </div>
+                      {items.length ? (
+                        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                          {items.map((slug) => (
+                            <span key={`${label}-${slug}`} className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${color}`}>
+                              {slug}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-300">None</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -315,8 +401,12 @@ const UserPermissions = ({ setModuleName }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const selector = useSelector(state => state.user);
+    const adminCoreSelector = useSelector(state => state.adminCore);
     const sellerSelector = useSelector(state => state.sellerSubAdmins);
     const sellerPanel = isSellerPanel();
+    const currentStoredUser = getCurrentStoredUser();
+    const storedRole = normalizeRole(getStoredRole() || currentStoredUser?.role || currentStoredUser?.roleSlug);
+    const currentUserId = currentStoredUser?._id || currentStoredUser?.id || currentStoredUser?.userId;
     const [permissions, setPermissions] = useState([]);
     const [filters, setFilters] = useState({ search: '' });
     const [userName, setUserName] = useState('');
@@ -332,6 +422,22 @@ const UserPermissions = ({ setModuleName }) => {
         [actorPermissionMap],
     );
     const sidebarModules = selector?.getMyModulePermissionData?.data?.data?.modules;
+    const dynamicSidebarModules = useMemo(() => {
+        const sidebarData = adminCoreSelector?.rbacSidebarModulesData;
+        return firstArray(
+            sidebarData?.data?.normalized?.data,
+            sidebarData?.normalized?.normalized?.data,
+            sidebarData?.normalized?.data,
+            sidebarData?.data?.data?.list,
+            sidebarData?.data?.list,
+            sidebarData?.data?.data,
+            sidebarData?.data,
+        );
+    }, [adminCoreSelector?.rbacSidebarModulesData]);
+    const sidebarModuleMeta = useMemo(
+        () => buildSidebarModuleMeta(dynamicSidebarModules),
+        [dynamicSidebarModules],
+    );
     const sidebarModuleSlugs = useMemo(
         () => new Set(
             (Array.isArray(sidebarModules) ? sidebarModules : [])
@@ -341,7 +447,10 @@ const UserPermissions = ({ setModuleName }) => {
         ),
         [sidebarModules],
     );
-    const sidebarTabOrder = MODULE_TAB_ORDER;
+    const sidebarTabOrder = useMemo(
+        () => Array.from(new Set([...sidebarModuleMeta.tabOrder, ...MODULE_TAB_ORDER])),
+        [sidebarModuleMeta],
+    );
 
     useEffect(() => {
         if (id) {
@@ -354,8 +463,18 @@ const UserPermissions = ({ setModuleName }) => {
     }, [id, dispatch, sellerPanel]);
 
     useEffect(() => {
+        if (sellerPanel) return;
+        if (currentUserId || storedRole) {
+            dispatch(getMyModulePermission({ _id: currentUserId, role: storedRole }));
+        }
+        if (!dynamicSidebarModules.length) {
+            dispatch(getRbacSidebarModules());
+        }
+    }, [currentUserId, dispatch, dynamicSidebarModules.length, sellerPanel, storedRole]);
+
+    useEffect(() => {
         let isMounted = true;
-        const role = normalizeRole(getStoredRole());
+        const role = storedRole;
         if (role === 'super-admin' || role === 'seller') {
             setCanAssignPermissions(true);
             setActorPermissionMap({});
@@ -364,7 +483,7 @@ const UserPermissions = ({ setModuleName }) => {
             };
         }
 
-        const currentUser = getStoredUser() || {};
+        const currentUser = getCurrentStoredUser();
         const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
         if (!currentUserId) {
             setCanAssignPermissions(false);
@@ -385,7 +504,7 @@ const UserPermissions = ({ setModuleName }) => {
                 const modules = Array.isArray(payload?.modules) ? payload.modules : [];
                 const map = buildAssignedActionMap(modules);
                 setActorPermissionMap(map);
-                const rbacActions = map.rbac || map['admin-users'] || new Set();
+                const rbacActions = map.rbac || map.admin_users || map['admin-users'] || new Set();
                 const sellerAccessActions = map.sellers || new Set();
                 const hasNamedAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
                     rbacActions.has(action) || sellerAccessActions.has(action)
@@ -402,7 +521,7 @@ const UserPermissions = ({ setModuleName }) => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [storedRole]);
 
     useEffect(() => {
         const sellerSubAdmins = getListItems(sellerSelector?.listSubAdminsData);
@@ -473,6 +592,19 @@ const UserPermissions = ({ setModuleName }) => {
 
         setPermissions(visibleModules.map((module) => {
             const moduleSlug = getModuleCode(module);
+            const tabCandidates = [
+                moduleSlug,
+                module?.metadata?.requiredModule,
+                module?.requiredModule,
+                module?.moduleKey,
+                module?.moduleSlug,
+                module?.slug,
+            ]
+                .map(normalizeModuleCode)
+                .filter(Boolean);
+            const sidebarTabName = tabCandidates
+                .map((candidate) => sidebarModuleMeta.tabByModule[candidate])
+                .find(Boolean);
             const availablePermissions = getModuleActions(module);
             const actorModuleActions = actorPermissionMap[moduleSlug] || new Set();
             const effectiveAssignablePermissions = canAssignPermissions
@@ -493,7 +625,7 @@ const UserPermissions = ({ setModuleName }) => {
             return {
                 id: moduleSlug,
                 module: module.name || moduleSlug,
-                tab: module.tab || module.metadata?.tab || moduleSlug,
+                tab: sidebarTabName || module.tab || module.metadata?.tab || moduleSlug,
                 availablePermissions,
                 assignablePermissions: effectiveAssignablePermissions,
                 canAssign: canAssignPermissions && effectiveAssignablePermissions.includes('view'),
@@ -511,6 +643,7 @@ const UserPermissions = ({ setModuleName }) => {
         hasActorPermissionCeiling,
         canAssignPermissions,
         sidebarModuleSlugs,
+        sidebarModuleMeta,
         sidebarTabOrder,
     ]);
 
@@ -696,7 +829,6 @@ const UserPermissions = ({ setModuleName }) => {
         setPendingBulkAction(action);
     }, [selectedModules.length]);
 
-    const storedRole = normalizeRole(getStoredRole());
     const canCreateSubSubAdmin = canAssignPermissions && (storedRole === 'admin' || storedRole === 'super-admin');
 
     return (

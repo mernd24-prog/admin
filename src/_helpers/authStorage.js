@@ -224,19 +224,24 @@ export const hasModuleAccess = (moduleCode) => {
     return true;
   }
 
-  const permissionModules = [
+  const storedPermissionValues = [
     ...(Array.isArray(getStoredUser()?.permissions) ? getStoredUser().permissions : []),
     ...(Array.isArray(sessionUser?.permissions)
       ? sessionUser?.permissions
       : []),
-  ]
+  ];
+  const permissionModules = storedPermissionValues
     .map((permission) => String(permission || "").trim().toLowerCase())
     .filter((permission) => permission.includes(":"))
+    .filter((permission) => normalizeCode(permission.split(":")[1]) === "view")
     .map((permission) => normalizeCode(permission.split(":")[0]));
+  const legacyAllowedModules = storedPermissionValues.length
+    ? []
+    : getAllowedModules().map(normalizeCode);
 
   const allowedModules = Array.from(
     new Set([
-      ...getAllowedModules().map(normalizeCode),
+      ...legacyAllowedModules,
       ...permissionModules,
     ]),
   );
