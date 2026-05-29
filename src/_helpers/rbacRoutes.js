@@ -265,17 +265,16 @@ const ROUTE_MODULES = [
   // Catalog Management — brands
   [["/brands"], ["brands", "platform", "products"]],
   // Catalog Management — option masters / values
+  [["/product-options"], ["option_masters", "platform", "products"]],
   [
-    ["/product-options", "/product-option-value", "/product-option-values"],
-    ["option_masters", "option_values", "platform", "products"],
+    ["/product-option-value", "/product-option-values"],
+    ["option_values", "option_masters", "platform", "products"],
   ],
   // Catalog Management — other platform catalog
   [
     [
       "/collections", "/product-families", "/product-variants",
       "/product-dimensions", "/finish", "/batch",
-      "/tax-structure", "/tax-category", "/tax-category-rules",
-      "/shipping-duration",
     ],
     ["platform", "products"],
   ],
@@ -320,7 +319,13 @@ const ROUTE_MODULES = [
   [["/promotions-banners"], ["banners", "cms", "pricing"]],
 
   // Tax & Compliance
-  [["/tax", "/subTax", "/tax-rule", "/hsn-code"], ["tax"]],
+  [
+    [
+      "/tax", "/subTax", "/tax-rule", "/hsn-code",
+      "/tax-structure", "/tax-category", "/tax-category-rules",
+    ],
+    ["tax"],
+  ],
   [["/country"], ["countries", "locations"]],
   [["/state"], ["states", "locations"]],
   [["/city"], ["cities", "locations"]],
@@ -356,7 +361,7 @@ const ROUTE_MODULES = [
       "/content-management/help-and-support",
       "/privacy-policy",
     ],
-    ["cms", "platform"],
+    ["cms_pages", "cms", "platform"],
   ],
 
   // Settings

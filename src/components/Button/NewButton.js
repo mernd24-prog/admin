@@ -1,5 +1,7 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 
 const NewButton = React.memo(({
     type = "button",
@@ -13,6 +15,9 @@ const NewButton = React.memo(({
     requiredAction,
     ...rest
 }) => {
+    const location = useLocation();
+    const inferredModule = getRouteModuleCandidates(location.pathname)[0];
+    const guardModule = requiredModule ? (inferredModule || requiredModule) : null;
     const button = (
         <button
             type={type}
@@ -23,8 +28,8 @@ const NewButton = React.memo(({
             {children}
         </button>
     );
-    return requiredModule ? (
-        <PermissionGuard module={requiredModule} action={requiredAction} hide>
+    return guardModule ? (
+        <PermissionGuard module={guardModule} action={requiredAction} hide>
             {button}
         </PermissionGuard>
     ) : button;

@@ -59,7 +59,7 @@ export default function SearchComponent({
 }) {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = requiredModule || inferredModule;
+  const guardModule = inferredModule || requiredModule;
   const [searchDown, setSearchDown] = useState(false);
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);

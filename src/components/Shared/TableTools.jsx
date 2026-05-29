@@ -11,7 +11,7 @@ import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 const MaybeGuard = ({ module, action, children }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = module || inferredModule;
+  const guardModule = inferredModule || module;
   return guardModule ? <PermissionGuard module={guardModule} action={action} hide>{children}</PermissionGuard> : children;
 };
 

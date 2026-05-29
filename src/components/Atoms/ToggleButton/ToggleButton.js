@@ -6,7 +6,7 @@ import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 const ToggleButton = ({ handleClick, isToggle, requiredModule, requiredAction = "status_change" }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = requiredModule || inferredModule;
+  const guardModule = inferredModule || requiredModule;
   const toggle = (
     <div className="flex">
       <label className="relative inline-flex items-center w-11 h-6">

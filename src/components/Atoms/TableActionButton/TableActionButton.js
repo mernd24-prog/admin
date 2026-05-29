@@ -64,7 +64,7 @@ export const ActionButtons = ({
 }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = requiredModule || inferredModule;
+  const guardModule = inferredModule || requiredModule;
   const guard = (action, node) => guardModule ? (
     <PermissionGuard module={guardModule} action={action} hide>{node}</PermissionGuard>
   ) : node;

@@ -20,7 +20,7 @@ const AddButton = React.memo(
   }) => {
     const location = useLocation();
     const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-    const guardModule = requiredModule || inferredModule;
+    const guardModule = inferredModule || requiredModule;
     const button = (
       <button
         type={type}

@@ -331,13 +331,19 @@ const emptySubAdmin = {
   allowedModules: ["products", "orders"],
 };
 
-const SUB_ADMIN_ACTIONS = [
+const PERMISSION_ACTIONS = [
   "view",
   "create",
   "update",
   "delete",
   "status_change",
+  "approve",
+  "reject",
+  "assign",
   "export",
+  "import",
+  "bulk_action",
+  "restore",
 ];
 const ACTION_SHORT_LABELS = {
   view: "View",
@@ -350,13 +356,62 @@ const ACTION_SHORT_LABELS = {
   assign: "Assign",
   approve: "Approve",
   reject: "Reject",
+  bulk_action: "Bulk",
+  restore: "Restore",
 };
 
-const buildDefaultModulePermissions = (modules = []) =>
-  modules.map((mod) => ({
-    module: typeof mod === "string" ? mod : mod.slug || mod,
-    actions: ["view"],
-  }));
+const normalizeActionsForAssignment = (actions = []) =>
+  Array.from(new Set(["view", ...(actions || [])])).filter((action) =>
+    PERMISSION_ACTIONS.includes(action),
+  );
+
+const buildModulePermissions = (
+  modules = [],
+  actionsMap = {},
+  fallbackActions = ["view"],
+) =>
+  modules.map((mod) => {
+    const module = typeof mod === "string" ? mod : mod.slug || mod;
+    return {
+      module,
+      actions: normalizeActionsForAssignment(
+        actionsMap[module] || fallbackActions,
+      ),
+    };
+  });
+
+const buildActionsMapFromUser = (user = {}) => {
+  const map = {};
+
+  if (Array.isArray(user.modulePermissions)) {
+    user.modulePermissions.forEach((item) => {
+      const module = item.module || item.slug;
+      if (!module) return;
+      map[module] = normalizeActionsForAssignment(item.actions || ["view"]);
+    });
+  }
+
+  const permissionSlugs = user.permissionSummary?.permissions || [];
+  if (Array.isArray(permissionSlugs)) {
+    permissionSlugs.forEach((permission) => {
+      const [module, action] = String(permission || "").split(":");
+      if (!module || !action || !PERMISSION_ACTIONS.includes(action)) return;
+      map[module] = normalizeActionsForAssignment([
+        ...(map[module] || []),
+        action,
+      ]);
+    });
+  }
+
+  return map;
+};
+
+const fullModuleActionMap = (modules = []) =>
+  modules.reduce((lookup, module) => {
+    const slug = typeof module === "string" ? module : module.slug || module;
+    if (slug) lookup[slug] = PERMISSION_ACTIONS;
+    return lookup;
+  }, {});
 
 const ModuleActionsSelector = ({
   modules = [],
@@ -382,7 +437,7 @@ const ModuleActionsSelector = ({
               <th className="px-3 py-2 text-left text-gray-500 font-medium w-32">
                 Module
               </th>
-              {SUB_ADMIN_ACTIONS.map((a) => (
+              {PERMISSION_ACTIONS.map((a) => (
                 <th
                   key={a}
                   className="px-2 py-2 text-center text-gray-400 font-medium capitalize whitespace-nowrap"
@@ -403,7 +458,7 @@ const ModuleActionsSelector = ({
                   <td className="px-3 py-2 font-medium text-gray-700 capitalize">
                     {label}
                   </td>
-                  {SUB_ADMIN_ACTIONS.map((action) => {
+                  {PERMISSION_ACTIONS.map((action) => {
                     const checked =
                       action === "view"
                         ? true
@@ -538,7 +593,10 @@ const AdminUsers = () => {
   const isAdmin = storedRole === "admin" || isSuperAdmin;
   const canSeeAdminsTab = isSuperAdmin;
   const canCreateSubAdmin =
-    isSuperAdmin || canAny("rbac", ["create", "add", "assign"]);
+    isSuperAdmin ||
+    canAny("admin_users", ["create", "add", "assign"]) ||
+    canAny("rbac", ["create", "add", "assign"]) ||
+    canAny("users", ["create", "add", "assign"]);
 
   const [tab, setTab] = useState(isSuperAdmin ? "admins" : "subadmins");
   const [pageAdmin, setPageAdmin] = useState(1);
@@ -824,11 +882,20 @@ const AdminUsers = () => {
       setErrors(errs);
       return;
     }
+    const modulePermissions = buildModulePermissions(
+      allowedModules,
+      moduleActionsMap,
+      PERMISSION_ACTIONS,
+    );
     try {
-      await dispatch(createAdmin({ ...adminForm, allowedModules })).unwrap();
+      await dispatch(
+        createAdmin({ ...adminForm, allowedModules, modulePermissions }),
+      ).unwrap();
       toast.success("Admin created successfully");
       setAddAdminOpen(false);
       setAdminForm(emptyUser);
+      setModuleActionsMap({});
+      setShowModuleActions(false);
       setErrors({});
       setRefresh((r) => !r);
     } catch (err) {
@@ -887,6 +954,9 @@ const AdminUsers = () => {
         defaultAdminModules.includes(mod),
       ),
     });
+    const existingActions = buildActionsMapFromUser(user);
+    setModuleActionsMap(existingActions);
+    setShowModuleActions(Object.keys(existingActions).length > 0);
     setEditAdminOpen(true);
   };
 
@@ -897,13 +967,7 @@ const AdminUsers = () => {
     setEditingTarget(user);
     setErrors({});
     // Build actionsMap from existing modulePermissions if available
-    const existingActions = {};
-    (user.modulePermissions || []).forEach((mp) => {
-      if (mp.module)
-        existingActions[mp.module] = Array.isArray(mp.actions)
-          ? mp.actions
-          : ["view"];
-    });
+    const existingActions = buildActionsMapFromUser(user);
     setModuleActionsMap(existingActions);
     setShowModuleActions(Object.keys(existingActions).length > 0);
     setSubAdminForm({
@@ -923,10 +987,20 @@ const AdminUsers = () => {
     e.preventDefault();
     if (!editingTarget) return;
     const errs = validateUserForm(adminForm, false);
+    const allowedModules = (adminForm.allowedModules || []).filter((mod) =>
+      defaultAdminModules.includes(mod),
+    );
+    if (!allowedModules.length)
+      errs.allowedModules = "Select at least one module";
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
+    const modulePermissions = buildModulePermissions(
+      allowedModules,
+      moduleActionsMap,
+      ["view"],
+    );
     try {
       await dispatch(
         updateAdminUser({
@@ -935,10 +1009,19 @@ const AdminUsers = () => {
           phone: adminForm.phone,
         }),
       ).unwrap();
-      toast.success("Admin updated successfully");
+      await dispatch(
+        updatePlatformSubAdminModules({
+          userId: editingTarget._id || editingTarget.id,
+          allowedModules,
+          modulePermissions,
+        }),
+      ).unwrap();
+      toast.success("Admin modules and permissions updated");
       setEditAdminOpen(false);
       setEditingTarget(null);
       setAdminForm(emptyUser);
+      setModuleActionsMap({});
+      setShowModuleActions(false);
       setErrors({});
       setRefresh((r) => !r);
     } catch (err) {
@@ -1231,6 +1314,8 @@ const AdminUsers = () => {
                     ...emptyUser,
                     allowedModules: defaultAdminModules,
                   });
+                  setModuleActionsMap(fullModuleActionMap(defaultAdminModules));
+                  setShowModuleActions(false);
                   setAddAdminOpen(true);
                 }}
               >
@@ -1245,6 +1330,8 @@ const AdminUsers = () => {
                     ...emptySubAdmin,
                     allowedModules: defaultSubAdminModules,
                   });
+                  setModuleActionsMap({});
+                  setShowModuleActions(false);
                   setAddSubAdminOpen(true);
                 }}
               >
@@ -1341,7 +1428,11 @@ const AdminUsers = () => {
       {/* Create Admin modal — super-admin only */}
       <DefaultModal
         isOpen={addAdminOpen}
-        onClose={() => setAddAdminOpen(false)}
+        onClose={() => {
+          setAddAdminOpen(false);
+          setModuleActionsMap({});
+          setShowModuleActions(false);
+        }}
         onSubmit={handleCreateAdmin}
         isButtonView={true}
         submitButtonText="Create Admin"
@@ -1417,15 +1508,50 @@ const AdminUsers = () => {
             </p>
             <ModuleSelector
               selected={adminForm.allowedModules}
-              onChange={(mods) =>
-                setAdminForm((f) => ({ ...f, allowedModules: mods }))
-              }
+              onChange={(mods) => {
+                setAdminForm((f) => ({ ...f, allowedModules: mods }));
+                setModuleActionsMap((prev) => {
+                  const next = {};
+                  mods.forEach((mod) => {
+                    next[mod] = prev[mod] || PERMISSION_ACTIONS;
+                  });
+                  return next;
+                });
+              }}
               modules={defaultAdminModules.map(toModuleOption)}
             />
             {errors.allowedModules && (
               <p className="text-xs text-red-500">{errors.allowedModules}</p>
             )}
           </div>
+          {adminForm.allowedModules.length > 0 && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => setShowModuleActions((v) => !v)}
+                className="flex items-center gap-2 text-xs font-medium text-[#3E4094] hover:underline"
+              >
+                {showModuleActions ? "▾" : "▸"} Configure actions per module
+              </button>
+              {showModuleActions && (
+                <ModuleActionsSelector
+                  modules={defaultAdminModules
+                    .map(toModuleOption)
+                    .filter((module) =>
+                      adminForm.allowedModules.includes(module.slug),
+                    )}
+                  actionsMap={moduleActionsMap}
+                  onChange={setModuleActionsMap}
+                />
+              )}
+              {!showModuleActions && (
+                <p className="text-[10px] text-gray-400">
+                  By default, all management actions are granted for selected
+                  admin modules.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </DefaultModal>
 
@@ -1435,6 +1561,8 @@ const AdminUsers = () => {
         onClose={() => {
           setEditAdminOpen(false);
           setEditingTarget(null);
+          setModuleActionsMap({});
+          setShowModuleActions(false);
         }}
         onSubmit={handleUpdateAdmin}
         isButtonView={true}
@@ -1473,13 +1601,66 @@ const AdminUsers = () => {
             }
             maxLength={15}
           />
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">
+              Assign Modules <span className="text-red-500">*</span>
+            </label>
+            <ModuleSelector
+              selected={adminForm.allowedModules}
+              onChange={(mods) => {
+                setAdminForm((f) => ({ ...f, allowedModules: mods }));
+                setModuleActionsMap((prev) => {
+                  const next = {};
+                  mods.forEach((mod) => {
+                    next[mod] = prev[mod] || ["view"];
+                  });
+                  return next;
+                });
+              }}
+              modules={defaultAdminModules.map(toModuleOption)}
+            />
+            {errors.allowedModules && (
+              <p className="text-xs text-red-500">{errors.allowedModules}</p>
+            )}
+          </div>
+          {adminForm.allowedModules.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Actions per Module
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowModuleActions((v) => !v)}
+                  className="text-xs text-[#3E4094] hover:underline"
+                >
+                  {showModuleActions ? "Hide" : "Show"}
+                </button>
+              </div>
+              {showModuleActions && (
+                <ModuleActionsSelector
+                  modules={defaultAdminModules
+                    .map(toModuleOption)
+                    .filter((module) =>
+                      adminForm.allowedModules.includes(module.slug),
+                    )}
+                  actionsMap={moduleActionsMap}
+                  onChange={setModuleActionsMap}
+                />
+              )}
+            </div>
+          )}
         </div>
       </DefaultModal>
 
       {/* Create Sub-Admin modal */}
       <DefaultModal
         isOpen={addSubAdminOpen}
-        onClose={() => setAddSubAdminOpen(false)}
+        onClose={() => {
+          setAddSubAdminOpen(false);
+          setModuleActionsMap({});
+          setShowModuleActions(false);
+        }}
         onSubmit={handleCreateSubAdmin}
         isButtonView={true}
         submitButtonText="Create Sub-Admin"
