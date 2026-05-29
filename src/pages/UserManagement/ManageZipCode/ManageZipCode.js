@@ -291,6 +291,7 @@ const ManageZipCode = () => {
       <ToggleButton
         isToggle={isRowActive(ele)}
         handleClick={() => handleToggle(ele)}
+        requiredModule="zip_codes"
       />
     </div>,
     <ActionButtons
@@ -314,6 +315,7 @@ const ManageZipCode = () => {
       }}
       showLinkButton={false}
       showDeleteButton={false}
+      requiredModule="zip_codes"
     />,
   ]);
 
@@ -326,6 +328,8 @@ const ManageZipCode = () => {
             Home / <Link to="/app/setting">Settings</Link> / Zip Codes
           </h3>
           <Button
+            requiredModule="zip_codes"
+            requiredAction="create"
             onClick={() => {
               setFormData(initialFormState);
               setIsEditMode(false);
@@ -349,6 +353,7 @@ const ManageZipCode = () => {
             handleAction={handleBulkAction}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
+            requiredModule="zip_codes"
           />
 
           <TableData

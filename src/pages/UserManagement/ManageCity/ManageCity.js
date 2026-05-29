@@ -263,6 +263,7 @@ const ManageCity = () => {
       <ToggleButton
         isToggle={isRowActive(ele)}
         handleClick={() => handleToggle(ele)}
+        requiredModule="cities"
       />
     </div>,
     <ActionButtons
@@ -288,6 +289,7 @@ const ManageCity = () => {
       }}
       showLinkButton={false}
       showDeleteButton={false}
+      requiredModule="cities"
     />,
   ]);
 
@@ -328,6 +330,8 @@ const ManageCity = () => {
             Home / <Link to="/app/setting">Settings</Link> / Cities
           </h3>
           <Button
+            requiredModule="cities"
+            requiredAction="create"
             onClick={() => {
               setFormData(initialFormState);
               setIsEditMode(false);
@@ -353,6 +357,7 @@ const ManageCity = () => {
             isSelectNearSearch={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
+            requiredModule="cities"
           />
 
           <TableData

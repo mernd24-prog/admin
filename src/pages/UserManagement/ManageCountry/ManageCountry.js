@@ -237,7 +237,7 @@ const ManageCountry = () => {
       <ToggleButton
         isToggle={isRowActive(ele)}
         handleClick={() => handleToggle(ele)}
-        requiredModule="platform"
+        requiredModule="countries"
       />
     </div>,
     <ActionButtons
@@ -253,7 +253,7 @@ const ManageCountry = () => {
       }}
       showLinkButton={false}
       showDeleteButton={false}
-      requiredModule="platform"
+      requiredModule="countries"
     />,
   ]);
 
@@ -265,7 +265,7 @@ const ManageCountry = () => {
           Home / <Link to="/app/setting">Settings</Link> / Country
         </h3>
         <Button
-          requiredModule="platform"
+          requiredModule="countries"
           requiredAction="create"
           onClick={() => {
             setFormData(initialFormState);
@@ -288,7 +288,7 @@ const ManageCountry = () => {
           setSelectedRow={setSelectedRow}
           placeholder={`Search by name and code`}
           handleAction={handleBulkAction}
-          requiredModule="platform"
+          requiredModule="countries"
         />
 
         <TableData

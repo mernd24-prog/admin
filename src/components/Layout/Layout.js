@@ -7,6 +7,7 @@ import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
+import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
 import {
   getRouteModuleCandidates,
   isSelfServiceRoute,
@@ -278,6 +279,8 @@ const getStoredSidebarState = () => {
 };
 
 function Layout() {
+  useSessionHeartbeat();
+
   const location = useLocation();
   const [navbarOpen, setNavbarOpen] = useState(getStoredSidebarState);
   const [moduleName, setModuleName] = useState("");

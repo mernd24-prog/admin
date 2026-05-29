@@ -272,6 +272,7 @@ const ManageState = () => {
       <ToggleButton
         isToggle={isRowActive(ele)}
         handleClick={() => handleToggle(ele)}
+        requiredModule="states"
       />
     </div>,
     <ActionButtons
@@ -287,6 +288,7 @@ const ManageState = () => {
       }}
       showLinkButton={false}
       showDeleteButton={false}
+      requiredModule="states"
     />,
   ]);
 
@@ -327,6 +329,8 @@ const ManageState = () => {
             Home / <Link to="/app/setting">Settings</Link> / State
           </h3>
           <Button
+            requiredModule="states"
+            requiredAction="create"
             onClick={() => {
               setFormData(initialFormState);
               setIsEditMode(false);
@@ -353,6 +357,7 @@ const ManageState = () => {
             isSelectNearSearch={true}
             applyFilters={applyFilters}
             handleSearchRemove={handleSearchRemove}
+            requiredModule="states"
           />
 
           <TableData
