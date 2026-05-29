@@ -311,8 +311,8 @@ export const useAuthFlow = ({
         if (!formFields.phone.trim()) {
           errors.phone = "Phone is required";
           isValid = false;
-        } else if (!/^\d{10}$/.test(formFields.phone.trim())) {
-          errors.phone = "Phone number must be exactly 10 digits";
+        } else if (!/^[6-9]\d{9}$/.test(formFields.phone.trim())) {
+          errors.phone = "Phone number must be 10 digits and start with 6, 7, 8, or 9";
           isValid = false;
         }
 

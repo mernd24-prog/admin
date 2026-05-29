@@ -20,6 +20,22 @@ import BarcodePage from "../../pages/Admin/Barcode/Barcode";
 import HsnCode from "../../pages/Admin/HsnCode/HsnCode";
 import { PageSkeletonLoader } from "../Loader/SkeletonLoader";
 
+const valueFieldSelector =
+  'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea';
+
+const syncPrefilledFieldState = (root) => {
+  if (!root) return;
+
+  root.querySelectorAll(valueFieldSelector).forEach((field) => {
+    const hasValue = String(field.value || "").trim() !== "";
+    if (hasValue) {
+      field.dataset.hasValue = "true";
+    } else {
+      delete field.dataset.hasValue;
+    }
+  });
+};
+
 const Dashboard = React.lazy(() => import("../../pages/dashboard/Dashboard"));
 const AdminUsers = React.lazy(
   () => import("../../pages/UserManagement/Adminusers/AdminUsers"),
@@ -293,6 +309,37 @@ function Layout() {
 
   useEffect(() => {
     setSocket(socketConnection());
+  }, []);
+
+  useEffect(() => {
+    const root = document.querySelector(".admin-shell");
+    if (!root) return undefined;
+
+    const syncField = (event) => {
+      if (event.target?.matches?.(valueFieldSelector)) {
+        syncPrefilledFieldState(root);
+      }
+    };
+
+    syncPrefilledFieldState(root);
+
+    const observer = new MutationObserver(() => syncPrefilledFieldState(root));
+    observer.observe(root, { childList: true, subtree: true });
+
+    const intervalId = window.setInterval(
+      () => syncPrefilledFieldState(root),
+      500,
+    );
+
+    root.addEventListener("input", syncField, true);
+    root.addEventListener("change", syncField, true);
+
+    return () => {
+      observer.disconnect();
+      window.clearInterval(intervalId);
+      root.removeEventListener("input", syncField, true);
+      root.removeEventListener("change", syncField, true);
+    };
   }, []);
 
   const modulePermissions = useMemo(() => {

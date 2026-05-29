@@ -3,14 +3,30 @@ import Select from "react-select";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { IoClose, IoCloudUploadOutline } from "react-icons/io5";
 
-const selectStyles = (invalid) => ({
+const selectStyles = (invalid, hasValue) => ({
   control: (base, state) => ({
     ...base,
     minHeight: 40,
-    background: "var(--admin-field)",
-    borderColor: invalid ? "var(--admin-danger)" : state.isFocused ? "var(--admin-navy)" : "var(--admin-field-line)",
+    background: hasValue ? "#f7f9ff" : "var(--admin-field)",
+    borderColor: invalid
+      ? "var(--admin-danger)"
+      : state.isFocused
+        ? "var(--admin-navy)"
+        : hasValue
+          ? "#b9c8ea"
+          : "var(--admin-field-line)",
     boxShadow: state.isFocused ? "0 0 0 2px rgba(8, 47, 145, 0.1)" : "none",
     fontSize: 13,
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: hasValue ? "#082f91" : base.color,
+    fontWeight: hasValue ? 500 : base.fontWeight,
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    color: "#082f91",
+    fontWeight: 500,
   }),
   menu: (base) => ({ ...base, zIndex: 60 }),
 });
@@ -117,6 +133,8 @@ const Input = ({
       const selectedValue = type === "multi-select" || isMulti
         ? list.filter((option) => (value || []).includes?.(option.value) || (value || []).some?.((item) => item.value === option.value))
         : list.find((option) => option.value === value) || value || null;
+      const hasSelectedValue =
+        Array.isArray(selectedValue) ? selectedValue.length > 0 : Boolean(selectedValue);
       return (
         <Select
           inputId={inputId}
@@ -132,7 +150,7 @@ const Input = ({
           isSearchable={searchable}
           isDisabled={disable || loading || readOnly}
           isLoading={loading}
-          styles={selectStyles(invalid)}
+          styles={selectStyles(invalid, hasSelectedValue)}
           aria-invalid={invalid}
         />
       );

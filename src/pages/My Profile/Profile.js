@@ -125,7 +125,7 @@ const EditableField = ({
 const ProfileSection = ({ number, title, children }) => (
   <section className="mt-9 first:mt-0">
     <h3 className="admin-section-title">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#e49e1c] text-[10px] text-white">
+      <span className="flex h-6 w-6  items-center justify-center rounded-full bg-[#e49e1c] text-[10px] text-white">
         {number}
       </span>
       {title}
@@ -398,7 +398,7 @@ const Profile = () => {
           <div className="mb-8 flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <label className="group relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[#eef2ff] shadow-md">
+                <label className="group  relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[#eef2ff] shadow-md">
                   {formData.user_image ? (
                     <img
                       src={formData.user_image}
