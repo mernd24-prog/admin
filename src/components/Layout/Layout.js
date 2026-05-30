@@ -793,6 +793,22 @@ function Layout() {
                     path="/seller"
                     element={renderRoute("/seller", <Sellers />)}
                   />
+                  <Route
+                    path="/seller-kyc"
+                    element={renderRoute("/seller-kyc", <Sellers />)}
+                  />
+                  <Route
+                    path="/seller-bank"
+                    element={renderRoute("/seller-bank", <Sellers />)}
+                  />
+                  <Route
+                    path="/seller-kyc-detail/:id"
+                    element={renderRoute("/seller-kyc-detail", <UserDetails />)}
+                  />
+                  <Route
+                    path="/seller-bank-detail/:id"
+                    element={renderRoute("/seller-bank-detail", <UserDetails />)}
+                  />
 
                   <Route
                     path="/product-option-value/:id"

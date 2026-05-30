@@ -227,6 +227,8 @@ const toModuleOption = (module) => {
       getModuleMeta(slug).tab ||
       MODULE_TABS[slug] ||
       "Settings",
+    permissions: module?.permissions || [],
+    assignableActions: module?.assignableActions || undefined,
   };
 };
 
@@ -365,18 +367,41 @@ const normalizeActionsForAssignment = (actions = []) =>
     PERMISSION_ACTIONS.includes(action),
   );
 
+const getAssignableActionsForModule = (module = {}) => {
+  if (!module || typeof module === "string") return PERMISSION_ACTIONS;
+
+  if (Array.isArray(module.assignableActions) && module.assignableActions.length) {
+    return normalizeActionsForAssignment(module.assignableActions);
+  }
+
+  if (Array.isArray(module.permissions) && module.permissions.length) {
+    const actions = module.permissions
+      .filter((permission) => permission.assignable !== false)
+      .map((permission) => permission.action)
+      .filter(Boolean);
+    return actions.length ? normalizeActionsForAssignment(actions) : ["view"];
+  }
+
+  return PERMISSION_ACTIONS;
+};
+
 const buildModulePermissions = (
   modules = [],
   actionsMap = {},
   fallbackActions = ["view"],
+  moduleOptions = [],
 ) =>
   modules.map((mod) => {
     const module = typeof mod === "string" ? mod : mod.slug || mod;
+    const moduleOption =
+      moduleOptions.find((option) => option?.slug === module) || mod;
+    const assignableActions = new Set(getAssignableActionsForModule(moduleOption));
+    const actions = normalizeActionsForAssignment(
+      actionsMap[module] || fallbackActions,
+    ).filter((action) => action === "view" || assignableActions.has(action));
     return {
       module,
-      actions: normalizeActionsForAssignment(
-        actionsMap[module] || fallbackActions,
-      ),
+      actions: actions.length ? actions : ["view"],
     };
   });
 
@@ -452,6 +477,7 @@ const ModuleActionsSelector = ({
               const slug = typeof mod === "string" ? mod : mod.slug || mod;
               const label =
                 typeof mod === "string" ? mod : mod.name || mod.slug || mod;
+              const assignableActions = getAssignableActionsForModule(mod);
               const currentActions = actionsMap[slug] || ["view"];
               return (
                 <tr key={slug} className="hover:bg-[#faf6ee]/60">
@@ -459,6 +485,8 @@ const ModuleActionsSelector = ({
                     {label}
                   </td>
                   {PERMISSION_ACTIONS.map((action) => {
+                    const canAssignAction =
+                      action === "view" || assignableActions.includes(action);
                     const checked =
                       action === "view"
                         ? true
@@ -467,9 +495,10 @@ const ModuleActionsSelector = ({
                       <td key={action} className="px-2 py-2 text-center">
                         <input
                           type="checkbox"
-                          checked={checked}
-                          disabled={disabled || action === "view"}
+                          checked={checked && canAssignAction}
+                          disabled={disabled || action === "view" || !canAssignAction}
                           onChange={(e) => {
+                            if (!canAssignAction) return;
                             const next = e.target.checked
                               ? Array.from(new Set([...currentActions, action]))
                               : currentActions.filter((a) => a !== action);
@@ -824,7 +853,7 @@ const AdminUsers = () => {
   useEffect(() => {
     if (isAdmin) {
       dispatch(
-        getAccessModules({ role: "sub-admin", includePermissions: false }),
+        getAccessModules({ role: "sub-admin", includePermissions: true }),
       );
     }
   }, [dispatch, isAdmin]);
@@ -886,6 +915,7 @@ const AdminUsers = () => {
       allowedModules,
       moduleActionsMap,
       PERMISSION_ACTIONS,
+      moduleOptions,
     );
     try {
       await dispatch(
@@ -915,10 +945,12 @@ const AdminUsers = () => {
       setErrors(errs);
       return;
     }
-    const modulePermissions = allowedModules.map((mod) => ({
-      module: mod,
-      actions: Array.from(new Set(["view", ...(moduleActionsMap[mod] || [])])),
-    }));
+    const modulePermissions = buildModulePermissions(
+      allowedModules,
+      moduleActionsMap,
+      ["view"],
+      moduleOptions,
+    );
     try {
       await dispatch(
         createPlatformSubAdmin({
@@ -1000,6 +1032,7 @@ const AdminUsers = () => {
       allowedModules,
       moduleActionsMap,
       ["view"],
+      moduleOptions,
     );
     try {
       await dispatch(
@@ -1042,10 +1075,12 @@ const AdminUsers = () => {
       setErrors(errs);
       return;
     }
-    const modulePermissions = allowedModules.map((mod) => ({
-      module: mod,
-      actions: Array.from(new Set(["view", ...(moduleActionsMap[mod] || [])])),
-    }));
+    const modulePermissions = buildModulePermissions(
+      allowedModules,
+      moduleActionsMap,
+      ["view"],
+      moduleOptions,
+    );
     try {
       await dispatch(
         updateAdminUser({

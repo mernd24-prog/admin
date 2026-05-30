@@ -220,6 +220,26 @@ const buildAssignedActionMap = (modules = []) => {
     return result;
 };
 
+const getModuleCodeCandidates = (moduleCode = '') => {
+    const normalized = normalizeModuleCode(moduleCode);
+    const underscore = normalized.replace(/-/g, '_');
+    return Array.from(new Set([normalized, underscore]));
+};
+
+const getActorActionsForModule = (actorPermissionMap = {}, moduleCode = '') => {
+    const candidates = getModuleCodeCandidates(moduleCode);
+    for (const candidate of candidates) {
+        const actions = actorPermissionMap[candidate];
+        if (actions instanceof Set) return actions;
+    }
+    return new Set();
+};
+
+const hasAnyActorModuleActions = (actorPermissionMap = {}) =>
+    Object.values(actorPermissionMap || {}).some((actions) =>
+        actions instanceof Set && actions.size > 0
+    );
+
 /* ─── Effective Permissions Modal ───────────────────────────────────────── */
 const ACTION_BADGE_COLORS = {
   view:          'bg-blue-50 text-blue-600 border-blue-100',
@@ -509,7 +529,7 @@ const UserPermissions = ({ setModuleName }) => {
                 const hasNamedAssignmentAction = ASSIGNMENT_ACTIONS.some((action) =>
                     rbacActions.has(action) || sellerAccessActions.has(action)
                 );
-                const hasAssignmentAction = hasNamedAssignmentAction;
+                const hasAssignmentAction = hasNamedAssignmentAction || hasAnyActorModuleActions(map);
                 setCanAssignPermissions(hasAssignmentAction);
             })
             .catch(() => {
@@ -574,10 +594,18 @@ const UserPermissions = ({ setModuleName }) => {
             return;
         }
 
+        const actorModuleSlugs = new Set(Object.keys(actorPermissionMap || {}));
+        const hasModuleVisibilityCeiling =
+            !sellerPanel && (sidebarModuleSlugs.size > 0 || actorModuleSlugs.size > 0);
         const visibleModules = modules
             .filter((module) => {
                 const moduleSlug = getModuleCode(module);
-                return sellerPanel || !sidebarModuleSlugs.size || sidebarModuleSlugs.has(moduleSlug);
+                const moduleCandidates = getModuleCodeCandidates(moduleSlug);
+                return sellerPanel ||
+                    !hasModuleVisibilityCeiling ||
+                    moduleCandidates.some((candidate) =>
+                        sidebarModuleSlugs.has(candidate) || actorModuleSlugs.has(candidate)
+                    );
             })
             .sort((a, b) => {
                 const tabA = a.tab || a.metadata?.tab || '';
@@ -606,12 +634,13 @@ const UserPermissions = ({ setModuleName }) => {
                 .map((candidate) => sidebarModuleMeta.tabByModule[candidate])
                 .find(Boolean);
             const availablePermissions = getModuleActions(module);
-            const actorModuleActions = actorPermissionMap[moduleSlug] || new Set();
+            const actorModuleActions = getActorActionsForModule(actorPermissionMap, moduleSlug);
             const effectiveAssignablePermissions = canAssignPermissions
                 ? (hasActorPermissionCeiling
                     ? availablePermissions.filter((action) =>
-                        action === 'view' ||
-                        expandActionCandidates(action).some((candidate) => actorModuleActions.has(candidate))
+                        action === 'view'
+                            ? actorModuleActions.has('view')
+                            : expandActionCandidates(action).some((candidate) => actorModuleActions.has(candidate))
                     )
                     : availablePermissions)
                 : [];

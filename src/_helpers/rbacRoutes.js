@@ -183,9 +183,11 @@ export const MODULE_DEFAULT_ROUTES = {
   // Users
   users:              "users",
   sellers:            "seller",
-  seller_kyc:         "seller",
-  seller_bank:        "seller",
-  "seller-management": "seller-users",
+  seller_kyc:         "seller-kyc",
+  "seller-kyc":       "seller-kyc",
+  seller_bank:        "seller-bank",
+  "seller-bank":      "seller-bank",
+  "seller-management":"seller-users",
   "sellers/commissions":"transactions",
   // CMS/Content
   cms:       "content-management",
@@ -247,7 +249,11 @@ const ROUTE_MODULES = [
   [["/permission-templates"], ["rbac"]],
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
-  [["/seller", "/seller-staff", "/seller-users"], ["sellers"]],
+  [["/seller"], ["sellers"]],
+  [["/seller-staff", "/seller-users", "/seller-sub-admins"], ["seller-management"]],
+  [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
+  [["/seller-bank", "/seller-bank-detail"], ["seller_bank", "seller-bank", "sellers"]],
+  [["/seller-onboarding"], ["sellers", "seller_kyc"]],
 
   // Catalog Management — products
   [
