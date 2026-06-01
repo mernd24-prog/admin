@@ -772,11 +772,7 @@ const AdminUsers = () => {
     const fromApi = accessModules
       .filter((module) => module?.assignable !== false)
       .map(toModuleOption)
-      .filter((module) => module.slug)
-      .filter(
-        (module) =>
-          !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug),
-      );
+      .filter((module) => module.slug);
     const fallback = DEFAULT_PLATFORM_MODULES.map(toModuleOption).filter(
       (module) =>
         !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug),
