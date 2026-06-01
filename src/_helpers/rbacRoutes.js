@@ -175,9 +175,9 @@ export const MODULE_DEFAULT_ROUTES = {
   // Orders
   carts:        "orders",
   orders:       "orders",
-  returns:      "order-return-reasons",
+  returns:      "returns",
   reviews:      "product-reviews",
-  payments:     "orders",
+  payments:     "payments",
   wallets:      "transactions",
   subscriptions:"settings",
   // Users
@@ -298,14 +298,15 @@ const ROUTE_MODULES = [
   // Orders Management
   [
     [
-      "/orders", "/view-orders", "/order-status",
+      "/orders", "/orders/view", "/view-orders", "/order-status",
       "/gift-card-orders", "/order-cancellation-reasons",
-      "/refunds", "/shipment-tracking",
+      "/refunds", "/returns",
     ],
     ["orders"],
   ],
+  [["/payments"], ["payments"]],
   [["/product-reviews"], ["reviews", "orders"]],
-  [["/order-return-reasons"], ["returns", "orders"]],
+  [["/returns", "/order-return-reasons"], ["returns", "orders"]],
   [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
 
   // Marketing
@@ -339,7 +340,7 @@ const ROUTE_MODULES = [
   [["/warranty"], ["warranty", "products"]],
   [
     [
-      "/shipping-company-users", "/shipping-packages",
+      "/shipping-company-users", "/shipping-packages", "/shipment-tracking",
       "/shipping-profile", "/pickup-addresses", "/delivery-staff",
       "/shipping-duration",
     ],

@@ -15,6 +15,7 @@ import {
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
 
 import Tax from "../../pages/Tax/Tax";
+import TaxCompliance from "../../pages/Tax/TaxCompliance";
 import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
@@ -78,6 +79,12 @@ const ThresholdProducts = React.lazy(
 const Orders = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/Orders"),
 );
+const Payments = React.lazy(
+  () => import("../../pages/OrdersManagement/Payments/Payments"),
+);
+const Returns = React.lazy(
+  () => import("../../pages/OrdersManagement/Returns/Returns"),
+);
 const OrderStatus = React.lazy(
   () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
 );
@@ -131,6 +138,9 @@ const ShippingProfiles = React.lazy(
 );
 const PickupAddresses = React.lazy(
   () => import("../../pages/ShippingPickup/PickupAddresses/PickupAddresses"),
+);
+const ShipmentTracking = React.lazy(
+  () => import("../../pages/ShippingPickup/ShipmentTracking/ShipmentTracking"),
 );
 
 const AddEditProductPopup = React.lazy(
@@ -579,6 +589,14 @@ function Layout() {
                     element={renderRoute("/orders", <Orders />)}
                   />
                   <Route
+                    path="/payments"
+                    element={renderRoute("/payments", <Payments />)}
+                  />
+                  <Route
+                    path="/returns"
+                    element={renderRoute("/returns", <Returns />)}
+                  />
+                  <Route
                     path="/order-status"
                     element={renderRoute("/order-status", <OrderStatus />)}
                   />
@@ -704,6 +722,13 @@ function Layout() {
                     element={renderRoute(
                       "/pickup-addresses",
                       <PickupAddresses />,
+                    )}
+                  />
+                  <Route
+                    path="/shipment-tracking"
+                    element={renderRoute(
+                      "/shipment-tracking",
+                      <ShipmentTracking />,
                     )}
                   />
 
@@ -870,6 +895,10 @@ function Layout() {
                     element={renderRoute("/warranty", <ProductWarranty />)}
                   />
                   <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
+                  <Route
+                    path="/tax-documents"
+                    element={renderRoute("/tax-documents", <TaxCompliance />)}
+                  />
                   <Route
                     path="/subTax"
                     element={renderSupportedRoute(

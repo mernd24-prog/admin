@@ -12,8 +12,10 @@ const toOrderListParams = (params = {}) => {
         ...(params.status ? { status: params.status } : {}),
         ...(params.orderType || params.order_type ? { orderType: params.orderType || params.order_type } : {}),
         ...(params.paymentStatus || params.payment_status ? { paymentStatus: params.paymentStatus || params.payment_status } : {}),
+        ...(params.deliveryStatus || params.delivery_status ? { deliveryStatus: params.deliveryStatus || params.delivery_status } : {}),
+        ...(params.sellerId || params.seller_id ? { sellerId: params.sellerId || params.seller_id } : {}),
         ...(params.userId || params.buyerId ? { buyerId: params.userId || params.buyerId } : {}),
-        ...(params.keyWord ? { keyWord: params.keyWord } : {}),
+        ...(params.keyWord || params.search ? { search: params.keyWord || params.search } : {}),
         ...(params.fromDate || params.dateFrom ? { fromDate: params.fromDate || params.dateFrom } : {}),
         ...(params.toDate || params.dateTo ? { toDate: params.toDate || params.dateTo } : {}),
         limit,
@@ -31,7 +33,7 @@ const normalizeOrderStatus = (status) => {
 
 const initialState = {
     getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
-    orderCancelData: {}, createOrderData: {}, deleteOrderData: {}
+    orderCancelData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
 
 }
 
@@ -42,11 +44,18 @@ export const getOrderList = createApiThunkPrivate('getOrderList', ENDPOINTS.orde
 export const getOrderInfo = createApiThunkPrivate('getOrderInfo', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'GET', true)
 export const createOrder = createApiThunkPrivate('createOrder', ENDPOINTS.orders.create, 'POST')
 export const updateOrderStatus = createApiThunkPrivate('updateOrderStatus', (payload) => ENDPOINTS.orders.status(firstOrderId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({ status: normalizeOrderStatus(payload.status) }),
+    transformBody: (payload = {}) => ({
+        status: normalizeOrderStatus(payload.status),
+        ...(payload.reason ? { reason: payload.reason } : {}),
+        ...(payload.note ? { note: payload.note } : {}),
+    }),
 })
 export const deleteOrder = createApiThunkPrivate('deleteOrder', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'DELETE')
 export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => ENDPOINTS.orders.cancel(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ reason: payload.reason || payload.cancelReason || "" }),
+})
+export const addOrderNote = createApiThunkPrivate('addOrderNote', (payload) => ENDPOINTS.orders.notes(firstOrderId(payload)), 'POST', false, {
+    transformBody: (payload = {}) => ({ note: payload.note || "", visibility: payload.visibility || "internal" }),
 })
 
 
@@ -70,6 +79,7 @@ createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
         createExtraReducersForThunk(builder, updateOrderStatus, 'updateOrderStatusData')
         createExtraReducersForThunk(builder, deleteOrder, 'deleteOrderData')
         createExtraReducersForThunk(builder, orderCancel, 'orderCancelData')
+        createExtraReducersForThunk(builder, addOrderNote, 'addOrderNoteData')
 
 
 

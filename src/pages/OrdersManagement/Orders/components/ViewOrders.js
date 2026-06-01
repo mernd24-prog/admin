@@ -1,282 +1,255 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { FaChevronDown, FaChevronLeft, FaChevronUp, FaFile } from "react-icons/fa6";
-import { IoEyeOutline } from 'react-icons/io5';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FaChevronLeft, FaFile, FaRegNoteSticky } from "react-icons/fa6";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router";
-import { getOrderInfo, getProductInfo, orderCancel, updateOrderStatus } from "../../../../Redux/orderSlice";
 import { toast } from "sonner";
 import moment from "moment";
-import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
-import { TitleValue2, TitleValue } from "../../../../components/Atoms/TitleValue/TitleValue";
+import { addOrderNote, getOrderInfo, orderCancel, updateOrderStatus } from "../../../../Redux/orderSlice";
+import { getProfile } from "../../../../Redux/userSlice";
 import Loader from "../../../../components/Loader/Loader";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../../components/Atoms/Input/Input";
-import { getProfile } from "../../../../Redux/userSlice";
-import useDropdownOptions from "../../../../hooks/useDropdownOptions";
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { TitleValue, TitleValue2 } from "../../../../components/Atoms/TitleValue/TitleValue";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
-const DESCRIPTION_WORD_LIMIT = 20;
 
-const initialFormData = {
-  order_id: "",
-  status: "",
-  cancelReason: "",
-  store_id: "",
-};
+const STATUS_OPTIONS = [
+  "confirmed",
+  "packed",
+  "shipped",
+  "delivered",
+  "fulfilled",
+  "return_requested",
+  "returned",
+  "cancelled",
+].map((status) => ({ value: status, label: status.replace(/_/g, " ") }));
+
+const firstDefined = (...values) =>
+  values.find((value) => value !== undefined && value !== null && value !== "");
 
 const money = (value) => Number(value || 0);
-const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null && value !== "");
 
-const normalizeAddress = (address = {}) => ({
-  house_flat_floor: address.line1 || "N/A",
-  apartment_area_road: address.line2 || "",
-  delivery_instructions: address.deliveryInstructions || "",
-  phone: address.phone || "",
-  location: {
-    address_string: {
-      fullAddress: [address.line1, address.line2, address.city, address.state, address.postalCode, address.country]
-        .filter(Boolean)
-        .join(", "),
-      city: address.city || "",
-      state: address.state || "",
-      pincode: address.postalCode || "",
-      country: address.country || "",
-    },
-  },
-});
+const percent = (value) => `${Number(value || 0).toFixed(2).replace(/\.00$/, "")}%`;
 
-const normalizeOrderDetail = (order = {}) => {
-  const orderId = firstDefined(order._id, order.id, order.orderId);
-  const items = Array.isArray(order.items) ? order.items : [];
-  const sellerId = firstDefined(order.seller_id, order.sellerId, order.store_id);
-  const sellerName = firstDefined(order.sellerName, order.store_name, "Platform");
+const displayStatus = (value = "") =>
+  String(value || "N/A").replace(/_/g, " ");
 
-  return {
-    ...order,
-    allOrders: [
-      {
-        _id: orderId,
-        status: order.status,
-        store_id: { _id: sellerId || "", name: sellerName },
-        items: items.map((item) => ({
-          ...item,
-          _id: firstDefined(item._id, item.id),
-          quantity: Number(item.quantity || 0),
-          total: money(firstDefined(item.total, item.line_total)),
-          product_id:
-            typeof item.product_id === "object"
-              ? item.product_id
-              : {
-                  _id: item.product_id,
-                  name: item.product_id || "Product",
-                  description: "",
-                },
-        })),
-      },
-    ],
-    orderSummary: {
-      createAt: firstDefined(order.createdAt, order.created_at),
-      cartTotal: money(firstDefined(order.subtotalAmount, order.subtotal_amount)),
-      taxCharges: money(firstDefined(order.taxAmount, order.tax_amount)),
-      discountAmount: money(firstDefined(order.discountAmount, order.discount_amount)),
-      netAmount: money(firstDefined(order.totalAmount, order.total_amount)),
-    },
-    contactInformation: {
-      email: firstDefined(order.buyerEmail, order.user_id?.email, ""),
-      phone: firstDefined(order.buyerPhone, order.user_id?.phone, ""),
-    },
-    deliveryAddress: normalizeAddress(firstDefined(order.shippingAddress, order.shipping_address, {})),
-    orderPayment: {
-      paymentDate: firstDefined(order.updatedAt, order.updated_at, order.createdAt, order.created_at),
-      paymentDetails: { transactionId: firstDefined(order.payment_id, order.transactionId, orderId) },
-      paymentMethod: firstDefined(order.paymentProvider, order.provider, "N/A"),
-      amount: money(firstDefined(order.payableAmount, order.payable_amount, order.totalAmount, order.total_amount)),
-      paymentStatus: firstDefined(order.paymentStatus, order.status, "N/A"),
-    },
-  };
+const normalizeJson = (value, fallback) => {
+  if (!value) return fallback;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return value;
 };
+
+const getOrderId = (order = {}) => firstDefined(order.id, order._id, order.orderId, order.order_no);
+
+const formatMoney = (value) => `₹ ${money(value).toFixed(2)}`;
+
+const getItemKey = (item = {}) => firstDefined(item.id, item._id, `${item.product_id}-${item.variant_sku}`);
+
+const getItemTaxLabel = (tax = {}, item = {}) => {
+  const gstRate = firstDefined(tax.gstRate, item.gst_rate, item.gstRate, 0);
+  const cessRate = firstDefined(tax.cessRate, item.cess_rate, item.cessRate, 0);
+  const mode = firstDefined(tax.taxMode, tax.tax_mode, "N/A");
+  const cessText = money(cessRate) > 0 ? ` + Cess ${percent(cessRate)}` : "";
+  return `${percent(gstRate)} GST${cessText} · ${displayStatus(mode)}`;
+};
+
+const getOrderTaxRates = (taxBreakup = {}, items = []) => {
+  const sourceItems = Array.isArray(taxBreakup.items) && taxBreakup.items.length
+    ? taxBreakup.items
+    : items.map((item) => normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {}));
+  const rates = sourceItems
+    .map((taxItem, index) => firstDefined(taxItem.gstRate, items[index]?.gst_rate, items[index]?.gstRate))
+    .filter((rate) => rate !== undefined && rate !== null && rate !== "")
+    .map((rate) => Number(rate || 0));
+  return [...new Set(rates)].sort((a, b) => a - b);
+};
+
+const groupItemsBySeller = (items = []) =>
+  items.reduce((groups, item) => {
+    const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
+    const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
+    const sellerName = firstDefined(sellerSnapshot.name, sellerSnapshot.sellerName, sellerId);
+    if (!groups[sellerId]) {
+      groups[sellerId] = { sellerId, sellerName, items: [] };
+    }
+    groups[sellerId].items.push(item);
+    return groups;
+  }, {});
+
+const buildSellerSettlements = (items = []) =>
+  Object.values(groupItemsBySeller(items)).map((group) => {
+    const totals = group.items.reduce(
+      (acc, item) => {
+        const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+        const pricing = normalizeJson(firstDefined(item.pricing_snapshot, item.pricingSnapshot), {});
+        const lineTotal = money(firstDefined(item.line_total, item.lineTotal));
+        const taxableAmount = money(firstDefined(itemTax.taxableAmount, itemTax.taxable_amount, lineTotal - money(firstDefined(item.discount_amount, item.discountAmount))));
+        const taxAmount = money(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount, itemTax.tax_amount));
+        const platformFee = money(firstDefined(item.platform_fee_amount, item.platformFeeAmount, pricing.platformFeeAmount));
+        const commissionFee = money(firstDefined(pricing.commissionFee, pricing.commission_fee, platformFee));
+        const fixedFee = money(firstDefined(pricing.fixedFee, pricing.fixed_fee));
+        const closingFee = money(firstDefined(pricing.closingFee, pricing.closing_fee));
+        const commissionPercent = money(firstDefined(pricing.commissionPercent, pricing.commission_percent));
+
+        acc.grossSales += lineTotal;
+        acc.taxableSales += taxableAmount;
+        acc.taxCollected += taxAmount;
+        acc.platformFee += platformFee;
+        acc.commissionFee += commissionFee;
+        acc.fixedFee += fixedFee;
+        acc.closingFee += closingFee;
+        if (commissionPercent > 0) acc.commissionRates.add(commissionPercent);
+        return acc;
+      },
+      {
+        grossSales: 0,
+        taxableSales: 0,
+        taxCollected: 0,
+        platformFee: 0,
+        commissionFee: 0,
+        fixedFee: 0,
+        closingFee: 0,
+        commissionRates: new Set(),
+      },
+    );
+
+    return {
+      ...group,
+      ...totals,
+      commissionRates: [...totals.commissionRates].sort((a, b) => a - b),
+      sellerPayout: Math.max(0, Number((totals.taxableSales - totals.platformFee).toFixed(2))),
+    };
+  });
 
 const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const orderStatuses = useDropdownOptions("order-statuses");
 
   const [state, setState] = useState({
-    selectedSeller: "",
-    isExpanded: true,
     orderInfo: null,
-    storeOptions: [],
     isLoading: false,
-    viewDetails: false,
-    viewData: null,
     statusModal: false,
+    noteModal: false,
     userData: {},
   });
-
-  const [formData, setFormData] = useState(initialFormData);
-
-  const canModifyOrder = useMemo(() => {
-    return [3, 9].includes(Number(state.userData?.role_id || state.userData?.roleId));
-  }, [state.userData?.role_id, state.userData?.roleId]);
-
-  const allStoresOption = useMemo(() => [{ label: "All Stores", value: "" }], []);
-
-  const handleError = useCallback((error, defaultMessage = "An error occurred") => {
-    const errorMessage = error?.message || error || defaultMessage;
-    toast.error(errorMessage);
-  }, []);
+  const [formData, setFormData] = useState({ status: "", reason: "", note: "" });
+  const [noteData, setNoteData] = useState({ note: "", visibility: "internal" });
 
   const setLoading = useCallback((loading) => {
-    setState(prev => ({ ...prev, isLoading: loading }));
+    setState((prev) => ({ ...prev, isLoading: loading }));
+  }, []);
+
+  const handleError = useCallback((error, defaultMessage = "An error occurred") => {
+    toast.error(error?.message || error || defaultMessage);
   }, []);
 
   const fetchOrderInfo = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
-      const res = await dispatch(getOrderInfo({ order_no: id })).unwrap();
-      if (!res?.data) throw new Error("Invalid response format");
-
-      const normalizedOrder = normalizeOrderDetail(res.data);
-      const options = normalizedOrder.allOrders?.map((store) => ({
-        label: store.store_id?.name || "Unknown Store",
-        value: store.store_id?._id || "",
-      })) || [];
-
-      setState(prev => ({
-        ...prev,
-        storeOptions: [...allStoresOption, ...options],
-        orderInfo: normalizedOrder,
-      }));
+      const res = await dispatch(getOrderInfo({ orderId: id })).unwrap();
+      if (!res?.data) throw new Error("Invalid order response");
+      setState((prev) => ({ ...prev, orderInfo: res.data }));
     } catch (error) {
       handleError(error, "Failed to fetch order information");
     } finally {
       setLoading(false);
     }
-  }, [id, dispatch, handleError, setLoading, allStoresOption]);
+  }, [id, dispatch, handleError, setLoading]);
 
   const fetchUserData = useCallback(async () => {
     try {
       const res = await dispatch(getProfile()).unwrap();
-      if (res?.data) setState(prev => ({ ...prev, userData: res.data }));
-    } catch (error) {
-      handleError(error, "Failed to fetch user profile");
+      if (res?.data) setState((prev) => ({ ...prev, userData: res.data }));
+    } catch {
+      setState((prev) => ({ ...prev, userData: {} }));
     }
-  }, [dispatch, handleError]);
-
-  const handleDetails = useCallback(async (item) => {
-    const productId = firstDefined(item?.product_id?._id, item?.product_id, item?.productId);
-    if (!productId) return;
-    try {
-      setLoading(true);
-      const res = await dispatch(getProductInfo({ product_id: productId })).unwrap();
-      if (res?.data) setState(prev => ({ ...prev, viewData: res.data, viewDetails: true }));
-    } catch (error) {
-      handleError(error, "Failed to fetch product details");
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, handleError, setLoading]);
-
-  const validateFormData = useCallback(() => {
-    if (!formData.order_id) return false;
-    if (!formData.status) {
-      toast.error("Status is required");
-      return false;
-    }
-    if (formData.status === "cancelled" && (!formData.cancelReason || formData.cancelReason.trim().length < MINIMUM_CANCEL_REASON_LENGTH)) {
-      toast.error(`Please provide a valid cancellation reason (at least ${MINIMUM_CANCEL_REASON_LENGTH} characters)`);
-      return false;
-    }
-    return true;
-  }, [formData]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!validateFormData()) return;
-    try {
-      setLoading(true);
-      let res;
-      if (formData.status === "cancelled") {
-        res = await dispatch(orderCancel({
-          order_id: formData.order_id,
-          cancelledBy: "admin",
-          cancelReason: formData.cancelReason || "Order cancelled by admin",
-        })).unwrap();
-      } else {
-        res = await dispatch(updateOrderStatus({
-          order_id: formData.order_id,
-          status: formData.status,
-        })).unwrap();
-      }
-      toast.success(res?.message || "Order updated successfully");
-      setState(prev => ({ ...prev, statusModal: false }));
-      setFormData(initialFormData);
-      await fetchOrderInfo();
-    } catch (error) {
-      handleError(error, "Failed to update order");
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, formData, fetchOrderInfo, handleError, setLoading, validateFormData]);
-
-  const handleSelectChange = useCallback((option) => {
-    setFormData(prev => ({ ...prev, status: option?.value || "" }));
-  }, []);
-
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }, []);
-
-  const handleStatusModalOpen = useCallback((order) => {
-    const orderId = firstDefined(order?._id, order?.id);
-    if (!orderId) return;
-    setFormData({ ...initialFormData, order_id: orderId, store_id: order?.store_id?._id || "" });
-    setState(prev => ({ ...prev, statusModal: true }));
-  }, []);
-
-  const formatDescription = useCallback((description) => {
-    if (!description) return "";
-    const words = description.split(' ');
-    return words.length > DESCRIPTION_WORD_LIMIT ? `${words.slice(0, DESCRIPTION_WORD_LIMIT).join(' ')}...` : description;
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     fetchOrderInfo();
     fetchUserData();
   }, [fetchOrderInfo, fetchUserData]);
 
-  const renderOrderItems = useCallback((order) => (
-    <div key={order._id}>
-      <div className="py-3 flex justify-start gap-3 items-center">
-        <span className="px-3 py-1 text-sm text-teal-500 rounded-full bg-teal-50">{order.store_id?.name || "Unknown Store"}</span>
-        {canModifyOrder && (
-          <button className="text-gray-500 hover:text-gray-700 transition-colors" onClick={() => handleStatusModalOpen(order)} aria-label="Update order status">
-            <FaFile size={18} />
-          </button>
-        )}
-      </div>
-      {order.items?.map((item) => (
-        <div key={item._id} className="grid items-center grid-cols-11 py-4 border-b">
-          <div className="flex items-center col-span-4">
-            <div>
-              <div className="font-medium">{item?.product_id?.name || "Unknown Product"}</div>
-              <div className="text-xs text-gray-500 truncate text-wrap break-words">{formatDescription(item?.product_id?.description)}</div>
-            </div>
-          </div>
-          <div className="col-span-2"><span className="px-2 py-1 text-xs text-teal-500 rounded-full bg-teal-50">{order.store_id?.name || "Unknown Store"}</span></div>
-          <div className="col-span-2"><span className="px-2 py-1 text-xs text-blue-500 rounded-full bg-blue-50">{order.status || "Unknown"}</span></div>
-          <div className="col-span-1 text-center">{item.quantity || 0}</div>
-          <div className="col-span-2 font-medium">₹ {(item.total || 0).toFixed(2)}</div>
-          <button className="text-gray-500 hover:text-gray-700 transition-colors" onClick={() => handleDetails(item)} aria-label="View product details">
-            <IoEyeOutline size={18} />
-          </button>
-        </div>
-      ))}
-    </div>
-  ), [canModifyOrder, formatDescription, handleDetails, handleStatusModalOpen]);
+  const order = state.orderInfo || {};
+  const orderId = getOrderId(order);
+  const orderNumber = firstDefined(order.order_number, order.orderNumber, order.order_no, orderId);
+  const shippingAddress = normalizeJson(firstDefined(order.shipping_address, order.shippingAddress), {});
+  const taxBreakup = normalizeJson(firstDefined(order.tax_breakup, order.taxBreakup), {});
+  const summary = order.summary || {};
+  const taxIncludedAmount = money(firstDefined(summary.taxIncludedAmount, taxBreakup.taxIncludedAmount));
+  const taxPayableAmount = money(firstDefined(summary.taxPayableAmount, taxBreakup.taxPayableAmount));
+  const customerTotalAmount = money(firstDefined(summary.customerTotalAmount, order.total_amount, order.totalAmount));
+  const customerPayableAmount = money(firstDefined(summary.customerPayableAmount, order.payable_amount, order.payableAmount, order.total_amount));
+  const items = Array.isArray(order.items) ? order.items : [];
+  const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items)), [items]);
+  const sellerSettlements = useMemo(() => buildSellerSettlements(items), [items]);
+  const orderTaxRates = useMemo(() => getOrderTaxRates(taxBreakup, items), [taxBreakup, items]);
+  const timeline = Array.isArray(order.timeline) ? order.timeline : [];
+  const notes = Array.isArray(order.notes) ? order.notes : [];
+
+  const handleStatusSubmit = useCallback(async () => {
+    if (!formData.status) {
+      toast.error("Status is required");
+      return;
+    }
+    if (formData.status === "cancelled" && formData.reason.trim().length < MINIMUM_CANCEL_REASON_LENGTH) {
+      toast.error(`Please provide a cancellation reason with at least ${MINIMUM_CANCEL_REASON_LENGTH} characters`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        orderId,
+        status: formData.status,
+        reason: formData.reason,
+        note: formData.note,
+      };
+      const res = formData.status === "cancelled"
+        ? await dispatch(orderCancel({ orderId, reason: formData.reason })).unwrap()
+        : await dispatch(updateOrderStatus(payload)).unwrap();
+      toast.success(res?.message || "Order updated successfully");
+      setState((prev) => ({ ...prev, statusModal: false }));
+      setFormData({ status: "", reason: "", note: "" });
+      await fetchOrderInfo();
+    } catch (error) {
+      handleError(error, "Failed to update order");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, fetchOrderInfo, formData, handleError, orderId, setLoading]);
+
+  const handleNoteSubmit = useCallback(async () => {
+    if (!noteData.note.trim()) {
+      toast.error("Note is required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await dispatch(addOrderNote({ orderId, ...noteData })).unwrap();
+      toast.success("Note added successfully");
+      setState((prev) => ({ ...prev, noteModal: false }));
+      setNoteData({ note: "", visibility: "internal" });
+      await fetchOrderInfo();
+    } catch (error) {
+      handleError(error, "Failed to add order note");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, fetchOrderInfo, handleError, noteData, orderId, setLoading]);
 
   if (!id) {
     return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-gray-700">Invalid Order ID</div>;
@@ -285,106 +258,225 @@ const OrderSummary = () => {
   return (
     <div className="min-h-screen p-4 bg-gray-100">
       <Loader loading={state.isLoading} />
-      <div className="flex flex-col gap-4 mx-auto max-w-7xl lg:flex-row">
-        <div className="flex-grow p-4">
-          <div className="flex items-center p-2 bg-white">
-            <button className="mr-2 text-blue-500 hover:text-blue-700 transition-colors" onClick={() => navigate('/app/orders')} aria-label="Go back to orders">
-              <FaChevronLeft size={20} />
-            </button>
-            <h1 className="text-lg font-medium">Order #{id}</h1>
-            <div className="relative ml-auto">
-              <FilterSelect
-                options={state.storeOptions}
-                placeholder="Store"
-                value={state.storeOptions.find(opt => opt.value === state.selectedSeller) || null}
-                onChange={(value) => setState(prev => ({ ...prev, selectedSeller: value?.value || "" }))}
-              />
-            </div>
+
+      <div className="mx-auto max-w-7xl space-y-4">
+        <div className="flex items-center gap-3 bg-white p-3">
+          <button className="text-blue-500 hover:text-blue-700" onClick={() => navigate("/app/orders")} aria-label="Go back to orders">
+            <FaChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-medium">Order #{orderNumber}</h1>
+            <p className="text-xs text-gray-500">{orderId}</p>
           </div>
-          <div className="bg-white p-2 mb-8">
-            <div className="grid grid-cols-12 py-3 text-sm font-medium text-gray-600 border-b">
-              <div className="col-span-4">Items summary</div>
-              <div className="col-span-2">Fulfilled by</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-1">Quantity</div>
-              <div className="col-span-2">Amount</div>
-              <div className="col-span-1">Actions</div>
-            </div>
-            {state.orderInfo?.allOrders?.length > 0 ? state.orderInfo.allOrders.map(renderOrderItems) : <div className="py-8 text-center text-gray-500">No orders found</div>}
+          <div className="ml-auto flex gap-2">
+            <PermissionGuard module="orders" action="update" hide>
+              <button className="border px-3 py-2 rounded text-sm" onClick={() => setState((prev) => ({ ...prev, noteModal: true }))}>
+                <FaRegNoteSticky className="inline mr-2" /> Note
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="orders" action="status_change" hide>
+              <button className="bg-[#181c32] text-white px-3 py-2 rounded text-sm" onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}>
+                <FaFile className="inline mr-2" /> Status
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
-        <div className="w-full lg:w-1/2 space-y-4">
-          <div className="bg-white shadow-sm">
-            <div className="flex items-center border-b p-3">
-              <FaFile className="mr-2" size={18} />
-              <h2 className="text-[1.1rem] pt-2">Order Summary</h2>
-            </div>
-            <div className="p-6 space-y-2">
-              <TitleValue title="Order Date" value={state.orderInfo?.orderSummary?.createAt ? moment(state.orderInfo.orderSummary.createAt).format('DD MMM YYYY') : 'N/A'} />
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal:</span><span>₹{(state.orderInfo?.orderSummary?.cartTotal || 0).toFixed(2)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Tax:</span><span>₹{(state.orderInfo?.orderSummary?.taxCharges || 0).toFixed(2)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Discount:</span><span className="text-green-600">-₹{(state.orderInfo?.orderSummary?.discountAmount || 0).toFixed(2)}</span></div>
-              <div className="border-t pt-2 mt-1 flex justify-between font-medium"><span className="text-gray-700">Total:</span><span className="text-gray-900">₹{(state.orderInfo?.orderSummary?.netAmount || 0).toFixed(2)}</span></div>
-            </div>
-          </div>
-
-          <div className="relative p-2 bg-white shadow-sm">
-            <div className="flex items-center justify-between p-2 border-b">
-              <h2 className="text-[1.1rem]">Delivery Address</h2>
-              <button onClick={() => setState(prev => ({ ...prev, isExpanded: !prev.isExpanded }))} className="text-gray-500 hover:text-gray-700 transition-colors" aria-label={state.isExpanded ? "Collapse address" : "Expand address"}>
-                {state.isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-            </div>
-            {state.isExpanded && (
-              <div className="space-y-4 pt-4">
-                <TitleValue title="House/Flat/Floor" value={state.orderInfo?.deliveryAddress?.house_flat_floor || 'N/A'} />
-                <TitleValue title="Apartment/Area/Road" value={state.orderInfo?.deliveryAddress?.apartment_area_road || 'N/A'} />
-                <TitleValue title="Delivery Instructions" value={state.orderInfo?.deliveryAddress?.delivery_instructions || 'N/A'} />
-                <TitleValue title="Phone" value={state.orderInfo?.deliveryAddress?.phone || 'N/A'} />
-                <TitleValue2 title="Full Address" value={state.orderInfo?.deliveryAddress?.location?.address_string?.fullAddress || 'N/A'} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <section className="lg:col-span-2 bg-white p-4">
+            <h2 className="font-medium mb-3">Items By Seller</h2>
+            {sellerGroups.length ? sellerGroups.map((group) => (
+              <div key={group.sellerId} className="border-t py-3">
+                <div className="text-sm font-medium text-teal-600 mb-2">{group.sellerName}</div>
+                {group.items.map((item) => {
+                  const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+                  const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
+                  const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");
+                  return (
+                    <div key={getItemKey(item)} className="grid grid-cols-12 gap-2 py-3 border-b text-sm">
+                      <div className="col-span-5">
+                        <div className="font-medium">{productTitle}</div>
+                        <div className="text-xs text-gray-500">
+                          SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
+                        </div>
+                      </div>
+                      <div className="col-span-2 capitalize">{displayStatus(order.status)}</div>
+                      <div className="col-span-1 text-center">{Number(item.quantity || 0)}</div>
+                      <div className="col-span-2">₹ {money(firstDefined(item.unit_price, item.unitPrice)).toFixed(2)}</div>
+                      <div className="col-span-2">
+                        <div>₹ {money(firstDefined(item.line_total, item.lineTotal)).toFixed(2)}</div>
+                        <div className="text-xs text-gray-500">
+                          Tax {formatMoney(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount))} ({getItemTaxLabel(itemTax, item)})
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Taxable {formatMoney(firstDefined(itemTax.taxableAmount, itemTax.taxable_amount, item.line_total, item.lineTotal))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            )) : <div className="py-8 text-center text-gray-500">No items found</div>}
+          </section>
+
+          <aside className="space-y-4">
+            <section className="bg-white p-4">
+              <h2 className="font-medium mb-3">Order Summary</h2>
+              <TitleValue title="Order Date" value={order.created_at ? moment(order.created_at).format("DD MMM YYYY HH:mm") : "N/A"} />
+              <TitleValue title="Status" value={displayStatus(order.status)} />
+              <TitleValue title="Payment" value={displayStatus(firstDefined(order.payment_status, order.paymentStatus))} />
+              <TitleValue title="Payment Method" value={displayStatus(firstDefined(order.payment_provider, order.paymentProvider))} />
+              <TitleValue title="Delivery" value={displayStatus(firstDefined(order.delivery_status, order.deliveryStatus))} />
+              <div className="border-t pt-3 mt-3 space-y-2 text-sm">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹ {money(firstDefined(order.subtotal_amount, order.subtotalAmount)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Discount</span><span className="text-green-600">-₹ {money(firstDefined(order.discount_amount, order.discountAmount)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>GST payable by customer</span><span>₹ {taxPayableAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>GST included in items</span><span>₹ {taxIncludedAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Platform fees deducted from seller</span><span>₹ {money(firstDefined(order.platform_fee_amount, order.platformFeeAmount)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>COD Charge</span><span>₹ {money(firstDefined(order.cod_charge_amount, order.codChargeAmount)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Wallet</span><span>-₹ {money(firstDefined(order.wallet_discount_amount, order.walletDiscountAmount)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Customer total</span><span>₹ {customerTotalAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between font-medium border-t pt-2"><span>Customer payable</span><span>₹ {customerPayableAmount.toFixed(2)}</span></div>
+              </div>
+            </section>
+
+            <section className="bg-white p-4">
+              <h2 className="font-medium mb-3">Tax Breakup</h2>
+              <TitleValue title="Taxable" value={formatMoney(taxBreakup.taxableAmount)} />
+              <TitleValue title="GST Rate" value={orderTaxRates.length ? orderTaxRates.map(percent).join(", ") : "N/A"} />
+              <TitleValue title={`CGST ${money(taxBreakup.cgstAmount) > 0 && orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.cgstAmount)} />
+              <TitleValue title={`SGST ${money(taxBreakup.sgstAmount) > 0 && orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.sgstAmount)} />
+              <TitleValue title={`IGST ${money(taxBreakup.igstAmount) > 0 ? orderTaxRates.map(percent).join(", ") : ""}`} value={formatMoney(taxBreakup.igstAmount)} />
+              <TitleValue title="Cess" value={formatMoney(taxBreakup.cessAmount)} />
+              <TitleValue title="Total Tax" value={formatMoney(firstDefined(order.tax_amount, order.taxAmount, taxBreakup.totalTaxAmount))} />
+              <TitleValue title="Tax Added To Payable" value={formatMoney(taxPayableAmount)} />
+              <TitleValue title="Tax Included In Price" value={formatMoney(taxIncludedAmount)} />
+              <TitleValue title="Mode" value={displayStatus(taxBreakup.taxMode)} />
+              {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
+                <div className="mt-3 border-t pt-3 space-y-2">
+                  {taxBreakup.items.map((taxItem, index) => {
+                    const orderItem = items[index] || {};
+                    const productSnapshot = normalizeJson(firstDefined(orderItem.product_snapshot, orderItem.productSnapshot), {});
+                    const productTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, taxItem.productId, `Item ${index + 1}`);
+                    return (
+                      <div key={`${taxItem.productId || "tax"}-${index}`} className="text-xs text-gray-600">
+                        <div className="font-medium text-gray-700">{productTitle}</div>
+                        <div className="flex justify-between gap-2">
+                          <span>{getItemTaxLabel(taxItem, orderItem)}</span>
+                          <span>{formatMoney(money(taxItem.taxAmount) + money(taxItem.cessAmount))}</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span>Taxable base</span>
+                          <span>{formatMoney(taxItem.taxableAmount)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-white p-4">
+              <h2 className="font-medium mb-3">Buyer & Shipping</h2>
+              <TitleValue title="Buyer" value={firstDefined(order.buyer_id, order.buyerId, "N/A")} />
+              <TitleValue2 title="Address" value={[shippingAddress.line1, shippingAddress.line2, shippingAddress.city, shippingAddress.state, shippingAddress.postalCode, shippingAddress.country].filter(Boolean).join(", ") || "N/A"} />
+            </section>
+          </aside>
+        </div>
+
+        <section className="bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="font-medium">Seller Commission & Payout</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Admin flow: keep tax in the tax ledger, cut platform fees/commission, then pay seller the net product amount.
+              </p>
+            </div>
           </div>
+          {sellerSettlements.length ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {sellerSettlements.map((seller) => (
+                <div key={seller.sellerId} className="border p-3 text-sm">
+                  <div className="flex justify-between gap-2 mb-3">
+                    <div>
+                      <div className="font-medium text-teal-600">{seller.sellerName}</div>
+                      <div className="text-xs text-gray-500">{seller.sellerId}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">{formatMoney(seller.sellerPayout)}</div>
+                      <div className="text-xs text-gray-500">seller payout</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between"><span>Taxable product sales</span><span>{formatMoney(seller.taxableSales)}</span></div>
+                    <div className="flex justify-between"><span>Tax to maintain</span><span>{formatMoney(seller.taxCollected)}</span></div>
+                    <div className="flex justify-between">
+                      <span>Platform commission</span>
+                      <span>
+                        -{formatMoney(seller.commissionFee)}
+                        {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
+                      </span>
+                    </div>
+                    <div className="flex justify-between"><span>Fixed/closing fees</span><span>-{formatMoney(seller.fixedFee + seller.closingFee)}</span></div>
+                    <div className="flex justify-between font-medium border-t pt-2"><span>Net seller payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
+                  </div>
+                  <div className="mt-3 bg-gray-50 p-2 text-xs text-gray-600">
+                    Formula: Seller payout = taxable product sales - platform commission - fixed/closing fees. Tax is shown separately so admin can maintain GST liability before settlement.
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-sm text-gray-500">No seller settlement data found</div>
+          )}
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <section className="bg-white p-4">
+            <h2 className="font-medium mb-3">Timeline</h2>
+            {timeline.length ? timeline.map((entry) => (
+              <div key={entry.id} className="border-l pl-3 pb-4 text-sm">
+                <div className="font-medium capitalize">{displayStatus(entry.to_status || entry.toStatus)}</div>
+                <div className="text-gray-500">{entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A"} · {entry.actor_role || "system"}</div>
+                {entry.reason && <div className="text-gray-600 mt-1">{entry.reason}</div>}
+              </div>
+            )) : <div className="text-sm text-gray-500">No timeline yet</div>}
+          </section>
+
+          <section className="bg-white p-4">
+            <h2 className="font-medium mb-3">Notes</h2>
+            {notes.length ? notes.map((note) => (
+              <div key={note.id} className="border-b py-3 text-sm">
+                <div className="text-gray-700">{note.note}</div>
+                <div className="text-xs text-gray-500 mt-1">{note.actor_role || "system"} · {note.visibility} · {note.created_at ? moment(note.created_at).format("DD MMM YYYY HH:mm") : "N/A"}</div>
+              </div>
+            )) : <div className="text-sm text-gray-500">No notes yet</div>}
+          </section>
         </div>
       </div>
 
-      <DefaultModal isOpen={state.viewDetails} onClose={() => setState(prev => ({ ...prev, viewDetails: false }))} title={state.viewData?.name || 'Product Details'}>
-        <div className="p-3">
-          <h3 className="text-lg font-semibold mb-2">{state.viewData?.name || state.viewData?.title || 'N/A'}</h3>
-          <p className="text-gray-600 mb-4">{state.viewData?.description || 'N/A'}</p>
-          <div className="grid grid-cols-2 gap-4">
-            <TitleValue2 title="Category" value={state.viewData?.category?.name || state.viewData?.category || 'N/A'} className="text-sm" />
-            <TitleValue2 title="Brand" value={state.viewData?.brand?.name || state.viewData?.brand || 'N/A'} className="text-sm" />
-            <TitleValue2 title="Price" value={`₹${state.viewData?.price || state.viewData?.salePrice || 0}`} className="text-sm" />
-            <TitleValue2 title="MRP" value={`₹${state.viewData?.mrp || 0}`} className="text-sm" />
-          </div>
+      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleStatusSubmit}>
+        <div className="space-y-4">
+          <FilterSelect
+            options={STATUS_OPTIONS}
+            value={STATUS_OPTIONS.find((opt) => opt.value === formData.status) || null}
+            onChange={(option) => setFormData((prev) => ({ ...prev, status: option?.value || "" }))}
+            label="Status"
+            placeholder="Select Status"
+          />
+          <Input type="textarea" labelName="Reason" value={formData.reason} onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))} name="reason" placeholder="Reason or operational note" maxLength={1000} />
+          <Input type="textarea" labelName="Internal Note" value={formData.note} onChange={(event) => setFormData((prev) => ({ ...prev, note: event.target.value }))} name="note" placeholder="Optional internal note" maxLength={1000} />
         </div>
       </DefaultModal>
 
-      <DefaultModal isOpen={state.statusModal} onClose={() => setState(prev => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleSubmit}>
+      <DefaultModal isOpen={state.noteModal} onClose={() => setState((prev) => ({ ...prev, noteModal: false }))} title="Add Order Note" onSubmit={handleNoteSubmit}>
         <div className="space-y-4">
-          <FilterSelect
-            options={orderStatuses.options}
-            value={orderStatuses.options.find((opt) => opt.value === formData.status) || null}
-            onChange={handleSelectChange}
-            label="Status"
-            placeholder="Select Status"
-            isLoading={orderStatuses.loading}
-          />
-          {formData.status === "cancelled" && (
-            <Input
-              type="textarea"
-              labelName="Reason"
-              value={formData.cancelReason}
-              onChange={handleInputChange}
-              name="cancelReason"
-              placeholder="Enter cancellation reason (minimum 10 characters)"
-              maxLength={1000}
-              minLength={MINIMUM_CANCEL_REASON_LENGTH}
-              required={true}
-            />
-          )}
+          <select className="border rounded px-3 py-2 text-sm w-full" value={noteData.visibility} onChange={(event) => setNoteData((prev) => ({ ...prev, visibility: event.target.value }))}>
+            <option value="internal">Internal</option>
+            <option value="seller">Seller visible</option>
+            <option value="buyer">Buyer visible</option>
+          </select>
+          <Input type="textarea" labelName="Note" value={noteData.note} onChange={(event) => setNoteData((prev) => ({ ...prev, note: event.target.value }))} name="note" placeholder="Enter order note" maxLength={2000} required={true} />
         </div>
       </DefaultModal>
     </div>
