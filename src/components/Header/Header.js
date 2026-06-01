@@ -166,7 +166,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
           <div className="relative ">
             <div className="flex items-center gap-2.5">
               <div className="hidden md:block text-right leading-tight">
-                <p className="max-w-44 text-[14px] font-bold font-inter text-white">
+                <p className="max-w-64    text-[14px] font-bold font-inter text-white">
                   {getDisplayName(userData)}
                 </p>
                 <p className=" truncate text-[10px] font-inter mt-[2px] font-medium capitalize text-white/60">
@@ -195,65 +195,61 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
               className={`absolute  right-0 w-64 mt-3 bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
               ref={dropDownRef}
             >
-              {openModel && (
-                <>
-                  <div className="px-4 py-3 bg-[#082f91]/[0.04] border-b border-gray-100 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={toggleLogoutModal}
-                      className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
-                      aria-label="Close profile menu"
-                    >
-                      {avatarUrl && !avatarFailed ? (
-                        <img
-                          className="h-full w-full object-cover"
-                          src={avatarUrl}
-                          alt={getDisplayName(userData)}
-                          onError={() => setAvatarFailed(true)}
-                        />
-                      ) : (
-                        getUserInitial(userData)
-                      )}
-                    </button>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        Hi, {getDisplayName(userData)}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate text-wrap">
-                        {userData?.email}
-                      </p>
-                    </div>
-                  </div>
-                  {userData?.role_id !== 9 && (
-                    <div className="py-1 text-xs px-4">
-                      <Link
-                        to="/app/profile"
-                        className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-semibold hover:bg-gray-100 hover:text-blue-600 "
-                      >
-                        <FiUser className="mr-3" />
-                        no
-                      </Link>
-                      <Link
-                        to={`/app/changePassword`}
-                        className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
-                      >
-                        <FiKey className="mr-3" />
-                        Change Password
-                      </Link>
-                    </div>
+              <div className="px-4 py-3 bg-[#082f91]/[0.04] border-b border-gray-100 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleLogoutModal}
+                  className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
+                  aria-label="Close profile menu"
+                >
+                  {avatarUrl && !avatarFailed ? (
+                    <img
+                      className="h-full w-full object-cover"
+                      src={avatarUrl}
+                      alt={getDisplayName(userData)}
+                      onError={() => setAvatarFailed(true)}
+                    />
+                  ) : (
+                    getUserInitial(userData)
                   )}
-
-                  <div className="py-1 border-t border-gray-100 text-xs px-4">
-                    <p
-                      className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
-                      onClick={handleLogout}
-                    >
-                      <IoLogOutOutline className="mr-3" />
-                      Logout
-                    </p>
-                  </div>
-                </>
+                </button>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Hi, {getDisplayName(userData)}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate text-wrap">
+                    {userData?.email}
+                  </p>
+                </div>
+              </div>
+              {userData?.role_id !== 9 && (
+                <div className="py-1 text-xs px-4">
+                  <Link
+                    to="/app/profile"
+                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-semibold hover:bg-gray-100 hover:text-blue-600 "
+                  >
+                    <FiUser className="mr-3" />
+                    Profile
+                  </Link>
+                  <Link
+                    to={`/app/changePassword`}
+                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
+                  >
+                    <FiKey className="mr-3" />
+                    Change Password
+                  </Link>
+                </div>
               )}
+
+              <div className="py-1 border-t border-gray-100 text-xs px-4">
+                <p
+                  className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
+                  onClick={handleLogout}
+                >
+                  <IoLogOutOutline className="mr-3" />
+                  Logout
+                </p>
+              </div>
             </div>
           </div>
         </div>

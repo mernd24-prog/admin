@@ -232,6 +232,19 @@ select:active {
     box-shadow 0.2s ease;
 }
 
+.admin-input[data-has-value="true"],
+.admin-shell
+  input[data-has-value="true"]:not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):not([type="hidden"]),
+.admin-shell select[data-has-value="true"],
+.admin-shell textarea[data-has-value="true"] {
+  border-color: #b9c8ea;
+  background-color: #f7f9ff;
+  color: #383838;
+  font-weight: 500;
+}
+
 .admin-input:focus {
   border-color: var(--admin-navy);
   box-shadow: 0 0 0 2px rgba(8, 47, 145, 0.1);
@@ -241,6 +254,11 @@ select:active {
 .admin-input[readonly] {
   color: #667085;
   cursor: not-allowed;
+}
+
+.admin-input[data-has-value="true"]:disabled,
+.admin-input[data-has-value="true"][readonly] {
+  color: #082f91;
 }
 
 .admin-field {

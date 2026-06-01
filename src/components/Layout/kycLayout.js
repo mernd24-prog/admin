@@ -158,8 +158,8 @@ const KYCStatusLayout = ({
   }, [currentSection, scrollContentToTop]);
 
   return (
-    <div className="min-h-screen bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
-      <aside className="w-full bg-[#FEFEFE] shadow-[2px_2px_50px_0px_#0000001A] lg:min-h-screen">
+    <div className="min-h-screen  bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
+      <aside className="w-full shadow-[2px_2px_50px_0px_#0000001A] lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
           <div className="border border-[#f8e0c1] bg-[#F4F1ED] pb-5 shadow-[2px_2px_50px_0px_#0000001A] sm:pb-7 lg:pb-10">
             <div className="flex h-[118px]  items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
@@ -273,7 +273,7 @@ const KYCStatusLayout = ({
 
         <div
           ref={contentRef}
-          className="hide-scrollbar min-h-[calc(90vh-64px)] overflow-y-auto px-4 py-6 sm:px-8 lg:h-[calc(100vh-75px)] lg:px-10"
+          className="min-h-[calc(100vh-64px)] px-4 py-6 sm:px-8 lg:min-h-[calc(100vh-75px)] lg:px-10"
         >
           {children}
         </div>
