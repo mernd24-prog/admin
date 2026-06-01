@@ -30,12 +30,25 @@ const initialState = {
   moderateAdminProductData: {},
   adminOrdersData: {},
   adminPaymentsData: {},
+  codConfigData: {},
+  updateCodConfigData: {},
+  approvePaymentData: {},
+  rejectPaymentData: {},
+  adminReturnsData: {},
+  adminReturnData: {},
+  approveReturnData: {},
+  rejectReturnData: {},
+  updateReturnData: {},
+  refundReturnData: {},
   adminPayoutsData: {},
   adminsData: {},
   createAdminData: {},
   createAdminPayoutData: {},
   taxReportsData: {},
+  taxInvoicesData: {},
+  taxCreditNotesData: {},
   createTaxInvoiceData: {},
+  createTaxCreditNoteData: {},
   deliveryServiceabilityData: {},
   orderEwayBillData: {},
   createOrderEwayBillData: {},
@@ -498,11 +511,37 @@ export const getAdminOrders = createApiThunkPrivate(
   { transformParams: pickQuery(listOrderQueryKeys) }
 );
 
-export const getAdminPayments = createApiThunkPrivate("adminCore/getAdminPayments", ENDPOINTS.payments.admin, "GET", true, { transformParams: pickQuery(["status", "provider", "fromDate", "toDate", "limit", "offset"]) });
+export const getAdminPayments = createApiThunkPrivate("adminCore/getAdminPayments", ENDPOINTS.payments.admin, "GET", true, { transformParams: pickQuery(["status", "provider", "buyerId", "orderId", "search", "fromDate", "toDate", "limit", "offset"]) });
+export const getCodConfig = createApiThunkPrivate("adminCore/getCodConfig", ENDPOINTS.payments.codConfig, "GET");
+export const updateCodConfig = createApiThunkPrivate("adminCore/updateCodConfig", ENDPOINTS.payments.codConfig, "PUT", false, {
+  transformBody: (payload = {}) => ({
+    enabled: Boolean(payload.enabled),
+    chargeAmount: toNum(payload.chargeAmount, 0),
+    minOrderAmount: toNum(payload.minOrderAmount, null),
+    maxOrderAmount: toNum(payload.maxOrderAmount, null),
+    currency: payload.currency || "INR",
+    metadata: payload.metadata || {},
+  }),
+});
+export const approvePayment = createApiThunkPrivate("adminCore/approvePayment", (payload) => ENDPOINTS.payments.approve(payload.paymentId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["referenceId", "reason"]) });
+export const rejectPayment = createApiThunkPrivate("adminCore/rejectPayment", (payload) => ENDPOINTS.payments.reject(payload.paymentId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["referenceId", "reason"]) });
+export const getAdminReturns = createApiThunkPrivate("adminCore/getAdminReturns", ENDPOINTS.returns.list, "GET", true, { transformParams: pickQuery(["status", "reason", "buyerId", "orderId", "sellerId", "search", "fromDate", "toDate", "limit", "offset"]) });
+export const getAdminReturn = createApiThunkPrivate("adminCore/getAdminReturn", (payload) => ENDPOINTS.returns.detail(payload.returnId || payload.id || payload._id), "GET");
+export const approveReturn = createApiThunkPrivate("adminCore/approveReturn", (payload) => ENDPOINTS.returns.approve(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["refundAmount", "note"]) });
+export const rejectReturn = createApiThunkPrivate("adminCore/rejectReturn", (payload) => ENDPOINTS.returns.reject(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason"]) });
+export const scheduleReturn = createApiThunkPrivate("adminCore/scheduleReturn", (payload) => ENDPOINTS.returns.schedule(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["trackingNumber", "note"]) });
+export const receiveReturn = createApiThunkPrivate("adminCore/receiveReturn", (payload) => ENDPOINTS.returns.receive(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["notes"]) });
+export const qcReturn = createApiThunkPrivate("adminCore/qcReturn", (payload) => ENDPOINTS.returns.qc(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["passed", "condition", "notes"]) });
+export const refundReturn = createApiThunkPrivate("adminCore/refundReturn", (payload) => ENDPOINTS.returns.refund(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["refundAmount", "referenceId", "method", "note"]) });
+export const replaceReturn = createApiThunkPrivate("adminCore/replaceReturn", (payload) => ENDPOINTS.returns.replacement(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["replacementOrderId", "replacementShipmentId", "note"]) });
+export const closeReturn = createApiThunkPrivate("adminCore/closeReturn", (payload) => ENDPOINTS.returns.close(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason", "note"]) });
 export const getAdminPayouts = createApiThunkPrivate("adminCore/getAdminPayouts", ENDPOINTS.payouts.admin, "GET", true, { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) });
 export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST", false, { transformBody: toAdminPayoutBody });
 export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.adminReports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "limit", "offset"]) });
 export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoice", (payload) => ENDPOINTS.tax.adminInvoice(payload.orderId), "POST", false, { transformBody: noBody });
+export const getTaxInvoices = createApiThunkPrivate("adminCore/getTaxInvoices", ENDPOINTS.tax.invoices, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "buyerId", "state", "hsnCode", "search", "limit", "offset"]) });
+export const getTaxCreditNotes = createApiThunkPrivate("adminCore/getTaxCreditNotes", ENDPOINTS.tax.creditNotes, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "orderId", "limit", "offset"]) });
+export const createTaxCreditNote = createApiThunkPrivate("adminCore/createTaxCreditNote", ENDPOINTS.tax.creditNotes, "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
 export const getDeliveryServiceability = createApiThunkPrivate("adminCore/getDeliveryServiceability", ENDPOINTS.delivery.serviceability, "GET");
 export const getOrderEwayBill = createApiThunkPrivate("adminCore/getOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "GET");
 export const createOrderEwayBill = createApiThunkPrivate("adminCore/createOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["orderId", "id"]) });
@@ -643,10 +682,27 @@ const adminCoreSlice = createSlice({
       [moderateAdminProduct, "moderateAdminProductData"],
       [getAdminOrders, "adminOrdersData"],
       [getAdminPayments, "adminPaymentsData"],
+      [getCodConfig, "codConfigData"],
+      [updateCodConfig, "updateCodConfigData"],
+      [approvePayment, "approvePaymentData"],
+      [rejectPayment, "rejectPaymentData"],
+      [getAdminReturns, "adminReturnsData"],
+      [getAdminReturn, "adminReturnData"],
+      [approveReturn, "approveReturnData"],
+      [rejectReturn, "rejectReturnData"],
+      [scheduleReturn, "updateReturnData"],
+      [receiveReturn, "updateReturnData"],
+      [qcReturn, "updateReturnData"],
+      [refundReturn, "refundReturnData"],
+      [replaceReturn, "updateReturnData"],
+      [closeReturn, "updateReturnData"],
       [getAdminPayouts, "adminPayoutsData"],
       [createAdminPayout, "createAdminPayoutData"],
       [getTaxReports, "taxReportsData"],
+      [getTaxInvoices, "taxInvoicesData"],
+      [getTaxCreditNotes, "taxCreditNotesData"],
       [createTaxInvoice, "createTaxInvoiceData"],
+      [createTaxCreditNote, "createTaxCreditNoteData"],
       [getDeliveryServiceability, "deliveryServiceabilityData"],
       [getOrderEwayBill, "orderEwayBillData"],
       [createOrderEwayBill, "createOrderEwayBillData"],
