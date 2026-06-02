@@ -319,7 +319,7 @@ const ProductFamilies = () => {
               Home / <b>Product Families</b>
             </h3>
             <Button
-              className="border-[#3E4094] text-[#3E4094] mb-3"
+              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
               onClick={() => setIsModalOpen(true)}
             >
               Add
@@ -588,7 +588,7 @@ const ProductFamilies = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded bg-[#3E4094] text-white"
+              className="px-4 py-2 rounded bg-[var(--admin-blue)] text-white"
             >
               Save
             </button>

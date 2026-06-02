@@ -1,6 +1,5 @@
 import { IoMdTrendingDown } from "react-icons/io";
 import { IoTrendingUp } from "react-icons/io5";
-import { MdMoreVert } from "react-icons/md";
 
 export default function Cards({
   icon,
@@ -11,31 +10,35 @@ export default function Cards({
   trendNegative = false,
   warning = false,
 }) {
-  const trendColor = trendNegative ? "text-red-600" : "text-[#082f91]";
+  const trendColor = trendNegative ? "text-red-500" : "text-emerald-500";
   return (
-    <div className="flex h-full min-h-[190px] w-full min-w-0 flex-col justify-between rounded-[10px] border border-[#e7e7e7] bg-gradient-to-br from-[#FFFFFF] to-[#F4F1ED] px-[26px] py-8 shadow-[0_2px_6px_rgba(20,20,20,0.16)]">
+    <div className="flex h-full min-h-[92px] w-full min-w-0 flex-col justify-between rounded-[8px] border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[var(--admin-shadow)]">
       {icon && (
-        <div className="mb-[24px] flex min-h-10 items-start justify-between">
+        <div className="mb-1 flex min-h-8 items-start justify-between">
+          <p className="text-[11px] font-medium font-inter text-[var(--admin-ink)]">
+            {label}
+          </p>
           {icon && (
             <span
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${warning ? "bg-[#d71920]" : "bg-[#e99f13]"} text-white`}
+              className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${warning ? "bg-red-100" : "bg-[var(--admin-gold-soft)]"} text-white`}
             >
               <img className="h-5 w-5 object-contain" src={icon} alt="" />
             </span>
           )}
-          <MdMoreVert className="h-6 w-6 text-[#757683]" />
         </div>
       )}
 
-      <div className="mt-2">
-        <p className="text-lg  font-semibold  font-inter text-[#182D5099]/60">
-          {label}
-        </p>
-        <p className=" text-[28px] font-inter font-extrabold text-[#042586]">
+      <div className="mt-0">
+        {!icon && (
+          <p className="text-[11px] font-medium font-inter text-[var(--admin-ink)]">
+            {label}
+          </p>
+        )}
+        <p className="text-[21px] leading-7 font-inter font-extrabold text-[var(--admin-navy)]">
           {value}
         </p>
         {(trend || helper) && (
-          <p className="mt-[6px] text-[12px] font-semibold text-[#6f7482]">
+          <p className="mt-1 text-[10px] font-semibold text-[var(--admin-muted)]">
             {trend && (
               <span className={`inline-flex items-center gap-1 ${trendColor}`}>
                 {trendNegative ? (

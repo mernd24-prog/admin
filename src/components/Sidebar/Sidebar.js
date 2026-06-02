@@ -421,38 +421,38 @@ const Sidebar = ({
 
   // ── Render ────────────────────────────────────────────────────────────────
   const sidebarWidth = isExpanded
-    ? 'w-full max-w-[350px] lg:w-[350px]'
+    ? 'w-full max-w-[260px] lg:w-[260px]'
     : 'w-16';
 
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[#faf8f5] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[#e8e2db] transition-all duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(8,47,145,0.05)]`}
+      className={`fixed lg:static inset-y-0 bg-[var(--admin-shell)] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[var(--admin-line)] transition-all duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(31,27,95,0.08)]`}
     >
       {/* Logo / toggle */}
-      <div className={`sticky top-0 z-10 flex  w-full items-start justify-center bg-[#faf8f5] px-3 pt-[26px] ${navbarOpen ? "sm:h-[190px] h-[170px]" : "sm:h-[90px]  h-[70px]"}  sm:pt-[28px]`}>
+      <div className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-3 pt-3 ${navbarOpen ? "h-[128px]" : "h-[70px]"} sm:pt-4`}>
         {isExpanded && (
           <button
             type="button"
             aria-label="Collapse sidebar"
-            className="absolute right-4 top-4 z-20 hidden h-9 w-9 items-center justify-center rounded text-[#082f91] transition hover:bg-[#f3f6ff] lg:flex"
+            className="absolute right-3 top-3 z-20 hidden h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-white hover:text-[var(--admin-navy)] lg:flex"
             onClick={handleDesktopCollapse}
           >
-            <MdChevronLeft size={24} />
+            <MdChevronLeft size={22} />
           </button>
         )}
 
         {isExpanded ? (
-          <div className="flex items-center justify-center gap-8">
+          <div className="flex items-center justify-center">
             <BrandLogo
-              className=" mb-10 h-[140px] w-[150px] p-[6px]  "
-              imageClassName="!h-[80%] w-[90%] !my-[10px]"
+              className="mb-0 h-[100px] w-[210px] border-[var(--admin-gold)]/50 bg-white p-[6px] shadow-[0_6px_16px_rgba(31,27,95,0.08)]"
+              imageClassName="!h-full w-full border-[var(--admin-gold)]/20 p-[4px]"
             />
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
             <IoIosMenu
-              className="text-2xl cursor-pointer text-[#082f91]"
+              className="text-2xl cursor-pointer text-[var(--admin-navy)]"
               onClick={handleMenuClick}
             />
           </div>
@@ -462,7 +462,7 @@ const Sidebar = ({
           <button
             type="button"
             aria-label="Close sidebar"
-            className="absolute right-[6px] top-[26px] flex h-8 w-8 items-center justify-center text-[#5d667a] transition hover:text-[#082f91] focus:outline-none sm:right-3 sm:top-[28px] lg:hidden"
+            className="absolute right-2 top-4 flex h-8 w-8 items-center justify-center text-[var(--admin-muted)] transition hover:text-[var(--admin-navy)] focus:outline-none sm:right-3 lg:hidden"
             onClick={() => {
               setNavbarOpen(false);
               setIsExpanded(false);
@@ -477,7 +477,7 @@ const Sidebar = ({
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto sidebar-scrollbar">
         <nav
-          className={`w-full bg-[#faf8f5] ${isExpanded ? "px-6 pb-4 sm:px-[28px]" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
+          className={`w-full bg-[var(--admin-shell)] ${isExpanded ? "px-4 pb-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
         >
           <ul>
             {sidebarData.map((item, index) => {
@@ -500,19 +500,19 @@ const Sidebar = ({
                 return (
                   <li
                     key={index}
-                    className={`flex flex-col border-b border-[#ece6e0] py-[6px] uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
+                    className={`flex flex-col py-[4px] text-[13px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
-                      className={`flex items-center ${isExpanded ? "gap-3" : "justify-center"} p-2 rounded-md transition-colors duration-200 ${isActive ? "bg-[#082f91] text-white" : "text-[#082f91] hover:bg-[#eef2ff]"}`}
+                      className={`flex items-center ${isExpanded ? "gap-2.5" : "justify-center"} rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${isActive ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                       to={`/app/${sub.module_code}`}
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ""}
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#082f91] bg-white text-[#082f91] shadow-[0_2px_5px_rgba(8,47,145,0.12)]">
-                        <Icon size={18} />
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isActive ? "text-white" : "text-[var(--admin-blue)]"}`}>
+                        <Icon size={15} />
                       </span>
                       {isExpanded && (
-                        <span className="text-[11px] font-semibold">
+                        <span className="text-[12px] font-semibold">
                           {item.label}
                         </span>
                       )}
@@ -524,24 +524,24 @@ const Sidebar = ({
               return (
                 <li
                   key={index}
-                  className={`flex flex-col border-b border-[#ece6e0] py-1 uppercase text-[14px] ${isExpanded ? "" : "items-center"}`}
+                  className={`flex flex-col py-[4px] text-[13px] ${isExpanded ? "" : "items-center"}`}
                 >
                   {/* Section header */}
                   <div
-                    className={`flex w-full min-w-0 items-center ${isExpanded ? "gap-3" : "justify-center"} cursor-pointer p-2 rounded-md transition-colors duration-200 ${hasActiveChild ? " " : "text-[#082f91] hover:bg-[#eef2ff]"}`}
+                    className={`flex w-full min-w-0 items-center ${isExpanded ? "gap-2.5" : "justify-center"} cursor-pointer rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${hasActiveChild ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#082f91] bg-white text-[#082f91] shadow-[0_2px_5px_rgba(8,47,145,0.12)]">
-                      <Icon size={18} />
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${hasActiveChild ? "text-white" : "text-[var(--admin-blue)]"}`}>
+                      <Icon size={15} />
                     </span>
                     {isExpanded && (
                       <>
-                        <span className="text-[11px] font-semibold">
+                        <span className="text-[12px] font-semibold">
                           {item.label}
                         </span>
                         <MdChevronRight
-                          className={`ml-auto transition-transform duration-200 ${hasActiveChild ? "" : "text-[#082f91]"} ${isTabActive ? "rotate-90" : ""}`}
+                          className={`ml-auto transition-transform duration-200 ${hasActiveChild ? "text-white/80" : "text-[var(--admin-muted)]"} ${isTabActive ? "rotate-90" : ""}`}
                         />
                       </>
                     )}
@@ -560,7 +560,7 @@ const Sidebar = ({
                     }}
                   >
                     {isExpanded && (
-                      <ul className="mt-2 ml-6 space-y-1">
+                      <ul className="mt-1 ml-8 space-y-1">
                         {item.subItems.map((sub, si) => {
                           const path = `/app/${sub.module_code}`;
                           const isSubActive =
@@ -579,12 +579,12 @@ const Sidebar = ({
                               }}
                             >
                               <Link
-                                className={`flex items-center gap-3 p-2 text-sm transition-all duration-200 ease-in-out rounded ${isSubActive ? "font-medium bg-[#eef2ff] text-[#082f91]" : "text-gray-600 hover:text-[#082f91] hover:bg-[#eef2ff]"}`}
+                                className={`flex items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-sm transition-all duration-200 ease-in-out w-full ${isSubActive ? "font-semibold bg-white text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]" : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#082f91] flex-shrink-0" />
-                                <span className="text-xs capitalize">
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`} />
+                                <span className="text-[12px] capitalize">
                                   {sub.label}
                                 </span>
                               </Link>
@@ -605,10 +605,10 @@ const Sidebar = ({
           title="Need Help?"
           description="Our verification team is available 24/7 to help you complete KYC."
           buttonText="Contact Support"
-          className="mx-[28px] mb-[36px] mt-[28px] border-[#ead9bf] bg-[#fff5df]"
-          titleClassName="text-[10px] tracking-[0.1em] text-[#082f91]"
-          descriptionClassName="text-[10px] leading-4 text-[#43506a]"
-          buttonClassName="mt-3 h-8 rounded bg-[#082f91] text-[10px] font-semibold hover:bg-[#062779]"
+          className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"
+          titleClassName="text-[11px] tracking-[0.04em] text-[var(--admin-navy)]"
+          descriptionClassName="text-[11px] leading-4 text-[var(--admin-ink)]"
+          buttonClassName="mt-3 h-8 rounded-[5px] bg-[var(--admin-gold)] text-[10px] font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-gold-dark)]"
         />
       )}
     </div>

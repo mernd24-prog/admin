@@ -49,7 +49,7 @@ const DocumentLink = ({ label, url }) => {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[#3E4094] underline hover:text-[#2e3074]"
+        className="text-xs text-[var(--admin-blue)] underline hover:text-[#2e3074]"
       >
         View
       </a>

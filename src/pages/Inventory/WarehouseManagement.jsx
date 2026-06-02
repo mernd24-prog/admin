@@ -261,7 +261,7 @@ const WarehouseFormModal = ({
               name="active"
               checked={Boolean(form.active)}
               onChange={onChange}
-              className="w-4 h-4 accent-[#989AFF]"
+              className="w-4 h-4 accent-[var(--admin-gold)]"
             />
             Active warehouse
           </label>
@@ -488,7 +488,7 @@ const WarehouseManagement = () => {
       label: "Warehouse",
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-lg bg-[#F0F0F3] flex items-center justify-center text-[#989AFF]">
+          <span className="w-9 h-9 rounded-lg bg-[var(--admin-blue-soft)] flex items-center justify-center text-[var(--admin-gold)]">
             <MdWarehouse size={18} />
           </span>
           <div>

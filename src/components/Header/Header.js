@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutFunction } from "../../_helpers";
 import { IoLogOutOutline } from "react-icons/io5";
-import { MdOutlineMenu } from "react-icons/md";
+import { MdOutlineMenu, MdSearch, MdOutlineNotificationsNone } from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from "../../Redux/userSlice";
@@ -46,8 +46,8 @@ const getAvatarUrl = (user = {}) =>
   "";
 
 const HEADER_ROUTE_TITLES = {
-  home: "Dashboard / Default",
-  orders: "Dashboard / Order > Order List",
+  home: "Dashboard",
+  orders: "Orders",
 };
 
 const formatRouteLabel = (value = "") =>
@@ -67,7 +67,7 @@ const getHeaderTitle = (path = "", fallback = "") => {
   const routeKey = isId ? routeParts[routeParts.length - 2] : lastPart;
 
   if (HEADER_ROUTE_TITLES[routeKey]) return HEADER_ROUTE_TITLES[routeKey];
-  if (routeKey) return `Dashboard / ${formatRouteLabel(routeKey)}`;
+  if (routeKey) return formatRouteLabel(routeKey);
   return fallback || "Dashboard";
 };
 
@@ -140,43 +140,66 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
   return (
     <div
-      className={`  ${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-16 bg-[#082f91] text-white shadow-[0_2px_10px_rgba(8,47,145,0.22)]`}
+      className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] border-b border-[var(--admin-line)] text-[var(--admin-ink)] shadow-[0_1px_8px_rgba(31,27,95,0.06)]`}
     >
-      <div className="flex items-center justify-between flex-1 px-5 md:px-7 w-full">
-        <div
-          className={`flex items-center ${hasPermanentOpen ? "lg:ps-0" : "lg:ps-10 space-x-3"} ps-0`}
-        >
+      <div className="flex items-center justify-between flex-1 px-4 md:px-5 w-full gap-4">
+        {/* Left: menu toggle + title */}
+        <div className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}>
           <button
             type="button"
             aria-label="Toggle sidebar"
-            className="p-2 text-white rounded-md focus:outline-none hover:bg-white/10 lg:hidden"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] shadow-sm transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] focus:outline-none"
             onClick={handleNavbar}
           >
-            <MdOutlineMenu className="w-6 h-6" />
+            <MdOutlineMenu className="w-5 h-5" />
           </button>
 
-          <div className="leading-tight">
-            <h1 className="text-lg font-semibold px-8 capitalize font-inter  text-white">
+          <div className="leading-tight min-w-0">
+            <h1 className="text-[13px] font-semibold capitalize font-inter text-[var(--admin-ink)] truncate">
               {headerTitle || moduleName || "Dashboard"}
             </h1>
           </div>
         </div>
 
-        <div className="flex  items-center gap-3 md:gap-5">
-          <div className="relative ">
+        {/* Center: search bar */}
+        <div className="hidden md:flex flex-1 max-w-[360px]">
+          <div className="relative w-full">
+            <MdSearch
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder="Search"
+              className="w-full h-9 pl-10 pr-4 rounded-full border border-[var(--admin-line)] bg-white text-xs text-[var(--admin-ink)] placeholder-[var(--admin-muted)] shadow-sm focus:outline-none focus:border-[var(--admin-blue)] focus:bg-white focus:ring-2 focus:ring-[var(--admin-blue)]/10 transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Right: user profile */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] shadow-sm transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+          >
+            <MdOutlineNotificationsNone size={18} />
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
+          </button>
+          <div className="relative">
             <div className="flex items-center gap-2.5">
               <div className="hidden md:block text-right leading-tight">
-                <p className="max-w-64    text-[14px] font-bold font-inter text-white">
+                <p className="max-w-44 text-[12px] font-bold font-inter text-[var(--admin-ink)] truncate">
                   {getDisplayName(userData)}
                 </p>
-                <p className=" truncate text-[10px] font-inter mt-[2px] font-medium capitalize text-white/60">
-                  {userData?.role || "Admin"}
+                <p className="truncate text-[10px] font-inter mt-[1px] font-medium text-[var(--admin-muted)]">
+                  {userData?.email || userData?.role || "Admin"}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={toggleLogoutModal}
-                className="flex h-9 w-9 overflow-hidden items-center justify-center rounded-full border border-white/25  bg-white text-sm font-bold text-[#082f91] transition-transform hover:scale-105"
+                className="flex h-9 w-9 overflow-hidden items-center justify-center rounded-full border border-[var(--admin-line)] bg-[var(--admin-blue-soft)] text-sm font-bold text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)]"
                 aria-label="Open profile menu"
               >
                 {avatarUrl && !avatarFailed ? (
@@ -192,14 +215,14 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
               </button>
             </div>
             <div
-              className={`absolute  right-0 w-64 mt-3 bg-white text-gray-900 border border-gray-100 shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
+              className={`absolute right-0 w-64 mt-3 bg-white text-gray-900 border border-[var(--admin-line)] shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
               ref={dropDownRef}
             >
-              <div className="px-4 py-3 bg-[#082f91]/[0.04] border-b border-gray-100 flex items-center gap-3">
+              <div className="px-4 py-3 bg-[var(--admin-shell)] border-b border-[var(--admin-line)] flex items-center gap-3">
                 <button
                   type="button"
                   onClick={toggleLogoutModal}
-                  className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[#082f91] text-base font-bold text-white transition-transform hover:scale-105"
+                  className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[var(--admin-blue-soft)] text-base font-bold text-[var(--admin-navy)] transition hover:ring-2 hover:ring-[var(--admin-gold)]/30"
                   aria-label="Close profile menu"
                 >
                   {avatarUrl && !avatarFailed ? (
@@ -226,14 +249,14 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
                 <div className="py-1 text-xs px-4">
                   <Link
                     to="/app/profile"
-                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-semibold hover:bg-gray-100 hover:text-blue-600 "
+                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
                   >
                     <FiUser className="mr-3" />
                     Profile
                   </Link>
                   <Link
                     to={`/app/changePassword`}
-                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
+                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
                   >
                     <FiKey className="mr-3" />
                     Change Password
@@ -243,7 +266,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
               <div className="py-1 border-t border-gray-100 text-xs px-4">
                 <p
-                  className="flex items-center flex-wrap px-3.5 py-2 no-underline text-[rgba(0,0,0,0.85)] rounded font-medium hover:bg-gray-100 hover:text-blue-600"
+                  className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-red-500 cursor-pointer"
                   onClick={handleLogout}
                 >
                   <IoLogOutOutline className="mr-3" />

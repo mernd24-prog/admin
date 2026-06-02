@@ -612,7 +612,7 @@ const Sellers = () => {
               Home / <b>Sellers</b>
             </h3>
             <AddButton
-              className="border-[#3E4094] text-[#3E4094] mb-3"
+              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
               onClick={() => setIsOpenAddModal(true)}
             >
               Add Seller
@@ -849,7 +849,7 @@ const Sellers = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded bg-[#3E4094] text-white"
+                className="px-4 py-2 rounded bg-[var(--admin-blue)] text-white"
               >
                 Update KYC
               </button>
@@ -907,7 +907,7 @@ const Sellers = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded bg-[#3E4094] text-white"
+                className="px-4 py-2 rounded bg-[var(--admin-blue)] text-white"
               >
                 Update Bank
               </button>

@@ -155,7 +155,7 @@ const PackageFormModal = ({
               name="active"
               checked={Boolean(form.active)}
               onChange={onChange}
-              className="w-4 h-4 accent-[#989AFF]"
+              className="w-4 h-4 accent-[var(--admin-gold)]"
             />
             Active package
           </label>

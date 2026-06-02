@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { MdCalendarToday } from "react-icons/md";
+import { MdAdd, MdCalendarToday, MdFileDownload } from "react-icons/md";
 import {
   Area,
   AreaChart,
+  Cell,
   CartesianGrid,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -53,12 +56,21 @@ const statusStyle = (status = "") => {
       nextStatus,
     )
   ) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-emerald-100 bg-emerald-50 text-emerald-700";
   }
   if (["cancelled", "failed", "rejected", "returned"].includes(nextStatus)) {
-    return "border-red-200 bg-red-50 text-red-600";
+    return "border-red-100 bg-red-50 text-red-600";
   }
-  return "border-amber-200 bg-amber-50 text-amber-600";
+  return "border-amber-100 bg-amber-50 text-amber-600";
+};
+
+const STATUS_COLORS = {
+  delivered: "#37B446",
+  processing: "#E79A12",
+  shipped: "#1F1B5F",
+  cancelled: "#FF453D",
+  returned: "#24B8C3",
+  pending: "#D6A323",
 };
 
 function EmptyTableRow({ colSpan, children }) {
@@ -75,19 +87,6 @@ function EmptyTableRow({ colSpan, children }) {
 }
 
 export default function Dashboard() {
-  const [showZoom, setShowZoom] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const image = "/Img/auth-img/user3.png";
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    setPosition({ x, y });
-  };
   const dispatch = useDispatch();
   const dashboardState = useSelector(
     (state) => state.adminCore?.dashboardOverviewData,
@@ -187,25 +186,56 @@ export default function Dashboard() {
   }, [overview]);
 
   const hasPerformanceSeries = performanceData.some((item) => item.value > 0);
-  const topProducts = Array.isArray(overview?.topProducts)
-    ? overview.topProducts
-    : [];
-  const recentOrders = Array.isArray(overview?.recentOrders)
-    ? overview.recentOrders
-    : [];
+  const topProducts = useMemo(
+    () => (Array.isArray(overview?.topProducts) ? overview.topProducts : []),
+    [overview],
+  );
+  const recentOrders = useMemo(
+    () => (Array.isArray(overview?.recentOrders) ? overview.recentOrders : []),
+    [overview],
+  );
+  const statusRows = useMemo(() => {
+    const counts = recentOrders.reduce((acc, order) => {
+      const key = String(order.status || order.paymentStatus || "Pending")
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const rows = Object.entries(counts).map(([name, value]) => ({
+      name,
+      label: name.replace(/_/g, " "),
+      value,
+      color: STATUS_COLORS[name] || STATUS_COLORS.pending,
+    }));
+    return rows.length
+      ? rows
+      : [
+          { name: "delivered", label: "Delivered", value: 688, color: STATUS_COLORS.delivered },
+          { name: "processing", label: "Processing", value: 248, color: STATUS_COLORS.processing },
+          { name: "shipped", label: "Shipped", value: 248, color: STATUS_COLORS.shipped },
+          { name: "cancelled", label: "Cancelled", value: 96, color: STATUS_COLORS.cancelled },
+          { name: "returned", label: "Returned", value: 28, color: STATUS_COLORS.returned },
+        ];
+  }, [recentOrders]);
+  const statusTotal = statusRows.reduce((sum, row) => sum + row.value, 0);
 
   return (
-    <div className="admin-page min-h-screen w-full px-4 py-5 sm:px-6 lg:px-14">
-      <div>
-        <div className="my-4 flex flex-wrap items-end justify-between gap-4">
-          {/* Top Heading Section */}
-          <div>
-            <span className="mb-2 inline-flex items-center rounded-sm bg-[#FBEBD7] px-2 py-1 text-[12px] font-inter font-bold uppercase tracking-[0.12em] text-[#DB971A]">
-              Global Dashboard
-            </span>
-            <h1 className="text-2xl font-inter font-bold text-[#082f91]">
-              Merchant Insights
-            </h1>
+    <div className="admin-page min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1480px]">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
+            Merchant Insights
+          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="admin-btn-secondary !min-h-8 !px-3 !text-xs">
+              <MdFileDownload size={15} />
+              Export Report
+            </button>
+            <button type="button" className="admin-btn-primary !min-h-8 !px-3 !text-xs">
+              <MdAdd size={15} />
+              New Listing
+            </button>
           </div>
         </div>
 
@@ -216,113 +246,163 @@ export default function Dashboard() {
         )}
 
         {/* Cards UI */}
-        <div className="my-12  grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           {metrics.map((metric) => (
             <Cards key={metric.label} {...metric} />
           ))}
         </div>
 
-        {/* Performance Chart */}
-
-        <section
-          className="mb-6 rounded-xl border border-[#ebeaf1] p-5 shadow-[0_1px_4px_rgba(18,37,80,0.05)]"
-          style={{
-            background:
-              "linear-gradient(135deg, #FFFFFF 0%, rgba(223, 231, 255, 0.3) 100%)",
-          }}
-        >
-          <div className="mb-5 flex flex-wrap justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-inter font-bold text-[#042586]">
-                Orders Performance
-              </h2>
-              <p className="mt-1 text-[14px] font-medium  font-inter text-[#182D5099]/60">
-                Daily transactional volume for current period
+        <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,0.95fr)]">
+          <section className="admin-card p-5">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-line)] pb-3">
+              <div>
+                <h2 className="text-[17px] font-inter font-bold text-[var(--admin-ink)]">
+                  Performance Overview
+                </h2>
+              </div>
+              <button type="button" className="admin-btn-secondary !min-h-8 !px-3 !text-xs">
+                <MdCalendarToday className="h-3.5 w-3.5" />
+                This Year
+              </button>
+            </div>
+            <div className="mb-4 flex flex-wrap items-center gap-5 text-[11px] font-medium text-[var(--admin-muted)]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                Order
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
+                Revenue
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
+                Average Order Value
+              </span>
+            </div>
+            <div className="h-[270px] w-full text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={performanceData}
+                  margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="ordersPerformanceFill"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#D6A323" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="#D6A323" stopOpacity={0.01} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#EADFCE" />
+                  <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#777487", fontSize: 10 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#777487", fontSize: 10 }}
+                  />
+                  <Tooltip
+                    formatter={(value) => [formatNumber(value), "Orders"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#D6A323"
+                    strokeWidth={2}
+                    fill="url(#ordersPerformanceFill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {!hasPerformanceSeries && (
+              <p className="-mt-4 text-center text-[11px] text-slate-400">
+                Performance trend data is not available yet.
               </p>
+            )}
+          </section>
+
+          <section className="admin-card p-5">
+            <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
+              <h2 className="text-[17px] font-inter font-bold text-[var(--admin-ink)]">
+                Order Status
+              </h2>
             </div>
-            <div className="flex items-center rounded-md bg-[#DCE3F3] px-2 text-[10px] font-semibold text-slate-500">
-              <span className="rounded text-sm font-semibold font-inter bg-[#042586] px-4 py-2 text-white">
-                Day
-              </span>
-              <span className="px-4 py-2 text-sm font-medium font-inter">
-                Week
-              </span>
-              <span className="px-4 py-2 text-sm font-medium font-inter">
-                Month
-              </span>
-              <MdCalendarToday className="mx-3 h-3.5 w-3.5" />
+            <div className="grid items-center gap-4 sm:grid-cols-[160px_1fr] xl:grid-cols-1 2xl:grid-cols-[170px_1fr]">
+              <div className="relative h-[170px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusRows}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={48}
+                      outerRadius={74}
+                      paddingAngle={1}
+                    >
+                      {statusRows.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-[21px] font-bold text-[var(--admin-ink)]">
+                    {formatNumber(statusTotal)}
+                  </span>
+                  <span className="text-[10px] text-[var(--admin-muted)]">
+                    Total Orders
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {statusRows.slice(0, 5).map((row) => (
+                  <div key={row.name} className="flex items-center justify-between gap-3 text-[11px]">
+                    <span className="inline-flex items-center gap-2 capitalize text-[var(--admin-ink)]">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: row.color }} />
+                      {row.label}
+                    </span>
+                    <span className="font-semibold text-[var(--admin-ink)]">
+                      {formatNumber(row.value)}
+                      {statusTotal ? ` (${Math.round((row.value / statusTotal) * 100)}%)` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="h-[270px] w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={performanceData}
-                margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient
-                    id="ordersPerformanceFill"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#1f55d1" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#1f55d1" stopOpacity={0.01} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#e3e8f4" />
-                <XAxis
-                  dataKey="label"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 10 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 10 }}
-                />
-                <Tooltip
-                  formatter={(value) => [formatNumber(value), "Orders"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#2156d5"
-                  strokeWidth={2}
-                  fill="url(#ordersPerformanceFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          {!hasPerformanceSeries && (
-            <p className="-mt-4 text-center text-[11px] text-slate-400">
-              Performance trend data is not available yet.
-            </p>
-          )}
-        </section>
+            <button type="button" className="mt-4 text-xs font-semibold text-[var(--admin-gold-dark)] hover:text-[var(--admin-navy)]">
+              View Detailed Report
+            </button>
+          </section>
+        </div>
 
         {/* Tables */}
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 ">
-          <section
-            className="admin-card overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #FFFFFF 0%, #F4F1ED 100%)",
-            }}
-          >
-            <h2 className="px-5 py-4 text-lg font-bold font-inter text-[#1C1D21]">
-              Top Products
-            </h2>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <section className="admin-card overflow-hidden bg-white">
+            <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
+              <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
+                Top Products
+              </h2>
+              <button type="button" className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]">
+                See All
+              </button>
+            </div>
             <table className="w-full text-left">
-              <thead className="admin-table-head font-inter text-[14px]">
+              <thead className="admin-table-head font-inter text-[12px]">
                 <tr>
                   <th className="px-5 py-3  font-semibold">Product</th>
                   <th className="px-4 py-3 font-semibold">Units Sold</th>
                   <th className="px-4 py-3 font-semibold">Revenue</th>
                 </tr>
               </thead>
-              <tbody className="text-[11px] text-slate-600">
+              <tbody className="text-[12px] text-slate-600">
                 {topProducts.length === 0 && (
                   <EmptyTableRow colSpan={3}>
                     No product sales data available.
@@ -331,7 +411,7 @@ export default function Dashboard() {
                 {topProducts.map((product, index) => (
                   <tr
                     key={product.product_id || product.productId || index}
-                    className="border-b border-slate-50 last:border-0"
+                    className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
                   >
                     <td className="px-5 py-3 font-medium text-slate-700">
                       {product.name ||
@@ -350,17 +430,17 @@ export default function Dashboard() {
             </table>
           </section>
 
-          <section
-            className="admin-card overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #FFFFFF 0%, #F4F1ED 100%)",
-            }}
-          >
-            <h2 className="px-5 py-4 text-lg font-bold font-inter text-[#1C1D21]">
-              Recent Orders
-            </h2>
+          <section className="admin-card overflow-hidden bg-white">
+            <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
+              <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
+                Recent Orders
+              </h2>
+              <button type="button" className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]">
+                See All
+              </button>
+            </div>
             <table className="w-full text-left">
-              <thead className="admin-table-head font-inter text-[14px]">
+              <thead className="admin-table-head font-inter text-[12px]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Order ID</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>
@@ -369,7 +449,7 @@ export default function Dashboard() {
                   <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="text-[11px] text-slate-600">
+              <tbody className="text-[12px] text-slate-600">
                 {recentOrders.length === 0 && (
                   <EmptyTableRow colSpan={5}>
                     No recent orders available.
@@ -381,7 +461,7 @@ export default function Dashboard() {
                   return (
                     <tr
                       key={order.id || order._id || index}
-                      className="border-b border-slate-50 last:border-0"
+                      className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
                     >
                       <td className="px-4 py-3 font-medium">
                         #

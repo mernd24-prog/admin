@@ -34,7 +34,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       <Field label="Download File URL *" hint="Direct link to the file or a signed CDN URL. Customers get this after payment.">
         <input
           type="url"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           placeholder="https://cdn.yourstore.com/files/product.zip"
           value={digital.fileUrl || ''}
           onChange={(e) => set('fileUrl', e.target.value)}
@@ -45,7 +45,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       <Field label="Preview / Sample URL" hint="Free sample or preview version (optional).">
         <input
           type="url"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           placeholder="https://cdn.yourstore.com/previews/sample.pdf"
           value={digital.previewUrl || ''}
           onChange={(e) => set('previewUrl', e.target.value)}
@@ -56,7 +56,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       <div className="grid grid-cols-2 gap-4">
         <Field label="File Type">
           <select
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             value={digital.fileType || ''}
             onChange={(e) => set('fileType', e.target.value)}
           >
@@ -72,7 +72,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
             type="number"
             min={0}
             step={0.1}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 24.5"
             value={digital.fileSize || ''}
             onChange={(e) => set('fileSize', Number(e.target.value))}
@@ -86,7 +86,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
           <input
             type="number"
             min={0}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 3"
             value={digital.downloadLimit || ''}
             onChange={(e) => set('downloadLimit', Number(e.target.value) || 0)}
@@ -97,7 +97,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
           <input
             type="number"
             min={0}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 30"
             value={digital.expiryDays || ''}
             onChange={(e) => set('expiryDays', Number(e.target.value) || 0)}
@@ -108,7 +108,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       {/* License type */}
       <Field label="License Type">
         <select
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           value={digital.licenseType || 'single_use'}
           onChange={(e) => set('licenseType', e.target.value)}
         >
@@ -123,7 +123,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
         <input
           id="requiresAuth"
           type="checkbox"
-          className="mt-0.5 accent-[#3E4094]"
+          className="mt-0.5 accent-[var(--admin-blue)]"
           checked={!!digital.requiresAuth}
           onChange={(e) => set('requiresAuth', e.target.checked)}
         />
@@ -142,7 +142,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
         <Field label="Version" hint="e.g. 2.1.0">
           <input
             type="text"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="1.0.0"
             value={digital.version || ''}
             onChange={(e) => set('version', e.target.value)}
@@ -152,7 +152,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
         <Field label="Platform / Compatibility" hint="e.g. Windows, macOS, iOS">
           <input
             type="text"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="All platforms"
             value={digital.platform || ''}
             onChange={(e) => set('platform', e.target.value)}
@@ -163,7 +163,7 @@ const DigitalProductPanel = ({ digital = {}, onChange }) => {
       <Field label="Changelog / Release Notes">
         <textarea
           rows={3}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
           placeholder="What's new in this version…"
           value={digital.changelog || ''}
           onChange={(e) => set('changelog', e.target.value)}

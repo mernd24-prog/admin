@@ -43,19 +43,19 @@ const ProductTypeSelector = ({ value, onChange, disabled = false }) => {
               onClick={() => onChange(type.value)}
               className={`flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-all ${
                 selected
-                  ? 'border-[#3E4094] bg-[#3E4094]/5'
+                  ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/5'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <span className="text-2xl flex-shrink-0">{type.icon}</span>
               <div>
-                <p className={`text-sm font-semibold ${selected ? 'text-[#3E4094]' : 'text-gray-800'}`}>
+                <p className={`text-sm font-semibold ${selected ? 'text-[var(--admin-blue)]' : 'text-gray-800'}`}>
                   {type.label}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
               </div>
               {selected && (
-                <div className="ml-auto flex-shrink-0 w-4 h-4 rounded-full bg-[#3E4094] flex items-center justify-center">
+                <div className="ml-auto flex-shrink-0 w-4 h-4 rounded-full bg-[var(--admin-blue)] flex items-center justify-center">
                   <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>

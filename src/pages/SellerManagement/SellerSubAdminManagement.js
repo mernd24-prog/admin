@@ -473,7 +473,7 @@ const SellerSubAdminManagement = () => {
       <span key={`role-${id}`} className="text-gray-600">{getRoleLabel(user.role)}</span>,
       <div key={`mods-${id}`} className="flex flex-wrap gap-1">
         {modules.slice(0, 3).map((module) => (
-          <span key={module} className="rounded bg-[#3E4094]/10 px-1.5 py-0.5 text-xs text-[#3E4094]">
+          <span key={module} className="rounded bg-[var(--admin-blue)]/10 px-1.5 py-0.5 text-xs text-[var(--admin-blue)]">
             {getModuleLabel(module)}
           </span>
         ))}
@@ -518,7 +518,7 @@ const SellerSubAdminManagement = () => {
       <div className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm text-gray-500">
-            <Link to="/app/home" className="text-[#3E4094] hover:underline">Home</Link>
+            <Link to="/app/home" className="text-[var(--admin-blue)] hover:underline">Home</Link>
             {' / '}
             <b className="text-gray-800">Seller Management</b>
           </h3>
@@ -538,7 +538,7 @@ const SellerSubAdminManagement = () => {
               onClick={() => setTab(item.key)}
               className={`-mb-px border-b-2 px-5 py-2.5 text-sm font-medium transition-colors ${
                 tab === item.key
-                  ? 'border-[#3E4094] text-[#3E4094]'
+                  ? 'border-[var(--admin-blue)] text-[var(--admin-blue)]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -728,7 +728,7 @@ const SellerSubAdminManagement = () => {
                 <div className="flex flex-wrap gap-1.5">
                   {(viewTarget.allowedModules || []).length ? (
                     viewTarget.allowedModules.map((module) => (
-                      <span key={module} className="rounded bg-[#3E4094]/10 px-2 py-1 text-xs text-[#3E4094]">
+                      <span key={module} className="rounded bg-[var(--admin-blue)]/10 px-2 py-1 text-xs text-[var(--admin-blue)]">
                         {getModuleLabel(module)}
                       </span>
                     ))

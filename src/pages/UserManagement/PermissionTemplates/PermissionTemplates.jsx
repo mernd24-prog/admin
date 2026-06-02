@@ -63,11 +63,11 @@ const PermissionBuilder = ({ value = [], onChange }) => {
   return (
     <div className="space-y-3">
       {/* Builder row */}
-      <div className="bg-[#faf6ee] rounded-xl border border-[#e7dfd1] p-3 space-y-2">
+      <div className="bg-[var(--admin-surface-soft)] rounded-xl border border-[var(--admin-line)] p-3 space-y-2">
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Add permissions</p>
         <div className="flex gap-2">
           <input
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/20"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
             placeholder="Module slug (e.g. products)"
             value={module}
             onChange={(e) => setModule(e.target.value)}
@@ -77,7 +77,7 @@ const PermissionBuilder = ({ value = [], onChange }) => {
             type="button"
             onClick={add}
             disabled={!module.trim() || !picked.length}
-            className="px-3 py-1.5 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#323580] disabled:opacity-40"
+            className="px-3 py-1.5 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#323580] disabled:opacity-40"
           >
             Add
           </button>
@@ -102,7 +102,7 @@ const PermissionBuilder = ({ value = [], onChange }) => {
 
       {/* Current slugs grouped by module */}
       {allMods.length > 0 && (
-        <div className="rounded-xl border border-[#e7dfd1] overflow-hidden divide-y divide-[#f5f0e8]">
+        <div className="rounded-xl border border-[var(--admin-line)] overflow-hidden divide-y divide-[#f5f0e8]">
           {allMods.map((mod) => (
             <div key={mod} className="flex items-center gap-3 px-3 py-2 bg-white hover:bg-[#fafafa]">
               <span className="text-xs font-semibold text-gray-700 w-28 shrink-0 truncate">{mod}</span>
@@ -160,9 +160,9 @@ const TemplateModal = ({ template, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col border border-[#e7dfd1]">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col border border-[var(--admin-line)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-teal-100 flex items-center justify-center">
               <MdDashboardCustomize size={16} className="text-teal-600" />
@@ -185,7 +185,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Name <span className="text-red-400">*</span></label>
                 <input
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/20 ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
                   value={form.name}
                   onChange={(e) => { set('name', e.target.value); if (!isEdit) set('slug', slugify(e.target.value)); }}
                   maxLength={128}
@@ -196,7 +196,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Slug <span className="text-red-400">*</span></label>
                 <input
-                  className={`w-full rounded-lg border px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/20 ${errors.slug ? 'border-red-300' : 'border-gray-200'}`}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 ${errors.slug ? 'border-red-300' : 'border-gray-200'}`}
                   value={form.slug}
                   onChange={(e) => set('slug', slugify(e.target.value))}
                   maxLength={128}
@@ -210,7 +210,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Description</label>
               <textarea
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#3E4094]/20"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
                 rows={2}
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -231,7 +231,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
                       type="button"
                       onClick={() => set('roleScope', on ? form.roleScope.filter((r) => r !== role) : [...form.roleScope, role])}
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                        on ? 'border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094]' : 'border-gray-200 text-gray-500 hover:border-[#3E4094]/40'
+                        on ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/10 text-[var(--admin-blue)]' : 'border-gray-200 text-gray-500 hover:border-[var(--admin-blue)]/40'
                       }`}
                     >
                       {on && <MdCheck size={12} />}{role}
@@ -261,7 +261,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 flex justify-end gap-2 px-5 py-4 border-t border-[#e7dfd1] bg-[#faf6ee] rounded-b-2xl">
+          <div className="shrink-0 flex justify-end gap-2 px-5 py-4 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-b-2xl">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-white transition-colors">
               Cancel
             </button>
@@ -359,13 +359,13 @@ const PermissionTemplates = () => {
             <button
               onClick={fetch}
               title="Refresh"
-              className="p-2 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+              className="p-2 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all"
             >
               <MdRefresh size={18} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={() => setModal(null)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#323580] transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#323580] transition-colors shadow-sm"
             >
               <MdAdd size={16} />
               New Template
@@ -391,7 +391,7 @@ const PermissionTemplates = () => {
               key={f}
               onClick={() => setFilterActive(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                filterActive === f ? 'bg-[#3E4094] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                filterActive === f ? 'bg-[var(--admin-blue)] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
               }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -399,7 +399,7 @@ const PermissionTemplates = () => {
           ))}
           {/* Search */}
           <input
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#3E4094]/20 w-36"
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 w-36"
             placeholder="Search…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -413,7 +413,7 @@ const PermissionTemplates = () => {
           <MdDashboardCustomize size={40} className="mb-3 text-gray-200" />
           <p className="text-sm font-medium">{search || filterActive !== 'all' ? 'No templates match' : 'No templates yet'}</p>
           {!search && filterActive === 'all' && (
-            <button onClick={() => setModal(null)} className="mt-3 text-sm text-[#3E4094] hover:underline">
+            <button onClick={() => setModal(null)} className="mt-3 text-sm text-[var(--admin-blue)] hover:underline">
               Create your first template →
             </button>
           )}
@@ -465,7 +465,7 @@ const PermissionTemplates = () => {
                     <button
                       title="Edit"
                       onClick={() => setModal(tpl)}
-                      className="p-1.5 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-[#eef3ff] transition-colors"
+                      className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
                     >
                       <MdEdit size={15} />
                     </button>
@@ -476,7 +476,7 @@ const PermissionTemplates = () => {
                 {(tpl.roleScope || []).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {tpl.roleScope.map((role) => (
-                      <span key={role} className="text-[10px] px-2 py-0.5 rounded-full bg-[#3E4094]/10 text-[#3E4094] font-medium capitalize">
+                      <span key={role} className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] font-medium capitalize">
                         {role}
                       </span>
                     ))}
@@ -485,7 +485,7 @@ const PermissionTemplates = () => {
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-2.5 bg-[#faf6ee] border-t border-[#f0ece4] flex items-center justify-between">
+              <div className="px-4 py-2.5 bg-[var(--admin-surface-soft)] border-t border-[var(--admin-line)] flex items-center justify-between">
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span><b className="text-gray-700">{(tpl.permissionSlugs || []).length}</b> permissions</span>
                   <span><b className="text-gray-700">{modCount}</b> module{modCount !== 1 ? 's' : ''}</span>
@@ -493,7 +493,7 @@ const PermissionTemplates = () => {
                 <button
                   type="button"
                   onClick={() => setExpanded(isExpanded ? null : tpl.id)}
-                  className="flex items-center gap-1 text-[11px] font-medium text-[#3E4094] hover:underline"
+                  className="flex items-center gap-1 text-[11px] font-medium text-[var(--admin-blue)] hover:underline"
                 >
                   {isExpanded ? 'Hide' : 'Breakdown'}
                   {isExpanded ? <MdExpandLess size={14} /> : <MdExpandMore size={14} />}
@@ -502,7 +502,7 @@ const PermissionTemplates = () => {
 
               {/* Module breakdown (expandable) */}
               {isExpanded && (
-                <div className="px-4 py-3 border-t border-[#f0ece4] space-y-2 bg-white">
+                <div className="px-4 py-3 border-t border-[var(--admin-line)] space-y-2 bg-white">
                   {Object.entries(byMod).map(([mod, actions]) => (
                     <div key={mod} className="flex items-center gap-2">
                       <span className="text-xs font-medium text-gray-600 w-24 shrink-0 truncate">{mod}</span>

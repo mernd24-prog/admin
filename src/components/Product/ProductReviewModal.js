@@ -105,7 +105,7 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">Decision</label>
           <select
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             value={decision}
             onChange={(e) => { setDecision(e.target.value); setError(''); }}
           >
@@ -121,7 +121,7 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
             <button
               type="button"
               onClick={handleCheckAll}
-              className="text-xs text-[#3E4094] hover:underline"
+              className="text-xs text-[var(--admin-blue)] hover:underline"
             >
               {allChecked ? 'Uncheck all' : 'Check all'}
             </button>
@@ -132,7 +132,7 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
                 type="checkbox"
                 checked={!!checklist[key]}
                 onChange={() => handleChecklistToggle(key)}
-                className="w-4 h-4 text-[#3E4094] border-gray-300 rounded focus:ring-[#3E4094]"
+                className="w-4 h-4 text-[var(--admin-blue)] border-gray-300 rounded focus:ring-[var(--admin-blue)]"
               />
               <span className="text-sm text-gray-700">{label}</span>
             </label>
@@ -145,7 +145,7 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
               Rejection Reason <span className="text-red-500">*</span>
             </label>
             <textarea
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
               rows={3}
               placeholder="Provide a clear reason for rejection..."
               value={rejectionReason}

@@ -59,7 +59,7 @@ const VariantInventory = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search variable products…"
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF]"
+          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)]"
         />
       </div>
 

@@ -359,7 +359,7 @@ const FinishProducts = () => {
               Home / <b>Finish</b>
             </h3>
             <AddButton
-              className="border-[#3E4094] text-[#3E4094] mb-3"
+              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
               onClick={() => {
                 setIsOpenAddModal(true);
               }}

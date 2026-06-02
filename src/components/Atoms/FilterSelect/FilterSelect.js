@@ -9,30 +9,30 @@ const customStyles = (error) => ({
     borderColor: error
       ? "var(--admin-danger)"
       : state.isFocused
-        ? "var(--admin-navy)"
+        ? "var(--admin-blue)"
         : "var(--admin-field-line)",
     boxShadow: error
       ? "0 0 0 1px var(--admin-danger)"
       : state.isFocused
-        ? "0 0 0 2px rgba(8, 47, 145, 0.1)"
+        ? "0 0 0 3px rgba(47, 107, 255, 0.11)"
         : "none",
     borderRadius: "0.375rem",
-    minHeight: "42px",
+    minHeight: "36px",
     paddingLeft: "0.5rem",
     paddingRight: "0.5rem",
     cursor: "pointer",
     "&:hover": {
-      borderColor: error ? "var(--admin-danger)" : "var(--admin-navy)",
+      borderColor: error ? "var(--admin-danger)" : "var(--admin-blue)",
     },
   }),
   placeholder: (provided) => ({
     ...provided,
-    color: "#4A5568",
+    color: "var(--admin-muted)",
     fontSize: "0.875rem",
   }),
   singleValue: (provided) => ({
     ...provided,
-    color: "#2D3748",
+    color: "var(--admin-ink)",
     fontSize: "0.875rem",
   }),
   dropdownIndicator: (provided) => ({
@@ -45,8 +45,18 @@ const customStyles = (error) => ({
   }),
   menu: (provided) => ({
     ...provided,
+    borderRadius: 8,
     zIndex: 9999,
     position: "absolute",
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected
+      ? "var(--admin-navy)"
+      : state.isFocused
+        ? "var(--admin-blue-soft)"
+        : provided.backgroundColor,
+    color: state.isSelected ? "#fff" : "var(--admin-ink)",
   }),
   menuPortal: (provided) => ({
     ...provided,

@@ -3,8 +3,8 @@ import React from "react";
 const Button = ({ label, onClick, isActive, className = "" }) => {
     return (
         <button type="button"
-            className={`rounded-t-md border px-4 py-2 text-center text-sm font-medium transition-colors duration-300 ${isActive ? 'border-[#082f91] bg-[#082f91] text-white' : 'border-[#e4dfd9] text-[#082f91]'
-                } hover:bg-[#eef2ff] ${className}`}
+            className={`rounded-t-md border px-4 py-2 text-center text-sm font-medium transition-colors duration-300 ${isActive ? 'border-[var(--admin-navy)] bg-[var(--admin-navy)] text-white' : 'border-[var(--admin-line)] text-[var(--admin-ink)]'
+                } hover:bg-[var(--admin-blue-soft)] ${className}`}
             onClick={onClick}
         >
             {label}

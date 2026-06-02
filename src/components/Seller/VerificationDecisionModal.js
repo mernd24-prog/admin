@@ -72,7 +72,7 @@ const VerificationDecisionModal = ({
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">{decisionLabel}</label>
           <select
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             value={decision}
             onChange={(e) => { setDecision(e.target.value); setError(''); }}
           >
@@ -86,7 +86,7 @@ const VerificationDecisionModal = ({
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">{rejectionLabel} <span className="text-red-500">*</span></label>
             <textarea
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
               rows={3}
               placeholder="Provide a clear reason for rejection..."
               value={rejectionReason}
@@ -108,7 +108,7 @@ const VerificationDecisionModal = ({
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm rounded-md bg-[#3E4094] text-white hover:bg-[#2e3074] disabled:opacity-60"
+            className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074] disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Submitting…' : submitText}

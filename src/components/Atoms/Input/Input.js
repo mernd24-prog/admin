@@ -6,29 +6,40 @@ import { IoClose, IoCloudUploadOutline } from "react-icons/io5";
 const selectStyles = (invalid, hasValue) => ({
   control: (base, state) => ({
     ...base,
-    minHeight: 40,
-    background: hasValue ? "#f7f9ff" : "var(--admin-field)",
+    minHeight: 36,
+    background: hasValue ? "var(--admin-surface-soft)" : "var(--admin-field)",
     borderColor: invalid
       ? "var(--admin-danger)"
       : state.isFocused
-        ? "var(--admin-navy)"
+        ? "var(--admin-blue)"
         : hasValue
-          ? "#b9c8ea"
+          ? "var(--admin-line-strong)"
           : "var(--admin-field-line)",
-    boxShadow: state.isFocused ? "0 0 0 2px rgba(8, 47, 145, 0.1)" : "none",
+    boxShadow: state.isFocused ? "0 0 0 3px rgba(47, 107, 255, 0.11)" : "none",
+    borderRadius: 6,
     fontSize: 13,
   }),
   singleValue: (base) => ({
     ...base,
-    color: hasValue ? "#082f91" : base.color,
+    color: hasValue ? "var(--admin-ink)" : base.color,
     fontWeight: hasValue ? 500 : base.fontWeight,
   }),
   multiValueLabel: (base) => ({
     ...base,
-    color: "#082f91",
+    color: "var(--admin-ink)",
     fontWeight: 500,
   }),
-  menu: (base) => ({ ...base, zIndex: 60 }),
+  menu: (base) => ({ ...base, borderRadius: 8, zIndex: 60 }),
+  option: (base, state) => ({
+    ...base,
+    background: state.isSelected
+      ? "var(--admin-navy)"
+      : state.isFocused
+        ? "var(--admin-blue-soft)"
+        : base.background,
+    color: state.isSelected ? "#fff" : "var(--admin-ink)",
+    fontSize: 13,
+  }),
 });
 
 const normalizeOptions = (options = []) =>

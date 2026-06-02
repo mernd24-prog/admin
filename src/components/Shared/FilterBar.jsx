@@ -64,7 +64,7 @@ const FilterField = ({ field, value, onChange }) => {
         )}
         <div className="relative">
           {field.type === 'search' && (
-            <MdSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <MdSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] pointer-events-none" />
           )}
           <input
             id={id}
@@ -146,12 +146,12 @@ const FilterBar = ({
   if (!filters.length) return null;
 
   return (
-    <div className="flex flex-wrap items-end gap-3 px-4 py-3 bg-gray-50/70 border-b border-gray-100">
+    <div className="flex flex-wrap items-end gap-3 px-4 py-3 bg-[var(--admin-surface-soft)] border-b border-[var(--admin-line)]">
       {/* Icon */}
-      <div className="flex items-center gap-1.5 text-gray-400 self-end pb-1.5">
+      <div className="flex items-center gap-1.5 text-[var(--admin-muted)] self-end pb-1.5">
         <MdFilterList size={16} />
         {activeCount > 0 && (
-          <span className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-[#989AFF] text-white rounded-full">
+          <span className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-[var(--admin-gold)] text-[var(--admin-navy)] rounded-full">
             {activeCount}
           </span>
         )}

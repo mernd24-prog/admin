@@ -290,7 +290,7 @@ const SellerUsers = () => {
           <span key={`parent-${userId}`} className="text-xs text-gray-500">{user.parentSellerId || user.ownerSellerId || '-'}</span>,
           <div key={`mods-${userId}`} className="flex flex-wrap gap-1">
             {modules.slice(0, 2).map((module) => (
-              <span key={module} className="rounded bg-[#3E4094]/10 px-1.5 py-0.5 text-xs text-[#3E4094]">
+              <span key={module} className="rounded bg-[var(--admin-blue)]/10 px-1.5 py-0.5 text-xs text-[var(--admin-blue)]">
                 {getModuleLabel(module)}
               </span>
             ))}
@@ -427,7 +427,7 @@ const SellerUsers = () => {
       <div className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm text-gray-500">
-            <Link to="/app/home" className="text-[#3E4094] hover:underline">Home</Link> / <b className="text-gray-800">Seller Users</b>
+            <Link to="/app/home" className="text-[var(--admin-blue)] hover:underline">Home</Link> / <b className="text-gray-800">Seller Users</b>
           </h3>
           {(tab === 'seller-admins' || tab === 'seller-sub-admins') && (
             <AddButton onClick={() => openCreateStaff(tab === 'seller-admins' ? 'seller-admin' : 'seller-sub-admin')}>
@@ -450,7 +450,7 @@ const SellerUsers = () => {
                 setPage(1);
               }}
               className={`-mb-px border-b-2 px-5 py-2.5 text-sm font-medium transition-colors ${
-                tab === item.key ? 'border-[#3E4094] text-[#3E4094]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                tab === item.key ? 'border-[var(--admin-blue)] text-[var(--admin-blue)]' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
               {item.label}
@@ -555,7 +555,7 @@ const SellerUsers = () => {
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Parent Seller *</label>
             <select
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3E4094] focus:outline-none"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[var(--admin-blue)] focus:outline-none"
               value={staffForm.parentSellerId}
               onChange={(event) => setStaffForm((current) => ({ ...current, parentSellerId: event.target.value }))}
             >

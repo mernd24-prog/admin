@@ -59,10 +59,10 @@ const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
       <div className="bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] sticky top-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] sticky top-0">
           <div>
             <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <MdSecurity className="text-[#3E4094]" size={16} />
+              <MdSecurity className="text-[var(--admin-blue)]" size={16} />
               Effective Permissions
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">{userName}</p>
@@ -74,26 +74,26 @@ const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
 
         {loading ? (
           <div className="p-6 space-y-3 animate-pulse">
-            {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[#faf6ee] rounded" />)}
+            {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[var(--admin-surface-soft)] rounded" />)}
           </div>
         ) : !data ? (
           <div className="p-8 text-center text-sm text-gray-400">No data available</div>
         ) : (
           <div className="p-5 space-y-5 flex-1">
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-[#faf6ee] rounded-lg p-3">
+              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Role</p>
                 <p className="font-semibold text-gray-700 capitalize">{data.role || "—"}</p>
               </div>
-              <div className="bg-[#faf6ee] rounded-lg p-3">
+              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Total Permissions</p>
                 <p className="font-semibold text-gray-700">{(data.assignedPermissions || []).length}</p>
               </div>
-              <div className="bg-[#faf6ee] rounded-lg p-3">
+              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Modules</p>
                 <p className="font-semibold text-gray-700">{(data.assignedModules || []).length}</p>
               </div>
-              <div className="bg-[#faf6ee] rounded-lg p-3">
+              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Denied</p>
                 <p className="font-semibold text-red-500">{(data.deniedPermissions || []).length}</p>
               </div>
@@ -108,7 +108,7 @@ const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
                       <span className="font-medium text-gray-700 w-32 shrink-0 capitalize">{mod}</span>
                       <div className="flex flex-wrap gap-1">
                         {Object.keys(actions).map((action) => (
-                          <span key={action} className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] rounded text-[10px] font-medium">
+                          <span key={action} className="px-1.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] rounded text-[10px] font-medium">
                             {action}
                           </span>
                         ))}
@@ -299,7 +299,7 @@ const ModuleSelector = ({
             onClick={() => toggleGroup(tabModules)}
             className={`w-full rounded-md border px-3 py-2.5 text-left text-xs transition-colors ${
               tabModules.some((module) => module.selected)
-                ? "border-[#3E4094] bg-[#3E4094]/10 text-[#3E4094]"
+                ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/10 text-[var(--admin-blue)]"
                 : "border-gray-200 text-gray-600 hover:border-gray-300"
             } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
@@ -446,8 +446,8 @@ const ModuleActionsSelector = ({
 }) => {
   if (!modules.length) return null;
   return (
-    <div className="border border-[#e7dfd1] rounded-lg overflow-hidden mt-1">
-      <div className="bg-[#faf6ee] px-3 py-2 border-b border-[#e7dfd1] flex items-center gap-2">
+    <div className="border border-[var(--admin-line)] rounded-lg overflow-hidden mt-1">
+      <div className="bg-[var(--admin-surface-soft)] px-3 py-2 border-b border-[var(--admin-line)] flex items-center gap-2">
         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
           Actions per Module
         </span>
@@ -480,7 +480,7 @@ const ModuleActionsSelector = ({
               const assignableActions = getAssignableActionsForModule(mod);
               const currentActions = actionsMap[slug] || ["view"];
               return (
-                <tr key={slug} className="hover:bg-[#faf6ee]/60">
+                <tr key={slug} className="hover:bg-[var(--admin-surface-soft)]/60">
                   <td className="px-3 py-2 font-medium text-gray-700 capitalize">
                     {label}
                   </td>
@@ -507,7 +507,7 @@ const ModuleActionsSelector = ({
                               [slug]: next.length ? next : ["view"],
                             });
                           }}
-                          className="w-3.5 h-3.5 accent-[#3E4094] cursor-pointer disabled:cursor-default"
+                          className="w-3.5 h-3.5 accent-[var(--admin-blue)] cursor-pointer disabled:cursor-default"
                         />
                       </td>
                     );
@@ -1202,7 +1202,7 @@ const AdminUsers = () => {
             <button
               title="View effective permissions"
               onClick={() => setPermDrawer({ userId, userName: name })}
-              className="p-1.5 text-gray-400 hover:text-[#3E4094] rounded hover:bg-[#faf6ee] transition-colors"
+              className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded hover:bg-[var(--admin-surface-soft)] transition-colors"
             >
               <MdSecurity size={15} />
             </button>
@@ -1287,7 +1287,7 @@ const AdminUsers = () => {
             <button
               title="View effective permissions"
               onClick={() => setPermDrawer({ userId, userName: name })}
-              className="p-1.5 text-gray-400 hover:text-[#3E4094] rounded hover:bg-[#faf6ee] transition-colors"
+              className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded hover:bg-[var(--admin-surface-soft)] transition-colors"
             >
               <MdSecurity size={15} />
             </button>
@@ -1330,7 +1330,7 @@ const AdminUsers = () => {
       <div className="max-w-7xl mx-auto  py-6 px-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm text-gray-500">
-            <Link to="/app/home" className="hover:underline text-[#3E4094]">
+            <Link to="/app/home" className="hover:underline text-[var(--admin-blue)]">
               Home
             </Link>{" "}
             / <b className="text-gray-800">Admin Users</b>
@@ -1383,7 +1383,7 @@ const AdminUsers = () => {
               onClick={() => setTab(key)}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === key
-                  ? "border-[#3E4094] text-[#3E4094]"
+                  ? "border-[var(--admin-blue)] text-[var(--admin-blue)]"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -1560,7 +1560,7 @@ const AdminUsers = () => {
               <button
                 type="button"
                 onClick={() => setShowModuleActions((v) => !v)}
-                className="flex items-center gap-2 text-xs font-medium text-[#3E4094] hover:underline"
+                className="flex items-center gap-2 text-xs font-medium text-[var(--admin-blue)] hover:underline"
               >
                 {showModuleActions ? "▾" : "▸"} Configure actions per module
               </button>
@@ -1663,7 +1663,7 @@ const AdminUsers = () => {
                 <button
                   type="button"
                   onClick={() => setShowModuleActions((v) => !v)}
-                  className="text-xs text-[#3E4094] hover:underline"
+                  className="text-xs text-[var(--admin-blue)] hover:underline"
                 >
                   {showModuleActions ? "Hide" : "Show"}
                 </button>
@@ -1808,7 +1808,7 @@ const AdminUsers = () => {
               <button
                 type="button"
                 onClick={() => setShowModuleActions((v) => !v)}
-                className="flex items-center gap-2 text-xs font-medium text-[#3E4094] hover:underline"
+                className="flex items-center gap-2 text-xs font-medium text-[var(--admin-blue)] hover:underline"
               >
                 {showModuleActions ? "▾" : "▸"} Configure actions per module
                 (optional)
@@ -1933,7 +1933,7 @@ const AdminUsers = () => {
                 <button
                   type="button"
                   onClick={() => setShowModuleActions((v) => !v)}
-                  className="text-xs text-[#3E4094] hover:underline"
+                  className="text-xs text-[var(--admin-blue)] hover:underline"
                 >
                   {showModuleActions ? "Hide" : "Show"}
                 </button>
@@ -1997,8 +1997,8 @@ const AdminUsers = () => {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[#e7dfd1]">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <MdContentCopy className="text-indigo-500" size={16} />
@@ -2091,8 +2091,8 @@ const AdminUsers = () => {
       {/* Apply-template modal */}
       {applyTemplateTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[#e7dfd1]">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
               <div>
                 <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                   <MdDashboardCustomize className="text-teal-500" size={16} />

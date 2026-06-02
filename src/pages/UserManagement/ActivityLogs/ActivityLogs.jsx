@@ -133,7 +133,7 @@ const ActivityLogs = () => {
               setActionFilter(f);
               setPage(1);
             }}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${actionFilter === f ? "bg-[#082f91] text-white" : "bg-white border border-gray-200 text-gray-500 hover:border-[#082f91]"}`}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${actionFilter === f ? "bg-[var(--admin-navy)] text-white" : "bg-white border border-gray-200 text-gray-500 hover:border-[var(--admin-navy)]"}`}
           >
             {f}
           </button>

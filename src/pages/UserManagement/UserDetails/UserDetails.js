@@ -635,7 +635,7 @@ const UserDetails = () => {
                           {(module.permissions.length ? module.permissions : ['View']).map((permission) => (
                             <span
                               key={`${module.id}-${permission}`}
-                              className="inline-flex items-center rounded-md border border-[#CE9F2D]/40 bg-[#CE9F2D]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#8A5A1F]"
+                              className="inline-flex items-center rounded-md border border-[var(--admin-gold)]/40 bg-[var(--admin-gold)]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#8A5A1F]"
                             >
                               {permission}
                             </span>
@@ -822,7 +822,7 @@ const UserDetails = () => {
                     className="h-16 w-16 rounded-full border border-gray-200 bg-white object-cover"
                   />
                   <div className="flex flex-wrap items-center gap-2">
-                    <label className="cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                    <label className="cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
                       Upload Seller Image
                       <input
                         type="file"
@@ -873,7 +873,7 @@ const UserDetails = () => {
                   onChange={(e) => setEditSeller((p) => ({ ...p, businessType: e.target.value }))}
                 />
                 <div className="md:col-span-2 flex justify-end">
-                  <button type="submit" className="px-4 py-2 rounded-md bg-[#3E4094] text-white text-sm hover:bg-[#2e3074]">
+                  <button type="submit" className="px-4 py-2 rounded-md bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2e3074]">
                     Save Seller Details
                   </button>
                 </div>

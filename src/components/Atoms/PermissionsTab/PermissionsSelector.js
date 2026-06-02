@@ -118,7 +118,7 @@ const PermissionsSelector = ({ module, selected, availablePermissions = [], onCh
                                 type="checkbox"
                                 name={`permission-${module}`}
                                 id={`${module}-${option}`}
-                                className="h-4 w-4 rounded border-[#082f91] accent-[#082f91] focus:ring-[#082f91]"
+                                className="h-4 w-4 rounded border-[var(--admin-navy)] accent-[var(--admin-navy)] focus:ring-[var(--admin-navy)]"
                                 checked={isSelected}
                                 onChange={() => {
                                     if (disabled) return;

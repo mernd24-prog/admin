@@ -84,14 +84,14 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
         <div className="relative">
           <input
             type="text"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="Search product by title or SKU…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {searching && (
             <div className="absolute right-3 top-2.5">
-              <div className="w-4 h-4 border-2 border-[#3E4094] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[var(--admin-blue)] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           {results.length > 0 && (
@@ -114,7 +114,7 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
                     <p className="text-sm text-gray-800 truncate">{p.title || p.name}</p>
                     <p className="text-xs text-gray-400">SKU: {p.sku || '—'} · ₹{p.price || 0}</p>
                   </div>
-                  <span className="ml-auto text-xs text-[#3E4094] font-medium flex-shrink-0">+ Add</span>
+                  <span className="ml-auto text-xs text-[var(--admin-blue)] font-medium flex-shrink-0">+ Add</span>
                 </button>
               ))}
             </div>
@@ -148,7 +148,7 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
                   <input
                     type="number"
                     min={1}
-                    className="w-14 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3E4094]"
+                    className="w-14 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
                     value={item.quantity}
                     onChange={(e) => updateQty(item.productId, e.target.value)}
                   />
@@ -181,7 +181,7 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
                   type="number"
                   min={0}
                   max={100}
-                  className="w-20 border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+                  className="w-20 border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
                   value={bundleDiscount}
                   onChange={(e) => onDiscountChange(Math.min(100, Math.max(0, Number(e.target.value))))}
                 />
@@ -196,7 +196,7 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
               <span className="text-sm font-semibold text-gray-800">Bundle price:</span>
-              <span className="text-base font-bold text-[#3E4094]">₹{bundlePrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+              <span className="text-base font-bold text-[var(--admin-blue)]">₹{bundlePrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
             </div>
             {bundleDiscount > 0 && (
               <p className="text-xs text-green-600">Customers save {bundleDiscount}% vs buying separately</p>

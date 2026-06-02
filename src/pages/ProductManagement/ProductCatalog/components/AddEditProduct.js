@@ -1003,7 +1003,7 @@ export default function ProductManagementUI() {
             <label className="text-sm font-medium text-gray-700">Short Description</label>
             <textarea
               rows={2}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
               placeholder="Brief one-line summary shown in product cards…"
               value={formData?.shortDescription || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
@@ -1014,7 +1014,7 @@ export default function ProductManagementUI() {
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Visibility</label>
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
               value={formData?.visibility || 'public'}
               onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
             >
@@ -1169,7 +1169,7 @@ export default function ProductManagementUI() {
               <label key={key} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer">
                 <input
                   type="checkbox"
-                  className="mt-0.5 accent-[#3E4094]"
+                  className="mt-0.5 accent-[var(--admin-blue)]"
                   checked={!!formData?.[key]}
                   onChange={() => handleToggleProductSetting(key === 'markAsFeatured' ? 'FEATURED' : key === 'cod' ? 'COD' : 'prescription_required')}
                 />
@@ -1268,7 +1268,7 @@ export default function ProductManagementUI() {
           <button
             type="button"
             onClick={() => navigate('/app/product-flow')}
-            className="rounded bg-[#3E4094] px-3 py-1 text-xs text-white"
+            className="rounded bg-[var(--admin-blue)] px-3 py-1 text-xs text-white"
           >
             Open Full Flow
           </button>

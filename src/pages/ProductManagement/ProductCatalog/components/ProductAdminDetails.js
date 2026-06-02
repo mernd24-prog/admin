@@ -91,7 +91,7 @@ const ProductAdminDetails = () => {
         <h3 className="text-sm text-gray-500">
           <Link
             to="/app/product-catalog"
-            className="hover:underline text-[#3E4094]"
+            className="hover:underline text-[var(--admin-blue)]"
           >
             Product Catalog
           </Link>
@@ -102,7 +102,7 @@ const ProductAdminDetails = () => {
           {product.status && <ProductStatusBadge status={product.status} />}
           <button
             onClick={() => setReviewOpen(true)}
-            className="px-4 py-2 text-sm rounded-md bg-[#3E4094] text-white hover:bg-[#2e3074]"
+            className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
           >
             Review Product
           </button>
@@ -464,7 +464,7 @@ const ProductAdminDetails = () => {
                     href={product.digital.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-sm text-[#3E4094] hover:underline break-all"
+                    className="text-sm text-[var(--admin-blue)] hover:underline break-all"
                   >
                     {product.digital.fileUrl}
                   </a>
@@ -658,7 +658,7 @@ const ProductAdminDetails = () => {
                     {product.seo.keywords.map((kw) => (
                       <span
                         key={kw}
-                        className="px-2.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded-full"
+                        className="px-2.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs rounded-full"
                       >
                         {kw}
                       </span>
@@ -742,7 +742,7 @@ const ProductAdminDetails = () => {
               {product.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex px-2.5 py-0.5 bg-[#3E4094] text-white text-xs rounded-full"
+                  className="inline-flex px-2.5 py-0.5 bg-[var(--admin-blue)] text-white text-xs rounded-full"
                 >
                   #{tag}
                 </span>

@@ -124,7 +124,7 @@ const TableData = ({
 
   return (
     <>
-      <section className="admin-card  w-full overflow-hidden bg-gradient-to-br from-white to-[#F4F1ED]">
+      <section className="admin-card w-full overflow-hidden bg-white">
         {(actions || onRefresh) && (
           <div className="admin-table-toolbar flex-wrap">
             <div className="flex flex-wrap items-center gap-2">{actions}</div>
@@ -154,7 +154,7 @@ const TableData = ({
               <div className="hidden w-full lg:block overflow-x-auto">
                 <table className="w-full min-w-max table-auto border-collapse text-left font-inter">
                   <thead
-                    className={`admin-table-head text-[14px] ${stickyHeader ? "sticky top-0 z-10 shadow-sm" : ""}`}
+                    className={`admin-table-head text-[13px] ${stickyHeader ? "sticky top-0 z-10 shadow-sm" : ""}`}
                   >
                     <tr>
                       {isHeaderCheckbox && (
@@ -175,11 +175,11 @@ const TableData = ({
                         return (
                           <th
                             key={`heading-${index}`}
-                            className={`px-5 py-3 text-left font-semibold text-white whitespace-nowrap select-none ${
+                            className={`px-5 py-3 text-left font-semibold text-[var(--admin-navy)] whitespace-nowrap select-none ${
                               columnMeta.headerClass
                             } ${
                               sortableColumns.includes(index)
-                                ? "cursor-pointer hover:bg-white/10"
+                                ? "cursor-pointer hover:bg-[var(--admin-blue-soft)]"
                                 : "cursor-default"
                             }`}
                             onClick={
@@ -196,13 +196,13 @@ const TableData = ({
                               <span>{heading}</span>
                               {sortableColumns.includes(index) &&
                                 showTableSorting && (
-                                  <div className="flex flex-col text-white/50">
+                                  <div className="flex flex-col text-[var(--admin-muted)]">
                                     <IoCaretUpOutline
                                       size={8}
                                       className={`${
                                         sortColumn === index &&
                                         sortDirection === "asc"
-                                          ? "text-[#e49e1c]"
+                                          ? "text-[var(--admin-gold)]"
                                           : ""
                                       }`}
                                     />
@@ -211,7 +211,7 @@ const TableData = ({
                                       className={`${
                                         sortColumn === index &&
                                         sortDirection === "desc"
-                                          ? "text-[#e49e1c]"
+                                          ? "text-[var(--admin-gold)]"
                                           : ""
                                       }`}
                                     />
@@ -240,7 +240,7 @@ const TableData = ({
                             ? rowKey(row, rowIndex)
                             : `row-${rowIndex}`
                         }
-                        className="border-b border-slate-50 last:border-0 transition-colors hover:bg-[#f7f9ff]"
+                        className="border-b border-[#f0e8dc] last:border-0 transition-colors hover:bg-[var(--admin-surface-soft)]"
                       >
                         {row && Array.isArray(row) && row.length > 0 ? (
                           row.map((cell, cellIndex) => {
@@ -272,7 +272,7 @@ const TableData = ({
                             return (
                               <td
                                 key={`cell-${rowIndex}-${cellIndex}`}
-                                className={`px-5 py-3 align-middle text-slate-700 ${
+                                className={`px-5 py-3 align-middle text-[var(--admin-ink)] ${
                                   columnMeta.cellClass
                                 }`}
                               >
@@ -300,7 +300,7 @@ const TableData = ({
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between border-t border-[#edeff1] bg-white/70 px-5 py-3 text-sm text-gray-500">
+                <div className="flex items-center justify-between border-t border-[var(--admin-line)] bg-white px-5 py-3 text-sm text-[var(--admin-muted)]">
                   <span>Total Records</span>
                   <span className="font-semibold text-gray-700">
                     {totalData ?? data.length}
@@ -312,10 +312,10 @@ const TableData = ({
                 {data.map((row, rowIndex) => (
                   <div
                     key={`mobile-row-${rowIndex}`}
-                    className="overflow-hidden rounded-lg border border-[#e8e2db] bg-white"
+                    className="overflow-hidden rounded-lg border border-[var(--admin-line)] bg-white"
                   >
-                    <div className="flex items-center justify-between border-b border-[#edeff1] bg-[#f7f9ff] px-4 py-3">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-[#082f91]">
+                    <div className="flex items-center justify-between border-b border-[var(--admin-line)] bg-[var(--admin-table-head)] px-4 py-3">
+                      <span className="text-xs font-semibold text-[var(--admin-navy)]">
                         Record {rowIndex + 1}
                       </span>
                     </div>
@@ -323,7 +323,7 @@ const TableData = ({
                       row.map((cell, cellIndex) => (
                         <div
                           key={`mobile-cell-${rowIndex}-${cellIndex}`}
-                          className="grid grid-cols-[minmax(96px,42%)_1fr] gap-3 border-b border-[#f0f2f5] px-4 py-3 last:border-b-0"
+                          className="grid grid-cols-[minmax(96px,42%)_1fr] gap-3 border-b border-[#f0e8dc] px-4 py-3 last:border-b-0"
                         >
                           <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                             {getMobileHeading(
@@ -344,7 +344,7 @@ const TableData = ({
                     )}
                   </div>
                 ))}
-                <div className="flex items-center justify-between rounded-lg border border-[#e8e2db] bg-[#fafbff] px-4 py-3 text-sm text-gray-500">
+                <div className="flex items-center justify-between rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3 text-sm text-[var(--admin-muted)]">
                   <span>Total Records</span>
                   <span className="font-semibold text-gray-700">
                     {totalData ?? data.length}

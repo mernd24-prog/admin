@@ -73,14 +73,14 @@ const RbacAuditLog = () => {
       />
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm p-4 mb-4">
+      <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm p-4 mb-4">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
           <div>
             <label className="block text-gray-500 mb-1 font-medium">Action</label>
             <select
               value={filters.action}
               onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             >
               {ACTION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -91,7 +91,7 @@ const RbacAuditLog = () => {
               value={filters.moduleSlug}
               onChange={(e) => setFilters((f) => ({ ...f, moduleSlug: e.target.value }))}
               placeholder="e.g. products"
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             />
           </div>
           <div>
@@ -100,7 +100,7 @@ const RbacAuditLog = () => {
               value={filters.actorId}
               onChange={(e) => setFilters((f) => ({ ...f, actorId: e.target.value }))}
               placeholder="User ID"
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             />
           </div>
           <div>
@@ -109,7 +109,7 @@ const RbacAuditLog = () => {
               value={filters.targetUserId}
               onChange={(e) => setFilters((f) => ({ ...f, targetUserId: e.target.value }))}
               placeholder="User ID"
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             />
           </div>
           <div>
@@ -118,7 +118,7 @@ const RbacAuditLog = () => {
               type="date"
               value={filters.from}
               onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             />
           </div>
           <div>
@@ -127,7 +127,7 @@ const RbacAuditLog = () => {
               type="date"
               value={filters.to}
               onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
-              className="w-full border border-[#e7dfd1] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
             />
           </div>
         </div>
@@ -143,10 +143,10 @@ const RbacAuditLog = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 space-y-3 animate-pulse">
-            {[1,2,3,4,5].map((i) => <div key={i} className="h-10 bg-[#faf6ee] rounded" />)}
+            {[1,2,3,4,5].map((i) => <div key={i} className="h-10 bg-[var(--admin-surface-soft)] rounded" />)}
           </div>
         ) : items.length === 0 ? (
           <div className="p-12 text-center text-sm text-gray-400">No audit log entries found</div>
@@ -154,7 +154,7 @@ const RbacAuditLog = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[#faf6ee] border-b border-[#e7dfd1]">
+                <tr className="bg-[var(--admin-surface-soft)] border-b border-[var(--admin-line)]">
                   <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Timestamp</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Action</th>
                   <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Actor</th>
@@ -166,7 +166,7 @@ const RbacAuditLog = () => {
               <tbody className="divide-y divide-[#f7efde]">
                 {items.map((row) => (
                   <React.Fragment key={row.id}>
-                    <tr className="hover:bg-[#faf6ee]/60 transition-colors">
+                    <tr className="hover:bg-[var(--admin-surface-soft)]/60 transition-colors">
                       <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap font-mono">
                         {row.created_at ? new Date(row.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                       </td>
@@ -185,7 +185,7 @@ const RbacAuditLog = () => {
                       </td>
                       <td className="px-4 py-2.5">
                         {row.moduleSlug && (
-                          <span className="px-1.5 py-0.5 bg-[#3E4094]/10 text-[#3E4094] rounded text-[10px] font-medium mr-1">
+                          <span className="px-1.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] rounded text-[10px] font-medium mr-1">
                             {row.moduleSlug}
                           </span>
                         )}
@@ -197,7 +197,7 @@ const RbacAuditLog = () => {
                         {(row.newValue || row.oldValue) && (
                           <button
                             onClick={() => setExpanded(expanded === row.id ? null : row.id)}
-                            className="text-gray-300 hover:text-[#3E4094] text-base leading-none"
+                            className="text-gray-300 hover:text-[var(--admin-blue)] text-base leading-none"
                             title="Show diff"
                           >
                             {expanded === row.id ? '▲' : '▼'}
@@ -207,12 +207,12 @@ const RbacAuditLog = () => {
                     </tr>
                     {expanded === row.id && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-3 bg-[#faf6ee]">
+                        <td colSpan={6} className="px-4 py-3 bg-[var(--admin-surface-soft)]">
                           <div className="grid grid-cols-2 gap-4 text-[10px]">
                             {row.oldValue && (
                               <div>
                                 <p className="font-semibold text-gray-500 mb-1 uppercase tracking-wide">Before</p>
-                                <pre className="bg-white border border-[#e7dfd1] rounded p-2 overflow-x-auto text-gray-600 font-mono">
+                                <pre className="bg-white border border-[var(--admin-line)] rounded p-2 overflow-x-auto text-gray-600 font-mono">
                                   {JSON.stringify(row.oldValue, null, 2)}
                                 </pre>
                               </div>
@@ -220,7 +220,7 @@ const RbacAuditLog = () => {
                             {row.newValue && (
                               <div>
                                 <p className="font-semibold text-gray-500 mb-1 uppercase tracking-wide">After</p>
-                                <pre className="bg-white border border-[#e7dfd1] rounded p-2 overflow-x-auto text-gray-600 font-mono">
+                                <pre className="bg-white border border-[var(--admin-line)] rounded p-2 overflow-x-auto text-gray-600 font-mono">
                                   {JSON.stringify(row.newValue, null, 2)}
                                 </pre>
                               </div>
@@ -245,14 +245,14 @@ const RbacAuditLog = () => {
             <button
               disabled={page === 1}
               onClick={() => { setPage((p) => p - 1); load(page - 1); }}
-              className="px-3 py-1.5 border border-[#e7dfd1] rounded-lg hover:bg-[#faf6ee] disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 border border-[var(--admin-line)] rounded-lg hover:bg-[var(--admin-surface-soft)] disabled:opacity-40 transition-colors"
             >
               Previous
             </button>
             <button
               disabled={page === totalPages}
               onClick={() => { setPage((p) => p + 1); load(page + 1); }}
-              className="px-3 py-1.5 border border-[#e7dfd1] rounded-lg hover:bg-[#faf6ee] disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 border border-[var(--admin-line)] rounded-lg hover:bg-[var(--admin-surface-soft)] disabled:opacity-40 transition-colors"
             >
               Next
             </button>

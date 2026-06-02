@@ -45,7 +45,7 @@ const FormLayout = ({
 
         <div className="mb-[22px] text-center">
           <h2
-            className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#082f91] sm:text-[35px] ${titleClassName}`}
+            className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#1A1A2E] sm:text-[35px] ${titleClassName}`}
           >
             {title}
           </h2>
@@ -66,7 +66,7 @@ const FormLayout = ({
             {buttonText && (
               <FormSubmitButton
                 buttonLabel={buttonText}
-                className="h-[38px] w-full rounded-[7px] bg-[#082f91] text-[11px] font-semibold text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#062779] active:scale-[0.99]"
+                className="h-[38px] w-full rounded-[7px] bg-[#1A1A2E] text-[11px] font-semibold text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#12151E] active:scale-[0.99]"
               />
             )}
           </form>

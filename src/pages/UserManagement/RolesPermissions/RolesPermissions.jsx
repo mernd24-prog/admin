@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 const ROLE_META = {
   'super-admin':      { color: 'bg-purple-100 text-purple-700 border-purple-200', model: 'unrestricted', label: 'Super Admin',       desc: 'Bypasses all permission checks' },
-  'admin':            { color: 'bg-blue-100 text-[#3E4094] border-blue-200',      model: 'per-user',     label: 'Admin',             desc: 'Permissions set individually per admin' },
+  'admin':            { color: 'bg-blue-100 text-[var(--admin-blue)] border-blue-200',      model: 'per-user',     label: 'Admin',             desc: 'Permissions set individually per admin' },
   'sub-admin':        { color: 'bg-indigo-100 text-indigo-600 border-indigo-200', model: 'per-user',     label: 'Sub Admin',         desc: 'Permissions set individually per sub-admin' },
   'seller':           { color: 'bg-amber-100 text-amber-700 border-amber-200',    model: 'role-wide',    label: 'Seller',            desc: 'All sellers share these permissions' },
   'seller-admin':     { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', model: 'per-user',     label: 'Seller Admin',      desc: 'Permissions set individually per seller admin' },
@@ -71,8 +71,8 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
 
   if (!modules.length) {
     return (
-      <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm p-10 text-center">
-        <MdSecurity size={40} className="mx-auto mb-3 text-[#e7dfd1]" />
+      <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm p-10 text-center">
+        <MdSecurity size={40} className="mx-auto mb-3 text-[var(--admin-line)]" />
         <p className="text-sm text-gray-400 font-medium">No modules found in database.</p>
         <p className="text-xs text-gray-300 mt-1">Run <code className="font-mono bg-gray-100 px-1 rounded">node scripts/db/seed-rbac.js</code> to populate.</p>
       </div>
@@ -80,9 +80,9 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-5 py-3 border-b border-[#e7dfd1] hover:bg-[#faf6ee] transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 border-b border-[var(--admin-line)] hover:bg-[var(--admin-surface-soft)] transition-colors"
         onClick={() => setExpanded((o) => !o)}
       >
         <div className="flex items-center gap-2">
@@ -96,8 +96,8 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#faf6ee] border-b border-[#e7dfd1]">
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide w-44 sticky left-0 bg-[#faf6ee]">Module</th>
+              <tr className="bg-[var(--admin-surface-soft)] border-b border-[var(--admin-line)]">
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide w-44 sticky left-0 bg-[var(--admin-surface-soft)]">Module</th>
                 {visibleActions.map((a) => (
                   <th key={a} className="px-3 py-2.5 text-center font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
                     {ACTION_LABELS[a] || a.replace('_', ' ')}
@@ -108,7 +108,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
             </thead>
             <tbody className="divide-y divide-[#f7efde]">
               {modules.map((mod) => (
-                <tr key={mod.id || mod.slug} className="hover:bg-[#faf6ee]/60 transition-colors">
+                <tr key={mod.id || mod.slug} className="hover:bg-[var(--admin-surface-soft)]/60 transition-colors">
                   <td className="px-4 py-2.5 sticky left-0 bg-white">
                     <span className="font-medium text-gray-700 text-xs">{mod.moduleName || mod.name}</span>
                     <span className="block text-[10px] text-gray-400 font-mono">{mod.moduleKey || mod.slug}</span>
@@ -124,7 +124,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                             checked={isChecked}
                             disabled={readOnly}
                             onChange={(e) => onChange?.(perm.id, e.target.checked, mod.slug || mod.moduleKey, action)}
-                            className="w-4 h-4 accent-[#3E4094] cursor-pointer disabled:cursor-default rounded"
+                            className="w-4 h-4 accent-[var(--admin-blue)] cursor-pointer disabled:cursor-default rounded"
                           />
                         ) : (
                           <span className="text-gray-200">—</span>
@@ -138,7 +138,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                         type="checkbox"
                         checked={allChecked(mod.slug || mod.moduleKey)}
                         onChange={(e) => toggleAll(mod.slug || mod.moduleKey, e.target.checked)}
-                        className="w-4 h-4 accent-[#CE9F2D] cursor-pointer rounded"
+                        className="w-4 h-4 accent-[var(--admin-gold)] cursor-pointer rounded"
                         title="Toggle all"
                       />
                     </td>
@@ -188,8 +188,8 @@ const RoleModal = ({ role, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-[#e7dfd1]">
-        <div className="px-6 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-[var(--admin-line)]">
+        <div className="px-6 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
           <h3 className="text-sm font-semibold text-gray-800">{role?.id ? 'Edit Role' : 'Create Custom Role'}</h3>
           <p className="text-xs text-gray-400 mt-0.5">{role?.id ? 'Update role name and description' : 'A custom role lets you group a reusable set of permissions'}</p>
         </div>
@@ -199,7 +199,7 @@ const RoleModal = ({ role, onClose, onSave }) => {
             <input
               value={form.name}
               onChange={(e) => { const n = e.target.value; setForm((p) => ({ ...p, name: n, ...(!role?.id ? { slug: autoSlug(n) } : {}) })); setErrors((p) => ({ ...p, name: undefined })); }}
-              className={`w-full border ${errors.name ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30`}
+              className={`w-full border ${errors.name ? 'border-red-300' : 'border-[var(--admin-line)]'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30`}
               placeholder="e.g. Content Manager"
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -210,7 +210,7 @@ const RoleModal = ({ role, onClose, onSave }) => {
               value={form.slug}
               onChange={(e) => { setForm((p) => ({ ...p, slug: e.target.value })); setErrors((p) => ({ ...p, slug: undefined })); }}
               disabled={isStandard}
-              className={`w-full border ${errors.slug ? 'border-red-300' : 'border-[#e7dfd1]'} rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 disabled:bg-[#faf6ee] disabled:text-gray-400`}
+              className={`w-full border ${errors.slug ? 'border-red-300' : 'border-[var(--admin-line)]'} rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30 disabled:bg-[var(--admin-surface-soft)] disabled:text-gray-400`}
               placeholder="content-manager"
             />
             {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug}</p>}
@@ -219,12 +219,12 @@ const RoleModal = ({ role, onClose, onSave }) => {
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
             <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2}
-              className="w-full border border-[#e7dfd1] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]/30 resize-none"
+              className="w-full border border-[var(--admin-line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30 resize-none"
               placeholder="What this role is for" />
           </div>
-          <div className="flex justify-end gap-3 pt-2 border-t border-[#e7dfd1]">
+          <div className="flex justify-end gap-3 pt-2 border-t border-[var(--admin-line)]">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-            <button type="submit" disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#2d3070] disabled:opacity-50">
               {saving ? 'Saving…' : (role?.id ? 'Update Role' : 'Create Role')}
             </button>
           </div>
@@ -237,11 +237,11 @@ const RoleModal = ({ role, onClose, onSave }) => {
 /* ─── Save Confirm ───────────────────────────────────────────────────────── */
 const SaveConfirmModal = ({ onConfirm, onCancel, changedCount }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-[#e7dfd1]">
+    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-[var(--admin-line)]">
       <div className="px-6 py-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-[#3E4094]/10 flex items-center justify-center shrink-0">
-            <MdLock size={20} className="text-[#3E4094]" />
+          <div className="w-10 h-10 rounded-full bg-[var(--admin-blue)]/10 flex items-center justify-center shrink-0">
+            <MdLock size={20} className="text-[var(--admin-blue)]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-800">Save Role Permissions</h3>
@@ -256,7 +256,7 @@ const SaveConfirmModal = ({ onConfirm, onCancel, changedCount }) => (
       </div>
       <div className="px-6 pb-5 flex justify-end gap-3">
         <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-        <button onClick={onConfirm} className="px-5 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070]">Save</button>
+        <button onClick={onConfirm} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#2d3070]">Save</button>
       </div>
     </div>
   </div>
@@ -268,11 +268,11 @@ const HowItWorksBanner = () => {
   if (dismissed) return null;
   return (
     <div className="bg-[#f0f4ff] border border-[#c7d4f5] rounded-xl px-5 py-4 mb-5 flex gap-4 items-start">
-      <div className="w-8 h-8 rounded-lg bg-[#3E4094]/15 flex items-center justify-center shrink-0 mt-0.5">
-        <MdInfo size={18} className="text-[#3E4094]" />
+      <div className="w-8 h-8 rounded-lg bg-[var(--admin-blue)]/15 flex items-center justify-center shrink-0 mt-0.5">
+        <MdInfo size={18} className="text-[var(--admin-blue)]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#3E4094] mb-2">How the two permission levels work</p>
+        <p className="text-sm font-semibold text-[var(--admin-blue)] mb-2">How the two permission levels work</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="bg-white rounded-lg border border-[#c7d4f5] p-3">
             <div className="flex items-center gap-2 mb-1">
@@ -470,7 +470,7 @@ const RolesPermissions = () => {
           <PermissionGuard module="rbac" action={ACTIONS.CREATE}>
             <button
               onClick={() => setModal('create')}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3E4094] text-white text-sm rounded-lg hover:bg-[#2d3070] transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-blue)] text-white text-sm rounded-lg hover:bg-[#2d3070] transition-colors shadow-sm"
             >
               <MdAdd size={16} /> New Custom Role
             </button>
@@ -482,15 +482,15 @@ const RolesPermissions = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* ── Left: Roles list ── */}
-        <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#e7dfd1] bg-[#faf6ee]">
+        <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
             <h3 className="text-sm font-semibold text-gray-700">Roles</h3>
             <p className="text-xs text-gray-400 mt-0.5">Select a role to view or edit its permissions</p>
           </div>
 
           {loading ? (
             <div className="p-4 space-y-2 animate-pulse">
-              {[1,2,3,4,5,6,7].map((i) => <div key={i} className="h-12 bg-[#faf6ee] rounded-lg" />)}
+              {[1,2,3,4,5,6,7].map((i) => <div key={i} className="h-12 bg-[var(--admin-surface-soft)] rounded-lg" />)}
             </div>
           ) : (
             <ul className="divide-y divide-[#f7efde]">
@@ -501,8 +501,8 @@ const RolesPermissions = () => {
                   <li
                     key={role.id || role.slug}
                     onClick={() => selectRole(role)}
-                    className={`flex items-start justify-between px-3 py-3 cursor-pointer hover:bg-[#faf6ee] transition-colors border-l-2 ${
-                      isSelectedRole(role) ? 'bg-[#faf6ee] border-l-[#3E4094]' : 'border-l-transparent'
+                    className={`flex items-start justify-between px-3 py-3 cursor-pointer hover:bg-[var(--admin-surface-soft)] transition-colors border-l-2 ${
+                      isSelectedRole(role) ? 'bg-[var(--admin-surface-soft)] border-l-[var(--admin-blue)]' : 'border-l-transparent'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
@@ -519,11 +519,11 @@ const RolesPermissions = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                      {isSelectedRole(role) && <MdCheck size={14} className="text-[#3E4094]" />}
+                      {isSelectedRole(role) && <MdCheck size={14} className="text-[var(--admin-blue)]" />}
                       {!role._placeholder && canEdit && !role.isSuperAdmin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setModal(role); }}
-                          className="p-1 text-gray-300 hover:text-[#3E4094] rounded transition-colors"
+                          className="p-1 text-gray-300 hover:text-[var(--admin-blue)] rounded transition-colors"
                           title="Edit role"
                         >
                           <MdEdit size={13} />
@@ -540,9 +540,9 @@ const RolesPermissions = () => {
         {/* ── Right: Permission detail ── */}
         <div className="lg:col-span-3">
           {!selected ? (
-            <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm h-64 flex items-center justify-center">
+            <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm h-64 flex items-center justify-center">
               <div className="text-center">
-                <MdSecurity size={40} className="mx-auto mb-3 text-[#e7dfd1]" />
+                <MdSecurity size={40} className="mx-auto mb-3 text-[var(--admin-line)]" />
                 <p className="text-sm font-medium text-gray-400">Select a role from the left</p>
                 <p className="text-xs text-gray-300 mt-1">Configure role-wide permission defaults</p>
               </div>
@@ -550,11 +550,11 @@ const RolesPermissions = () => {
           ) : (
             <div className="space-y-4">
               {/* Header bar */}
-              <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm px-5 py-4">
+              <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm px-5 py-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#3E4094]/10 flex items-center justify-center shrink-0">
-                      <MdSecurity size={18} className="text-[#3E4094]" />
+                    <div className="w-9 h-9 rounded-lg bg-[var(--admin-blue)]/10 flex items-center justify-center shrink-0">
+                      <MdSecurity size={18} className="text-[var(--admin-blue)]" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -588,7 +588,7 @@ const RolesPermissions = () => {
                         <button
                           onClick={() => selectRole(selected)}
                           disabled={permLoading}
-                          className="p-2 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-[#faf6ee] transition-colors"
+                          className="p-2 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-surface-soft)] transition-colors"
                           title="Reload"
                         >
                           <MdRefresh size={16} className={permLoading ? 'animate-spin' : ''} />
@@ -596,7 +596,7 @@ const RolesPermissions = () => {
                         <button
                           onClick={() => setShowSaveConfirm(true)}
                           disabled={saving || permLoading || changedCount === 0}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#3E4094] rounded-lg hover:bg-[#2d3070] disabled:opacity-40 transition-colors shadow-sm"
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#2d3070] disabled:opacity-40 transition-colors shadow-sm"
                         >
                           {saving ? 'Saving…' : 'Save Changes'}
                         </button>
@@ -629,9 +629,9 @@ const RolesPermissions = () => {
                   <p className="text-xs text-gray-400 mt-1">This role is for customer accounts only.</p>
                 </div>
               ) : permLoading ? (
-                <div className="bg-white rounded-xl border border-[#e7dfd1] shadow-sm p-8 animate-pulse">
+                <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-sm p-8 animate-pulse">
                   <div className="space-y-3">
-                    {[1,2,3,4,5].map((i) => <div key={i} className="h-8 bg-[#faf6ee] rounded" />)}
+                    {[1,2,3,4,5].map((i) => <div key={i} className="h-8 bg-[var(--admin-surface-soft)] rounded" />)}
                   </div>
                 </div>
               ) : (

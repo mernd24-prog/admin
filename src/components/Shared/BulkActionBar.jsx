@@ -31,8 +31,8 @@ import PermissionGuard from '../Atoms/PermissionGuard/PermissionGuard';
 const VARIANT_CLASSES = {
   danger:   'text-red-600   hover:bg-red-50   border-red-200',
   warning:  'text-yellow-600 hover:bg-yellow-50 border-yellow-200',
-  primary:  'text-[#989AFF]  hover:bg-indigo-50 border-indigo-200',
-  default:  'text-gray-600  hover:bg-gray-50  border-gray-200',
+  primary:  'text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] border-[var(--admin-blue)]/30',
+  default:  'text-[var(--admin-muted)] hover:bg-white border-[var(--admin-line)]',
 };
 
 const BulkActionBar = ({
@@ -47,10 +47,10 @@ const BulkActionBar = ({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg mb-2 animate-fade-in">
+    <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-[var(--admin-gold-soft)] border border-[var(--admin-line)] rounded-lg mb-2 animate-fade-in">
       {/* Count + clear */}
-      <div className="flex items-center gap-2 text-sm font-medium text-indigo-700 flex-shrink-0">
-        <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+      <div className="flex items-center gap-2 text-sm font-medium text-[var(--admin-navy)] flex-shrink-0">
+        <span className="inline-flex items-center justify-center w-5 h-5 bg-[var(--admin-gold)] text-[var(--admin-navy)] text-[10px] font-bold rounded-full">
           {selectedCount}
         </span>
         <span>{selectedCount} selected</span>
@@ -58,7 +58,7 @@ const BulkActionBar = ({
           <button
             type="button"
             onClick={onSelectAll}
-            className="ml-1 text-xs text-indigo-600 hover:text-indigo-800 underline underline-offset-2"
+            className="ml-1 text-xs text-[var(--admin-blue)] hover:text-[var(--admin-navy)] underline underline-offset-2"
           >
             Select all {totalCount}
           </button>
@@ -66,7 +66,7 @@ const BulkActionBar = ({
       </div>
 
       {/* Divider */}
-      <span className="hidden sm:block w-px h-4 bg-indigo-200" />
+      <span className="hidden sm:block w-px h-4 bg-[var(--admin-line-strong)]" />
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +101,7 @@ const BulkActionBar = ({
         type="button"
         onClick={onClear}
         disabled={loading}
-        className="ml-auto flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 disabled:opacity-50"
+        className="ml-auto flex items-center gap-1 text-xs text-[var(--admin-muted)] hover:text-[var(--admin-navy)] disabled:opacity-50"
         aria-label="Clear selection"
       >
         <MdClose size={14} />

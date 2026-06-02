@@ -3,14 +3,14 @@ import React from 'react';
 // Color map: status key → Tailwind classes
 const VARIANTS = {
   // ── Generic ──────────────────────────────────────────────────────────────
-  active:        'bg-green-100 text-green-700',
-  inactive:      'bg-gray-100 text-gray-500',
+  active:        'bg-green-50 text-green-700 border-green-100',
+  inactive:      'bg-gray-50 text-gray-500 border-gray-100',
   enabled:       'bg-green-100 text-green-700',
   disabled:      'bg-gray-100 text-gray-500',
-  pending:       'bg-yellow-100 text-yellow-700',
-  approved:      'bg-green-100 text-green-700',
-  rejected:      'bg-red-100 text-red-700',
-  draft:         'bg-blue-100 text-blue-600',
+  pending:       'bg-yellow-50 text-yellow-700 border-yellow-100',
+  approved:      'bg-green-50 text-green-700 border-green-100',
+  rejected:      'bg-red-50 text-red-700 border-red-100',
+  draft:         'bg-blue-50 text-blue-600 border-blue-100',
   published:     'bg-green-100 text-green-700',
   unpublished:   'bg-gray-100 text-gray-500',
   archived:      'bg-gray-100 text-gray-500',
@@ -136,7 +136,7 @@ const StatusBadge = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium capitalize ${colorClass} ${sizeClass} ${shapeClass}`}
+      className={`inline-flex items-center gap-1.5 border font-medium capitalize ${colorClass} ${sizeClass} ${shapeClass}`}
     >
       {dot && (
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />

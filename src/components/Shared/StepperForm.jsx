@@ -39,12 +39,11 @@ const StepperForm = ({
   return (
     <div className="flex flex-col gap-6">
       {/* Step indicators */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4 overflow-x-auto">
+      <div className="admin-card px-5 py-4 overflow-x-auto">
         <div className="flex items-center min-w-max">
           {steps.map((step, i) => {
             const done    = i < current;
             const active  = i === current;
-            const pending = i > current;
 
             return (
               <React.Fragment key={i}>
@@ -57,15 +56,15 @@ const StepperForm = ({
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 ${
                       done    ? 'bg-green-500 text-white shadow-sm' :
-                      active  ? 'bg-[#989AFF] text-white shadow-md ring-4 ring-[#989AFF]/20' :
-                                'bg-gray-100 text-gray-400'
+                      active  ? 'bg-[var(--admin-navy)] text-white shadow-md ring-4 ring-[var(--admin-blue)]/10' :
+                                'bg-[var(--admin-blue-soft)] text-[var(--admin-muted)]'
                     }`}
                   >
                     {done ? <MdCheck size={16} /> : i + 1}
                   </div>
                   {/* Label */}
                   <span className={`text-[10px] font-medium whitespace-nowrap ${
-                    active  ? 'text-[#989AFF]' :
+                    active  ? 'text-[var(--admin-navy)]' :
                     done    ? 'text-green-600' :
                               'text-gray-400'
                   }`}>
@@ -76,7 +75,7 @@ const StepperForm = ({
 
                 {/* Connector line */}
                 {i < steps.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 rounded-full transition-colors duration-300 ${i < current ? 'bg-green-400' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 h-0.5 mx-2 rounded-full transition-colors duration-300 ${i < current ? 'bg-green-400' : 'bg-[var(--admin-line)]'}`} />
                 )}
               </React.Fragment>
             );
@@ -88,12 +87,12 @@ const StepperForm = ({
       <div className="min-h-0">{children}</div>
 
       {/* Navigation */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4 flex items-center justify-between">
+      <div className="admin-card px-5 py-4 flex items-center justify-between">
         <button
           type="button"
           onClick={onBack}
           disabled={backDisabled || current === 0}
-          className="px-5 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="admin-btn-secondary !min-h-9 px-5 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Back
         </button>
@@ -108,7 +107,7 @@ const StepperForm = ({
           type="button"
           onClick={isLast ? onSubmit : onNext}
           disabled={nextDisabled || loading}
-          className="px-6 py-2 text-sm font-medium text-white bg-[#989AFF] hover:bg-[#7b7de8] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="admin-btn-primary !min-h-9 px-6 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading && <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
           {isLast ? submitLabel : nextLabel}

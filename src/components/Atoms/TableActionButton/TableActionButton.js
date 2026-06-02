@@ -74,7 +74,7 @@ export const ActionButtons = ({
         <Tooltip text="Edit" position="top">
           <button
             onClick={onEdit}
-            className="p-1 text-green-600 transition-colors duration-200 rounded hover:bg-green-100"
+            className="rounded p-1 text-green-600 transition-colors duration-200 hover:bg-green-50"
           >
             <FiEdit size={18} />
           </button>
@@ -86,7 +86,7 @@ export const ActionButtons = ({
         <Tooltip text="View" position="top">
           <button
             onClick={onViewClick}
-            className="p-1 text-green-600 transition-colors duration-200 rounded hover:bg-green-100"
+            className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
           >
             <FiEye size={18} />
           </button>
@@ -98,7 +98,7 @@ export const ActionButtons = ({
         <Tooltip text="Add" position="top">
           <button
             onClick={onAdd}
-            className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+            className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
           >
             <IoAddCircleOutline size={20} />
           </button>
@@ -107,7 +107,7 @@ export const ActionButtons = ({
       {showOptionValues && guard(optionValueAction, (
         <button
           onClick={onOptionValue}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <BsListTask size={20} />
         </button>
@@ -116,7 +116,7 @@ export const ActionButtons = ({
       {showWarningButton && guard(warningAction, (
         <button
           onClick={onWarning}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <IoWarningOutline size={20} />
         </button>
@@ -124,7 +124,7 @@ export const ActionButtons = ({
       {showViewButton && guard(viewAction, (
         <button
           onClick={onView}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <FaEye size={20} />
         </button>
@@ -132,7 +132,7 @@ export const ActionButtons = ({
       {showLinkButton && guard(linkAction, (
         <button
           onClick={onLink}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <IoMdLink size={20} />
         </button>
@@ -148,7 +148,7 @@ export const ActionButtons = ({
       {showDeleteButton && guard(deleteAction, (
         <button
           onClick={onDelete}
-          className="p-1 text-red-600 transition-colors duration-200 rounded hover:bg-red-100"
+            className="rounded p-1 text-red-600 transition-colors duration-200 hover:bg-red-50"
         >
           <FiTrash2 size={18} />
         </button>
@@ -156,7 +156,7 @@ export const ActionButtons = ({
       {showBannerButton && guard(bannerAction, (
         <button
           onClick={onBanner}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <MdListAlt size={18} />
         </button>
@@ -165,7 +165,7 @@ export const ActionButtons = ({
         <Tooltip text="Change Password" position="top">
           <button
             onClick={onPasswordChange}
-            className="p-1 text-black duration-200 rounded hover:bg-blue-100 hover:text-blue-500"
+            className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
           >
             <MdPassword size={20} />
           </button>
@@ -174,7 +174,7 @@ export const ActionButtons = ({
       {showListing && guard(listingAction, (
         <button
           onClick={onListing}
-          className="p-1 text-black duration-200 rounded hover:bg-blue-100 hover:text-blue-500"
+          className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <IoIosList size={20} />
         </button>
@@ -187,7 +187,7 @@ export const ActionButtons = ({
       {showPrintIcon && guard(printAction, (
         <button
           onClick={onPrint}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
           <MdLocalPrintshop size={18} />
         </button>

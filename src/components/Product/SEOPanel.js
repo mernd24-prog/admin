@@ -63,7 +63,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         </div>
         <input
           type="text"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           placeholder="Compelling title for search engines (max 70 chars)"
           value={seo.metaTitle || ''}
           onChange={(e) => onChange('seo.metaTitle', e.target.value)}
@@ -79,7 +79,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         </div>
         <textarea
           rows={3}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
           placeholder="Summary shown in search results (max 160 chars)"
           value={seo.metaDescription || ''}
           onChange={(e) => onChange('seo.metaDescription', e.target.value)}
@@ -90,11 +90,11 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
       {/* Keywords */}
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Keywords</label>
-        <div className="flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-md min-h-[42px] focus-within:ring-2 focus-within:ring-[#3E4094]">
+        <div className="flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-md min-h-[42px] focus-within:ring-2 focus-within:ring-[var(--admin-blue)]">
           {(seo.keywords || []).map((kw) => (
             <span
               key={kw}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#3E4094]/10 text-[#3E4094] text-xs rounded-full"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs rounded-full"
             >
               {kw}
               <button type="button" onClick={() => removeKeyword(kw)} className="hover:text-red-500">×</button>
@@ -117,7 +117,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         <label className="text-sm font-medium text-gray-700">Canonical URL</label>
         <input
           type="url"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           placeholder="https://yourstore.com/products/product-slug"
           value={seo.canonicalUrl || ''}
           onChange={(e) => onChange('seo.canonicalUrl', e.target.value)}
@@ -130,7 +130,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm text-[#3E4094] hover:underline"
+          className="flex items-center gap-2 text-sm text-[var(--admin-blue)] hover:underline"
         >
           <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -144,7 +144,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
               <label className="text-sm font-medium text-gray-700">OG Title</label>
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
                 placeholder="Title for Facebook/Twitter (defaults to meta title)"
                 value={seo.ogTitle || ''}
                 onChange={(e) => onChange('seo.ogTitle', e.target.value)}
@@ -154,7 +154,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
               <label className="text-sm font-medium text-gray-700">OG Description</label>
               <textarea
                 rows={2}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
                 placeholder="Description for social sharing"
                 value={seo.ogDescription || ''}
                 onChange={(e) => onChange('seo.ogDescription', e.target.value)}
@@ -164,7 +164,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
               <label className="text-sm font-medium text-gray-700">OG Image URL</label>
               <input
                 type="url"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
                 placeholder="https://cdn.yourstore.com/og-image.jpg"
                 value={seo.ogImage || ''}
                 onChange={(e) => onChange('seo.ogImage', e.target.value)}

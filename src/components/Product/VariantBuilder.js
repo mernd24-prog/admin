@@ -250,11 +250,11 @@ const VariantBuilder = ({
 
                   {/* Required */}
                   <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none whitespace-nowrap">
-                    <input type="checkbox" className="w-3 h-3 accent-[#3E4094]" checked={Boolean(option.required)} onChange={(e) => updateOption(optIdx, 'required', e.target.checked)} />
+                    <input type="checkbox" className="w-3 h-3 accent-[var(--admin-blue)]" checked={Boolean(option.required)} onChange={(e) => updateOption(optIdx, 'required', e.target.checked)} />
                     Required
                   </label>
 
-                  <button type="button" onClick={() => setActiveOptionIdx(activeOptionIdx === optIdx ? null : optIdx)} className="text-xs text-[#3E4094] hover:underline whitespace-nowrap">
+                  <button type="button" onClick={() => setActiveOptionIdx(activeOptionIdx === optIdx ? null : optIdx)} className="text-xs text-[var(--admin-blue)] hover:underline whitespace-nowrap">
                     {activeOptionIdx === optIdx ? 'Done' : '+ Values'}
                   </button>
                   <button type="button" onClick={() => removeOption(optIdx)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
@@ -302,8 +302,8 @@ const VariantBuilder = ({
                                 }}
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                                   isSelected
-                                    ? 'bg-[#3E4094] text-white border-[#3E4094]'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:border-[#3E4094]'
+                                    ? 'bg-[var(--admin-blue)] text-white border-[var(--admin-blue)]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-[var(--admin-blue)]'
                                 }`}
                               >
                                 {option.displayType === 'color_swatch' && pv.colorHex && (
@@ -338,7 +338,7 @@ const VariantBuilder = ({
           <div className="flex gap-2">
             <input
               type="text"
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
               placeholder="Search option master (Color, Size, RAM...)"
               value={optionSearch}
               onChange={(e) => { setOptionSearch(e.target.value); setShowOptionDropdown(true); }}
@@ -379,7 +379,7 @@ const VariantBuilder = ({
           <button
             type="button"
             onClick={generateCombinations}
-            className="mt-3 w-full py-2 bg-[#3E4094] text-white text-sm rounded-md hover:bg-[#2e3074] font-medium"
+            className="mt-3 w-full py-2 bg-[var(--admin-blue)] text-white text-sm rounded-md hover:bg-[#2e3074] font-medium"
           >
             ✨ Generate {totalCombinations} Variant Combination{totalCombinations !== 1 ? 's' : ''}
           </button>
@@ -423,15 +423,15 @@ const VariantBuilder = ({
               onDragStart={() => handleVariantDragStart(idx)}
               onDragOver={(e) => handleVariantDragOver(e, idx)}
               onDragEnd={() => { dragVariantIdx.current = null; }}
-              className={`rounded-lg border transition-colors ${variant.isDefault ? 'border-[#3E4094] bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+              className={`rounded-lg border transition-colors ${variant.isDefault ? 'border-[var(--admin-blue)] bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
             >
               <div className="grid gap-1 items-center px-2 py-1.5"
                 style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto' }}>
                 <span className="text-gray-300 text-xs cursor-grab leading-none">⠿</span>
                 <button type="button" title="Set as default" onClick={() => setDefaultVariant(idx)}
-                  className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${variant.isDefault ? 'bg-[#3E4094] border-[#3E4094]' : 'border-gray-300 hover:border-[#3E4094]'}`}
+                  className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${variant.isDefault ? 'bg-[var(--admin-blue)] border-[var(--admin-blue)]' : 'border-gray-300 hover:border-[var(--admin-blue)]'}`}
                 />
-                <input type="text" className="border border-gray-300 rounded px-1.5 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-[#3E4094]" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} placeholder="SKU" />
+                <input type="text" className="border border-gray-300 rounded px-1.5 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} placeholder="SKU" />
                 <span className="text-xs text-gray-600 truncate px-1">
                   {variant.attributes && Object.keys(variant.attributes).length ? Object.values(variant.attributes).join(' / ') : variant.title || '—'}
                 </span>
@@ -447,7 +447,7 @@ const VariantBuilder = ({
                 </select>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button type="button" title="Manage images" onClick={() => toggleExpandVariant(idx)}
-                    className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${expandedVariants.has(idx) ? 'bg-[#3E4094] text-white border-[#3E4094]' : 'border-gray-300 text-gray-500 hover:border-[#3E4094]'}`}>
+                    className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${expandedVariants.has(idx) ? 'bg-[var(--admin-blue)] text-white border-[var(--admin-blue)]' : 'border-gray-300 text-gray-500 hover:border-[var(--admin-blue)]'}`}>
                     🖼{(variant.images || []).length > 0 ? ` ${variant.images.length}` : ''}
                   </button>
                   <button type="button" title="Duplicate" onClick={() => duplicateVariant(idx)} className="text-xs px-1.5 py-0.5 rounded border border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-500">⧉</button>
@@ -474,14 +474,14 @@ const VariantBuilder = ({
                             className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                         </div>
                       ))}
-                      <label className={`w-16 h-16 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#3E4094] text-gray-400 hover:text-[#3E4094] flex-shrink-0 ${uploadingVariant === idx ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <label className={`w-16 h-16 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[var(--admin-blue)] text-gray-400 hover:text-[var(--admin-blue)] flex-shrink-0 ${uploadingVariant === idx ? 'opacity-50 pointer-events-none' : ''}`}>
                         <span className="text-xl leading-none">{uploadingVariant === idx ? '⏳' : '+'}</span>
                         <span className="text-[9px] mt-0.5">Upload</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadVariantImage(idx, e.target.files[0])} />
                       </label>
                     </div>
                     <div className="flex gap-2 mt-2">
-                      <input type="text" className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3E4094]" placeholder="Or paste image URL and press Enter…"
+                      <input type="text" className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]" placeholder="Or paste image URL and press Enter…"
                         onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); updateVariant(idx, 'images', [...(variant.images || []), e.target.value.trim()]); e.target.value = ''; } }} />
                     </div>
                   </div>
@@ -493,7 +493,7 @@ const VariantBuilder = ({
       )}
 
       <button type="button" onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}`, price: basePrice, mrp: baseMrp }])}
-        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-[#3E4094] hover:text-[#3E4094] transition-colors">
+        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] transition-colors">
         + Add Variant Manually
       </button>
 

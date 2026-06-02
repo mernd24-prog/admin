@@ -103,19 +103,19 @@ const SellerStatusScreen = ({
         />
 
         {showStatusBadge && (
-          <span className="mb-8 inline-flex h-[28px] items-center rounded-full border border-[#E49E1C] bg-[#FFF2D3] px-4 font-inter text-[12px] font-semibold text-[#082f91]">
-            <span className="mr-2 h-2 w-2 rounded-full  bg-[#082f91]" />
+          <span className="mb-8 inline-flex h-[28px] items-center rounded-full border border-[#E49E1C] bg-[#FFF2D3] px-4 font-inter text-[12px] font-semibold text-[#1A1A2E]">
+            <span className="mr-2 h-2 w-2 rounded-full  bg-[#1A1A2E]" />
             {content.badgeLabel}
           </span>
         )}
 
         <div className="w-full">
-          <h1 className="font-inter text-center text-[28px]  font-extrabold leading-[38px] text-[#082f91] sm:text-[34px] ">
+          <h1 className="font-inter text-center text-[28px]  font-extrabold leading-[38px] text-[#1A1A2E] sm:text-[34px] ">
             {content.title}
             {content.subtitleTitle && (
               <>
                 <br />
-                <span className="font-extrabold text-[#082f91] ">
+                <span className="font-extrabold text-[#1A1A2E] ">
                   {content.subtitleTitle}
                 </span>
               </>
@@ -129,8 +129,8 @@ const SellerStatusScreen = ({
           )}
 
           {content.nextStepLabel && (
-            <span className="mx-auto mt-8 inline-flex h-[29px] items-center rounded-[6px] bg-[#FFE5AB] px-5 font-inter text-[14px] font-bold text-[#082f91]">
-              <span className="mr-2 text-[20px]  text-[#082f91]">
+            <span className="mx-auto mt-8 inline-flex h-[29px] items-center rounded-[6px] bg-[#FFE5AB] px-5 font-inter text-[14px] font-bold text-[#1A1A2E]">
+              <span className="mr-2 text-[20px]  text-[#1A1A2E]">
                 <MdArrowRightAlt />
               </span>
               {content.nextStepLabel}
@@ -141,7 +141,7 @@ const SellerStatusScreen = ({
             type="button"
             onClick={onButtonClick}
             disabled={disabled}
-            className="mx-auto mt-8  flex h-[48px] w-full max-w-[680px] items-center justify-center rounded-[8px] bg-[#082f91] px-6 font-inter text-lg font-bold text-white shadow-[0_8px_16px_rgba(8,47,145,0.24)] transition hover:bg-[#062779] disabled:cursor-not-allowed disabled:opacity-70"
+            className="mx-auto mt-8  flex h-[48px] w-full max-w-[680px] items-center justify-center rounded-[8px] bg-[#1A1A2E] px-6 font-inter text-lg font-bold text-white shadow-[0_8px_16px_rgba(8,47,145,0.24)] transition hover:bg-[#12151E] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {finalButtonLabel}
           </button>

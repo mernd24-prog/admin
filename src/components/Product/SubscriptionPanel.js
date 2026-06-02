@@ -48,7 +48,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
       <div className="grid grid-cols-2 gap-4">
         <Field label="Billing Cycle *">
           <select
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             value={subscription.billingCycle || 'monthly'}
             onChange={(e) => set('billingCycle', e.target.value)}
           >
@@ -62,7 +62,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
           <input
             type="number"
             min={0}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 499"
             value={subscription.recurringPrice || ''}
             onChange={(e) => set('recurringPrice', Number(e.target.value))}
@@ -76,7 +76,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
           <input
             type="number"
             min={0}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 14"
             value={subscription.trialDays || ''}
             onChange={(e) => set('trialDays', Number(e.target.value) || 0)}
@@ -87,7 +87,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
           <input
             type="number"
             min={0}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             placeholder="e.g. 0"
             value={subscription.setupFee || ''}
             onChange={(e) => set('setupFee', Number(e.target.value) || 0)}
@@ -101,7 +101,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
           type="number"
           min={0}
           max={30}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
           placeholder="3"
           value={subscription.gracePeriodDays || ''}
           onChange={(e) => set('gracePeriodDays', Number(e.target.value) || 0)}
@@ -114,7 +114,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
           <div className="flex gap-2">
             <input
               type="text"
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
               placeholder="Add a feature…"
               value={featureInput}
               onChange={(e) => setFeatureInput(e.target.value)}
@@ -123,7 +123,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
             <button
               type="button"
               onClick={addFeature}
-              className="px-3 py-2 bg-[#3E4094] text-white text-sm rounded-md hover:bg-[#2e3074]"
+              className="px-3 py-2 bg-[var(--admin-blue)] text-white text-sm rounded-md hover:bg-[#2e3074]"
             >
               Add
             </button>
@@ -150,7 +150,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
       <Field label="Cancellation Policy">
         <textarea
           rows={2}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094] resize-none"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
           placeholder="e.g. Cancel anytime. No refunds for the current billing period."
           value={subscription.cancellationPolicy || ''}
           onChange={(e) => set('cancellationPolicy', e.target.value)}
@@ -177,7 +177,7 @@ const SubscriptionPanel = ({ subscription = {}, onChange }) => {
             <input
               id={`sub-${key}`}
               type="checkbox"
-              className="mt-0.5 accent-[#3E4094]"
+              className="mt-0.5 accent-[var(--admin-blue)]"
               checked={subscription[key] !== undefined ? subscription[key] : defaultVal}
               onChange={(e) => set(key, e.target.checked)}
             />

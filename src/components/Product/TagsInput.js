@@ -49,13 +49,13 @@ const TagsInput = ({
     <div className="relative">
       <div
         className={`flex flex-wrap gap-1.5 p-2 border rounded-md min-h-[42px] transition-all ${
-          focused ? 'border-[#3E4094] ring-2 ring-[#3E4094]/20' : 'border-gray-300'
+          focused ? 'border-[var(--admin-blue)] ring-2 ring-[var(--admin-blue)]/20' : 'border-gray-300'
         }`}
       >
         {tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#3E4094] text-white text-xs rounded-full"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[var(--admin-blue)] text-white text-xs rounded-full"
           >
             #{tag}
             <button

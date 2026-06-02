@@ -262,7 +262,7 @@ export default function ModuleManagement() {
           </button>
           <button
             onClick={openCreate}
-            className="px-4 py-2 text-sm rounded bg-[#3E4094] text-white"
+            className="px-4 py-2 text-sm rounded bg-[var(--admin-blue)] text-white"
           >
             Add Module
           </button>
@@ -290,7 +290,7 @@ export default function ModuleManagement() {
         </select>
         <button
           onClick={load}
-          className="px-4 py-2 text-sm rounded border border-[#3E4094] text-[#3E4094] bg-white"
+          className="px-4 py-2 text-sm rounded border border-[var(--admin-blue)] text-[var(--admin-blue)] bg-white"
         >
           Apply
         </button>
@@ -561,7 +561,7 @@ export default function ModuleManagement() {
               <button
                 disabled={saving}
                 onClick={handleSave}
-                className="px-4 py-2 rounded bg-[#3E4094] text-white disabled:opacity-60"
+                className="px-4 py-2 rounded bg-[var(--admin-blue)] text-white disabled:opacity-60"
               >
                 {saving ? "Saving..." : "Save"}
               </button>

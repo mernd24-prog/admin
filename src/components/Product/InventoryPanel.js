@@ -148,7 +148,7 @@ const InventoryPanel = ({ product = {}, onAdjust, readOnly = false }) => {
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Variant SKU</label>
                 <select
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
                   value={form.variantSku}
                   onChange={(e) => setForm((f) => ({ ...f, variantSku: e.target.value }))}
                 >
@@ -169,7 +169,7 @@ const InventoryPanel = ({ product = {}, onAdjust, readOnly = false }) => {
               </label>
               <input
                 type="number"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
                 placeholder="e.g. +50 or -10"
                 value={form.adjustment || ''}
                 onChange={(e) => setForm((f) => ({ ...f, adjustment: e.target.value }))}
@@ -181,7 +181,7 @@ const InventoryPanel = ({ product = {}, onAdjust, readOnly = false }) => {
             <label className="text-xs font-medium text-gray-600">Reason (optional)</label>
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E4094]"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
               placeholder="e.g. Physical stock count, Damaged goods, Restock…"
               value={form.reason}
               onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
@@ -195,7 +195,7 @@ const InventoryPanel = ({ product = {}, onAdjust, readOnly = false }) => {
             type="button"
             onClick={handleAdjust}
             disabled={saving}
-            className="px-4 py-2 bg-[#3E4094] text-white text-sm rounded-md hover:bg-[#2e3074] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-[var(--admin-blue)] text-white text-sm rounded-md hover:bg-[#2e3074] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Saving…' : 'Apply Adjustment'}
           </button>

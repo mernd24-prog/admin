@@ -12,7 +12,7 @@ const ICON_MAP = {
 const BTN_VARIANTS = {
   danger:   'bg-red-600 hover:bg-red-700 text-white',
   warning:  'bg-yellow-500 hover:bg-yellow-600 text-white',
-  primary:  'bg-[#989AFF] hover:bg-[#7b7de8] text-white',
+  primary:  'bg-[var(--admin-gold)] hover:bg-[var(--admin-gold-dark)] text-[var(--admin-navy)]',
   success:  'bg-green-600 hover:bg-green-700 text-white',
 };
 
@@ -57,12 +57,12 @@ const ConfirmModal = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[rgba(31,27,95,0.35)] backdrop-blur-[2px]"
         onClick={!loading ? onClose : undefined}
       />
 
       {/* Dialog */}
-      <div role="alertdialog" aria-modal="true" aria-label={title} className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
+      <div role="alertdialog" aria-modal="true" aria-label={title} className="admin-card relative w-full max-w-md mx-4 p-6 animate-fade-in">
         {/* Close */}
         <button
           onClick={onClose}
@@ -78,8 +78,8 @@ const ConfirmModal = ({
             <Icon size={22} className={color} />
           </span>
           <div>
-            <h3 className="text-base font-semibold text-gray-800">{title}</h3>
-            {message && <p className="text-sm text-gray-500 mt-1">{message}</p>}
+            <h3 className="text-base font-semibold text-[var(--admin-ink)]">{title}</h3>
+            {message && <p className="text-sm text-[var(--admin-muted)] mt-1">{message}</p>}
           </div>
         </div>
 
@@ -88,14 +88,14 @@ const ConfirmModal = ({
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="admin-btn-secondary !min-h-9 px-4 py-2 text-sm disabled:opacity-50"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${btnClass}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${btnClass}`}
           >
             {loading ? (
               <span className="flex items-center gap-2">

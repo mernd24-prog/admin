@@ -567,7 +567,7 @@ const Users = () => {
                 className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
               />
               <div>
-                <label className="inline-flex cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
                   Upload Image
                   <input
                     type="file"
@@ -692,7 +692,7 @@ const Users = () => {
                 className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
               />
               <div>
-                <label className="inline-flex cursor-pointer rounded-md bg-[#3E4094] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
+                <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
                   Change Image
                   <input
                     type="file"

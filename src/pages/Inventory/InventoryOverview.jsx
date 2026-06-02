@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
 
 const STAT_CARDS = [
-  { label: "Total SKUs",    key: "totalSkus",   icon: MdInventory,    color: "text-[#989AFF] bg-[#F0F0F3]" },
+  { label: "Total SKUs",    key: "totalSkus",   icon: MdInventory,    color: "text-[var(--admin-gold)] bg-[var(--admin-blue-soft)]" },
   { label: "In Stock",      key: "inStock",      icon: MdInventory,    color: "text-green-600 bg-green-50" },
   { label: "Low Stock",     key: "lowStock",     icon: MdWarning,      color: "text-yellow-600 bg-yellow-50" },
   { label: "Out of Stock",  key: "outOfStock",   icon: MdTrendingDown, color: "text-red-600 bg-red-50" },
@@ -128,7 +128,7 @@ const InventoryOverview = () => {
         breadcrumbs={[{ label: "Inventory Management" }, { label: "Stock Overview" }]}
         actions={
           <PermissionGuard module="inventory" action={ACTIONS.ADJUST}>
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#989AFF] text-white text-sm rounded-lg hover:bg-[#7b7de8] transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors">
               <MdAddCircleOutline size={16} /> Adjust Stock
             </button>
           </PermissionGuard>
@@ -146,7 +146,7 @@ const InventoryOverview = () => {
                   <Icon size={18} />
                 </span>
               </div>
-              <div className="text-xl md:text-3xl font-bold text-[#042586]">
+              <div className="text-xl md:text-3xl font-bold text-[var(--admin-navy)]">
                 {loading ? <div className="h-7 w-16 bg-gray-200 rounded animate-pulse" /> : (stats[card.key] ?? 0)}
               </div>
               <div className="text-sm md:text-base font-semibold text-gray-500">{card.label}</div>

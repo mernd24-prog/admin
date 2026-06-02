@@ -35,13 +35,13 @@ const DefaultModal = ({
         <>
             <div
                 className={`fixed inset-0 z-40 transition-all duration-300 ease-in-out 
-                    ${isOpen ? "bg-black bg-opacity-30 backdrop-blur-sm p-0 m-0 -top-3" : "bg-transparent backdrop-blur-0 pointer-events-none"}
+                    ${isOpen ? "bg-[rgba(31,27,95,0.32)] backdrop-blur-sm p-0 m-0 -top-3" : "bg-transparent backdrop-blur-0 pointer-events-none"}
                 `}
                 onClick={!loading && closeOnOutsideClick ? onClose : undefined}
             />
             <div
                 className={`
-                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[${width}] h-full bg-white shadow-xl z-50 text-sm
+                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[${width}] h-full bg-white shadow-[var(--admin-shadow-strong)] z-50 text-sm
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "translate-x-full"}
                 `}
@@ -51,7 +51,7 @@ const DefaultModal = ({
                 aria-label={title}
             >
                 <div className="admin-card-header flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-                    <h2 className={`text-lg sm:text-xl font-semibold text-[#082f91] ${titleClassName}`}>{title}</h2>
+                    <h2 className={`text-lg font-semibold text-[var(--admin-ink)] ${titleClassName}`}>{title}</h2>
                     <button
                         onClick={onClose}
                         disabled={loading}
@@ -65,7 +65,7 @@ const DefaultModal = ({
                 <div className="h-[calc(100%-120px)] overflow-y-auto p-4 sm:p-6">{children}</div>
 
                 {isButtonView && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-white p-3 sm:p-4 flex justify-between items-center border-t border-gray-200 gap-2">
+                    <div className="absolute bottom-0 left-0 right-0 bg-[var(--admin-surface-soft)] p-3 sm:p-4 flex justify-between items-center border-t border-[var(--admin-line)] gap-2">
                         <TransparentButton 
                             onClick={onClose} 
                             label={closeButtonText} 

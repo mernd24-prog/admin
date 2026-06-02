@@ -464,7 +464,7 @@ function Layout() {
   }, [hasPermanentOpen, navbarOpen]);
 
   return (
-    <div className="admin-shell relative flex h-screen overflow-hidden bg-[#fffdfa]">
+    <div className="admin-shell relative flex h-screen overflow-hidden bg-[var(--admin-canvas)]">
       <div className={`z-50`}>
         <Sidebar
           navbarOpen={navbarOpen}
@@ -488,7 +488,7 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
         />
 
-        <main className="flex-1 bg-[#fffdfa] overflow-y-auto  sidebar-scrollbar">
+        <main className="flex-1 bg-[var(--admin-canvas)] overflow-y-auto sidebar-scrollbar">
           <Suspense fallback={<PageSkeletonLoader />}>
             <AnimatePresence mode="wait">
               <motion.div

@@ -332,7 +332,7 @@ const ProductVariants = () => {
               Home / <b>Product Variants</b>
             </h3>
             <Button
-              className="border-[#3E4094] text-[#3E4094] mb-3"
+              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
               onClick={() => setIsModalOpen(true)}
             >
               Add

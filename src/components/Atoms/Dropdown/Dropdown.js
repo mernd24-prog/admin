@@ -6,8 +6,8 @@ const Dropdown = ({
     triggerLabel = 'Menu',
     triggerClassName = 'admin-btn-secondary w-auto',
     menuClassName = 'admin-card bg-white rounded-md overflow-hidden',
-    itemClassName = 'text-gray-700 hover:bg-[#eef2ff] hover:text-[#082f91]',
-    dividerClassName = 'border-[#e8e2db]',
+    itemClassName = 'text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]',
+    dividerClassName = 'border-[var(--admin-line)]',
     position = 'right',
     showDivider = true,
     selectedValue
@@ -56,7 +56,7 @@ const Dropdown = ({
                             <button
                                 onClick={() => handleSelect(option.value)}
                                 className={`block w-full text-left px-4 py-2 transition-colors duration-200 ${itemClassName} ${
-                                    selectedValue === option.value ? 'bg-gray-200 font-medium' : ''
+                                    selectedValue === option.value ? 'bg-[var(--admin-blue-soft)] font-semibold text-[var(--admin-blue)]' : ''
                                 }`}
                             >
                                 <div className="flex items-center">

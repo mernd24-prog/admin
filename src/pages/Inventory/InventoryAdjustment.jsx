@@ -103,12 +103,12 @@ const InventoryAdjustment = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchProducts()}
                 placeholder="Search by name or SKU…"
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF]"
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)]"
               />
               <button
                 onClick={searchProducts}
                 disabled={searching}
-                className="px-4 py-2 text-sm bg-[#989AFF] text-white rounded-lg hover:bg-[#7b7de8] disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[var(--admin-gold)] text-white rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-50"
               >
                 {searching ? "…" : "Search"}
               </button>
@@ -123,7 +123,7 @@ const InventoryAdjustment = () => {
                       setSelected(p);
                       setResults([]);
                     }}
-                    className={`flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 text-sm ${selected?._id === p._id ? "bg-[#F0F0F3]" : ""}`}
+                    className={`flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 text-sm ${selected?._id === p._id ? "bg-[var(--admin-blue-soft)]" : ""}`}
                   >
                     <div>
                       <div className="font-medium text-gray-700">{p.title}</div>
@@ -132,7 +132,7 @@ const InventoryAdjustment = () => {
                       </div>
                     </div>
                     {selected?._id === p._id && (
-                      <MdCheck size={16} className="text-[#989AFF]" />
+                      <MdCheck size={16} className="text-[var(--admin-gold)]" />
                     )}
                   </div>
                 ))}
@@ -178,12 +178,12 @@ const InventoryAdjustment = () => {
                     <button
                       key={t.value}
                       onClick={() => setAdjustType(t.value)}
-                      className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-sm font-medium transition-colors ${adjustType === t.value ? "border-[#989AFF] bg-[#F0F0F3] text-[#989AFF]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-sm font-medium transition-colors ${adjustType === t.value ? "border-[var(--admin-gold)] bg-[var(--admin-blue-soft)] text-[var(--admin-gold)]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
                     >
                       <Icon
                         size={20}
                         className={
-                          adjustType === t.value ? "text-[#989AFF]" : t.color
+                          adjustType === t.value ? "text-[var(--admin-gold)]" : t.color
                         }
                       />
                       {t.label}
@@ -202,7 +202,7 @@ const InventoryAdjustment = () => {
                   min="1"
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF]"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)]"
                   placeholder="Enter quantity"
                 />
               </div>
@@ -215,7 +215,7 @@ const InventoryAdjustment = () => {
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF] bg-white"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)] bg-white"
                 >
                   <option value="">Select reason…</option>
                   {adjustmentReasons.options.map((option) => (
@@ -235,7 +235,7 @@ const InventoryAdjustment = () => {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#989AFF] resize-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)] resize-none"
                   placeholder="Additional notes…"
                 />
               </div>
@@ -244,7 +244,7 @@ const InventoryAdjustment = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !qty || !reason}
-                  className="px-6 py-2 text-sm font-medium text-white bg-[#989AFF] rounded-lg hover:bg-[#7b7de8] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {submitting && (
                     <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />

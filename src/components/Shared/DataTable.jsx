@@ -159,7 +159,7 @@ const DataTable = ({
     <div className="admin-card overflow-hidden">
       {/* Search + toolbar */}
       {(onSearch || actions || exportConfig || importConfig || onRefresh) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-[var(--admin-line)] bg-white">
           {onSearch && (
             <div className="relative w-full sm:w-72">
               <MdSearch
@@ -204,9 +204,9 @@ const DataTable = ({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wide whitespace-nowrap ${
+                className={`px-4 py-3 text-left text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap ${
                     col.sortable
-                      ? "cursor-pointer select-none hover:text-white/80"
+                      ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
                       : ""
                   } ${col.width ? `w-${col.width}` : ""}`}
                   onClick={() => handleSort(col)}
@@ -218,8 +218,8 @@ const DataTable = ({
                         size={14}
                         className={
                           sortKey === col.key
-                            ? "text-[#e49e1c]"
-                            : "text-white/50"
+                            ? "text-[var(--admin-gold)]"
+                            : "text-[var(--admin-muted)]"
                         }
                       />
                     )}
@@ -229,7 +229,7 @@ const DataTable = ({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-[#f0e8dc]">
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <SkeletonRow key={i} cols={colCount} />
@@ -258,7 +258,7 @@ const DataTable = ({
               data.map((row, index) => (
                 <tr
                   key={getKey(row, index)}
-                  className="hover:bg-[#f7f9ff] transition-colors"
+                  className="hover:bg-[var(--admin-surface-soft)] transition-colors"
                 >
                   {selectable && (
                     <td className="px-4 py-3">
@@ -271,7 +271,7 @@ const DataTable = ({
                     </td>
                   )}
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-gray-700">
+                    <td key={col.key} className="px-4 py-3 text-[var(--admin-ink)]">
                       {col.render
                         ? col.render(row[col.key], row)
                         : (row[col.key] ?? "—")}
@@ -286,7 +286,7 @@ const DataTable = ({
 
       {/* Pagination */}
       {(totalPages > 1 || onPageSizeChange) && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--admin-line)] bg-white text-sm text-[var(--admin-muted)]">
           <span>
             Showing{" "}
             {totalCount

@@ -141,8 +141,8 @@ const FieldGrid = ({ children }) => (
 );
 
 const AddressBlock = ({ title, address }) => (
-  <div className="rounded-lg border border-[#e8e2db] bg-[#fffdfa] p-4">
-    <p className="mb-4 text-xs font-semibold text-[#082f91]">{title}</p>
+  <div className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
+    <p className="mb-4 text-xs font-semibold text-[var(--admin-navy)]">{title}</p>
     <FieldGrid>
       <DetailField
         label="Address Line 1"
@@ -386,7 +386,7 @@ const Profile = () => {
           <p className="text-[10px] font-semibold text-[#e49e1c]">
             {isSeller ? "Seller profile > Edit" : "My profile > Edit"}
           </p>
-          <h1 className="mt-3 text-2xl font-bold text-[#082f91]">
+          <h1 className="mt-3 text-2xl font-bold text-[var(--admin-navy)]">
             {isSeller ? "Seller Profile" : "My Profile"}
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -398,7 +398,7 @@ const Profile = () => {
           <div className="mb-8 flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <label className="group  relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[#eef2ff] shadow-md">
+                <label className="group  relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[var(--admin-surface-soft)] shadow-md">
                   {formData.user_image ? (
                     <img
                       src={formData.user_image}
@@ -407,7 +407,7 @@ const Profile = () => {
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center">
-                      <span className="text-xl font-bold text-[#082f91]">
+                      <span className="text-xl font-bold text-[var(--admin-navy)]">
                         {getProfileInitials(formData)}
                       </span>
                     </span>
@@ -637,7 +637,7 @@ const Profile = () => {
                     {allowedModules.map((module) => (
                       <span
                         key={module}
-                        className="rounded-full border border-[#d9e1f8] bg-[#eef2ff] px-3 py-1 text-xs font-medium capitalize text-[#082f91]"
+                        className="rounded-full border border-[#d9e1f8] bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-medium capitalize text-[var(--admin-navy)]"
                       >
                         {String(module).replace(/[-_]/g, " ")}
                       </span>
@@ -920,7 +920,7 @@ const Profile = () => {
           </ProfileSection>
 
           {isEditing && (
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#e8e2db] pt-5 sm:flex-row sm:justify-end">
+            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={handleCancel}

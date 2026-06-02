@@ -2,13 +2,13 @@ import React, { memo } from "react";
 import { LuChevronRight, LuChevronLeft } from "react-icons/lu";
 
 const pageButtonBase =
-  "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#082f91]/20 disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 disabled:cursor-not-allowed disabled:opacity-45";
 
 const pageButtonIdle =
-  "border-[#dce2ef] bg-white text-slate-600 hover:border-[#082f91]/30 hover:bg-[#f4f7ff] hover:text-[#082f91]";
+  "border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-blue)]/40 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]";
 
 const pageButtonActive =
-  "border-[#082f91] bg-[#082f91] text-white shadow-sm shadow-[#082f91]/20";
+  "border-[var(--admin-navy)] bg-[var(--admin-navy)] text-white shadow-sm shadow-[var(--admin-navy)]/20";
 
 const Pagination = ({
   totalPages = 1,
@@ -83,19 +83,19 @@ const Pagination = ({
     <div className={wrapperClass}>
       {!compact && totalRecords !== undefined && pageSize && (
         <div className="flex flex-col leading-tight">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span className="text-xs font-medium text-[var(--admin-muted)]">
             Showing
           </span>
-          <span className="text-sm font-semibold text-slate-700">
+          <span className="text-sm font-semibold text-[var(--admin-ink)]">
             {rangeStart}-{rangeEnd} of {totalRecords}
           </span>
         </div>
       )}
       {onPageSizeChange && (
-        <label className="inline-flex items-center gap-2 rounded-md  bg-[#f8fafc] px-2 py-1 text-xs font-medium text-slate-500">
+        <label className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
           Rows per page
           <select
-            className="admin-input !h-8 !w-auto !min-w-[68px] !border-[#dce2ef] !bg-white !px-2"
+            className="admin-input !h-8 !w-auto !min-w-[68px] !border-[var(--admin-line)] !bg-white !px-2"
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             aria-label="Rows per page"

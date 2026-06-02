@@ -178,7 +178,7 @@ const AttributeRow = ({
                 type="checkbox"
                 checked={Boolean(attribute.allowCustomOptions)}
                 onChange={(e) => onUpdate(index, 'allowCustomOptions', e.target.checked)}
-                className="w-3.5 h-3.5 accent-[#3E4094]"
+                className="w-3.5 h-3.5 accent-[var(--admin-blue)]"
               />
               Allow custom category-specific values
             </label>
@@ -210,7 +210,7 @@ const AttributeRow = ({
             type="checkbox"
             checked={Boolean(attribute[key])}
             onChange={(e) => onUpdate(index, key, e.target.checked)}
-            className="w-4 h-4 accent-[#3E4094] rounded"
+            className="w-4 h-4 accent-[var(--admin-blue)] rounded"
           />
           {label}
         </label>
@@ -249,7 +249,7 @@ const CategoryRow = ({ option, attrCount, onEdit, loadingKey }) => {
           type="button"
           onClick={() => onEdit(option)}
           disabled={loadingKey === option.value}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#3E4094] border border-[#3E4094] rounded hover:bg-[#3E4094] hover:text-white transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--admin-blue)] border border-[var(--admin-blue)] rounded hover:bg-[var(--admin-blue)] hover:text-white transition-colors disabled:opacity-50"
         >
           <MdEdit size={13} />
           {loadingKey === option.value ? 'Loading…' : 'Edit Attributes'}
@@ -436,7 +436,7 @@ const CategoryAttributes = () => {
           </div>
           <button
             type="button"
-            className="text-xs text-[#3E4094] border border-[#3E4094] px-3 py-1.5 rounded hover:bg-[#3E4094] hover:text-white transition-colors"
+            className="text-xs text-[var(--admin-blue)] border border-[var(--admin-blue)] px-3 py-1.5 rounded hover:bg-[var(--admin-blue)] hover:text-white transition-colors"
             onClick={() => navigate('/app/product-catalog')}
           >
             Open Product Catalog
@@ -508,7 +508,7 @@ const CategoryAttributes = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center gap-1.5 px-3 py-2 rounded bg-[#3E4094] text-white text-sm hover:bg-[#2f3070] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2f3070] transition-colors disabled:opacity-50"
               onClick={() => setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])}
             >
               <MdAdd size={15} /> Add Attribute
@@ -540,7 +540,7 @@ const CategoryAttributes = () => {
           <p className="text-gray-400 text-sm mb-3">No attributes defined for this category yet.</p>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-[#3E4094] text-white text-sm hover:bg-[#2f3070]"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2f3070]"
             onClick={() => setAttributes([{ ...EMPTY_ATTRIBUTE }])}
           >
             <MdAdd size={15} /> Add First Attribute
@@ -563,7 +563,7 @@ const CategoryAttributes = () => {
 
           <button
             type="button"
-            className="w-full border border-dashed border-[#3E4094] text-[#3E4094] rounded-lg py-3 text-sm hover:bg-[#f0f0ff] transition-colors flex items-center justify-center gap-1.5"
+            className="w-full border border-dashed border-[var(--admin-blue)] text-[var(--admin-blue)] rounded-lg py-3 text-sm hover:bg-[#f0f0ff] transition-colors flex items-center justify-center gap-1.5"
             onClick={() => setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])}
           >
             <MdAdd size={15} /> Add Another Attribute

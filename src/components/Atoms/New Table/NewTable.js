@@ -101,7 +101,7 @@ export default function SearchComponent({
   };
 
   return (
-    <div className="w-full bg-white p-1 ">
+    <div className="w-full bg-white p-1">
       <div
         className={`flex flex-col gap-3 mb-4 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
@@ -132,11 +132,11 @@ export default function SearchComponent({
           {isSearchDown && (
             <Button
               onClick={handleSearchDown}
-              className={`bg-[#f3f6f9] border-none py-2.5`}
+              className="border-none bg-[var(--admin-blue-soft)] py-2.5 text-[var(--admin-blue)]"
               disabled={isFiltering}
             >
               <IoIosArrowDown
-                className={`text-xl text-[#0A73CF] transition-transform duration-200 ${searchDown ? "rotate-180" : ""}`}
+                className={`text-xl text-[var(--admin-blue)] transition-transform duration-200 ${searchDown ? "rotate-180" : ""}`}
               />
             </Button>
           )}
@@ -165,8 +165,8 @@ export default function SearchComponent({
                   requiredAction="status_change"
                   className={
                     selectedRow.length === 0
-                      ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
-                      : "h-10 border-blue-500 text-blue-500 gap-2"
+                      ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                      : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                   }
                 >
                   <PiToggleRightThin className="text-xl" />
@@ -179,8 +179,8 @@ export default function SearchComponent({
                   requiredAction="status_change"
                   className={
                     selectedRow.length === 0
-                      ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
-                      : "h-10 border-blue-500 text-blue-500 gap-2"
+                      ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                      : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                   }
                 >
                   <PiToggleLeftThin className="text-xl" /> Deactivate
@@ -195,8 +195,8 @@ export default function SearchComponent({
                 requiredAction="delete"
                 className={
                   selectedRow.length === 0
-                    ? "h-10 cursor-not-allowed border-[#dee2e6] gap-2"
-                    : "h-10 border-blue-500 text-blue-500 gap-2"
+                    ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                    : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                 }
               >
                 <MdOutlineDeleteOutline className="text-xl" /> Delete
@@ -312,7 +312,7 @@ export default function SearchComponent({
 
             {dateFrom && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="admin-label">
                   Date from
                 </label>
                 <div className="relative">
@@ -322,7 +322,7 @@ export default function SearchComponent({
                     onChange={(e) =>
                       handleFilterChange("dateFrom", e.target.value)
                     }
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full"
                     disabled={isFiltering}
                   />
                 </div>
@@ -331,7 +331,7 @@ export default function SearchComponent({
 
             {dateTo && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="admin-label">
                   To (Date)
                 </label>
                 <div className="relative">
@@ -341,7 +341,7 @@ export default function SearchComponent({
                     onChange={(e) =>
                       handleFilterChange("dateTo", e.target.value)
                     }
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full"
                     disabled={isFiltering}
                     min={filters.dateFrom}
                   />
@@ -366,7 +366,7 @@ export default function SearchComponent({
             <div className="flex items-end gap-2">
               <Button
                 onClick={applyFilters}
-                className={`bg-white text-black`}
+                className="admin-btn-secondary"
                 disabled={isFiltering}
               >
                 {isFiltering ? "Searching..." : "Search"}

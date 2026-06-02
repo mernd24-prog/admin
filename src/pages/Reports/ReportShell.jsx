@@ -62,7 +62,7 @@ export const ReportShell = ({
             <select
               value={range}
               onChange={(e) => setRange(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-[#989AFF]"
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-[var(--admin-gold)]"
             >
               {RANGE_OPTIONS.map((o) => (
                 <option key={o}>{o}</option>

@@ -475,7 +475,7 @@ const ProductCatalog = () => {
               />
               <PermissionGuard module="products" action="approve" hide>
                 <button
-                  className="text-xs px-2 py-1 rounded bg-[#3E4094] text-white hover:bg-[#2e3074]"
+                  className="text-xs px-2 py-1 rounded bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
                   onClick={() => handleApproveToggle(product)}
                 >
                   Review

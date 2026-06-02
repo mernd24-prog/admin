@@ -134,7 +134,7 @@ const SimilarProducts = () => {
           similarProducts.map((value) => (
             <span
               key={`${id}-${value}`}
-              className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[#eef3ff] text-[#2d4db3]"
+              className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[var(--admin-blue-soft)] text-[#2d4db3]"
             >
               {productNameMap[String(value)] || String(value)}
             </span>

@@ -90,7 +90,7 @@ const ProductFlow = () => {
                 <button
                   type="button"
                   onClick={() => navigate(step.route)}
-                  className="rounded bg-[#3E4094] px-3 py-1.5 text-xs font-medium text-white"
+                  className="rounded bg-[var(--admin-blue)] px-3 py-1.5 text-xs font-medium text-white"
                 >
                   Open
                 </button>
@@ -99,7 +99,7 @@ const ProductFlow = () => {
                     key={item.route}
                     type="button"
                     onClick={() => navigate(item.route)}
-                    className="rounded border border-[#3E4094] px-3 py-1.5 text-xs font-medium text-[#3E4094]"
+                    className="rounded border border-[var(--admin-blue)] px-3 py-1.5 text-xs font-medium text-[var(--admin-blue)]"
                   >
                     {item.label}
                   </button>

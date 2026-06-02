@@ -47,9 +47,9 @@ const BACKEND_PERMISSION_ACTIONS = [
     'restore',
     'bulk_action',
 ];
-const SEARCH_ACCENT = '#082f91';
-const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#082f91] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
-const SECONDARY_BUTTON_CLASS = 'px-4 py-2 text-sm font-medium border border-[#082f91] text-[#082f91] rounded-lg hover:bg-[#eef3ff] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+const SEARCH_ACCENT = 'var(--admin-navy)';
+const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--admin-navy)] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+const SECONDARY_BUTTON_CLASS = 'px-4 py-2 text-sm font-medium border border-[var(--admin-navy)] text-[var(--admin-navy)] rounded-lg hover:bg-[var(--admin-blue-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
 
 const normalizeAction = (action = '') => {
     const value = String(action || '').trim().toLowerCase();
@@ -85,7 +85,7 @@ const AccessCheckbox = ({ checked, disabled, onChange, ariaLabel }) => (
         className={`inline-flex h-4 w-4 items-center justify-center bg-transparent p-0 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
     >
         <span
-            className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${checked ? 'border-[#082f91] bg-[#082f91]' : 'border-[#082f91] bg-white'}`}
+            className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${checked ? 'border-[var(--admin-navy)] bg-[var(--admin-navy)]' : 'border-[var(--admin-navy)] bg-white'}`}
         >
             {checked && (
                 <MdCheck size={13} className="text-white" />
@@ -292,15 +292,15 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-[#e7dfd1]">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-[var(--admin-line)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e7dfd1] bg-[#faf6ee] rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl shrink-0">
           <div>
             <h3 className="text-sm font-semibold text-gray-800">Effective Permissions</h3>
             <p className="text-xs text-gray-400 mt-0.5">{userName} — final computed access</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="p-1.5 text-gray-400 hover:text-[#3E4094] rounded-lg hover:bg-white transition-colors" title="Reload">
+            <button onClick={load} className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-white transition-colors" title="Reload">
               <MdRefresh size={16} className={loading ? 'animate-spin' : ''} />
             </button>
             <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-white transition-colors">
@@ -313,7 +313,7 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="space-y-3 animate-pulse">
-              {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[#faf6ee] rounded-lg" />)}
+              {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[var(--admin-surface-soft)] rounded-lg" />)}
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600">{error}</div>
@@ -338,7 +338,7 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
               {data && (
                 <div className="space-y-2">
                   {sourceSections.map(({ label, items, color }) => (
-                    <div key={label} className="rounded-lg border border-[#e7dfd1] bg-white p-3">
+                    <div key={label} className="rounded-lg border border-[var(--admin-line)] bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</h4>
                         <span className="text-[10px] font-medium text-gray-400">{items.length}</span>
@@ -364,7 +364,7 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Module Access Breakdown</h4>
                   {modules.map(([mod, actions]) => (
-                    <div key={mod} className="flex items-start gap-3 p-3 rounded-lg border border-[#e7dfd1] bg-white">
+                    <div key={mod} className="flex items-start gap-3 p-3 rounded-lg border border-[var(--admin-line)] bg-white">
                       <div className="w-36 shrink-0">
                         <p className="text-xs font-semibold text-gray-700 capitalize">{mod.replace(/_/g, ' ')}</p>
                         <p className="text-[10px] text-gray-400 font-mono">{mod}</p>
@@ -406,7 +406,7 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
           )}
         </div>
 
-        <div className="px-6 py-3 border-t border-[#e7dfd1] bg-[#faf6ee] rounded-b-2xl shrink-0">
+        <div className="px-6 py-3 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-b-2xl shrink-0">
           <p className="text-[10px] text-gray-400">
             Formula: Role permissions + User direct grants + Sidebar expansions − Denied permissions
           </p>
@@ -876,7 +876,7 @@ const UserPermissions = ({ setModuleName }) => {
                     <button
                         type="button"
                         onClick={() => setShowEffective(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#3E4094] border border-[#3E4094] rounded-lg hover:bg-[#eef3ff] transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--admin-blue)] border border-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
                         title="View final computed permissions for this user"
                     >
                         <MdBarChart size={16} /> Effective Permissions
@@ -897,7 +897,7 @@ const UserPermissions = ({ setModuleName }) => {
             {/* Info banner showing what this user can access */}
             {userName && (
                 <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#b7c5e6] bg-white p-4 shadow-sm">
-                    <MdInfoOutline size={18} className="mt-0.5 flex-shrink-0 text-[#082f91]" />
+                    <MdInfoOutline size={18} className="mt-0.5 flex-shrink-0 text-[var(--admin-navy)]" />
                     <div>
                         <p className="text-sm font-semibold text-gray-800">{userName}</p>
                         <p className="mt-0.5 text-xs text-gray-500">
@@ -922,7 +922,7 @@ const UserPermissions = ({ setModuleName }) => {
                         </div>
                     </div>
                     {groupedPermissions.length ? (
-                        <ul className="divide-y divide-[#eef3ff]">
+                        <ul className="divide-y divide-[var(--admin-blue-soft)]">
                             {groupedPermissions.map(({ tabName, items }) => {
                                 const selectableItems = items.filter((permission) => permission.canAssign);
                                 const selectedInGroup = selectableItems.filter((permission) => selectedModuleSet.has(permission.id)).length;
@@ -935,7 +935,7 @@ const UserPermissions = ({ setModuleName }) => {
                                     <li
                                         key={tabName}
                                         onClick={() => setSelectedTabName(tabName)}
-                                        className={`flex cursor-pointer items-center justify-between gap-3 border-l-2 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'border-l-[#082f91] bg-[#eef3ff]' : 'border-l-transparent'}`}
+                                        className={`flex cursor-pointer items-center justify-between gap-3 border-l-2 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'border-l-[var(--admin-navy)] bg-[var(--admin-blue-soft)]' : 'border-l-transparent'}`}
                                     >
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-gray-700">{tabName}</p>
@@ -945,11 +945,11 @@ const UserPermissions = ({ setModuleName }) => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {!!selectedInGroup && (
-                                                <span className="rounded-full bg-[#eef3ff] px-2 py-0.5 text-xs font-medium text-[#082f91]">
+                                                <span className="rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-xs font-medium text-[var(--admin-navy)]">
                                                     {selectedInGroup}
                                                 </span>
                                             )}
-                                            {isActive && <MdCheck size={16} className="text-[#082f91]" />}
+                                            {isActive && <MdCheck size={16} className="text-[var(--admin-navy)]" />}
                                         </div>
                                     </li>
                                 );
@@ -1014,7 +1014,7 @@ const UserPermissions = ({ setModuleName }) => {
                                 {activeItems.map((permission) => (
                                     <div
                                         key={permission.id}
-                                        className="grid grid-cols-1 gap-3 rounded-lg border border-[#b7c5e6] p-3 transition-colors hover:bg-[#eef3ff]/60 md:grid-cols-[minmax(180px,260px),1fr]"
+                                        className="grid grid-cols-1 gap-3 rounded-lg border border-[#b7c5e6] p-3 transition-colors hover:bg-[var(--admin-blue-soft)]/60 md:grid-cols-[minmax(180px,260px),1fr]"
                                     >
                                         <div className="flex items-start gap-2">
                                             <AccessCheckbox

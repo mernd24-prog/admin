@@ -13,13 +13,13 @@ const NeedHelpCard = ({
 }) => (
   <div
     className={twMerge(
-      "mt-8 rounded-[8px] border border-[#0425861F] bg-[#E49E1C1A] p-4",
+      "mt-8 rounded-[8px] border border-[var(--admin-line)] bg-[var(--admin-gold-soft)] p-4",
       className,
     )}
   >
     <p
       className={twMerge(
-        "text-[14px] font-bold uppercase leading-[15px] tracking-[1px] text-[#042586]",
+        "text-[14px] font-bold uppercase leading-[15px] tracking-[1px] text-[var(--admin-navy)]",
         titleClassName,
       )}
     >
@@ -27,7 +27,7 @@ const NeedHelpCard = ({
     </p>
     <p
       className={twMerge(
-        "mt-2 text-[12px] font-normal leading-[19.5px] text-[#042586]",
+        "mt-2 text-[12px] font-normal leading-[19.5px] text-[var(--admin-ink)]",
         descriptionClassName,
       )}
     >
@@ -37,7 +37,7 @@ const NeedHelpCard = ({
       type="button"
       onClick={onClick}
       className={twMerge(
-        "mt-4 h-[32px] w-full rounded-[4px] bg-[#042586] text-[11px] font-bold text-white transition hover:bg-[#062779]",
+        "mt-4 h-[32px] w-full rounded-[4px] bg-[var(--admin-gold)] text-[11px] font-bold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)]",
         buttonClassName,
       )}
     >
