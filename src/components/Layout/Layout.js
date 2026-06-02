@@ -52,6 +52,10 @@ const UsersTransactions = React.lazy(
   () =>
     import("../../pages/UserManagement/UsersTransactions/UsersTransactions"),
 );
+const ViewTransaction = React.lazy(
+  () =>
+    import("../../pages/UserManagement/UsersTransactions/ViewTransaction"),
+);
 
 const ProductCatalog = React.lazy(
   () => import("../../pages/ProductManagement/ProductCatalog/ProductCatalog"),
@@ -537,6 +541,13 @@ function Layout() {
                     element={renderRoute(
                       "/transactions",
                       <UsersTransactions />,
+                    )}
+                  />
+                  <Route
+                    path="/transactions/view/:id"
+                    element={renderRoute(
+                      "/transactions",
+                      <ViewTransaction />,
                     )}
                   />
 

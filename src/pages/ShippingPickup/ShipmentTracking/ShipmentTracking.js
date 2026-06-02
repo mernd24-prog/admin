@@ -71,6 +71,7 @@ const unwrapList = (payload = {}) => {
 
 const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const csvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
 
 const ShipmentTracking = () => {
   const dispatch = useDispatch();
@@ -80,7 +81,7 @@ const ShipmentTracking = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
-    orderId: "",
+    orderId: getInitialQuery("orderId"),
     sellerId: "",
     status: "",
     courierName: "",

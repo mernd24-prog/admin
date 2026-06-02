@@ -1,6 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { MdVisibility } from "react-icons/md";
 import { toast } from "react-toastify";
 import TableData from "../../../components/Atoms/TableData/TableData";
 import AddEditTransactionModal from "./components/AddEditTransactionModal";
@@ -24,6 +26,7 @@ const formatCurrency = (value) => {
 
 const UsersTransactions = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const adminCoreSelector = useSelector((state) => state.adminCore);
 
   const [apiRes, setApiRes] = useState([]);
@@ -77,6 +80,7 @@ const UsersTransactions = () => {
     "Debit",
     "Description",
     "Status",
+    "Action",
   ];
 
   const tableRows = apiRes?.map((item) => {
@@ -98,6 +102,14 @@ const UsersTransactions = () => {
       >
         {metadata.status || "Transaction Completed"}
       </span>,
+      <button
+        type="button"
+        className="inline-flex items-center justify-center rounded-md p-1 text-[#2f6fed] transition hover:bg-[#f3f6ff]"
+        onClick={() => navigate(`/app/transactions/view/${encodeURIComponent(item?.slug || item?._id || metadata.transactionId)}`)}
+        aria-label="View payment detail"
+      >
+        <MdVisibility size={20} />
+      </button>,
     ];
   });
 
