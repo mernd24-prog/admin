@@ -43,6 +43,7 @@ const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const money = (value) => Number(value || 0).toFixed(2);
 
 const unwrapData = (payload = {}) => payload?.data?.data || payload?.data || {};
+const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
 
 const Payments = () => {
   const dispatch = useDispatch();
@@ -59,7 +60,7 @@ const Payments = () => {
     provider: "",
     status: "",
     buyerId: "",
-    orderId: "",
+    orderId: getInitialQuery("orderId"),
     fromDate: "",
     toDate: "",
   });

@@ -58,6 +58,7 @@ const unwrapList = (payload = {}) => {
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
 const returnId = (row) => row?._id || row?.id || row?.returnId;
+const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
 
 const Returns = () => {
   const dispatch = useDispatch();
@@ -87,7 +88,7 @@ const Returns = () => {
     search: "",
     status: "",
     reason: "",
-    orderId: "",
+    orderId: getInitialQuery("orderId"),
     buyerId: "",
     fromDate: "",
     toDate: "",
