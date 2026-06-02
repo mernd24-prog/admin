@@ -1,367 +1,312 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FiMinusCircle } from "react-icons/fi";
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa6';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FiMinusCircle } from 'react-icons/fi';
+import { FaChevronDown, FaChevronUp, FaImage, FaInfoCircle } from 'react-icons/fa';
+import { MdAdd, MdClose } from 'react-icons/md';
 import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../../components/Atoms/Input/Input';
 import Button from '../../../../components/Atoms/buttons/button';
+import { uploadFileMulti } from '../../../../_helpers/globalFunctions';
+import { toast } from 'sonner';
+
+const MAX_VARIANT_IMAGES = 5;
+
+const EMPTY_ROW = () => ({
+  id: Date.now() + Math.random(),
+  sku: '',
+  type: null,
+  remark: '',
+  packaging: '',
+  mrp: '',
+  discount: '',
+  salePrice: '',
+  stock: '',
+  images: [],
+});
+
+const calculateSalePrice = (mrp, discount) => {
+  const m = parseFloat(mrp) || 0;
+  const d = parseFloat(discount) || 0;
+  if (m <= 0) return '';
+  if (d <= 0) return m.toFixed(2);
+  return (m - (m * d) / 100).toFixed(2);
+};
 
 export default function VariantsOptionsTab({
-    options,
-    setVariantRows,
-    setFormData,
-    platformOptions = [],
+  options,
+  setVariantRows,
+  setFormData,
+  platformOptions = [],
 }) {
-    const [isExpanded, setIsExpanded] = useState(true);
-    const [errors, setErrors] = useState({});
-    const [isLoading, setIsLoading] = useState(false);
-    const [variantRows, setLocalVariantRows] = useState([]);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [errors, setErrors] = useState({});
+  const [variantRows, setLocalVariantRows] = useState([EMPTY_ROW()]);
+  const [uploadingRows, setUploadingRows] = useState(new Set());
+  const [expandedImages, setExpandedImages] = useState(new Set());
+  const fileInputRefs = useRef({});
 
-    useEffect(() => {
-        if (options && Array.isArray(options) && options.length > 0) {
-            setLocalVariantRows(options);
-            setVariantRows(options);
-        } else {
-            const initialRow = {
-                id: Date.now(),
-                sku: '',
-                type: null,
-                remark: '',
-                packaging: '',
-                mrp: '',
-                discount: '',
-                salePrice: '',
-                stock: ''
-            };
-            setLocalVariantRows([initialRow]);
-            setVariantRows([initialRow]);
-        }
-    }, [options, setVariantRows]);
+  // ── Seed from parent ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (options && Array.isArray(options) && options.length > 0) {
+      const rows = options.map((o, i) => ({ id: o._id || Date.now() + i, ...o, images: o.images || [] }));
+      setLocalVariantRows(rows);
+      setVariantRows(rows);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    useEffect(() => {
-        if (variantRows.length > 0) {
-            setFormData(prev => ({
-                ...prev,
-                options: variantRows
-            }));
-        }
-    }, [variantRows, setFormData]);
+  // ── Sync to parent ──────────────────────────────────────────────────────────
+  const syncUp = useCallback((rows) => {
+    setLocalVariantRows(rows);
+    setVariantRows(rows);
+    setFormData((prev) => ({ ...prev, options: rows }));
+  }, [setVariantRows, setFormData]);
 
+  // ── Field change ────────────────────────────────────────────────────────────
+  const handleFieldChange = useCallback((index, fieldName, value) => {
+    const updated = [...variantRows];
+    updated[index] = { ...updated[index], [fieldName]: value };
+    if (fieldName === 'mrp' || fieldName === 'discount') {
+      const mrp = fieldName === 'mrp' ? value : updated[index].mrp;
+      const disc = fieldName === 'discount' ? value : updated[index].discount;
+      updated[index].salePrice = calculateSalePrice(mrp, disc);
+    }
+    syncUp(updated);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (next[index]?.[fieldName]) {
+        delete next[index][fieldName];
+        if (!Object.keys(next[index]).length) delete next[index];
+      }
+      return next;
+    });
+  }, [variantRows, syncUp]);
 
-    const updateVariants = useCallback((updatedRows) => {
-        setLocalVariantRows(updatedRows);
-        setVariantRows(updatedRows);
-        setFormData(prev => ({
-            ...prev,
-            options: updatedRows
-        }));
-    }, [setVariantRows, setFormData]);
+  const handleOptionSelect = useCallback((index, selected) => {
+    const updated = [...variantRows];
+    updated[index] = { ...updated[index], type: selected?.value || null };
+    syncUp(updated);
+  }, [variantRows, syncUp]);
 
-    const handleAddRow = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const newRow = {
-                id: Date.now(),
-                sku: '',
-                type: null,
-                remark: '',
-                packaging: '',
-                mrp: '',
-                discount: '',
-                salePrice: '',
-                stock: ''
-            };
+  // ── Row management ──────────────────────────────────────────────────────────
+  const addRow = () => syncUp([...variantRows, EMPTY_ROW()]);
 
-            const updatedRows = [...variantRows, newRow];
-            updateVariants(updatedRows);
+  const removeRow = useCallback((index) => {
+    if (variantRows.length <= 1) return;
+    const updated = variantRows.filter((_, i) => i !== index);
+    syncUp(updated);
+    setErrors((prev) => {
+      const next = {};
+      Object.keys(prev).forEach((k) => {
+        const ki = parseInt(k, 10);
+        if (ki < index) next[ki] = prev[k];
+        else if (ki > index) next[ki - 1] = prev[k];
+      });
+      return next;
+    });
+  }, [variantRows, syncUp]);
 
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[variantRows.length];
-                return newErrors;
-            });
+  // ── Image upload ────────────────────────────────────────────────────────────
+  const uploadImages = async (index, files) => {
+    if (!files || !files.length) return;
+    const current = variantRows[index]?.images || [];
+    const remaining = MAX_VARIANT_IMAGES - current.length;
+    if (remaining <= 0) { toast.error(`Maximum ${MAX_VARIANT_IMAGES} images per variant`); return; }
+    const toUpload = Array.from(files).slice(0, remaining);
+    setUploadingRows((prev) => new Set([...prev, index]));
+    try {
+      const urls = await uploadFileMulti(toUpload, 'PRODUCTS');
+      const updated = [...variantRows];
+      updated[index] = { ...updated[index], images: [...current, ...urls] };
+      syncUp(updated);
+      toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} added`);
+    } catch (err) {
+      toast.error(err?.message || 'Upload failed');
+    } finally {
+      setUploadingRows((prev) => { const n = new Set(prev); n.delete(index); return n; });
+    }
+  };
 
-        } catch (error) {
-            console.error('Error adding variant row:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [variantRows, updateVariants]);
+  const removeImage = (rowIdx, imgIdx) => {
+    const updated = [...variantRows];
+    updated[rowIdx] = { ...updated[rowIdx], images: updated[rowIdx].images.filter((_, i) => i !== imgIdx) };
+    syncUp(updated);
+  };
 
-    const handleOptionSelect = useCallback((index, selectedOption) => {
-        setIsLoading(true);
-        try {
-            const updatedRows = [...variantRows];
-            updatedRows[index] = {
-                ...updatedRows[index],
-                type: selectedOption?.value || null
-            };
+  const toggleImages = (index) =>
+    setExpandedImages((prev) => { const n = new Set(prev); if (n.has(index)) n.delete(index); else n.add(index); return n; });
 
-            updateVariants(updatedRows);
+  const optionChoices = platformOptions.map((o) => ({ value: o.slug || o.name, label: o.name }));
+  const getSelectedOption = (row) => {
+    if (!row.type) return null;
+    return optionChoices.find((o) => o.value === row.type || o.label === row.type) || null;
+  };
 
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (newErrors[index]) {
-                    delete newErrors[index].type;
-                    if (Object.keys(newErrors[index]).length === 0) {
-                        delete newErrors[index];
-                    }
-                }
-                return newErrors;
-            });
-
-        } catch (error) {
-            console.error('Error selecting option:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [variantRows, updateVariants]);
-
-    const calculateSalePrice = (mrp, discount) => {
-        const mrpValue = parseFloat(mrp) || 0;
-        const discountValue = parseFloat(discount) || 0;
-
-        if (mrpValue <= 0) return '';
-        if (discountValue <= 0) return mrpValue.toFixed(2);
-
-        const discountAmount = (mrpValue * discountValue) / 100;
-        const salePrice = mrpValue - discountAmount;
-        return salePrice.toFixed(2);
-    };
-
-    const handleVariantFieldChange = useCallback((index, fieldName, value) => {
-        const updatedRows = [...variantRows];
-
-        updatedRows[index] = {
-            ...updatedRows[index],
-            [fieldName]: value
-        };
-
-        if (fieldName === 'mrp' || fieldName === 'discount') {
-            const mrp = fieldName === 'mrp' ? value : updatedRows[index].mrp;
-            const discount = fieldName === 'discount' ? value : updatedRows[index].discount;
-
-            updatedRows[index].salePrice = calculateSalePrice(mrp, discount);
-        }
-
-        updateVariants(updatedRows);
-
-        setErrors(prev => {
-            const newErrors = { ...prev };
-            if (newErrors[index]?.[fieldName]) {
-                delete newErrors[index][fieldName];
-                if (Object.keys(newErrors[index]).length === 0) {
-                    delete newErrors[index];
-                }
-            }
-            return newErrors;
-        });
-    }, [variantRows, updateVariants]);
-
-    const handleRemoveRow = useCallback((index) => {
-        if (variantRows.length <= 1) return;
-
-        const updatedRows = [...variantRows];
-        updatedRows.splice(index, 1);
-        updateVariants(updatedRows);
-        setErrors(prev => {
-            const newErrors = {};
-            Object.keys(prev).forEach(key => {
-                const keyIndex = parseInt(key);
-                if (keyIndex < index) {
-                    newErrors[keyIndex] = prev[keyIndex];
-                } else if (keyIndex > index) {
-                    newErrors[keyIndex - 1] = prev[keyIndex];
-                }
-                // Skip the removed index
-            });
-            return newErrors;
-        });
-    }, [variantRows, updateVariants]);
-
-    const getSelectedOption = (row) => {
-        if (!row.type) return null;
-        const optionChoices = platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }));
-        return optionChoices.find(option => option.value === row.type || option.label === row.type) || null;
-    };
-
-    const optionChoices = platformOptions.map((option) => ({ value: option.slug || option.name, label: option.name }));
-
-    return (
-        <div className="w-full bg-white">
-            <div
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setIsExpanded(!isExpanded)}
-            >
-                <div>
-                    <h3 className="text-lg font-medium text-gray-900">Variants & Options</h3>
-                    <p className="text-sm text-gray-500">Customize the product options, including size, color, etc.</p>
-                </div>
-                {isExpanded ? <FaChevronUp className="text-gray-500" /> : <FaChevronDown className="text-gray-500" />}
-            </div>
-
-            {isExpanded && (
-                <div className="pb-6 space-y-6 bg-white border-t border-gray-100">
-                    <div className="space-y-4 mt-2">
-                        {variantRows.map((row, index) => (
-                            <div key={row.id || index} className="relative">
-                                <div className="flex items-start justify-between p-2 border border-gray-200">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                        <div>
-                                            <Input
-                                                labelName="SKU"
-                                                value={row.sku || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'sku', e.target.value)}
-                                                placeholder="Enter variant SKU"
-                                                isLoading={isLoading}
-                                                name={`sku_${index}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <FilterSelect
-                                                label="Options"
-                                                options={optionChoices}
-                                                value={getSelectedOption(row)}
-                                                onChange={(val) => handleOptionSelect(index, val)}
-                                                placeholder="Select option"
-                                                isLoading={isLoading}
-                                            />
-                                            {errors[index]?.type && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].type}</p>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <Input
-                                                labelName="Remark"
-                                                value={row.remark || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'remark', e.target.value)}
-                                                placeholder="Enter remark"
-                                                isLoading={isLoading}
-                                                name={`remark_${index}`}
-                                            />
-                                            {errors[index]?.remark && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].remark}</p>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <Input
-                                                labelName="Packaging"
-                                                value={row.packaging || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'packaging', e.target.value)}
-                                                placeholder="Enter packaging"
-                                                isLoading={isLoading}
-                                                name={`packaging_${index}`}
-                                            />
-                                            {errors[index]?.packaging && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].packaging}</p>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <Input
-                                                labelName="MRP *"
-                                                value={row.mrp || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'mrp', e.target.value)}
-                                                placeholder="Enter MRP"
-                                                isLoading={isLoading}
-                                                name={`mrp_${index}`}
-                                                type="number"
-                                            />
-                                            {errors[index]?.mrp && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].mrp}</p>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <Input
-                                                labelName="Discount (%)"
-                                                value={row.discount || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'discount', e.target.value)}
-                                                placeholder="Enter discount percentage"
-                                                isLoading={isLoading}
-                                                name={`discount_${index}`}
-                                                type="number"
-                                            />
-                                            {errors[index]?.discount && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].discount}</p>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <Input
-                                                labelName="Sale Price *"
-                                                value={row.salePrice || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'salePrice', e.target.value)}
-                                                placeholder="Enter sale price"
-                                                isLoading={isLoading}
-                                                name={`salePrice_${index}`}
-                                                type="number"
-                                                disable
-                                            />
-                                            {errors[index]?.salePrice && (
-                                                <p className="mt-1 text-sm text-red-600">{errors[index].salePrice}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <Input
-                                                labelName="Stock"
-                                                value={row.stock || ''}
-                                                onChange={(e) => handleVariantFieldChange(index, 'stock', e.target.value)}
-                                                placeholder="Enter variant stock"
-                                                isLoading={isLoading}
-                                                name={`stock_${index}`}
-                                                type="number"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {variantRows.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveRow(index)}
-                                            className="ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
-                                            aria-label="Remove variant row"
-                                        >
-                                            <FiMinusCircle className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <Button onClick={handleAddRow} disabled={isLoading} type="button" className={`bg-white text-black`}>
-                        {isLoading ? (
-                            <>
-                                <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                Adding...
-                            </>
-                        ) : (
-                            'Add Variant'
-                        )}
-                    </Button>
-
-                    {Object.keys(errors).length > 0 && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h4>
-                            <ul className="text-sm text-red-700 space-y-1">
-                                {Object.entries(errors).map(([key, error]) => {
-                                    if (typeof error === 'object') {
-                                        return Object.entries(error).map(([field, message]) => (
-                                            <li key={`${key}-${field}`}>• Row {parseInt(key) + 1}: {message}</li>
-                                        ));
-                                    }
-                                    return <li key={key}>• {error}</li>
-                                })}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            )}
+  return (
+    <div className="w-full bg-white">
+      {/* Section header */}
+      <div
+        className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-[var(--admin-surface-soft)] transition-colors select-none border-b border-[var(--admin-line)]"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div>
+          <h3 className="text-base font-semibold text-[var(--admin-ink)]">Simple Product Variants</h3>
+          <p className="text-xs text-[var(--admin-muted)] mt-0.5">
+            Add size / pack / style variants for this product — each row is a separate purchasable option
+          </p>
         </div>
-    );
+        {isExpanded
+          ? <FaChevronUp className="text-[var(--admin-muted)] text-sm flex-shrink-0" />
+          : <FaChevronDown className="text-[var(--admin-muted)] text-sm flex-shrink-0" />}
+      </div>
+
+      {isExpanded && (
+        <div className="px-5 pb-6 pt-4 space-y-3">
+          {/* Info banner */}
+          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-[var(--admin-blue-soft)] border border-[var(--admin-blue)]/20 text-xs text-[var(--admin-ink)]/70">
+            <FaInfoCircle className="text-[var(--admin-blue)] mt-0.5 flex-shrink-0" size={11} />
+            <span>
+              Each row is a variant of this simple product. Images per variant replace the main product gallery when the customer selects that option.
+            </span>
+          </div>
+
+          {/* Variant rows */}
+          <div className="space-y-3">
+            {variantRows.map((row, index) => {
+              const imageCount = (row.images || []).length;
+              const hasImages = imageCount > 0;
+              const isImagesOpen = expandedImages.has(index);
+              const isUploading = uploadingRows.has(index);
+
+              return (
+                <div key={row.id || index}
+                  className={`rounded-xl border overflow-hidden transition-colors ${!hasImages ? 'border-[var(--admin-warning)]/40' : 'border-[var(--admin-line)]'}`}>
+                  {/* Row header */}
+                  <div className="flex items-center justify-between px-3 py-2 bg-[var(--admin-surface-soft)] border-b border-[var(--admin-line)]">
+                    <span className="text-xs font-semibold text-[var(--admin-muted)]">Variant #{index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      {/* Image toggle */}
+                      <button type="button" onClick={() => toggleImages(index)}
+                        className={`text-[10px] px-2 py-0.5 rounded border font-semibold flex items-center gap-1 transition-colors
+                          ${isImagesOpen ? 'bg-[var(--admin-navy)] text-white border-[var(--admin-navy)]'
+                          : hasImages ? 'bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] border-[var(--admin-gold)]/40'
+                          : 'bg-[var(--admin-amber-soft)] text-[var(--admin-warning)] border-[var(--admin-warning)]/40'}`}>
+                        <FaImage size={9} />
+                        {hasImages ? `${imageCount} image${imageCount > 1 ? 's' : ''}` : 'No images'}
+                      </button>
+                      {variantRows.length > 1 && (
+                        <button type="button" onClick={() => removeRow(index)}
+                          className="p-1 text-[var(--admin-danger)] hover:bg-red-50 rounded-full transition-colors" aria-label="Remove variant">
+                          <FiMinusCircle size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fields grid */}
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div>
+                        <Input labelName="SKU" value={row.sku || ''} onChange={(e) => handleFieldChange(index, 'sku', e.target.value)} placeholder="e.g. SKU-RED-M" name={`sku_${index}`} />
+                      </div>
+                      <div>
+                        <FilterSelect label="Option Type" options={optionChoices} value={getSelectedOption(row)}
+                          onChange={(val) => handleOptionSelect(index, val)} placeholder="Select option" />
+                        {errors[index]?.type && <p className="mt-1 text-xs text-[var(--admin-danger)]">{errors[index].type}</p>}
+                      </div>
+                      <div>
+                        <Input labelName="Remark" value={row.remark || ''} onChange={(e) => handleFieldChange(index, 'remark', e.target.value)} placeholder="e.g. Limited edition" name={`remark_${index}`} />
+                      </div>
+                      <div>
+                        <Input labelName="Packaging" value={row.packaging || ''} onChange={(e) => handleFieldChange(index, 'packaging', e.target.value)} placeholder="e.g. Box of 6" name={`packaging_${index}`} />
+                      </div>
+                      <div>
+                        <Input labelName="MRP (₹) *" value={row.mrp || ''} onChange={(e) => handleFieldChange(index, 'mrp', e.target.value)} placeholder="0.00" name={`mrp_${index}`} type="number" />
+                        {errors[index]?.mrp && <p className="mt-1 text-xs text-[var(--admin-danger)]">{errors[index].mrp}</p>}
+                      </div>
+                      <div>
+                        <Input labelName="Discount (%)" value={row.discount || ''} onChange={(e) => handleFieldChange(index, 'discount', e.target.value)} placeholder="0" name={`discount_${index}`} type="number" />
+                      </div>
+                      <div>
+                        <Input labelName="Sale Price (₹) *" value={row.salePrice || ''} onChange={(e) => handleFieldChange(index, 'salePrice', e.target.value)} placeholder="Auto-calculated" name={`salePrice_${index}`} type="number" disable />
+                        <span className="text-[10px] text-[var(--admin-muted)] mt-0.5 block">Auto from MRP − Discount</span>
+                      </div>
+                      <div>
+                        <Input labelName="Stock" value={row.stock || ''} onChange={(e) => handleFieldChange(index, 'stock', e.target.value)} placeholder="0" name={`stock_${index}`} type="number" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image section */}
+                  {isImagesOpen && (
+                    <div className="border-t border-[var(--admin-line)] px-4 py-4 bg-[var(--admin-surface-soft)] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-[var(--admin-muted)] uppercase tracking-wide flex items-center gap-1.5">
+                          <FaImage size={10} /> Variant Images ({imageCount}/{MAX_VARIANT_IMAGES})
+                        </span>
+                      </div>
+
+                      <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-[var(--admin-blue-soft)] border border-[var(--admin-blue)]/20">
+                        <FaInfoCircle className="text-[var(--admin-blue)] mt-0.5 flex-shrink-0" size={11} />
+                        <p className="text-xs text-[var(--admin-ink)]/70 leading-relaxed">
+                          These images override the main product gallery when a customer selects this variant.
+                          First image is the cover.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 items-start">
+                        {(row.images || []).map((img, imgIdx) => (
+                          <div key={imgIdx} className="relative w-16 h-16 rounded border border-[var(--admin-line)] overflow-hidden group flex-shrink-0 bg-white">
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                            {imgIdx === 0 && (
+                              <div className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-[7px] font-bold px-1 rounded">Cover</div>
+                            )}
+                            <button type="button" onClick={() => removeImage(index, imgIdx)}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[var(--admin-danger)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MdClose size={9} />
+                            </button>
+                          </div>
+                        ))}
+
+                        {imageCount < MAX_VARIANT_IMAGES && (
+                          <label className={`w-16 h-16 rounded border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors flex-shrink-0 ${isUploading ? 'opacity-50 pointer-events-none border-[var(--admin-line)]' : 'border-[var(--admin-line)] hover:border-[var(--admin-gold)] text-[var(--admin-muted)] hover:text-[var(--admin-gold)]'}`}>
+                            {isUploading
+                              ? <span className="text-xs">⏳</span>
+                              : <><MdAdd size={20} /><span className="text-[9px] mt-0.5">Upload</span></>}
+                            <input type="file" accept="image/*" multiple className="hidden"
+                              onChange={(e) => uploadImages(index, e.target.files)} />
+                          </label>
+                        )}
+                      </div>
+
+                      {imageCount >= MAX_VARIANT_IMAGES && (
+                        <p className="text-xs text-[var(--admin-muted)]">Maximum {MAX_VARIANT_IMAGES} images per variant reached.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add row */}
+          <Button onClick={addRow} type="button" variant="secondary" className="!text-xs">
+            <MdAdd size={15} /> Add Variant
+          </Button>
+
+          {/* Error summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+              <h4 className="text-sm font-semibold text-[var(--admin-danger)] mb-2">Please fix:</h4>
+              <ul className="text-xs text-[var(--admin-danger)] space-y-1">
+                {Object.entries(errors).map(([key, error]) =>
+                  typeof error === 'object'
+                    ? Object.entries(error).map(([field, msg]) => <li key={`${key}-${field}`}>• Row {parseInt(key, 10) + 1}: {msg}</li>)
+                    : <li key={key}>• {error}</li>,
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

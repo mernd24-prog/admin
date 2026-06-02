@@ -198,7 +198,8 @@ export default function ProductManagementUI() {
               mrp: option.mrp || '',
               discount: option.discount || '',
               salePrice: option.salePrice || option.price || '',
-              stock: option.stock || ''
+              stock: option.stock || '',
+              images: option.images || [],
             }));
             setVariantRows(formattedOptions);
           }
