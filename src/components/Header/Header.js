@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutFunction } from "../../_helpers";
 import { IoLogOutOutline } from "react-icons/io5";
-import { MdOutlineMenu, MdSearch, MdOutlineNotificationsNone } from "react-icons/md";
+import { MdClose, MdOutlineMenu, MdSearch, MdOutlineNotificationsNone } from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
+import { FcNext } from "react-icons/fc";
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from "../../Redux/userSlice";
 import { Link, useLocation } from "react-router-dom";
@@ -71,7 +72,12 @@ const getHeaderTitle = (path = "", fallback = "") => {
   return fallback || "Dashboard";
 };
 
-export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
+export default function Header({
+  handleNavbar,
+  moduleName,
+  hasPermanentOpen,
+  isSidebarExpanded,
+}) {
   const [openModel, setOpenModel] = useState(false);
   const dispatch = useDispatch();
   const dropDownRef = useRef(null);
@@ -140,18 +146,22 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
 
   return (
     <div
-      className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] border-b border-[var(--admin-line)] text-[var(--admin-ink)] shadow-[0_1px_8px_rgba(31,27,95,0.06)]`}
+      className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] text-[var(--admin-ink)]`}
     >
       <div className="flex items-center justify-between flex-1 px-4 md:px-5 w-full gap-4">
         {/* Left: menu toggle + title */}
         <div className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}>
           <button
             type="button"
-            aria-label="Toggle sidebar"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] shadow-sm transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] focus:outline-none"
+            aria-label={isSidebarExpanded ? "Sidebar open" : "Sidebar closed"}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-white focus:outline-none"
             onClick={handleNavbar}
           >
-            <MdOutlineMenu className="w-5 h-5" />
+            {isSidebarExpanded ? (
+              <MdOutlineMenu className="h-5 w-5" />
+            ) : (
+              <FcNext className="h-5 w-5" />
+            )}
           </button>
 
           <div className="leading-tight min-w-0">
@@ -162,16 +172,16 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
         </div>
 
         {/* Center: search bar */}
-        <div className="hidden md:flex flex-1 max-w-[360px]">
-          <div className="relative w-full">
+        <div className="hidden md:flex flex-1 max-w-[325px]">
+          <div className="header-search-pill group relative w-full">
             <MdSearch
-              size={16}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] pointer-events-none"
+              size={14}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
             />
             <input
               type="text"
               placeholder="Search"
-              className="w-full h-9 pl-10 pr-4 rounded-full border border-[var(--admin-line)] bg-white text-xs text-[var(--admin-ink)] placeholder-[var(--admin-muted)] shadow-sm focus:outline-none focus:border-[var(--admin-blue)] focus:bg-white focus:ring-2 focus:ring-[var(--admin-blue)]/10 transition-colors"
+              className="admin-input admin-header-search-input"
             />
           </div>
         </div>
@@ -181,7 +191,7 @@ export default function Header({ handleNavbar, moduleName, hasPermanentOpen }) {
           <button
             type="button"
             aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] shadow-sm transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
           >
             <MdOutlineNotificationsNone size={18} />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />

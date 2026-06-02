@@ -7,40 +7,53 @@ export default function Cards({
   value,
   helper,
   trend,
+  iconBg = "#dde6d9",
+  iconColor,
   trendNegative = false,
-  warning = false,
 }) {
   const trendColor = trendNegative ? "text-red-500" : "text-emerald-500";
   return (
-    <div className="flex h-full min-h-[92px] w-full min-w-0 flex-col justify-between rounded-[8px] border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[var(--admin-shadow)]">
+    <div className="relative flex h-full min-h-[92px] w-full min-w-0 overflow-hidden rounded-[10px] border border-[#f0c86f] bg-white px-4 py-3 shadow-none">
       {icon && (
-        <div className="mb-1 flex min-h-8 items-start justify-between">
-          <p className="text-[11px] font-medium font-inter text-[var(--admin-ink)]">
-            {label}
-          </p>
-          {icon && (
+        <span
+          className="absolute right-0 top-0 flex h-9 w-10 items-center justify-center rounded-bl-[10px]"
+          style={{ backgroundColor: iconBg }}
+        >
+          {iconColor ? (
             <span
-              className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${warning ? "bg-red-100" : "bg-[var(--admin-gold-soft)]"} text-white`}
-            >
-              <img className="h-5 w-5 object-contain" src={icon} alt="" />
-            </span>
+              className="h-5 w-5"
+              style={{
+                backgroundColor: iconColor,
+                WebkitMask: `url(${icon}) center / contain no-repeat`,
+                mask: `url(${icon}) center / contain no-repeat`,
+              }}
+            />
+          ) : (
+            <img
+              className="h-5 w-5 object-contain opacity-100"
+              src={icon}
+              alt=""
+            />
           )}
-        </div>
+        </span>
       )}
 
-      <div className="mt-0">
-        {!icon && (
-          <p className="text-[11px] font-medium font-inter text-[var(--admin-ink)]">
+      <div className={`flex min-w-0 flex-col justify-between ${icon ? "pr-12" : ""}`}>
+        <div>
+          <p className="font-inter text-[11px] font-medium leading-4 text-[#2f2f37]">
             {label}
           </p>
-        )}
-        <p className="text-[21px] leading-7 font-inter font-extrabold text-[var(--admin-navy)]">
-          {value}
-        </p>
+          <p className="mt-2 font-inter text-[20px] font-extrabold leading-6 text-[var(--admin-navy)]">
+            {value}
+          </p>
+        </div>
+
         {(trend || helper) && (
-          <p className="mt-1 text-[10px] font-semibold text-[var(--admin-muted)]">
+          <p className="mt-3 text-[9px] font-medium text-[#36363f]">
             {trend && (
-              <span className={`inline-flex items-center gap-1 ${trendColor}`}>
+              <span
+                className={`inline-flex items-center gap-1 font-bold ${trendColor}`}
+              >
                 {trendNegative ? (
                   <IoMdTrendingDown className="h-3 w-3" />
                 ) : (
@@ -49,7 +62,11 @@ export default function Cards({
                 {trend}
               </span>
             )}{" "}
-            {helper && <span className="font-medium">{helper}</span>}
+            {helper && (
+              <span>
+                {String(helper).replace("last month", "Last month")}
+              </span>
+            )}
           </p>
         )}
       </div>

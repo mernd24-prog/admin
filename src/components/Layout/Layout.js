@@ -320,9 +320,12 @@ function Layout() {
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
-  const [hasPermanentOpen, setHasPermanentOpen] = useState(
-    getStoredSidebarState,
-  );
+  const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
+    if (typeof window === "undefined") return getStoredSidebarState();
+    return window.matchMedia("(min-width: 1024px)").matches
+      ? true
+      : getStoredSidebarState();
+  });
 
   useEffect(() => {
     setSocket(socketConnection());
@@ -455,20 +458,21 @@ function Layout() {
 
   const handleSidebarToggle = useCallback(() => {
     const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-    const nextOpen = isDesktop ? !hasPermanentOpen : !navbarOpen;
+    const nextOpen = isDesktop ? !isExpanded : !navbarOpen;
 
-    setNavbarOpen(nextOpen);
+    setNavbarOpen(isDesktop ? true : nextOpen);
     setIsExpanded(nextOpen);
-    setHasPermanentOpen(isDesktop ? nextOpen : false);
+    setHasPermanentOpen(isDesktop ? true : false);
 
-    if (isDesktop) {
-      sessionStorage.setItem("sidebarPermanentState", JSON.stringify(nextOpen));
-      sessionStorage.setItem("sidebarExpandedState", JSON.stringify(nextOpen));
-    }
-  }, [hasPermanentOpen, navbarOpen]);
+    sessionStorage.setItem("sidebarExpandedState", JSON.stringify(nextOpen));
+    sessionStorage.setItem(
+      "sidebarPermanentState",
+      JSON.stringify(isDesktop ? true : false),
+    );
+  }, [isExpanded, navbarOpen]);
 
   return (
-    <div className="admin-shell relative flex h-screen overflow-hidden bg-[var(--admin-canvas)]">
+    <div className="admin-shell relative flex h-screen overflow-hidden bg-[var(--admin-shell)]">
       <div className={`z-50`}>
         <Sidebar
           navbarOpen={navbarOpen}
@@ -482,7 +486,7 @@ function Layout() {
       </div>
 
       <div
-        className={`flex flex-col flex-1 overflow-hidden ${
+        className={`relative flex flex-col flex-1 overflow-hidden bg-[var(--admin-shell)] ${
           navbarOpen ? "" : "lg:ml-0"
         }`}
       >
@@ -490,9 +494,10 @@ function Layout() {
           handleNavbar={handleSidebarToggle}
           moduleName={moduleName}
           hasPermanentOpen={hasPermanentOpen}
+          isSidebarExpanded={isExpanded}
         />
 
-        <main className="flex-1 bg-[var(--admin-canvas)] overflow-y-auto sidebar-scrollbar">
+        <main className="flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar">
           <Suspense fallback={<PageSkeletonLoader />}>
             <AnimatePresence mode="wait">
               <motion.div

@@ -12,7 +12,6 @@ import {
   MdAccountBalance,
   MdBarChart,
   MdLocationOn,
-  MdChevronLeft,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -24,7 +23,6 @@ import {
   hasModuleAccess,
   normalizeRole,
 } from "../../_helpers/authStorage";
-import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import BrandLogo from "../BrandLogo/BrandLogo";
@@ -350,6 +348,10 @@ const Sidebar = ({
   }, [isPermanentlyOpen, windowWidth, setNavbarOpen]);
 
   useEffect(() => {
+    setIsPermanentlyOpen(Boolean(isExpanded));
+  }, [isExpanded]);
+
+  useEffect(() => {
     const cur = location.pathname.split("/")[2];
     if (!cur) return;
     const match = sidebarData.find((tab) =>
@@ -385,25 +387,6 @@ const Sidebar = ({
   }, [activeTab, isExpanded, sidebarData]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleMenuClick = () => {
-    const next = !isPermanentlyOpen;
-    setHasPermanentOpen(next);
-    setIsPermanentlyOpen(next);
-    setIsExpanded(next);
-    if (next) setNavbarOpen(true);
-    sessionStorage.setItem("sidebarPermanentState", JSON.stringify(next));
-    sessionStorage.setItem("sidebarExpandedState", JSON.stringify(next));
-  };
-
-  const handleDesktopCollapse = () => {
-    setNavbarOpen(true);
-    setIsExpanded(false);
-    setIsPermanentlyOpen(false);
-    setHasPermanentOpen(true);
-    sessionStorage.setItem('sidebarPermanentState', JSON.stringify(true));
-    sessionStorage.setItem('sidebarExpandedState', JSON.stringify(false));
-  };
-
   const handleNavClick = (code) => {
     setModuleName(code);
     if (!isPermanentlyOpen) setNavbarOpen(false);
@@ -427,35 +410,19 @@ const Sidebar = ({
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[var(--admin-shell)] ${sidebarWidth} h-full z-[9999] xl:flex flex-col border-r border-[var(--admin-line)] transition-all duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"} shadow-[3px_0_18px_rgba(31,27,95,0.08)]`}
+      className={`fixed lg:static inset-y-0 bg-[var(--admin-shell)] ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"}`}
     >
       {/* Logo / toggle */}
-      <div className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-3 pt-3 ${navbarOpen ? "h-[128px]" : "h-[70px]"} sm:pt-4`}>
-        {isExpanded && (
-          <button
-            type="button"
-            aria-label="Collapse sidebar"
-            className="absolute right-3 top-3 z-20 hidden h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-white hover:text-[var(--admin-navy)] lg:flex"
-            onClick={handleDesktopCollapse}
-          >
-            <MdChevronLeft size={22} />
-          </button>
-        )}
-
+      <div className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${isExpanded ? "h-[120px]" : "h-[70px]"} sm:pt-4`}>
         {isExpanded ? (
           <div className="flex items-center justify-center">
             <BrandLogo
-              className="mb-0 h-[100px] w-[210px] border-[var(--admin-gold)]/50 bg-white p-[6px] shadow-[0_6px_16px_rgba(31,27,95,0.08)]"
-              imageClassName="!h-full w-full border-[var(--admin-gold)]/20 p-[4px]"
+              className="mb-0 h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[6px] shadow-[0_3px_8px_rgba(31,27,95,0.08)]"
+              imageClassName="!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]"
             />
           </div>
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <IoIosMenu
-              className="text-2xl cursor-pointer text-[var(--admin-navy)]"
-              onClick={handleMenuClick}
-            />
-          </div>
+          <div className="h-full w-full" />
         )}
 
         {isExpanded && (
@@ -503,7 +470,7 @@ const Sidebar = ({
                     className={`flex flex-col py-[4px] text-[13px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
-                      className={`flex items-center ${isExpanded ? "gap-2.5" : "justify-center"} rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${isActive ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
+                      className={`relative flex items-center ${isExpanded ? "gap-2.5" : "justify-center"} overflow-hidden rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${isActive ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                       to={`/app/${sub.module_code}`}
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ""}
@@ -528,7 +495,7 @@ const Sidebar = ({
                 >
                   {/* Section header */}
                   <div
-                    className={`flex w-full min-w-0 items-center ${isExpanded ? "gap-2.5" : "justify-center"} cursor-pointer rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${hasActiveChild ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
+                    className={`relative flex w-full min-w-0 items-center ${isExpanded ? "gap-2.5" : "justify-center"} cursor-pointer overflow-hidden rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${hasActiveChild ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >

@@ -28,8 +28,9 @@ body {
   --admin-gold-soft: #fff3d2;
   --admin-amber: var(--admin-gold);
   --admin-amber-soft: var(--admin-gold-soft);
-  --admin-shell: #fff7ea;
+  --admin-shell: #FCF5E8;
   --admin-canvas: #f6f7fb;
+  --admin-shell-soft: #D3DEF9;
   --admin-surface: #FFFFFF;
   --admin-surface-soft: #fffaf1;
   --admin-table-head: #eef3ff;
@@ -217,9 +218,7 @@ select:active {
 
 .admin-shell {
   color: var(--admin-ink);
-  background:
-    linear-gradient(180deg, rgba(255, 247, 234, 0.75), rgba(246, 247, 251, 0.95) 160px),
-    var(--admin-canvas);
+  background: var(--admin-shell);
 }
 
 .admin-shell * {
@@ -627,6 +626,38 @@ select:active {
 .admin-shell textarea:focus {
   border-color: var(--admin-blue) !important;
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11) !important;
+}
+
+.admin-shell .header-search-pill input.admin-header-search-input.admin-input {
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border: 1px solid #eadcc3 !important;
+  border-radius: 999px !important;
+  background-color: #ffffff !important;
+  padding: 0 16px 0 40px !important;
+  color: var(--admin-ink) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  line-height: 32px !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.admin-shell .header-search-pill input.admin-header-search-input.admin-input::placeholder {
+  color: var(--admin-ink) !important;
+  opacity: 1 !important;
+}
+
+.admin-shell .header-search-pill input.admin-header-search-input.admin-input:hover,
+.admin-shell .header-search-pill input.admin-header-search-input.admin-input:focus {
+  border-color: var(--admin-blue) !important;
+  border-radius: 999px !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.1) !important;
 }
 
 .admin-shell table thead:not(.admin-table-head) {

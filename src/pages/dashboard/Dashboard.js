@@ -109,6 +109,8 @@ export default function Dashboard() {
     return [
       {
         icon: "/icons/shopping.png",
+        iconBg: "#04258633",
+        iconColor: "#0f4bb3",
         label: "Total Orders",
         value: formatNumber(sellerMetrics.totalOrders ?? commerce.totalOrders),
         helper: "vs last month",
@@ -116,6 +118,8 @@ export default function Dashboard() {
       },
       {
         icon: "/icons/revenue.png",
+        iconBg: "#cce8c9",
+        iconColor: "#1d9b50",
         label: "Total Revenue ( GMV )",
         value: formatCurrency(sellerMetrics.gmv ?? commerce.gmv),
         helper: "vs last month",
@@ -124,6 +128,8 @@ export default function Dashboard() {
       },
       {
         icon: "/icons/order.png",
+        iconBg: "#e3d4ff",
+        iconColor: "#8d5cf6",
         label: "Orders Today",
         value: formatNumber(
           sellerMetrics.ordersToday ??
@@ -135,6 +141,8 @@ export default function Dashboard() {
       },
       {
         icon: "/icons/sold.png",
+        iconBg: "#ffe5b5",
+        iconColor: "#f5a300",
         label: "Units Sold",
         value: formatNumber(
           sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold,
@@ -144,6 +152,8 @@ export default function Dashboard() {
       },
       {
         icon: "/icons/pending.png",
+        iconBg: "#ffd4d2",
+        iconColor: "#ff4b55",
         label: "Pending Payouts",
         value: formatNumber(
           sellerMetrics.pendingPayouts ??
@@ -157,6 +167,8 @@ export default function Dashboard() {
       },
       {
         icon: "/icons/return.png",
+        iconBg: "#bfeee8",
+        iconColor: "#16b8af",
         label: "Returned Orders",
         value: formatNumber(
           sellerMetrics.returnedOrders ??
@@ -164,8 +176,7 @@ export default function Dashboard() {
             overview.returnedOrders,
         ),
         helper: "vs last month",
-        trend: "-2%",
-        trendNegative: true,
+        trend: "+18%",
       },
     ];
   }, [overview]);
