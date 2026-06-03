@@ -32,9 +32,9 @@ const MIN_SELLER_AGE = 18;
 
 const ERROR_CLASS = "mt-1 text-xs text-red-600";
 const STEP_ONE_INPUT_CLASS =
-  "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
+  "admin-input h-[46px] text-[14px] font-medium text-[#111827] placeholder:font-normal placeholder:text-[#9a96a6]";
 const DATE_FIELD_CLASS =
-  "admin-input h-[46px] text-[14px] placeholder:text-[#8f8aa3]";
+  "admin-input h-[46px] text-[14px] font-medium text-[#111827] placeholder:font-normal placeholder:text-[#9a96a6]";
 const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
 const SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
@@ -1672,6 +1672,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={kycForm.legalName}
                   onChange={onKycChange}
+                  data-has-value={Boolean(kycForm.legalName)}
                 />
                 {kycErrors.legalName && (
                   <p className={ERROR_CLASS}>{kycErrors.legalName}</p>
@@ -1686,8 +1687,9 @@ const SellerOnboarding = () => {
                   </label>
                   <div
                     className={`${DATE_FIELD_CLASS} flex items-center justify-between gap-3 ${
-                      kycForm.dateOfBirth ? "text-gray-800" : "text-gray-400"
+                      kycForm.dateOfBirth ? "text-[#111827]" : "text-[#9a96a6]"
                     }`}
+                    data-has-value={Boolean(kycForm.dateOfBirth)}
                     onClick={openDatePicker}
                     role="button"
                     tabIndex={0}
@@ -1740,11 +1742,12 @@ const SellerOnboarding = () => {
                   id="mobileNumber"
                   name="mobileNumber"
                   type="tel"
-                  className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
-                  value={kycForm.mobileNumber}
-                  readOnly
-                  aria-readonly="true"
-                />
+                    className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
+                    value={kycForm.mobileNumber}
+                    readOnly
+                    aria-readonly="true"
+                    data-has-value={Boolean(kycForm.mobileNumber)}
+                  />
                 {kycErrors.mobileNumber && (
                   <p className={ERROR_CLASS}>{kycErrors.mobileNumber}</p>
                 )}
@@ -1762,6 +1765,7 @@ const SellerOnboarding = () => {
                   value={kycForm.emailAddress}
                   readOnly
                   aria-readonly="true"
+                  data-has-value={Boolean(kycForm.emailAddress)}
                 />
                 {kycErrors.emailAddress && (
                   <p className={ERROR_CLASS}>{kycErrors.emailAddress}</p>
@@ -1785,6 +1789,7 @@ const SellerOnboarding = () => {
                   value={kycForm.panNumber}
                   onChange={onKycChange}
                   maxLength="10"
+                  data-has-value={Boolean(kycForm.panNumber)}
                 />
                 {kycErrors.panNumber && (
                   <p className={ERROR_CLASS}>{kycErrors.panNumber}</p>
@@ -1804,6 +1809,7 @@ const SellerOnboarding = () => {
                   value={kycForm.aadhaarNumber}
                   onChange={onKycChange}
                   maxLength="12"
+                  data-has-value={Boolean(kycForm.aadhaarNumber)}
                 />
                 {kycErrors.aadhaarNumber && (
                   <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>

@@ -143,9 +143,9 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
     return (
       <SellerStatusScreen
         variant="underReview"
-        title="Onboarding Complete"
-        subtitleTitle="Submitted For Review"
-        description="Your seller onboarding details have been submitted. Our team will verify them within 24 - 48 hours."
+        title="We're Reviewing Your Account"
+        subtitleTitle="24 - 48 Hours"
+        description="Your application is currently under review. This usually takes 24–48 hours."
         buttonLabel="View Status"
         onButtonClick={() => navigate(AUTH_ROUTES.SELLER_STATUS_PENDING)}
       />

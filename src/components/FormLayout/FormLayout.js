@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import FormSubmitButton from "../Atoms/FormButton/FormSubmitButton";
 import BrandLogo from "../BrandLogo";
 
+const AUTH_LOGO_CLASS_NAME =
+  "mb-0 h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[6px] shadow-[0_3px_8px_rgba(31,27,95,0.08)] mb-[30px] sm:mb-[40px]";
+
+const AUTH_LOGO_IMAGE_CLASS_NAME =
+  "!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]";
+
 const FormLayout = ({
   title,
   subTitle,
@@ -15,8 +21,8 @@ const FormLayout = ({
   onLinkClick,
   logoSrc = "/logo.png",
   showLogo = true,
-  logoClassName = "",
-  logoImageClassName = "",
+  logoClassName = AUTH_LOGO_CLASS_NAME,
+  logoImageClassName = AUTH_LOGO_IMAGE_CLASS_NAME,
   topContent = null,
   className = "",
   shellClassName = "",

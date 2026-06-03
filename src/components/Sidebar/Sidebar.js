@@ -68,6 +68,12 @@ const SELLER_SIDEBAR_SECTIONS = [
     route: "profile",
   },
   {
+    module: "seller-management",
+    tab: "Users & Access",
+    label: "Access Management",
+    route: "seller-users",
+  },
+  {
     module: "sellers/commissions",
     tab: "Orders Management",
     label: "Commissions",

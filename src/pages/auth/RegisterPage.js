@@ -27,7 +27,7 @@ const RegisterPage = () => {
           <AuthProgressSteps activeStep={0} />
         </div>
         <div className="mb-10 text-center">
-          <h2 className="font-inter text-3xl font-extrabold text-blue">
+          <h2 className="font-inter text-3xl font-extrabold text-black sm:text-4xl">
             Create Your Vendor Account
           </h2>
           <p className="mt-3 font-inter text-lg text-darkInk">

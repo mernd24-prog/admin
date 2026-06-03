@@ -52,6 +52,20 @@ const getSellerHeaderSubtitle = (...sources) => {
   return "Vendor Applicant";
 };
 
+const getSellerHeaderEmail = (...sources) => {
+  for (const source of sources) {
+    const email =
+      source?.email ||
+      source?.userEmail ||
+      source?.primaryEmail ||
+      source?.sellerProfile?.email ||
+      source?.sellerProfile?.primaryEmail ||
+      source?.contactEmail;
+    if (email) return email;
+  }
+  return "";
+};
+
 const getInitials = (name = "") => {
   const words = String(name || "")
     .trim()
@@ -86,6 +100,13 @@ const KYCStatusLayout = ({
     storedOnboardingUser,
   );
   const headerSubtitle = getSellerHeaderSubtitle(
+    authSlice?.user,
+    seller?.onboardingUser,
+    flowState,
+    storedUser,
+    storedOnboardingUser,
+  );
+  const headerEmail = getSellerHeaderEmail(
     authSlice?.user,
     seller?.onboardingUser,
     flowState,
@@ -247,8 +268,8 @@ const KYCStatusLayout = ({
       </aside>
 
       <main className="min-w-0 bg-[#f8f6f3]">
-        <header className="flex min-h-[64px] items-center justify-between gap-[10px] bg-[#042586] px-4 py-4 text-white sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
-          <div className="flex min-w-0 items-center gap-2 text-[12px] font-medium leading-[16px] text-white sm:text-[14px] lg:text-[16px]">
+        <header className="flex min-h-[64px] items-center justify-between gap-[10px] border-b border-[#f8e0c1] bg-[#FCF5E8] px-4 py-4 text-[#111827] shadow-[0_2px_12px_rgba(31,27,95,0.06)] sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
+          <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-[16px] text-[#111827] sm:text-[14px] lg:text-[16px]">
             <span>Onboarding</span>
             <span className="mx-1 sm:mx-[10px]">›</span>
             <span className="truncate">
@@ -257,17 +278,17 @@ const KYCStatusLayout = ({
           </div>
           <div className="flex items-center gap-4">
             {/* <Bell size={16} className="text-white/90" /> */}
-            <div className="hidden text-right sm:block">
-              <p className="max-w-[95px] truncate text-right text-[14px] font-bold leading-[20px] text-white">
-                {headerName}
-              </p>
-              <p className="mt-1 max-w-[83px] truncate text-right text-[10px] font-medium leading-[15px] text-[#FFFFFF99]">
-                {headerSubtitle}
-              </p>
-            </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#082f91]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E49E1C] bg-white text-[11px] font-bold text-[#082f91]">
               {headerInitials}
             </span>
+            <div className="hidden text-left sm:block">
+              <p className="max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
+                {headerName}
+              </p>
+              <p className="mt-1 max-w-[130px] truncate text-left text-[10px] font-medium leading-[15px] text-[#5f6575]">
+                {headerEmail || headerSubtitle}
+              </p>
+            </div>
           </div>
         </header>
 

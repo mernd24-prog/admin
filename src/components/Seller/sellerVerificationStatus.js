@@ -39,18 +39,17 @@ export const getVerificationCase = (flowState) => {
     kycStatus === "approved" || kycStatus === "verified";
   const bankApproved =
     bankStatus === "approved" || bankStatus === "verified";
+  const bankDetailsCompleted =
+    flowState.requirements?.bankDetails?.completed === true ||
+    Boolean(flowState.sellerProfile?.bankDetails);
   const kycPending = ["pending", "submitted", "under_review"].includes(
     kycStatus,
   );
-  const bankPending = ["pending", "submitted", "under_review"].includes(
-    bankStatus,
-  );
+  const bankPending =
+    ["pending", "submitted", "under_review"].includes(bankStatus) ||
+    (bankStatus === "not_submitted" && bankDetailsCompleted);
 
-  const isFullyApproved =
-    kycApproved &&
-    bankApproved &&
-    (flowState.accountStatus === "active" ||
-      flowState.overallStatus === "approved");
+  const isFullyApproved = kycApproved && bankApproved;
 
   if (isFullyApproved && approvalModalSeen) return "already_approved";
   if (isFullyApproved) return "both_approved";
