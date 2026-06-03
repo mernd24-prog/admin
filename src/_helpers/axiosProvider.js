@@ -18,7 +18,7 @@ const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
 
 const configuredApiBase =
   
-    "http://192.168.16.42:4000";
+    "http://192.168.16.47:4000";
 
 const normalizedApiBase = trimTrailingSlash(configuredApiBase);
 

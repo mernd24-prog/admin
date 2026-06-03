@@ -97,6 +97,14 @@ export const ENDPOINTS = {
     ),
     moderationQueue: "/admin/products/moderation-queue",
     moderate: (productId) => `/admin/products/${productId}/moderate`,
+    revisions: byPanelFn(
+      (productId) => `/admin/products/${productId}/revisions`,
+      (productId) => `/products/${productId}/revisions`
+    ),
+    reviewRevision: byPanelFn(
+      (productId, revisionId) => `/admin/products/${productId}/revisions/${revisionId}/review`,
+      (productId, revisionId) => `/products/${productId}/revisions/${revisionId}/review`
+    ),
     approve: (productId) => `/admin/products/${productId}/approve`,
     reject: (productId) => `/admin/products/${productId}/reject`,
     status: (productId) => `/admin/products/${productId}/status`,

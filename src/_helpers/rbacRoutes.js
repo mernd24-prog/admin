@@ -259,7 +259,7 @@ const ROUTE_MODULES = [
   [
     [
       "/product-catalog", "/add-product", "/draft-products",
-      "/pending-products", "/rejected-products",
+      "/pending-products", "/change-pending-products", "/rejected-products",
       "/product-tags", "/store", "/bar-code", "/qty-head",
       "/seo-media",
     ],

@@ -77,7 +77,6 @@ const toProductBody = (payload = {}) => {
         stock: Number(payload.stock || payload.quantity || 0),
         images: Array.isArray(payload.images) ? payload.images : [],
         ...(payload.status ? { status: payload.status } : {}),
-        ...(payload.gstRate !== undefined ? { gstRate: Number(payload.gstRate || 0) } : {}),
     };
 };
 
@@ -113,7 +112,6 @@ const toProductPatchBody = (payload = {}) => {
     if (payload.stock !== undefined || payload.quantity !== undefined) body.stock = Number(payload.stock || payload.quantity || 0);
     if (payload.images !== undefined && Array.isArray(payload.images)) body.images = payload.images;
     if (payload.status !== undefined) body.status = payload.status;
-    if (payload.gstRate !== undefined) body.gstRate = Number(payload.gstRate || 0);
     if (payload.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(payload.minPurchaseQuantity || 0);
     if (payload.volumeDiscount !== undefined) body.volumeDiscount = Number(payload.volumeDiscount || 0);
     if (payload.specialPriceStartDate !== undefined) body.specialPriceStartDate = payload.specialPriceStartDate;
@@ -154,6 +152,7 @@ const initialState = {
     createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
     deleteProductsData: {}, approveDisapproveData: {}, getAllProductsData: {}, createCategoryData: {},
     getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, productModerationQueueData: {},
+    getProductRevisionsData: {}, reviewProductRevisionData: {},
     getCategoryAttributesData: {}, updateCategoryAttributesData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
 }
@@ -467,6 +466,30 @@ export const getProductModerationQueue = createApiThunkPrivate('getProductModera
         ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
     }),
 })
+export const getProductRevisions = createApiThunkPrivate('getProductRevisions', (payload) => ENDPOINTS.products.revisions(firstProductId(payload)), 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.page ? { page: Number(params.page) } : {}),
+        ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+    }),
+})
+export const reviewProductRevision = createApiThunkPrivate(
+    'reviewProductRevision',
+    (payload) => ENDPOINTS.products.reviewRevision(
+        firstProductId(payload),
+        payload.revisionId || payload.pendingRevisionId || payload?.revision?._id || payload?.revision?.id,
+    ),
+    'PATCH',
+    false,
+    {
+        transformBody: (payload = {}) => ({
+            status: payload.status,
+            ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
+            ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+            ...(payload.checklist ? { checklist: payload.checklist } : {}),
+        }),
+    },
+)
 export const getCategoryAttributes = createApiThunkPrivate(
     'getCategoryAttributes',
     (payload) => ENDPOINTS.platform.categoryAttributes(payload?.categoryKey || payload?.categoryId || payload?._id || payload?.id),
@@ -613,6 +636,8 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, getAllWarrantyList, 'getAllWarrantyListData')
         createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
         createExtraReducersForThunk(builder, getProductModerationQueue, 'productModerationQueueData')
+        createExtraReducersForThunk(builder, getProductRevisions, 'getProductRevisionsData')
+        createExtraReducersForThunk(builder, reviewProductRevision, 'reviewProductRevisionData')
         createExtraReducersForThunk(builder, createCategory, 'createCategoryData')
         createExtraReducersForThunk(builder, getCategoryAttributes, 'getCategoryAttributesData')
         createExtraReducersForThunk(builder, updateCategoryAttributes, 'updateCategoryAttributesData')

@@ -24,8 +24,16 @@ const DEFAULT_CHECKLIST = {
  *  onClose        - () => void
  *  onSubmit       - (decision: 'active'|'rejected'|'inactive', rejectionReason?: string, checklist: object) => Promise<void>
  *  product        - { title, status, moderation: { rejectionReason, checklist } }
+ *  revision       - optional pending revision with draftChanges + changedFields
  */
-const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
+const formatReviewValue = (value) => {
+  if (value === undefined || value === null || value === '') return 'N/A';
+  if (Array.isArray(value)) return value.length ? JSON.stringify(value, null, 2) : '[]';
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return String(value);
+};
+
+const ProductReviewModal = ({ isOpen, onClose, onSubmit, product, revision = null }) => {
   const productStatuses = useDropdownOptions('product-statuses');
   const [decision, setDecision] = useState('active');
   const [rejectionReason, setRejectionReason] = useState('');
@@ -39,15 +47,20 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
       setRejectionReason('');
       setChecklist({
         ...DEFAULT_CHECKLIST,
-        ...(product?.moderation?.checklist || {}),
+        ...(revision?.checklist || product?.moderation?.checklist || {}),
       });
       setError('');
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, revision]);
 
   const needsReason = decision === 'rejected';
 
   const allChecked = Object.values(checklist).every(Boolean);
+  const isRevisionReview = Boolean(revision);
+  const draftChanges = revision?.draftChanges || {};
+  const changedFields = revision?.changedFields?.length
+    ? revision.changedFields
+    : Object.keys(draftChanges);
 
   const handleChecklistToggle = (key) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -85,7 +98,7 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
     <DefaultMiddleModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Product Review Decision"
+      title={isRevisionReview ? "Product Revision Review" : "Product Review Decision"}
       isButtonView={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,6 +106,43 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
           <p className="text-sm text-gray-600">
             Product: <span className="font-medium text-gray-800">{product.title}</span>
           </p>
+        )}
+
+        {isRevisionReview && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-blue-900">
+              <span>Base version: {revision.baseVersion || 'N/A'}</span>
+              <span>Submitted by: {revision.submittedByRole || revision.submittedBy || 'N/A'}</span>
+              <span>
+                Submitted at: {revision.submittedAt ? new Date(revision.submittedAt).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {changedFields.length ? (
+                changedFields.map((field) => (
+                  <div key={field} className="rounded border border-blue-100 bg-white p-2">
+                    <p className="text-xs font-semibold uppercase text-blue-800">{field}</p>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      <div>
+                        <p className="text-[11px] uppercase text-gray-400">Current</p>
+                        <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-gray-50 p-2 text-xs text-gray-700">
+                          {formatReviewValue(product?.[field])}
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase text-gray-400">Proposed</p>
+                        <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-green-50 p-2 text-xs text-green-800">
+                          {formatReviewValue(draftChanges[field])}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-blue-800">No changed fields were returned for this revision.</p>
+              )}
+            </div>
+          </div>
         )}
 
         {product?.moderation?.rejectionReason && (
@@ -110,7 +160,11 @@ const ProductReviewModal = ({ isOpen, onClose, onSubmit, product }) => {
             onChange={(e) => { setDecision(e.target.value); setError(''); }}
           >
             {productStatuses.options
-              .filter((option) => ['active', 'inactive', 'rejected'].includes(option.value))
+              .filter((option) => (
+                isRevisionReview
+                  ? ['active', 'rejected'].includes(option.value)
+                  : ['active', 'inactive', 'rejected'].includes(option.value)
+              ))
               .map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </div>

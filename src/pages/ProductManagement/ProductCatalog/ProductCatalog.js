@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 // Components
 import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
@@ -15,7 +15,11 @@ import {
   approveDisapprove,
   deleteProducts,
   enableDisableProductCatalogs,
+  getProductById,
+  getProductModerationQueue,
+  getProductRevisions,
   getProducts,
+  reviewProductRevision,
 } from "../../../Redux/productSlice";
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import Loader from "../../../components/Loader/Loader";
@@ -51,6 +55,21 @@ const INITIAL_FILTERS = {
 };
 
 const size = 10;
+const APPROVAL_STATUS_OPTIONS = [
+  { value: "Does not matter", label: "Does not matter" },
+  { value: "Draft", label: "Draft" },
+  { value: "Pending", label: "Pending" },
+  { value: "Change Pending", label: "Change Pending" },
+  { value: "Rejected", label: "Rejected" },
+  { value: "Scheduled", label: "Scheduled" },
+  { value: "Archived", label: "Archived" },
+];
+const ACTIVATION_STATUS_OPTIONS = [
+  { value: "Does not matter", label: "Does not matter" },
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
 const refToLabel = (value) => {
   if (!value) return "N/A";
   if (typeof value === "object") {
@@ -66,10 +85,28 @@ const refToLabel = (value) => {
   return String(value);
 };
 
+const getInitialFiltersForPath = (pathname = "") => {
+  const path = String(pathname || "").toLowerCase();
+  if (path.includes("draft-products")) {
+    return { ...INITIAL_FILTERS, approvalStatus: { value: "Draft", label: "Draft" } };
+  }
+  if (path.includes("pending-products")) {
+    return { ...INITIAL_FILTERS, approvalStatus: { value: "Pending", label: "Pending" } };
+  }
+  if (path.includes("change-pending-products")) {
+    return { ...INITIAL_FILTERS, approvalStatus: { value: "Change Pending", label: "Change Pending" } };
+  }
+  if (path.includes("rejected-products")) {
+    return { ...INITIAL_FILTERS, approvalStatus: { value: "Rejected", label: "Rejected" } };
+  }
+  return INITIAL_FILTERS;
+};
+
 const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
   const navigate = useNavigate();
+  const location = useLocation();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -77,7 +114,7 @@ const ProductCatalog = () => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState([]);
   const [productToDelete, setProductToDelete] = useState(null);
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [filters, setFilters] = useState(() => getInitialFiltersForPath(location.pathname));
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
   const allRowIds = useMemo(
     () => apiRes.list.map((product) => product._id),
@@ -95,6 +132,7 @@ const ProductCatalog = () => {
   const [reviewModal, setReviewModal] = useState({
     open: false,
     product: null,
+    revision: null,
   });
 
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
@@ -105,47 +143,98 @@ const ProductCatalog = () => {
     selector?.store?.getShopListData?.data?.list || [],
   );
 
+  const isChangePendingFilter = filters?.approvalStatus?.value === "Change Pending";
+  const approvalStatusToProductStatus = {
+    Draft: "draft",
+    Pending: "pending_approval",
+    Rejected: "rejected",
+    Scheduled: "scheduled",
+    Archived: "archived",
+  };
+
+  const buildProductQuery = useCallback(
+    (page = pageNo) => ({
+      page,
+      size: size,
+      keyWord: filters?.search,
+      includeAllStatuses: true,
+      ...(filters?.category?.value
+        ? { category: filters.category.value }
+        : {}),
+      ...(filters?.sellerName?.value
+        ? { sellerId: filters.sellerName.value }
+        : {}),
+      ...(filters?.activationStatus?.value === "Active"
+        ? { status: "active" }
+        : {}),
+      ...(filters?.activationStatus?.value === "Inactive"
+        ? { status: "inactive" }
+        : {}),
+      ...(approvalStatusToProductStatus[filters?.approvalStatus?.value]
+        ? { status: approvalStatusToProductStatus[filters.approvalStatus.value] }
+        : {}),
+    }),
+    [filters, pageNo],
+  );
+
   const fetchProductsList = useCallback(async () => {
     setLoading(true);
     try {
-      const query = {
-        page: pageNo,
-        size: size,
-        keyWord: filters?.search,
-        includeAllStatuses: true,
-        ...(filters?.category?.value
-          ? { category: filters.category.value }
-          : {}),
-        ...(filters?.sellerName?.value
-          ? { sellerId: filters.sellerName.value }
-          : {}),
-        ...(filters?.activationStatus?.value === "Active"
-          ? { status: "active" }
-          : {}),
-        ...(filters?.activationStatus?.value === "Inactive"
-          ? { status: "inactive" }
-          : {}),
-        ...(filters?.approvalStatus?.value === "Pending"
-          ? { status: "pending_approval" }
-          : {}),
-        ...(filters?.approvalStatus?.value === "Rejected"
-          ? { status: "rejected" }
-          : {}),
-      };
-      const response = await dispatch(getProducts(query));
+      const response = isChangePendingFilter
+        ? await dispatch(
+            getProductModerationQueue({
+              status: "change_pending",
+              page: pageNo,
+              size,
+              ...(filters?.category?.value
+                ? { category: filters.category.value }
+                : {}),
+            }),
+          )
+        : await dispatch(getProducts(buildProductQuery(pageNo)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");
     } finally {
       setLoading(false);
     }
-  }, [dispatch, pageNo, size, filters]);
+  }, [dispatch, pageNo, filters, isChangePendingFilter, buildProductQuery]);
 
   useEffect(() => {
     fetchProductsList();
     dispatch(getAllSellerList());
     dispatch(getShopList({ page: 1, size: 100 }));
   }, [pageNo]);
+
+  useEffect(() => {
+    const nextFilters = getInitialFiltersForPath(location.pathname);
+    setFilters(nextFilters);
+    setPageNo(1);
+    const loadRouteProducts = async () => {
+      setLoading(true);
+      try {
+        const response = nextFilters?.approvalStatus?.value === "Change Pending"
+          ? await dispatch(getProductModerationQueue({ status: "change_pending", page: 1, size }))
+          : await dispatch(
+              getProducts({
+                page: 1,
+                size,
+                keyWord: nextFilters.search,
+                includeAllStatuses: true,
+                ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
+                  ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
+                  : {}),
+              }),
+            );
+        setApiRes(response?.payload?.data || { list: [], total: 0 });
+      } catch (err) {
+        toast.error("Failed to fetch products");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRouteProducts();
+  }, [location.pathname]);
 
   useEffect(() => {
     const userDataString = sessionStorage.getItem("EcomAdmin");
@@ -261,29 +350,80 @@ const ProductCatalog = () => {
     fetchProductsList();
   };
 
-  const handleApproveToggle = (data) => {
-    setReviewModal({ open: true, product: data });
+  const hasPendingRevision = (product) =>
+    product?.revisionStatus === "change_pending" ||
+    Boolean(product?.pendingRevisionId) ||
+    Boolean(product?.pendingRevision);
+
+  const extractRevisionList = (response) => {
+    const data = response?.data || response?.payload?.data || {};
+    if (Array.isArray(data)) return data;
+    return data?.list || data?.items || data?.data?.list || data?.data?.items || [];
+  };
+
+  const handleApproveToggle = async (data) => {
+    if (!hasPendingRevision(data)) {
+      setReviewModal({ open: true, product: data, revision: null });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const detailResponse = await dispatch(getProductById({ id: data?._id })).unwrap();
+      const product = detailResponse?.data || data;
+      let revision = product?.pendingRevision || null;
+
+      if (!revision) {
+        const revisionsResponse = await dispatch(
+          getProductRevisions({ productId: data?._id, status: "pending", size: 1 }),
+        ).unwrap();
+        revision = extractRevisionList(revisionsResponse)[0] || null;
+      }
+
+      if (!revision) {
+        toast.error("Pending product revision was not found.");
+        return;
+      }
+
+      setReviewModal({ open: true, product, revision });
+    } catch (error) {
+      toast.error(error?.message || error || "Failed to load product revision");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
     const product = reviewModal.product;
-    const apiPayload = {
-      id: product?._id,
-      status: decision,
-      rejectionReason: rejectionReason || null,
-      checklist,
-    };
     setLoading(true);
     try {
-      const response = await dispatch(approveDisapprove(apiPayload)).unwrap();
+      const response = reviewModal.revision
+        ? await dispatch(
+            reviewProductRevision({
+              productId: product?._id,
+              revisionId: reviewModal.revision?._id || reviewModal.revision?.id,
+              status: decision,
+              rejectionReason: rejectionReason || null,
+              checklist,
+            }),
+          ).unwrap()
+        : await dispatch(
+            approveDisapprove({
+              id: product?._id,
+              status: decision,
+              rejectionReason: rejectionReason || null,
+              checklist,
+            }),
+          ).unwrap();
       const labels = {
         active: "approved",
         inactive: "deactivated",
         rejected: "rejected",
       };
+      const subject = reviewModal.revision ? "Product revision" : "Product";
       toast.success(
         response?.message ||
-          `Product ${labels[decision] || "updated"} successfully.`,
+          `${subject} ${labels[decision] || "updated"} successfully.`,
       );
       fetchProductsList();
     } catch (error) {
@@ -319,31 +459,19 @@ const ProductCatalog = () => {
   const handleSearchApply = async () => {
     setLoading(true);
     try {
-      const query = {
-        page: 1,
-        size: size,
-        keyWord: filters?.search,
-        includeAllStatuses: true,
-        ...(filters?.category?.value
-          ? { category: filters.category.value }
-          : {}),
-        ...(filters?.sellerName?.value
-          ? { sellerId: filters.sellerName.value }
-          : {}),
-        ...(filters?.activationStatus?.value === "Active"
-          ? { status: "active" }
-          : {}),
-        ...(filters?.activationStatus?.value === "Inactive"
-          ? { status: "inactive" }
-          : {}),
-        ...(filters?.approvalStatus?.value === "Pending"
-          ? { status: "pending_approval" }
-          : {}),
-        ...(filters?.approvalStatus?.value === "Rejected"
-          ? { status: "rejected" }
-          : {}),
-      };
-      const response = await dispatch(getProducts(query));
+      setPageNo(1);
+      const response = isChangePendingFilter
+        ? await dispatch(
+            getProductModerationQueue({
+              status: "change_pending",
+              page: 1,
+              size,
+              ...(filters?.category?.value
+                ? { category: filters.category.value }
+                : {}),
+            }),
+          )
+        : await dispatch(getProducts(buildProductQuery(1)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");
@@ -353,14 +481,22 @@ const ProductCatalog = () => {
   };
   const clearFilters = async () => {
     setLoading(true);
-    setFilters({ search: "" });
+    const nextFilters = getInitialFiltersForPath(location.pathname);
+    setFilters(nextFilters);
+    setPageNo(1);
     try {
       const query = {
-        page: pageNo,
+        page: 1,
         size: size,
-        keyWord: "",
+        keyWord: nextFilters.search,
+        includeAllStatuses: true,
+        ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
+          ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
+          : {}),
       };
-      const response = await dispatch(getProducts(query));
+      const response = nextFilters?.approvalStatus?.value === "Change Pending"
+        ? await dispatch(getProductModerationQueue({ status: "change_pending", page: 1, size }))
+        : await dispatch(getProducts(query));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");
@@ -451,7 +587,10 @@ const ProductCatalog = () => {
             {product?.price !== undefined ? `₹${product.price}` : "N/A"}
           </span>,
           <span>{product?.stock ?? "N/A"}</span>,
-          <ProductStatusBadge status={product?.status} />,
+          <ProductStatusBadge
+            status={product?.status}
+            revisionStatus={product?.revisionStatus}
+          />,
           <span key={`date-${product._id}`}>
             {formatDate(product.createdAt)}
           </span>,
@@ -478,7 +617,7 @@ const ProductCatalog = () => {
                   className="text-xs px-2 py-1 rounded bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
                   onClick={() => handleApproveToggle(product)}
                 >
-                  Review
+                  {hasPendingRevision(product) ? "Review Revision" : "Review"}
                 </button>
               </PermissionGuard>
             </div>
@@ -591,7 +730,9 @@ const ProductCatalog = () => {
           </Button>
           <Button onClick={() => navigate("/app/warranty")}>Warranty</Button>
           <Button onClick={() => navigate("/app/batch")}>Batch</Button>
-          <Button onClick={() => navigate("/app/hsn-code")}>HSN</Button>
+          <PermissionGuard module="tax" action="view" hide>
+            <Button onClick={() => navigate("/app/hsn-code")}>HSN</Button>
+          </PermissionGuard>
         </div>
       </div>
       <div className="bg-white">
@@ -608,6 +749,9 @@ const ProductCatalog = () => {
             isProduct={true}
             isProductType={true}
             isUser={true}
+            approvalOptions={APPROVAL_STATUS_OPTIONS}
+            activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
+            userOptions={sellerListData}
             applyFilters={handleSearchApply}
             handleSearchRemove={clearFilters}
             isActionButton={true}
@@ -696,7 +840,8 @@ const ProductCatalog = () => {
       <ProductReviewModal
         isOpen={reviewModal.open}
         product={reviewModal.product}
-        onClose={() => setReviewModal({ open: false, product: null })}
+        revision={reviewModal.revision}
+        onClose={() => setReviewModal({ open: false, product: null, revision: null })}
         onSubmit={handleReviewSubmit}
       />
     </div>

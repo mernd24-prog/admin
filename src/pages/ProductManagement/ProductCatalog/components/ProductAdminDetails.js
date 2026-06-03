@@ -6,14 +6,27 @@ import Loader from "../../../../components/Loader/Loader";
 import {
   getProductById,
   approveDisapprove,
+  getProductRevisions,
+  reviewProductRevision,
 } from "../../../../Redux/productSlice";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
 
+const formatDisplayValue = (value) => {
+  if (React.isValidElement(value)) return value;
+  if (value === 0) return "0";
+  if (value === undefined || value === null || value === "") return "N/A";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "N/A";
+  if (typeof value === "object") {
+    return value.name || value.title || value.label || value.email || value._id || JSON.stringify(value);
+  }
+  return String(value);
+};
+
 const Row = ({ label, value }) => (
   <div className="border-b border-gray-100 py-3">
     <p className="text-xs uppercase text-gray-400">{label}</p>
-    <p className="text-sm text-gray-900 break-words">{value || "N/A"}</p>
+    <p className="text-sm text-gray-900 break-words">{formatDisplayValue(value)}</p>
   </div>
 );
 
@@ -39,6 +52,18 @@ const refToLabel = (value) => {
   return String(value);
 };
 
+const getSliceData = (sliceData) => {
+  const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
+  if (Array.isArray(data)) return { list: data, total: data.length };
+  return data;
+};
+
+const formatRevisionValue = (value) => {
+  if (value === undefined || value === null || value === "") return "N/A";
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+};
+
 const ProductAdminDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -47,6 +72,19 @@ const ProductAdminDetails = () => {
     selector?.updateProductsData?.normalized?.data ||
     selector?.updateProductsData?.data?.data ||
     {};
+  const revisionData = getSliceData(selector?.getProductRevisionsData);
+  const revisions = Array.isArray(revisionData?.list)
+    ? revisionData.list
+    : Array.isArray(revisionData?.items)
+      ? revisionData.items
+      : [];
+  const pendingRevision =
+    product.pendingRevision ||
+    revisions.find((revision) => revision.status === "pending") ||
+    null;
+  const statusHistory = Array.isArray(product.statusHistory)
+    ? [...product.statusHistory].reverse()
+    : [];
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
 
@@ -56,27 +94,45 @@ const ProductAdminDetails = () => {
       : product.attributes || {};
 
   useEffect(() => {
-    if (id) dispatch(getProductById({ _id: id }));
+    if (id) {
+      dispatch(getProductById({ _id: id }));
+      dispatch(getProductRevisions({ productId: id, page: 1, size: 20 }));
+    }
   }, [dispatch, id]);
 
   const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
     setReviewLoading(true);
     try {
-      await dispatch(
-        approveDisapprove({
-          id,
-          status: decision,
-          rejectionReason: rejectionReason || null,
-          checklist,
-        }),
-      ).unwrap();
+      if (pendingRevision) {
+        await dispatch(
+          reviewProductRevision({
+            productId: id,
+            revisionId: pendingRevision._id || pendingRevision.id,
+            status: decision,
+            rejectionReason: rejectionReason || null,
+            checklist,
+          }),
+        ).unwrap();
+      } else {
+        await dispatch(
+          approveDisapprove({
+            id,
+            status: decision,
+            rejectionReason: rejectionReason || null,
+            checklist,
+          }),
+        ).unwrap();
+      }
       const labels = {
         active: "approved",
         inactive: "deactivated",
         rejected: "rejected",
       };
-      toast.success(`Product ${labels[decision] || "updated"} successfully.`);
+      toast.success(
+        `${pendingRevision ? "Product revision" : "Product"} ${labels[decision] || "updated"} successfully.`,
+      );
       dispatch(getProductById({ _id: id }));
+      dispatch(getProductRevisions({ productId: id, page: 1, size: 20 }));
     } catch (err) {
       throw new Error(err?.message || "Failed to update product");
     } finally {
@@ -99,12 +155,17 @@ const ProductAdminDetails = () => {
           <b className="text-gray-800">Product Details</b>
         </h3>
         <div className="flex items-center gap-3">
-          {product.status && <ProductStatusBadge status={product.status} />}
+          {product.status && (
+            <ProductStatusBadge
+              status={product.status}
+              revisionStatus={product.revisionStatus}
+            />
+          )}
           <button
             onClick={() => setReviewOpen(true)}
             className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
           >
-            Review Product
+            {pendingRevision ? "Review Revision" : "Review Product"}
           </button>
           <Link
             to={`/app/product-catalog/form/${id}`}
@@ -158,6 +219,8 @@ const ProductAdminDetails = () => {
               }
             />
             <Row label="HSN Code" value={product.hsnCode} />
+            <Row label="Revision Status" value={product.revisionStatus} />
+            <Row label="Version" value={product.version} />
             <Row label="Stock" value={product.stock} />
             <Row
               label="Created At"
@@ -194,6 +257,77 @@ const ProductAdminDetails = () => {
             )}
           </div>
         </section>
+
+        {product.complianceSnapshot && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">
+              Compliance Snapshot
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6">
+              <Row label="HSN Code" value={product.complianceSnapshot.hsnCode} />
+              <Row
+                label="GST Rate"
+                value={
+                  product.complianceSnapshot.gstRate !== undefined
+                    ? `${product.complianceSnapshot.gstRate}%`
+                    : null
+                }
+              />
+              <Row label="Tax Type" value={product.complianceSnapshot.taxType} />
+              <Row label="Source" value={product.complianceSnapshot.source} />
+            </div>
+          </section>
+        )}
+
+        {pendingRevision && (
+          <section className="bg-white border border-blue-200 rounded-lg p-5 lg:col-span-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-gray-800">
+                  Pending Revision
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Base version {pendingRevision.baseVersion || "N/A"} submitted{" "}
+                  {pendingRevision.submittedAt
+                    ? new Date(pendingRevision.submittedAt).toLocaleString()
+                    : "N/A"}
+                </p>
+              </div>
+              <button
+                onClick={() => setReviewOpen(true)}
+                className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+              >
+                Review Revision
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(pendingRevision.changedFields?.length
+                ? pendingRevision.changedFields
+                : Object.keys(pendingRevision.draftChanges || {})
+              ).map((field) => (
+                <div key={field} className="rounded-md border border-gray-200 p-3">
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {field}
+                  </p>
+                  <div className="mt-2 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] uppercase text-gray-400">Current</p>
+                      <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap rounded bg-gray-50 p-2 text-xs text-gray-700">
+                        {formatRevisionValue(product?.[field])}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase text-gray-400">Proposed</p>
+                      <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap rounded bg-green-50 p-2 text-xs text-green-800">
+                        {formatRevisionValue(pendingRevision.draftChanges?.[field])}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {product.moderation && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
@@ -263,6 +397,52 @@ const ProductAdminDetails = () => {
                   );
                 })}
               </div>
+            </div>
+          </section>
+        )}
+
+        {statusHistory.length > 0 && (
+          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+            <h2 className="text-base font-semibold text-gray-800 mb-3">
+              Status History
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    {["From", "To", "Revision", "Reason", "Fields", "Actor", "Date"].map((heading) => (
+                      <th key={heading} className="p-3 text-left text-xs font-medium text-gray-600">
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {statusHistory.map((entry, index) => (
+                    <tr key={entry._id || index} className="border-b hover:bg-gray-50">
+                      <td className="p-3">{entry.fromStatus || "N/A"}</td>
+                      <td className="p-3">{entry.toStatus || "N/A"}</td>
+                      <td className="p-3">
+                        {[entry.fromRevisionStatus, entry.toRevisionStatus]
+                          .filter(Boolean)
+                          .join(" -> ") || "N/A"}
+                      </td>
+                      <td className="p-3 max-w-xs break-words">{entry.reason || "N/A"}</td>
+                      <td className="p-3">
+                        {Array.isArray(entry.changedFields) && entry.changedFields.length
+                          ? entry.changedFields.join(", ")
+                          : "N/A"}
+                      </td>
+                      <td className="p-3">{entry.actorRole || entry.actor || entry.actorId || "N/A"}</td>
+                      <td className="p-3">
+                        {entry.createdAt || entry.at
+                          ? new Date(entry.createdAt || entry.at).toLocaleString()
+                          : "N/A"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         )}
@@ -755,6 +935,7 @@ const ProductAdminDetails = () => {
       <ProductReviewModal
         isOpen={reviewOpen}
         product={product}
+        revision={pendingRevision}
         onClose={() => setReviewOpen(false)}
         onSubmit={handleReviewSubmit}
       />

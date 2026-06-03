@@ -359,7 +359,7 @@ const HsnCode = () => {
           <ToggleButton
             isToggle={!item?.isDisable}
             handleClick={() => handleToggle(item)}
-            requiredModule="products"
+            requiredModule="tax"
           />
         </div>,
         <div key={`actions-${item._id}`} className="flex justify-center gap-2">
@@ -368,7 +368,7 @@ const HsnCode = () => {
             showLinkButton={false}
             showDeleteButton={true}
             onDelete={() => handleDelete(item)}
-            requiredModule="products"
+            requiredModule="tax"
           />
         </div>,
       ]) || [],
@@ -396,7 +396,7 @@ const HsnCode = () => {
       {/* Header */}
       <div className="flex justify-between items-center ">
         <h3 className="text-lg font-semibold text-gray-800">Home / HSN Code</h3>
-        <AddButton onClick={handleAddNew} requiredModule="products">
+        <AddButton onClick={handleAddNew} requiredModule="tax">
           Add HSN Code
         </AddButton>
       </div>
@@ -415,7 +415,7 @@ const HsnCode = () => {
           applyFilters={applyFilters}
           handleSearchRemove={handleSearchRemove}
           isDelete={true}
-          requiredModule="products"
+          requiredModule="tax"
         />
 
         <TableData

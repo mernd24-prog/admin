@@ -974,6 +974,13 @@ function Layout() {
                     )}
                   />
                   <Route
+                    path="/change-pending-products"
+                    element={renderRoute(
+                      "/change-pending-products",
+                      <ProductCatalog />,
+                    )}
+                  />
+                  <Route
                     path="/rejected-products"
                     element={renderRoute(
                       "/rejected-products",

@@ -857,7 +857,6 @@ export default function ProductManagementUI() {
     const productPayload = {
       sellerId: updatedFormData.sellerId,
       title: updatedFormData.name || updatedFormData.title,
-      gstRate: Number(taxData?.gstRate ?? taxData?.IGST ?? updatedFormData.gstRate ?? 18),
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
       mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),

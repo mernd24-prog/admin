@@ -20,6 +20,7 @@
           { "label": "Add Product",        "icon": "MdAddBox",          "key": "add-product",        "route": "add-product"       },
           { "label": "Draft Products",     "icon": "MdDrafts",          "key": "draft-products",     "route": "draft-products"    },
           { "label": "Pending Approval",   "icon": "MdPendingActions",  "key": "pending-products",   "route": "pending-products"  },
+          { "label": "Change Pending",     "icon": "MdPendingActions",  "key": "change-pending-products", "route": "change-pending-products" },
           { "label": "Rejected Products",  "icon": "MdCancel",          "key": "rejected-products",  "route": "rejected-products" }
         ]
       },

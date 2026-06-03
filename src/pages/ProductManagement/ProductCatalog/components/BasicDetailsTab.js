@@ -10,6 +10,7 @@ import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect
 import Input from '../../../../components/Atoms/Input/Input';
 import Loader from '../../../../components/Loader/Loader';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
+import PermissionGuard from '../../../../components/Atoms/PermissionGuard/PermissionGuard';
 
 // Modals
 import AddStoreModal from './Modals/AddStoreModal';
@@ -62,7 +63,7 @@ const INITIAL_FORM_HSN = {
   SGST: "",
   additionalTax: "",
   description: "",
-  isDisable: true
+  isDisable: false
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
@@ -410,7 +411,7 @@ export default function BasicDetailsTab({
       SGST: Number(hsnFormValues.SGST),
       additionalTax: Number(hsnFormValues.additionalTax),
       description: hsnFormValues.description?.trim() || '',
-      isDisable: true
+      active: true
 
     }
     try {
@@ -501,7 +502,9 @@ export default function BasicDetailsTab({
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/categories')}>Categories</button>
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/category-attributes')}>Category Attributes</button>
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-families')}>Product Families</button>
-              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/hsn-code')}>HSN Codes</button>
+              <PermissionGuard module="tax" action="view" hide>
+                <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/hsn-code')}>HSN Codes</button>
+              </PermissionGuard>
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-flow')}>Open Full Product Flow</button>
             </div>
           </div>
@@ -607,12 +610,15 @@ export default function BasicDetailsTab({
             <div>
               <div className='flex justify-between items-center'>
                 <label>Hsn Code</label>
-                <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("Hsn")}
-                >
-                  Add Hsn
-                </button>
+                <PermissionGuard module="tax" action="create" hide>
+                  <button
+                    type="button"
+                    className='font-semibold text-xs text-blue-600 hover:text-blue-800'
+                    onClick={() => handleAction("Hsn")}
+                  >
+                    Add Hsn
+                  </button>
+                </PermissionGuard>
               </div>
               <FilterSelect
                 name="hsn_code"
