@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { MdGridView, MdSearch, MdRefresh } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 
 const VariantInventory = () => {
@@ -13,7 +14,7 @@ const VariantInventory = () => {
     const fetch = async () => {
       setLoading(true);
       try {
-        const res = await axiosProvider.get("/products", {
+        const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
           params: {
             productType: "variable",
             hasVariants: true,

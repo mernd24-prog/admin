@@ -34,7 +34,10 @@ const toProductListParams = (params = {}) => ({
 });
 
 const toProductStatusBody = (payload = {}) => ({
-    status: payload.isDisable ? "inactive" : "active",
+    status: payload.status || (payload.isDisable ? "inactive" : "active"),
+    ...(payload.reason ? { reason: payload.reason } : {}),
+    ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
+    ...(payload.scheduledAt ? { scheduledAt: payload.scheduledAt } : {}),
     checklist: {
         titleVerified: true,
         categoryVerified: true,
@@ -54,9 +57,15 @@ const toProductBody = (payload = {}) => {
     return {
         ...(payload.sellerId ? { sellerId: payload.sellerId } : {}),
         title,
+        ...(payload.shortDescription ? { shortDescription: payload.shortDescription } : {}),
         description: payload.description || "",
+        ...(payload.productType ? { productType: payload.productType } : {}),
+        ...(payload.visibility ? { visibility: payload.visibility } : {}),
         price: Number(payload.price || primaryVariant.price || primaryVariant.salePrice || 0),
         mrp: Number(payload.mrp || primaryVariant.mrp || 0),
+        ...(payload.salePrice !== undefined ? { salePrice: Number(payload.salePrice || 0) } : {}),
+        ...(payload.costPrice !== undefined ? { costPrice: Number(payload.costPrice || 0) } : {}),
+        gstInclusive: true,
         category,
         ...(categoryId ? { categoryId } : {}),
         ...(payload.brand || payload.brand_id ? { brand: payload.brand || payload.brand_id } : {}),
@@ -70,52 +79,90 @@ const toProductBody = (payload = {}) => {
         ...(hsnCode ? { hsnCode } : {}),
         origin: payload.origin || {},
         ...(payload.warranty ? { warranty: payload.warranty } : {}),
+        ...(payload.shipping ? { shipping: payload.shipping } : {}),
+        ...(payload.inventorySettings ? { inventorySettings: payload.inventorySettings } : {}),
         ...(payload.metadata ? { metadata: payload.metadata } : {}),
+        ...(payload.seo ? { seo: payload.seo } : {}),
+        ...(payload.digital ? { digital: payload.digital } : {}),
+        ...(payload.subscription ? { subscription: payload.subscription } : {}),
+        ...(Array.isArray(payload.bundleItems) ? { bundleItems: payload.bundleItems } : {}),
+        ...(payload.bundleDiscount !== undefined ? { bundleDiscount: Number(payload.bundleDiscount || 0) } : {}),
         ...(Array.isArray(payload.relatedProducts) ? { relatedProducts: payload.relatedProducts } : {}),
         ...(Array.isArray(payload.crossSellProducts) ? { crossSellProducts: payload.crossSellProducts } : {}),
         ...(Array.isArray(payload.upSellProducts) ? { upSellProducts: payload.upSellProducts } : {}),
+        ...(Array.isArray(payload.frequentlyBoughtTogether) ? { frequentlyBoughtTogether: payload.frequentlyBoughtTogether } : {}),
+        ...(Array.isArray(payload.featuredProducts) ? { featuredProducts: payload.featuredProducts } : {}),
+        ...(Array.isArray(payload.trendingProducts) ? { trendingProducts: payload.trendingProducts } : {}),
+        ...(Array.isArray(payload.bestSellerProducts) ? { bestSellerProducts: payload.bestSellerProducts } : {}),
+        ...(Array.isArray(payload.collectionIds) ? { collectionIds: payload.collectionIds } : {}),
         stock: Number(payload.stock || payload.quantity || 0),
         images: Array.isArray(payload.images) ? payload.images : [],
+        videos: Array.isArray(payload.videos) ? payload.videos : [],
+        documents: Array.isArray(payload.documents) ? payload.documents : [],
+        tags: Array.isArray(payload.tags) ? payload.tags : [],
         ...(payload.status ? { status: payload.status } : {}),
     };
 };
 
 const toProductPatchBody = (payload = {}) => {
+    const source = payload.body || payload.data || payload;
     const body = {};
-    const categoryId = payload.categoryId || payload.category_id || payload.category;
-    const category = payload.category || payload.categoryKey || payload.category_key || categoryId;
+    const categoryId = source.categoryId || source.category_id || source.category;
+    const category = source.category || source.categoryKey || source.category_key || categoryId;
 
-    if (payload.sellerId !== undefined) body.sellerId = payload.sellerId;
-    if (payload.title !== undefined || payload.name !== undefined) body.title = payload.title || payload.name || "";
-    if (payload.description !== undefined) body.description = payload.description || "";
-    if (payload.price !== undefined) body.price = Number(payload.price || 0);
-    if (payload.mrp !== undefined) body.mrp = Number(payload.mrp || 0);
-    if (payload.category !== undefined || payload.categoryKey !== undefined || payload.category_id !== undefined || payload.categoryId !== undefined) {
+    if (source.sellerId !== undefined) body.sellerId = source.sellerId;
+    if (source.title !== undefined || source.name !== undefined) body.title = source.title || source.name || "";
+    if (source.shortDescription !== undefined) body.shortDescription = source.shortDescription || "";
+    if (source.description !== undefined) body.description = source.description || "";
+    if (source.productType !== undefined) body.productType = source.productType;
+    if (source.visibility !== undefined) body.visibility = source.visibility;
+    if (source.price !== undefined) body.price = Number(source.price || 0);
+    if (source.mrp !== undefined) body.mrp = Number(source.mrp || 0);
+    if (source.salePrice !== undefined) body.salePrice = Number(source.salePrice || 0);
+    if (source.costPrice !== undefined) body.costPrice = Number(source.costPrice || 0);
+    if (source.gstRate !== undefined) body.gstRate = Number(source.gstRate || 0);
+    if (source.gstInclusive !== undefined) body.gstInclusive = Boolean(source.gstInclusive);
+    if (source.category !== undefined || source.categoryKey !== undefined || source.category_id !== undefined || source.categoryId !== undefined) {
         body.category = category;
     }
-    if (payload.categoryId !== undefined || payload.category_id !== undefined) body.categoryId = categoryId;
-    if (payload.brand !== undefined || payload.brand_id !== undefined) body.brand = payload.brand || payload.brand_id || "";
-    if (payload.productFamilyCode !== undefined) body.productFamilyCode = payload.productFamilyCode;
-    if (payload.sku !== undefined) body.sku = payload.sku;
-    if (payload.color !== undefined) body.color = payload.color;
-    if (payload.attributes !== undefined) body.attributes = payload.attributes || {};
-    if (payload.variants !== undefined) body.variants = Array.isArray(payload.variants) ? payload.variants : [];
-    if (payload.options !== undefined && Array.isArray(payload.options)) body.options = payload.options;
-    if (payload.dimensions !== undefined) body.dimensions = payload.dimensions;
-    if (payload.hsnCode !== undefined || payload.hsn_code !== undefined) body.hsnCode = payload.hsnCode || payload.hsn_code || "";
-    if (payload.origin !== undefined) body.origin = payload.origin || {};
-    if (payload.warranty !== undefined) body.warranty = payload.warranty;
-    if (payload.metadata !== undefined) body.metadata = payload.metadata || {};
-    if (payload.relatedProducts !== undefined && Array.isArray(payload.relatedProducts)) body.relatedProducts = payload.relatedProducts;
-    if (payload.crossSellProducts !== undefined && Array.isArray(payload.crossSellProducts)) body.crossSellProducts = payload.crossSellProducts;
-    if (payload.upSellProducts !== undefined && Array.isArray(payload.upSellProducts)) body.upSellProducts = payload.upSellProducts;
-    if (payload.stock !== undefined || payload.quantity !== undefined) body.stock = Number(payload.stock || payload.quantity || 0);
-    if (payload.images !== undefined && Array.isArray(payload.images)) body.images = payload.images;
-    if (payload.status !== undefined) body.status = payload.status;
-    if (payload.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(payload.minPurchaseQuantity || 0);
-    if (payload.volumeDiscount !== undefined) body.volumeDiscount = Number(payload.volumeDiscount || 0);
-    if (payload.specialPriceStartDate !== undefined) body.specialPriceStartDate = payload.specialPriceStartDate;
-    if (payload.specialPriceEndDate !== undefined) body.specialPriceEndDate = payload.specialPriceEndDate;
+    if (source.categoryId !== undefined || source.category_id !== undefined) body.categoryId = categoryId;
+    if (source.brand !== undefined || source.brand_id !== undefined) body.brand = source.brand || source.brand_id || "";
+    if (source.productFamilyCode !== undefined) body.productFamilyCode = source.productFamilyCode;
+    if (source.sku !== undefined) body.sku = source.sku;
+    if (source.color !== undefined) body.color = source.color;
+    if (source.attributes !== undefined) body.attributes = source.attributes || {};
+    if (source.variants !== undefined) body.variants = Array.isArray(source.variants) ? source.variants : [];
+    if (source.options !== undefined && Array.isArray(source.options)) body.options = source.options;
+    if (source.dimensions !== undefined) body.dimensions = source.dimensions;
+    if (source.hsnCode !== undefined || source.hsn_code !== undefined) body.hsnCode = source.hsnCode || source.hsn_code || "";
+    if (source.origin !== undefined) body.origin = source.origin || {};
+    if (source.warranty !== undefined) body.warranty = source.warranty;
+    if (source.shipping !== undefined) body.shipping = source.shipping || {};
+    if (source.inventorySettings !== undefined) body.inventorySettings = source.inventorySettings || {};
+    if (source.metadata !== undefined) body.metadata = source.metadata || {};
+    if (source.seo !== undefined) body.seo = source.seo || {};
+    if (source.digital !== undefined) body.digital = source.digital || {};
+    if (source.subscription !== undefined) body.subscription = source.subscription || {};
+    if (source.bundleItems !== undefined && Array.isArray(source.bundleItems)) body.bundleItems = source.bundleItems;
+    if (source.bundleDiscount !== undefined) body.bundleDiscount = Number(source.bundleDiscount || 0);
+    if (source.relatedProducts !== undefined && Array.isArray(source.relatedProducts)) body.relatedProducts = source.relatedProducts;
+    if (source.crossSellProducts !== undefined && Array.isArray(source.crossSellProducts)) body.crossSellProducts = source.crossSellProducts;
+    if (source.upSellProducts !== undefined && Array.isArray(source.upSellProducts)) body.upSellProducts = source.upSellProducts;
+    if (source.frequentlyBoughtTogether !== undefined && Array.isArray(source.frequentlyBoughtTogether)) body.frequentlyBoughtTogether = source.frequentlyBoughtTogether;
+    if (source.featuredProducts !== undefined && Array.isArray(source.featuredProducts)) body.featuredProducts = source.featuredProducts;
+    if (source.trendingProducts !== undefined && Array.isArray(source.trendingProducts)) body.trendingProducts = source.trendingProducts;
+    if (source.bestSellerProducts !== undefined && Array.isArray(source.bestSellerProducts)) body.bestSellerProducts = source.bestSellerProducts;
+    if (source.collectionIds !== undefined && Array.isArray(source.collectionIds)) body.collectionIds = source.collectionIds;
+    if (source.stock !== undefined || source.quantity !== undefined) body.stock = Number(source.stock || source.quantity || 0);
+    if (source.images !== undefined && Array.isArray(source.images)) body.images = source.images;
+    if (source.videos !== undefined && Array.isArray(source.videos)) body.videos = source.videos;
+    if (source.documents !== undefined && Array.isArray(source.documents)) body.documents = source.documents;
+    if (source.tags !== undefined && Array.isArray(source.tags)) body.tags = source.tags;
+    if (source.status !== undefined) body.status = source.status;
+    if (source.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(source.minPurchaseQuantity || 0);
+    if (source.volumeDiscount !== undefined) body.volumeDiscount = Number(source.volumeDiscount || 0);
+    if (source.specialPriceStartDate !== undefined) body.specialPriceStartDate = source.specialPriceStartDate;
+    if (source.specialPriceEndDate !== undefined) body.specialPriceEndDate = source.specialPriceEndDate;
     return body;
 };
 
@@ -154,7 +201,9 @@ const initialState = {
     getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, productModerationQueueData: {},
     getProductRevisionsData: {}, reviewProductRevisionData: {},
     getCategoryAttributesData: {}, updateCategoryAttributesData: {},
+    productPrefillData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
+    archiveProductData: {}, restoreProductData: {}, duplicateProductData: {},
 }
 
 export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
@@ -433,6 +482,14 @@ export const updateProductOption = createApiThunkPrivate('product-option-value/u
 export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST', false, {
     transformBody: toProductBody,
 })
+export const getProductPrefill = createApiThunkPrivate('getProductPrefill', ENDPOINTS.products.prefill, 'GET', true, {
+    transformParams: (params = {}) => ({
+        includeProducts: params.includeProducts !== false,
+        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+        limit: Number(params.limit || 100),
+    }),
+})
 export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
     transformParams: toProductListParams,
 })
@@ -448,6 +505,22 @@ export const updateProductsById = createApiThunkPrivate('updateProductsById', (p
     transformBody: toProductPatchBody,
 })
 export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
+export const archiveProduct = createApiThunkPrivate('archiveProduct', (payload) => ENDPOINTS.products.archive(firstProductId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({ ...(payload.reason ? { reason: payload.reason } : {}) }),
+})
+export const restoreProduct = createApiThunkPrivate('restoreProduct', (payload) => ENDPOINTS.products.restore(firstProductId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.status ? { status: payload.status } : {}),
+        ...(payload.visibility ? { visibility: payload.visibility } : {}),
+        ...(payload.reason ? { reason: payload.reason } : {}),
+    }),
+})
+export const duplicateProduct = createApiThunkPrivate('duplicateProduct', (payload) => ENDPOINTS.products.duplicate(firstProductId(payload)), 'POST', false, {
+    transformBody: (payload = {}) => ({
+        ...(payload.title ? { title: payload.title } : {}),
+        ...(payload.sku ? { sku: payload.sku } : {}),
+    }),
+})
 export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
     transformBody: (payload = {}) => ({
         ...(payload.status ? { status: payload.status } : {}),
@@ -626,11 +699,15 @@ const countrySlice = createSlice({
 
         createExtraReducersForThunk(builder, getAllBrandList, 'getAllBrandListData')
         createExtraReducersForThunk(builder, createProducts, 'createProductsData')
+        createExtraReducersForThunk(builder, getProductPrefill, 'productPrefillData')
         createExtraReducersForThunk(builder, getProducts, 'getProductsData')
         createExtraReducersForThunk(builder, getProductById, 'updateProductsData')
         createExtraReducersForThunk(builder, enableDisableProductCatalogs, 'enableDisableProductCatalogsData')
         createExtraReducersForThunk(builder, updateProductsById, 'updateProductsByIdData')
         createExtraReducersForThunk(builder, deleteProducts, 'deleteProductsData')
+        createExtraReducersForThunk(builder, archiveProduct, 'archiveProductData')
+        createExtraReducersForThunk(builder, restoreProduct, 'restoreProductData')
+        createExtraReducersForThunk(builder, duplicateProduct, 'duplicateProductData')
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
         createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')
         createExtraReducersForThunk(builder, getAllWarrantyList, 'getAllWarrantyListData')

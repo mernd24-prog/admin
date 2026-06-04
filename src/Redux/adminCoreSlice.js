@@ -41,6 +41,7 @@ const initialState = {
   updateReturnData: {},
   refundReturnData: {},
   adminPayoutsData: {},
+  walletTransactionsData: {},
   adminsData: {},
   createAdminData: {},
   createAdminPayoutData: {},
@@ -537,6 +538,7 @@ export const replaceReturn = createApiThunkPrivate("adminCore/replaceReturn", (p
 export const closeReturn = createApiThunkPrivate("adminCore/closeReturn", (payload) => ENDPOINTS.returns.close(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason", "note"]) });
 export const getAdminPayouts = createApiThunkPrivate("adminCore/getAdminPayouts", ENDPOINTS.payouts.admin, "GET", true, { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) });
 export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST", false, { transformBody: toAdminPayoutBody });
+export const getWalletTransactions = createApiThunkPrivate("adminCore/getWalletTransactions", ENDPOINTS.wallets.adminTransactions, "GET", true, { transformParams: pickQuery(["userId", "type", "status", "referenceType", "referenceId", "search", "fromDate", "toDate", "limit", "offset"]) });
 export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.adminReports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "limit", "offset"]) });
 export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoice", (payload) => ENDPOINTS.tax.adminInvoice(payload.orderId), "POST", false, { transformBody: noBody });
 export const getTaxInvoices = createApiThunkPrivate("adminCore/getTaxInvoices", ENDPOINTS.tax.invoices, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "buyerId", "state", "hsnCode", "search", "limit", "offset"]) });
@@ -698,6 +700,7 @@ const adminCoreSlice = createSlice({
       [closeReturn, "updateReturnData"],
       [getAdminPayouts, "adminPayoutsData"],
       [createAdminPayout, "createAdminPayoutData"],
+      [getWalletTransactions, "walletTransactionsData"],
       [getTaxReports, "taxReportsData"],
       [getTaxInvoices, "taxInvoicesData"],
       [getTaxCreditNotes, "taxCreditNotesData"],

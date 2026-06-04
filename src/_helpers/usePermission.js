@@ -21,6 +21,7 @@ export const ACTIONS = {
   ASSIGN:        'assign',
   EXPORT:        'export',
   IMPORT:        'import',
+  RESTORE:       'restore',
   BULK_ACTION:   'bulk_action',
   ADJUST:        'adjust',
 };
@@ -33,13 +34,29 @@ const ACTION_ALIASES = {
   action: 'status_change',
   review: 'approve',
   manage: 'status_change',
+  activate: 'status_change',
+  deactivate: 'status_change',
+  enable: 'status_change',
+  disable: 'status_change',
+  archive: 'status_change',
+  recover: 'restore',
+  bulk: 'bulk_action',
+  'bulk-action': 'bulk_action',
+  'bulk action': 'bulk_action',
+  bulkaction: 'bulk_action',
+  adjustment: 'adjust',
+  'stock-adjustment': 'adjust',
+  stock_adjustment: 'adjust',
 };
 
 const ACTION_EQUIVALENTS = {
   create: ['add'],
   update: ['edit'],
   approve: ['approval', 'review'],
-  status_change: ['status', 'action', 'manage'],
+  status_change: ['status', 'action', 'manage', 'activate', 'deactivate', 'enable', 'disable', 'archive'],
+  restore: ['recover'],
+  bulk_action: ['bulk', 'bulk-action', 'bulk action', 'bulkaction'],
+  adjust: ['adjustment', 'stock-adjustment', 'stock_adjustment'],
 };
 
 const normalizeAction = (action = '') => {

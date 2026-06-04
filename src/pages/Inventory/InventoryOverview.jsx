@@ -9,6 +9,7 @@ import { PageHeader, DataTable, StatusBadge, FilterBar } from "../../components/
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
 
@@ -78,7 +79,7 @@ const InventoryOverview = () => {
       setLoading(true);
       try {
         const params = list.toQueryParams();
-        const res = await axiosProvider.get("/products", {
+        const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
           params: {
             page:   params.page,
             limit:  params.limit,

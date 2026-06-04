@@ -227,7 +227,7 @@ const FrequentlyBoughtTogether = () => {
             await dispatch(
               updateProductsById({
                 productId: data.productId,
-                crossSellProducts: data.relatedProductIds || [],
+                frequentlyBoughtTogether: data.relatedProductIds || [],
               }),
             ).unwrap();
             toast.success("Frequently bought together updated successfully");

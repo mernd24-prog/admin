@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { MdNotifications, MdAddCircleOutline } from "react-icons/md";
 import { PageHeader, DataTable, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
@@ -62,7 +63,7 @@ const LowStockAlerts = () => {
     const fetch = async () => {
       setLoading(true);
       try {
-        const res = await axiosProvider.get("/products", {
+        const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
           params: { stockStatus: "low", page, limit: 20 },
         });
         const items = res.data?.data?.products || res.data?.data || [];

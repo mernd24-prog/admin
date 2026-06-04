@@ -12,6 +12,7 @@ export const MODULE_TAB_ORDER = [
   "Catalog Management",
   "Inventory Management",
   "Orders Management",
+  "Delivery & Shipping",
   "Users & Access",
   "Marketing",
   "Tax & Compliance",
@@ -132,7 +133,7 @@ const MODULE_TABS = {
   referral: "Marketing",
   recommendations: "Marketing",
   tax: "Tax & Compliance",
-  delivery: "Tax & Compliance",
+  delivery: "Delivery & Shipping",
   locations: "Location Management",
   countries: "Location Management",
   states: "Location Management",
@@ -179,7 +180,7 @@ export const MODULE_DEFAULT_ROUTES = {
   reviews:      "product-reviews",
   payments:     "payments",
   wallets:      "transactions",
-  subscriptions:"settings",
+  subscriptions:"subscription-orders",
   // Users
   users:              "users",
   sellers:            "seller",
@@ -188,7 +189,7 @@ export const MODULE_DEFAULT_ROUTES = {
   seller_bank:        "seller-bank",
   "seller-bank":      "seller-bank",
   "seller-management":"seller-users",
-  "sellers/commissions":"transactions",
+  "sellers/commissions":"seller-finance",
   // CMS/Content
   cms:       "content-management",
   cms_pages: "content-management",
@@ -249,8 +250,9 @@ const ROUTE_MODULES = [
   [["/permission-templates"], ["rbac"]],
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
+  [["/seller-finance"], ["sellers/commissions"]],
   [["/seller"], ["sellers"]],
-  [["/seller-staff", "/seller-users", "/seller-sub-admins"], ["seller-management"]],
+  [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins"], ["seller-management", "sellers"]],
   [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
   [["/seller-bank", "/seller-bank-detail"], ["seller_bank", "seller-bank", "sellers"]],
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
@@ -289,7 +291,7 @@ const ROUTE_MODULES = [
   [
     [
       "/inventory-overview", "/variant-inventory",
-      "/seller-Product-Inventory", "/inventory-adjustment",
+      "/seller-Product-Inventory", "/seller-product-inventory", "/inventory-adjustment",
       "/warehouse", "/low-stock-alerts", "/threshold-products",
     ],
     ["inventory", "products"],
@@ -300,11 +302,10 @@ const ROUTE_MODULES = [
     [
       "/orders", "/orders/view", "/view-orders", "/order-status",
       "/gift-card-orders", "/order-cancellation-reasons",
-      "/refunds", "/returns",
     ],
     ["orders"],
   ],
-  [["/payments"], ["payments"]],
+  [["/payments", "/refunds"], ["payments", "wallets", "orders"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/returns", "/order-return-reasons"], ["returns", "orders"]],
   [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
@@ -315,21 +316,27 @@ const ROUTE_MODULES = [
     [
       "/special-price", "/volume-discounts",
       "/PPC-promotions-management",
-      "/product-event-weightages", "/recommended-product-tag-weightages",
       "/badges", "/ribbons", "/campaigns",
     ],
     ["pricing"],
   ],
-  [["/similar-products", "/frequently-bought-together"], ["recommendations"]],
+  [
+    [
+      "/similar-products", "/frequently-bought-together",
+      "/product-event-weightages", "/recommended-product-tag-weightages",
+    ],
+    ["recommendations", "pricing"],
+  ],
   [["/reward-on-purchase"], ["loyalty"]],
   [["/referral-commerce"], ["referral"]],
-  [["/promotions-banners"], ["banners", "cms", "pricing"]],
+  [["/promotions-banners", "/content-management/promotion-banner"], ["banners", "cms_pages", "cms", "pricing"]],
 
   // Tax & Compliance
   [
     [
       "/tax", "/subTax", "/tax-rule", "/hsn-code",
       "/tax-structure", "/tax-category", "/tax-category-rules",
+      "/tax-documents",
     ],
     ["tax"],
   ],

@@ -169,24 +169,57 @@ export const hasModuleAccess = (moduleCode) => {
   if (!moduleCode) return false;
 
   const moduleAliases = {
-    dashboard: ["home", "dashboard", "analytics"],
-    products: ["products", "product-catalog", "categories", "category-attributes"],
-    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish"],
-    inventory: ["inventory", "seller-product-inventory", "seller-product-inventories", "inventory-overview", "variant-inventory", "inventory-adjustment", "warehouse", "low-stock-alerts", "threshold-products"],
-    orders: ["orders", "order_status", "subscription_orders", "gift-card-orders"],
-    pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
+    dashboard: ["home", "dashboard", "analytics", "admin"],
+    products: ["products", "product", "product-catalog", "add-product", "draft-products", "pending-products", "change-pending-products", "rejected-products", "product-tags", "store", "bar-code", "seo-media"],
+    categories: ["categories", "category", "category-attributes", "sub-categories", "sub-sub-categories"],
+    "sub-categories": ["sub-categories", "sub_categories", "categories", "category-attributes"],
+    "sub-sub-categories": ["sub-sub-categories", "sub_sub_categories", "categories", "category-attributes"],
+    brands: ["brands", "brand"],
+    option_masters: ["option-masters", "option_masters", "product-options", "product_options"],
+    "option-masters": ["option-masters", "option_masters", "product-options", "product_options"],
+    option_values: ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
+    "option-values": ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
+    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish", "batch", "collections"],
+    inventory: ["inventory", "seller-product-inventory", "seller-product-inventories", "inventory-overview", "variant-inventory", "inventory-adjustment", "warehouse", "low-stock-alerts", "threshold-products", "stock", "stock-adjustment"],
+    orders: ["orders", "order", "order_status", "order-status", "subscription_orders", "subscription-orders", "gift-card-orders", "order-cancellation-reasons", "view-orders"],
+    payments: ["payments", "payment", "refunds", "refund", "payouts"],
+    wallets: ["wallets", "wallet", "transactions", "user-transactions"],
+    pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons", "special-price", "volume-discounts", "ppc-promotions-management", "campaigns"],
     referral: ["referral", "referral-commerce", "influencers"],
-    delivery: ["delivery", "shipping_packages", "shipping_profile", "pickup_addresses", "delivery-staff"],
+    delivery: ["delivery", "delivery-shipping", "shipping_packages", "shipping-packages", "shipping_profile", "shipping-profile", "pickup_addresses", "pickup-addresses", "delivery-staff", "shipping-company-users", "shipment-tracking", "shipping-duration"],
     sellers: ["sellers", "seller", "vendors", "profile", "seller-management", "seller-users", "seller-staff"],
     "seller-management": ["seller-management", "seller-admins", "seller-sub-admins", "seller-hierarchy", "seller-users", "seller-staff"],
-    "sellers/commissions": ["sellers/commissions", "commissions", "transactions"],
+    seller_kyc: ["seller-kyc", "seller_kyc", "seller-kyc-detail"],
+    "seller-kyc": ["seller-kyc", "seller_kyc", "seller-kyc-detail"],
+    seller_bank: ["seller-bank", "seller_bank", "seller-bank-detail"],
+    "seller-bank": ["seller-bank", "seller_bank", "seller-bank-detail"],
+    "sellers/commissions": ["sellers/commissions", "seller-finance", "seller-commissions", "seller_commissions", "commissions", "seller-payouts", "seller_payouts", "settlements"],
     notifications: ["notifications", "messages"],
-    returns: ["returns", "order_return_reasons"],
+    returns: ["returns", "return-requests", "order_return_reasons", "order-return-reasons"],
     analytics: ["analytics", "dashboard", "home"],
-    users: ["users", "admin_users", "admin-users"],
+    reports: ["reports", "reports-sales", "reports-products", "reports-inventory", "reports-sellers", "analytics"],
+    users: ["users", "user", "customers", "admin_users", "admin-users"],
+    admin_users: ["admin-users", "admin_users", "sub-admins", "sub_admins"],
+    "admin-users": ["admin-users", "admin_users", "sub-admins", "sub_admins"],
     rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
-    tax: ["tax", "tax-structure", "tax-category", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule"],
+    tax: ["tax", "tax-structure", "tax-category", "tax-category-rules", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule", "tax-documents", "gst"],
     locations: ["locations", "country", "countries", "state", "states", "city", "cities", "zipcode", "zip-code", "zip-codes", "pincode", "pin-code"],
+    countries: ["country", "countries", "locations"],
+    states: ["state", "states", "locations"],
+    cities: ["city", "cities", "locations"],
+    zip_codes: ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
+    "zip-codes": ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
+    coupons: ["coupons", "discount-coupons", "discount_coupons"],
+    banners: ["banners", "promotion-banners", "promotions-banners", "content-management/promotion-banner"],
+    cms: ["cms", "cms-pages", "cms_pages", "content-management"],
+    cms_pages: ["cms-pages", "cms_pages", "content-management"],
+    "cms-pages": ["cms-pages", "cms_pages", "content-management"],
+    reviews: ["reviews", "product-reviews"],
+    "dynamic-pricing": ["dynamic-pricing", "dynamic_pricing", "special-price"],
+    loyalty: ["loyalty", "reward-on-purchase"],
+    recommendations: ["recommendations", "similar-products", "frequently-bought-together", "product-event-weightages", "recommended-product-tag-weightages"],
+    warranty: ["warranty", "warranty-templates"],
+    fraud: ["fraud", "chargebacks"],
     system: ["system", "settings"],
   };
 
@@ -197,6 +230,7 @@ export const hasModuleAccess = (moduleCode) => {
   const sellerOwnedModules = new Set([
     "dashboard",
     "products",
+    "inventory",
     "orders",
     "pricing",
     "notifications",
@@ -211,7 +245,7 @@ export const hasModuleAccess = (moduleCode) => {
   const sellerOwnedAliases = new Set(
     Object.entries(moduleAliases)
       .filter(([moduleKey]) => sellerOwnedModules.has(moduleKey))
-      .flatMap(([, aliases]) => aliases)
+      .flatMap(([, aliases]) => aliases.map(normalizeCode))
   );
 
   const isSellerOwnedCode = (code) =>

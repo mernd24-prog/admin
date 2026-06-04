@@ -5,13 +5,12 @@ import MediaTab from './MediaTab';
 import ProductSettingsPanel from './ProductSettingsPanel';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  createProducts, getAllProducts, getList,
-  getProductById, updateProductsById, getAllHsn, getCategoryAttributes, getAllBrandList, getAllWarrantyList,
+  createProducts, getProductPrefill,
+  getProductById, updateProductsById, getCategoryAttributes,
 } from '../../../../Redux/productSlice';
-import { getProductFamilies, getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
+import { getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
 import Loader from '../../../../components/Loader/Loader';
-import { getAllCountryList } from '../../../../Redux/CountrySlice';
 import { getAllStateList } from '../../../../Redux/stateSlice';
 import { getAllCityList } from '../../../../Redux/citySlice';
 import { GrDocument } from 'react-icons/gr';
@@ -34,19 +33,13 @@ import BundleBuilder from '../../../../components/Product/BundleBuilder';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 
 const API_CALLS = [
-{ action: getList, name: 'Category List' },
-{ action: getAllCountryList, name: 'Country List' },
-{ action: getAllHsn, name: 'Hsn code List' },
-{ action: getAllBrandList, name: 'Brand List' },
-{ action: getAllWarrantyList, name: 'Warranty List' },
-{ action: () => getProductFamilies({ page: 1, limit: 100 }), name: 'Product Families List' },
-{ action: getAllProducts, name: 'Products List' },
+{ action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
 ];
 
 const API_CALL_OBJECT = {
-  "Category List": { action: getList, name: "Category List" },
-  "Country List": { action: getAllCountryList, name: "Country List" },
-  "Hsn code list": { action: getAllHsn, name: "Hsn code List" },
+  "Category List": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
+  "Country List": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
+  "Hsn code list": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
 
 }
 
@@ -134,6 +127,19 @@ export default function ProductManagementUI() {
     return data.list || data.items || [];
   };
 
+  const prefillData = useMemo(() => {
+    const data = selector?.productPrefillData?.data?.data ||
+      selector?.productPrefillData?.normalized?.data ||
+      selector?.productPrefillData?.data ||
+      {};
+    return data && typeof data === 'object' ? data : {};
+  }, [selector?.productPrefillData]);
+
+  const prefillList = useCallback((key, fallback = []) => {
+    const value = prefillData?.[key];
+    return Array.isArray(value) ? value : fallback;
+  }, [prefillData]);
+
   const toSelectId = (record = {}) => String(record.categoryKey || record._id || record.id || record.value || record.code || "");
 
   const toCategoryOption = (category = {}, prefix = '') => {
@@ -174,6 +180,7 @@ export default function ProductManagementUI() {
             price: productData?.price ?? '',
             mrp: productData?.mrp ?? '',
             gstRate: productData?.gstRate ?? 18,
+            gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
             options: productData?.options || [{
               "sku": "",
@@ -224,7 +231,7 @@ export default function ProductManagementUI() {
 
           if (res?.data?.hsnCode || res?.data?.hsn_code) {
             const hsnValue = res?.data?.hsnCode || res?.data?.hsn_code;
-            const hsnCodeData = getListPayload(selector?.getAllHsnData).find(item =>
+            const hsnCodeData = prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).find(item =>
               item?.code === hsnValue || item?._id === hsnValue || item?.id === hsnValue
             );
             if (hsnCodeData) {
@@ -279,15 +286,33 @@ export default function ProductManagementUI() {
   }, [fetchAllData]);
 
   useEffect(() => {
-    if (isEditMode && !loading) {
+    if (id) {
       fetchProductById(id);
     }
-  }, [isEditMode, id, loading]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const categoryKey = formData?.category_key || formData?.category || formData?.category_id || formData?.categoryId;
     if (!categoryKey) {
       setCategoryAttributeSchema([]);
+      return;
+    }
+
+    const cachedCategoryAttributes = prefillList('categoryAttributes').find((item) =>
+      String(item.categoryKey || item.categoryId || item._id || '') === String(categoryKey)
+    );
+    if (cachedCategoryAttributes) {
+      const schema = cachedCategoryAttributes.attributeSchema || [];
+      setCategoryAttributeSchema(schema);
+      schema.forEach((field) => {
+        const optId = field.platformOptionId;
+        if (!optId || fetchedOptionIds.current.has(optId)) return;
+        const cachedValues = prefillData.optionValuesByOptionId?.[optId] || [];
+        if (cachedValues.length) {
+          fetchedOptionIds.current.add(optId);
+          setPlatformValues((prev) => ({ ...prev, [optId]: cachedValues }));
+        }
+      });
       return;
     }
 
@@ -314,7 +339,7 @@ export default function ProductManagementUI() {
       .catch(() => {
         setCategoryAttributeSchema([]);
       });
-  }, [dispatch, formData?.category_key, formData?.category, formData?.category_id, formData?.categoryId]);
+  }, [dispatch, formData?.category_key, formData?.category, formData?.category_id, formData?.categoryId, prefillData.optionValuesByOptionId, prefillList]);
 
   useEffect(() => {
     const originCountry = formData?.origin?.countryCode || formData?.origin?.country;
@@ -329,6 +354,15 @@ export default function ProductManagementUI() {
 
   // Load platform attribute options once on mount
   useEffect(() => {
+    const cachedOptions = prefillList('productOptions');
+    if (cachedOptions.length) {
+      const valuesByOptionId = prefillData.optionValuesByOptionId || {};
+      setPlatformOptions(cachedOptions);
+      setPlatformValues(valuesByOptionId);
+      Object.keys(valuesByOptionId).forEach((optionId) => fetchedOptionIds.current.add(optionId));
+      return;
+    }
+
     dispatch(getPlatformOptions({ limit: 100, active: true }))
       .unwrap()
       .then((res) => {
@@ -336,12 +370,18 @@ export default function ProductManagementUI() {
         setPlatformOptions(list);
       })
       .catch(() => {});
-  }, [dispatch]);
+  }, [dispatch, prefillData.optionValuesByOptionId, prefillList]);
 
   useEffect(() => {
     platformOptions.forEach((option) => {
       const optId = option._id || option.id;
       if (!optId || fetchedOptionIds.current.has(optId)) return;
+      const cachedValues = prefillData.optionValuesByOptionId?.[optId] || [];
+      if (cachedValues.length) {
+        fetchedOptionIds.current.add(optId);
+        setPlatformValues((prev) => ({ ...prev, [optId]: cachedValues }));
+        return;
+      }
       fetchedOptionIds.current.add(optId);
       dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
         .unwrap()
@@ -352,13 +392,19 @@ export default function ProductManagementUI() {
         })
         .catch(() => { fetchedOptionIds.current.delete(optId); });
     });
-  }, [dispatch, platformOptions]);
+  }, [dispatch, platformOptions, prefillData.optionValuesByOptionId]);
 
   // When a platform-linked axis is added to variantAxes, load its values
   useEffect(() => {
     variantAxes.forEach((axis) => {
       const optId = axis.platformOptionId;
       if (!optId || fetchedOptionIds.current.has(optId)) return;
+      const cachedValues = prefillData.optionValuesByOptionId?.[optId] || [];
+      if (cachedValues.length) {
+        fetchedOptionIds.current.add(optId);
+        setPlatformValues((prev) => ({ ...prev, [optId]: cachedValues }));
+        return;
+      }
       fetchedOptionIds.current.add(optId);
       dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
         .unwrap()
@@ -368,7 +414,7 @@ export default function ProductManagementUI() {
         })
         .catch(() => { fetchedOptionIds.current.delete(optId); });
     });
-  }, [dispatch, variantAxes]);
+  }, [dispatch, variantAxes, prefillData.optionValuesByOptionId]);
 
   const handleOptionSearch = useCallback((query) => {
     dispatch(getPlatformOptions({ limit: 100, active: true, q: query || undefined }))
@@ -398,11 +444,11 @@ export default function ProductManagementUI() {
   }, []);
 
   const formattedData = useMemo(() => ({
-    brandList: getListPayload(selector?.getAllBrandListData).map((item) => ({
+    brandList: prefillList('brands', getListPayload(selector?.getAllBrandListData)).map((item) => ({
       value: item?.name || item?._id || item?.id,
       label: item?.name || item?.title || item?.code || String(item?._id || item?.id || ''),
     })),
-    warrantyTemplateList: getListPayload(selector?.getAllWarrantyListData).map((item) => ({
+    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData)).map((item) => ({
       value: item?.period || item?._id || item?.id,
       label: item?.period || item?.name || String(item?._id || item?.id || ''),
     })),
@@ -413,22 +459,24 @@ export default function ProductManagementUI() {
         .filter((item) => item.active !== false)
         .map((item) => ({ value: item.name, label: item.name }));
     })(),
-    productFamilyList: getListPayload(adminCoreSelector?.productFamiliesData)
+    productFamilyList: prefillList('productFamilies', getListPayload(adminCoreSelector?.productFamiliesData))
       .map((item) => String(item?.familyCode || item?.code || '').trim())
       .filter(Boolean)
       .filter((value, index, arr) => arr.indexOf(value) === index)
       .map((code) => ({ value: code, label: code })),
     taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
-    hsnCodeList: getListPayload(selector?.getAllHsnData).map((item) => ({
+    hsnCodeList: prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).map((item) => ({
       value: item.code || item._id || item.id,
       code: item.code,
       label: `${item.code || item._id || item.id} | GST: ${Number(item.gstRate || item.IGST || 0)}%`,
     })),
+    countryList: transformArray(prefillList('countries')),
+    sellerList: transformArray(prefillList('sellers')),
 
-  }), [selector, adminCoreSelector?.productFamiliesData, platformOptions, platformValues]);
+  }), [selector, adminCoreSelector?.productFamiliesData, platformOptions, platformValues, prefillList]);
 
   const createSelectOptions = useMemo(() => {
-    const categorySource = getListPayload(selector?.getListData);
+    const categorySource = prefillList('categories', getListPayload(selector?.getListData));
     const options = [];
     if (!Array.isArray(categorySource) || categorySource.length === 0) return options;
 
@@ -481,7 +529,7 @@ export default function ProductManagementUI() {
     };
     walk("__root__", "");
     return options;
-  }, [selector?.getListData]);
+  }, [selector?.getListData, prefillList]);
 
 
   const validateForm = () => {
@@ -736,7 +784,7 @@ export default function ProductManagementUI() {
           hsn_code: selectedOption?.value || "",
           hsnCode: selectedOption?.code || selectedOption?.value || "",
         }));
-        const hsnCodeData = getListPayload(selector?.getAllHsnData).find(item =>
+        const hsnCodeData = prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).find(item =>
           toSelectId(item) === String(selectedOption?.value) || item?.code === selectedOption?.value
         )
 
@@ -860,6 +908,7 @@ export default function ProductManagementUI() {
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
       mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),
+      gstInclusive: true,
       category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
       brand: updatedFormData.brand || updatedFormData.brand_id || "",
@@ -900,6 +949,14 @@ export default function ProductManagementUI() {
       ...(updatedFormData.subscription && Object.keys(updatedFormData.subscription).length ? { subscription: updatedFormData.subscription } : {}),
       ...(Array.isArray(updatedFormData.bundleItems) && updatedFormData.bundleItems.length ? { bundleItems: updatedFormData.bundleItems } : {}),
       ...(typeof updatedFormData.bundleDiscount === 'number' ? { bundleDiscount: updatedFormData.bundleDiscount } : {}),
+      ...(Array.isArray(updatedFormData.relatedProducts) ? { relatedProducts: updatedFormData.relatedProducts } : {}),
+      ...(Array.isArray(updatedFormData.crossSellProducts) ? { crossSellProducts: updatedFormData.crossSellProducts } : {}),
+      ...(Array.isArray(updatedFormData.upSellProducts) ? { upSellProducts: updatedFormData.upSellProducts } : {}),
+      ...(Array.isArray(updatedFormData.frequentlyBoughtTogether) ? { frequentlyBoughtTogether: updatedFormData.frequentlyBoughtTogether } : {}),
+      ...(Array.isArray(updatedFormData.featuredProducts) ? { featuredProducts: updatedFormData.featuredProducts } : {}),
+      ...(Array.isArray(updatedFormData.trendingProducts) ? { trendingProducts: updatedFormData.trendingProducts } : {}),
+      ...(Array.isArray(updatedFormData.bestSellerProducts) ? { bestSellerProducts: updatedFormData.bestSellerProducts } : {}),
+      ...(Array.isArray(updatedFormData.collectionIds) ? { collectionIds: updatedFormData.collectionIds } : {}),
       options: productType === 'variable' ? variableOptionAxes : formattedOptions,
       ...(variableOptionAxes.length ? { variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name) } : {}),
       ...(variantsData.length ? {
@@ -978,7 +1035,9 @@ export default function ProductManagementUI() {
           formattedProductFamilyList={formattedData.productFamilyList}
           handleSelectChange={handleSelectChange}
           fetchAllData={fetchAllData}
-          allCategories={getListPayload(selector?.getListData)}
+          allCategories={prefillList('categories', getListPayload(selector?.getListData))}
+          countryList={formattedData.countryList}
+          sellerList={formattedData.sellerList}
           hsnCodeList={formattedData?.hsnCodeList}
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}

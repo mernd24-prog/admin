@@ -58,7 +58,7 @@ const steps = [
     title: "9) Post-Create Management",
     description:
       "Manage seller inventory, threshold alerts, and moderation after products are created.",
-    route: "/app/seller-product-inventories",
+    route: "/app/seller-product-inventory",
     extraRoutes: [
       { label: "Threshold Products", route: "/app/threshold-products" },
     ],

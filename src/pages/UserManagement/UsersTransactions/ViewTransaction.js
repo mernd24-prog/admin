@@ -5,22 +5,33 @@ import { toast } from "react-toastify";
 import { MdArrowForward, MdRefresh } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import { PageHeader, StatusBadge } from "../../../components/Shared";
-import { getContentPage } from "../../../Redux/adminCoreSlice";
+import { getWalletTransactions } from "../../../Redux/adminCoreSlice";
 
 const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
 
-const unwrapContentPage = (payload) => {
+const unwrapTransaction = (payload, id) => {
   const root = payload?.data?.data || payload?.data || payload || {};
-  return root.data || root.item || root.page || root;
+  const items = root.items || root.list || root.rows || [];
+  return items.find((item) => String(item.id) === String(id)) || items[0] || null;
 };
 
 const money = (value) => {
   const numeric = Number(value || 0);
-  return `$${numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
+
+const parseMetadata = (value) => {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+};
 
 const DetailPanel = ({ title, children, className = "" }) => (
   <section className={`rounded-lg border border-[#eadfbd] bg-[#fffdf8] shadow-[0_1px_3px_rgba(31,41,55,0.06)] ${className}`}>
@@ -64,8 +75,9 @@ const ViewTransaction = () => {
     if (!id) return;
     try {
       setLoading(true);
-      const response = await dispatch(getContentPage({ slug: decodeURIComponent(id) })).unwrap();
-      setTransaction(unwrapContentPage(response));
+      const transactionId = decodeURIComponent(id);
+      const response = await dispatch(getWalletTransactions({ search: transactionId, limit: 10 })).unwrap();
+      setTransaction(unwrapTransaction(response, transactionId));
     } catch (error) {
       toast.error(error?.message || "Failed to load transaction detail");
       setTransaction(null);
@@ -78,16 +90,16 @@ const ViewTransaction = () => {
     fetchTransaction();
   }, [fetchTransaction]);
 
-  const metadata = transaction?.metadata || {};
-  const transactionId = firstDefined(metadata.transactionId, transaction?.slug, id);
-  const createdAt = firstDefined(transaction?.publishedAt, transaction?.updatedAt, transaction?.createdAt);
-  const type = String(metadata.type || "").toLowerCase();
-  const amount = Number(metadata.amount || 0);
-  const orderId = firstDefined(metadata.orderId, metadata.order_id, metadata.referenceId, metadata.reference_id);
+  const metadata = parseMetadata(transaction?.metadata);
+  const transactionId = firstDefined(transaction?.id, id);
+  const createdAt = firstDefined(transaction?.created_at, transaction?.createdAt);
+  const type = String(transaction?.type || "").toLowerCase();
+  const amount = Number(transaction?.amount || 0);
+  const orderId = firstDefined(metadata.orderId, metadata.order_id, transaction?.reference_id);
   const provider = firstDefined(metadata.provider, metadata.paymentProvider, metadata.payment_provider, metadata.providerName);
   const paymentId = firstDefined(metadata.paymentId, metadata.payment_id, metadata.providerPaymentId, metadata.provider_payment_id);
   const providerOrderId = firstDefined(metadata.providerOrderId, metadata.provider_order_id);
-  const status = metadata.status || "Transaction Completed";
+  const status = transaction?.status || "completed";
 
   if (!id) {
     return <div className="min-h-screen p-6 text-lg font-semibold text-[#202337]">Invalid Transaction ID</div>;
@@ -100,7 +112,7 @@ const ViewTransaction = () => {
       <div className="mx-auto max-w-7xl">
         <PageHeader
           title={`Transaction #${transactionId}`}
-          subtitle={transaction?.title || metadata.userLabel || "Payment transaction detail"}
+          subtitle={transaction?.userLabel || transaction?.user?.email || transaction?.user_id || "Payment transaction detail"}
           breadcrumbs={[
             { label: "Home", to: "/app/home" },
             { label: "Transactions", to: "/app/transactions" },
@@ -126,11 +138,12 @@ const ViewTransaction = () => {
           <DetailPanel title="Transaction Detail" className="lg:col-span-2">
             <div className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
               <DetailRow label="Transaction ID" value={transactionId} />
-              <DetailRow label="User" value={metadata.userLabel || transaction?.title} />
+              <DetailRow label="User" value={transaction?.userLabel || transaction?.user?.email || transaction?.user_id} />
               <DetailRow label="Date" value={createdAt ? new Date(createdAt).toLocaleString() : "N/A"} />
               <DetailRow label="Type" value={display(type)} />
               <DetailRow label="Amount" value={money(amount)} />
-              <DetailRow label="Description" value={metadata.description} />
+              <DetailRow label="Reference Type" value={display(transaction?.reference_type)} />
+              <DetailRow label="Description" value={metadata.description || metadata.reason || metadata.method} />
             </div>
           </DetailPanel>
 
@@ -139,6 +152,7 @@ const ViewTransaction = () => {
             <DetailRow label="Order ID" value={orderId} />
             <DetailRow label="Payment ID" value={paymentId} />
             <DetailRow label="Provider Order ID" value={providerOrderId} />
+            <DetailRow label="Reference ID" value={transaction?.reference_id} />
             {orderId && (
               <button
                 type="button"

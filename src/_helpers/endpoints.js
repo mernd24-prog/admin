@@ -89,6 +89,7 @@ export const ENDPOINTS = {
   products: {
     list: byPanel("/admin/products", "/products"),
     listForPanel: byPanel("/admin/products", "/products/seller/me"),
+    prefill: byPanel("/admin/products/prefill", "/products/prefill"),
     search: "/products/search",
     sellerMine: "/products/seller/me",
     detail: byPanelFn(
@@ -107,11 +108,29 @@ export const ENDPOINTS = {
     ),
     approve: (productId) => `/admin/products/${productId}/approve`,
     reject: (productId) => `/admin/products/${productId}/reject`,
-    status: (productId) => `/admin/products/${productId}/status`,
-    bulkUpdate: "/admin/products/bulk/update",
-    inventory: (productId) => `/admin/products/${productId}/inventory`,
-    inventoryStats: "/admin/products/inventory/stats",
-    analyticsTop: "/admin/products/analytics/top",
+    status: byPanelFn(
+      (productId) => `/admin/products/${productId}/status`,
+      (productId) => `/products/${productId}/status`
+    ),
+    archive: byPanelFn(
+      (productId) => `/admin/products/${productId}/archive`,
+      (productId) => `/products/${productId}/archive`
+    ),
+    restore: byPanelFn(
+      (productId) => `/admin/products/${productId}/restore`,
+      (productId) => `/products/${productId}/restore`
+    ),
+    duplicate: byPanelFn(
+      (productId) => `/admin/products/${productId}/duplicate`,
+      (productId) => `/products/${productId}/duplicate`
+    ),
+    bulkUpdate: byPanel("/admin/products/bulk/update", "/products/bulk/update"),
+    inventory: byPanelFn(
+      (productId) => `/admin/products/${productId}/inventory`,
+      (productId) => `/products/${productId}/inventory`
+    ),
+    inventoryStats: byPanel("/admin/products/inventory/stats", "/products/inventory/stats"),
+    analyticsTop: byPanel("/admin/products/analytics/top", "/products/analytics/top"),
   },
   orders: {
     admin: "/admin/orders",
@@ -133,11 +152,19 @@ export const ENDPOINTS = {
   },
   payouts: {
     admin: "/admin/payouts",
+    summary: "/sellers/commissions/summary",
+    commissions: "/sellers/commissions",
+    sellerPayouts: "/sellers/commissions/payouts",
     myCommissions: "/sellers/commissions/my-commissions",
     myPayouts: "/sellers/commissions/my-payouts",
     calculate: (orderId) => `/sellers/commissions/calculate/${orderId}`,
     process: "/sellers/commissions/process-payouts",
+    complete: (payoutId) => `/sellers/commissions/payouts/${payoutId}/process`,
+    fail: (payoutId) => `/sellers/commissions/payouts/${payoutId}/fail`,
     settlements: "/sellers/commissions/settlements",
+  },
+  wallets: {
+    adminTransactions: "/wallets/admin/transactions",
   },
   referral: {
     influencers: "/admin/referral/influencers",

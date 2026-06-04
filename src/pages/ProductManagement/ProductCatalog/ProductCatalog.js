@@ -90,11 +90,11 @@ const getInitialFiltersForPath = (pathname = "") => {
   if (path.includes("draft-products")) {
     return { ...INITIAL_FILTERS, approvalStatus: { value: "Draft", label: "Draft" } };
   }
-  if (path.includes("pending-products")) {
-    return { ...INITIAL_FILTERS, approvalStatus: { value: "Pending", label: "Pending" } };
-  }
   if (path.includes("change-pending-products")) {
     return { ...INITIAL_FILTERS, approvalStatus: { value: "Change Pending", label: "Change Pending" } };
+  }
+  if (path.includes("pending-products")) {
+    return { ...INITIAL_FILTERS, approvalStatus: { value: "Pending", label: "Pending" } };
   }
   if (path.includes("rejected-products")) {
     return { ...INITIAL_FILTERS, approvalStatus: { value: "Rejected", label: "Rejected" } };
@@ -182,15 +182,15 @@ const ProductCatalog = () => {
     try {
       const response = isChangePendingFilter
         ? await dispatch(
-            getProductModerationQueue({
-              status: "change_pending",
-              page: pageNo,
-              size,
-              ...(filters?.category?.value
-                ? { category: filters.category.value }
-                : {}),
-            }),
-          )
+          getProductModerationQueue({
+            status: "change_pending",
+            page: pageNo,
+            size,
+            ...(filters?.category?.value
+              ? { category: filters.category.value }
+              : {}),
+          }),
+        )
         : await dispatch(getProducts(buildProductQuery(pageNo)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
@@ -216,16 +216,16 @@ const ProductCatalog = () => {
         const response = nextFilters?.approvalStatus?.value === "Change Pending"
           ? await dispatch(getProductModerationQueue({ status: "change_pending", page: 1, size }))
           : await dispatch(
-              getProducts({
-                page: 1,
-                size,
-                keyWord: nextFilters.search,
-                includeAllStatuses: true,
-                ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
-                  ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
-                  : {}),
-              }),
-            );
+            getProducts({
+              page: 1,
+              size,
+              keyWord: nextFilters.search,
+              includeAllStatuses: true,
+              ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
+                ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
+                : {}),
+            }),
+          );
         setApiRes(response?.payload?.data || { list: [], total: 0 });
       } catch (err) {
         toast.error("Failed to fetch products");
@@ -251,7 +251,7 @@ const ProductCatalog = () => {
     "Image",
     "Product",
     "SKU",
-    "Seller",
+    // "Seller",   Uncomment when Admin loged in needs to see seller info in product list
     "Category",
     "Brand",
     "Color",
@@ -338,7 +338,6 @@ const ProductCatalog = () => {
         toast.success(
           `Product ${apiPayload.isDisable ? "disabled" : "enabled"} successfully.`,
         );
-        fetchProductsList();
       } else {
         toast.info(response?.message || "Something went wrong");
       }
@@ -399,22 +398,22 @@ const ProductCatalog = () => {
     try {
       const response = reviewModal.revision
         ? await dispatch(
-            reviewProductRevision({
-              productId: product?._id,
-              revisionId: reviewModal.revision?._id || reviewModal.revision?.id,
-              status: decision,
-              rejectionReason: rejectionReason || null,
-              checklist,
-            }),
-          ).unwrap()
+          reviewProductRevision({
+            productId: product?._id,
+            revisionId: reviewModal.revision?._id || reviewModal.revision?.id,
+            status: decision,
+            rejectionReason: rejectionReason || null,
+            checklist,
+          }),
+        ).unwrap()
         : await dispatch(
-            approveDisapprove({
-              id: product?._id,
-              status: decision,
-              rejectionReason: rejectionReason || null,
-              checklist,
-            }),
-          ).unwrap();
+          approveDisapprove({
+            id: product?._id,
+            status: decision,
+            rejectionReason: rejectionReason || null,
+            checklist,
+          }),
+        ).unwrap();
       const labels = {
         active: "approved",
         inactive: "deactivated",
@@ -423,7 +422,7 @@ const ProductCatalog = () => {
       const subject = reviewModal.revision ? "Product revision" : "Product";
       toast.success(
         response?.message ||
-          `${subject} ${labels[decision] || "updated"} successfully.`,
+        `${subject} ${labels[decision] || "updated"} successfully.`,
       );
       fetchProductsList();
     } catch (error) {
@@ -462,15 +461,15 @@ const ProductCatalog = () => {
       setPageNo(1);
       const response = isChangePendingFilter
         ? await dispatch(
-            getProductModerationQueue({
-              status: "change_pending",
-              page: 1,
-              size,
-              ...(filters?.category?.value
-                ? { category: filters.category.value }
-                : {}),
-            }),
-          )
+          getProductModerationQueue({
+            status: "change_pending",
+            page: 1,
+            size,
+            ...(filters?.category?.value
+              ? { category: filters.category.value }
+              : {}),
+          }),
+        )
         : await dispatch(getProducts(buildProductQuery(1)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
@@ -552,7 +551,7 @@ const ProductCatalog = () => {
 
           <div className="relative flex items-center">
             <span
-              className="text-blue-500 hover:underline"
+              className="text-blue-500 hover:underline cursor-pointer "
               onClick={() =>
                 handleImageClick(
                   product?.images || product?.product_image_id?.images,
@@ -651,7 +650,7 @@ const ProductCatalog = () => {
     setBulkUploadData((prev) => ({ ...prev, file: file }));
   };
   const handleSubmitBulk = async () => {
-    if (!bulkUploadValidation()) return;
+    if (!bulkUploadValidation(userData)) return;
 
     try {
       setIsLoading(true);

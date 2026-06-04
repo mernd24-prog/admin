@@ -89,6 +89,9 @@ const Payments = React.lazy(
 const Returns = React.lazy(
   () => import("../../pages/OrdersManagement/Returns/Returns"),
 );
+const SellerFinance = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
+);
 const OrderStatus = React.lazy(
   () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
 );
@@ -575,6 +578,13 @@ function Layout() {
                     )}
                   />
                   <Route
+                    path="/seller-product-inventory"
+                    element={renderRoute(
+                      "/seller-product-inventory",
+                      <SellerProductInventories />,
+                    )}
+                  />
+                  <Route
                     path="/store"
                     element={renderRoute("/store", <Store />)}
                   />
@@ -607,6 +617,10 @@ function Layout() {
                   <Route
                     path="/payments"
                     element={renderRoute("/payments", <Payments />)}
+                  />
+                  <Route
+                    path="/seller-finance"
+                    element={renderRoute("/seller-finance", <SellerFinance />)}
                   />
                   <Route
                     path="/returns"

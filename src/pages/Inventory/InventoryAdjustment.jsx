@@ -4,6 +4,7 @@ import { PageHeader, FormSection } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 
@@ -19,7 +20,6 @@ const TYPES = [
 ];
 
 const InventoryAdjustment = () => {
-  const [step, setStep] = useState(1);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -35,7 +35,7 @@ const InventoryAdjustment = () => {
     if (!search.trim()) return;
     setSearching(true);
     try {
-      const res = await axiosProvider.get("/products", {
+      const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
         params: { search, limit: 10 },
       });
       setResults(res.data?.data?.products || []);
@@ -51,14 +51,13 @@ const InventoryAdjustment = () => {
       return toast.warn("Fill all required fields");
     setSubmitting(true);
     try {
-      await axiosProvider.patch(`/products/${selected._id}/inventory`, {
+      await axiosProvider.patch(ENDPOINTS.products.inventory(selected._id), {
         adjustmentType: adjustType,
         quantity: Number(qty),
         reason,
         note,
       });
       toast.success("Inventory adjusted successfully");
-      setStep(1);
       setSelected(null);
       setQty("");
       setReason("");

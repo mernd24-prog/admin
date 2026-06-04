@@ -1,5 +1,5 @@
 import 'react-quill/dist/quill.snow.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ import AddCategoryModal from './Modals/AddCategoryModal';
 // Redux Actions
 import { getAllCityList } from '../../../../Redux/citySlice';
 import { getAllStateList } from '../../../../Redux/stateSlice';
-import { create, getAllSellerList } from '../../../../Redux/StoreSlice';
+import { create } from '../../../../Redux/StoreSlice';
 import { createCategory, createHsn } from '../../../../Redux/productSlice';
 
 import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
@@ -85,17 +85,21 @@ export default function BasicDetailsTab({
   handleSelectChange,
   errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, userData
+  allCategories, API_CALL_OBJECT, hsnCodeList, countryList = [], sellerList = [], userData
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector(state => state);
   const warrantyUnits = useDropdownOptions('warranty-units');
 
-  const modifiedCountry = transformArray(getListPayload(selector?.country?.getAllCountryListData));
+  const modifiedCountry = countryList.length
+    ? countryList
+    : transformArray(getListPayload(selector?.country?.getAllCountryListData));
   const modifiedState = transformArray(getListPayload(selector?.state?.getAllStateListData));
   const modifiedCity = transformArray(getListPayload(selector?.city?.getAllCityListData));
-  const modifiedSellerList = transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
+  const modifiedSellerList = sellerList.length
+    ? sellerList
+    : transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
   const selectedCategoryOption = useMemo(() => {
     const currentCategory = String(formData.category_id || formData.categoryId || formData.category || formData.category_key || '');
     if (!currentCategory) return null;
@@ -138,11 +142,6 @@ export default function BasicDetailsTab({
       { value: currentColor, label: currentColor }
     );
   }, [formattedColorList, formData.color]);
-
-  useEffect(() => {
-    dispatch(getAllSellerList())
-  }, [dispatch])
-
 
   const convertTimeToMilliseconds = (timeStr) => {
     if (!timeStr || !timeStr.includes(':')) return 0;
@@ -417,14 +416,12 @@ export default function BasicDetailsTab({
     try {
       await dispatch(createHsn(basePayload)).unwrap()
       toast.success('HSN Code created successfully')
-      setIsHsnAddModal(false); setIsHsnFormValue(INITIAL_FORM_HSN)
+      setIsHsnAddModal(false);
+      setIsHsnFormValue(INITIAL_FORM_HSN);
+      setFormErrors({});
       fetchAllData([API_CALL_OBJECT["Hsn code list"]])
-
     } catch (error) {
       toast.error(error?.message || 'Failed to save HSN Code')
-    } finally {
-      setFormErrors({})
-      setIsHsnAddModal(false); setIsHsnFormValue(INITIAL_FORM_HSN)
     }
 
   }
@@ -659,7 +656,7 @@ export default function BasicDetailsTab({
               error={errors?.productFamilyCode}
             />
             <Input
-              labelName="Price"
+              labelName="Price (GST included)"
               name="price"
               type="number"
               value={formData.price}
@@ -670,7 +667,7 @@ export default function BasicDetailsTab({
               textareaClasses='text-sm'
             />
             <Input
-              labelName="MRP"
+              labelName="MRP (GST included)"
               name="mrp"
               type="number"
               value={formData.mrp}

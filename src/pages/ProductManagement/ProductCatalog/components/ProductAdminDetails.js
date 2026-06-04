@@ -218,6 +218,10 @@ const ProductAdminDetails = () => {
                 product.gstRate !== undefined ? `${product.gstRate}%` : null
               }
             />
+            <Row
+              label="GST Mode"
+              value={product.gstInclusive === false ? "Excluded" : "Included"}
+            />
             <Row label="HSN Code" value={product.hsnCode} />
             <Row label="Revision Status" value={product.revisionStatus} />
             <Row label="Version" value={product.version} />
