@@ -53,7 +53,7 @@ const toCategoryOptions = (categories = []) => {
       const name = category?.name || category?.title || category?.categoryKey;
       const label = prefix ? `${prefix} > ${name}` : name;
       options.push({ value: key, label, category });
-      const children = category?.subcategories || category?.subCategories || [];
+      const children = category?.children || category?.subcategories || category?.subCategories || [];
       if (Array.isArray(children) && children.length) {
         walkNested(children, label);
       }
@@ -61,7 +61,7 @@ const toCategoryOptions = (categories = []) => {
   };
 
   const hasNested = categories.some(
-    (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+    (item) => Array.isArray(item?.children) || Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
   );
   if (hasNested) {
     walkNested(categories);
@@ -285,7 +285,7 @@ const CategoryAttributes = () => {
   const [optionValues, setOptionValues] = useState({});
 
   useEffect(() => {
-    dispatch(getList({ limit: 100 }));
+    dispatch(getList({ tree: true, limit: 100 }));
     dispatch(getPlatformOptions({ limit: 100, active: true }))
       .unwrap()
       .then((res) => {
@@ -414,7 +414,7 @@ const CategoryAttributes = () => {
       ).unwrap();
       toast.success('Category attributes saved');
       setAttrCounts((prev) => ({ ...prev, [selectedCategory.value]: payload.length }));
-      dispatch(getList({ limit: 100 }));
+      dispatch(getList({ tree: true, limit: 5000 }));
     } catch (error) {
       toast.error(error?.message || 'Failed to save category attributes');
     } finally {

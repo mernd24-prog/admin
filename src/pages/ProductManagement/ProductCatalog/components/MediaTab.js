@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FaChevronDown, FaChevronUp, FaInfoCircle, FaImage, FaFileAlt, FaStar } from "react-icons/fa";
 import MultiImageUpload from '../../../../components/Atoms/ImageGallery/MultiImageUpload';
 import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
-import { uploadFile, validateFiles } from "../../../../_helpers/globalFunctions";
+import { uploadDocumentFile, validateDocumentFiles } from "../../../../_helpers/globalFunctions";
 import { toast } from "sonner";
 import Loader from "../../../../components/Loader/Loader";
 
@@ -13,11 +13,11 @@ export default function MediaTab({ setFormData, formData, images, setImages, err
 
   const handleCatalogUpload = async (file) => {
     if (!file) return;
-    const validFiles = validateFiles([file]);
+    const validFiles = validateDocumentFiles([file]);
     if (validFiles.length === 0) return;
     try {
       setIsLoading(true);
-      const catalogUrl = await uploadFile(validFiles[0], 'PRODUCTS');
+      const catalogUrl = await uploadDocumentFile(validFiles[0], 'PRODUCTS');
       setFormData((prev) => ({ ...prev, catalogsUrls: catalogUrl }));
     } catch (err) {
       toast.error(err || "Catalog upload failed. Please try again.");
@@ -25,6 +25,8 @@ export default function MediaTab({ setFormData, formData, images, setImages, err
       setIsLoading(false);
     }
   };
+  const catalogUrl = formData?.catalogsUrls;
+  const isCatalogImage = /\.(png|jpe?g|webp)(\?.*)?$/i.test(String(catalogUrl || ""));
 
   return (
     <div className="w-full space-y-4">
@@ -130,9 +132,20 @@ export default function MediaTab({ setFormData, formData, images, setImages, err
               <ImageUpload
                 label="Catalog / Specification Sheet"
                 onChange={handleCatalogUpload}
-                file={formData?.catalogsUrls}
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                file={isCatalogImage ? catalogUrl : ""}
                 errorMessage={error?.catalogsUrls}
               />
+              {catalogUrl && !isCatalogImage && (
+                <a
+                  href={catalogUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-xs font-medium text-[var(--admin-blue)] hover:underline"
+                >
+                  View uploaded document
+                </a>
+              )}
               {!formData?.catalogsUrls && (
                 <p className="mt-2 text-xs text-[var(--admin-muted)] flex items-center gap-1.5">
                   <FaInfoCircle size={11} />

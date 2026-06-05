@@ -167,9 +167,13 @@ export default function ProductManagementUI() {
           const productData = res?.data;
           const resolvedCategoryId = productData?.categoryId || productData?.category_id || productData?.categoryKey || productData?.category || '';
           const resolvedCategoryKey = productData?.categoryKey || productData?.category_key || productData?.category || resolvedCategoryId;
+          const catalogDocumentUrl = Array.isArray(productData?.documents)
+            ? productData.documents[0] || ''
+            : productData?.catalogsUrls || '';
           setFormData({
             ...INITIALS_DATA,
             ...productData,
+            catalogsUrls: catalogDocumentUrl,
             name: productData?.title || productData?.name || '',
             category_id: resolvedCategoryId,
             categoryId: resolvedCategoryId,
@@ -855,9 +859,9 @@ export default function ProductManagementUI() {
   const productType = formData?.productType || 'simple';
 
   const handleSaveSubmit = useCallback(async () => {
-    const catalogsUrlsArray = typeof formData.catalogsUrls === 'string'
-      ? [formData.catalogsUrls]
-      : formData.catalogsUrls;
+    const catalogsUrlsArray = (Array.isArray(formData.catalogsUrls)
+      ? formData.catalogsUrls
+      : [formData.catalogsUrls]).filter(Boolean);
 
     const updatedFormData = { ...formData };
 
@@ -933,7 +937,8 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
-      images: images?.length ? images : catalogsUrlsArray,
+      images: Array.isArray(images) ? images : [],
+      documents: catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
       metadata: {
         featured: Boolean(updatedFormData.markAsFeatured),
@@ -957,8 +962,10 @@ export default function ProductManagementUI() {
       ...(Array.isArray(updatedFormData.trendingProducts) ? { trendingProducts: updatedFormData.trendingProducts } : {}),
       ...(Array.isArray(updatedFormData.bestSellerProducts) ? { bestSellerProducts: updatedFormData.bestSellerProducts } : {}),
       ...(Array.isArray(updatedFormData.collectionIds) ? { collectionIds: updatedFormData.collectionIds } : {}),
-      options: productType === 'variable' ? variableOptionAxes : formattedOptions,
-      ...(variableOptionAxes.length ? { variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name) } : {}),
+      ...(productType === 'variable' && variableOptionAxes.length ? {
+        options: variableOptionAxes,
+        variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name),
+      } : {}),
       ...(variantsData.length ? {
         variants: variantsData,
         hasVariants: true,

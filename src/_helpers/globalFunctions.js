@@ -156,6 +156,33 @@ export const uploadFileMulti = async (files, moduleName = 'DEFAULT') => {
   }
 };
 
+export const uploadDocumentFile = async (file, moduleName = 'DEFAULT') => {
+  if (!file) throw new Error('No file provided');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('module', moduleName);
+  formData.append('type', 'catalog-document');
+
+  try {
+    const response = await apiRequestImage('POST', '/file-uploader/upload-document', formData);
+    const payload = response?.data || response || {};
+    const documentURL =
+      payload?.documentURL ||
+      payload?.url ||
+      payload?.document?.documentURL ||
+      payload?.document?.url;
+
+    if (!documentURL) {
+      throw new Error("Upload response did not include a document URL");
+    }
+
+    return documentURL;
+  } catch (error) {
+    throw error?.message || 'Upload failed';
+  }
+};
+
 export const uploadCsvFile = async (files) => {
   if (!files) throw new Error('No file provided');
 
@@ -211,6 +238,26 @@ export const validateFiles = (files) => {
     }
     if (f.size > maxSize) {
       toast.error(`${f.name} is too large. Maximum size is 5MB.`);
+      continue;
+    }
+    validFiles.push(f);
+  }
+
+  return validFiles;
+};
+
+export const validateDocumentFiles = (files) => {
+  const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  const maxSize = 10 * 1024 * 1024;
+  const validFiles = [];
+
+  for (const f of files) {
+    if (!allowedTypes.includes(f.type)) {
+      toast.error(`${f.name} is not a supported document. Use PDF, PNG, JPG, or WEBP.`);
+      continue;
+    }
+    if (f.size > maxSize) {
+      toast.error(`${f.name} is too large. Maximum size is 10MB.`);
       continue;
     }
     validFiles.push(f);

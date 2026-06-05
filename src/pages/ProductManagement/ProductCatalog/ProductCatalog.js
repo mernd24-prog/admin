@@ -19,6 +19,7 @@ import {
   getProductModerationQueue,
   getProductRevisions,
   getProducts,
+  restoreProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -69,6 +70,10 @@ const ACTIVATION_STATUS_OPTIONS = [
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
 ];
+const BULK_IMPORT_AVAILABLE = false;
+const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
+const STATUS_TOGGLEABLE = new Set(["active", "inactive"]);
+const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
 const refToLabel = (value) => {
   if (!value) return "N/A";
@@ -134,6 +139,7 @@ const ProductCatalog = () => {
     product: null,
     revision: null,
   });
+  const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
 
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(
@@ -325,6 +331,10 @@ const ProductCatalog = () => {
     }
   };
   const handleToggle = async (data) => {
+    if (!canToggleProduct(data)) {
+      toast.error("This product status cannot be toggled from here.");
+      return;
+    }
     const apiPayload = {
       _id: [data?._id],
       isDisable: data?.isDisable ? false : true,
@@ -353,6 +363,13 @@ const ProductCatalog = () => {
     product?.revisionStatus === "change_pending" ||
     Boolean(product?.pendingRevisionId) ||
     Boolean(product?.pendingRevision);
+  const canReviewProduct = (product) =>
+    REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product);
+  const canToggleProduct = (product) => {
+    if (!STATUS_TOGGLEABLE.has(product?.status)) return false;
+    if (isSellerPanelUser && product?.status === "inactive") return false;
+    return true;
+  };
 
   const extractRevisionList = (response) => {
     const data = response?.data || response?.payload?.data || {};
@@ -455,6 +472,26 @@ const ProductCatalog = () => {
     }
   }
 
+  const handleRestoreProduct = async (product) => {
+    try {
+      setLoading(true);
+      const response = await dispatch(
+        restoreProduct({
+          _id: [product?._id],
+          status: "draft",
+          visibility: "private",
+          reason: "product_restored_from_admin",
+        }),
+      ).unwrap();
+      toast.success(response?.message || "Product restored as draft.");
+      fetchProductsList();
+    } catch (error) {
+      toast.error(error?.message || error || "Restore failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearchApply = async () => {
     setLoading(true);
     try {
@@ -507,6 +544,10 @@ const ProductCatalog = () => {
     setPageNo(newPageNo);
   };
   const handleBulkAction = async (action) => {
+    if (isSellerPanelUser && action === "Active") {
+      toast.error("Seller products must be approved by admin before activation.");
+      return;
+    }
     if (action === "Active" || action === "Inactive") {
       let apiPayload = {
         _id: selectedRow,
@@ -565,7 +606,7 @@ const ProductCatalog = () => {
             {product?.title || product?.name || "N/A"}
           </span>,
           <span>{product?.sku || "N/A"}</span>,
-          <span>{refToLabel(product?.sellerName || product?.sellerId)}</span>,
+          // <span>{refToLabel(product?.sellerName || product?.sellerId)}</span>,
           <span>
             {refToLabel(
               product?.categoryName || product?.category || product?.categoryId,
@@ -593,12 +634,16 @@ const ProductCatalog = () => {
           <span key={`date-${product._id}`}>
             {formatDate(product.createdAt)}
           </span>,
-          <ToggleButton
-            key={`toggle-${product._id}`}
-            isToggle={!product?.isDisable}
-            handleClick={() => handleToggle(product)}
-            requiredModule="products"
-          />,
+          canToggleProduct(product) ? (
+            <ToggleButton
+              key={`toggle-${product._id}`}
+              isToggle={!product?.isDisable}
+              handleClick={() => handleToggle(product)}
+              requiredModule="products"
+            />
+          ) : (
+            <span className="text-xs text-gray-400">-</span>
+          ),
           <span>
             <div className="flex flex-wrap gap-2">
               <ActionButtons
@@ -609,22 +654,35 @@ const ProductCatalog = () => {
                 }
                 showLinkButton={false}
                 onDelete={() => handleDelete(product)}
+                showDeleteButton={product?.status !== "archived"}
                 requiredModule="products"
               />
-              <PermissionGuard module="products" action="approve" hide>
-                <button
-                  className="text-xs px-2 py-1 rounded bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
-                  onClick={() => handleApproveToggle(product)}
-                >
-                  {hasPendingRevision(product) ? "Review Revision" : "Review"}
-                </button>
-              </PermissionGuard>
+              {product?.status === "archived" && (
+                <PermissionGuard module="products" action="restore" hide>
+                  <button
+                    className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                    onClick={() => handleRestoreProduct(product)}
+                  >
+                    Restore
+                  </button>
+                </PermissionGuard>
+              )}
+              {canReviewProduct(product) && (
+                <PermissionGuard module="products" action="approve" hide>
+                  <button
+                    className="text-xs px-2 py-1 rounded bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+                    onClick={() => handleApproveToggle(product)}
+                  >
+                    {hasPendingRevision(product) ? "Review Revision" : "Review"}
+                  </button>
+                </PermissionGuard>
+              )}
             </div>
           </span>,
         ];
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiRes.list, selectedRow, handleImageClick, navigate],
+    [apiRes.list, selectedRow, handleImageClick, navigate, isSellerPanelUser],
   );
 
   const handleAddBulkUpload = () => {
@@ -681,20 +739,24 @@ const ProductCatalog = () => {
       <div className="flex md:flex-row flex-col items-center justify-between mb-4">
         <h1 className="text-xl font-bold ">Product Catalog</h1>
         <div className="flex justify-end gap-2">
-          <Button onClick={() => navigate(`/app/product-catalog/bulk-history`)}>
-            Bulk History
-          </Button>
+          {BULK_IMPORT_AVAILABLE && (
+            <Button onClick={() => navigate(`/app/product-catalog/bulk-history`)}>
+              Bulk History
+            </Button>
+          )}
           <ExportButton
             data={apiRes?.list || []}
             filename="products"
             requiredModule="products"
           />
-          <AddButton
-            onClick={handleAddBulkUpload}
-            labelName={`Add in bulk`}
-            requiredModule="products"
-            requiredAction="import"
-          />
+          {BULK_IMPORT_AVAILABLE && (
+            <AddButton
+              onClick={handleAddBulkUpload}
+              labelName={`Add in bulk`}
+              requiredModule="products"
+              requiredAction="import"
+            />
+          )}
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
@@ -791,44 +853,46 @@ const ProductCatalog = () => {
         confirmDelete={handleDeleteSubmit}
       />
 
-      <DefaultModal
-        isOpen={isBulkUpload}
-        onClose={() => setIsBulkUpload(false)}
-        title={`Add Bulk Product`}
-        onSubmit={handleSubmitBulk}
-      >
-        <div className="space-y-8 p-2">
-          {userData?.roleId !== 9 && (
-            <>
-              {userData?.roleId !== 3 && (
+      {BULK_IMPORT_AVAILABLE && (
+        <DefaultModal
+          isOpen={isBulkUpload}
+          onClose={() => setIsBulkUpload(false)}
+          title={`Add Bulk Product`}
+          onSubmit={handleSubmitBulk}
+        >
+          <div className="space-y-8 p-2">
+            {userData?.roleId !== 9 && (
+              <>
+                {userData?.roleId !== 3 && (
+                  <FilterSelect
+                    options={sellerListData || []}
+                    onChange={(data) => handleSelectChange(data, "SELLER")}
+                    value={
+                      sellerListData.find(
+                        (opt) => opt.value === bulkUploadData?.seller_id,
+                      ) || null
+                    }
+                    label="Seller"
+                  />
+                )}
+
                 <FilterSelect
-                  options={sellerListData || []}
-                  onChange={(data) => handleSelectChange(data, "SELLER")}
+                  options={storeList || []}
                   value={
-                    sellerListData.find(
-                      (opt) => opt.value === bulkUploadData?.seller_id,
+                    storeList.find(
+                      (opt) => opt.value === bulkUploadData?.store_id,
                     ) || null
                   }
-                  label="Seller"
+                  onChange={(data) => handleSelectChange(data, "STORE")}
+                  label="Store"
                 />
-              )}
+              </>
+            )}
 
-              <FilterSelect
-                options={storeList || []}
-                value={
-                  storeList.find(
-                    (opt) => opt.value === bulkUploadData?.store_id,
-                  ) || null
-                }
-                onChange={(data) => handleSelectChange(data, "STORE")}
-                label="Store"
-              />
-            </>
-          )}
-
-          <UploadFile onFileSelect={handleFileUpload} />
-        </div>
-      </DefaultModal>
+            <UploadFile onFileSelect={handleFileUpload} />
+          </div>
+        </DefaultModal>
+      )}
 
       <ImageGallery
         images={selectedImages}

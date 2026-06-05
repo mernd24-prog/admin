@@ -109,10 +109,21 @@ const ProductCategories = () => {
 
   // Transform API data structure
   const transformData = useCallback((apiData) => {
-    const source = Array.isArray(apiData)
+    const raw = Array.isArray(apiData)
       ? apiData
       : apiData?.list || apiData?.items || [];
-    if (!Array.isArray(source) || source.length === 0) return [];
+    if (!Array.isArray(raw) || raw.length === 0) return [];
+
+    // Flatten server-side tree (children array) into a flat list so parentKey-based rebuilding works
+    const flattenTree = (nodes = [], out = []) => {
+      nodes.forEach((node) => {
+        out.push(node);
+        const nested = node.children || node.subCategories || [];
+        if (Array.isArray(nested) && nested.length) flattenTree(nested, out);
+      });
+      return out;
+    };
+    const source = flattenTree(raw);
 
     const indexed = source.map((category) => ({
       _id: category?.categoryKey || category?._id,
@@ -172,7 +183,7 @@ const ProductCategories = () => {
 
   // Fetch categories on initial load and refresh
   useEffect(() => {
-    dispatch(getList());
+    dispatch(getList({ tree: true, limit: 5000 }));
   }, [dispatch, isRefresh]);
 
   // Build select options for category dropdown

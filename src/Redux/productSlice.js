@@ -209,7 +209,8 @@ const initialState = {
 export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.page ? { page: Number(params.page) } : {}),
-        limit: Number(params.limit || params.size || 100),
+        limit: Number(params.limit || params.size || 5000),
+        ...(params.tree !== undefined ? { tree: params.tree } : {}),
         ...(params.parentKey ? { parentKey: params.parentKey } : {}),
         ...(params.active !== undefined ? { active: params.active } : {}),
         ...(params.categoryKey ? { categoryKey: params.categoryKey } : {}),
