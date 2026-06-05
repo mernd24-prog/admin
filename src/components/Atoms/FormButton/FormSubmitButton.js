@@ -13,7 +13,7 @@ const FormSubmitButton = ({
         type={type}
         onClick={onClick}
         disabled={disabled}
-        className={`admin-btn-primary h-[46px] w-full font-inter ${className}`}
+        className={`admin-btn-primary  h-[46px] w-full font-inter ${className}`}
       >
         {buttonLabel}
       </button>

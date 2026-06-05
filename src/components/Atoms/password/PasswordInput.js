@@ -1,29 +1,28 @@
-import React, { useState } from 'react'
-import { LuAsterisk } from 'react-icons/lu'
-import { FaEyeSlash } from 'react-icons/fa'
-import { FiEye } from 'react-icons/fi';
-
+import React, { useState } from "react";
+import { LuAsterisk } from "react-icons/lu";
+import { FaEyeSlash } from "react-icons/fa";
+import { FiEye } from "react-icons/fi";
 
 const PasswordInput = React.memo(
   ({
-    id = 'default-id',
-    name = 'default-name',
-    placeholder = 'Enter password',
-    label = '',
-    inputClassName = '',
-    iconClassName = '',
-    containerClassName = '',
-    labelClassName = '',
-    autoComplete = 'off',
-    errorMessage = '',
+    id = "default-id",
+    name = "default-name",
+    placeholder = "Enter password",
+    label = "",
+    inputClassName = "",
+    iconClassName = "",
+    containerClassName = "",
+    labelClassName = "",
+    autoComplete = "off",
+    errorMessage = "",
     required = false,
-    value = '',
+    value = "",
     ...rest
   }) => {
-    const [type, setType] = useState('password')
+    const [type, setType] = useState("password");
     const clickEyeButton = () => {
-      setType(type === 'password' ? 'text' : 'password')
-    }
+      setType(type === "password" ? "text" : "password");
+    };
 
     return (
       <div className={containerClassName}>
@@ -34,11 +33,11 @@ const PasswordInput = React.memo(
           >
             {label}
             {required && (
-              <LuAsterisk className='mt-[2px] text-[#B42318]' size={10} />
+              <LuAsterisk className="mt-[2px] text-[#B42318]" size={10} />
             )}
           </label>
         )}
-        <div className='relative'>
+        <div className="relative">
           <input
             id={id}
             name={name}
@@ -48,32 +47,33 @@ const PasswordInput = React.memo(
             required={required}
             className={`admin-input h-[40px] pr-10
               ${inputClassName}
-              ${errorMessage ? '!border-[#fe3c6a]/50' : ''}
+              
             `}
             placeholder={placeholder}
             {...rest}
           />
-          {type === 'password' ? (
+          {type === "password" ? (
             <FiEye
               size={14}
-              className={`absolute right-[14px] top-1/2 -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
+              className={`absolute right-[14px] top-1/2    -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
               onClick={clickEyeButton}
             />
           ) : (
             <FaEyeSlash
               size={14}
-
-              className={`absolute right-[14px] top-1/2 -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
+              className={`absolute right-[14px] top-1/2  -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
               onClick={clickEyeButton}
             />
           )}
         </div>
         {errorMessage && (
-          <div className='mt-1 text-[11px] leading-[15px] text-[#8B0A1A]'>{errorMessage}</div>
+          <div className="mt-1 text-[11px] leading-[15px] text-red-700">
+            {errorMessage}
+          </div>
         )}
       </div>
-    )
-  }
-)
+    );
+  },
+);
 
-export default PasswordInput
+export default PasswordInput;

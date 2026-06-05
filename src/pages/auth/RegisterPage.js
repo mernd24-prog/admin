@@ -5,10 +5,7 @@ import Loader from "../../components/Loader/Loader";
 import AuthProgressSteps from "../../components/AuthVerification/AuthProgressSteps";
 import { AUTH_FORM_TYPES } from "../../context/AuthLayoutContext";
 import AuthTermsCheckbox from "./components/AuthTermsCheckbox";
-import {
-  AUTH_INPUT_CLASS_NAME,
-  AUTH_LABEL_CLASS_NAME,
-} from "./authFormStyles";
+import { AUTH_INPUT_CLASS_NAME, AUTH_LABEL_CLASS_NAME } from "./authFormStyles";
 import { useAuthFlow } from "./useAuthFlow";
 import { useAuthPageMeta } from "./useAuthPageMeta";
 
@@ -40,17 +37,17 @@ const RegisterPage = () => {
           className="mx-auto min-h-[440px] w-full rounded-[14px] border border-[#dedede] bg-[#f7f5f2] px-5 py-10 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:px-10 md:min-h-[480px] md:px-[64px] md:py-[70px] xl:min-h-[400px]"
         >
           <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
-           <EmailInput
-           id="firstName"
-           name="firstName"
-           label="First Name"
-           value={auth.formFields.firstName}
-           placeholder="e.g. John"
-           onChange={auth.handleInputChange}
-           errorMessage={auth.formErrors.firstName}
-           inputClassName={AUTH_INPUT_CLASS_NAME}
-           labelClassName={AUTH_LABEL_CLASS_NAME}
-           />
+            <EmailInput
+              id="firstName"
+              name="firstName"
+              label="First Name"
+              value={auth.formFields.firstName}
+              placeholder="e.g. John"
+              onChange={auth.handleInputChange}
+              errorMessage={auth.formErrors.firstName}
+              inputClassName={AUTH_INPUT_CLASS_NAME}
+              labelClassName={AUTH_LABEL_CLASS_NAME}
+            />
             <EmailInput
               id="lastName"
               name="lastName"
@@ -124,7 +121,7 @@ const RegisterPage = () => {
           </div>
 
           {auth.loginError && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-700 md:col-span-2">
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-700  md:col-span-2">
               {auth.loginError}
             </div>
           )}

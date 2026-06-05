@@ -32,11 +32,10 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
             <img
               src={authBackgroundImg}
               alt="Background"
-              className="absolute inset-x-0 -top-[14%] z-0 h-[84%] w-full object-cover object-top"
+              className="  z-0 h-full w-full object-cover "
             />
-            <div className="absolute inset-x-0  bottom-[20%] z-10 h-[60%] xl:h-[48%] bg-gradient-to-b from-transparent via-white/90 to-white" />
 
-            <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[35rem] flex-col items-center text-center  bottom-4  xl:bottom-[6rem]">
+            <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[45rem]  flex-col items-center text-center  bottom-4  xl:bottom-[6rem]">
               <div className="h-12 w-12 sm:h-14 sm:w-14">
                 <img
                   src={activeUser.profileImg}
@@ -44,7 +43,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                   className="w-full h-full rounded-full object-cover border-2 border-white"
                 />
               </div>
-              <h4 className="mt-2 max-w-full text-blue truncate font-inter text-lg font-bold sm:text-xl">
+              <h4 className="mt-2 max-w-full text-[#1B1D60] truncate font-inter text-lg font-bold sm:text-xl">
                 {activeUser.name}
               </h4>
               <div className="mt-2 flex flex-row justify-center   md:mt-0 gap-1">
@@ -52,12 +51,12 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                   (_, index) => (
                     <IoStarSharp
                       key={`star-${index}`}
-                      className="h-6 w-6  text-primary "
+                      className="h-6 w-6 text-[#FFBB00]  fill-current stroke-current"
                     />
                   ),
                 )}
               </div>
-              <p className="mt-2 max-w-sm px-3 py-2 text-center font-inter text-xs leading-relaxed text-black sm:px-4 md:text-sm xl:mt-5 xl:max-w-lg xl:text-base">
+              <p className="mt-2 w-full px-3 py-2 text-center font-inter text-xs leading-relaxed text-black sm:px-4 md:text-sm xl:mt-5  xl:text-base">
                 "{activeUser.description}"
               </p>
 
@@ -69,28 +68,6 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                   alt="rating"
                   className="mx-auto h-auto max-w-[150px] sm:max-w-none"
                 />
-              </div>
-
-              {/* bottom multiple users */}
-              <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:mt-6 xl:mt-4 xl:flex-row xl:gap-3">
-                <div className="flex flex-row items-center justify-center">
-                  {userData.map((ele, index) => (
-                    <div
-                      key={`${ele.name}-${index}`}
-                      className={index === 0 ? "" : "-ml-3"}
-                    >
-                      <img
-                        src={ele.profileImg}
-                        alt={ele.name}
-                        className="h-8 w-8 rounded-full object-cover xl:h-10 xl:w-10"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className=" text-sm  sm:text-base">
-                  Supporting over <span className="font-bold">3,000,000</span>{" "}
-                  users worldwide
-                </p>
               </div>
             </div>
           </div>

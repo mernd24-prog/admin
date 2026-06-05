@@ -96,7 +96,8 @@ const SellerStatusScreen = ({
           We're Reviewing Your Account
         </h1>
         <p className="mt-3 max-w-3xl font-inter text-[14px] font-medium leading-[22px] text-[#182D50B2]">
-          Your application is currently under review. This usually takes 24–48 hours.
+          Your application is currently under review. This usually takes 24–48
+          hours.
         </p>
       </div>
       <div className="min-w-[185px]">
@@ -127,7 +128,7 @@ const SellerStatusScreen = ({
 
     return (
       <div className={`w-full ${className}`}>
-        {renderProgressHeader()}
+        {/* {renderProgressHeader()} */}
 
         <div
           className={`flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 ${contentClassName}`}
@@ -165,38 +166,38 @@ const SellerStatusScreen = ({
         {renderProgressHeader()}
 
         <div className="flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12">
-        <div
-          className={`flex w-full max-w-[760px] flex-col items-center justify-center text-center ${contentClassName}`}
-        >
-          <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#1A1A68] text-white">
-            <Hourglass size={42} strokeWidth={2.4} />
-          </span>
-
-          <h1 className="mt-10 max-w-[760px] font-inter text-[26px] font-extrabold leading-[34px] text-[#1A1A68] sm:text-[32px] sm:leading-[40px]">
-            {content.title}
-            {content.subtitleTitle && (
-              <>
-                <br />
-                {content.subtitleTitle}
-              </>
-            )}
-          </h1>
-
-          {finalDescription && (
-            <p className="mt-7 max-w-[720px] font-inter text-[18px] font-medium leading-[28px] text-[#182D50B2] sm:text-[22px] sm:leading-[32px]">
-              {finalDescription}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={onButtonClick}
-            disabled={disabled}
-            className="mt-12 flex h-[48px] w-full max-w-[320px] items-center justify-center rounded-[8px] bg-[#DBA328] px-6 font-inter text-[13px] font-bold text-white shadow-[0_8px_16px_rgba(219,151,26,0.22)] transition hover:bg-[#bd861c] disabled:cursor-not-allowed disabled:opacity-70"
+          <div
+            className={`flex w-full max-w-[760px] flex-col items-center justify-center text-center ${contentClassName}`}
           >
-            {finalButtonLabel}
-          </button>
-        </div>
+            <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#1A1A68] text-white">
+              <Hourglass size={42} strokeWidth={2.4} />
+            </span>
+
+            <h1 className="mt-10 max-w-[760px] font-inter text-[26px] font-extrabold leading-[34px] text-[#1A1A68] sm:text-[32px] sm:leading-[40px]">
+              {content.title}
+              {content.subtitleTitle && (
+                <>
+                  <br />
+                  {content.subtitleTitle}
+                </>
+              )}
+            </h1>
+
+            {finalDescription && (
+              <p className="mt-7 max-w-[720px] font-inter text-[18px] font-medium leading-[28px] text-[#182D50B2] sm:text-[22px] sm:leading-[32px]">
+                {finalDescription}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={onButtonClick}
+              disabled={disabled}
+              className="mt-12 flex h-[48px] w-full max-w-[320px] items-center justify-center rounded-[8px] bg-[#DBA328] px-6 font-inter text-[13px] font-bold text-white shadow-[0_8px_16px_rgba(219,151,26,0.22)] transition hover:bg-[#bd861c] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {finalButtonLabel}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -204,10 +205,8 @@ const SellerStatusScreen = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {renderProgressHeader()}
-      <div
-        className="flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 sm:px-10"
-      >
+      {/* {renderProgressHeader()} */}
+      <div className="flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 sm:px-10">
         <div
           className={`flex w-full max-w-[760px] flex-col items-center justify-center text-center ${contentClassName}`}
         >

@@ -16,7 +16,7 @@ const AUTH_LAYOUT_CONFIG = {
     sellerTitle: "Welcome Back, Seller",
     adminSubtitle: "Login to manage platform operations",
     sellerSubtitle: "Login to manage onboarding, products, and orders",
-    backgroundImg: "/Img/auth-img/backgroundImg.png",
+    backgroundImg: "/Img/auth-img/login.png",
   },
   [AUTH_FORM_TYPES.FORGOT_PASSWORD]: {
     backgroundImg: "/Img/auth-img/forgotPasswordBg.png",
