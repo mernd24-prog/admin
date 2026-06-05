@@ -1,4 +1,10 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
@@ -53,8 +59,7 @@ const UsersTransactions = React.lazy(
     import("../../pages/UserManagement/UsersTransactions/UsersTransactions"),
 );
 const ViewTransaction = React.lazy(
-  () =>
-    import("../../pages/UserManagement/UsersTransactions/ViewTransaction"),
+  () => import("../../pages/UserManagement/UsersTransactions/ViewTransaction"),
 );
 
 const ProductCatalog = React.lazy(
@@ -298,7 +303,8 @@ const RbacAuditLog = React.lazy(
   () => import("../../pages/UserManagement/RbacAuditLog/RbacAuditLog"),
 );
 const PermissionTemplates = React.lazy(
-  () => import("../../pages/UserManagement/PermissionTemplates/PermissionTemplates"),
+  () =>
+    import("../../pages/UserManagement/PermissionTemplates/PermissionTemplates"),
 );
 
 const getStoredSidebarState = () => {
@@ -475,7 +481,7 @@ function Layout() {
   }, [isExpanded, navbarOpen]);
 
   return (
-    <div className="admin-shell relative flex h-screen overflow-hidden bg-[var(--admin-shell)]">
+    <div className="admin-shell relative flex h-screen overflow-hidden  bg-[var(--admin-shell)]">
       <div className={`z-50`}>
         <Sidebar
           navbarOpen={navbarOpen}
@@ -522,7 +528,10 @@ function Layout() {
                   />
                   <Route
                     path="/admin-users/view/:id"
-                    element={renderRoute("/admin-users", <UserPermissions setModuleName={setModuleName} />)}
+                    element={renderRoute(
+                      "/admin-users",
+                      <UserPermissions setModuleName={setModuleName} />,
+                    )}
                   />
                   <Route
                     path="/seller-management"
@@ -553,10 +562,7 @@ function Layout() {
                   />
                   <Route
                     path="/transactions/view/:id"
-                    element={renderRoute(
-                      "/transactions",
-                      <ViewTransaction />,
-                    )}
+                    element={renderRoute("/transactions", <ViewTransaction />)}
                   />
 
                   <Route
@@ -909,7 +915,10 @@ function Layout() {
                   />
                   <Route
                     path="/seller-bank-detail/:id"
-                    element={renderRoute("/seller-bank-detail", <UserDetails />)}
+                    element={renderRoute(
+                      "/seller-bank-detail",
+                      <UserDetails />,
+                    )}
                   />
 
                   <Route
@@ -1078,7 +1087,10 @@ function Layout() {
                   />
                   <Route
                     path="/permission-templates"
-                    element={renderRoute("/permission-templates", <PermissionTemplates />)}
+                    element={renderRoute(
+                      "/permission-templates",
+                      <PermissionTemplates />,
+                    )}
                   />
 
                   {/* ── Marketing — new routes ──────────────────────────────── */}

@@ -38,7 +38,7 @@ const FormLayout = ({
       className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}
     >
       <div
-        className={`relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
+        className={` relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
       >
         {showLogo && (
           <BrandLogo
@@ -65,14 +65,14 @@ const FormLayout = ({
         </div>
 
         <div
-          className={`flex w-full max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
+          className={`flex w-full  max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
         >
-          <form onSubmit={onSubmit} className={`space-y-0 ${formClassName}`}>
+          <form onSubmit={onSubmit} className={` space-y-0 ${formClassName}`}>
             <div className={childrenClassName}>{children}</div>
             {buttonText && (
               <FormSubmitButton
                 buttonLabel={buttonText}
-                className="h-[38px] w-full rounded-[7px] bg-[#1A1A2E] text-[11px] font-semibold text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#12151E] active:scale-[0.99]"
+                className="h-[38px] d w-full rounded-[7px] bg-[#1A1A2E] text-[11px] font-semibold text-white shadow-[0_8px_16px_rgba(8,47,145,0.28)] transition hover:bg-[#12151E] active:scale-[0.99]"
               />
             )}
           </form>

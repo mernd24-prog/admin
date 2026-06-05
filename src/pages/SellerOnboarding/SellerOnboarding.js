@@ -15,7 +15,9 @@ import { getSellerStatusRoute } from "../../components/Seller/sellerVerification
 import { useKYC } from "../../context/KycContext";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import useDropdownOptions, { withSelectedOption } from "../../hooks/useDropdownOptions";
+import useDropdownOptions, {
+  withSelectedOption,
+} from "../../hooks/useDropdownOptions";
 import { AUTH_ROUTES } from "../auth/authRoutes";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -38,16 +40,13 @@ const DATE_FIELD_CLASS =
 const STEP_ONE_REQUIRED = <span className="text-[#082f91]">*</span>;
 const SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
-const PRIMARY_BUTTON_CLASS =
-  "admin-btn-primary w-full text-[14px]";
-const ONBOARDING_CARD_CLASS =
-  "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
+const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
-const REVIEW_PRIMARY_BUTTON_CLASS =
-  "admin-btn-primary w-full text-[14px]";
+const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
 // const DISPLAY_FIELD_CLASS =
 //   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
 
@@ -117,9 +116,14 @@ const OnboardingSelect = ({
         onChange={onChange}
         disabled={disabled || loading}
       >
-        <option value="">{loading ? "Loading..." : placeholder || `Select ${label}`}</option>
+        <option value="">
+          {loading ? "Loading..." : placeholder || `Select ${label}`}
+        </option>
         {withSelectedOption(options, value).map((option) => (
-          <option key={`${name}-${option.id || option.value}`} value={option.value}>
+          <option
+            key={`${name}-${option.id || option.value}`}
+            value={option.value}
+          >
             {option.label}
           </option>
         ))}
@@ -137,7 +141,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
   const progress = Math.min(Math.max(step, 1), 5) * 20;
 
   return (
-    <div className="mx-auto w-full max-w-[1350px]">
+    <div className="mx-auto w-full max-w-[1350px]  ">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">
@@ -175,7 +179,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
 
 const OnboardingSection = ({ number, title, children }) => (
   <section className="space-y-5">
-    <div className="flex items-center gap-3 my-6">
+    <div className="flex items-center gap-3 my-6 ">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E49E1C] text-[12px] font-bold text-white">
         {number}
       </span>
@@ -219,9 +223,7 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
 
 const ReviewInput = ({ label, value, className = "" }) => (
   <div className={className}>
-    <label className="admin-label font-inter">
-      {label}
-    </label>
+    <label className="admin-label font-inter">{label}</label>
     <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />
   </div>
 );
@@ -314,8 +316,10 @@ const getRegistrationContact = (...sources) => {
 
     if (!contact.fullName) contact.fullName = fullName;
     if (!contact.rawFullName) contact.rawFullName = rawFullName;
-    if (!contact.emailAddress) contact.emailAddress = String(user?.email || "").trim();
-    if (!contact.mobileNumber) contact.mobileNumber = String(user?.phone || "").trim();
+    if (!contact.emailAddress)
+      contact.emailAddress = String(user?.email || "").trim();
+    if (!contact.mobileNumber)
+      contact.mobileNumber = String(user?.phone || "").trim();
   });
 
   return contact;
@@ -339,7 +343,9 @@ const isRepeatedSingleWordName = (value = "") => {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  return parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase();
+  return (
+    parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()
+  );
 };
 
 const stripFileFieldsFromDraft = (draft = {}) => ({
@@ -447,7 +453,6 @@ const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
     return name || fallback;
   }
 };
-
 
 const DocumentUploadField = ({
   id,
@@ -635,18 +640,60 @@ const SellerOnboarding = () => {
   const countries = useDropdownOptions("countries", { limit: 250 });
   const optionIdByValue = (options, value) =>
     options.find((option) => String(option.value) === String(value))?.id || "";
-  const pickupCountryId = optionIdByValue(countries.options, profileForm.pickupCountry);
-  const pickupStates = useDropdownOptions("states", { parentId: pickupCountryId, limit: 250 }, { enabled: Boolean(pickupCountryId) });
-  const pickupStateId = optionIdByValue(pickupStates.options, profileForm.pickupState);
-  const pickupCities = useDropdownOptions("cities", { parentId: pickupStateId, limit: 250 }, { enabled: Boolean(pickupStateId) });
-  const pickupCityId = optionIdByValue(pickupCities.options, profileForm.pickupCity);
-  const pickupPincodes = useDropdownOptions("pincodes", { parentId: pickupCityId, limit: 250 }, { enabled: Boolean(pickupCityId) });
-  const businessCountryId = optionIdByValue(countries.options, profileForm.businessAddressCountry);
-  const businessStates = useDropdownOptions("states", { parentId: businessCountryId, limit: 250 }, { enabled: Boolean(businessCountryId) });
-  const businessStateId = optionIdByValue(businessStates.options, profileForm.businessAddressState);
-  const businessCities = useDropdownOptions("cities", { parentId: businessStateId, limit: 250 }, { enabled: Boolean(businessStateId) });
-  const businessCityId = optionIdByValue(businessCities.options, profileForm.businessAddressCity);
-  const businessPincodes = useDropdownOptions("pincodes", { parentId: businessCityId, limit: 250 }, { enabled: Boolean(businessCityId) });
+  const pickupCountryId = optionIdByValue(
+    countries.options,
+    profileForm.pickupCountry,
+  );
+  const pickupStates = useDropdownOptions(
+    "states",
+    { parentId: pickupCountryId, limit: 250 },
+    { enabled: Boolean(pickupCountryId) },
+  );
+  const pickupStateId = optionIdByValue(
+    pickupStates.options,
+    profileForm.pickupState,
+  );
+  const pickupCities = useDropdownOptions(
+    "cities",
+    { parentId: pickupStateId, limit: 250 },
+    { enabled: Boolean(pickupStateId) },
+  );
+  const pickupCityId = optionIdByValue(
+    pickupCities.options,
+    profileForm.pickupCity,
+  );
+  const pickupPincodes = useDropdownOptions(
+    "pincodes",
+    { parentId: pickupCityId, limit: 250 },
+    { enabled: Boolean(pickupCityId) },
+  );
+  const businessCountryId = optionIdByValue(
+    countries.options,
+    profileForm.businessAddressCountry,
+  );
+  const businessStates = useDropdownOptions(
+    "states",
+    { parentId: businessCountryId, limit: 250 },
+    { enabled: Boolean(businessCountryId) },
+  );
+  const businessStateId = optionIdByValue(
+    businessStates.options,
+    profileForm.businessAddressState,
+  );
+  const businessCities = useDropdownOptions(
+    "cities",
+    { parentId: businessStateId, limit: 250 },
+    { enabled: Boolean(businessStateId) },
+  );
+  const businessCityId = optionIdByValue(
+    businessCities.options,
+    profileForm.businessAddressCity,
+  );
+  const businessPincodes = useDropdownOptions(
+    "pincodes",
+    { parentId: businessCityId, limit: 250 },
+    { enabled: Boolean(businessCityId) },
+  );
   const registeredContact = useMemo(
     () => getRegistrationContact(seller?.onboardingUser, flowState),
     [flowState, seller?.onboardingUser],
@@ -715,7 +762,15 @@ const SellerOnboarding = () => {
       step,
     });
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [bankForm, documentUrls, draftKey, draftLoaded, kycForm, profileForm, step]);
+  }, [
+    bankForm,
+    documentUrls,
+    draftKey,
+    draftLoaded,
+    kycForm,
+    profileForm,
+    step,
+  ]);
 
   useEffect(() => {
     dispatch(fetchAuthStatus({ token: onboardingToken }));
@@ -848,7 +903,10 @@ const SellerOnboarding = () => {
                 : "",
           businessName:
             sellerProfile?.businessName ||
-            clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
+            clearAutoFilledBusinessName(
+              prev.businessName,
+              registrationContact,
+            ) ||
             "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
@@ -921,7 +979,10 @@ const SellerOnboarding = () => {
 
     const sellerProfile = flowState?.sellerProfile || {};
     const kyc = flowState?.kyc || {};
-    const registrationContact = getRegistrationContact(flowState, seller?.onboardingUser);
+    const registrationContact = getRegistrationContact(
+      flowState,
+      seller?.onboardingUser,
+    );
     const bankDetails = sellerProfile?.bankDetails || {};
     const businessAddress = sellerProfile?.businessAddress || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
@@ -1291,22 +1352,27 @@ const SellerOnboarding = () => {
     }));
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
   };
-  const onAddressSelectChange = (field, resetFields = []) => (event) => {
-    const { value } = event.target;
-    setProfileForm((prev) => ({
-      ...prev,
-      [field]: value,
-      ...resetFields.reduce((result, childField) => ({ ...result, [childField]: "" }), {}),
-    }));
-    setProfileErrors((prev) => ({
-      ...prev,
-      [field]: null,
-      ...resetFields.reduce(
-        (result, childField) => ({ ...result, [childField]: null }),
-        {},
-      ),
-    }));
-  };
+  const onAddressSelectChange =
+    (field, resetFields = []) =>
+    (event) => {
+      const { value } = event.target;
+      setProfileForm((prev) => ({
+        ...prev,
+        [field]: value,
+        ...resetFields.reduce(
+          (result, childField) => ({ ...result, [childField]: "" }),
+          {},
+        ),
+      }));
+      setProfileErrors((prev) => ({
+        ...prev,
+        [field]: null,
+        ...resetFields.reduce(
+          (result, childField) => ({ ...result, [childField]: null }),
+          {},
+        ),
+      }));
+    };
   const onBankChange = (event) => {
     const { name, value } = event.target;
     let normalized = name === "ifscCode" ? value.toUpperCase() : value;
@@ -1454,7 +1520,8 @@ const SellerOnboarding = () => {
     if (!profileForm.businessName.trim())
       errors.businessName = "Business name is required";
     if (!GST_REGEX.test(profileForm.gstNumber.trim()))
-      errors.gstNumber = "Please enter a valid GST Number (e.g. 27ABCDE1234F1Z5)";
+      errors.gstNumber =
+        "Please enter a valid GST Number (e.g. 27ABCDE1234F1Z5)";
     if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
       errors.gstCertificateFile = "GST certificate is required";
     if (!profileForm.supportEmail.trim())
@@ -1531,7 +1598,9 @@ const SellerOnboarding = () => {
       await dispatch(submitSellerKyc(kycPayload)).unwrap();
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
-      await dispatch(updateSellerOnboardingProfile(buildProfilePayload())).unwrap();
+      await dispatch(
+        updateSellerOnboardingProfile(buildProfilePayload()),
+      ).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       setStep(3);
     } catch (error) {
@@ -1742,12 +1811,12 @@ const SellerOnboarding = () => {
                   id="mobileNumber"
                   name="mobileNumber"
                   type="tel"
-                    className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
-                    value={kycForm.mobileNumber}
-                    readOnly
-                    aria-readonly="true"
-                    data-has-value={Boolean(kycForm.mobileNumber)}
-                  />
+                  className={`${STEP_ONE_INPUT_CLASS} bg-[#f5f1eb]`}
+                  value={kycForm.mobileNumber}
+                  readOnly
+                  aria-readonly="true"
+                  data-has-value={Boolean(kycForm.mobileNumber)}
+                />
                 {kycErrors.mobileNumber && (
                   <p className={ERROR_CLASS}>{kycErrors.mobileNumber}</p>
                 )}
@@ -2016,6 +2085,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.registrationNumber}
                   onChange={onProfileChange}
+                  maxLength={10}
                 />
               </div>
 
@@ -2456,10 +2526,7 @@ const SellerOnboarding = () => {
               onEdit={() => setStep(2)}
             >
               <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                <ReviewInput
-                  label="Business Type"
-                  value={businessTypeLabel}
-                />
+                <ReviewInput label="Business Type" value={businessTypeLabel} />
                 <ReviewInput
                   label="Business Name"
                   value={profileForm.businessName}

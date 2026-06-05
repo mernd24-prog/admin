@@ -324,6 +324,7 @@ const PublicAuthRoute = ({
     forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
   } else if (
     isAuthenticated &&
+    formType !== AUTH_FORM_TYPES.VERIFICATION_COMPLETE &&
     (!flowState || flowState?.accountStatus === "active")
   ) {
     return <Navigate to="/app/home" />;

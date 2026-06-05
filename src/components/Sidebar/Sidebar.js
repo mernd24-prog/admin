@@ -129,14 +129,14 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
     const children = flattenSidebarChildren(item.children || [], label);
     const self = route
       ? [
-        {
-          name: label,
-          label,
-          module_code: route,
-          module:
-            item.metadata?.requiredModule || item.moduleKey || item.slug,
-        },
-      ]
+          {
+            name: label,
+            label,
+            module_code: route,
+            module:
+              item.metadata?.requiredModule || item.moduleKey || item.slug,
+          },
+        ]
       : [];
     return [...self, ...children];
   });
@@ -149,9 +149,9 @@ const filterSidebarTreeByAccess = (items = [], options = {}) =>
     .map((item) => {
       const requiredModule = normalizeModuleCode(
         item.metadata?.requiredModule ||
-        item.requiredModule ||
-        item.moduleKey ||
-        item.slug,
+          item.requiredModule ||
+          item.moduleKey ||
+          item.slug,
       );
       const children = filterSidebarTreeByAccess(item.children || [], options);
       const allowedModules = options.allowedModules || new Set();
@@ -180,12 +180,12 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
         icon: getIconForTab(item.moduleName || item.name),
         subItems: isSingleItem
           ? [
-            {
-              name: item.moduleName || item.name,
-              label: item.moduleName || item.name,
-              module_code: route,
-            },
-          ]
+              {
+                name: item.moduleName || item.name,
+                label: item.moduleName || item.name,
+                module_code: route,
+              },
+            ]
           : subItems,
         isSingleItem,
       };
@@ -312,9 +312,9 @@ const Sidebar = ({
 
     return Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length
       ? buildDynamicSidebarData(dynamicSidebarModules, {
-        superAdmin: isSuperAdmin,
-        allowedModules: assignedSidebarModules,
-      })
+          superAdmin: isSuperAdmin,
+          allowedModules: assignedSidebarModules,
+        })
       : [];
   }, [
     sellerPanel,
@@ -413,16 +413,18 @@ const Sidebar = ({
 
   // ── Render ────────────────────────────────────────────────────────────────
   const sidebarWidth = isExpanded
-    ? 'w-full max-w-[260px] lg:w-[260px]'
-    : 'w-16';
+    ? "w-full max-w-[260px] lg:w-[260px]"
+    : "w-16";
 
   return (
     <div
       ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[var(--admin-shell)] ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"}`}
+      className={`fixed lg:static inset-y-0 bg-[#FCF5E8]   ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"}`}
     >
       {/* Logo / toggle */}
-      <div className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${isExpanded ? "h-[120px]" : "h-[70px]"} sm:pt-4`}>
+      <div
+        className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${isExpanded ? "h-[120px]" : "h-[70px]"} sm:pt-4`}
+      >
         {isExpanded ? (
           <div className="flex items-center justify-center">
             <BrandLogo
@@ -484,7 +486,9 @@ const Sidebar = ({
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ""}
                     >
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isActive ? "text-white" : "text-[var(--admin-blue)]"}`}>
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isActive ? "text-white" : "text-[var(--admin-blue)]"}`}
+                      >
                         <Icon size={15} />
                       </span>
                       {isExpanded && (
@@ -508,7 +512,9 @@ const Sidebar = ({
                     onClick={() => toggleTab(item.label)}
                     title={!isExpanded ? item.label : ""}
                   >
-                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${hasActiveChild ? "text-white" : "text-[var(--admin-blue)]"}`}>
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${hasActiveChild ? "text-white" : "text-[var(--admin-blue)]"}`}
+                    >
                       <Icon size={15} />
                     </span>
                     {isExpanded && (
@@ -559,7 +565,9 @@ const Sidebar = ({
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
-                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`} />
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`}
+                                />
                                 <span className="text-[12px] capitalize">
                                   {sub.label}
                                 </span>

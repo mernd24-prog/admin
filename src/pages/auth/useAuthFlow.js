@@ -23,7 +23,10 @@ import {
   setStoredAuth,
 } from "../../_helpers/authStorage";
 import { isSellerPanel, PANEL_MODES } from "../../_helpers/panelConfig";
-import { AUTH_FORM_TYPES, useAuthLayout } from "../../context/AuthLayoutContext";
+import {
+  AUTH_FORM_TYPES,
+  useAuthLayout,
+} from "../../context/AuthLayoutContext";
 import { AUTH_ROUTES } from "./authRoutes";
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -312,7 +315,8 @@ export const useAuthFlow = ({
           errors.phone = "Phone is required";
           isValid = false;
         } else if (!/^[6-9]\d{9}$/.test(formFields.phone.trim())) {
-          errors.phone = "Phone number must be 10 digits and start with 6, 7, 8, or 9";
+          errors.phone =
+            "Phone number must be 10 digits and start with 6, 7, 8, or 9";
           isValid = false;
         }
 
@@ -331,10 +335,12 @@ export const useAuthFlow = ({
           errors.registerPassword = "Minimum 8 characters required";
           isValid = false;
         } else if (
-          !/^(?=.*[A-Z])(?=.*\d).+$/.test(formFields.registerPassword)
+          !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/.test(
+            formFields.registerPassword,
+          )
         ) {
           errors.registerPassword =
-            "Password must contain at least one uppercase letter and one number";
+            "Password must contain at least one uppercase letter, one number & one special character";
           isValid = false;
         }
 
@@ -883,7 +889,10 @@ export const useAuthFlow = ({
       const code = verificationCode.join("");
 
       if (code.length !== 6) {
-        setInlineError(AUTH_FORM_TYPES.REGISTER_VERIFICATION, "Enter complete OTP");
+        setInlineError(
+          AUTH_FORM_TYPES.REGISTER_VERIFICATION,
+          "Enter complete OTP",
+        );
         return;
       }
 
@@ -967,13 +976,7 @@ export const useAuthFlow = ({
         console.error("Resend OTP error:", error);
       }
     },
-    [
-      activeFormType,
-      dispatch,
-      formFields,
-      resendCooldown,
-      setInlineError,
-    ],
+    [activeFormType, dispatch, formFields, resendCooldown, setInlineError],
   );
 
   const goToLogin = useCallback(

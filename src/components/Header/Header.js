@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutFunction } from "../../_helpers";
 import { IoLogOutOutline } from "react-icons/io5";
-import { MdClose, MdOutlineMenu, MdSearch, MdOutlineNotificationsNone } from "react-icons/md";
+import {
+  MdOutlineMenu,
+  MdSearch,
+  MdOutlineNotificationsNone,
+} from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
 import { FcNext } from "react-icons/fc";
 import { useDispatch } from "react-redux";
@@ -150,7 +154,9 @@ export default function Header({
     >
       <div className="flex items-center justify-between flex-1 px-4 md:px-5 w-full gap-4">
         {/* Left: menu toggle + title */}
-        <div className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}>
+        <div
+          className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}
+        >
           <button
             type="button"
             aria-label={isSidebarExpanded ? "Sidebar open" : "Sidebar closed"}
@@ -164,7 +170,7 @@ export default function Header({
             )}
           </button>
 
-          <div className="leading-tight min-w-0">
+          <div className="leading-tight min-w-0 ">
             <h1 className="text-[13px] font-semibold capitalize font-inter text-[var(--admin-ink)] truncate">
               {headerTitle || moduleName || "Dashboard"}
             </h1>
