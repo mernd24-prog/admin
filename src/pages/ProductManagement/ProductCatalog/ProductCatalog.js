@@ -19,6 +19,7 @@ import {
   getProductModerationQueue,
   getProductRevisions,
   getProducts,
+  getList as getCategoryList,
   restoreProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
@@ -115,6 +116,7 @@ const ProductCatalog = () => {
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState([]);
@@ -210,6 +212,23 @@ const ProductCatalog = () => {
     fetchProductsList();
     dispatch(getAllSellerList());
     dispatch(getShopList({ page: 1, size: 100 }));
+    dispatch(getCategoryList({ tree: true, limit: 100 }))
+      .then((res) => {
+        const raw = res?.payload?.data?.data || res?.payload?.data || [];
+        const flattenTree = (nodes = [], out = [], prefix = '') => {
+          nodes.forEach((node) => {
+            const name = node?.title || node?.name || node?.categoryKey || '';
+            const key = node?.categoryKey || String(node?._id || '');
+            if (name && key) out.push({ value: key, label: prefix ? `${prefix} > ${name}` : name });
+            const children = node?.children || node?.subCategories || [];
+            if (children.length) flattenTree(children, out, prefix ? `${prefix} > ${name}` : name);
+          });
+          return out;
+        };
+        const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
+        setCategoryOptions([{ value: '', label: 'All Categories' }, ...flattenTree(source)]);
+      })
+      .catch(() => {});
   }, [pageNo]);
 
   useEffect(() => {
@@ -760,7 +779,7 @@ const ProductCatalog = () => {
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
-      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">
           Product Setup Flow
         </p>
@@ -795,7 +814,7 @@ const ProductCatalog = () => {
             <Button onClick={() => navigate("/app/hsn-code")}>HSN</Button>
           </PermissionGuard>
         </div>
-      </div>
+      </div> */}
       <div className="bg-white">
         <section className="p-2 border-b">
           <SearchComponent
@@ -807,6 +826,7 @@ const ProductCatalog = () => {
             isActivationStatus={true}
             isApprovalOptions={true}
             isCategory={true}
+            categoryOptions={categoryOptions}
             isProduct={true}
             isProductType={true}
             isUser={true}

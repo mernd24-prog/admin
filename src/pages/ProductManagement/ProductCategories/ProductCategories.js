@@ -183,7 +183,7 @@ const ProductCategories = () => {
 
   // Fetch categories on initial load and refresh
   useEffect(() => {
-    dispatch(getList({ tree: true, limit: 5000 }));
+    dispatch(getList({ tree: true, limit: 100 }));
   }, [dispatch, isRefresh]);
 
   // Build select options for category dropdown

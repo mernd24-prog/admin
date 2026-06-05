@@ -485,7 +485,7 @@ export default function ProductManagementUI() {
     if (!Array.isArray(categorySource) || categorySource.length === 0) return options;
 
     const hasNested = categorySource.some(
-      (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+      (item) => Array.isArray(item?.children) || Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
     );
 
     const addOptions = (categories, prefix = '') => {
@@ -493,7 +493,7 @@ export default function ProductManagementUI() {
       categories.forEach((category) => {
         const option = toCategoryOption(category, prefix);
         options.push(option);
-        const children = category.subcategories || category.subCategories || [];
+        const children = category.children || category.subcategories || category.subCategories || [];
         if (Array.isArray(children) && children.length > 0) {
           addOptions(children, option.label);
         }

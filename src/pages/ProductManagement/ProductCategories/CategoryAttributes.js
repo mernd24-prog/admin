@@ -414,7 +414,7 @@ const CategoryAttributes = () => {
       ).unwrap();
       toast.success('Category attributes saved');
       setAttrCounts((prev) => ({ ...prev, [selectedCategory.value]: payload.length }));
-      dispatch(getList({ tree: true, limit: 5000 }));
+      dispatch(getList({ tree: true, limit: 100 }));
     } catch (error) {
       toast.error(error?.message || 'Failed to save category attributes');
     } finally {
