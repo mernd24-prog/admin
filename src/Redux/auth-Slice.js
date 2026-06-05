@@ -47,6 +47,12 @@ export const normalizeAuthPayload = (response) => {
     tokens?.refreshToken ||
     raw?.data?.refreshToken ||
     null;
+  const onboardingToken =
+    raw?.onboardingToken ||
+    raw?.data?.onboardingToken ||
+    tokens?.onboardingToken ||
+    flowState?.onboardingToken ||
+    null;
   const role = extractRole(user, raw, flowState);
   const allowedModules = extractAllowedModules(user, raw);
 
@@ -58,8 +64,10 @@ export const normalizeAuthPayload = (response) => {
     refreshToken,
     role,
     allowedModules,
-    requiresOnboarding: Boolean(raw?.requiresOnboarding || flowState?.requiresOnboarding),
-    onboardingToken: raw?.onboardingToken || raw?.data?.onboardingToken || null,
+    requiresOnboarding: Boolean(
+      raw?.requiresOnboarding || flowState?.requiresOnboarding || onboardingToken,
+    ),
+    onboardingToken,
     message: raw?.message || response?.message || "Success",
   };
 };

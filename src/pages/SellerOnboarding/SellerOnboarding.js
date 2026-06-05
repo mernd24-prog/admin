@@ -47,8 +47,6 @@ const REVIEW_INPUT_CLASS =
 const REVIEW_SECONDARY_BUTTON_CLASS =
   "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
 const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
-// const DISPLAY_FIELD_CLASS =
-//   "h-[35px] w-full rounded-md border border-[#e5e5e5] bg-[#f5f1eb] px-4 text-[13px] text-gray-800 flex items-center";
 
 const ONBOARDING_STEP_META = {
   0: {
@@ -141,7 +139,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
   const progress = Math.min(Math.max(step, 1), 5) * 20;
 
   return (
-    <div className="mx-auto w-full max-w-[1350px]  ">
+    <div className="mx-auto w-full max-w-[1350px]">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">
@@ -179,7 +177,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
 
 const OnboardingSection = ({ number, title, children }) => (
   <section className="space-y-5">
-    <div className="flex items-center gap-3 my-6 ">
+    <div className="flex items-center gap-3 my-6">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E49E1C] text-[12px] font-bold text-white">
         {number}
       </span>
@@ -2085,7 +2083,6 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.registrationNumber}
                   onChange={onProfileChange}
-                  maxLength={10}
                 />
               </div>
 

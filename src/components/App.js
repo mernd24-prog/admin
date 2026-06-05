@@ -317,6 +317,9 @@ const PublicAuthRoute = ({
     flowState?.requiresOnboarding &&
     !allowOnboardingToken
   ) {
+    if (formType === AUTH_FORM_TYPES.REGISTER_VERIFICATION) {
+      return <Navigate to={AUTH_ROUTES.VERIFICATION_COMPLETE} replace />;
+    }
     return <Navigate to={AUTH_ROUTES.ONBOARDING} replace />;
   }
 
