@@ -16,8 +16,9 @@ import {
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
 
-const configuredApiBase =
-  
+const configuredApiBase = process.env.REACT_APP_API_BASE_URL ||
+    process.env.VITE_API_BASE_URL ||
+
     "http://192.168.16.47:4000";
 
 const normalizedApiBase = trimTrailingSlash(configuredApiBase);

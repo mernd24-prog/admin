@@ -1,7 +1,5 @@
-const configuredBaseURL =
-  
-  'http://192.168.16.47:4000' ||
-  'http://localhost:4000';
+const configuredBaseURL = process.env.REACT_APP_API_BASE_URL ||
+  process.env.VITE_API_BASE_URL  
 
 const normalizedBaseURL = configuredBaseURL.replace(/\/+$/, '');
 const baseURL = normalizedBaseURL.endsWith('/api/v1')
