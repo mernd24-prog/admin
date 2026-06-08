@@ -4,34 +4,34 @@ export const userDetails = [
     name: "Samantha Green",
     rating: 4.8,
     description:
-      "Sam Global truly exceeded my expectations. I started by exploring a few products, and soon I found myself shopping across multiple categories with ease. The platform feels smooth, reliable, and convenient, and it’s great knowing that Sam Global connects buyers with quality products and trusted sellers in one place.",
+      "Using Sam Global has been a wonderful experience from the very beginning. The platform is easy to navigate, products are well organized, and the checkout process feels seamless. I appreciate how quickly I can discover new items and trust that every purchase is backed by a reliable marketplace experience.",
   },
   {
     profileImg: "/Img/auth-img/user2.png",
     name: "Michael Carter",
     rating: 5,
     description:
-      "The buying experience was quick, clear, and surprisingly simple. I found the products I needed, compared options easily, and completed everything without any confusion.Sam Global truly exceeded my expectations. I started by exploring a few products, and soon I found myself shopping across multiple categories with ease. The platform feels smooth, reliable, and convenient, ",
+      "I have tried many online marketplaces before, but Sam Global stands out because of its smooth user experience and wide range of products. Everything feels thoughtfully designed, from browsing categories to placing orders, making shopping enjoyable, efficient, and dependable whenever I need something new.",
   },
   {
     profileImg: "/Img/auth-img/user3.png",
     name: "Priya Sharma",
     rating: 4.7,
     description:
-      "I like how organized the platform feels. Product details are easy to scan, seller information is clear, and the whole journey feels reliable from start to finish.Sam Global truly exceeded my expectations. I started by exploring a few products, and soon I found myself shopping across multiple categories with ease. The platform feels smooth, reliable, and convenient, ",
+      "Sam Global has made online shopping much simpler and more convenient for me. The platform offers a great variety of products, clear information, and an intuitive design. I always feel confident exploring different categories, knowing I can find quality items and complete purchases without any hassle.",
   },
   {
     profileImg: "/Img/auth-img/user4.png",
     name: "Daniel Brooks",
     rating: 4.9,
     description:
-      "Sam Global helped me discover new sellers and order with confidence. The interface is smooth, the categories are well arranged, and support feels dependable.Sam Global truly exceeded my expectations. I started by exploring a few products, and soon I found myself shopping across multiple categories with ease. The platform feels smooth, reliable, and convenient, ",
+      "What impressed me most about Sam Global is how effortless the entire shopping journey feels. From discovering products to finalizing orders, everything works smoothly and efficiently. The marketplace provides a trustworthy environment where buyers can browse confidently and enjoy a consistent experience every time.",
   },
   {
     profileImg: "/Img/auth-img/user5.png",
     name: "Emma Wilson",
     rating: 5,
     description:
-      "Everything felt seamless, from browsing to checkout. I especially liked how easy it was to move across different product categories without losing track.Sam Global truly exceeded my expectations. I started by exploring a few products, and soon I found myself shopping across multiple categories with ease. The platform feels smooth, reliable, and convenient, ",
+      "My experience with Sam Global has been consistently positive. The platform combines ease of use with a diverse selection of products, making it simple to find exactly what I need. Every interaction feels reliable, and the overall shopping experience encourages me to return again and again.",
   },
 ];

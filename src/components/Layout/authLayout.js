@@ -56,13 +56,13 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                   ),
                 )}
               </div>
-              <p className="mt-2 w-full px-3 py-2 text-center font-inter text-xs leading-relaxed text-black sm:px-4 md:text-sm xl:mt-5  xl:text-base">
+              <p className="mt-2 w-full px-3 py-2 text-center font-inter   text-black sm:px-4 text-xs xl:mt-5  xl:text-base  h-[7rem] xl:h-[9rem]">
                 "{activeUser.description}"
               </p>
 
               {/* ratings */}
 
-              <div className="mt-3 sm:mt-5 md:mt-6">
+              <div className="mt-3">
                 <img
                   src="/Img/auth-img/rating.png"
                   alt="rating"

@@ -506,7 +506,7 @@ function Layout() {
           isSidebarExpanded={isExpanded}
         />
 
-        <main className="flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar">
+        <main className="flex-1  overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar">
           <Suspense fallback={<PageSkeletonLoader />}>
             <AnimatePresence mode="wait">
               <motion.div
