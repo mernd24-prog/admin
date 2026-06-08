@@ -93,6 +93,13 @@ const getColumnMeta = (heading) => {
   };
 };
 
+const TotalRecordsSummary = ({ total }) => (
+  <div className="flex items-center justify-between border-t border-[var(--admin-line)] bg-white px-5 py-3 text-sm text-[var(--admin-muted)]">
+    <span>Total Records</span>
+    <span className="font-semibold text-gray-700">{total}</span>
+  </div>
+);
+
 const TableData = ({
   tableHeadings = [],
   isHeaderCheckbox = false,
@@ -121,6 +128,7 @@ const TableData = ({
     tableHeadings.length +
     (isHeaderCheckbox ? 1 : 0) +
     (showExtraHeading ? Math.max(0, 10 - tableHeadings.length) : 0);
+  const totalRecords = totalData ?? data?.length ?? 0;
 
   return (
     <>
@@ -300,12 +308,9 @@ const TableData = ({
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between border-t border-[var(--admin-line)] bg-white px-5 py-3 text-sm text-[var(--admin-muted)]">
-                  <span>Total Records</span>
-                  <span className="font-semibold text-gray-700">
-                    {totalData ?? data.length}
-                  </span>
-                </div>
+              </div>
+              <div className="hidden lg:block">
+                <TotalRecordsSummary total={totalRecords} />
               </div>
 
               <div className="space-y-3 p-3 lg:hidden">
@@ -344,11 +349,8 @@ const TableData = ({
                     )}
                   </div>
                 ))}
-                <div className="flex items-center justify-between rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3 text-sm text-[var(--admin-muted)]">
-                  <span>Total Records</span>
-                  <span className="font-semibold text-gray-700">
-                    {totalData ?? data.length}
-                  </span>
+                <div className="overflow-hidden rounded-lg border border-[var(--admin-line)]">
+                  <TotalRecordsSummary total={totalRecords} />
                 </div>
               </div>
             </>

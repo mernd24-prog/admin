@@ -31,6 +31,7 @@ import DigitalProductPanel from '../../../../components/Product/DigitalProductPa
 import SubscriptionPanel from '../../../../components/Product/SubscriptionPanel';
 import BundleBuilder from '../../../../components/Product/BundleBuilder';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
+import { normalizeImageList } from '../../../../_helpers/productMedia';
 
 const API_CALLS = [
 { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -215,7 +216,15 @@ export default function ProductManagementUI() {
             setVariantRows(formattedOptions);
           }
 
-          setImages(productData?.images || res?.data?.imageUrls || []);
+          setImages(normalizeImageList(
+            productData?.images,
+            productData?.imageUrls,
+            productData?.product_image_id?.images,
+            productData?.media?.images,
+            productData?.image,
+            productData?.thumbnail,
+            productData?.thumbnailUrl,
+          ));
 
           if (Array.isArray(productData?.variants) && productData.variants.length) {
             const hasAttributes = productData.variants.some((v) => v.attributes && Object.keys(v.attributes).length);
@@ -937,7 +946,7 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
-      images: Array.isArray(images) ? images : [],
+      images: normalizeImageList(images),
       documents: catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
       metadata: {
@@ -1148,7 +1157,7 @@ export default function ProductManagementUI() {
         <div className="space-y-2">
           <div className="mb-2">
             <h4 className="text-sm font-semibold text-gray-800">Variant Builder</h4>
-            <p className="text-xs text-gray-500">Define option axes (Color, Size…), generate combinations, then edit each variant.</p>
+            <p className="text-xs text-gray-500">Define option axes (Color, Size...), generate combinations, then edit each variant.</p>
           </div>
           <VariantBuilder
             variants={variantsData}
@@ -1318,7 +1327,7 @@ export default function ProductManagementUI() {
     <div className='relative min-h-screen p-2 mx-auto max-w-7xl'>
       <Loader loading={loading} />
       <Breadcrumb isEditMode={isEditMode} />
-      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {flowReadiness.map((item) => (
@@ -1363,7 +1372,7 @@ export default function ProductManagementUI() {
         <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
           {error.flow}
         </div>
-      )}
+      )} */}
       <div className="flex flex-col gap-4 pb-8 lg:flex-row ">
         <div className='h-full lg:sticky lg:top-24 '>
           <TabNavigation

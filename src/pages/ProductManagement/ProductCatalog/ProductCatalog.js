@@ -1,9 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 // Components
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
 import TableData from "../../../components/Atoms/TableData/TableData";
@@ -42,6 +41,8 @@ import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ExportButton } from "../../../components/Shared";
 import { getShopList } from "../../../Redux/StoreSlice";
+import ConfirmModal from "../../../components/Shared/ConfirmModal";
+import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
 // import { GoDesktopDownload } from "react-icons/go";
 
 const INITIAL_FILTERS = {
@@ -75,6 +76,14 @@ const BULK_IMPORT_AVAILABLE = false;
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 const STATUS_TOGGLEABLE = new Set(["active", "inactive"]);
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
+
+const getProductStatus = (product = {}) =>
+  product.status || (product.isDisable ? "inactive" : "active");
+
+const isProductActive = (product = {}) => getProductStatus(product) === "active";
+
+const getNextToggleStatus = (product = {}) =>
+  isProductActive(product) ? "inactive" : "active";
 
 const refToLabel = (value) => {
   if (!value) return "N/A";
@@ -122,6 +131,8 @@ const ProductCatalog = () => {
   const [selectedRow, setSelectedRow] = useState([]);
   const [productToDelete, setProductToDelete] = useState(null);
   const [filters, setFilters] = useState(() => getInitialFiltersForPath(location.pathname));
+  const [appliedFilters, setAppliedFilters] = useState(() => getInitialFiltersForPath(location.pathname));
+  const didMountRouteRef = useRef(false);
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
   const allRowIds = useMemo(
     () => apiRes.list.map((product) => product._id),
@@ -151,7 +162,7 @@ const ProductCatalog = () => {
     selector?.store?.getShopListData?.data?.list || [],
   );
 
-  const isChangePendingFilter = filters?.approvalStatus?.value === "Change Pending";
+  const isChangePendingFilter = appliedFilters?.approvalStatus?.value === "Change Pending";
   const approvalStatusToProductStatus = {
     Draft: "draft",
     Pending: "pending_approval",
@@ -164,25 +175,25 @@ const ProductCatalog = () => {
     (page = pageNo) => ({
       page,
       size: size,
-      keyWord: filters?.search,
+      keyWord: appliedFilters?.search,
       includeAllStatuses: true,
-      ...(filters?.category?.value
-        ? { category: filters.category.value }
+      ...(appliedFilters?.category?.value
+        ? { category: appliedFilters.category.value }
         : {}),
-      ...(filters?.sellerName?.value
-        ? { sellerId: filters.sellerName.value }
+      ...(appliedFilters?.sellerName?.value
+        ? { sellerId: appliedFilters.sellerName.value }
         : {}),
-      ...(filters?.activationStatus?.value === "Active"
+      ...(appliedFilters?.activationStatus?.value === "Active"
         ? { status: "active" }
         : {}),
-      ...(filters?.activationStatus?.value === "Inactive"
+      ...(appliedFilters?.activationStatus?.value === "Inactive"
         ? { status: "inactive" }
         : {}),
-      ...(approvalStatusToProductStatus[filters?.approvalStatus?.value]
-        ? { status: approvalStatusToProductStatus[filters.approvalStatus.value] }
+      ...(approvalStatusToProductStatus[appliedFilters?.approvalStatus?.value]
+        ? { status: approvalStatusToProductStatus[appliedFilters.approvalStatus.value] }
         : {}),
     }),
-    [filters, pageNo],
+    [appliedFilters, pageNo],
   );
 
   const fetchProductsList = useCallback(async () => {
@@ -194,8 +205,8 @@ const ProductCatalog = () => {
             status: "change_pending",
             page: pageNo,
             size,
-            ...(filters?.category?.value
-              ? { category: filters.category.value }
+            ...(appliedFilters?.category?.value
+              ? { category: appliedFilters.category.value }
               : {}),
           }),
         )
@@ -206,10 +217,13 @@ const ProductCatalog = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, pageNo, filters, isChangePendingFilter, buildProductQuery]);
+  }, [dispatch, pageNo, appliedFilters, isChangePendingFilter, buildProductQuery]);
 
   useEffect(() => {
     fetchProductsList();
+  }, [fetchProductsList]);
+
+  useEffect(() => {
     dispatch(getAllSellerList());
     dispatch(getShopList({ page: 1, size: 100 }));
     dispatch(getCategoryList({ tree: true, limit: 100 }))
@@ -228,37 +242,18 @@ const ProductCatalog = () => {
         const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
         setCategoryOptions([{ value: '', label: 'All Categories' }, ...flattenTree(source)]);
       })
-      .catch(() => {});
-  }, [pageNo]);
+      .catch(() => { });
+  }, [dispatch]);
 
   useEffect(() => {
+    if (!didMountRouteRef.current) {
+      didMountRouteRef.current = true;
+      return;
+    }
     const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
     setPageNo(1);
-    const loadRouteProducts = async () => {
-      setLoading(true);
-      try {
-        const response = nextFilters?.approvalStatus?.value === "Change Pending"
-          ? await dispatch(getProductModerationQueue({ status: "change_pending", page: 1, size }))
-          : await dispatch(
-            getProducts({
-              page: 1,
-              size,
-              keyWord: nextFilters.search,
-              includeAllStatuses: true,
-              ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
-                ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
-                : {}),
-            }),
-          );
-        setApiRes(response?.payload?.data || { list: [], total: 0 });
-      } catch (err) {
-        toast.error("Failed to fetch products");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadRouteProducts();
   }, [location.pathname]);
 
   useEffect(() => {
@@ -277,10 +272,10 @@ const ProductCatalog = () => {
     "Product",
     "SKU",
     // "Seller",   Uncomment when Admin loged in needs to see seller info in product list
-    "Category",
+    // "Category",
     "Brand",
-    "Color",
-    "Origin",
+    // "Color",
+    // "Origin",
     "Price",
     "Stock",
     "Status",
@@ -322,8 +317,12 @@ const ProductCatalog = () => {
   };
 
   const handleImageClick = useCallback((data) => {
-    if (!data) return;
-    setSelectedImages(data);
+    const images = Array.isArray(data) ? data : getProductImages(data);
+    if (!images.length) {
+      toast.info("No product images available.");
+      return;
+    }
+    setSelectedImages(images);
     setGalleryOpen(true);
   }, []);
 
@@ -354,9 +353,12 @@ const ProductCatalog = () => {
       toast.error("This product status cannot be toggled from here.");
       return;
     }
+    const nextStatus = getNextToggleStatus(data);
     const apiPayload = {
       _id: [data?._id],
-      isDisable: data?.isDisable ? false : true,
+      status: nextStatus,
+      isDisable: nextStatus !== "active",
+      reason: "product_status_toggle",
     };
     try {
       setLoading(true);
@@ -365,7 +367,7 @@ const ProductCatalog = () => {
       ).unwrap();
       if (response.message) {
         toast.success(
-          `Product ${apiPayload.isDisable ? "disabled" : "enabled"} successfully.`,
+          `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`,
         );
       } else {
         toast.info(response?.message || "Something went wrong");
@@ -385,8 +387,9 @@ const ProductCatalog = () => {
   const canReviewProduct = (product) =>
     REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product);
   const canToggleProduct = (product) => {
-    if (!STATUS_TOGGLEABLE.has(product?.status)) return false;
-    if (isSellerPanelUser && product?.status === "inactive") return false;
+    const status = getProductStatus(product);
+    if (!STATUS_TOGGLEABLE.has(status)) return false;
+    if (isSellerPanelUser && status === "inactive") return false;
     return true;
   };
 
@@ -428,7 +431,7 @@ const ProductCatalog = () => {
     }
   };
 
-  const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
+  const handleReviewSubmit = async (decision, rejectionReason, checklist, notes) => {
     const product = reviewModal.product;
     setLoading(true);
     try {
@@ -439,6 +442,7 @@ const ProductCatalog = () => {
             revisionId: reviewModal.revision?._id || reviewModal.revision?.id,
             status: decision,
             rejectionReason: rejectionReason || null,
+            notes: notes || null,
             checklist,
           }),
         ).unwrap()
@@ -447,6 +451,7 @@ const ProductCatalog = () => {
             id: product?._id,
             status: decision,
             rejectionReason: rejectionReason || null,
+            notes: notes || null,
             checklist,
           }),
         ).unwrap();
@@ -511,53 +516,17 @@ const ProductCatalog = () => {
     }
   };
 
-  const handleSearchApply = async () => {
-    setLoading(true);
-    try {
-      setPageNo(1);
-      const response = isChangePendingFilter
-        ? await dispatch(
-          getProductModerationQueue({
-            status: "change_pending",
-            page: 1,
-            size,
-            ...(filters?.category?.value
-              ? { category: filters.category.value }
-              : {}),
-          }),
-        )
-        : await dispatch(getProducts(buildProductQuery(1)));
-      setApiRes(response?.payload?.data || { list: [], total: 0 });
-    } catch (err) {
-      toast.error("Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
+  const handleSearchApply = () => {
+    setSelectedRow([]);
+    setAppliedFilters(filters);
+    setPageNo(1);
   };
-  const clearFilters = async () => {
-    setLoading(true);
+  const clearFilters = () => {
     const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
     setPageNo(1);
-    try {
-      const query = {
-        page: 1,
-        size: size,
-        keyWord: nextFilters.search,
-        includeAllStatuses: true,
-        ...(approvalStatusToProductStatus[nextFilters?.approvalStatus?.value]
-          ? { status: approvalStatusToProductStatus[nextFilters.approvalStatus.value] }
-          : {}),
-      };
-      const response = nextFilters?.approvalStatus?.value === "Change Pending"
-        ? await dispatch(getProductModerationQueue({ status: "change_pending", page: 1, size }))
-        : await dispatch(getProducts(query));
-      setApiRes(response?.payload?.data || { list: [], total: 0 });
-    } catch (err) {
-      toast.error("Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
+    setSelectedRow([]);
   };
   const onPageChange = (newPageNo) => {
     setPageNo(newPageNo);
@@ -568,11 +537,15 @@ const ProductCatalog = () => {
       return;
     }
     if (action === "Active" || action === "Inactive") {
+      const nextStatus = action === "Active" ? "active" : "inactive";
       let apiPayload = {
         _id: selectedRow,
-        isDisable: action === "Active" ? false : true,
+        status: nextStatus,
+        isDisable: nextStatus !== "active",
+        reason: "product_bulk_status_toggle",
       };
       try {
+         setLoading(true);
         const res = await dispatch(
           enableDisableProductCatalogs(apiPayload),
         ).unwrap();
@@ -583,6 +556,7 @@ const ProductCatalog = () => {
         setSelectedRow([]);
       } catch (error) {
         toast.error(error?.message || error || "Failed...!");
+         setLoading(true);
         if (error.errors) {
           toast.error(error.errors || "failed to update");
         }
@@ -603,45 +577,65 @@ const ProductCatalog = () => {
   const tableRows = useMemo(
     () =>
       apiRes.list.map((product) => {
+        const productImages = getProductImages(product);
+        const primaryImage = getPrimaryProductImage(product);
+
         return [
           <CustomCheckbox
             checked={selectedRow.includes(product._id)}
             onChange={(e) => handleRowCheckboxChange(e, product._id)}
           />,
 
-          <div className="relative flex items-center">
-            <span
-              className="text-blue-500 hover:underline cursor-pointer "
-              onClick={() =>
-                handleImageClick(
-                  product?.images || product?.product_image_id?.images,
-                )
-              }
+          <div className="relative flex items-center gap-2">
+            {primaryImage ? (
+              <button
+                type="button"
+                className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+                onClick={() => handleImageClick(productImages)}
+                title="View product images"
+              >
+                <img
+                  src={primaryImage}
+                  alt={product?.title || product?.name || "Product"}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </button>
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
+                No
+              </span>
+            )}
+            <button
+              type="button"
+              className={`text-sm ${productImages.length ? "text-blue-500 hover:underline" : "text-gray-400 cursor-not-allowed"}`}
+              onClick={() => handleImageClick(productImages)}
+              disabled={!productImages.length}
             >
               View
-            </span>
+            </button>
           </div>,
           <span className="capitalize">
             {product?.title || product?.name || "N/A"}
           </span>,
           <span>{product?.sku || "N/A"}</span>,
           // <span>{refToLabel(product?.sellerName || product?.sellerId)}</span>,
-          <span>
-            {refToLabel(
-              product?.categoryName || product?.category || product?.categoryId,
-            )}
-          </span>,
+          // <span>
+          //   {refToLabel(
+          //     product?.categoryName || product?.category || product?.categoryId,
+          //   )}
+          // </span>,
           <span>{refToLabel(product?.brand)}</span>,
-          <span>{product?.color || "N/A"}</span>,
-          <span>
-            {[
-              product?.origin?.city,
-              product?.origin?.state,
-              product?.origin?.country,
-            ]
-              .filter(Boolean)
-              .join(", ") || "N/A"}
-          </span>,
+          // <span>{product?.color || "N/A"}</span>,
+          // <span>
+          //   {[
+          //     product?.origin?.city,
+          //     product?.origin?.state,
+          //     product?.origin?.country,
+          //   ]
+          //     .filter(Boolean)
+          //     .join(", ") || "N/A"}
+          // </span>,
           <span>
             {product?.price !== undefined ? `₹${product.price}` : "N/A"}
           </span>,
@@ -656,7 +650,7 @@ const ProductCatalog = () => {
           canToggleProduct(product) ? (
             <ToggleButton
               key={`toggle-${product._id}`}
-              isToggle={!product?.isDisable}
+              isToggle={isProductActive(product)}
               handleClick={() => handleToggle(product)}
               requiredModule="products"
             />
@@ -862,15 +856,18 @@ const ProductCatalog = () => {
         )}
       </div>
 
-      <DeletePopup
-        isDeleteModalOpen={showDeleteConfirmation}
-        closeDeleteModal={() => {
+      <ConfirmModal
+        open={showDeleteConfirmation}
+        onClose={() => {
           setShowDeleteConfirmation(false);
           setProductToDelete(null);
         }}
-        DeleteHeading={"Are you sure you want to delete?"}
-        isDeleting={loading && productToDelete}
-        confirmDelete={handleDeleteSubmit}
+        title="Delete product?"
+        message={`This will archive "${productToDelete?.title || productToDelete?.name || "this product"}" and remove it from the normal catalog list.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={loading && Boolean(productToDelete)}
+        onConfirm={handleDeleteSubmit}
       />
 
       {BULK_IMPORT_AVAILABLE && (

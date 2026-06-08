@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
 import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
+import { normalizeImageList } from '../_helpers/productMedia';
 
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
@@ -96,7 +97,7 @@ const toProductBody = (payload = {}) => {
         ...(Array.isArray(payload.bestSellerProducts) ? { bestSellerProducts: payload.bestSellerProducts } : {}),
         ...(Array.isArray(payload.collectionIds) ? { collectionIds: payload.collectionIds } : {}),
         stock: Number(payload.stock || payload.quantity || 0),
-        images: Array.isArray(payload.images) ? payload.images : [],
+        images: normalizeImageList(payload.images),
         videos: Array.isArray(payload.videos) ? payload.videos : [],
         documents: Array.isArray(payload.documents) ? payload.documents : [],
         tags: Array.isArray(payload.tags) ? payload.tags : [],
@@ -154,7 +155,7 @@ const toProductPatchBody = (payload = {}) => {
     if (source.bestSellerProducts !== undefined && Array.isArray(source.bestSellerProducts)) body.bestSellerProducts = source.bestSellerProducts;
     if (source.collectionIds !== undefined && Array.isArray(source.collectionIds)) body.collectionIds = source.collectionIds;
     if (source.stock !== undefined || source.quantity !== undefined) body.stock = Number(source.stock || source.quantity || 0);
-    if (source.images !== undefined && Array.isArray(source.images)) body.images = source.images;
+    if (source.images !== undefined && Array.isArray(source.images)) body.images = normalizeImageList(source.images);
     if (source.videos !== undefined && Array.isArray(source.videos)) body.videos = source.videos;
     if (source.documents !== undefined && Array.isArray(source.documents)) body.documents = source.documents;
     if (source.tags !== undefined && Array.isArray(source.tags)) body.tags = source.tags;

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { MdSearch } from "react-icons/md";
 
 const SearchInput = ({
   placeholder,
@@ -21,7 +22,11 @@ const SearchInput = ({
   };
 
   return (
-    <div className="relative w-full ">
+    <div className="relative w-full  min-w-0 header-search-pill group relative p-1">
+        <MdSearch
+                    size={14}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
+                  />
       <input
         type="text"
         placeholder={placeholder || "Search..."}
@@ -29,7 +34,7 @@ const SearchInput = ({
         onChange={onChange}
         disabled={disabled}
         aria-label={placeholder || "Search"}
-        className="admin-input block pl-4 pr-10"
+        className="admin-input admin-header-search-input block pl-4 pr-10 p-1"
       />
     </div>
   );

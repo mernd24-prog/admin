@@ -10,19 +10,21 @@ const TYPE_PRESENTATION = {
     description: 'Has variants like size, color, storage. E.g. T-shirt, Mobile.',
     icon: '🎨',
   },
-  digital: {
-    description: 'Downloadable file, software license, course, or e-book.',
-    icon: '💾',
-  },
-  bundle: {
-    description: 'A kit of multiple products sold together at a combo price.',
-    icon: '🎁',
-  },
-  subscription: {
-    description: 'Recurring billing product with trial, monthly/yearly plans.',
-    icon: '🔄',
-  },
+  // digital: {
+  //   description: 'Downloadable file, software license, course, or e-book.',
+  //   icon: '💾',
+  // },
+  // bundle: {
+  //   description: 'A kit of multiple products sold together at a combo price.',
+  //   icon: '🎁',
+  // },
+  // subscription: {
+  //   description: 'Recurring billing product with trial, monthly/yearly plans.',
+  //   icon: '🔄',
+  // },
 };
+
+const ENABLED_TYPES = new Set(['simple', 'variable']);
 
 const ProductTypeSelector = ({ value, onChange, disabled = false }) => {
   const productTypes = useDropdownOptions('product-types');
@@ -31,8 +33,8 @@ const ProductTypeSelector = ({ value, onChange, disabled = false }) => {
       <p className="text-sm font-medium text-gray-700 mb-3">
         Product Type <span className="text-red-500">*</span>
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {productTypes.options.map((option) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {productTypes.options.filter((option) => ENABLED_TYPES.has(option.value)).map((option) => {
           const type = { ...option, ...(TYPE_PRESENTATION[option.value] || {}) };
           const selected = value === type.value;
           return (

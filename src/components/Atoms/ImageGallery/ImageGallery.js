@@ -1,9 +1,20 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IoArrowForwardOutline, IoArrowBack } from "react-icons/io5";
+import { normalizeImageList } from "../../../_helpers/productMedia";
 
 const ImageGallery = ({ images, isOpen, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const imageArray = Array.isArray(images) ? images : [images];
+  const imageArray = normalizeImageList(images);
+
+  const handlePrev = useCallback(() => {
+    if (!imageArray.length) return;
+    setCurrentIndex((prev) => (prev === 0 ? imageArray.length - 1 : prev - 1));
+  }, [imageArray.length]);
+
+  const handleNext = useCallback(() => {
+    if (!imageArray.length) return;
+    setCurrentIndex((prev) => (prev === imageArray.length - 1 ? 0 : prev + 1));
+  }, [imageArray.length]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -17,15 +28,13 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentIndex, imageArray.length]);
+  }, [handleNext, handlePrev, isOpen, onClose]);
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? imageArray.length - 1 : prev - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === imageArray.length - 1 ? 0 : prev + 1));
-  };
+  useEffect(() => {
+    if (currentIndex >= imageArray.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, imageArray.length]);
 
   if (!isOpen) return null;
 
@@ -33,7 +42,9 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
       <div className="w-11/12 max-w-2xl p-6 bg-white rounded-lg shadow-xl overflow-y-auto max-h-[70vh]">
         <div className="flex items-center justify-between pb-3 border-b">
-          <h2 className="text-xl font-semibold">Product Images ({currentIndex + 1}/{imageArray.length})</h2>
+          <h2 className="text-xl font-semibold">
+            Product Images {imageArray.length ? `(${currentIndex + 1}/${imageArray.length})` : ""}
+          </h2>
           <button
             className="p-1 text-2xl font-bold text-gray-600 hover:text-black"
             onClick={onClose}
@@ -44,31 +55,41 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
         </div>
 
         <div className="p-4">
-          <div className="relative flex items-center">
-            <button
-              onClick={handlePrev}
-              className="absolute left-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full -translate-x-1/2 hover:bg-opacity-70 z-10"
-              aria-label="Previous image"
-            >
-              <IoArrowBack />
-            </button>
-            
-            <div className="w-full h-[40vh]">
-              <img
-                src={imageArray[currentIndex]}
-                alt={`Product view ${currentIndex + 1}`}
-                className="object-contain w-full h-full"
-              />
-            </div>
+          {imageArray.length ? (
+            <div className="relative flex items-center">
+              {imageArray.length > 1 && (
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full -translate-x-1/2 hover:bg-opacity-70 z-10"
+                  aria-label="Previous image"
+                >
+                  <IoArrowBack />
+                </button>
+              )}
 
-            <button
-              onClick={handleNext}
-              className="absolute right-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full translate-x-1/2 hover:bg-opacity-70 z-10"
-              aria-label="Next image"
-            >
-              <IoArrowForwardOutline />
-            </button>
-          </div>
+              <div className="w-full h-[40vh]">
+                <img
+                  src={imageArray[currentIndex]}
+                  alt={`Product view ${currentIndex + 1}`}
+                  className="object-contain w-full h-full"
+                />
+              </div>
+
+              {imageArray.length > 1 && (
+                <button
+                  onClick={handleNext}
+                  className="absolute right-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full translate-x-1/2 hover:bg-opacity-70 z-10"
+                  aria-label="Next image"
+                >
+                  <IoArrowForwardOutline />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-[30vh] items-center justify-center rounded bg-gray-50 text-sm text-gray-500">
+              No product images available.
+            </div>
+          )}
 
           {imageArray.length > 1 && (
             <div className="mt-4">

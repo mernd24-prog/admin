@@ -11,6 +11,7 @@ import {
 } from "../../../../Redux/productSlice";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
+import { getProductImages } from "../../../../_helpers/productMedia";
 
 const formatDisplayValue = (value) => {
   if (React.isValidElement(value)) return value;
@@ -88,10 +89,18 @@ const ProductAdminDetails = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
 
+  const REVIEWABLE_STATUSES = new Set(['pending_approval']);
+  const needsReview =
+    REVIEWABLE_STATUSES.has(product?.status) ||
+    product?.revisionStatus === 'change_pending' ||
+    Boolean(product?.pendingRevisionId) ||
+    Boolean(product?.pendingRevision);
+
   const attributes =
     product.attributes instanceof Map
       ? Object.fromEntries(product.attributes)
       : product.attributes || {};
+  const productImages = getProductImages(product);
 
   useEffect(() => {
     if (id) {
@@ -100,7 +109,7 @@ const ProductAdminDetails = () => {
     }
   }, [dispatch, id]);
 
-  const handleReviewSubmit = async (decision, rejectionReason, checklist) => {
+  const handleReviewSubmit = async (decision, rejectionReason, checklist, notes) => {
     setReviewLoading(true);
     try {
       if (pendingRevision) {
@@ -110,6 +119,7 @@ const ProductAdminDetails = () => {
             revisionId: pendingRevision._id || pendingRevision.id,
             status: decision,
             rejectionReason: rejectionReason || null,
+            notes: notes || null,
             checklist,
           }),
         ).unwrap();
@@ -119,6 +129,7 @@ const ProductAdminDetails = () => {
             id,
             status: decision,
             rejectionReason: rejectionReason || null,
+            notes: notes || null,
             checklist,
           }),
         ).unwrap();
@@ -161,12 +172,14 @@ const ProductAdminDetails = () => {
               revisionStatus={product.revisionStatus}
             />
           )}
-          <button
-            onClick={() => setReviewOpen(true)}
-            className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
-          >
-            {pendingRevision ? "Review Revision" : "Review Product"}
-          </button>
+          {needsReview && (
+            <button
+              onClick={() => setReviewOpen(true)}
+              className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+            >
+              {pendingRevision ? "Review Revision" : "Review Product"}
+            </button>
+          )}
           <Link
             to={`/app/product-catalog/form/${id}`}
             className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -248,15 +261,16 @@ const ProductAdminDetails = () => {
         <section className="bg-white border border-gray-200 rounded-lg p-5">
           <h2 className="text-base font-semibold text-gray-800 mb-3">Images</h2>
           <div className="grid grid-cols-2 gap-2">
-            {(product.images || []).map((image) => (
+            {productImages.map((image) => (
               <img
                 key={image}
                 src={image}
-                alt=""
+                alt={product.title || "Product"}
                 className="w-full aspect-square object-cover border rounded"
+                loading="lazy"
               />
             ))}
-            {!product.images?.length && (
+            {!productImages.length && (
               <p className="text-sm text-gray-400 col-span-2">No images</p>
             )}
           </div>
@@ -297,12 +311,14 @@ const ProductAdminDetails = () => {
                     : "N/A"}
                 </p>
               </div>
-              <button
-                onClick={() => setReviewOpen(true)}
-                className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
-              >
-                Review Revision
-              </button>
+              {needsReview && (
+                <button
+                  onClick={() => setReviewOpen(true)}
+                  className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+                >
+                  Review Revision
+                </button>
+              )}
             </div>
             <div className="space-y-2">
               {(pendingRevision.changedFields?.length

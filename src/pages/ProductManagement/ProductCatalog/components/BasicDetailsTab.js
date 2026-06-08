@@ -2,7 +2,6 @@ import 'react-quill/dist/quill.snow.css';
 import { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 // Components
 import FormInput from '../../../../components/Atoms/FormInput/FormInput';
@@ -88,7 +87,6 @@ export default function BasicDetailsTab({
   allCategories, API_CALL_OBJECT, hsnCodeList, countryList = [], sellerList = [], userData
 }) {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const selector = useSelector(state => state);
   const warrantyUnits = useDropdownOptions('warranty-units');
 
@@ -493,7 +491,7 @@ export default function BasicDetailsTab({
         </div>
 
         <div className="p-2 space-y-6 ">
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+          {/* <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
             <p className="text-xs font-semibold text-blue-900">Setup help</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/categories')}>Categories</button>
@@ -504,7 +502,7 @@ export default function BasicDetailsTab({
               </PermissionGuard>
               <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-flow')}>Open Full Product Flow</button>
             </div>
-          </div>
+          </div> */}
           <div className="grid w-auto grid-cols-1 gap-4 md:grid-cols-2">
             {!SELLER_PANEL_ROLES.has(userData?.role) && (
               <div>
@@ -546,12 +544,12 @@ export default function BasicDetailsTab({
             <div>
               <div className='flex justify-between items-center'>
                 <label>Category</label>
-                <button
+                {/* <button
                   className='font-semibold text-xs text-blue-600 hover:text-blue-800'
                   onClick={() => handleAction("Category")}
                 >
                   Add Category
-                </button>
+                </button> */}
               </div>
               <FilterSelect
                 name="category_id"
@@ -608,13 +606,13 @@ export default function BasicDetailsTab({
               <div className='flex justify-between items-center'>
                 <label>Hsn Code</label>
                 <PermissionGuard module="tax" action="create" hide>
-                  <button
+                  {/* <button
                     type="button"
                     className='font-semibold text-xs text-blue-600 hover:text-blue-800'
                     onClick={() => handleAction("Hsn")}
                   >
                     Add Hsn
-                  </button>
+                  </button> */}
                 </PermissionGuard>
               </div>
               <FilterSelect

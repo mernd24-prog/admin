@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { axiosImage, axiosPrivate, axiosPublic } from "./axiosProvider";
+import { normalizeImageList } from "./productMedia";
 
 const resolveEndpoint = (url, payload) =>
   typeof url === "function" ? url(payload) : url;
@@ -81,8 +82,20 @@ const normalizeLegacyRecord = (record) => {
   if (next.gstRate !== undefined && next.CGST === undefined) next.CGST = Number(next.gstRate || 0) / 2;
   if (next.gstRate !== undefined && next.SGST === undefined) next.SGST = Number(next.gstRate || 0) / 2;
   if (next.cessRate !== undefined && next.additionalTax === undefined) next.additionalTax = Number(next.cessRate || 0);
-  if (Array.isArray(next.images) && !next.product_image_id) {
-    next.product_image_id = { images: next.images };
+  const normalizedImages = normalizeImageList(
+    next.images,
+    next.imageUrls,
+    next.product_image_id?.images,
+    next.media?.images,
+    next.image,
+    next.thumbnail,
+    next.thumbnailUrl,
+  );
+  if (normalizedImages.length) {
+    next.images = normalizedImages;
+    if (!next.product_image_id) {
+      next.product_image_id = { images: normalizedImages };
+    }
   }
   if (next.status && next.isApproved === undefined && (next.title || next.sku || next.price !== undefined)) {
     next.isApproved = next.status === "active";

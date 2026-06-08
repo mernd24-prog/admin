@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { FaCloudUploadAlt, FaTimes, FaSpinner, FaInfoCircle } from "react-icons/fa";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 import { toast } from "sonner";
+import { normalizeImageList, resolveMediaUrl } from "../../../_helpers/productMedia";
 
 const MultiImageUpload = ({
     label = "",
@@ -23,7 +24,8 @@ const MultiImageUpload = ({
         const maxSize = 5 * 1024 * 1024; // 5MB
         const filesArray = Array.from(files);
 
-        const remainingSlots = maxFiles - images.length;
+        const normalizedImages = normalizeImageList(images);
+        const remainingSlots = maxFiles - normalizedImages.length;
         if (remainingSlots <= 0) {
             toast.error(`You can only upload up to ${maxFiles} images.`);
             return;
@@ -52,7 +54,7 @@ const MultiImageUpload = ({
             const uploadedUrls = await uploadFileMulti(validFiles, type || "PRODUCTS");
             console.log(uploadedUrls)
           
-            setImages((prev) => [...prev, ...(uploadedUrls || [])]); // Ensure safe spread
+            setImages((prev) => normalizeImageList(prev, uploadedUrls));
         } catch (err) {
             toast.error(err || "Upload failed. Please try again.");
             console.log(err)
@@ -76,8 +78,10 @@ const MultiImageUpload = ({
     };
 
     const handleDelete = (url) => {
-        setImages((prev) => prev.filter((img) => img !== url));
+        setImages((prev) => normalizeImageList(prev).filter((img) => img !== url));
     };
+
+    const normalizedImages = normalizeImageList(images);
 
     return (
         <div className="space-y-3">
@@ -90,7 +94,7 @@ const MultiImageUpload = ({
 
             <div
                 className={`relative border-2 border-dashed rounded-xl transition-all duration-200
-          ${images.length ? "border-gray-200" : "border-gray-300"}
+          ${normalizedImages.length ? "border-gray-200" : "border-gray-300"}
           ${errorMessage ? "border-red-500" : ""}
           ${isDisabled ? "opacity-70 cursor-not-allowed bg-gray-100" : "bg-white cursor-pointer hover:border-blue-400"}
         `}
@@ -108,17 +112,17 @@ const MultiImageUpload = ({
                     disabled={isDisabled || isUploading}
                 />
 
-                {images?.length ? (
+                {normalizedImages?.length ? (
                     <div className="p-4">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {images.map((url, idx) => (
+                            {normalizedImages.map((url, idx) => (
                                 <div
                                     key={idx}
                                     className="relative group rounded-lg overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                                 >
                                     <div className="aspect-square bg-gray-100">
                                         <img
-                                            src={url}
+                                            src={resolveMediaUrl(url)}
                                             alt={`uploaded-${idx}`}
                                             className="object-cover w-full h-full"
                                             loading="lazy"
@@ -139,7 +143,7 @@ const MultiImageUpload = ({
                                 </div>
                             ))}
 
-                            {images.length < maxFiles && !isUploading && (
+                            {normalizedImages.length < maxFiles && !isUploading && (
                                 <div
                                     className="relative aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-400 transition-colors cursor-pointer"
                                     onClick={(e) => {
@@ -150,7 +154,7 @@ const MultiImageUpload = ({
                                     <FaCloudUploadAlt size={24} className="mb-2" />
                                     <span className="text-xs text-center px-2">Add more images</span>
                                     <span className="text-xs text-gray-400 mt-1">
-                                        {maxFiles - images.length} remaining
+                                        {maxFiles - normalizedImages.length} remaining
                                     </span>
                                 </div>
                             )}
