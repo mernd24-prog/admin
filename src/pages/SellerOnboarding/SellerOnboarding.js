@@ -896,10 +896,7 @@ const SellerOnboarding = () => {
         }));
         const storedBusinessName =
           sellerProfile?.businessName ||
-          sellerProfile?.displayName ||
           sellerProfile?.legalBusinessName ||
-          kyc?.legalName ||
-          kyc?.legal_name ||
           "";
         const storedBusinessType =
           sellerProfile?.businessType || kyc?.businessType || kyc?.business_type || "";
@@ -1082,10 +1079,7 @@ const SellerOnboarding = () => {
     }));
     const storedBusinessName =
       sellerProfile?.businessName ||
-      sellerProfile?.displayName ||
       sellerProfile?.legalBusinessName ||
-      kyc?.legalName ||
-      kyc?.legal_name ||
       "";
     const storedBusinessType =
       sellerProfile?.businessType || kyc?.businessType || kyc?.business_type || "";
@@ -1172,7 +1166,6 @@ const SellerOnboarding = () => {
       Boolean(
         (
           sellerProfile?.businessName ||
-          sellerProfile?.displayName ||
           sellerProfile?.legalBusinessName
         )?.trim(),
       ) &&
@@ -1230,11 +1223,11 @@ const SellerOnboarding = () => {
       setStep(3);
       return;
     }
-    if (statusMeansReview && profileCompleted && bankLinked) {
-      setStep(5);
+    if (profileCompleted && kycSubmitted && bankLinked) {
+      setStep(4);
       return;
     }
-    if (profileCompleted && kycSubmitted && bankLinked) {
+    if (statusMeansReview && profileCompleted && bankLinked) {
       setStep(5);
       return;
     }
