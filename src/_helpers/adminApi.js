@@ -32,16 +32,88 @@ export const DEFAULT_PLATFORM_MODULES = [
 
 export const DEFAULT_SELLER_MODULES = [
   "products",
+  "inventory",
   "orders",
+  "returns",
+  "coupons",
   "pricing",
   "notifications",
+  "delivery",
   "analytics",
+  "reports",
   "sellers",
   "seller-management",
   "sellers/commissions",
-  "returns",
-  "delivery",
 ];
+
+export const normalizeModuleSlug = (value = "") =>
+  String(value || "").trim().toLowerCase();
+
+export const normalizePermissionActions = (actions = []) =>
+  Array.from(
+    new Set(
+      ["view", ...(actions || [])]
+        .map((action) => String(action || "").trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+
+export const getAccessModuleSlug = (module = {}) =>
+  normalizeModuleSlug(module.slug || module.moduleKey || module.moduleSlug || module.module);
+
+export const getAccessModuleAssignableActions = (module = {}) => {
+  const assignableActions = Array.isArray(module.assignableActions)
+    ? module.assignableActions
+    : [];
+  if (assignableActions.length) return normalizePermissionActions(assignableActions);
+
+  const permissionActions = Array.isArray(module.permissions)
+    ? module.permissions
+      .filter((permission) => permission?.assignable !== false)
+      .map((permission) => permission.action)
+    : [];
+  return permissionActions.length ? normalizePermissionActions(permissionActions) : ["view"];
+};
+
+export const getAccessModuleAssignedActions = (module = {}) => {
+  const assignedActions = Array.isArray(module.permissions)
+    ? module.permissions
+      .filter((permission) => permission?.assigned === true)
+      .map((permission) => permission.action)
+    : [];
+  return assignedActions.length ? normalizePermissionActions(assignedActions) : ["view"];
+};
+
+export const buildAccessModuleActionMaps = (modules = []) =>
+  (Array.isArray(modules) ? modules : []).reduce(
+    (maps, module) => {
+      const slug = getAccessModuleSlug(module);
+      if (!slug || module.assignable === false) return maps;
+      maps.assignable[slug] = getAccessModuleAssignableActions(module);
+      maps.assigned[slug] = getAccessModuleAssignedActions(module);
+      return maps;
+    },
+    { assignable: {}, assigned: {} },
+  );
+
+export const buildModulePermissions = (
+  modules = [],
+  assignableActionsByModule = {},
+  selectedActionsByModule = {},
+) =>
+  Array.from(new Set((modules || []).map(normalizeModuleSlug).filter(Boolean)))
+    .map((moduleName) => {
+      const assignableActions = normalizePermissionActions(assignableActionsByModule[moduleName] || ["view"]);
+      const sourceActions = Array.isArray(selectedActionsByModule[moduleName]) && selectedActionsByModule[moduleName].length
+        ? selectedActionsByModule[moduleName]
+        : ["view"];
+      const sourceSet = new Set(normalizePermissionActions(sourceActions));
+      const actions = assignableActions.filter((action) => action === "view" || sourceSet.has(action));
+      return {
+        module: moduleName,
+        actions: actions.length ? actions : ["view"],
+      };
+    });
 
 export const getApiErrorMessage = (error) =>
   error?.error?.message ||

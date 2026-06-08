@@ -39,6 +39,12 @@ const SELLER_SIDEBAR_SECTIONS = [
     route: "product-catalog",
   },
   {
+    module: "inventory",
+    tab: "Inventory Management",
+    label: "Inventory",
+    route: "inventory-overview",
+  },
+  {
     module: "orders",
     tab: "Orders Management",
     label: "Orders",
@@ -85,6 +91,12 @@ const SELLER_SIDEBAR_SECTIONS = [
     tab: "Marketing",
     label: "Notifications",
     route: "messages",
+  },
+  {
+    module: "reports",
+    tab: "Reports & Analytics",
+    label: "Reports",
+    route: "reports-sales",
   },
 ];
 
@@ -214,8 +226,16 @@ const getSessionUser = () => {
 const getCurrentSidebarUser = () => {
   const s = getSessionUser() || {};
   const u = getStoredUser() || {};
-  const role = s.role || s.roleSlug || getStoredRole() || u.role;
-  const userId = s.userId || s.id || s._id || u.userId || u.id || u._id;
+  const role = s.role || s.roleSlug || s.roleId || getStoredRole() || u.role || u.roleId;
+  const userId =
+    s.userId ||
+    s.user_id ||
+    s.id ||
+    s._id ||
+    u.userId ||
+    u.user_id ||
+    u.id ||
+    u._id;
   if (!userId && !role) return null;
   return { ...u, ...s, userId, role };
 };
@@ -336,12 +356,12 @@ const Sidebar = ({
   }, []);
 
   useEffect(() => {
+    if (getAccessToken() && (userData?.userId || userData?.role)) {
+      dispatch(
+        getMyModulePermission({ _id: userData.userId, role: userData.role }),
+      );
+    }
     if (!sellerPanel && getAccessToken()) {
-      if (userData?.userId || userData?.role) {
-        dispatch(
-          getMyModulePermission({ _id: userData.userId, role: userData.role }),
-        );
-      }
       dispatch(getRbacSidebarModules());
     }
   }, [userData, dispatch, isRefreshConfig, sellerPanel]);

@@ -11,7 +11,12 @@ import {
   updateSellerSubAdminStatus,
 } from '../../Redux/sellerSubAdminsSlice';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
-import { DEFAULT_SELLER_MODULES } from '../../_helpers/adminApi';
+import {
+  DEFAULT_SELLER_MODULES,
+  buildAccessModuleActionMaps,
+  buildModulePermissions,
+  normalizePermissionActions,
+} from '../../_helpers/adminApi';
 import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../_helpers/rbacRoutes';
 import { getStoredRole, getStoredUser, hasModuleAccess, normalizeRole } from '../../_helpers/authStorage';
 import { apiRequest } from '../../_helpers/apiConfig';
@@ -171,6 +176,58 @@ const groupModules = (modules = []) => {
     });
 };
 
+const ACTION_LABELS = {
+  view: 'View',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
+  approve: 'Approve',
+  reject: 'Reject',
+  assign: 'Assign',
+  export: 'Export',
+  import: 'Import',
+  status_change: 'Status',
+  restore: 'Restore',
+  bulk_action: 'Bulk',
+  adjust: 'Adjust',
+};
+
+const getActionLabel = (action = '') =>
+  ACTION_LABELS[action] ||
+  String(action || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const reconcileActionsMap = (
+  modules = [],
+  current = {},
+  assignedDefaults = {},
+  assignableOptions = {},
+) =>
+  Array.from(new Set(modules)).reduce((lookup, module) => {
+    const assignableActions = normalizePermissionActions(assignableOptions[module] || ['view']);
+    const sourceActions = current[module] || assignedDefaults[module] || ['view'];
+    lookup[module] = normalizePermissionActions(sourceActions).filter(
+      (action) => action === 'view' || assignableActions.includes(action),
+    );
+    if (!lookup[module].length) lookup[module] = ['view'];
+    return lookup;
+  }, {});
+
+const buildActionsMapFromUser = (user = {}) =>
+  (Array.isArray(user.modulePermissions) ? user.modulePermissions : []).reduce((lookup, item) => {
+    const module = String(item.module || item.slug || '').trim().toLowerCase();
+    if (module) lookup[module] = normalizePermissionActions(item.actions || ['view']);
+    return lookup;
+  }, (Array.isArray(user.permissionSummary?.permissions) ? user.permissionSummary.permissions : []).reduce((lookup, permission) => {
+    const [module, action] = String(permission || '').split(':');
+    const slug = String(module || '').trim().toLowerCase();
+    if (slug && action) {
+      lookup[slug] = normalizePermissionActions([...(lookup[slug] || []), action]);
+    }
+    return lookup;
+  }, {}));
+
 const ModuleSelector = ({ modules, selected, onChange, disabled = false }) => {
   const selectedSet = new Set(selected);
 
@@ -224,6 +281,72 @@ const ModuleSelector = ({ modules, selected, onChange, disabled = false }) => {
           </div>
         </section>
       ))}
+    </div>
+  );
+};
+
+const ModuleActionsSelector = ({
+  modules = [],
+  actionOptions = {},
+  actionsMap = {},
+  onChange,
+  disabled = false,
+}) => {
+  if (!modules.length) return null;
+  const actionColumns = normalizePermissionActions(
+    modules.flatMap((module) => actionOptions[module] || ['view']),
+  );
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-md border border-gray-100">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2">
+        <span className="text-xs font-semibold uppercase text-gray-500">Actions per module</span>
+        <span className="text-[10px] text-gray-400">View is always included</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-100 bg-white">
+              <th className="w-40 px-3 py-2 text-left font-medium text-gray-500">Module</th>
+              {actionColumns.map((action) => (
+                <th key={action} className="px-2 py-2 text-center font-medium text-gray-400">
+                  {getActionLabel(action)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {modules.map((module) => {
+              const available = normalizePermissionActions(actionOptions[module] || ['view']);
+              const current = normalizePermissionActions(actionsMap[module] || ['view']);
+              return (
+                <tr key={module}>
+                  <td className="px-3 py-2 font-medium text-gray-700">{getModuleLabel(module)}</td>
+                  {actionColumns.map((action) => {
+                    const canAssign = action === 'view' || available.includes(action);
+                    return (
+                      <td key={action} className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={canAssign && (action === 'view' || current.includes(action))}
+                          disabled={disabled || action === 'view' || !canAssign}
+                          onChange={(event) => {
+                            const next = event.target.checked
+                              ? normalizePermissionActions([...current, action])
+                              : normalizePermissionActions(current.filter((item) => item !== action));
+                            onChange?.({ ...actionsMap, [module]: next });
+                          }}
+                          className="h-3.5 w-3.5 accent-[var(--admin-blue)] disabled:cursor-default"
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -302,6 +425,8 @@ const SellerSubAdminManagement = () => {
   const [viewProducts, setViewProducts] = useState([]);
   const [viewDashboard, setViewDashboard] = useState({});
   const [viewLoading, setViewLoading] = useState(false);
+  const [moduleActionsMap, setModuleActionsMap] = useState({});
+  const [showModuleActions, setShowModuleActions] = useState(false);
 
   const subAdmins = extractList(sellerSelector?.listSubAdminsData);
   const hierarchyItems = extractList(sellerSelector?.hierarchyData);
@@ -314,6 +439,16 @@ const SellerSubAdminManagement = () => {
     const source = fromPermissions.length ? fromPermissions : DEFAULT_SELLER_MODULES;
     return Array.from(new Set(source.filter((slug) => hasModuleAccess(slug))));
   }, [userSelector?.getMyModulePermissionData]);
+  const moduleActionMaps = useMemo(() => {
+    const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
+    return buildAccessModuleActionMaps(
+      (Array.isArray(sidebarModules) ? sidebarModules : []).filter((module) =>
+        hasModuleAccess(module.slug || module.module || module.module_code?.module_code || module.module_code),
+      ),
+    );
+  }, [userSelector?.getMyModulePermissionData]);
+  const moduleActionOptions = moduleActionMaps.assignable;
+  const moduleAssignedActions = moduleActionMaps.assigned;
 
   const visibleSubAdmins = useMemo(() => {
     const query = String(filters.search || '').trim().toLowerCase();
@@ -355,10 +490,24 @@ const SellerSubAdminManagement = () => {
     });
   }, [moduleOptions]);
 
+  useEffect(() => {
+    setModuleActionsMap((current) =>
+      reconcileActionsMap(
+        form.allowedModules || [],
+        current,
+        moduleAssignedActions,
+        moduleActionOptions,
+      ),
+    );
+  }, [form.allowedModules, moduleActionOptions, moduleAssignedActions]);
+
   const openCreate = () => {
+    const allowedModules = moduleOptions.slice(0, 2);
     setEditTarget(null);
     setErrors({});
-    setForm({ ...emptyForm, allowedModules: moduleOptions.slice(0, 2) });
+    setModuleActionsMap(reconcileActionsMap(allowedModules, {}, moduleAssignedActions, moduleActionOptions));
+    setShowModuleActions(false);
+    setForm({ ...emptyForm, allowedModules });
     setModalOpen(true);
   };
 
@@ -366,6 +515,15 @@ const SellerSubAdminManagement = () => {
     const allowedModules = (user.allowedModules || []).filter((module) => moduleOptions.includes(module));
     setEditTarget(user);
     setErrors({});
+    setModuleActionsMap(
+      reconcileActionsMap(
+        allowedModules,
+        buildActionsMapFromUser(user),
+        moduleAssignedActions,
+        moduleActionOptions,
+      ),
+    );
+    setShowModuleActions(false);
     setForm({
       ...emptyForm,
       fullName: getUserName(user),
@@ -380,6 +538,8 @@ const SellerSubAdminManagement = () => {
     setModalOpen(false);
     setEditTarget(null);
     setErrors({});
+    setShowModuleActions(false);
+    setModuleActionsMap({});
   };
 
   const refresh = () => {
@@ -397,14 +557,20 @@ const SellerSubAdminManagement = () => {
     }
 
     try {
+      const modulePermissions = buildModulePermissions(
+        allowedModules,
+        moduleActionOptions,
+        moduleActionsMap,
+      );
       if (editTarget) {
         await dispatch(updateSellerSubAdminModules({
           userId: getId(editTarget),
           allowedModules,
+          modulePermissions,
         })).unwrap();
         toast.success('Sub-seller access updated');
       } else {
-        await dispatch(createSellerSubAdmin({ ...form, allowedModules })).unwrap();
+        await dispatch(createSellerSubAdmin({ ...form, allowedModules, modulePermissions })).unwrap();
         toast.success('Sub-seller created successfully');
       }
       closeModal();
@@ -682,6 +848,29 @@ const SellerSubAdminManagement = () => {
             />
             {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
           </div>
+          {form.allowedModules.length > 0 && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => setShowModuleActions((value) => !value)}
+                className="text-xs font-medium text-[var(--admin-blue)] hover:underline"
+              >
+                {showModuleActions ? 'Hide' : 'Configure'} actions per module
+              </button>
+              {showModuleActions ? (
+                <ModuleActionsSelector
+                  modules={form.allowedModules}
+                  actionOptions={moduleActionOptions}
+                  actionsMap={moduleActionsMap}
+                  onChange={setModuleActionsMap}
+                />
+              ) : (
+                <p className="text-[10px] text-gray-400">
+                  Uses backend RBAC defaults. Open this to assign create/update/delete per module.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </DefaultModal>
       <DefaultModal

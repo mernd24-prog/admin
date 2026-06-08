@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { getStoredRole, hasModuleAccess } from './authStorage';
+import { getStoredRole, getStoredUser, hasModuleAccess } from './authStorage';
 import { getRouteModuleCandidates, isSelfServiceRoute } from './rbacRoutes';
 
 /**
@@ -77,6 +77,57 @@ const normalizeModuleCode = (value = '') =>
     .replace(/\s+/g, '-')
     .replace(/_/g, '-');
 
+const safeParseStorage = (storage, key, fallback = null) => {
+  try {
+    return storage?.getItem ? JSON.parse(storage.getItem(key) || 'null') || fallback : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const permissionLikeToSlug = (permission) => {
+  if (typeof permission === 'string') return permission;
+  if (!permission || typeof permission !== 'object') return '';
+  return permission.slug || permission.permission || permission.permissionSlug || '';
+};
+
+const getStoredPermissionSlugs = () => {
+  const localUser = getStoredUser() || {};
+  const sessionUser =
+    typeof window === 'undefined'
+      ? {}
+      : safeParseStorage(window.sessionStorage, 'EcomAdmin', {});
+  return [
+    localUser.permissions,
+    localUser.effectivePermissions,
+    localUser.assignedPermissions,
+    localUser.permissionSummary?.permissions,
+    sessionUser?.permissions,
+    sessionUser?.effectivePermissions,
+    sessionUser?.assignedPermissions,
+    sessionUser?.permissionSummary?.permissions,
+  ]
+    .flatMap((value) => (Array.isArray(value) ? value : []))
+    .map(permissionLikeToSlug)
+    .map((permission) => String(permission || '').trim().toLowerCase())
+    .filter((permission) => permission.includes(':'));
+};
+
+const applyPermissionSlugToMap = (map, permissionSlug) => {
+  const [moduleSlug, actionSlug] = String(permissionSlug || '').split(':');
+  const slug = normalizeModuleCode(moduleSlug);
+  const action = normalizeAction(actionSlug);
+  if (!slug || !action) return;
+
+  if (!map[slug]) map[slug] = { _assigned: false };
+  map[slug]._assigned = true;
+  map[slug][action] = true;
+
+  if (action !== ACTIONS.VIEW) {
+    map[slug][ACTIONS.VIEW] = true;
+  }
+};
+
 /**
  * ROLE constants — mirrors backend roles.js
  */
@@ -109,38 +160,43 @@ export function usePermission() {
   // Build a fast lookup: { moduleSlug: { action: bool } }
   const permMap = useMemo(() => {
     const map = {};
-    if (!Array.isArray(permissions)) return map;
+    if (Array.isArray(permissions)) {
+      permissions.forEach((mod) => {
+        const slug = normalizeModuleCode(
+          mod.slug ||
+          mod.moduleKey ||
+          mod.moduleSlug ||
+          mod.module ||
+          mod.module_code?.module_code ||
+          mod.module_code ||
+          mod.metadata?.requiredModule
+        );
+        if (!slug) return;
 
-    permissions.forEach((mod) => {
-      const slug = normalizeModuleCode(
-        mod.slug ||
-        mod.moduleKey ||
-        mod.moduleSlug ||
-        mod.module ||
-        mod.module_code?.module_code ||
-        mod.module_code ||
-        mod.metadata?.requiredModule
-      );
-      if (!slug) return;
+        if (!map[slug]) map[slug] = { _assigned: false };
+        if (mod.assigned === true && !Array.isArray(mod.permissions)) {
+          map[slug]._assigned = true;
+          map[slug].view = true;
+        }
 
-      if (!map[slug]) map[slug] = { _assigned: false };
-      if (mod.assigned === true && !Array.isArray(mod.permissions)) {
-        map[slug]._assigned = true;
-        map[slug].view = true;
-      }
+        if (Array.isArray(mod.permissions)) {
+          mod.permissions.forEach((p) => {
+            const action = normalizeAction(p.action);
+            if (!action) return;
+            const assigned = p.assigned === true;
+            map[slug][action] = map[slug][action] === true || assigned;
+            if (action === 'view' && assigned) {
+              map[slug]._assigned = true;
+            }
+          });
+        }
+      });
+    }
 
-      if (Array.isArray(mod.permissions)) {
-        mod.permissions.forEach((p) => {
-          const action = normalizeAction(p.action);
-          if (!action) return;
-          const assigned = p.assigned === true;
-          map[slug][action] = map[slug][action] === true || assigned;
-          if (action === 'view' && assigned) {
-            map[slug]._assigned = true;
-          }
-        });
-      }
-    });
+    getStoredPermissionSlugs().forEach((permissionSlug) =>
+      applyPermissionSlugToMap(map, permissionSlug)
+    );
+
     return map;
   }, [permissions]);
 

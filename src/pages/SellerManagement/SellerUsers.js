@@ -4,7 +4,12 @@ import { toast } from 'sonner';
 import { apiRequest } from '../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../_helpers/endpoints';
 import { getStoredRole, normalizeRole } from '../../_helpers/authStorage';
-import { DEFAULT_SELLER_MODULES } from '../../_helpers/adminApi';
+import {
+  DEFAULT_SELLER_MODULES,
+  buildAccessModuleActionMaps,
+  buildModulePermissions,
+  normalizePermissionActions,
+} from '../../_helpers/adminApi';
 import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../_helpers/rbacRoutes';
 import TableData from '../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../components/Atoms/New Table/NewTable';
@@ -95,6 +100,58 @@ const groupModules = (modules = []) => {
     });
 };
 
+const ACTION_LABELS = {
+  view: 'View',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
+  approve: 'Approve',
+  reject: 'Reject',
+  assign: 'Assign',
+  export: 'Export',
+  import: 'Import',
+  status_change: 'Status',
+  restore: 'Restore',
+  bulk_action: 'Bulk',
+  adjust: 'Adjust',
+};
+
+const getActionLabel = (action = '') =>
+  ACTION_LABELS[action] ||
+  String(action || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const reconcileActionsMap = (
+  modules = [],
+  current = {},
+  assignedDefaults = {},
+  assignableOptions = {},
+) =>
+  Array.from(new Set(modules)).reduce((lookup, module) => {
+    const assignableActions = normalizePermissionActions(assignableOptions[module] || ['view']);
+    const sourceActions = current[module] || assignedDefaults[module] || ['view'];
+    lookup[module] = normalizePermissionActions(sourceActions).filter(
+      (action) => action === 'view' || assignableActions.includes(action),
+    );
+    if (!lookup[module].length) lookup[module] = ['view'];
+    return lookup;
+  }, {});
+
+const buildActionsMapFromUser = (user = {}) =>
+  (Array.isArray(user.modulePermissions) ? user.modulePermissions : []).reduce((lookup, item) => {
+    const module = String(item.module || item.slug || '').trim().toLowerCase();
+    if (module) lookup[module] = normalizePermissionActions(item.actions || ['view']);
+    return lookup;
+  }, (Array.isArray(user.permissionSummary?.permissions) ? user.permissionSummary.permissions : []).reduce((lookup, permission) => {
+    const [module, action] = String(permission || '').split(':');
+    const slug = String(module || '').trim().toLowerCase();
+    if (slug && action) {
+      lookup[slug] = normalizePermissionActions([...(lookup[slug] || []), action]);
+    }
+    return lookup;
+  }, {}));
+
 const ModuleSelector = ({ modules = [], selected = [], onChange, disabled = false }) => {
   const selectedSet = new Set(selected);
 
@@ -152,6 +209,72 @@ const ModuleSelector = ({ modules = [], selected = [], onChange, disabled = fals
   );
 };
 
+const ModuleActionsSelector = ({
+  modules = [],
+  actionOptions = {},
+  actionsMap = {},
+  onChange,
+  disabled = false,
+}) => {
+  if (!modules.length) return null;
+  const actionColumns = normalizePermissionActions(
+    modules.flatMap((module) => actionOptions[module] || ['view']),
+  );
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-md border border-gray-100">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2">
+        <span className="text-xs font-semibold uppercase text-gray-500">Actions per module</span>
+        <span className="text-[10px] text-gray-400">View is always included</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-100 bg-white">
+              <th className="w-40 px-3 py-2 text-left font-medium text-gray-500">Module</th>
+              {actionColumns.map((action) => (
+                <th key={action} className="px-2 py-2 text-center font-medium text-gray-400">
+                  {getActionLabel(action)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {modules.map((module) => {
+              const available = normalizePermissionActions(actionOptions[module] || ['view']);
+              const current = normalizePermissionActions(actionsMap[module] || ['view']);
+              return (
+                <tr key={module}>
+                  <td className="px-3 py-2 font-medium text-gray-700">{getModuleLabel(module)}</td>
+                  {actionColumns.map((action) => {
+                    const canAssign = action === 'view' || available.includes(action);
+                    return (
+                      <td key={action} className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={canAssign && (action === 'view' || current.includes(action))}
+                          disabled={disabled || action === 'view' || !canAssign}
+                          onChange={(event) => {
+                            const next = event.target.checked
+                              ? normalizePermissionActions([...current, action])
+                              : normalizePermissionActions(current.filter((item) => item !== action));
+                            onChange?.({ ...actionsMap, [module]: next });
+                          }}
+                          className="h-3.5 w-3.5 accent-[var(--admin-blue)] disabled:cursor-default"
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const SellerUsers = () => {
   const navigate = useNavigate();
   const storedRole = normalizeRole(getStoredRole());
@@ -173,6 +296,10 @@ const SellerUsers = () => {
   const [errors, setErrors] = useState({});
   const [editTarget, setEditTarget] = useState(null);
   const [moduleOptions, setModuleOptions] = useState(DEFAULT_SELLER_MODULES);
+  const [moduleActionOptions, setModuleActionOptions] = useState({});
+  const [moduleAssignedActions, setModuleAssignedActions] = useState({});
+  const [moduleActionsMap, setModuleActionsMap] = useState({});
+  const [showModuleActions, setShowModuleActions] = useState(false);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -182,21 +309,26 @@ const SellerUsers = () => {
     try {
       const response = await apiRequest('GET', ENDPOINTS.adminAccess.modules, {
         role,
-        includePermissions: false,
+        includePermissions: true,
       });
       const payload = unwrapPayload(response);
       const modules = (payload?.modules || [])
         .filter((module) => module.assignable !== false)
         .map((module) => String(module.slug || module.moduleKey || '').trim().toLowerCase())
         .filter(Boolean);
+      const actionMaps = buildAccessModuleActionMaps(payload?.modules || []);
       if (modules.length) {
         setModuleOptions(Array.from(new Set(modules)));
+        setModuleActionOptions(actionMaps.assignable);
+        setModuleAssignedActions(actionMaps.assigned);
         return;
       }
     } catch (error) {
       // fallback handled below
     }
     setModuleOptions(DEFAULT_SELLER_MODULES);
+    setModuleActionOptions({});
+    setModuleAssignedActions({});
   }, []);
 
   const fetchTabData = useCallback(async () => {
@@ -270,6 +402,17 @@ const SellerUsers = () => {
     });
   }, [moduleOptions]);
 
+  useEffect(() => {
+    setModuleActionsMap((current) =>
+      reconcileActionsMap(
+        staffForm.allowedModules || [],
+        current,
+        moduleAssignedActions,
+        moduleActionOptions,
+      ),
+    );
+  }, [staffForm.allowedModules, moduleActionOptions, moduleAssignedActions]);
+
   const activeData = useMemo(() => {
     if (tab === 'sellers') return sellersData;
     if (tab === 'seller-admins') return sellerAdminsData;
@@ -304,13 +447,23 @@ const SellerUsers = () => {
               setEditTarget(user);
               setEditMode(true);
               setErrors({});
+              const allowedModules = (user.allowedModules || []).filter((module) => moduleOptions.includes(module));
+              setModuleActionsMap(
+                reconcileActionsMap(
+                  allowedModules,
+                  buildActionsMapFromUser(user),
+                  moduleAssignedActions,
+                  moduleActionOptions,
+                ),
+              );
+              setShowModuleActions(false);
               setStaffForm({
                 ...emptyStaffForm,
                 fullName: getUserName(user),
                 email: user.email || '',
                 phone: user.phone || '',
                 parentSellerId: user.parentSellerId || user.ownerSellerId || '',
-                allowedModules: (user.allowedModules || []).filter((module) => moduleOptions.includes(module)),
+                allowedModules,
                 role: normalizeRole(user.role) || 'seller-admin',
               });
               setStaffModalOpen(true);
@@ -326,17 +479,20 @@ const SellerUsers = () => {
           />,
         ];
       }),
-    [activeData.list, tab, moduleOptions, navigate],
+    [activeData.list, tab, moduleOptions, moduleActionOptions, moduleAssignedActions, navigate],
   );
 
   const openCreateStaff = (role = 'seller-admin') => {
     setEditMode(false);
     setEditTarget(null);
     setErrors({});
+    const allowedModules = moduleOptions.slice(0, Math.min(2, moduleOptions.length));
+    setModuleActionsMap(reconcileActionsMap(allowedModules, {}, moduleAssignedActions, moduleActionOptions));
+    setShowModuleActions(false);
     setStaffForm({
       ...emptyStaffForm,
       role,
-      allowedModules: moduleOptions.slice(0, Math.min(2, moduleOptions.length)),
+      allowedModules,
     });
     setStaffModalOpen(true);
   };
@@ -362,6 +518,11 @@ const SellerUsers = () => {
     const requirePassword = !editMode;
     if (!validateStaffForm(requirePassword)) return;
     try {
+      const modulePermissions = buildModulePermissions(
+        staffForm.allowedModules,
+        moduleActionOptions,
+        moduleActionsMap,
+      );
       const payload = {
         fullName: staffForm.fullName,
         email: staffForm.email,
@@ -369,6 +530,7 @@ const SellerUsers = () => {
         password: staffForm.password,
         parentSellerId: staffForm.parentSellerId,
         allowedModules: staffForm.allowedModules,
+        modulePermissions,
       };
       if (editMode && editTarget) {
         const userId = getId(editTarget);
@@ -378,6 +540,7 @@ const SellerUsers = () => {
         });
         await apiRequest('PATCH', ENDPOINTS.adminAccess.subAdminModules(userId), {
           allowedModules: staffForm.allowedModules,
+          modulePermissions,
         });
         toast.success('Seller staff updated');
       } else if (staffForm.role === 'seller-sub-admin') {
@@ -492,7 +655,11 @@ const SellerUsers = () => {
 
       <DefaultModal
         isOpen={staffModalOpen}
-        onClose={() => setStaffModalOpen(false)}
+        onClose={() => {
+          setStaffModalOpen(false);
+          setShowModuleActions(false);
+          setModuleActionsMap({});
+        }}
         onSubmit={submitStaffForm}
         isButtonView={true}
         submitButtonText={editMode ? 'Update Staff' : 'Create Staff'}
@@ -579,6 +746,29 @@ const SellerUsers = () => {
             />
             {errors.allowedModules && <p className="text-xs text-red-500">{errors.allowedModules}</p>}
           </div>
+          {staffForm.allowedModules.length > 0 && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => setShowModuleActions((value) => !value)}
+                className="text-xs font-medium text-[var(--admin-blue)] hover:underline"
+              >
+                {showModuleActions ? 'Hide' : 'Configure'} actions per module
+              </button>
+              {showModuleActions ? (
+                <ModuleActionsSelector
+                  modules={staffForm.allowedModules}
+                  actionOptions={moduleActionOptions}
+                  actionsMap={moduleActionsMap}
+                  onChange={setModuleActionsMap}
+                />
+              ) : (
+                <p className="text-[10px] text-gray-400">
+                  Uses backend RBAC role defaults. Open this to assign create/update/delete per module.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </DefaultModal>
 

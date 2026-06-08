@@ -12,7 +12,6 @@ import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import PermissionGuard from '../../../../components/Atoms/PermissionGuard/PermissionGuard';
 
 // Modals
-import AddStoreModal from './Modals/AddStoreModal';
 import AddCategoryModal from './Modals/AddCategoryModal';
 
 // Redux Actions
@@ -90,11 +89,7 @@ export default function BasicDetailsTab({
   const selector = useSelector(state => state);
   const warrantyUnits = useDropdownOptions('warranty-units');
 
-  const modifiedCountry = countryList.length
-    ? countryList
-    : transformArray(getListPayload(selector?.country?.getAllCountryListData));
-  const modifiedState = transformArray(getListPayload(selector?.state?.getAllStateListData));
-  const modifiedCity = transformArray(getListPayload(selector?.city?.getAllCityListData));
+ 
   const modifiedSellerList = sellerList.length
     ? sellerList
     : transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
@@ -562,46 +557,7 @@ export default function BasicDetailsTab({
               <p className="mt-1 text-xs text-gray-500">Attributes are controlled by the selected category schema.</p>
             </div>
 
-            {/* <div>
-              <div className='flex justify-between items-center'>
-                <label>Batch</label>
-                <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("Batch")}
-                >
-                  Add Batch
-                </button>
-              </div>
-              <FilterSelect
-                name="batch_id"
-                value={batchData.find(opt => opt.value === formData.batch_id)}
-                onChange={(e) => handleSelectChange(e, 'STORE_BATCH_ID')}
-                options={batchData || []}
-                error={errors?.batch_id}
-                placeholder="Batch"
-              />
-            </div> */}
-
-            {/* <div>
-              <div className='flex justify-between items-center'>
-                <label>Quantity Head</label>
-                <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("QTY")}
-                >
-                  Add Quantity Head
-                </button>
-              </div>
-              <FilterSelect
-                name="qty_head_id"
-                value={formattedQtyHeadList.find(opt => opt.value === formData.qty_head_id)}
-                onChange={(e) => handleSelectChange(e, 'STORE_qtyHead_ID')}
-                options={formattedQtyHeadList || []}
-                error={errors?.qty_head_id}
-                placeholder="Quantity"
-              />
-            </div> */}
-
+            
             <div>
               <div className='flex justify-between items-center'>
                 <label>Hsn Code</label>
@@ -686,59 +642,7 @@ export default function BasicDetailsTab({
               error={errors?.stock}
               textareaClasses='text-sm'
             />
-            <FilterSelect
-              label="Origin Country"
-              value={modifiedCountry.find(opt => String(opt.value) === String(formData.origin?.countryCode || '') || opt.label === formData.origin?.country || String(opt.value) === String(formData.origin?.country)) || null}
-              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_COUNTRY')}
-              options={modifiedCountry || []}
-              placeholder="Select country"
-            />
-            <FilterSelect
-              label="Origin State"
-              value={modifiedState.find(opt => String(opt.value) === String(formData.origin?.stateCode || '') || opt.label === formData.origin?.state || String(opt.value) === String(formData.origin?.state)) || null}
-              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_STATE')}
-              options={modifiedState || []}
-              placeholder="Select state"
-            />
-            <FilterSelect
-              label="Origin City"
-              value={modifiedCity.find(opt => String(opt.value) === String(formData.origin?.cityCode || '') || opt.label === formData.origin?.city || String(opt.value) === String(formData.origin?.city)) || null}
-              onChange={(e) => handleProductOriginSelect(e, 'PRODUCT_CITY')}
-              options={modifiedCity || []}
-              placeholder="Select city"
-            />
-            <Input
-              labelName="Length"
-              name="dimensions.length"
-              type="number"
-              value={formData.dimensions?.length || ""}
-              onChange={handleChange}
-              placeholder="Length"
-            />
-            <Input
-              labelName="Width"
-              name="dimensions.width"
-              type="number"
-              value={formData.dimensions?.width || ""}
-              onChange={handleChange}
-              placeholder="Width"
-            />
-            <Input
-              labelName="Height"
-              name="dimensions.height"
-              type="number"
-              value={formData.dimensions?.height || ""}
-              onChange={handleChange}
-              placeholder="Height"
-            />
-            <Input
-              labelName="Weight"
-              name="dimensions.weight"
-              type="number"
-              value={formData.dimensions?.weight || ""}
-              onChange={handleChange}
-              placeholder="Weight"
-            />
+           
             <Input
               labelName="Warranty Period"
               name="warranty.period"
@@ -796,21 +700,7 @@ export default function BasicDetailsTab({
 
         </div>
       </div>
-
-      <AddStoreModal
-        isOpen={isAddStoreModal}
-        formValues={formValues}
-        formErrors={formErrors}
-        handleInputChange={handleInputChange}
-        modifiedCountry={modifiedCountry}
-        modifiedState={modifiedState}
-        modifiedCity={modifiedCity}
-        handleSelectChange={handleSelectAddChange}
-        onClose={() => { setIsAddStoreModal(false); setFormValues(INITIAL_FORM_STATE); setFormErrors({}) }}
-        handleSubmit={() => validateStoreForm() && handleAddStore()}
-        modifiedSellerList={modifiedSellerList}
-        userData={userData}
-      />
+ 
 
       <AddCategoryModal
         isOpen={isCategoryModal}
