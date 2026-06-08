@@ -180,14 +180,14 @@ const KYCStatusLayout = ({
 
   return (
     <div className="min-h-screen  bg-[#f6f3ef]  font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
-      <aside className="w-full   lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
+      <aside className="sidebar-scrollbar w-full   lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
           <div className=" bg-[#FCF5E8]  pb-5  sm:pb-7 lg:pb-10">
-            <div className="flex h-[118px]  items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
+            <div className="flex h-[118px] items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
               <BrandLogo
                 src={logo}
-                className="m-0 h-[82px] w-[108px]  bg-white p-[8px] shadow-[0_8px_18px_rgba(78,53,23,0.18)] sm:h-[96px] sm:w-[126px] lg:h-[112px] lg:w-[146px] lg:p-[10px]"
-                imageClassName="p-[6px] lg:p-[9px]"
+                className="m-0 h-[96px] w-[240px] rounded-[10px] border border-[#DB971A] bg-white p-[9px] shadow-[0_8px_18px_rgba(78,53,23,0.16)] sm:h-[112px] sm:w-[276px] lg:h-[124px] lg:w-[306px] lg:p-[10px]"
+                imageClassName="rounded-[7px] border border-[#DB971A]/70 object-contain p-[10px] lg:p-[12px]"
               />
             </div>
 
@@ -200,7 +200,7 @@ const KYCStatusLayout = ({
             <div className="px-4 pt-4 sm:px-6 sm:pt-5 lg:px-[31px] lg:pt-[22px]">
               <nav
                 ref={stepsNavRef}
-                className="relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
+                className="sidebar-scrollbar relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
               >
                 <span className="absolute left-[25px] top-[20px] hidden h-[310px] w-[2.5px] rounded-full bg-[#E49E1C] lg:block" />
                 {menuItems.map((item, index) => (
@@ -267,8 +267,8 @@ const KYCStatusLayout = ({
         </div>
       </aside>
 
-      <main className="min-w-0 bg-[#f8f6f3]">
-        <header className="flex min-h-[64px] items-center justify-between gap-[10px]  bg-[#FCF5E8] px-4 py-4 text-[#111827] shadow-[0_2px_12px_rgba(31,27,95,0.06)] sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
+      <main className="min-w-0 bg-[#FCF5E8]">
+        <header className="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-[10px] bg-[#FCF5E8] px-4 py-4 text-[#111827]  sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
           <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-[16px] text-[#111827] sm:text-[14px] lg:text-[16px]">
             <span>Onboarding</span>
             <span className="mx-1 sm:mx-[10px]">›</span>
@@ -294,7 +294,7 @@ const KYCStatusLayout = ({
 
         <div
           ref={contentRef}
-          className="min-h-[calc(100vh-64px)]  bg-[#F7F8FC] rounded-2xl shadow-lg px-4 py-6 sm:px-8 lg:min-h-[calc(100vh-75px)] lg:px-10"
+          className="min-h-[calc(100vh-64px)] bg-[#F7F8FC] rounded-tl-[32px] rounded-tr-none rounded-br-none rounded-bl-none px-4 py-6 sm:px-8 lg:min-h-[calc(100vh-75px)] lg:px-10"
         >
           {children}
         </div>

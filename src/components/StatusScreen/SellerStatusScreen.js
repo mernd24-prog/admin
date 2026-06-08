@@ -96,15 +96,14 @@ const SellerStatusScreen = ({
           We're Reviewing Your Account
         </h1>
         <p className="mt-3 max-w-3xl font-inter text-[14px] font-medium leading-[22px] text-[#182D50B2]">
-          Your application is currently under review. This usually takes 24–48
-          hours.
+          Your application is currently under review. This usually takes 24–48 hours.
         </p>
       </div>
       <div className="min-w-[185px]">
         <p className="mb-2 text-left font-inter text-[10px] font-bold uppercase tracking-[0.18em] text-[#9ba4b6] sm:text-right">
           Progress
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:justify-end">
           <span className="whitespace-nowrap font-inter text-[16px] font-extrabold text-[#182D50]">
             Step 5 / 5
           </span>
@@ -128,7 +127,7 @@ const SellerStatusScreen = ({
 
     return (
       <div className={`w-full ${className}`}>
-        {/* {renderProgressHeader()} */}
+        {renderProgressHeader()}
 
         <div
           className={`flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 ${contentClassName}`}
@@ -205,7 +204,7 @@ const SellerStatusScreen = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* {renderProgressHeader()} */}
+      {renderProgressHeader()}
       <div className="flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 sm:px-10">
         <div
           className={`flex w-full max-w-[760px] flex-col items-center justify-center text-center ${contentClassName}`}

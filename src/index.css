@@ -1346,25 +1346,14 @@ label {
   animation: rotate 30s linear infinite reverse;
 }
 
-/* Sidebar scrollbar */
+/* Hide layout scrollbars while keeping scroll behavior */
 .sidebar-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(214, 163, 35, 0.7) transparent;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(214, 163, 35, 0.7);
-  border-radius: 999px;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: var(--admin-gold-dark);
+  width: 0;
+  height: 0;
+  display: none;
 }

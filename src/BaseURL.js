@@ -1,6 +1,6 @@
 const configuredBaseURL =
   
-  'http://192.168.16.47:4000' ||
+  'http://45.195.90.183:4000' ||
   'http://localhost:4000';
 
 const normalizedBaseURL = configuredBaseURL.replace(/\/+$/, '');

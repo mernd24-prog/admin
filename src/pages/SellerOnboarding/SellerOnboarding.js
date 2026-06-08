@@ -817,11 +817,17 @@ const SellerOnboarding = () => {
         const user = response?.data || response || {};
         const sellerProfile = user?.sellerProfile || {};
         const kyc = user?.kyc || {};
-        const bankDetails = sellerProfile?.bankDetails || {};
         const businessAddress = sellerProfile?.businessAddress || {};
         const pickupAddress = sellerProfile?.pickupAddress || {};
         const registrationContact = getRegistrationContact(user);
         const onboarding = user?.onboarding || {};
+        const isBankRejected =
+          user?.bankVerificationStatus === "rejected" ||
+          onboarding?.bankVerificationStatus === "rejected" ||
+          sellerProfile?.bankVerificationStatus === "rejected";
+        const bankDetails = isBankRejected
+          ? {}
+          : sellerProfile?.bankDetails || {};
         const kycStatus =
           onboarding?.kycStatus ||
           kyc?.verificationStatus ||
@@ -890,11 +896,20 @@ const SellerOnboarding = () => {
             prev.dateOfBirth || sellerProfile?.dateOfBirth,
           ),
         }));
+        const storedBusinessName =
+          sellerProfile?.businessName ||
+          sellerProfile?.displayName ||
+          sellerProfile?.legalBusinessName ||
+          kyc?.legalName ||
+          kyc?.legal_name ||
+          "";
+        const storedBusinessType =
+          sellerProfile?.businessType || kyc?.businessType || kyc?.business_type || "";
         setProfileForm((prev) => ({
           ...prev,
           businessType:
-            sellerProfile?.businessName?.trim() && sellerProfile?.businessType
-              ? sellerProfile.businessType
+            storedBusinessName?.trim() && storedBusinessType
+              ? storedBusinessType
               : clearAutoFilledBusinessName(
                     prev.businessName,
                     registrationContact,
@@ -902,7 +917,7 @@ const SellerOnboarding = () => {
                 ? prev.businessType
                 : "",
           businessName:
-            sellerProfile?.businessName ||
+            storedBusinessName ||
             clearAutoFilledBusinessName(
               prev.businessName,
               registrationContact,
@@ -912,7 +927,7 @@ const SellerOnboarding = () => {
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
           displayName:
             prev.displayName ||
-            (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+            (storedBusinessName ? sellerProfile?.displayName : "") ||
             "",
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
@@ -954,15 +969,29 @@ const SellerOnboarding = () => {
           pickupPostalCode:
             prev.pickupPostalCode || pickupAddress?.postalCode || "",
         }));
-        setBankForm((prev) => ({
-          ...prev,
-          accountHolderName:
-            prev.accountHolderName || bankDetails?.accountHolderName || "",
-          accountNumber: prev.accountNumber || bankDetails?.accountNumber || "",
-          ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
-          bankName: prev.bankName || bankDetails?.bankName || "",
-          branchName: prev.branchName || bankDetails?.branchName || "",
-        }));
+        setBankForm((prev) =>
+          isBankRejected
+            ? {
+                ...prev,
+                accountHolderName: "",
+                accountNumber: "",
+                ifscCode: "",
+                bankName: "",
+                branchName: "",
+              }
+            : {
+                ...prev,
+                accountHolderName:
+                  prev.accountHolderName ||
+                  bankDetails?.accountHolderName ||
+                  "",
+                accountNumber:
+                  prev.accountNumber || bankDetails?.accountNumber || "",
+                ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
+                bankName: prev.bankName || bankDetails?.bankName || "",
+                branchName: prev.branchName || bankDetails?.branchName || "",
+              },
+        );
       } catch (error) {
         toast.error(error?.message || "Unable to load seller account details");
       }
@@ -983,7 +1012,10 @@ const SellerOnboarding = () => {
       flowState,
       seller?.onboardingUser,
     );
-    const bankDetails = sellerProfile?.bankDetails || {};
+    const isBankRejected =
+      flowState?.bankVerificationStatus === "rejected" ||
+      sellerProfile?.bankVerificationStatus === "rejected";
+    const bankDetails = isBankRejected ? {} : sellerProfile?.bankDetails || {};
     const businessAddress = sellerProfile?.businessAddress || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
     const kycStatus =
@@ -1050,11 +1082,20 @@ const SellerOnboarding = () => {
         prev.dateOfBirth || sellerProfile?.dateOfBirth,
       ),
     }));
+    const storedBusinessName =
+      sellerProfile?.businessName ||
+      sellerProfile?.displayName ||
+      sellerProfile?.legalBusinessName ||
+      kyc?.legalName ||
+      kyc?.legal_name ||
+      "";
+    const storedBusinessType =
+      sellerProfile?.businessType || kyc?.businessType || kyc?.business_type || "";
     setProfileForm((prev) => ({
       ...prev,
       businessType:
-        sellerProfile?.businessName?.trim() && sellerProfile?.businessType
-          ? sellerProfile.businessType
+        storedBusinessName?.trim() && storedBusinessType
+          ? storedBusinessType
           : clearAutoFilledBusinessName(
                 prev.businessName,
                 registrationContact,
@@ -1062,14 +1103,14 @@ const SellerOnboarding = () => {
             ? prev.businessType
             : "",
       businessName:
-        sellerProfile?.businessName ||
+        storedBusinessName ||
         clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
         "",
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
       displayName:
         prev.displayName ||
-        (sellerProfile?.businessName ? sellerProfile?.displayName : "") ||
+        (storedBusinessName ? sellerProfile?.displayName : "") ||
         "",
       legalBusinessName:
         prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
@@ -1102,15 +1143,27 @@ const SellerOnboarding = () => {
       pickupPostalCode:
         prev.pickupPostalCode || pickupAddress?.postalCode || "",
     }));
-    setBankForm((prev) => ({
-      ...prev,
-      accountHolderName:
-        prev.accountHolderName || bankDetails?.accountHolderName || "",
-      accountNumber: prev.accountNumber || bankDetails?.accountNumber || "",
-      ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
-      bankName: prev.bankName || bankDetails?.bankName || "",
-      branchName: prev.branchName || bankDetails?.branchName || "",
-    }));
+    setBankForm((prev) =>
+      isBankRejected
+        ? {
+            ...prev,
+            accountHolderName: "",
+            accountNumber: "",
+            ifscCode: "",
+            bankName: "",
+            branchName: "",
+          }
+        : {
+            ...prev,
+            accountHolderName:
+              prev.accountHolderName || bankDetails?.accountHolderName || "",
+            accountNumber:
+              prev.accountNumber || bankDetails?.accountNumber || "",
+            ifscCode: prev.ifscCode || bankDetails?.ifscCode || "",
+            bankName: prev.bankName || bankDetails?.bankName || "",
+            branchName: prev.branchName || bankDetails?.branchName || "",
+          },
+    );
   }, [flowState, seller?.onboardingUser]);
 
   useEffect(() => {
@@ -1167,11 +1220,7 @@ const SellerOnboarding = () => {
       return;
     }
     if (flowState?.kycStatus === "rejected") {
-      if (editSection === "kyc") {
-        setStep(1);
-        return;
-      }
-      setStep(5);
+      setStep(1);
       return;
     }
     if (requiresKycRefresh) {
@@ -1180,11 +1229,7 @@ const SellerOnboarding = () => {
       return;
     }
     if (bankRejected && profileCompleted && kycSubmitted) {
-      if (editSection === "bank") {
-        setStep(3);
-        return;
-      }
-      setStep(5);
+      setStep(3);
       return;
     }
     if (statusMeansReview && profileCompleted && bankLinked) {
@@ -1462,6 +1507,7 @@ const SellerOnboarding = () => {
 
   const buildProfilePayload = ({ includeBankDetails = false } = {}) => {
     const payload = {
+      businessName: profileForm.businessName.trim(),
       displayName:
         profileForm.displayName.trim() || profileForm.businessName.trim(),
       legalBusinessName:
@@ -1646,18 +1692,16 @@ const SellerOnboarding = () => {
   const submitBankStep = async (event) => {
     event.preventDefault();
     if (!validateBankDetails()) return;
-    const bankRejected =
-      flowState?.bankVerificationStatus === "rejected" ||
-      flowState?.sellerProfile?.bankVerificationStatus === "rejected" ||
-      Boolean(
-        flowState?.bankRejectionReason ||
-        flowState?.sellerProfile?.bankRejectionReason,
-      );
-    if (bankRejected) {
-      await submitFinalOnboarding();
-      return;
+    try {
+      const payload = buildProfilePayload({ includeBankDetails: true });
+      await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
+      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+      setStep(4);
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to save bank details");
+      setBackendFieldErrors(parsed.details, setProfileErrors);
+      toast.error(parsed.message);
     }
-    setStep(4);
   };
 
   const submitFinalOnboarding = async () => {
