@@ -1,34 +1,57 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
-import { FiClock } from "react-icons/fi";
+import { useLocation, useNavigate } from "react-router-dom";
+import { FiClock, FiArrowLeft } from "react-icons/fi";
 
 const titleFromPath = (pathname = "") =>
   String(pathname || "")
-    .replace(/^\/+/, "")
+    .replace(/^\/app\/?/, "")
     .replace(/\/.*/, "")
     .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || "This page";
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || "This Page";
 
 const ComingSoonPage = ({ title, description }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const pageTitle = title || titleFromPath(location.pathname);
 
   return (
     <section className="flex min-h-[calc(100vh-120px)] items-center justify-center px-4 py-10">
-      <div className="w-full max-w-xl rounded-lg border border-[var(--admin-line)] bg-white px-6 py-10 text-center shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--admin-gold-soft)] text-[var(--admin-gold)]">
-          <FiClock className="h-7 w-7" />
+      <div className="w-full max-w-md text-center">
+
+        {/* Icon */}
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-gold-soft)] border border-[var(--admin-gold)]/30">
+          <FiClock className="h-7 w-7 text-[var(--admin-gold-dark)]" />
         </div>
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--admin-muted)]">
+
+        {/* Label */}
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--admin-muted)]">
           Coming Soon
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-[var(--admin-ink)]">
+
+        {/* Title */}
+        <h1 className="mt-2 text-xl font-bold text-[var(--admin-navy)]">
           {pageTitle}
         </h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--admin-muted)]">
+
+        {/* Description */}
+        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[var(--admin-muted)]">
           {description ||
-            "This management area is being prepared. Dashboard and product/catalog management are available now."}
+            "This section is being built and will be available shortly. Core modules are fully functional in the meantime."}
         </p>
+
+        {/* Divider */}
+        <div className="my-6 border-t border-[var(--admin-line)] mx-auto w-16" />
+
+        {/* Back button */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--admin-line)] bg-white px-4 py-2 text-[12.5px] font-semibold text-[var(--admin-ink)] transition hover:border-[var(--admin-navy)] hover:text-[var(--admin-navy)]"
+        >
+          <FiArrowLeft size={13} />
+          Go Back
+        </button>
+
       </div>
     </section>
   );
