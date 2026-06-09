@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
+import ComingSoonPage from "../Shared/ComingSoonPage";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
 import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
@@ -30,6 +31,53 @@ import { PageSkeletonLoader } from "../Loader/SkeletonLoader";
 
 const valueFieldSelector =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea';
+
+const LIVE_ADMIN_ROUTE_PREFIXES = [
+  "/home",
+  "/profile",
+  "/changepassword",
+  "/product-flow",
+  "/product-catalog",
+  "/add-product",
+  "/draft-products",
+  "/pending-products",
+  "/change-pending-products",
+  "/rejected-products",
+  "/seller-product-inventory",
+  "/categories",
+  "/category-attributes",
+  "/brands",
+  "/product-options",
+  "/product-option-value",
+  "/product-option-values",
+  "/product-tags",
+  "/threshold-products",
+  "/product-variants",
+  "/product-families",
+  "/product-dimensions",
+  "/finish",
+  "/warranty",
+  "/hsn-code",
+  "/bar-code",
+  "/barcode",
+];
+
+const normalizeRoutePath = (path = "") =>
+  `/${String(path || "")
+    .trim()
+    .replace(/^\/+/, "")
+    .toLowerCase()}`;
+
+const isLiveAdminRoute = (path) => {
+  const normalizedPath = normalizeRoutePath(path);
+  return LIVE_ADMIN_ROUTE_PREFIXES.some((prefix) => {
+    const normalizedPrefix = normalizeRoutePath(prefix);
+    return (
+      normalizedPath === normalizedPrefix ||
+      normalizedPath.startsWith(`${normalizedPrefix}/`)
+    );
+  });
+};
 
 const syncPrefilledFieldState = (root) => {
   if (!root) return;
@@ -454,11 +502,15 @@ function Layout() {
   };
 
   const renderRoute = (path, element) => {
-    return hasPermission(path) ? (
-      element
-    ) : (
-      <PermissionNotAllowed loading={isPermissionShow} />
-    );
+    if (!hasPermission(path)) {
+      return <PermissionNotAllowed loading={isPermissionShow} />;
+    }
+
+    if (!isLiveAdminRoute(path)) {
+      return <ComingSoonPage />;
+    }
+
+    return element;
   };
 
   const renderSupportedRoute = (path, element) => {
@@ -1121,6 +1173,7 @@ function Layout() {
                       <SellerAnalytics />,
                     )}
                   />
+                  <Route path="*" element={<ComingSoonPage />} />
                 </Routes>
               </motion.div>
             </AnimatePresence>

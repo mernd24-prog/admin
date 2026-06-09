@@ -43,6 +43,8 @@ const SkeletonRow = ({ cols }) => (
  *   error            {string}
  *   pageSizeOptions  {number[]}
  *   onPageSizeChange {(size: number) => void}
+ *   tableContainerClassName {string}
+ *   tableClassName   {string}
  *   exportConfig     {object}
  *   importConfig     {object}
  *   requiredModule   {string}
@@ -73,6 +75,8 @@ const DataTable = ({
   error,
   pageSizeOptions = [10, 20, 50, 100],
   onPageSizeChange,
+  tableContainerClassName = "",
+  tableClassName = "",
   exportConfig,
   importConfig,
   requiredModule,
@@ -189,8 +193,8 @@ const DataTable = ({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={tableContainerClassName || "overflow-x-auto"}>
+        <table className={`w-full text-sm ${tableClassName}`}>
           <thead className="admin-table-head">
             <tr>
               {selectable && (

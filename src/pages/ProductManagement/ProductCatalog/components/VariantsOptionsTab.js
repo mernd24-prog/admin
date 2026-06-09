@@ -144,22 +144,22 @@ export default function VariantsOptionsTab({
     <div className="w-full bg-white">
       {/* Section header */}
       <div
-        className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-[var(--admin-surface-soft)] transition-colors select-none border-b border-[var(--admin-line)]"
+        className="flex items-center justify-between pb-4 mb-5 cursor-pointer select-none border-b border-gray-100 hover:opacity-80 transition-opacity"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div>
-          <h3 className="text-base font-semibold text-[var(--admin-ink)]">Simple Product Variants</h3>
-          <p className="text-xs text-[var(--admin-muted)] mt-0.5">
-            Add size / pack / style variants for this product — each row is a separate purchasable option
+          <h3 className="text-lg font-semibold text-gray-900">Simple Product Variants</h3>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Add size / pack / style variants — each row is a separate purchasable option
           </p>
         </div>
         {isExpanded
-          ? <FaChevronUp className="text-[var(--admin-muted)] text-sm flex-shrink-0" />
-          : <FaChevronDown className="text-[var(--admin-muted)] text-sm flex-shrink-0" />}
+          ? <FaChevronUp className="text-gray-400 text-sm flex-shrink-0" />
+          : <FaChevronDown className="text-gray-400 text-sm flex-shrink-0" />}
       </div>
 
       {isExpanded && (
-        <div className="px-5 pb-6 pt-4 space-y-3">
+        <div className="space-y-3">
           {/* Info banner */}
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-[var(--admin-blue-soft)] border border-[var(--admin-blue)]/20 text-xs text-[var(--admin-ink)]/70">
             <FaInfoCircle className="text-[var(--admin-blue)] mt-0.5 flex-shrink-0" size={11} />

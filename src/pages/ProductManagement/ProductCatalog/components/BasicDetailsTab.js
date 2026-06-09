@@ -474,31 +474,29 @@ export default function BasicDetailsTab({
   };
 
 
+  const toTitleCase = (str) =>
+    str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+
+  const handleNameBlur = (e) => {
+    const { name, value } = e.target;
+    if (!value.trim()) return;
+    const titled = toTitleCase(value);
+    if (titled !== value) handleChange({ target: { name, value: titled } });
+  };
+
   return (
     <>
       <Loader loading={isLoading} />
-      <div className="bg-white border-b">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">Basic Details</h3>
-          <p className="text-sm text-gray-500">
+      <div className="bg-white">
+        <div className="pb-4 mb-5 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Basic Details</h3>
+          <p className="text-sm text-gray-500 mt-0.5">
             Customize the product basic details like name, brand, and categories
           </p>
         </div>
 
-        <div className="p-2 space-y-6 ">
-          {/* <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-            <p className="text-xs font-semibold text-blue-900">Setup help</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/categories')}>Categories</button>
-              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/category-attributes')}>Category Attributes</button>
-              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-families')}>Product Families</button>
-              <PermissionGuard module="tax" action="view" hide>
-                <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/hsn-code')}>HSN Codes</button>
-              </PermissionGuard>
-              <button type="button" className="rounded border border-blue-300 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => navigate('/app/product-flow')}>Open Full Product Flow</button>
-            </div>
-          </div> */}
-          <div className="grid w-auto grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="space-y-5">
+          <div className="grid w-full grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
             {!SELLER_PANEL_ROLES.has(userData?.role) && (
               <div>
                 <FilterSelect
@@ -519,6 +517,7 @@ export default function BasicDetailsTab({
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                onBlur={handleNameBlur}
                 required={true}
                 helpText="Name of the product as it will be displayed"
                 error={errors?.name}
@@ -537,49 +536,29 @@ export default function BasicDetailsTab({
             </div>
 
             <div>
-              <div className='flex justify-between items-center'>
-                <label>Category</label>
-                {/* <button
-                  className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                  onClick={() => handleAction("Category")}
-                >
-                  Add Category
-                </button> */}
-              </div>
               <FilterSelect
+                label="Category"
                 name="category_id"
                 value={selectedCategoryOption}
                 onChange={(e) => handleSelectChange(e, 'CATEGORY_ID')}
                 options={formattedCategoryList || []}
                 error={errors?.category_id}
-                placeholder="Category"
+                placeholder="Select Category"
+                helperText="Attributes are controlled by the selected category schema."
+                required
               />
-              <p className="mt-1 text-xs text-gray-500">Attributes are controlled by the selected category schema.</p>
             </div>
 
-            
             <div>
-              <div className='flex justify-between items-center'>
-                <label>Hsn Code</label>
-                <PermissionGuard module="tax" action="create" hide>
-                  {/* <button
-                    type="button"
-                    className='font-semibold text-xs text-blue-600 hover:text-blue-800'
-                    onClick={() => handleAction("Hsn")}
-                  >
-                    Add Hsn
-                  </button> */}
-                </PermissionGuard>
-              </div>
               <FilterSelect
+                label="HSN Code"
                 name="hsn_code"
                 value={selectedHsnOption}
                 onChange={(e) => handleSelectChange(e, 'hsn_code')}
                 options={hsnCodeList || []}
                 error={errors?.hsn_code}
-                placeholder="Hsn"
+                placeholder="Select HSN Code"
               />
-
             </div>
 
 
@@ -653,8 +632,12 @@ export default function BasicDetailsTab({
             />
             <FilterSelect
               label="Warranty Template"
-              value={(formattedWarrantyList || []).find((opt) => String(opt.value) === String(formData.warranty?.period || '')) || null}
-              onChange={(e) => handleChange({ target: { name: 'warranty.period', value: e?.value || '' } })}
+              value={(formattedWarrantyList || []).find((opt) => String(opt.value) === `${String(formData.warranty?.period || '')}:${String(formData.warranty?.periodUnit || '')}`) || null}
+              onChange={(e) => {
+                const [durationValue = '', durationUnit = ''] = String(e?.value || '').split(':');
+                handleChange({ target: { name: 'warranty.period', value: durationValue } });
+                handleChange({ target: { name: 'warranty.periodUnit', value: durationUnit } });
+              }}
               options={formattedWarrantyList || []}
               placeholder="Select warranty template"
             />
@@ -684,7 +667,6 @@ export default function BasicDetailsTab({
             />
           </div>
 
-  
           <FormInput
             label="Description"
             name="description"
@@ -694,10 +676,8 @@ export default function BasicDetailsTab({
             required={true}
             placeholder="Enter detailed product description (50-500 characters)"
             error={errors?.description}
-            textareaClasses='text-sm'
+            textareaClasses="text-sm"
           />
-
-
         </div>
       </div>
  

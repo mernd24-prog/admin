@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   createProducts, getProductPrefill,
   getProductById, updateProductsById, getCategoryAttributes,
+  getAllWarrantyList,
 } from '../../../../Redux/productSlice';
 import { getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
@@ -34,7 +35,8 @@ import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { normalizeImageList } from '../../../../_helpers/productMedia';
 
 const API_CALLS = [
-{ action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
+  { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
+  { action: () => getAllWarrantyList({ limit: 200, active: true }), name: 'Warranty Templates' },
 ];
 
 const API_CALL_OBJECT = {
@@ -461,10 +463,16 @@ export default function ProductManagementUI() {
       value: item?.name || item?._id || item?.id,
       label: item?.name || item?.title || item?.code || String(item?._id || item?.id || ''),
     })),
-    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData)).map((item) => ({
-      value: item?.period || item?._id || item?.id,
-      label: item?.period || item?.name || String(item?._id || item?.id || ''),
-    })),
+    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData)).map((item) => {
+      const durationValue = item?.durationValue !== undefined && item?.durationValue !== null
+        ? item.durationValue
+        : item?.durationMonths || 0;
+      const durationUnit = item?.durationUnit || 'months';
+      return {
+        value: `${durationValue}:${durationUnit}`,
+        label: item?.period || item?.name || String(item?._id || item?.id || ''),
+      };
+    }),
     colorList: (() => {
       const colorOption = platformOptions.find((item) => String(item.name || item.slug || '').toLowerCase() === 'color');
       const colorValues = colorOption ? (platformValues[colorOption._id || colorOption.id] || []) : [];
@@ -1067,60 +1075,55 @@ export default function ProductManagementUI() {
       description: 'Set the product type and type-specific configuration.',
       icon: <BsMenuApp />,
       component: (
-        <div className="space-y-6">
+        <div className="space-y-5">
+          <div className="pb-4 mb-1 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">Product Type</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Set the product type and type-specific configuration.</p>
+          </div>
           <ProductTypeSelector
             value={productType}
             onChange={(val) => setFormData((prev) => ({ ...prev, productType: val }))}
           />
 
-          {/* Short description */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Short Description</label>
-            <textarea
-              rows={2}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
-              placeholder="Brief one-line summary shown in product cards…"
-              value={formData?.shortDescription || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
-            />
-          </div>
-
-          {/* Visibility */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Visibility</label>
-            <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
-              value={formData?.visibility || 'public'}
-              onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
-            >
-              {productVisibilities.options.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="admin-label">Short Description</label>
+              <textarea
+                rows={2}
+                className="admin-input admin-textarea !min-h-[64px] w-full resize-none"
+                placeholder="Brief one-line summary shown in product cards…"
+                value={formData?.shortDescription || ''}
+                onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="admin-label">Visibility</label>
+              <select
+                className="admin-input"
+                value={formData?.visibility || 'public'}
+                onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
+              >
+                {productVisibilities.options.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {productType === 'digital' && (
-            <div className="border border-gray-200 rounded-lg p-4">
+            <div className="border border-gray-200 rounded-xl p-4">
               <h5 className="text-sm font-semibold text-gray-800 mb-4">Digital Product Settings</h5>
-              <DigitalProductPanel
-                digital={formData?.digital || {}}
-                onChange={handleNestedChange}
-              />
+              <DigitalProductPanel digital={formData?.digital || {}} onChange={handleNestedChange} />
             </div>
           )}
-
           {productType === 'subscription' && (
-            <div className="border border-gray-200 rounded-lg p-4">
+            <div className="border border-gray-200 rounded-xl p-4">
               <h5 className="text-sm font-semibold text-gray-800 mb-4">Subscription Settings</h5>
-              <SubscriptionPanel
-                subscription={formData?.subscription || {}}
-                onChange={handleNestedChange}
-              />
+              <SubscriptionPanel subscription={formData?.subscription || {}} onChange={handleNestedChange} />
             </div>
           )}
-
           {productType === 'bundle' && (
-            <div className="border border-gray-200 rounded-lg p-4">
+            <div className="border border-gray-200 rounded-xl p-4">
               <h5 className="text-sm font-semibold text-gray-800 mb-4">Bundle Configuration</h5>
               <BundleBuilder
                 bundleItems={formData?.bundleItems || []}
@@ -1154,10 +1157,10 @@ export default function ProductManagementUI() {
       description: 'Customize the product variants, including size, color, etc.',
       icon: <BsMenuApp />,
       component: productType === 'variable' ? (
-        <div className="space-y-2">
-          <div className="mb-2">
-            <h4 className="text-sm font-semibold text-gray-800">Variant Builder</h4>
-            <p className="text-xs text-gray-500">Define option axes (Color, Size...), generate combinations, then edit each variant.</p>
+        <div className="space-y-5">
+          <div className="pb-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">Variant Builder</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Define option axes (Color, Size...), generate combinations, then edit each variant.</p>
           </div>
           <VariantBuilder
             variants={variantsData}
@@ -1203,16 +1206,12 @@ export default function ProductManagementUI() {
       description: 'Search engine metadata and social sharing settings.',
       icon: <GrDocument />,
       component: (
-        <div className="space-y-2">
-          <div className="mb-2">
-            <h4 className="text-sm font-semibold text-gray-800">SEO &amp; Metadata</h4>
-            <p className="text-xs text-gray-500">Optimise how this product appears in Google and social sharing.</p>
+        <div className="space-y-5">
+          <div className="pb-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">SEO &amp; Metadata</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Optimise how this product appears in search engines and social sharing.</p>
           </div>
-          <SEOPanel
-            seo={formData?.seo || {}}
-            onChange={handleNestedChange}
-            slug={formData?.slug || ''}
-          />
+          <SEOPanel seo={formData?.seo || {}} onChange={handleNestedChange} slug={formData?.slug || ''} />
         </div>
       )
     },
@@ -1223,9 +1222,12 @@ export default function ProductManagementUI() {
       icon: <BsMenuApp />,
       component: (
         <div className="space-y-6">
+          <div className="pb-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">Tags &amp; Discovery</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Tags, badges, and discoverability settings.</p>
+          </div>
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-800">Product Tags</h4>
-            <p className="text-xs text-gray-500 mb-2">Tags help customers find this product through search and filters.</p>
+            <p className="text-xs text-gray-500">Tags help customers find this product through search and filters.</p>
             <TagsInput
               tags={Array.isArray(formData?.tags) ? formData.tags : []}
               onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
@@ -1234,19 +1236,19 @@ export default function ProductManagementUI() {
             />
           </div>
 
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-gray-800">Product Badges</h4>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-gray-800">Product Badges</p>
             {[
-              { key: 'markAsFeatured', label: 'Featured', desc: 'Show on homepage / featured sections.' },
-              { key: 'cod', label: 'Cash on Delivery', desc: 'Allow COD payment for this product.' },
-              { key: 'prescription_required', label: 'Prescription Required', desc: 'Customer must upload a prescription.' },
-            ].map(({ key, label, desc }) => (
-              <label key={key} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer">
+              { key: 'markAsFeatured', label: 'Featured', desc: 'Show on homepage / featured sections.', action: 'FEATURED' },
+              { key: 'cod', label: 'Cash on Delivery', desc: 'Allow COD payment for this product.', action: 'COD' },
+              { key: 'prescription_required', label: 'Prescription Required', desc: 'Customer must upload a prescription.', action: 'prescription_required' },
+            ].map(({ key, label, desc, action }) => (
+              <label key={key} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                 <input
                   type="checkbox"
-                  className="mt-0.5 accent-[var(--admin-blue)]"
+                  className="mt-0.5 w-4 h-4 accent-[var(--admin-blue)]"
                   checked={!!formData?.[key]}
-                  onChange={() => handleToggleProductSetting(key === 'markAsFeatured' ? 'FEATURED' : key === 'cod' ? 'COD' : 'prescription_required')}
+                  onChange={() => handleToggleProductSetting(action)}
                 />
                 <div>
                   <p className="text-sm font-medium text-gray-700">{label}</p>
@@ -1373,33 +1375,32 @@ export default function ProductManagementUI() {
           {error.flow}
         </div>
       )} */}
-      <div className="flex flex-col gap-4 pb-8 lg:flex-row ">
-        <div className='h-full lg:sticky lg:top-24 '>
+      <div className="flex flex-col gap-6 pb-8 lg:flex-row lg:items-start">
+        <div className="lg:w-44 flex-shrink-0 lg:sticky lg:top-24">
           <TabNavigation
             tabs={tabs}
             activeTab={activeTab}
             scrollToSection={scrollToSection}
           />
         </div>
-        <div className='w-10/12 mt-8'>
-          <div className='space-y-1 pb-7'>
-            <h3 className='text-2xl font-semibold'>{isEditMode ? "Edit" : "Add"} Product</h3>
-            <p className='text-xs text-gray-500'>Fields with (<span className='text-red-500'>*</span>) are mandatory</p>
+        <div className="flex-1 min-w-0">
+          <div className="space-y-1 pb-5">
+            <h3 className="text-2xl font-semibold">{isEditMode ? "Edit" : "Add"} Product</h3>
+            <p className="text-xs text-gray-500">Fields with (<span className="text-red-500">*</span>) are mandatory</p>
           </div>
           <main
             ref={mainContainerRef}
-            className="flex-1 overflow-hidden bg-white border border-gray-100 "
+            className="flex-1 bg-white border border-gray-100 rounded-xl overflow-visible"
           >
             {tabs.map(tab => (
-              <section key={tab.id} ref={refs[tab.id]} id={tab.id} className="p-2 pb-10 md:p-6 scroll-mt-24"  >
+              <section key={tab.id} ref={refs[tab.id]} id={tab.id} className="px-4 py-6 sm:px-6 sm:py-8 border-b border-gray-100 last:border-b-0 scroll-mt-24">
                 {tab.component}
               </section>
             ))}
           </main>
         </div>
-        <div className="lg:w-5/12 lg:sticky lg:top-24 h-fit ">
-          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting}
-          />
+        <div className="lg:w-64 xl:w-72 flex-shrink-0 lg:sticky lg:top-24 h-fit">
+          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting} />
         </div>
       </div>
     </div>

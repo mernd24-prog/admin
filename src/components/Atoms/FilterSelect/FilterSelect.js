@@ -18,27 +18,60 @@ const customStyles = (error) => ({
         : "none",
     borderRadius: "0.375rem",
     minHeight: "36px",
-    paddingLeft: "0.5rem",
-    paddingRight: "0.5rem",
     cursor: "pointer",
     "&:hover": {
       borderColor: error ? "var(--admin-danger)" : "var(--admin-blue)",
     },
   }),
+  valueContainer: (provided) => ({
+    ...provided,
+    minWidth: 0,
+    padding: "2px 8px",
+    overflow: "hidden",
+  }),
   placeholder: (provided) => ({
     ...provided,
     color: "var(--admin-muted)",
     fontSize: "0.875rem",
+    marginLeft: 0,
+    marginRight: 0,
   }),
   singleValue: (provided) => ({
     ...provided,
     color: "var(--admin-ink)",
     fontSize: "0.875rem",
+    marginLeft: 0,
+    marginRight: 0,
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  input: (provided) => ({
+    ...provided,
+    margin: 0,
+    paddingBottom: 0,
+    paddingTop: 0,
+  }),
+  multiValue: (provided) => ({
+    ...provided,
+    minWidth: 0,
+    maxWidth: "100%",
+  }),
+  multiValueLabel: (provided) => ({
+    ...provided,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   }),
   dropdownIndicator: (provided) => ({
     ...provided,
-    padding: "0 4px",
+    padding: "0 8px 0 4px",
     // color: hasError ? '#DC3545' : '#718096',
+  }),
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    flexShrink: 0,
   }),
   indicatorSeparator: () => ({
     display: "none",
@@ -57,6 +90,8 @@ const customStyles = (error) => ({
         ? "var(--admin-blue-soft)"
         : provided.backgroundColor,
     color: state.isSelected ? "#fff" : "var(--admin-ink)",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
   }),
   menuPortal: (provided) => ({
     ...provided,

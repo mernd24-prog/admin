@@ -32,6 +32,7 @@ const toProductListParams = (params = {}) => ({
     ...(params.maxPrice !== undefined ? { maxPrice: Number(params.maxPrice) } : {}),
     ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
     ...(params.sortBy ? { sortBy: params.sortBy } : {}),
+    ...(params.sortDir ? { sortDir: params.sortDir } : {}),
 });
 
 const toProductStatusBody = (payload = {}) => ({
@@ -539,6 +540,8 @@ export const getProductModerationQueue = createApiThunkPrivate('getProductModera
         ...(params.category ? { category: params.category } : {}),
         ...(params.page ? { page: Number(params.page) } : {}),
         ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
+        ...(params.sortBy ? { sortBy: params.sortBy } : {}),
+        ...(params.sortDir ? { sortDir: params.sortDir } : {}),
     }),
 })
 export const getProductRevisions = createApiThunkPrivate('getProductRevisions', (payload) => ENDPOINTS.products.revisions(firstProductId(payload)), 'GET', true, {

@@ -23,12 +23,39 @@ const selectStyles = (invalid, hasValue) => ({
     ...base,
     color: hasValue ? "var(--admin-ink)" : base.color,
     fontWeight: hasValue ? 500 : base.fontWeight,
+    marginLeft: 0,
+    marginRight: 0,
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    minWidth: 0,
+    padding: "2px 8px",
+    overflow: "hidden",
+  }),
+  input: (base) => ({
+    ...base,
+    margin: 0,
+    paddingBottom: 0,
+    paddingTop: 0,
+  }),
+  multiValue: (base) => ({
+    ...base,
+    minWidth: 0,
+    maxWidth: "100%",
   }),
   multiValueLabel: (base) => ({
     ...base,
     color: "var(--admin-ink)",
     fontWeight: 500,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   }),
+  indicatorsContainer: (base) => ({ ...base, flexShrink: 0 }),
   menu: (base) => ({ ...base, borderRadius: 8, zIndex: 60 }),
   option: (base, state) => ({
     ...base,
@@ -39,6 +66,8 @@ const selectStyles = (invalid, hasValue) => ({
         : base.background,
     color: state.isSelected ? "#fff" : "var(--admin-ink)",
     fontSize: 13,
+    whiteSpace: "normal",
+    wordBreak: "break-word",
   }),
 });
 

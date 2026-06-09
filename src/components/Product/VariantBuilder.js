@@ -396,9 +396,9 @@ const VariantBuilder = ({
 
       {/* ── Variants Table ───────────────────────────────────────────────── */}
       {variants.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 overflow-x-auto">
           <div className="hidden sm:grid gap-1 px-2 py-1 text-[10px] font-semibold text-[var(--admin-muted)] uppercase tracking-wide"
-            style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto' }}>
+            style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto', minWidth: '640px' }}>
             <span /><span />
             <span>SKU</span><span>Variant</span>
             <span>Price ₹</span><span>MRP ₹</span><span>Sale ₹</span>
@@ -420,7 +420,7 @@ const VariantBuilder = ({
               >
                 {/* Main row */}
                 <div className="grid gap-1 items-center px-2 py-1.5"
-                  style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto' }}>
+                  style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto', minWidth: '640px' }}>
                   <MdDragIndicator className="text-[var(--admin-muted)] text-sm cursor-grab" />
                   <button type="button" title="Set as default" onClick={() => setDefaultVariant(idx)}
                     className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${variant.isDefault ? 'bg-[var(--admin-navy)] border-[var(--admin-navy)]' : 'border-[var(--admin-line)] hover:border-[var(--admin-navy)]'}`}

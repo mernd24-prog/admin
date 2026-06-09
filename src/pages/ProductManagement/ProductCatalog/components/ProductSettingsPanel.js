@@ -3,55 +3,61 @@ import Button from "../../../../components/Atoms/buttons/button";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 
 export default function ProductSettingsPanel({ handleSaveSubmit, formData, handleToggleProductSetting }) {
-
   return (
-    <div className="flex flex-col w-auto gap-4">
-      <div className="p-4 bg-white space-y-3">
-        <Button className={`w-full bg-white text-black`} onClick={handleSaveSubmit}>Save</Button>
-        <div className="flex items-center justify-between p-4 mb-4 border rounded">
-          <span className="font-light text-gray-800">Activate it</span>
-          <ToggleButton isToggle={!formData?.isDisable} handleClick={() => handleToggleProductSetting('DISABLE')} />
-        </div>
-        <div className="flex items-center justify-between p-4 mb-4 border rounded">
-          <span className="font-light text-gray-800">Approval status</span>
-          <ToggleButton isToggle={formData?.isApproved} handleClick={() => handleToggleProductSetting('APPROVE')} />
-
-        </div>
-        <div className="flex items-center justify-between p-4 mb-4 border rounded">
-          <span className="font-light text-gray-800">Prescription Required</span>
-          <ToggleButton isToggle={formData?.prescription_required} handleClick={() => handleToggleProductSetting('prescription_required')} />
-
-        </div>
-      </div>
-      <div className="relative p-4 bg-white">
-        <div className="flex justify-between items-center">
-          <span className="font-light text-gray-800">Mark as featured</span>
-          <ToggleButton isToggle={formData?.markAsFeatured} handleClick={() => handleToggleProductSetting('FEATURED')} />
-        </div>
-        <span className="mt-1 text-xs text-gray-500">
-          Mark this product as a featured product, and it will be displayed under the featured product list on the front end.
-        </span>
-
+    <div className="flex flex-col gap-3">
+      {/* Save */}
+      <div className="bg-white border border-gray-100 rounded-xl p-4">
+        <Button className="w-full !font-semibold" onClick={handleSaveSubmit}>Save Product</Button>
       </div>
 
-      <div className="relative p-4 bg-white">
-        <div className="flex">
-          <span className="font-light text-gray-800">
-            Available for Cash on Delivery (COD) and Pay at Store
-          </span>
-          <ToggleButton isToggle={formData?.cod} handleClick={() => handleToggleProductSetting('COD')} />
-        </div>
-        <div>
-          <span className="text-xs text-gray-500">
-            Activate this if the product is available for COD and Pay at Store.
-            <br />
-            COD will work only if the fulfillment method is Shipping.
-            <br />
-            Pay at Store will work only if the fulfillment method is Pickup.
-          </span>
+      {/* Status toggles */}
+      <div className="bg-white border border-gray-100 rounded-xl p-4 space-y-0 divide-y divide-gray-100">
+        {[
+          { label: 'Active', desc: 'Make this product visible on the storefront.', key: 'DISABLE', value: !formData?.isDisable },
+          { label: 'Approved', desc: 'Mark this product as approved for sale.', key: 'APPROVE', value: formData?.isApproved },
+          { label: 'Prescription Required', desc: 'Customer must upload a prescription to purchase.', key: 'prescription_required', value: formData?.prescription_required },
+        ].map(({ label, desc, key, value }) => (
+          <div key={key} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800">{label}</p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-snug">{desc}</p>
+            </div>
+            <div className="flex-shrink-0 mt-0.5">
+              <ToggleButton isToggle={value} handleClick={() => handleToggleProductSetting(key)} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Featured */}
+      <div className="bg-white border border-gray-100 rounded-xl p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800">Mark as Featured</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+              Displayed in the featured product list on the storefront.
+            </p>
+          </div>
+          <div className="flex-shrink-0 mt-0.5">
+            <ToggleButton isToggle={formData?.markAsFeatured} handleClick={() => handleToggleProductSetting('FEATURED')} />
+          </div>
         </div>
       </div>
 
+      {/* COD */}
+      <div className="bg-white border border-gray-100 rounded-xl p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800">Cash on Delivery (COD)</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+              Allow COD and Pay at Store for this product. COD requires Shipping; Pay at Store requires Pickup.
+            </p>
+          </div>
+          <div className="flex-shrink-0 mt-0.5">
+            <ToggleButton isToggle={formData?.cod} handleClick={() => handleToggleProductSetting('COD')} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

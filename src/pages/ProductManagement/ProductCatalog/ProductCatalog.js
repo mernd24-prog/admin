@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 // Components
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
-import TableData from "../../../components/Atoms/TableData/TableData";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import AddButton from "../../../components/Button/AddButton";
 
@@ -25,8 +24,6 @@ import {
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import Loader from "../../../components/Loader/Loader";
 import { toast } from "sonner";
-import Pagination from "../../../components/Pagination/Pagination";
-import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
@@ -39,10 +36,11 @@ import Button from "../../../components/Atoms/buttons/button";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { ExportButton } from "../../../components/Shared";
+import { DataTable, ExportButton } from "../../../components/Shared";
 import { getShopList } from "../../../Redux/StoreSlice";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
+import { useListPage } from "../../../hooks/useListPage";
 // import { GoDesktopDownload } from "react-icons/go";
 
 const INITIAL_FILTERS = {
@@ -57,7 +55,7 @@ const INITIAL_FILTERS = {
   dateTo: "",
 };
 
-const size = 10;
+const DEFAULT_PAGE_SIZE = 10;
 const APPROVAL_STATUS_OPTIONS = [
   { value: "Does not matter", label: "Does not matter" },
   { value: "Draft", label: "Draft" },
@@ -128,17 +126,18 @@ const ProductCatalog = () => {
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
   const [productToDelete, setProductToDelete] = useState(null);
   const [filters, setFilters] = useState(() => getInitialFiltersForPath(location.pathname));
   const [appliedFilters, setAppliedFilters] = useState(() => getInitialFiltersForPath(location.pathname));
   const didMountRouteRef = useRef(false);
+  const list = useListPage({
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
+  const selectedRow = list.selectedKeys;
+  const setSelectedRow = list.setSelectedKeys;
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
-  const allRowIds = useMemo(
-    () => apiRes.list.map((product) => product._id),
-    [apiRes.list],
-  );
-  const [pageNo, setPageNo] = useState(1);
   const [userData, setUserData] = useState(null);
   const [isBulkUpload, setIsBulkUpload] = useState(false);
   const [bulkUploadData, setBulkUploadData] = useState({
@@ -170,13 +169,21 @@ const ProductCatalog = () => {
     Scheduled: "scheduled",
     Archived: "archived",
   };
+  const getSortByParam = (sortKey, sortDir) => {
+    if (sortKey === "price") {
+      return sortDir === "asc" ? "price_asc" : "price_desc";
+    }
+    return sortKey;
+  };
 
   const buildProductQuery = useCallback(
-    (page = pageNo) => ({
+    (page = list.page) => ({
       page,
-      size: size,
+      limit: list.pageSize,
       keyWord: appliedFilters?.search,
       includeAllStatuses: true,
+      sortBy: getSortByParam(list.sortKey, list.sortDir),
+      sortDir: list.sortDir,
       ...(appliedFilters?.category?.value
         ? { category: appliedFilters.category.value }
         : {}),
@@ -193,7 +200,7 @@ const ProductCatalog = () => {
         ? { status: approvalStatusToProductStatus[appliedFilters.approvalStatus.value] }
         : {}),
     }),
-    [appliedFilters, pageNo],
+    [appliedFilters, list.page, list.pageSize, list.sortDir, list.sortKey],
   );
 
   const fetchProductsList = useCallback(async () => {
@@ -203,21 +210,30 @@ const ProductCatalog = () => {
         ? await dispatch(
           getProductModerationQueue({
             status: "change_pending",
-            page: pageNo,
-            size,
+            page: list.page,
+            limit: list.pageSize,
+            sortBy: getSortByParam(list.sortKey, list.sortDir),
+            sortDir: list.sortDir,
             ...(appliedFilters?.category?.value
               ? { category: appliedFilters.category.value }
               : {}),
           }),
         )
-        : await dispatch(getProducts(buildProductQuery(pageNo)));
+        : await dispatch(getProducts(buildProductQuery(list.page)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");
     } finally {
       setLoading(false);
     }
-  }, [dispatch, pageNo, appliedFilters, isChangePendingFilter, buildProductQuery]);
+  }, [
+    dispatch,
+    appliedFilters,
+    isChangePendingFilter,
+    buildProductQuery,
+    list.page,
+    list.pageSize,
+  ]);
 
   useEffect(() => {
     fetchProductsList();
@@ -253,7 +269,8 @@ const ProductCatalog = () => {
     const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
     setAppliedFilters(nextFilters);
-    setPageNo(1);
+    list.setPage(1);
+    list.clearSelection();
   }, [location.pathname]);
 
   useEffect(() => {
@@ -267,23 +284,6 @@ const ProductCatalog = () => {
       }
     }
   }, []);
-  const TABLE_HEADINGS = [
-    "Image",
-    "Product",
-    "SKU",
-    // "Seller",   Uncomment when Admin loged in needs to see seller info in product list
-    // "Category",
-    "Brand",
-    // "Color",
-    // "Origin",
-    "Price",
-    "Stock",
-    "Status",
-    "Created On",
-    "Active",
-    "Action",
-  ];
-
   const bulkUploadValidation = (userData) => {
     const isRole9 = userData?.roleId === 9;
 
@@ -325,16 +325,6 @@ const ProductCatalog = () => {
     setSelectedImages(images);
     setGalleryOpen(true);
   }, []);
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  };
-
-  const handleHeaderCheckboxChange = (e) => {
-    setSelectedRow(e.target.checked ? allRowIds : []);
-  };
 
   const formatDate = (dateString) => {
     try {
@@ -517,19 +507,16 @@ const ProductCatalog = () => {
   };
 
   const handleSearchApply = () => {
-    setSelectedRow([]);
+    list.clearSelection();
     setAppliedFilters(filters);
-    setPageNo(1);
+    list.setPage(1);
   };
   const clearFilters = () => {
     const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
     setAppliedFilters(nextFilters);
-    setPageNo(1);
-    setSelectedRow([]);
-  };
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
+    list.setPage(1);
+    list.clearSelection();
   };
   const handleBulkAction = async (action) => {
     if (isSellerPanelUser && action === "Active") {
@@ -568,88 +555,111 @@ const ProductCatalog = () => {
     navigate(`/app/product-catalog/form/${id}`);
   };
 
-  const isAllRowsSelected = useMemo(
-    () =>
-      selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0,
-    [selectedRow.length, apiRes?.list?.length],
-  );
+  const productColumns = useMemo(
+    () => [
+      {
+        key: "image",
+        label: "Image",
+        render: (_, product) => {
+          const productImages = getProductImages(product);
+          const primaryImage = getPrimaryProductImage(product);
 
-  const tableRows = useMemo(
-    () =>
-      apiRes.list.map((product) => {
-        const productImages = getProductImages(product);
-        const primaryImage = getPrimaryProductImage(product);
-
-        return [
-          <CustomCheckbox
-            checked={selectedRow.includes(product._id)}
-            onChange={(e) => handleRowCheckboxChange(e, product._id)}
-          />,
-
-          <div className="relative flex items-center gap-2">
-            {primaryImage ? (
+          return (
+            <div className="relative flex min-w-[96px] items-center gap-2">
+              {primaryImage ? (
+                <button
+                  type="button"
+                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+                  onClick={() => handleImageClick(productImages)}
+                  title="View product images"
+                >
+                  <img
+                    src={primaryImage}
+                    alt={product?.title || product?.name || "Product"}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </button>
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
+                  No
+                </span>
+              )}
               <button
                 type="button"
-                className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+                className={`text-sm ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
                 onClick={() => handleImageClick(productImages)}
-                title="View product images"
+                disabled={!productImages.length}
               >
-                <img
-                  src={primaryImage}
-                  alt={product?.title || product?.name || "Product"}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
+                View
               </button>
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
-                No
-              </span>
-            )}
-            <button
-              type="button"
-              className={`text-sm ${productImages.length ? "text-blue-500 hover:underline" : "text-gray-400 cursor-not-allowed"}`}
-              onClick={() => handleImageClick(productImages)}
-              disabled={!productImages.length}
-            >
-              View
-            </button>
-          </div>,
-          <span className="capitalize">
+            </div>
+          );
+        },
+      },
+      {
+        key: "title",
+        label: "Product",
+        sortable: true,
+        render: (_, product) => (
+          <span className="block max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap capitalize">
             {product?.title || product?.name || "N/A"}
-          </span>,
-          <span>{product?.sku || "N/A"}</span>,
-          // <span>{refToLabel(product?.sellerName || product?.sellerId)}</span>,
-          // <span>
-          //   {refToLabel(
-          //     product?.categoryName || product?.category || product?.categoryId,
-          //   )}
-          // </span>,
-          <span>{refToLabel(product?.brand)}</span>,
-          // <span>{product?.color || "N/A"}</span>,
-          // <span>
-          //   {[
-          //     product?.origin?.city,
-          //     product?.origin?.state,
-          //     product?.origin?.country,
-          //   ]
-          //     .filter(Boolean)
-          //     .join(", ") || "N/A"}
-          // </span>,
-          <span>
-            {product?.price !== undefined ? `₹${product.price}` : "N/A"}
-          </span>,
-          <span>{product?.stock ?? "N/A"}</span>,
+          </span>
+        ),
+      },
+      {
+        key: "sku",
+        label: "SKU",
+        sortable: true,
+        render: (value) => (
+          <span className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+            {value || "N/A"}
+          </span>
+        ),
+      },
+      {
+        key: "brand",
+        label: "Brand",
+        render: (value) => (
+          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap">
+            {refToLabel(value)}
+          </span>
+        ),
+      },
+      {
+        key: "price",
+        label: "Price",
+        sortable: true,
+        render: (value) => (value !== undefined ? `₹${value}` : "N/A"),
+      },
+      {
+        key: "stock",
+        label: "Stock",
+        sortable: true,
+        render: (value) => value ?? "N/A",
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (_, product) => (
           <ProductStatusBadge
             status={product?.status}
             revisionStatus={product?.revisionStatus}
-          />,
-          <span key={`date-${product._id}`}>
-            {formatDate(product.createdAt)}
-          </span>,
+          />
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Created On",
+        sortable: true,
+        render: (value) => formatDate(value),
+      },
+      {
+        key: "active",
+        label: "Active",
+        render: (_, product) =>
           canToggleProduct(product) ? (
             <ToggleButton
-              key={`toggle-${product._id}`}
               isToggle={isProductActive(product)}
               handleClick={() => handleToggle(product)}
               requiredModule="products"
@@ -657,45 +667,60 @@ const ProductCatalog = () => {
           ) : (
             <span className="text-xs text-gray-400">-</span>
           ),
-          <span>
-            <div className="flex flex-wrap gap-2">
-              <ActionButtons
-                onEdit={() => handleEditProduct(product?._id)}
-                viewButton={true}
-                onViewClick={() =>
-                  navigate(`/app/product-catalog/view/${product?._id}`)
-                }
-                showLinkButton={false}
-                onDelete={() => handleDelete(product)}
-                showDeleteButton={product?.status !== "archived"}
-                requiredModule="products"
-              />
-              {product?.status === "archived" && (
-                <PermissionGuard module="products" action="restore" hide>
-                  <button
-                    className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                    onClick={() => handleRestoreProduct(product)}
-                  >
-                    Restore
-                  </button>
-                </PermissionGuard>
-              )}
-              {canReviewProduct(product) && (
-                <PermissionGuard module="products" action="approve" hide>
-                  <button
-                    className="text-xs px-2 py-1 rounded bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
-                    onClick={() => handleApproveToggle(product)}
-                  >
-                    {hasPendingRevision(product) ? "Review Revision" : "Review"}
-                  </button>
-                </PermissionGuard>
-              )}
-            </div>
-          </span>,
-        ];
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiRes.list, selectedRow, handleImageClick, navigate, isSellerPanelUser],
+      },
+      {
+        key: "actions",
+        label: "Action",
+        render: (_, product) => (
+          <div className="flex min-w-[180px] flex-wrap gap-2">
+            <ActionButtons
+              onEdit={() => handleEditProduct(product?._id)}
+              viewButton={true}
+              onViewClick={() =>
+                navigate(`/app/product-catalog/view/${product?._id}`)
+              }
+              showLinkButton={false}
+              onDelete={() => handleDelete(product)}
+              showDeleteButton={product?.status !== "archived"}
+              requiredModule="products"
+            />
+            {product?.status === "archived" && (
+              <PermissionGuard module="products" action="restore" hide>
+                <button
+                  className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                  onClick={() => handleRestoreProduct(product)}
+                >
+                  Restore
+                </button>
+              </PermissionGuard>
+            )}
+            {canReviewProduct(product) && (
+              <PermissionGuard module="products" action="approve" hide>
+                <button
+                  className="rounded bg-[var(--admin-blue)] px-2 py-1 text-xs text-white hover:bg-[#2e3074]"
+                  onClick={() => handleApproveToggle(product)}
+                >
+                  {hasPendingRevision(product) ? "Review Revision" : "Review"}
+                </button>
+              </PermissionGuard>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [
+      canReviewProduct,
+      canToggleProduct,
+      formatDate,
+      handleApproveToggle,
+      handleDelete,
+      handleEditProduct,
+      handleImageClick,
+      handleRestoreProduct,
+      handleToggle,
+      hasPendingRevision,
+      navigate,
+    ],
   );
 
   const handleAddBulkUpload = () => {
@@ -836,24 +861,28 @@ const ProductCatalog = () => {
           />
         </section>
         <section>
-          <TableData
-            tableHeadings={TABLE_HEADINGS}
-            data={tableRows || []}
-            isHeaderCheckbox={true}
-            handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            totalData={apiRes?.total}
-            allRowsSelected={isAllRowsSelected}
+          <DataTable
+            columns={productColumns}
+            data={apiRes?.list || []}
+            loading={loading}
+            totalCount={apiRes?.total || 0}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            selectable
+            selectedKeys={selectedRow}
+            onSelectionChange={setSelectedRow}
+            rowKey={(product) => product?._id || product?.id}
+            emptyText="No products found."
+            requiredModule="products"
+            tableContainerClassName="max-h-[calc(100vh-360px)] overflow-x-scroll overflow-y-auto pb-2"
+            tableClassName="min-w-[1680px]"
           />
         </section>
-      </div>
-      <div className="mt-3">
-        {apiRes?.total > size && (
-          <Pagination
-            totalPages={Math.ceil(apiRes?.total / size)}
-            currentPage={pageNo}
-            onPageChange={onPageChange}
-          />
-        )}
       </div>
 
       <ConfirmModal

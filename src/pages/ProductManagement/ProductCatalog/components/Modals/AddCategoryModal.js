@@ -6,9 +6,18 @@ import DefaultModal from '../../../../../components/Atoms/Modal/DefaultRightSide
 import ToggleButton from '../../../../../components/Atoms/ToggleButton/ToggleButton'
 import Input from '../../../../../components/Atoms/Input/Input'
 
+const toTitleCase = (str) =>
+    str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+
 const AddCategoryModal = ({
     isOpen, handleCloseModal, formData, handleFileUpload, handleChange, handleSelectChange, parentCategories, handleSubmit, handleDashboardVisible
 }) => {
+    const handleNameBlur = (e) => {
+        if (!e.target.value.trim()) return;
+        const titled = toTitleCase(e.target.value);
+        if (titled !== e.target.value) handleChange({ target: { name: e.target.name, value: titled } });
+    };
+
     return (
         <DefaultModal
             title={'Add Category'}
@@ -23,6 +32,7 @@ const AddCategoryModal = ({
                         name="categoryName"
                         value={formData?.categoryName}
                         onChange={handleChange}
+                        onBlur={handleNameBlur}
                         required
                     />
                 </div>
