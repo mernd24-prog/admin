@@ -15,7 +15,7 @@ const OtpVerificationCard = ({
   onResendOtp,
   maskedPhone = "**** **** 1234",
 }) => (
-  <div className="relative z-10 mx-auto flex w-full max-w-full flex-col items-center justify-center">
+  <div className="relative z-10  mx-auto flex w-full max-w-full flex-col items-center justify-center">
     <p className="text-center font-[Inter] text-[16px] font-medium leading-[30px] tracking-[0%] text-[#2E2E2E]">
       Phone Number :{" "}
       <span className="font-semibold text-[#3E4094]">{maskedPhone}</span>

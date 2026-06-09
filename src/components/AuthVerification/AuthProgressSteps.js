@@ -13,7 +13,7 @@ const AuthProgressSteps = ({
   className = "",
 }) => (
   <div
-    className={`mb-10 flex w-full max-w-[510px] items-start justify-between px-2 sm:mb-[54px] sm:px-0 ${className}`}
+    className={`mb-7 flex w-full max-w-[510px] items-start justify-between px-2 3xl:mb-[54px] sm:px-0 ${className}`}
   >
     {steps.map((step, index) => {
       const StepIcon = step.icon;

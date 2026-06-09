@@ -33,7 +33,7 @@ const VerifyOtpPage = () => {
         subTitle={`Enter the 6-digit code sent to ${email}`}
         onSubmit={auth.handleVerificationSubmit}
       >
-        <div className="relative d z-10 flex flex-col gap-4">
+        <div className="relative  z-10 flex flex-col gap-4">
           <OtpCodeInputs
             codeInputRefs={auth.codeInputRefs}
             verificationCode={auth.verificationCode}

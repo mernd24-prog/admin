@@ -109,6 +109,7 @@ const clearAuthFlowDraft = () => {
 export const useAuthFlow = ({
   currentFormType,
   clearAuthOnMount = false,
+  hydrateDraftOnMount = true,
 } = {}) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -119,7 +120,9 @@ export const useAuthFlow = ({
   const sellerPanel = isSellerPanel();
   const panelMode = sellerPanel ? PANEL_MODES.SELLER : PANEL_MODES.ADMIN;
   const activeFormType = currentFormType || formType || AUTH_FORM_TYPES.LOGIN;
-  const initialDraftRef = useRef(readAuthFlowDraft());
+  const initialDraftRef = useRef(
+    hydrateDraftOnMount ? readAuthFlowDraft() : {},
+  );
   const [loginError, setLoginError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [formFields, setFormFields] = useState(() => ({

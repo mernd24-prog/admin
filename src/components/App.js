@@ -58,7 +58,8 @@ const App = () => {
             // Regular session expired or invalidated — force logout with message
             forceLogout(
               result.payload?.code || "SESSION_INVALID",
-              result.payload?.message || "Your session is no longer valid. Please login again.",
+              result.payload?.message ||
+                "Your session is no longer valid. Please login again.",
             );
           } else {
             // Onboarding token expired/invalid — clear silently and let user re-login
@@ -240,7 +241,10 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
   const role = getStoredRole() || flowState?.role;
 
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
-    forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
+    forceLogout(
+      "ROLE_CHANGED",
+      "This account cannot access this panel. Please login with the correct account.",
+    );
     return <Navigate to="/login" />;
   }
 
@@ -324,7 +328,10 @@ const PublicAuthRoute = ({
   }
 
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
-    forceLogout("ROLE_CHANGED", "This account cannot access this panel. Please login with the correct account.");
+    forceLogout(
+      "ROLE_CHANGED",
+      "This account cannot access this panel. Please login with the correct account.",
+    );
   } else if (
     isAuthenticated &&
     formType !== AUTH_FORM_TYPES.VERIFICATION_COMPLETE &&

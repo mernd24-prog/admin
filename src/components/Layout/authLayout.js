@@ -35,7 +35,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
               className="  z-0 h-full w-full object-cover "
             />
 
-            <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[45rem]  flex-col items-center text-center  bottom-4  xl:bottom-[6rem]">
+            <div className="absolute inset-x-4  z-20 mx-auto flex w-auto max-w-[45rem]  flex-col items-center text-center   bottom-4  3xl:bottom-[6.9rem]">
               <div className="h-12 w-12 sm:h-14 sm:w-14">
                 <img
                   src={activeUser.profileImg}
@@ -56,7 +56,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                   ),
                 )}
               </div>
-              <p className="mt-2 w-full px-3 py-2 text-center font-inter   text-black sm:px-4 text-xs xl:mt-5  xl:text-base  h-[7rem] xl:h-[9rem]">
+              <p className="mt-2 w-full px-3 py-2 text-center font-inter   text-black sm:px-4 text-xs xl:mt-2  3xl:mt-6  xl:text-base  h-[7rem] xl:h-[9rem]">
                 "{activeUser.description}"
               </p>
 

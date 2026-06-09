@@ -1,7 +1,7 @@
 import React from "react";
 import { Hourglass } from "lucide-react";
 import { MdArrowRightAlt } from "react-icons/md";
-const statusContent = {
+export const statusContent = {
   verificationComplete: {
     imageSrc: "/Img/auth-img/completed.png",
     imageAlt: "Verification Complete",
@@ -130,7 +130,7 @@ const SellerStatusScreen = ({
         {renderProgressHeader()}
 
         <div
-          className={`flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 ${contentClassName}`}
+          className={`flex min-h-[430px] w-full  items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 ${contentClassName}`}
         >
           <div className="flex w-full max-w-[360px] flex-col items-center text-center">
             <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#1A1A68] text-white">
@@ -204,7 +204,7 @@ const SellerStatusScreen = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {renderProgressHeader()}
+      {/* {renderProgressHeader()} */}
       <div className="flex min-h-[430px] w-full items-center justify-center rounded-[14px] border border-[#e7d6b7] bg-white px-5 py-12 sm:px-10">
         <div
           className={`flex w-full max-w-[760px] flex-col items-center justify-center text-center ${contentClassName}`}
