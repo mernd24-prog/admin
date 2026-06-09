@@ -33,7 +33,7 @@ const VerifyOtpPage = () => {
         subTitle={`Enter the 6-digit code sent to ${email}`}
         onSubmit={auth.handleVerificationSubmit}
       >
-        <div className="relative  z-10 flex flex-col gap-4">
+        <div className="relative   z-10 flex flex-col gap-4">
           <OtpCodeInputs
             codeInputRefs={auth.codeInputRefs}
             verificationCode={auth.verificationCode}
@@ -41,7 +41,7 @@ const VerifyOtpPage = () => {
             onCodeKeyDown={auth.handleCodeKeyDown}
             onCodePaste={auth.handleCodePaste}
             containerClassName="flex space-x-2"
-            inputClassName="h-12 w-12 animate-pop-in rounded-md border border-transparent bg-white text-center text-lg outline-none transition-all duration-300 focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd]"
+            inputClassName="h-12 w-12 animate-pop-in rounded-md border border-[#D6A323] bg-white text-center text-lg outline-none transition-all duration-300  focus:border-[#d8d4cf] focus:ring-2 focus:ring-[#e8e3dd] "
             getInputStyle={(index) => ({ animationDelay: `${index * 0.1}s` })}
           />
 

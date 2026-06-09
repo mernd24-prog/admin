@@ -4,10 +4,10 @@ import FormSubmitButton from "../Atoms/FormButton/FormSubmitButton";
 import BrandLogo from "../BrandLogo";
 
 const AUTH_LOGO_CLASS_NAME =
-  "mb-0 h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[10px] shadow-[0_3px_8px_rgba(31,27,95,0.08)] mb-[30px] sm:mb-[40px]";
+  "mb-0 h-[110px]  w-[240px]  3xl:h-[140px]  3xl:w-[240px]  rounded-[6px] border border-[var(--admin-gold)] bg-[#F5F2EF] p-[10px] shadow-[0_3px_8px_rgba(31,27,95,0.08)] mb-[30px] sm:mb-[40px]";
 
 const AUTH_LOGO_IMAGE_CLASS_NAME =
-  "!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]";
+  "!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-[#FCF5E8]  p-[10px] 3xl:p-[17px]";
 
 const FormLayout = ({
   title,
@@ -38,7 +38,7 @@ const FormLayout = ({
       className={`relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-8 ${shellClassName}`}
     >
       <div
-        className={` relative z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
+        className={` relative  z-10 flex w-full max-w-[720px] flex-col items-center ${className}`}
       >
         {showLogo && (
           <BrandLogo
@@ -65,7 +65,7 @@ const FormLayout = ({
         </div>
 
         <div
-          className={`flex w-full   max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-[#f7f5f2] px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
+          className={`flex w-full   max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-white  px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
         >
           <form onSubmit={onSubmit} className={` space-y-0 ${formClassName}`}>
             <div className={childrenClassName}>{children}</div>

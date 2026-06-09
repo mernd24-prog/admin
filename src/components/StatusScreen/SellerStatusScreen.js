@@ -96,7 +96,8 @@ const SellerStatusScreen = ({
           We're Reviewing Your Account
         </h1>
         <p className="mt-3 max-w-3xl font-inter text-[14px] font-medium leading-[22px] text-[#182D50B2]">
-          Your application is currently under review. This usually takes 24–48 hours.
+          Your application is currently under review. This usually takes 24–48
+          hours.
         </p>
       </div>
       <div className="min-w-[185px]">

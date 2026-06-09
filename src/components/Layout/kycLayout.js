@@ -179,7 +179,7 @@ const KYCStatusLayout = ({
   }, [currentSection, scrollContentToTop]);
 
   return (
-    <div className="min-h-screen  bg-[#f6f3ef]  font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
+    <div className="min-h-screen  bg-[#f6f3ef]   font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
       <aside className="sidebar-scrollbar w-full   lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
           <div className=" bg-[#FCF5E8]  pb-5  sm:pb-7 lg:pb-10">

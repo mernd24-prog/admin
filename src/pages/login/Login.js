@@ -40,7 +40,7 @@ const Login = () => {
         onLinkClick={auth.sellerPanel ? auth.goToRegister : undefined}
         showLogo
       >
-        <div className="relative z-10 flex flex-col">
+        <div className="relative z-10 flex flex-col ">
           <div className={auth.sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
             <EmailInput
               id="email"

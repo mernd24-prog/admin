@@ -73,7 +73,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
           </div>
 
           {/* Right Panel - Form Container */}
-          <div className="flex justify-center bg-[#F4F1ED]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
+          <div className="flex justify-center bg-[#F7F8FC]  p-6 sm:p-8 md:p-10 lg:items-center lg:overflow-hidden lg:p-12">
             <div
               className={
                 formType === "verificationComplete" ||
