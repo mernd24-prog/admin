@@ -1,18 +1,19 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+} from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
-import { getAllUserList } from "../../../Redux/userManagementSlice";
-
-const PAGE_SIZE = 10;
+import { useListPage } from "../../../hooks/useListPage";
+import { MdShoppingCart } from "react-icons/md";
 
 const ORDER_STATUSES = [
   "pending_payment",
@@ -27,244 +28,270 @@ const ORDER_STATUSES = [
   "cancelled",
 ];
 
-const PAYMENT_STATUSES = ["initiated", "authorized", "captured", "failed", "refunded", "cancelled"];
-const DELIVERY_STATUSES = ["initiated", "manifested", "picked_up", "in_transit", "out_for_delivery", "delivered", "failed", "cancelled", "rto"];
+const PAYMENT_STATUSES = [
+  "initiated",
+  "authorized",
+  "captured",
+  "failed",
+  "refunded",
+  "cancelled",
+];
+
+const DELIVERY_STATUSES = [
+  "initiated",
+  "manifested",
+  "picked_up",
+  "in_transit",
+  "out_for_delivery",
+  "delivered",
+  "failed",
+  "cancelled",
+  "rto",
+];
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    type: "select",
+    label: "Order Status",
+    width: "w-44",
+    options: ORDER_STATUSES.map((s) => ({
+      value: s,
+      label: s.replace(/_/g, " "),
+    })),
+  },
+  {
+    key: "paymentStatus",
+    type: "select",
+    label: "Payment Status",
+    width: "w-44",
+    options: PAYMENT_STATUSES.map((s) => ({
+      value: s,
+      label: s.replace(/_/g, " "),
+    })),
+  },
+  {
+    key: "deliveryStatus",
+    type: "select",
+    label: "Delivery Status",
+    width: "w-44",
+    options: DELIVERY_STATUSES.map((s) => ({
+      value: s,
+      label: s.replace(/_/g, " "),
+    })),
+  },
+  {
+    key: "fromDate",
+    type: "date",
+    label: "From Date",
+    width: "w-36",
+  },
+  {
+    key: "toDate",
+    type: "date",
+    label: "To Date",
+    width: "w-36",
+  },
+];
 
 const firstDefined = (...values) =>
-  values.find((value) => value !== undefined && value !== null && value !== "");
+  values.find((v) => v !== undefined && v !== null && v !== "");
 
 const orderIdOf = (order = {}) =>
   firstDefined(order._id, order.id, order.orderId, order.order_no);
 
-const displayStatus = (value = "") =>
-  String(value || "N/A").replace(/_/g, " ");
+const formatMoney = (value) =>
+  `₹ ${Number(value || 0).toFixed(2)}`;
+
+const COLUMNS = [
+  {
+    key: "order_number",
+    label: "Order #",
+    sortable: true,
+    render: (v, row) => (
+      <span className="font-mono font-medium text-[var(--admin-navy)]">
+        {v || orderIdOf(row)}
+      </span>
+    ),
+  },
+  {
+    key: "createdAt",
+    label: "Date",
+    sortable: true,
+    render: (v, row) => {
+      const date = firstDefined(v, row.created_at);
+      return (
+        <span className="text-gray-500 text-sm">
+          {date ? moment(date).format("DD MMM YYYY HH:mm") : "N/A"}
+        </span>
+      );
+    },
+  },
+  {
+    key: "buyer_id",
+    label: "Buyer ID",
+    render: (v, row) => (
+      <span className="text-xs text-gray-500 font-mono truncate max-w-[120px]">
+        {firstDefined(v, row.buyerId, row.user_id, "—")}
+      </span>
+    ),
+  },
+  {
+    key: "items",
+    label: "Items",
+    render: (v, row) => {
+      const count = Array.isArray(v)
+        ? v.length
+        : firstDefined(row.itemCount, row.item_count, "—");
+      return <span className="font-mono">{count}</span>;
+    },
+  },
+  {
+    key: "total_amount",
+    label: "Total",
+    sortable: true,
+    render: (v, row) => (
+      <span className="font-mono font-semibold">
+        {formatMoney(firstDefined(v, row.totalAmount))}
+      </span>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (v) => <StatusBadge status={v} />,
+  },
+  {
+    key: "payment_status",
+    label: "Payment",
+    render: (v, row) => (
+      <StatusBadge
+        status={firstDefined(v, row.paymentStatus)}
+        dot
+      />
+    ),
+  },
+  {
+    key: "delivery_status",
+    label: "Delivery",
+    render: (v, row) => {
+      const s = firstDefined(v, row.deliveryStatus);
+      return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">—</span>;
+    },
+  },
+];
 
 const getListPayload = (selector = {}) => {
   const data = selector?.getOrderListData?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+  if (Array.isArray(data)) return { items: data, total: data.length };
   return {
-    list: data?.list || data?.items || [],
-    total: Number(data?.total || data?.list?.length || data?.items?.length || 0),
+    items: data?.list || data?.items || [],
+    total: Number(
+      data?.total || data?.list?.length || data?.items?.length || 0,
+    ),
   };
 };
-
-const csvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const Orders = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector((state) => state.order);
-  const userSelector = useSelector((state) => state.userManagement);
-
-  const { list, total } = getListPayload(selector);
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-    paymentStatus: "",
-    deliveryStatus: "",
-    buyerId: "",
-    sellerId: "",
-    fromDate: "",
-    toDate: "",
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
 
-  const userListData = useMemo(
-    () =>
-      (userSelector?.getAllUserListData?.data?.data?.list || []).map((user) => ({
-        value: user?._id || user?.id || "",
-        label:
-          [user?.email, user?.phone].filter(Boolean).join(" - ") ||
-          user?._id ||
-          user?.id ||
-          "Unknown",
-      })),
-    [userSelector?.getAllUserListData],
-  );
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await dispatch(
-        getOrderList({
-          page: pageNo,
-          limit: PAGE_SIZE,
-          ...filters,
-        }),
-      ).unwrap();
-    } catch (err) {
-      toast.error(err?.message || err || "Failed to fetch orders");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch, pageNo, filters]);
+  const { items, total } = getListPayload(selector);
+  const loading = !!selector?.getOrderListData?.loading;
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  useEffect(() => {
-    dispatch(getAllUserList({ searchFields: "email,phone", select: "" }));
-  }, [dispatch]);
-
-  const setFilter = useCallback((field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setPageNo(1);
-  }, []);
-
-  const resetFilters = useCallback(() => {
-    setFilters({
-      search: "",
-      status: "",
-      paymentStatus: "",
-      deliveryStatus: "",
-      buyerId: "",
-      sellerId: "",
-      fromDate: "",
-      toDate: "",
+    const params = list.toQueryParams();
+    dispatch(
+      getOrderList({
+        page: params.page,
+        limit: params.limit,
+        search: params.search || undefined,
+        status: params.status || undefined,
+        paymentStatus: params.paymentStatus || undefined,
+        deliveryStatus: params.deliveryStatus || undefined,
+        fromDate: params.fromDate || undefined,
+        toDate: params.toDate || undefined,
+        sortBy: params.sortBy,
+        sortOrder: params.sortDir,
+      }),
+    ).unwrap().catch((err) => {
+      toast.error(err?.message || "Failed to fetch orders");
     });
-    setPageNo(1);
-  }, []);
+  }, [
+    dispatch,
+    list.page,
+    list.pageSize,
+    list.search,
+    list.sortKey,
+    list.sortDir,
+    list.filters,
+  ]);
 
-  const exportCsv = useCallback(() => {
-    if (!list.length) {
-      toast.error("No orders to export");
-      return;
-    }
-
-    const rows = [
-      ["Order Number", "Order ID", "Buyer", "Status", "Payment Status", "Delivery Status", "Total", "Payable", "Created At"],
-      ...list.map((order) => [
-        firstDefined(order.order_number, order.orderNumber, order.order_no, ""),
-        orderIdOf(order),
-        firstDefined(order.buyer_id, order.buyerId, order.user_id, ""),
-        order.status || "",
-        firstDefined(order.payment_status, order.paymentStatus, ""),
-        firstDefined(order.delivery_status, order.deliveryStatus, ""),
-        firstDefined(order.total_amount, order.totalAmount, 0),
-        firstDefined(order.payable_amount, order.payableAmount, 0),
-        firstDefined(order.created_at, order.createdAt, ""),
-      ]),
-    ];
-
-    const csv = rows.map((row) => row.map(csvValue).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `orders-${moment().format("YYYYMMDD-HHmm")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [list]);
-
-  const tableHeadings = [
-    "Order",
-    "Buyer",
-    "Created",
-    "Total",
-    "Status",
-    "Payment",
-    "Delivery",
-    "Action",
+  const columns = [
+    ...COLUMNS,
+    {
+      key: "_actions",
+      label: "",
+      render: (_, row) => (
+        <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>
+          <button
+            onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
+            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--admin-navy)] text-[var(--admin-navy)] hover:bg-[var(--admin-navy)] hover:text-white transition-colors"
+          >
+            View
+          </button>
+        </PermissionGuard>
+      ),
+    },
   ];
 
-  const tableRows = list.map((order) => {
-    const orderId = orderIdOf(order);
-    const orderNumber = firstDefined(order.order_number, order.orderNumber, order.order_no, orderId);
-    const buyer = firstDefined(order.buyer_id, order.buyerId, order.user_id, "N/A");
-    const totalAmount = Number(firstDefined(order.total_amount, order.totalAmount, 0));
-    const createdAt = firstDefined(order.created_at, order.createdAt);
-
-    return [
-      <span className="font-medium">{orderNumber}</span>,
-      <span>{buyer}</span>,
-      <span>{createdAt ? moment(createdAt).format("DD-MM-YYYY HH:mm") : "N/A"}</span>,
-      <span>₹ {totalAmount.toFixed(2)}</span>,
-      <span className="capitalize">{displayStatus(order.status)}</span>,
-      <span className="capitalize">{displayStatus(firstDefined(order.payment_status, order.paymentStatus))}</span>,
-      <span className="capitalize">{displayStatus(firstDefined(order.delivery_status, order.deliveryStatus))}</span>,
-      <PermissionGuard module="orders" action="view" hide>
-        <ActionButtons
-          showLinkButton={false}
-          showDeleteButton={false}
-          showViewButton={false}
-          showEditButton={false}
-          viewButton={true}
-          onViewClick={() => navigate(`/app/orders/view/${orderId}`)}
-        />
-      </PermissionGuard>,
-    ];
-  });
-
   return (
-    <>
-      <Loader loading={isLoading} />
-      <div className="p-3 max-w-7xl mx-auto">
-        <h3 className="text-gray-500 text-sm font-semibold py-6">
-          <Link to="/app/home">Home</Link> / <span className="text-[#181c32]">Orders</span>
-        </h3>
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Orders"
+        subtitle="Manage and track all customer orders"
+        breadcrumbs={[
+          { label: "Orders Management" },
+          { label: "Orders" },
+        ]}
+      />
 
-        <section className="bg-white p-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pb-4">
-            <input
-              className="border rounded px-3 py-2 text-sm"
-              placeholder="Search order number"
-              value={filters.search}
-              onChange={(event) => setFilter("search", event.target.value)}
-            />
-            <select className="border rounded px-3 py-2 text-sm" value={filters.status} onChange={(event) => setFilter("status", event.target.value)}>
-              <option value="">All order statuses</option>
-              {ORDER_STATUSES.map((status) => <option key={status} value={status}>{displayStatus(status)}</option>)}
-            </select>
-            <select className="border rounded px-3 py-2 text-sm" value={filters.paymentStatus} onChange={(event) => setFilter("paymentStatus", event.target.value)}>
-              <option value="">All payment statuses</option>
-              {PAYMENT_STATUSES.map((status) => <option key={status} value={status}>{displayStatus(status)}</option>)}
-            </select>
-            <select className="border rounded px-3 py-2 text-sm" value={filters.deliveryStatus} onChange={(event) => setFilter("deliveryStatus", event.target.value)}>
-              <option value="">All delivery statuses</option>
-              {DELIVERY_STATUSES.map((status) => <option key={status} value={status}>{displayStatus(status)}</option>)}
-            </select>
-            <select className="border rounded px-3 py-2 text-sm" value={filters.buyerId} onChange={(event) => setFilter("buyerId", event.target.value)}>
-              <option value="">All buyers</option>
-              {userListData.map((user) => <option key={user.value} value={user.value}>{user.label}</option>)}
-            </select>
-            <input className="border rounded px-3 py-2 text-sm" placeholder="Seller ID" value={filters.sellerId} onChange={(event) => setFilter("sellerId", event.target.value)} />
-            <input className="border rounded px-3 py-2 text-sm" type="date" value={filters.fromDate} onChange={(event) => setFilter("fromDate", event.target.value)} />
-            <input className="border rounded px-3 py-2 text-sm" type="date" value={filters.toDate} onChange={(event) => setFilter("toDate", event.target.value)} />
-          </div>
-
-          <div className="flex flex-wrap justify-between gap-2 pb-3">
-            <button type="button" className="border px-4 py-2 rounded text-sm" onClick={resetFilters}>Reset</button>
-            <PermissionGuard module="orders" action="export" hide>
-              <button type="button" className="bg-[#181c32] text-white px-4 py-2 rounded text-sm" onClick={exportCsv}>Export CSV</button>
-            </PermissionGuard>
-          </div>
-
-          <TableData
-            Heading="Orders"
-            tableHeadings={tableHeadings}
-            data={tableRows}
-            showSearch={false}
-            showFilter={false}
-            showSummary={false}
-            showAddButton={false}
-            isHeaderCheckbox={false}
-            totalData={total}
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search by order number or buyer…"
+        emptyText="No orders found."
+        emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
+        requiredModule="orders"
+        exportConfig={{ filename: "orders", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
           />
-          {!isLoading && list.length === 0 && (
-            <div className="py-10 text-center text-sm text-gray-500">No orders found</div>
-          )}
-        </section>
-
-        {total > PAGE_SIZE && (
-          <Pagination
-            totalPages={Math.ceil(total / PAGE_SIZE)}
-            currentPage={pageNo}
-            onPageChange={setPageNo}
-          />
-        )}
-      </div>
-    </>
+        }
+      />
+    </div>
   );
 };
 

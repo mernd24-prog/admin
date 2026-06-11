@@ -1,149 +1,154 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
+import { toast } from "sonner";
+import { MdLabel } from "react-icons/md";
+import { PageHeader, DataTable, FilterBar, StatusBadge } from "../../../components/Shared";
+import { useListPage } from "../../../hooks/useListPage";
 import { getProducts } from "../../../Redux/productSlice";
 
-const PAGE_SIZE = 10;
 const firstDefined = (...values) =>
-  values.find((value) => value !== undefined && value !== null && value !== "");
+  values.find((v) => v !== undefined && v !== null && v !== "");
 
-const ProductTags = () => {
-  const dispatch = useDispatch();
-  const selector = useSelector((state) => state.product);
+const FILTER_FIELDS = [
+  {
+    key: "tags",
+    type: "text",
+    label: "Tag",
+    placeholder: "Filter by tag",
+    width: "w-44",
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: "w-44",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+      { value: "pending_approval", label: "Pending Approval" },
+      { value: "draft", label: "Draft" },
+      { value: "rejected", label: "Rejected" },
+      { value: "archived", label: "Archived" },
+    ],
+  },
+];
 
-  const listResponse = selector?.getProductsData?.data?.data || {};
-  const list = listResponse?.list || [];
-  const total = Number(listResponse?.total || 0);
-
-  const [filters, setFilters] = useState({ search: "" });
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-
-  const fetchProducts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await dispatch(
-        getProducts({
-          page: pageNo,
-          limit: PAGE_SIZE,
-          search: filters.search || undefined,
-        }),
-      ).unwrap();
-    } catch (err) {
-      toast.error(err?.message || err || "Failed to fetch product tags");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch, pageNo, filters.search]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const handlePageChange = useCallback((newPageNo) => {
-    setPageNo(newPageNo);
-  }, []);
-
-  const applyFilters = useCallback(() => {
-    setPageNo(1);
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({ search: "" });
-    setPageNo(1);
-  }, []);
-
-  const tableHeadings = ["Product Name", "Tags"];
-
-  const tableRows = list.map((product) => {
-    const title = firstDefined(
-      product?.title,
-      product?.name,
-      product?.productName,
-      "N/A",
-    );
-    const tags = Array.isArray(product?.tags) ? product.tags : [];
-
-    return [
-      <span className="text-sm font-medium">{title}</span>,
-      <div className="flex flex-wrap gap-1">
-        {tags.length > 0 ? (
-          tags.map((tag) => (
+const COLUMNS = [
+  {
+    key: "title",
+    label: "Product Name",
+    sortable: true,
+    render: (v, row) => (
+      <span className="font-medium text-gray-800">
+        {firstDefined(row?.title, row?.name, row?.productName, "N/A")}
+      </span>
+    ),
+  },
+  {
+    key: "tags",
+    label: "Tags",
+    render: (v, row) => {
+      const tags = Array.isArray(row?.tags) ? row.tags : [];
+      return tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {tags.map((tag) => (
             <span
-              key={`${product?._id || product?.id || title}-${tag}`}
+              key={`${row?._id}-${tag}`}
               className="inline-flex px-2 py-0.5 rounded-full text-xs bg-[var(--admin-blue-soft)] text-[#2d4db3]"
             >
               #{tag}
             </span>
-          ))
-        ) : (
-          <span className="text-xs text-gray-500">No tags</span>
-        )}
-      </div>,
-    ];
-  });
+          ))}
+        </div>
+      ) : (
+      <span className="text-xs text-gray-400">No tags</span>
+      );
+    },
+  },
+  {
+    key: "status",
+    label: "Status",
+    sortable: true,
+    render: (value) => <StatusBadge status={value || "draft"} dot />,
+  },
+];
+
+const ProductTags = () => {
+  const dispatch = useDispatch();
+  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const [loading, setLoading] = useState(false);
+
+  const selector = useSelector((state) => state.product);
+  const listResponse = selector?.getProductsData?.data?.data || {};
+  const products = listResponse?.list || [];
+  const total = Number(listResponse?.total || 0);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = list.toQueryParams();
+      await dispatch(
+        getProducts({
+          page: params.page,
+          limit: params.limit || 10,
+          search: params.search || undefined,
+          tags: params.tags || undefined,
+          status: params.status || undefined,
+          sortBy: params.sortBy,
+          sortDir: params.sortDir,
+          includeAllStatuses: true,
+        })
+      ).unwrap();
+    } catch (err) {
+      toast.error(err?.message || "Failed to fetch product tags");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir]);
 
   return (
-    <>
-      <Loader loading={isLoading} />
-      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl mx-auto space-y-3">
-        <h3 className="text-gray-500 text-sm font-semibold py-3">
-          <Link to="/app/home">Home</Link> /{" "}
-          <span className="text-[#181c32]">Product Tags</span>
-        </h3>
-        <div className="overflow-auto overflow-y-auto bg-white">
-          <div className="p-2 border-b">
-            <SearchComponent
-              tableHeadings={tableHeadings}
-              data={tableRows}
-              selectedRow={selectedRow}
-              setSelectedRow={setSelectedRow}
-              loading={isLoading}
-              filters={filters}
-              setFilters={setFilters}
-              isSearchShow={true}
-              isActivationStatus={false}
-              isApprovalOptions={false}
-              isProduct={false}
-              isUser={false}
-              isActionButton={false}
-              isSearchDown={false}
-              isStatusAction={false}
-              isDelete={false}
-              applyFilters={applyFilters}
-              handleSearchRemove={handleSearchRemove}
-            />
-          </div>
-          <TableData
-            Heading="Product Tags"
-            tableHeadings={tableHeadings}
-            data={tableRows}
-            showSearch={true}
-            placeholder="Search by product name..."
-            showFilter={false}
-            showSummary={false}
-            showAddButton={false}
-            isHeaderCheckbox={false}
-            totalData={total}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Tags"
+        subtitle="View tags associated with products"
+        breadcrumbs={[{ label: "Product Management" }, { label: "Product Tags" }]}
+      />
+
+      <DataTable
+        columns={COLUMNS}
+        data={products}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search by product name…"
+        emptyText="No products with tags found."
+        emptyIcon={<MdLabel size={40} className="text-gray-200" />}
+        requiredModule="products"
+        exportConfig={{ filename: "product-tags", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
           />
-        </div>
-        {total > PAGE_SIZE && (
-          <Pagination
-            totalPages={Math.ceil(total / PAGE_SIZE)}
-            currentPage={pageNo}
-            onPageChange={handlePageChange}
-          />
-        )}
-      </div>
-    </>
+        }
+      />
+    </div>
   );
 };
 

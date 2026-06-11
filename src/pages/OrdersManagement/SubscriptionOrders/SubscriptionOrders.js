@@ -1,248 +1,202 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { MdSubscriptions } from "react-icons/md";
 import {
-  ActionButtons,
-  getStatusStyles,
-} from "../../../components/Atoms/TableActionButton/TableActionButton";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
-import { getAllUserList } from "../../../Redux/userManagementSlice";
-import useDropdownOptions from "../../../hooks/useDropdownOptions";
+import { useListPage } from "../../../hooks/useListPage";
 
-const PAGE_SIZE = 10;
+const PAYMENT_STATUSES = [
+  "initiated",
+  "authorized",
+  "captured",
+  "failed",
+  "refunded",
+  "cancelled",
+];
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    type: "select",
+    label: "Payment Status",
+    width: "w-44",
+    options: PAYMENT_STATUSES.map((s) => ({
+      value: s,
+      label: s.replace(/_/g, " "),
+    })),
+  },
+  { key: "fromDate", type: "date", label: "From Date", width: "w-36" },
+  { key: "toDate", type: "date", label: "To Date", width: "w-36" },
+];
 
 const firstDefined = (...values) =>
-  values.find((value) => value !== undefined && value !== null && value !== "");
+  values.find((v) => v !== undefined && v !== null && v !== "");
+
 const orderIdOf = (order = {}) =>
   firstDefined(order._id, order.id, order.order_no, order.orderId);
+
+const COLUMNS = [
+  {
+    key: "order_no",
+    label: "Order #",
+    sortable: true,
+    render: (v, row) => (
+      <span className="font-mono font-medium text-[var(--admin-navy)]">
+        {v || orderIdOf(row)}
+      </span>
+    ),
+  },
+  {
+    key: "createdAt",
+    label: "Date",
+    sortable: true,
+    render: (v, row) => (
+      <span className="text-xs text-gray-500">
+        {firstDefined(v, row.created_at)
+          ? moment(firstDefined(v, row.created_at)).format("DD MMM YYYY HH:mm")
+          : "N/A"}
+      </span>
+    ),
+  },
+  {
+    key: "buyer_id",
+    label: "Buyer",
+    render: (v, row) => (
+      <span className="text-xs font-mono text-gray-500">
+        {firstDefined(v, row.buyerId, row.user_id, "—")}
+      </span>
+    ),
+  },
+  {
+    key: "total_amount",
+    label: "Amount",
+    sortable: true,
+    render: (v, row) => (
+      <span className="font-mono font-semibold">
+        ₹ {Number(firstDefined(v, row.totalAmount, 0)).toFixed(2)}
+      </span>
+    ),
+  },
+  {
+    key: "payment_status",
+    label: "Payment Status",
+    render: (v, row) => (
+      <StatusBadge status={firstDefined(v, row.paymentStatus, row.status)} dot />
+    ),
+  },
+];
+
+const getListPayload = (selector = {}) => {
+  const data = selector?.getOrderListData?.data?.data;
+  if (Array.isArray(data)) return { items: data, total: data.length };
+  return {
+    items: data?.list || data?.items || [],
+    total: Number(data?.total || data?.list?.length || data?.items?.length || 0),
+  };
+};
 
 const SubscriptionOrders = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector((state) => state.order);
-  const userSelector = useSelector((state) => state.userManagement);
-
-  const listPayload = selector?.getOrderListData?.data?.data || {};
-  const list = listPayload?.list || [];
-  const total = Number(listPayload?.total || 0);
-
-  const [filters, setFilters] = useState({
-    search: "",
-    activationStatus: "",
-    dateFrom: "",
-    dateTo: "",
-    sellerName: "",
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
   });
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const paymentStatuses = useDropdownOptions("payment-statuses");
 
-  const userListData = useMemo(
-    () =>
-      (userSelector?.getAllUserListData?.data?.data?.list || []).map(
-        (user) => ({
-          value: user?._id || "",
-          label:
-            [user?.email, user?.phone].filter(Boolean).join(" - ") ||
-            user?._id ||
-            "Unknown",
-        }),
+  const { items, total } = getListPayload(selector);
+  const loading = !!selector?.getOrderListData?.loading;
+
+  useEffect(() => {
+    const params = list.toQueryParams();
+    dispatch(
+      getOrderList({
+        page: params.page,
+        limit: params.limit,
+        search: params.search || undefined,
+        status: params.status || undefined,
+        fromDate: params.fromDate || undefined,
+        toDate: params.toDate || undefined,
+        orderType: "subscription",
+        sortBy: params.sortBy,
+        sortOrder: params.sortDir,
+      }),
+    )
+      .unwrap()
+      .catch((err) => toast.error(err?.message || "Failed to load subscription orders"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
+
+  const columns = [
+    ...COLUMNS,
+    {
+      key: "_actions",
+      label: "",
+      render: (_, row) => (
+        <PermissionGuard module="subscriptions" action={ACTIONS.VIEW} hide>
+          <button
+            onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
+            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--admin-navy)] text-[var(--admin-navy)] hover:bg-[var(--admin-navy)] hover:text-white transition-colors"
+          >
+            View
+          </button>
+        </PermissionGuard>
       ),
-    [userSelector?.getAllUserListData],
-  );
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await dispatch(
-        getOrderList({
-          page: pageNo,
-          limit: PAGE_SIZE,
-          status: filters.activationStatus || undefined,
-          fromDate: filters.dateFrom || undefined,
-          toDate: filters.dateTo || undefined,
-          userId: filters.sellerName || undefined,
-          keyWord: filters.search || undefined,
-          orderType: "subscription",
-        }),
-      ).unwrap();
-    } catch (err) {
-      toast.error(err?.message || err || "Failed to fetch subscription orders");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch, pageNo, filters]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  useEffect(() => {
-    dispatch(getAllUserList({ searchFields: "email,phone", select: "" }));
-  }, [dispatch]);
-
-  const handleViewOrders = useCallback(
-    (order) => {
-      const orderId = orderIdOf(order);
-      if (!orderId) {
-        toast.error("Order ID not found");
-        return;
-      }
-      navigate(`/app/orders/view/${orderId}`);
     },
-    [navigate],
-  );
-
-  const handlePageChange = useCallback((newPageNo) => {
-    setPageNo(newPageNo);
-  }, []);
-
-  const handleFilterChange = useCallback((field, option) => {
-    setFilters((prev) => ({ ...prev, [field]: option?.value || "" }));
-    setPageNo(1);
-  }, []);
-
-  const applyFilters = useCallback(() => {
-    setPageNo(1);
-    fetchOrders();
-  }, [fetchOrders]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({
-      search: "",
-      activationStatus: "",
-      dateFrom: "",
-      dateTo: "",
-      sellerName: "",
-    });
-    setPageNo(1);
-  }, []);
-
-  const tableHeadings = [
-    "Order ID",
-    "Buyer",
-    "Order Date & Time",
-    "Amount",
-    "Payment Status",
-    "Actions",
   ];
 
-  const tableRows = list.map((order) => {
-    const paymentStatus = firstDefined(
-      order?.paymentStatus,
-      order?.status,
-      "N/A",
-    );
-    const buyer =
-      typeof order?.user_id === "object"
-        ? [order?.user_id?.phone, order?.user_id?.email]
-            .filter(Boolean)
-            .join(" / ") || "N/A"
-        : firstDefined(order?.buyerId, order?.buyer_id, order?.user_id, "N/A");
-    const amount = Number(
-      firstDefined(
-        order?.totalAmount,
-        order?.total_amount,
-        order?.payableAmount,
-        order?.payable_amount,
-        0,
-      ),
-    );
-    const createdAt = firstDefined(order?.createdAt, order?.created_at);
-
-    return [
-      <span className="capitalize">
-        {firstDefined(order?.order_no, order?.id, order?._id, "N/A")}
-      </span>,
-      <span>{buyer}</span>,
-      <span>
-        {createdAt ? moment(createdAt).format("DD-MM-YYYY HH:mm") : "N/A"}
-      </span>,
-      <span>₹ {amount.toFixed(2)}</span>,
-      <span
-        className={`px-2 py-1 rounded text-xs font-medium ${getStatusStyles({ status: paymentStatus })}`}
-      >
-        {paymentStatus}
-      </span>,
-      <ActionButtons
-        showLinkButton={false}
-        showDeleteButton={false}
-        showViewButton={false}
-        showEditButton={false}
-        viewButton={true}
-        onViewClick={() => handleViewOrders(order)}
-      />,
-    ];
-  });
-
   return (
-    <>
-      <Loader loading={isLoading} />
-      <div className="p-3 max-w-7xl mx-auto">
-        <h3 className="text-gray-500 text-sm font-semibold py-6">
-          <Link to={`/app/home`}>Home</Link> /{" "}
-          <span className="text-[#181c32]">Subscription Orders</span>
-        </h3>
-        <section className="bg-white p-2">
-          <SearchComponent
-            tableHeadings={tableHeadings}
-            data={tableRows}
-            selectedRow={selectedRow}
-            setSelectedRow={setSelectedRow}
-            loading={isLoading}
-            filters={filters}
-            setFilters={setFilters}
-            isSearchShow={true}
-            isActivationStatus={true}
-            isApprovalOptions={false}
-            isProduct={false}
-            isUser={true}
-            isActionButton={false}
-            isSearchDown={true}
-            isStatusAction={false}
-            userLable={`Buyer`}
-            userOptions={userListData}
-            isDelete={false}
-            activationStatus={`Payment Status`}
-            dateFrom={true}
-            dateTo={true}
-            applyFilters={applyFilters}
-            handleSearchRemove={handleSearchRemove}
-            activationStatusOptions={paymentStatuses.options}
-            handleFilterChange={handleFilterChange}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Subscription Orders"
+        subtitle="Track and manage subscription-based orders"
+        breadcrumbs={[
+          { label: "Orders Management" },
+          { label: "Subscription Orders" },
+        ]}
+      />
+
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search by order number…"
+        emptyText="No subscription orders found."
+        emptyIcon={<MdSubscriptions size={40} className="text-gray-200" />}
+        requiredModule="subscriptions"
+        exportConfig={{ filename: "subscription-orders", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
           />
-          <div className="bg-white border border-[#E6E6E6]">
-            <TableData
-              Heading="Subscription Orders"
-              tableHeadings={tableHeadings}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search by order id..."
-              showFilter={false}
-              showSummary={false}
-              showAddButton={false}
-              isHeaderCheckbox={false}
-              totalData={total}
-            />
-          </div>
-        </section>
-        {total > PAGE_SIZE && (
-          <Pagination
-            totalPages={Math.ceil(total / PAGE_SIZE)}
-            currentPage={pageNo}
-            onPageChange={handlePageChange}
-          />
-        )}
-      </div>
-    </>
+        }
+      />
+    </div>
   );
 };
 

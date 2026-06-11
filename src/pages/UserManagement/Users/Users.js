@@ -1,144 +1,208 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { MdPerson, MdAdd, MdShield } from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+  ConfirmModal,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import {
   createUser,
   enableDisableUser,
   getUserList,
   update,
 } from "../../../Redux/userManagementSlice";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { toast } from "sonner";
-import Pagination from "../../../components/Pagination/Pagination";
-import Loader from "../../../components/Loader/Loader";
-import { useNavigate } from "react-router";
-import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
-import { Link } from "react-router-dom";
-import {
-  formatDateForDisplay,
-  uploadFile,
-} from "../../../_helpers/globalFunctions";
+import { formatDateForDisplay, uploadFile } from "../../../_helpers/globalFunctions";
+import { useListPage } from "../../../hooks/useListPage";
+
+const STATUS_OPTIONS = [
+  { value: "false", label: "Active" },
+  { value: "true", label: "Disabled" },
+];
+
+const FILTER_FIELDS = [
+  {
+    key: "isDisable",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: STATUS_OPTIONS,
+  },
+  {
+    key: "emailVerified",
+    type: "select",
+    label: "Email Verified",
+    width: "w-40",
+    options: [
+      { value: "true", label: "Verified" },
+      { value: "false", label: "Unverified" },
+    ],
+  },
+];
+
+const COLUMNS = [
+  {
+    key: "full_name",
+    label: "User",
+    sortable: true,
+    render: (v, row) => (
+      <span className="flex items-center gap-2">
+        <img
+          src={row?.profile?.avatarUrl || "/Img/noData.png"}
+          alt={v || "User"}
+          className="h-8 w-8 rounded-full border border-gray-200 object-cover bg-gray-50 shrink-0"
+        />
+        <span className="font-medium text-gray-800 capitalize">
+          {v ||
+            [row?.profile?.firstName, row?.profile?.lastName]
+              .filter(Boolean)
+              .join(" ") ||
+            "N/A"}
+        </span>
+      </span>
+    ),
+  },
+  {
+    key: "email",
+    label: "Email",
+    render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
+  },
+  {
+    key: "phone",
+    label: "Mobile",
+    render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
+  },
+  {
+    key: "role",
+    label: "Role",
+    render: (v) => (
+      <span className="capitalize text-sm text-gray-600">{v || "user"}</span>
+    ),
+  },
+  {
+    key: "emailVerified",
+    label: "Verified",
+    render: (v) => (
+      <StatusBadge status={v ? "verified" : "unverified"} dot />
+    ),
+  },
+  {
+    key: "isDisable",
+    label: "Status",
+    render: (v, row) => (
+      <StatusBadge
+        status={row?.accountStatus || (v ? "disabled" : "active")}
+        dot
+      />
+    ),
+  },
+  {
+    key: "createdAt",
+    label: "Created",
+    sortable: true,
+    render: (v) => (
+      <span className="text-xs text-gray-400">{formatDateForDisplay(v)}</span>
+    ),
+  },
+  {
+    key: "lastLoginAt",
+    label: "Last Login",
+    render: (v) => (
+      <span className="text-xs text-gray-400">
+        {v ? formatDateForDisplay(v) : "—"}
+      </span>
+    ),
+  },
+];
+
+const EMPTY_FORM = {
+  full_name: "",
+  userName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  avatarUrl: "",
+  isDisable: false,
+};
 
 const Users = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    full_name: "",
-    userName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    avatarUrl: "",
-    isDisable: false,
+  const list = useListPage({
+    defaultPageSize: 10,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
   });
-  const [errors, setErrors] = useState({});
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-  const size = 10;
-  useEffect(() => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: "userName,full_name,email",
-      // select: 'userName full_name email isDisable'
-      select: "userName full_name email isDisable phone createdAt",
-    };
-    dispatch(getUserList(reqData));
-  }, [size, pageNo, dispatch, isRefresh]);
+  const [isRefresh, setIsRefresh] = useState(false);
+  const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const selector = useSelector((state) => state.user);
   const getListData = selector?.getUserListData?.data?.data;
   const totalUsers = getListData?.total || 0;
+  const userList = getListData?.list || [];
+
+  useEffect(() => {
+    const params = list.toQueryParams();
+    dispatch(
+      getUserList({
+        page: params.page?.toString(),
+        size: params.limit?.toString() || "10",
+        keyWord: params.search || "",
+        searchFields: "userName,full_name,email",
+        select: "userName full_name email isDisable phone createdAt lastLoginAt accountStatus emailVerified profile",
+        ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
+        ...(params.emailVerified !== undefined && {
+          emailVerified: params.emailVerified,
+        }),
+      })
+    );
+  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const validateAddUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = "Full name is required";
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = "Full name must be at least 3 characters";
-      isValid = false;
+  const validateForm = (isEdit = false) => {
+    const errs = {};
+    if (!formData.full_name?.trim()) errs.full_name = "Full name is required";
+    else if (formData.full_name.length < 3)
+      errs.full_name = "At least 3 characters";
+    if (!formData.userName?.trim()) errs.userName = "Username is required";
+    else if (formData.userName.length < 5)
+      errs.userName = "At least 5 characters";
+    else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName))
+      errs.userName = "Letters, numbers and underscores only";
+    if (!formData.email?.trim()) errs.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      errs.email = "Invalid email address";
+    if (!isEdit) {
+      if (!formData.password) errs.password = "Password is required";
+      if (formData.password !== formData.confirmPassword)
+        errs.confirmPassword = "Passwords do not match";
     }
-
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = "Username is required";
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = "Username must be at least 5 characters";
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName =
-        "Username can only contain letters, numbers and underscores";
-      isValid = false;
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-      isValid = false;
-    }
-
-    // Password validation (only for add mode)
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      full_name: "",
-      userName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      avatarUrl: "",
-      isDisable: false,
-    });
-    setErrors({});
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleAvatarUpload = async (event) => {
-    const file = event.target.files?.[0] || null;
+    const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
@@ -147,598 +211,307 @@ const Users = () => {
     }
     try {
       const imageUrl = await uploadFile(file, "USER_AVATAR");
-      setForm((prev) => ({ ...prev, avatarUrl: imageUrl }));
+      setFormData((prev) => ({ ...prev, avatarUrl: imageUrl }));
       toast.success("Profile image uploaded");
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to upload profile image");
+    } catch (err) {
+      toast.error(err?.message || "Failed to upload profile image");
     }
   };
 
-  const handleAddUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateAddUserForm()) return;
-
-    const reqData = {
-      full_name: formData.full_name,
-      userName: formData.userName,
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      avatarUrl: formData.avatarUrl,
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(createUser(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        } else {
-          toast.success(res.message || "User created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error || "Error in creating user");
-      });
-  };
-
-  const handleUserPermission = (data) => {
-    navigate(`/app/user-permissions/${data._id}`);
-  };
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  };
-  const tableRows = getListData?.list?.map((user) => [
-    <CustomCheckbox
-      key={`checkbox-${user._id}`}
-      checked={selectedRow.includes(user._id)}
-      onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    />,
-    <span className="flex items-center gap-2 capitalize">
-      <img
-        src={user?.profile?.avatarUrl || "/Img/noData.png"}
-        alt={user?.profile?.firstName || user?.full_name || "User"}
-        className="h-9 w-9 rounded-full border border-gray-200 object-cover bg-gray-50"
-      />
-      <span>
-        {user?.full_name ||
-          [user?.profile?.firstName, user?.profile?.lastName]
-            .filter(Boolean)
-            .join(" ") ||
-          "N/A"}
-      </span>
-    </span>,
-    <span>{user?.email || "N/A"}</span>,
-    <span key={`phone-${user._id}`}>{user?.phone || "Not Available"}</span>,
-    <span className="capitalize">{user?.role || "N/A"}</span>,
-    <span className="capitalize">
-      {user?.accountStatus || (user?.isDisable ? "suspended" : "active")}
-    </span>,
-    <span>{user?.emailVerified ? "Yes" : "No"}</span>,
-    <span key={`created-${user._id}`}>
-      {formatDateForDisplay(user?.createdAt)}
-    </span>,
-    <span key={`last-login-${user._id}`}>
-      {user?.lastLoginAt ? formatDateForDisplay(user?.lastLoginAt) : "N/A"}
-    </span>,
-    <div className="flex flex-col">
-      <ToggleButton
-        isToggle={!user?.isDisable}
-        handleClick={() => handleToggle(user)}
-      />
-    </div>,
-    <span key={`actions-${user._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: user._id,
-            full_name:
-              user.full_name ||
-              [user?.profile?.firstName, user?.profile?.lastName]
-                .filter(Boolean)
-                .join(" "),
-            userName: user.userName,
-            email: user.email,
-            avatarUrl: user?.profile?.avatarUrl || "",
-            isDisable: user.isDisable,
-          });
-          setIsEditModal(true);
-        }}
-        showEditButton={false}
-        showDeleteButton={false}
-        showPasswordButton={false}
-        showLinkButton={false}
-        viewButton={true}
-        onViewClick={() => navigate(`/app/users/view/${user._id}`)}
-        userPermissions={false}
-        onPermissionClick={() => handleUserPermission(user)}
-      />
-    </span>,
-  ]);
-  const confirmDelete = () => {
-    setShowDeleteConfirmation(false);
-  };
-
-  const handleDisableFunc = () => {
-    if (!toggleStates) return;
-    const obj = {
-      _id: Array(toggleStates._id),
-      isDisable: !toggleStates.isDisable,
-    };
-
-    dispatch(enableDisableUser(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
-  };
-
-  const handleToggle = (user) => {
-    setToggleStates(user);
-    setIsConfirmModalOpen(true);
-  };
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true,
-      };
-      try {
-        const res = await dispatch(enableDisableUser(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setSelectedRow([]);
-          setIsRefresh(!isRefresh);
-        }
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        if (error.errors) {
-          setErrors(error.errors);
-        }
-      }
-    }
-  };
-
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      full_name: "",
-      userName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      avatarUrl: "",
-      isDisable: false,
-    });
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData(EMPTY_FORM);
     setErrors({});
   };
 
-  // This does nothing functionally, as it sets the same value
-  const handleToggleAdd = () => {
-    setForm((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-  const validateEditUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = "Full name is required";
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = "Full name must be at least 3 characters";
-      isValid = false;
-    }
-
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = "Username is required";
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = "Username must be at least 5 characters";
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName =
-        "Username can only contain letters, numbers and underscores";
-      isValid = false;
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.(com)$/.test(formData.email)) {
-      newErrors.email = "Email must be a valid .com address";
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  };
-  const handleEditUserSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateEditUserForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      full_name: formData.full_name,
-      // userName: formData.userName,
-      email: formData.email,
-      avatarUrl: formData.avatarUrl,
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(update(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "User Updated Successfully");
-          setIsEditModal(false);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        toast.error(error || "Error in Updating User");
-      });
-  };
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.list?.map((user) => user._id) || [];
-      setSelectedRow(allIds);
-    } else {
-      setSelectedRow([]);
+    if (!validateForm(false)) return;
+    setSaving(true);
+    try {
+      const res = await dispatch(createUser({ ...formData })).unwrap();
+      if (res.error) { toast.error(res.error); return; }
+      toast.success(res.message || "User created successfully");
+      closeModal();
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || err || "Error creating user");
+    } finally {
+      setSaving(false);
     }
   };
-  const handleApplySearchFilters = () => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: "email",
-      // populate: 'user:id|userName|full_name'
-      select: "userName full_name email isDisable phone createdAt",
-    };
-    dispatch(getUserList(reqData));
-  };
-  const handleSearchRemove = useCallback(() => {
-    setFilters((prev) => ({ ...prev, search: "" }));
-    setIsRefresh(!isRefresh);
-  }, [isRefresh]);
 
-  const isAllRowsSelected = useMemo(
-    () =>
-      selectedRow.length === getListData?.list?.length &&
-      getListData?.list?.length > 0,
-    [selectedRow.length, getListData?.list?.length],
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm(true)) return;
+    setSaving(true);
+    try {
+      const res = await dispatch(
+        update({ _id: formData._id, full_name: formData.full_name, email: formData.email, avatarUrl: formData.avatarUrl, isDisable: formData.isDisable })
+      ).unwrap();
+      if (res.error) { toast.error(res.error); return; }
+      toast.success(res.message || "User updated successfully");
+      closeModal();
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || err || "Error updating user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = (user) => {
+    setToggleTarget(user);
+    setConfirmOpen(true);
+  };
+
+  const handleDisableConfirm = async () => {
+    if (!toggleTarget) return;
+    try {
+      const res = await dispatch(
+        enableDisableUser({ _id: [toggleTarget._id], isDisable: !toggleTarget.isDisable })
+      ).unwrap();
+      if (res.error) { toast.error(res.error); return; }
+      toast.success(res.message || "Status updated");
+      setConfirmOpen(false);
+      setToggleTarget(null);
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Error updating status");
+    }
+  };
+
+  const rowActions = useCallback(
+    (row) => [
+      {
+        label: "View",
+        onClick: () => navigate(`/app/users/view/${row._id}`),
+      },
+      {
+        label: "Permissions",
+        icon: <MdShield size={14} />,
+        onClick: () => navigate(`/app/user-permissions/${row._id}`),
+      },
+      {
+        label: "Edit",
+        onClick: () => {
+          setFormData({
+            _id: row._id,
+            full_name:
+              row.full_name ||
+              [row?.profile?.firstName, row?.profile?.lastName]
+                .filter(Boolean)
+                .join(" ") ||
+              "",
+            userName: row.userName || "",
+            email: row.email || "",
+            password: "",
+            confirmPassword: "",
+            avatarUrl: row?.profile?.avatarUrl || "",
+            isDisable: row.isDisable || false,
+          });
+          setModalMode("edit");
+        },
+      },
+      {
+        label: row.isDisable ? "Enable" : "Disable",
+        onClick: () => handleToggle(row),
+        danger: !row.isDisable,
+      },
+    ],
+    [navigate]
   );
+
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className="max-w-7xl mx-auto">
-        <div className=" overflow-hidden overflow-y-auto py-6">
-          <div className="flex justify-between items-center">
-            <h3>
-              <Link to="/app/home" className="cursor-pointer">
-                Home
-              </Link>{" "}
-              / <b>Users</b>
-            </h3>
-          </div>
-          <div className="overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    placeholder="Search By Email"
-                    handleSearchRemove={handleSearchRemove}
-                    applyFilters={handleApplySearchFilters}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Users"
+        subtitle="Manage customer accounts"
+        breadcrumbs={[{ label: "User Management" }, { label: "Users" }]}
+        actions={
+          <PermissionGuard module="users" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={() => setModalMode("add")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
+              <MdAdd size={16} /> Add User
+            </button>
+          </PermissionGuard>
+        }
+      />
+
+      <DataTable
+        columns={COLUMNS}
+        data={userList}
+        loading={selector.loading}
+        totalCount={totalUsers}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        rowActions={rowActions}
+        searchPlaceholder="Search by name, email…"
+        emptyText="No users found."
+        emptyIcon={<MdPerson size={40} className="text-gray-200" />}
+        requiredModule="users"
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={selector.loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
+
+      {/* Add / Edit Modal */}
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
+              {modalMode === "add" ? "Add User" : "Edit User"}
+            </h2>
+
+            <form onSubmit={modalMode === "add" ? handleAddSubmit : handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput
+                  label="Full Name"
+                  name="full_name"
+                  type="text"
+                  value={formData.full_name}
+                  onChange={handleInputChange}
+                  error={errors.full_name}
+                  maxLength={50}
+                  required
+                />
+                <FormInput
+                  label="Username"
+                  name="userName"
+                  type="text"
+                  value={formData.userName}
+                  onChange={handleInputChange}
+                  error={errors.userName}
+                  maxLength={30}
+                  required
+                  disabled={modalMode === "edit"}
+                />
+              </div>
+
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                error={errors.email}
+                maxLength={100}
+                required
+              />
+
+              {/* Avatar */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Profile Image
+                </label>
+                <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
+                  <img
+                    src={formData.avatarUrl || "/Img/noData.png"}
+                    alt="Preview"
+                    className="h-12 w-12 rounded-full border border-gray-200 object-cover bg-white shrink-0"
                   />
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-3 py-1.5 text-sm text-white hover:bg-[#2e3074]">
+                      {formData.avatarUrl ? "Change" : "Upload"}
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleAvatarUpload} />
+                    </label>
+                    {formData.avatarUrl && (
+                      <button
+                        type="button"
+                        className="text-xs text-red-500 hover:underline"
+                        onClick={() => setFormData((p) => ({ ...p, avatarUrl: "" }))}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <TableData
-              tableHeadings={[
-                "Name",
-                "Email",
-                "Mobile No.",
-                "Role",
-                "Account Status",
-                "Email Verified",
-                "Created",
-                "Last Login",
-                "Actions",
-              ]}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search by..."
-              showFilter={false}
-              showSummary={false}
-              totalData={totalUsers}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              isHeaderCheckbox={true}
-              handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={isAllRowsSelected}
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {getListData?.total &&
-              size &&
-              Math.ceil(getListData.total / size) > 1 && (
-                <Pagination
-                  totalPages={Math.ceil(getListData.total / size)}
-                  currentPage={pageNo}
-                  onPageChange={onPageChange}
-                />
+
+              {/* Password — add mode only */}
+              {modalMode === "add" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput
+                    label="Password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    error={errors.password}
+                    maxLength={50}
+                    required
+                  />
+                  <FormInput
+                    label="Confirm Password"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    error={errors.confirmPassword}
+                    maxLength={50}
+                    required
+                  />
+                </div>
               )}
+
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">
+                  Account Active
+                </span>
+                <ToggleButton
+                  isToggle={!formData.isDisable}
+                  handleClick={() =>
+                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
+                  }
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
+                >
+                  {saving ? "Saving…" : modalMode === "add" ? "Create User" : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
 
-        {/* Add User Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddUserSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Reset"
-          title="Admin User Setup"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-              />
-            </div>
-          </div>
-          <div className="p-4">
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="p-4">
-            <label className="label block text-sm font-medium text-gray-700 mb-1">
-              Profile Image
-            </label>
-            <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
-              <img
-                src={formData.avatarUrl || "/Img/noData.png"}
-                alt="Profile preview"
-                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
-              />
-              <div>
-                <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
-                  Upload Image
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                  />
-                </label>
-                {formData.avatarUrl && (
-                  <button
-                    type="button"
-                    className="ml-3 text-xs text-red-600 hover:underline"
-                    onClick={() =>
-                      setForm((prev) => ({ ...prev, avatarUrl: "" }))
-                    }
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                error={errors.confirmPassword}
-                maxLength={15}
-                required
-              />
-            </div>
-          </div>
-          {/* <div className='p-4'>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div> */}
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        {/* Edit User Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditUserSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Admin User"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-                disabled
-              />
-            </div>
-          </div>
-          <div className="p-4">
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="p-4">
-            <label className="label block text-sm font-medium text-gray-700 mb-1">
-              Profile Image
-            </label>
-            <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
-              <img
-                src={formData.avatarUrl || "/Img/noData.png"}
-                alt="Profile preview"
-                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-white"
-              />
-              <div>
-                <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
-                  Change Image
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                  />
-                </label>
-                {formData.avatarUrl && (
-                  <button
-                    type="button"
-                    className="ml-3 text-xs text-red-600 hover:underline"
-                    onClick={() =>
-                      setForm((prev) => ({ ...prev, avatarUrl: "" }))
-                    }
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={"Are you sure you want to delete this user?"}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? "enable" : "disable"} this user?`}
-        />
-      </div>
-    </>
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onConfirm={handleDisableConfirm}
+        title={`${toggleTarget?.isDisable ? "Enable" : "Disable"} User`}
+        message={`Are you sure you want to ${toggleTarget?.isDisable ? "enable" : "disable"} ${toggleTarget?.full_name || "this user"}?`}
+        variant={toggleTarget?.isDisable ? "default" : "danger"}
+        confirmText={toggleTarget?.isDisable ? "Enable" : "Disable"}
+      />
+    </div>
   );
 };
 

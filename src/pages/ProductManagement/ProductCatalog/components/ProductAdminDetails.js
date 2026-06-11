@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import Loader from "../../../../components/Loader/Loader";
 import {
   getProductById,
   approveDisapprove,
+  archiveProduct,
+  duplicateProduct,
   getProductRevisions,
   reviewProductRevision,
 } from "../../../../Redux/productSlice";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
+import ConfirmModal from "../../../../components/Shared/ConfirmModal";
+import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { getProductImages } from "../../../../_helpers/productMedia";
 
 const formatDisplayValue = (value) => {
@@ -68,6 +72,7 @@ const formatRevisionValue = (value) => {
 const ProductAdminDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const selector = useSelector((state) => state.product);
   const product =
     selector?.updateProductsData?.normalized?.data ||
@@ -88,6 +93,9 @@ const ProductAdminDetails = () => {
     : [];
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState(false);
+  const [duplicateConfirm, setDuplicateConfirm] = useState(false);
 
   const REVIEWABLE_STATUSES = new Set(['pending_approval']);
   const needsReview =
@@ -151,9 +159,40 @@ const ProductAdminDetails = () => {
     }
   };
 
+  const handleArchiveSubmit = async () => {
+    setActionLoading(true);
+    try {
+      const res = await dispatch(
+        archiveProduct({ _id: id, reason: "admin_archived" }),
+      ).unwrap();
+      toast.success(res?.message || "Product archived successfully.");
+      dispatch(getProductById({ _id: id }));
+    } catch (err) {
+      toast.error(err?.message || "Failed to archive product.");
+    } finally {
+      setActionLoading(false);
+      setArchiveConfirm(false);
+    }
+  };
+
+  const handleDuplicateSubmit = async () => {
+    setActionLoading(true);
+    try {
+      const res = await dispatch(duplicateProduct({ _id: id })).unwrap();
+      const newId = res?.data?.data?._id || res?.data?._id;
+      toast.success(res?.message || "Product duplicated successfully.");
+      setDuplicateConfirm(false);
+      if (newId) navigate(`/app/product-catalog/form/${newId}`);
+    } catch (err) {
+      toast.error(err?.message || "Failed to duplicate product.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <Loader loading={selector.loading || reviewLoading} />
+      <Loader loading={selector.loading || reviewLoading || actionLoading} />
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm text-gray-500">
           <Link
@@ -165,7 +204,7 @@ const ProductAdminDetails = () => {
           {" / "}
           <b className="text-gray-800">Product Details</b>
         </h3>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {product.status && (
             <ProductStatusBadge
               status={product.status}
@@ -179,6 +218,39 @@ const ProductAdminDetails = () => {
             >
               {pendingRevision ? "Review Revision" : "Review Product"}
             </button>
+          )}
+          <PermissionGuard module="products" action="create" hide>
+            <button
+              onClick={() => setDuplicateConfirm(true)}
+              className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Duplicate
+            </button>
+          </PermissionGuard>
+          {product.status !== "archived" && (
+            <PermissionGuard module="products" action="delete" hide>
+              <button
+                onClick={() => setArchiveConfirm(true)}
+                className="px-4 py-2 text-sm rounded-md bg-orange-500 text-white hover:bg-orange-600"
+              >
+                Archive
+              </button>
+            </PermissionGuard>
+          )}
+          {product.status === "archived" && (
+            <PermissionGuard module="products" action="restore" hide>
+              <Link
+                to={`/app/product-catalog`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  // restore via list page restore flow
+                  navigate("/app/product-catalog?status=archived");
+                }}
+                className="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
+              >
+                Restore
+              </Link>
+            </PermissionGuard>
           )}
           <Link
             to={`/app/product-catalog/form/${id}`}
@@ -958,6 +1030,28 @@ const ProductAdminDetails = () => {
         revision={pendingRevision}
         onClose={() => setReviewOpen(false)}
         onSubmit={handleReviewSubmit}
+      />
+
+      <ConfirmModal
+        open={archiveConfirm}
+        onClose={() => setArchiveConfirm(false)}
+        title="Archive product?"
+        message={`This will archive "${product?.title || "this product"}" and remove it from the active catalog. You can restore it later.`}
+        variant="danger"
+        confirmLabel="Archive"
+        loading={actionLoading}
+        onConfirm={handleArchiveSubmit}
+      />
+
+      <ConfirmModal
+        open={duplicateConfirm}
+        onClose={() => setDuplicateConfirm(false)}
+        title="Duplicate product?"
+        message={`This will create a draft copy of "${product?.title || "this product"}". You will be taken to the edit form to review it.`}
+        variant="info"
+        confirmLabel="Duplicate"
+        loading={actionLoading}
+        onConfirm={handleDuplicateSubmit}
       />
     </div>
   );

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import { MdAdd, MdDelete, MdEdit, MdLocalShipping, MdRefresh } from "react-icons/md";
 import { toast } from "sonner";
 import Input from "../../../components/Atoms/Input/Input";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import {
   ConfirmModal,
@@ -190,7 +189,6 @@ const ShippingPackages = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ search: "" });
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [showForm, setShowForm] = useState(false);
@@ -216,14 +214,8 @@ const ShippingPackages = () => {
     fetchPackages();
   }, [fetchPackages]);
 
-  const applyFilters = useCallback(() => {
-    setSearch(filters.search?.trim() || "");
-    setPage(1);
-  }, [filters.search]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({ search: "" });
-    setSearch("");
+  const handleSearch = useCallback((value) => {
+    setSearch(value?.trim() || "");
     setPage(1);
   }, []);
 
@@ -393,43 +385,29 @@ const ShippingPackages = () => {
           { label: "Shipping Rules" },
         ]}
         actions={
-          <PermissionGuard module="delivery" action={ACTIONS.CREATE}>
-            <button onClick={openCreate} className="admin-btn-primary">
-              <MdAdd size={16} /> Add Package
+          <div className="flex items-center gap-2">
+            <ExportButton
+              filename="shipping-packages"
+              columns={columns}
+              data={packages}
+              requiredModule="delivery"
+            />
+            <button
+              type="button"
+              onClick={fetchPackages}
+              className="admin-btn-secondary"
+              aria-label="Refresh shipping packages"
+            >
+              <MdRefresh size={17} /> Refresh
             </button>
-          </PermissionGuard>
+            <PermissionGuard module="delivery" action={ACTIONS.CREATE}>
+              <button onClick={openCreate} className="admin-btn-primary">
+                <MdAdd size={16} /> Add Package
+              </button>
+            </PermissionGuard>
+          </div>
         }
       />
-
-      <div className="mb-3 bg-white rounded-lg">
-        <SearchComponent
-          isSearchShow={true}
-          filters={filters}
-          setFilters={setFilters}
-          placeholder="Search packages..."
-          applyFilters={applyFilters}
-          handleSearchRemove={handleSearchRemove}
-          searchDebounce={400}
-          searchActions={
-            <>
-              <ExportButton
-                filename="shipping-packages"
-                columns={columns}
-                data={packages}
-                requiredModule="delivery"
-              />
-              <button
-                type="button"
-                onClick={fetchPackages}
-                className="admin-btn-secondary"
-                aria-label="Refresh shipping packages"
-              >
-                <MdRefresh size={17} /> Refresh
-              </button>
-            </>
-          }
-        />
-      </div>
 
       <DataTable
         columns={columns}
@@ -439,6 +417,8 @@ const ShippingPackages = () => {
         page={page}
         pageSize={20}
         onPageChange={setPage}
+        onSearch={handleSearch}
+        searchPlaceholder="Search packages..."
         requiredModule="delivery"
       />
 

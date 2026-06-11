@@ -1,14 +1,16 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { FaPlus, FaMinus } from "react-icons/fa";
+import { MdSearch, MdClose, MdAdd } from "react-icons/md";
 
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import { PageHeader, ConfirmModal } from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import CategorySetup from "./components/CategorySetup";
 
 // Redux actions
@@ -19,14 +21,13 @@ import {
   softDelete,
   update,
 } from "../../../Redux/productSlice";
-import Loader from "../../../components/Loader/Loader";
-import AddButton from "../../../components/Button/AddButton";
 
 const ProductCategories = () => {
   // State management
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryEditOpen, setCategoryEditOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [statusTarget, setStatusTarget] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isRefresh, setIsRefresh] = useState(false);
   const [isPublish, setIsPublish] = useState(false);
@@ -520,6 +521,12 @@ const ProductCategories = () => {
     [dispatch],
   );
 
+  const handleStatusConfirm = useCallback(() => {
+    if (!statusTarget) return;
+    handleToggle(statusTarget)();
+    setStatusTarget(null);
+  }, [handleToggle, statusTarget]);
+
   const handleEditSubmit = useCallback(() => {
     if (!selectedCategory) return;
     if (!validateForm()) return;
@@ -810,15 +817,18 @@ const ProductCategories = () => {
 
           <div className="flex items-center gap-3">
             {/* Subcategory count badge - only show if category has subcategories */}
-            <ToggleButton
-              isToggle={!category.isDisable}
-              handleClick={handleToggle(category)}
-              size="sm"
-            />
+            <PermissionGuard module="categories" action={ACTIONS.STATUS_CHANGE} hide>
+              <ToggleButton
+                isToggle={!category.isDisable}
+                handleClick={() => setStatusTarget(category)}
+                size="sm"
+              />
+            </PermissionGuard>
             <ActionButtons
               showLinkButton={false}
               onEdit={() => handleEdit(category)}
               onDelete={() => handleDelete(category)}
+              requiredModule="categories"
               size="sm"
             />
           </div>
@@ -850,102 +860,125 @@ const ProductCategories = () => {
   };
 
   return (
-    <>
-      <Loader loading={selector.loading || isLoading} />
-      <div className="mx-auto px-4 py-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3>
-                Home / <b>Product Categories</b>
-              </h3>
-            </div>
-            <AddButton
-              className=" "
-              onClick={() => {
-                handleResetForm();
-                setCategoryOpen(true);
-              }}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Categories"
+        subtitle="Manage hierarchical product category tree"
+        breadcrumbs={[{ label: "Catalog" }, { label: "Categories" }]}
+        actions={
+          <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={() => { handleResetForm(); setCategoryOpen(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
             >
-              Add
-            </AddButton>
-          </div>
+              <MdAdd size={16} /> Add Category
+            </button>
+          </PermissionGuard>
+        }
+      />
 
-          <div className="bg-white p-2">
-            <div className="border-b mb-4">
-              <SearchComponent
-                isSearchShow={true}
-                filters={filters}
-                setFilters={setFilters}
-                placeholder="Search categories..."
-                handleSearchRemove={handleSearchRemove}
-                applyFilters={applySearchFilters}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        {/* Search bar */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 max-w-sm">
+            <div className="relative flex-1">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+                onKeyDown={(e) => e.key === "Enter" && applySearchFilters()}
+                placeholder="Search categories…"
+                className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
               />
-            </div>
-
-            <div className="space-y-3">
-              {categories.length > 0 ? (
-                categories.map((category) =>
-                  renderCategory(category, 0, null, categories),
-                )
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  {filters.search
-                    ? "No categories match your search"
-                    : "No categories found"}
-                </div>
+              {filters.search && (
+                <button
+                  onClick={handleSearchRemove}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <MdClose size={16} />
+                </button>
               )}
             </div>
+            <button
+              onClick={applySearchFilters}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
+            >
+              Search
+            </button>
           </div>
         </div>
 
-        <CategorySetup
-          isOpen={categoryOpen}
-          handleClose={() => {
-            setCategoryOpen(false);
-            handleResetForm();
-          }}
-          formData={formData}
-          setFormData={setFormData}
-          parentCategories={createSelectOptions}
-          handleResetForm={handleResetForm}
-          handleSubmit={handleSubmit}
-          isEditing={false}
-          isPublish={isPublish}
-          handleIsPublish={handleIsPublish}
-          errors={errors}
-          handleInputChange={handleInputChange}
-          handleDashboardVisible={handleDashboardVisible}
-        />
-
-        <CategorySetup
-          isOpen={categoryEditOpen}
-          handleClose={() => {
-            setCategoryEditOpen(false);
-            handleResetForm();
-          }}
-          formData={formData}
-          setFormData={setFormData}
-          parentCategories={createSelectOptions}
-          handleResetForm={handleResetForm}
-          handleSubmit={handleEditSubmit}
-          isEditing={true}
-          isPublish={isPublish}
-          handleIsPublish={handleIsPublish}
-          errors={errors}
-          handleInputChange={handleInputChange}
-          handleDashboardVisible={handleDashboardVisible}
-        />
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          DeleteHeading={`Delete "${selectedCategory?.name}" category?`}
-          DeleteDescription="This will permanently remove the category and all its subCategories. This action cannot be undone."
-          confirmDelete={handleDeleteConfirmDelete}
-        />
+        {/* Category tree */}
+        <div className="space-y-1">
+          {(selector.loading || isLoading) && (
+            <div className="text-center py-8 text-gray-400 text-sm">Loading categories…</div>
+          )}
+          {!selector.loading && !isLoading && categories.length > 0 ? (
+            categories.map((category) =>
+              renderCategory(category, 0, null, categories)
+            )
+          ) : !selector.loading && !isLoading ? (
+            <div className="text-center py-8 text-gray-400 text-sm">
+              {filters.search ? "No categories match your search" : "No categories found"}
+            </div>
+          ) : null}
+        </div>
       </div>
-    </>
+
+      <CategorySetup
+        isOpen={categoryOpen}
+        handleClose={() => { setCategoryOpen(false); handleResetForm(); }}
+        formData={formData}
+        setFormData={setFormData}
+        parentCategories={createSelectOptions}
+        handleResetForm={handleResetForm}
+        handleSubmit={handleSubmit}
+        isEditing={false}
+        isPublish={isPublish}
+        handleIsPublish={handleIsPublish}
+        errors={errors}
+        handleInputChange={handleInputChange}
+        handleDashboardVisible={handleDashboardVisible}
+      />
+
+      <CategorySetup
+        isOpen={categoryEditOpen}
+        handleClose={() => { setCategoryEditOpen(false); handleResetForm(); }}
+        formData={formData}
+        setFormData={setFormData}
+        parentCategories={createSelectOptions}
+        handleResetForm={handleResetForm}
+        handleSubmit={handleEditSubmit}
+        isEditing={true}
+        isPublish={isPublish}
+        handleIsPublish={handleIsPublish}
+        errors={errors}
+        handleInputChange={handleInputChange}
+        handleDashboardVisible={handleDashboardVisible}
+      />
+
+      <ConfirmModal
+        open={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={handleDeleteConfirmDelete}
+        title={`Delete "${selectedCategory?.name}"`}
+        message="This will permanently remove the category and all its subcategories. This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+      />
+
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={handleStatusConfirm}
+        title={`${statusTarget?.isDisable ? "Enable" : "Disable"} Category`}
+        message={`${statusTarget?.isDisable ? "Enable" : "Disable"} "${statusTarget?.name || "this category"}"? Disabling a parent also disables its child categories.`}
+        variant={statusTarget?.isDisable ? "success" : "warning"}
+        confirmLabel={statusTarget?.isDisable ? "Enable" : "Disable"}
+        loading={isLoading}
+      />
+    </div>
   );
 };
 

@@ -1,80 +1,57 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react';
-import TableData from '../../../components/Atoms/TableData/TableData';
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton';
-import useDropdownOptions from '../../../hooks/useDropdownOptions';
+import React, { useEffect, useState } from "react";
+import { MdLocalShipping } from "react-icons/md";
+import { PageHeader, DataTable } from "../../../components/Shared";
+import useDropdownOptions from "../../../hooks/useDropdownOptions";
+
+const MOCK_PROFILES = [
+  { id: 1, name: "Item Level Shipping", products: 155, countryIndexes: [0, 1, 2, 3] },
+  { id: 2, name: "Box Shipping", products: 78, countryIndexes: [1, 2] },
+  { id: 3, name: "Express Shipping", products: 22, countryIndexes: [0] },
+];
 
 const ShippingProfiles = () => {
   const [profiles, setProfiles] = useState([]);
-  const { options: countryOptions } = useDropdownOptions('countries');
+  const { options: countryOptions } = useDropdownOptions("countries");
 
-  const initialProfiles = [
+  useEffect(() => { setProfiles(MOCK_PROFILES); }, []);
+
+  const COLUMNS = [
+    { key: "name", label: "Name", render: (v) => <span className="font-medium text-gray-800">{v}</span> },
+    { key: "products", label: "Products", render: (v) => <span className="font-mono text-sm">{v}</span> },
     {
-      name: "Item Level Shipping",
-      products: 155,
-      countryIndexes: [0, 1, 2, 3],
+      key: "countryIndexes",
+      label: "Rates For",
+      render: (v) => {
+        const countries = (v || []).map((idx) => countryOptions[idx]?.label).filter(Boolean);
+        return (
+          <div className="flex flex-wrap gap-1">
+            {(countries.length ? countries : ["No countries configured"]).map((country, idx) => (
+              <span key={idx} className="px-2 py-0.5 text-xs text-gray-700 border border-gray-300 rounded-full">{country}</span>
+            ))}
+          </div>
+        );
+      },
     },
-    {
-      name: "Box Shipping",
-      products: 78,
-      countryIndexes: [1, 2],
-    },
-    {
-      name: "Express Shipping",
-      products: 22,
-      countryIndexes: [0],
-    }
   ];
 
-  useEffect(() => {
-    setProfiles(initialProfiles);
-  }, []);
-
-  const tableHeadings = ['Name', 'Products', 'Rates For', 'Actions'];
-  const tableRows = profiles.map((profile) => {
-    const countries = profile.countryIndexes
-      .map((index) => countryOptions[index]?.label)
-      .filter(Boolean);
-
-    return [
-      profile.name,
-      profile.products,
-      <div className="flex flex-wrap gap-2">
-        {(countries.length ? countries : ['No countries configured']).map((country, index) => (
-          <span
-            key={index}
-            className="px-3 py-1 text-sm text-gray-700 border border-gray-300 rounded-full"
-          >
-            {country}
-          </span>
-        ))}
-      </div>,
-      <ActionButtons
-        showEditButton={false}
-        showLinkButton={false}
-        showDeleteButton={true}
-      />
-    ];
-  });
-
-
   return (
-    <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto">
-      <div className="p-4 bg-white rounded-lg border border-[#E6E6E6]">
-        <TableData
-          Heading="Shipping Profiles"
-          tableHeadings={tableHeadings}
-          data={tableRows}
-          showSearch={true}
-          showFilter={false}
-          showSummary={false}
-          showAddButton={false}
-          addButtonLabel="Add Profile"
-          onClickFunction={() => {
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Shipping Profiles"
+        subtitle="Configure shipping profiles and country rates"
+        breadcrumbs={[{ label: "Shipping & Pickup" }, { label: "Shipping Profiles" }]}
+      />
 
-          }}
-        />
-      </div>
+      <DataTable
+        columns={COLUMNS}
+        data={profiles}
+        loading={false}
+        totalCount={profiles.length}
+        emptyText="No shipping profiles found."
+        emptyIcon={<MdLocalShipping size={40} className="text-gray-200" />}
+        requiredModule="shipping"
+      />
     </div>
   );
 };

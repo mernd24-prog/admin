@@ -151,9 +151,12 @@ export const ENDPOINTS = {
     reject: (paymentId) => `/payments/${paymentId}/reject`,
   },
   inventory: {
+    stats: "/admin/inventory/stats",
+    lowStock: "/admin/inventory/low-stock",
     transactions: "/admin/inventory/transactions",
     warehouses: "/admin/inventory/warehouses",
     warehouse: (warehouseId) => `/admin/inventory/warehouses/${warehouseId}`,
+    warehouseStatus: "/admin/inventory/warehouses/status",
   },
   payouts: {
     admin: "/admin/payouts",
@@ -167,6 +170,12 @@ export const ENDPOINTS = {
     complete: (payoutId) => `/sellers/commissions/payouts/${payoutId}/process`,
     fail: (payoutId) => `/sellers/commissions/payouts/${payoutId}/fail`,
     settlements: "/sellers/commissions/settlements",
+  },
+  finance: {
+    commissionRules: "/admin/finance/commission-rules",
+    commissionRule: (id) => `/admin/finance/commission-rules/${id}`,
+    platformFeeRules: "/admin/finance/platform-fee-rules",
+    platformFeeRule: (id) => `/admin/finance/platform-fee-rules/${id}`,
   },
   wallets: {
     adminTransactions: "/wallets/admin/transactions",
@@ -229,6 +238,8 @@ export const ENDPOINTS = {
   },
   notifications: {
     mine: "/notifications/me",
+    admin: "/notifications/admin",
+    send: "/notifications",
     preferences: "/notifications/preferences",
   },
   analytics: {

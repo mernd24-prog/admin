@@ -1,458 +1,438 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { toast } from 'sonner'
-import { ActionButtons } from '../../../components/Atoms/TableActionButton/TableActionButton'
-import ToggleButton from '../../../components/Atoms/ToggleButton/ToggleButton'
-import TableData from '../../../components/Atoms/TableData/TableData'
-import SearchComponent from '../../../components/Atoms/New Table/NewTable'
-import AddButton from '../../../components/Button/AddButton'
-import DeletePopup from '../../../components/Atoms/DeletePopup.js/DeletePopup'
-import Loader from '../../../components/Loader/Loader'
-import CustomCheckbox from '../../../components/Atoms/Checkbox/Checkbox'
-import BatchSetup from './components/BatchSetup'
-import { useLocation } from 'react-router-dom'
-
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { toast } from "sonner";
+import { MdAdd, MdDelete, MdEdit, MdInventory2, MdToggleOff, MdToggleOn } from "react-icons/md";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   createBatch,
+  deleteBatch,
+  enableDisableBatch,
   getBatchList,
   updateBatch,
-  deleteBatch,
-  enableDisableBatch
-} from '../../../Redux/productSlice'
-import moment from 'moment'
+} from "../../../Redux/productSlice";
 
-const TABLE_HEADINGS = [
-  'Batch Code',
-  'Manufacture Date',
-  'Expiry Date',
-  'Status',
-  'Actions'
-]
-const size = 10
-const INITIAL_FORM_VALUES = {
-  batchCode: '',
-  manufactureDate: '',
-  expiryDate: '',
-  isDisable: false
-}
+const FILTER_FIELDS = [
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+  },
+];
 
-const VALIDATION_RULES = {
-  batchCode: { required: true, minLength: 2, maxLength: 100 },
-  manufactureDate: { required: true },
-  expiryDate: { required: true }
-}
+const EMPTY_FORM = {
+  _id: "",
+  batchCode: "",
+  manufactureDate: "",
+  expiryDate: "",
+  active: true,
+};
+
+const formatDateDisplay = (value) => {
+  if (!value) return "-";
+  const date = new Date(Number(value) || value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString();
+};
+
+const formatDateInput = (value) => {
+  if (!value) return "";
+  const date = new Date(Number(value) || value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const toTimestamp = (value) => new Date(`${value}T00:00:00`).getTime();
+
+const isActive = (row) => row?.active ?? row?.isDisable !== true;
+
+const BASE_COLUMNS = [
+  {
+    key: "batchCode",
+    label: "Batch Code",
+    sortable: true,
+    render: (value) => <span className="font-medium text-gray-800">{value || "-"}</span>,
+  },
+  {
+    key: "manufactureDate",
+    label: "Manufacture Date",
+    sortable: true,
+    render: (value) => formatDateDisplay(value),
+  },
+  {
+    key: "expiryDate",
+    label: "Expiry Date",
+    sortable: true,
+    render: (value) => formatDateDisplay(value),
+  },
+  {
+    key: "active",
+    label: "Status",
+    render: (value, row) => <StatusBadge status={(value ?? row?.isDisable !== true) ? "active" : "inactive"} dot />,
+  },
+];
+
+const normalizeList = (payload) => {
+  const root = payload?.data?.data || payload?.data || payload || {};
+  const list = root.items || root.list || root.rows || [];
+  return {
+    list,
+    total: Number(root.total ?? payload?.data?.pagination?.total ?? list.length),
+  };
+};
 
 const Batch = () => {
-  const dispatch = useDispatch()
-  const location = useLocation()
-  const [formValues, setFormValues] = useState(INITIAL_FORM_VALUES)
-  const [errors, setErrors] = useState({})
-  const [batch, setBatch] = useState({ list: [], total: 0 })
-  const [isBatchSetupOpen, setIsBatchSetupOpen] = useState(false)
-  const [filters, setFilters] = useState({ search: '' })
-  const [pageNo, setPageNo] = useState(1)
-  const [selectedRow, setSelectedRow] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [keyword, setKeyword] = useState('')
-  const [modalState, setModalState] = useState({
-    type: '',
-    selectedBatch: null
-  })
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
-  
-  const getAllRowIds = useMemo(
-    () => batch?.list?.map(row => row?._id) || [],
-    [batch?.list]
-  )
-  
-  const isAllRowsSelected = useMemo(
-    () => selectedRow.length === batch?.list?.length && batch?.list?.length > 0,
-    [selectedRow, batch]
-  )
+  const dispatch = useDispatch();
+  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const { toQueryParams } = list;
+
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [modalMode, setModalMode] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = toQueryParams();
+      const response = await dispatch(
+        getBatchList({
+          page: params.page,
+          limit: params.limit,
+          search: params.search || undefined,
+          searchFields: "batchCode",
+          active: params.active,
+          sortBy: params.sortBy,
+          sortDir: params.sortDir,
+        }),
+      ).unwrap();
+      const normalized = normalizeList(response);
+      setItems(normalized.list);
+      setTotal(normalized.total);
+    } catch (error) {
+      toast.error(error?.message || "Failed to load batches");
+      setItems([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, toQueryParams]);
 
   useEffect(() => {
-    if (location?.state?.openBatchModal) {
-      setIsBatchSetupOpen(true)
-      // Clean up the navigation state to prevent re-opening on refresh
-      window.history.replaceState({}, document.title)
+    load();
+  }, [load]);
+
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+  };
+
+  const validate = () => {
+    const nextErrors = {};
+    const batchCode = formData.batchCode.trim();
+    const manufactureDate = formData.manufactureDate;
+    const expiryDate = formData.expiryDate;
+
+    if (!batchCode) nextErrors.batchCode = "Batch code is required";
+    else if (batchCode.length < 2) nextErrors.batchCode = "Minimum 2 characters required";
+    else if (batchCode.length > 100) nextErrors.batchCode = "Maximum 100 characters allowed";
+
+    if (!manufactureDate) nextErrors.manufactureDate = "Manufacture date is required";
+    if (!expiryDate) nextErrors.expiryDate = "Expiry date is required";
+
+    if (manufactureDate && Number.isNaN(toTimestamp(manufactureDate))) {
+      nextErrors.manufactureDate = "Invalid manufacture date";
     }
-  }, [location])
-
-  // -------------------- VALIDATION --------------------
-  const validateField = useCallback((name, value) => {
-    const rule = VALIDATION_RULES[name]
-    if (!rule) return ''
-    if (rule.required && !value?.toString().trim()) return `${name} is required`
-    if (rule.minLength && value.length < rule.minLength)
-      return `${name} must be at least ${rule.minLength} characters`
-    if (rule.maxLength && value.length > rule.maxLength)
-      return `${name} must not exceed ${rule.maxLength} characters`
-    return ''
-  }, [])
-
-  const validateForm = useCallback(() => {
-    const newErrors = {}
-    Object.entries(VALIDATION_RULES).forEach(([field]) => {
-      const error = validateField(field, formValues[field])
-      if (error) newErrors[field] = error
-    })
-    const { manufactureDate, expiryDate } = formValues
-    if (manufactureDate && expiryDate) {
-      const mDate = new Date(manufactureDate)
-      const eDate = new Date(expiryDate)
-
-      if (isNaN(mDate.getTime()) || isNaN(eDate.getTime())) {
-        if (isNaN(mDate.getTime()))
-          newErrors.manufactureDate = 'Invalid manufacture date'
-        if (isNaN(eDate.getTime())) newErrors.expiryDate = 'Invalid expiry date'
-      } else if (mDate > eDate) {
-        newErrors.manufactureDate =
-          'Manufacture date must not be after expiry date'
-        newErrors.expiryDate = 'Expiry date must be after manufacture date'
-      }
+    if (expiryDate && Number.isNaN(toTimestamp(expiryDate))) {
+      nextErrors.expiryDate = "Invalid expiry date";
+    }
+    if (manufactureDate && expiryDate && toTimestamp(manufactureDate) > toTimestamp(expiryDate)) {
+      nextErrors.expiryDate = "Expiry date must be after manufacture date";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [formValues, validateField])
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
-  // -------------------- API --------------------
-  const fetchBatchList = useCallback(
-    async (searchParam = filters?.search) => {
-      const query = {
-        page: pageNo,
-        size: size,
-        select: 'batchCode manufactureDate expiryDate isDisable createdAt',
-        searchFields: 'batchCode',
-        keyWord: filters.search || '',
-        sortOrder: 'desc',
-        sortBy: 'createdAt'
-      }
-
-      if (searchParam) {
-        query.keyWord = searchParam
-      }
-      setIsLoading(true)
-      try {
-        const res = await dispatch(getBatchList(query)).unwrap()
-        setBatch(res?.data || { list: [], total: 0 })
-      } catch (err) {
-        toast.error(err?.message || 'Failed to fetch batch')
-        setBatch({ list: [], total: 0 })
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [dispatch, pageNo, filters.search]
-  )
-
-  const handleBatchAction = useCallback(
-    async (actionFn, successMsg, errorMsg, data) => {
-      try {
-        setIsLoading(true)
-        await dispatch(actionFn(data)).unwrap()
-        toast.success(successMsg)
-        await fetchBatchList()
-        return { success: true, message: successMsg }
-      } catch (err) {
-        toast.error(err?.message || errorMsg)
-        return { success: false, message: err?.message || errorMsg }
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [dispatch, fetchBatchList]
-  )
-
-  const handleCreateBatch = useCallback(
-    data =>
-      handleBatchAction(
-        createBatch,
-        'Batch created successfully',
-        'Failed to create batch',
-        data
-      ),
-    [handleBatchAction]
-  )
-  
-  const handleUpdateBatch = useCallback(
-    data =>
-      handleBatchAction(
-        updateBatch,
-        'Batch updated successfully',
-        'Failed to update batch',
-        data
-      ),
-    [handleBatchAction]
-  )
-
-  const handleDeleteBatch = useCallback(
-    async id => {
-      try {
-        setIsLoading(true)
-        await dispatch(deleteBatch({ _id: [id] })).unwrap()
-        toast.success('Batch deleted successfully')
-        await fetchBatchList()
-      } catch (err) {
-        toast.error(err?.message || 'Failed to delete batch')
-      } finally {
-        setIsLoading(false)
-        setShowDeleteConfirmation(false)
-      }
-    },
-    [dispatch, fetchBatchList]
-  )
-
-  const handleToggleBatchStatus = useCallback(
-    async batch => {
-      await handleBatchAction(
-        enableDisableBatch,
-        'Status updated',
-        'Failed to update status',
-        {
-          _id: [batch._id],
-          isDisable: !batch.isDisable
-        }
-      )
-    },
-    [handleBatchAction]
-  )
-
-  // -------------------- FORM --------------------
-  const handleInputChange = useCallback(
-    e => {
-      const { name, value } = e.target
-      setFormValues(prev => ({ ...prev, [name]: value }))
-      if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
-    },
-    [errors]
-  )
-
-  const handleToggleDisable = useCallback(() => {
-    setFormValues(prev => ({ ...prev, isDisable: !prev.isDisable }))
-  }, [])
-
-  const handleCloseModal = useCallback(() => {
-    setModalState({ type: '', selectedBatch: null })
-    setFormValues(INITIAL_FORM_VALUES)
-    setErrors({})
-    setIsBatchSetupOpen(false)
-  }, [])
-
-  const handleSubmit = async e => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      toast.error('Please fix the validation errors')
-      return
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!validate()) return;
+    setSaving(true);
+    const payload = {
+      batchCode: formData.batchCode.trim(),
+      manufactureDate: toTimestamp(formData.manufactureDate),
+      expiryDate: toTimestamp(formData.expiryDate),
+      active: Boolean(formData.active),
+      isDisable: !formData.active,
+    };
+    try {
+      const response = modalMode === "edit"
+        ? await dispatch(updateBatch({ ...payload, _id: formData._id })).unwrap()
+        : await dispatch(createBatch(payload)).unwrap();
+      toast.success(response?.message || `Batch ${modalMode === "edit" ? "updated" : "created"}`);
+      closeModal();
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to save batch");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    const batchData = {
-      batchCode: formValues.batchCode.trim(),
-      manufactureDate: new Date(formValues.manufactureDate).getTime(),
-      expiryDate: new Date(formValues.expiryDate).getTime(),
-      isDisable: formValues.isDisable
+  const confirmStatus = async () => {
+    if (!statusTarget?._id) return;
+    setSaving(true);
+    try {
+      const nextActive = !isActive(statusTarget);
+      const response = await dispatch(
+        enableDisableBatch({
+          _id: [statusTarget._id],
+          active: nextActive,
+          isDisable: !nextActive,
+        }),
+      ).unwrap();
+      toast.success(response?.message || "Batch status updated");
+      setStatusTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to update batch status");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    if (formValues.id) {
-      batchData._id = formValues.id
+  const confirmDelete = async () => {
+    if (!deleteTarget?._id) return;
+    setSaving(true);
+    try {
+      const response = await dispatch(deleteBatch({ _id: [deleteTarget._id] })).unwrap();
+      toast.success(response?.message || "Batch deleted");
+      setDeleteTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete batch");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    let result
-
-    if (modalState.type === 'ADD') {
-      result = await handleCreateBatch(batchData)
-    } else if (modalState.type === 'EDIT') {
-      result = await handleUpdateBatch(batchData)
-    }
-
-    if (result?.success) {
-      handleCloseModal()
-    }
-  }
-
-  const handleAction = useCallback((type, batch = null) => {
-    if (type === 'EDIT' && batch) {
-      setFormValues({
-        batchCode: batch.batchCode || '',
-        manufactureDate:
-          moment(batch.manufactureDate).format('YYYY-MM-DD') || '',
-        expiryDate: moment(batch.expiryDate).format('YYYY-MM-DD') || '',
-        id: batch._id,
-        isDisable: batch?.isDisable || false
-      })
-    } else {
-      setFormValues(INITIAL_FORM_VALUES)
-    }
-
-    setErrors({})
-    setModalState({ type, selectedBatch: batch })
-    setIsBatchSetupOpen(true)
-  }, [])
-
-  const handleDelete = useCallback(() => {
-    if (modalState.selectedBatch?._id) {
-      handleDeleteBatch(modalState.selectedBatch._id)
-    }
-  }, [modalState, handleDeleteBatch])
-
-  // -------------------- BULK --------------------
-  const handleHeaderCheckboxChange = useCallback(e => {
-    setSelectedRow(e.target.checked ? getAllRowIds : [])
-  }, [getAllRowIds])
-
-  const handleRowCheckboxChange = useCallback((e, rowId) => {
-    setSelectedRow(prev =>
-      e.target.checked ? [...prev, rowId] : prev.filter(id => id !== rowId)
-    )
-  }, [])
-
-  const handleBulkAction = useCallback(
-    async action => {
-      if (!selectedRow.length) return toast.error('Please select items first')
-      
-      try {
-        setIsLoading(true)
-        let res
-        
-        if (action === 'Active' || action === 'Inactive') {
-          res = await dispatch(
-            enableDisableBatch({
-              _id: selectedRow,
-              isDisable: action === 'Inactive'
-            })
-          ).unwrap()
-        } else if (action === 'Delete') {
-          res = await dispatch(deleteBatch({ _id: selectedRow })).unwrap()
-        }
-        
-        toast.success(res?.message || 'Operation successful')
-        setSelectedRow([])
-        await fetchBatchList()
-      } catch (err) {
-        toast.error(err?.message || 'Bulk action failed')
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [dispatch, selectedRow, fetchBatchList]
-  )
-
-  const tableRows = useMemo(
-    () =>
-      batch?.list?.map(batchItem => [
-        <CustomCheckbox
-          key={`checkbox-${batchItem._id}`}
-          checked={selectedRow.includes(batchItem._id)}
-          onChange={e => handleRowCheckboxChange(e, batchItem._id)}
-        />,
-        <span key={`code-${batchItem._id}`} className='font-medium capitalize'>
-          {batchItem.batchCode}
-        </span>,
-        <span key={`mfg-${batchItem._id}`}>
-          {new Date(batchItem.manufactureDate).toLocaleDateString()}
-        </span>,
-        <span key={`exp-${batchItem._id}`}>
-          {new Date(batchItem.expiryDate).toLocaleDateString()}
-        </span>,
-        <ToggleButton
-          key={`toggle-${batchItem._id}`}
-          isToggle={!batchItem.isDisable}
-          handleClick={() => handleToggleBatchStatus(batchItem)} // Pass the entire batchItem
-        />,
-        <ActionButtons
-          key={`actions-${batchItem._id}`}
-          onEdit={() => handleAction('EDIT', batchItem)} // Pass the entire batchItem
-          onDelete={() => {
-            setModalState({ type: 'DELETE', selectedBatch: batchItem }) // Pass the entire batchItem
-            setShowDeleteConfirmation(true)
-          }}
-        />
-      ]) || [],
-    [batch?.list, selectedRow, handleRowCheckboxChange, handleToggleBatchStatus, handleAction]
-  )
-
-  useEffect(() => {
-    fetchBatchList()
-  }, [fetchBatchList])
-
-  const handleSearchRemove = async () => {
-    setFilters({ search: '' })
-    await fetchBatchList('')
-  }
-
-  const handleApplySearchFilters = async () => {
-    await fetchBatchList(filters.search)
-  }
+  const columns = useMemo(
+    () => [
+      ...BASE_COLUMNS,
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <PermissionGuard module="platform" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn"
+                title="Edit batch"
+                onClick={() => {
+                  setFormData({
+                    _id: row._id,
+                    batchCode: row.batchCode || "",
+                    manufactureDate: formatDateInput(row.manufactureDate),
+                    expiryDate: formatDateInput(row.expiryDate),
+                    active: isActive(row),
+                  });
+                  setModalMode("edit");
+                }}
+              >
+                <MdEdit size={18} />
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="platform" action={ACTIONS.STATUS_CHANGE} hide>
+              <button
+                type="button"
+                className={isActive(row) ? "admin-icon-btn text-yellow-600" : "admin-icon-btn text-green-600"}
+                title={isActive(row) ? "Deactivate batch" : "Activate batch"}
+                onClick={() => setStatusTarget(row)}
+              >
+                {isActive(row) ? <MdToggleOff size={20} /> : <MdToggleOn size={20} />}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="platform" action={ACTIONS.DELETE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn text-red-600"
+                title="Delete batch"
+                onClick={() => setDeleteTarget(row)}
+              >
+                <MdDelete size={18} />
+              </button>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className='p-6 mx-auto max-w-7xl'>
-      <Loader loading={isLoading} />
-
-      <div className='flex items-center justify-between mb-3'>
-        <h3 className='text-sm'>Product / Batch</h3>
-        <AddButton onClick={() => handleAction('ADD')} />
-      </div>
-
-      <div className='bg-white'>
-        <div className='p-4 border-b'>
-          <SearchComponent
-            filters={filters}
-            setFilters={setFilters}
-            isActionButton
-            isDelete
-            isStatusAction
-            isHeaderCheckbox
-            allRowsSelected={isAllRowsSelected}
-            selectedRow={selectedRow}
-            setSelectedRow={setSelectedRow}
-            handleAction={handleBulkAction}
-            handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-            handleSearchRemove={handleSearchRemove}
-            applyFilters={handleApplySearchFilters}
-          />
-        </div>
-
-        <TableData
-          Heading='Batch'
-          tableHeadings={TABLE_HEADINGS}
-          data={tableRows}
-          loading={isLoading}
-          totalData={batch?.total}
-          totalSize={batch?.list?.length}
-          pageSize={10}
-          currentPage={pageNo}
-          onPageChange={setPageNo}
-          isHeaderCheckbox
-          allRowsSelected={isAllRowsSelected}
-          handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-          searchTerm={keyword}
-          setSearchTerm={setKeyword}
-        />
-      </div>
-
-      <DeletePopup
-        isDeleteModalOpen={showDeleteConfirmation}
-        closeDeleteModal={() => setShowDeleteConfirmation(false)}
-        confirmDelete={handleDelete}
-        DeleteHeading={`Are you sure you want to delete this batch?`}
-      />
-
-      <BatchSetup
-        isOpen={isBatchSetupOpen}
-        handleClose={handleCloseModal}
-        formValues={formValues}
-        handleInputChange={handleInputChange}
-        handleToggleDisable={handleToggleDisable}
-        handleSubmit={handleSubmit}
-        errors={errors}
-        buttonLabel={
-          modalState.type === 'EDIT' ? 'Update Batch' : 'Create Batch'
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Batches"
+        subtitle="Manage manufacturing and expiry batches used in catalog setup"
+        breadcrumbs={[{ label: "Catalog Masters" }, { label: "Batches" }]}
+        actions={
+          <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
+            <button
+              type="button"
+              onClick={() => setModalMode("add")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
+              <MdAdd size={16} /> Add Batch
+            </button>
+          </PermissionGuard>
         }
       />
-    </div>
-  )
-}
 
-export default Batch
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search batches..."
+        emptyText="No batches found."
+        emptyIcon={<MdInventory2 size={40} className="text-gray-200" />}
+        requiredModule="platform"
+        exportConfig={{ filename: "product-batches", columns: BASE_COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
+
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
+              {modalMode === "edit" ? "Edit Batch" : "Add Batch"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Batch Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="batchCode"
+                  value={formData.batchCode}
+                  onChange={(event) => {
+                    setFormData((previous) => ({ ...previous, batchCode: event.target.value }));
+                    if (errors.batchCode) setErrors((previous) => ({ ...previous, batchCode: undefined }));
+                  }}
+                  maxLength={100}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  placeholder="e.g. BATCH-2026-01"
+                />
+                {errors.batchCode && <p className="text-red-500 text-xs mt-1">{errors.batchCode}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Manufacture Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="manufactureDate"
+                  value={formData.manufactureDate}
+                  onChange={(event) => {
+                    setFormData((previous) => ({ ...previous, manufactureDate: event.target.value }));
+                    if (errors.manufactureDate) setErrors((previous) => ({ ...previous, manufactureDate: undefined }));
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                />
+                {errors.manufactureDate && <p className="text-red-500 text-xs mt-1">{errors.manufactureDate}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Expiry Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="expiryDate"
+                  value={formData.expiryDate}
+                  min={formData.manufactureDate || undefined}
+                  onChange={(event) => {
+                    setFormData((previous) => ({ ...previous, expiryDate: event.target.value }));
+                    if (errors.expiryDate) setErrors((previous) => ({ ...previous, expiryDate: undefined }));
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                />
+                {errors.expiryDate && <p className="text-red-500 text-xs mt-1">{errors.expiryDate}</p>}
+              </div>
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active</span>
+                <ToggleButton
+                  isToggle={formData.active}
+                  handleClick={() => setFormData((previous) => ({ ...previous, active: !previous.active }))}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
+                  {saving ? "Saving..." : modalMode === "edit" ? "Save Changes" : "Create Batch"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={confirmStatus}
+        title={`${isActive(statusTarget) ? "Deactivate" : "Activate"} Batch`}
+        message={`${isActive(statusTarget) ? "Deactivate" : "Activate"} "${statusTarget?.batchCode || "this batch"}"?`}
+        variant={isActive(statusTarget) ? "warning" : "success"}
+        confirmLabel={isActive(statusTarget) ? "Deactivate" : "Activate"}
+        loading={saving}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Batch"
+        message={`Delete "${deleteTarget?.batchCode || "this batch"}"? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={saving}
+      />
+    </div>
+  );
+};
+
+export default Batch;

@@ -204,6 +204,9 @@ export const toListParams = (params = {}, defaults = {}) => ({
   ...(params.status ? { status: params.status } : {}),
   ...(params.onboardingStatus ? { onboardingStatus: params.onboardingStatus } : {}),
   ...(params.active !== undefined ? { active: params.active } : {}),
+  ...(params.isDisable !== undefined
+    ? { active: !(params.isDisable === true || params.isDisable === "true") }
+    : {}),
 });
 
 export const toManagedUserCreateBody = (payload = {}, options = {}) => ({

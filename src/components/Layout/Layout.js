@@ -102,6 +102,12 @@ const Returns = React.lazy(
 const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
 );
+const CommissionRules = React.lazy(
+  () => import("../../pages/OrdersManagement/CommissionRules/CommissionRules"),
+);
+const PlatformFeeConfig = React.lazy(
+  () => import("../../pages/OrdersManagement/PlatformFeeConfig/PlatformFeeConfig"),
+);
 const OrderStatus = React.lazy(
   () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
 );
@@ -295,6 +301,10 @@ const SellerAnalytics = React.lazy(() =>
   import("../../pages/Reports/ReportShell").then((m) => ({
     default: m.SellerAnalytics,
   })),
+);
+
+const UserMessages = React.lazy(
+  () => import("../../pages/UserManagement/UserMessages/UserMessages"),
 );
 
 // ── RBAC Management Pages ───────────────────────────────────────────────────
@@ -636,6 +646,14 @@ function Layout() {
                   <Route
                     path="/seller-finance"
                     element={renderRoute("/seller-finance", <SellerFinance />)}
+                  />
+                  <Route
+                    path="/commission-rules"
+                    element={renderRoute("/commission-rules", <CommissionRules />)}
+                  />
+                  <Route
+                    path="/platform-fee-config"
+                    element={renderRoute("/platform-fee-config", <PlatformFeeConfig />)}
                   />
                   <Route
                     path="/returns"
@@ -1136,6 +1154,10 @@ function Layout() {
                       "/reports-sellers",
                       <SellerAnalytics />,
                     )}
+                  />
+                  <Route
+                    path="/messages"
+                    element={renderRoute("/messages", <UserMessages />)}
                   />
                   <Route path="*" element={<ComingSoonPage />} />
                 </Routes>

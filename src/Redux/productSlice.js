@@ -25,6 +25,8 @@ const toProductListParams = (params = {}) => ({
     ...(params.sku ? { sku: params.sku } : {}),
     ...(params.includeAllStatuses !== undefined ? { includeAllStatuses: params.includeAllStatuses } : {}),
     ...(params.productType ? { productType: params.productType } : {}),
+    ...(params.hasVariants !== undefined ? { hasVariants: params.hasVariants } : {}),
+    ...(params.includeVariants !== undefined ? { includeVariants: params.includeVariants } : {}),
     ...(params.visibility ? { visibility: params.visibility } : {}),
     ...(params.brand ? { brand: params.brand } : {}),
     ...(params.tags ? { tags: params.tags } : {}),
@@ -33,6 +35,7 @@ const toProductListParams = (params = {}) => ({
     ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
     ...(params.dateTo ? { dateTo: params.dateTo } : {}),
     ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
+    ...(params.stockStatus || params.inventoryStatus ? { stockStatus: params.stockStatus || params.inventoryStatus } : {}),
     ...(params.sortBy ? { sortBy: params.sortBy } : {}),
     ...(params.sortDir ? { sortDir: params.sortDir } : {}),
 });

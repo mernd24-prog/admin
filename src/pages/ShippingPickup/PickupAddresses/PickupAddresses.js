@@ -3,7 +3,6 @@ import { MdAdd, MdDelete, MdEdit, MdLocationOn, MdRefresh } from "react-icons/md
 import { toast } from "sonner";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../../components/Atoms/Input/Input";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import {
   ConfirmModal,
@@ -275,7 +274,6 @@ const PickupAddresses = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ search: "" });
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [showForm, setShowForm] = useState(false);
@@ -334,14 +332,8 @@ const PickupAddresses = () => {
     fetchAddresses();
   }, [fetchAddresses]);
 
-  const applyFilters = useCallback(() => {
-    setSearch(filters.search?.trim() || "");
-    setPage(1);
-  }, [filters.search]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({ search: "" });
-    setSearch("");
+  const handleSearch = useCallback((value) => {
+    setSearch(value?.trim() || "");
     setPage(1);
   }, []);
 
@@ -544,43 +536,29 @@ const PickupAddresses = () => {
           { label: "Pickup Addresses" },
         ]}
         actions={
-          <PermissionGuard module="delivery" action={ACTIONS.CREATE}>
-            <button onClick={openCreate} className="admin-btn-primary">
-              <MdAdd size={16} /> Add Address
+          <div className="flex items-center gap-2">
+            <ExportButton
+              filename="pickup-addresses"
+              columns={columns}
+              data={addresses}
+              requiredModule="delivery"
+            />
+            <button
+              type="button"
+              onClick={fetchAddresses}
+              className="admin-btn-secondary"
+              aria-label="Refresh pickup addresses"
+            >
+              <MdRefresh size={17} /> Refresh
             </button>
-          </PermissionGuard>
+            <PermissionGuard module="delivery" action={ACTIONS.CREATE}>
+              <button onClick={openCreate} className="admin-btn-primary">
+                <MdAdd size={16} /> Add Address
+              </button>
+            </PermissionGuard>
+          </div>
         }
       />
-
-      <div className="mb-3 bg-white rounded-lg">
-        <SearchComponent
-          isSearchShow={true}
-          filters={filters}
-          setFilters={setFilters}
-          placeholder="Search pickup addresses..."
-          applyFilters={applyFilters}
-          handleSearchRemove={handleSearchRemove}
-          searchDebounce={400}
-          searchActions={
-            <>
-              <ExportButton
-                filename="pickup-addresses"
-                columns={columns}
-                data={addresses}
-                requiredModule="delivery"
-              />
-              <button
-                type="button"
-                onClick={fetchAddresses}
-                className="admin-btn-secondary"
-                aria-label="Refresh pickup addresses"
-              >
-                <MdRefresh size={17} /> Refresh
-              </button>
-            </>
-          }
-        />
-      </div>
 
       <DataTable
         columns={columns}
@@ -590,6 +568,8 @@ const PickupAddresses = () => {
         page={page}
         pageSize={20}
         onPageChange={setPage}
+        onSearch={handleSearch}
+        searchPlaceholder="Search pickup addresses..."
         requiredModule="delivery"
       />
 

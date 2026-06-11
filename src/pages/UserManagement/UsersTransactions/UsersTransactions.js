@@ -2,9 +2,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MdRefresh, MdVisibility } from "react-icons/md";
-import { toast } from "react-toastify";
-import TableData from "../../../components/Atoms/TableData/TableData";
+import { MdRefresh, MdVisibility, MdAccountBalanceWallet } from "react-icons/md";
+import { toast } from "sonner";
+import { PageHeader, DataTable, StatusBadge } from "../../../components/Shared";
 import { getWalletTransactions } from "../../../Redux/adminCoreSlice";
 
 const extractList = (payload) => {
@@ -20,11 +20,7 @@ const extractSummary = (payload) => {
 const parseMetadata = (value) => {
   if (!value) return {};
   if (typeof value === "object") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(value); } catch { return {}; }
 };
 
 const formatCurrency = (value) => {
@@ -33,7 +29,44 @@ const formatCurrency = (value) => {
 };
 
 const titleCase = (value = "") =>
-  String(value || "-").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  String(value || "-").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const COLUMNS = [
+  { key: "id", label: "Transaction ID", render: (v) => <span className="font-mono text-xs">{v || "—"}</span> },
+  { key: "userLabel", label: "User", render: (v, row) => <span className="text-sm">{v || row?.user?.name || row?.user_id || "—"}</span> },
+  {
+    key: "created_at",
+    label: "Date",
+    render: (v, row) => {
+      const ts = v || row?.createdAt;
+      return <span className="text-xs text-gray-500">{ts ? new Date(ts).toLocaleString() : "—"}</span>;
+    },
+  },
+  {
+    key: "amount",
+    label: "Credit",
+    render: (v, row) => String(row?.type || "").toLowerCase() === "credit" ? <span className="text-green-600 font-mono text-sm">{formatCurrency(v)}</span> : <span className="text-gray-300">—</span>,
+  },
+  {
+    key: "amount_debit",
+    label: "Debit",
+    render: (_, row) => String(row?.type || "").toLowerCase() !== "credit" ? <span className="text-red-500 font-mono text-sm">{formatCurrency(row.amount)}</span> : <span className="text-gray-300">—</span>,
+  },
+  {
+    key: "description",
+    label: "Description",
+    render: (_, row) => {
+      const meta = parseMetadata(row?.metadata);
+      const desc = meta.description || meta.reason || meta.method || [row?.reference_type, row?.reference_id].filter(Boolean).join(" #") || "—";
+      return <span className="text-xs text-gray-600 max-w-[200px] truncate block">{desc}</span>;
+    },
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (v) => <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-sky-100 text-sky-600 font-medium">{titleCase(v)}</span>,
+  },
+];
 
 const UsersTransactions = () => {
   const dispatch = useDispatch();
@@ -43,22 +76,15 @@ const UsersTransactions = () => {
 
   const [apiRes, setApiRes] = useState([]);
   const [summary, setSummary] = useState({});
-  const [filters, setFilters] = useState({
-    search: "",
-    type: "",
-    status: "",
-  });
+  const [filters, setFilters] = useState({ search: "", type: "", status: "" });
 
   const isRefundView = location.pathname.includes("/refunds");
+  const loading = adminCoreSelector?.loading;
 
   const loadTransactions = async (nextFilters = filters) => {
     try {
       const response = await dispatch(
-        getWalletTransactions({
-          ...nextFilters,
-          referenceType: isRefundView ? "return_refund" : "",
-          limit: 100,
-        }),
+        getWalletTransactions({ ...nextFilters, referenceType: isRefundView ? "return_refund" : "", limit: 100 })
       ).unwrap();
       setApiRes(extractList(response));
       setSummary(extractSummary(response));
@@ -67,57 +93,7 @@ const UsersTransactions = () => {
     }
   };
 
-  useEffect(() => {
-    loadTransactions();
-  }, [isRefundView]);
-
-  const loading = adminCoreSelector?.loading;
-
-  const tableHeadings = [
-    "Transaction ID",
-    "User",
-    "Date",
-    "Credit",
-    "Debit",
-    "Description",
-    "Status",
-    "Action",
-  ];
-
-  const tableRows = apiRes?.map((item) => {
-    const metadata = parseMetadata(item?.metadata);
-    const amount = Number(item?.amount || 0);
-    const isCredit = String(item?.type || "").toLowerCase() === "credit";
-    const timestamp = item?.created_at || item?.createdAt;
-    const description = metadata.description ||
-      metadata.reason ||
-      metadata.method ||
-      [item?.reference_type, item?.reference_id].filter(Boolean).join(" #") ||
-      "-";
-
-    return [
-      item?.id || "-",
-      item?.userLabel || item?.user?.name || item?.user_id || "-",
-      timestamp ? new Date(timestamp).toLocaleString() : "-",
-      isCredit ? formatCurrency(amount) : formatCurrency(0),
-      !isCredit ? formatCurrency(amount) : formatCurrency(0),
-      description,
-      <span
-        className="p-1 bg-sky-100 text-sky-600"
-        key={`status-${item?.id}`}
-      >
-        {titleCase(item?.status)}
-      </span>,
-      <button
-        type="button"
-        className="inline-flex items-center justify-center rounded-md p-1 text-[#2f6fed] transition hover:bg-[#f3f6ff]"
-        onClick={() => navigate(`/app/transactions/view/${encodeURIComponent(item?.id)}`)}
-        aria-label="View payment detail"
-      >
-        <MdVisibility size={20} />
-      </button>,
-    ];
-  });
+  useEffect(() => { loadTransactions(); }, [isRefundView]);
 
   const metrics = useMemo(() => [
     { label: "Credits", value: formatCurrency(summary.creditAmount) },
@@ -125,70 +101,89 @@ const UsersTransactions = () => {
     { label: "Held", value: formatCurrency(summary.heldAmount) },
   ], [summary]);
 
-  const updateFilter = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
+  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const rowActions = (row) => [
+    {
+      label: "View",
+      icon: <MdVisibility size={14} />,
+      onClick: () => navigate(`/app/transactions/view/${encodeURIComponent(row?.id)}`),
+    },
+  ];
 
   return (
-    <>
-      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto">
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {metrics.map((metric) => (
-            <div key={metric.label} className="rounded-lg border border-[#E6E6E6] bg-white p-4">
-              <p className="text-xs font-medium text-[#65718b]">{metric.label}</p>
-              <p className="mt-1 text-xl font-semibold text-[#202337]">{metric.value}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#E6E6E6] bg-white p-3 md:flex-row md:items-center">
-          <input
-            className="min-h-[38px] flex-1 rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]"
-            placeholder="Search user, reference, transaction..."
-            value={filters.search}
-            onChange={(event) => updateFilter("search", event.target.value)}
-          />
-          <select
-            className="min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]"
-            value={filters.type}
-            onChange={(event) => updateFilter("type", event.target.value)}
-          >
-            <option value="">All Types</option>
-            <option value="credit">Credit</option>
-            <option value="debit">Debit</option>
-          </select>
-          <select
-            className="min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]"
-            value={filters.status}
-            onChange={(event) => updateFilter("status", event.target.value)}
-          >
-            <option value="">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="held">Held</option>
-            <option value="released">Released</option>
-          </select>
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title={isRefundView ? "Refund Transactions" : "Users Transactions"}
+        subtitle="View wallet and payment transactions"
+        breadcrumbs={[{ label: "User Management" }, { label: isRefundView ? "Refunds" : "Transactions" }]}
+        actions={
           <button
             type="button"
-            className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white transition hover:bg-[#255bd1]"
             onClick={() => loadTransactions()}
+            className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
           >
-            <MdRefresh size={18} /> Refresh
+            <MdRefresh size={16} /> Refresh
           </button>
-        </div>
-        <div className=" overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-          <TableData
-            Heading={isRefundView ? "Refund Transactions" : "Users Transactions"}
-            tableHeadings={tableHeadings}
-            data={tableRows}
-            showSearch={true}
-            placeholder="Search by transaction..."
-            showFilter={false}
-            showSummary={false}
-            showAddButton={false}
-            isLoading={loading}
-          />
-        </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-medium text-gray-500">{metric.label}</p>
+            <p className="mt-1 text-xl font-semibold text-gray-800">{metric.value}</p>
+          </div>
+        ))}
       </div>
-    </>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <input
+          className="flex-1 min-h-[38px] rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+          placeholder="Search user, reference, transaction..."
+          value={filters.search}
+          onChange={(e) => updateFilter("search", e.target.value)}
+        />
+        <select
+          className="min-h-[38px] rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+          value={filters.type}
+          onChange={(e) => updateFilter("type", e.target.value)}
+        >
+          <option value="">All Types</option>
+          <option value="credit">Credit</option>
+          <option value="debit">Debit</option>
+        </select>
+        <select
+          className="min-h-[38px] rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+          value={filters.status}
+          onChange={(e) => updateFilter("status", e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="completed">Completed</option>
+          <option value="held">Held</option>
+          <option value="released">Released</option>
+        </select>
+        <button
+          type="button"
+          onClick={() => loadTransactions()}
+          className="min-h-[38px] px-4 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)]"
+        >
+          Apply
+        </button>
+      </div>
+
+      <DataTable
+        columns={COLUMNS}
+        data={apiRes}
+        loading={loading}
+        totalCount={apiRes.length}
+        rowActions={rowActions}
+        searchPlaceholder="Search transactions…"
+        emptyText="No transactions found."
+        emptyIcon={<MdAccountBalanceWallet size={40} className="text-gray-200" />}
+        requiredModule="users"
+      />
+    </div>
   );
 };
 

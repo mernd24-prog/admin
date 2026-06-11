@@ -180,7 +180,7 @@ export const hasModuleAccess = (moduleCode) => {
     option_values: ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
     "option-values": ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
     platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish", "batch", "collections"],
-    inventory: ["inventory", "seller-product-inventory", "seller-product-inventories", "inventory-overview", "variant-inventory", "inventory-adjustment", "warehouse", "low-stock-alerts", "threshold-products", "stock", "stock-adjustment"],
+    inventory: ["inventory", "seller-product-inventory", "seller-product-inventories", "inventory-overview", "variant-inventory", "inventory-adjustment", "inventory-transactions", "warehouse", "low-stock-alerts", "threshold-products", "stock", "stock-adjustment"],
     orders: ["orders", "order", "order_status", "order-status", "subscription_orders", "subscription-orders", "gift-card-orders", "order-cancellation-reasons", "view-orders"],
     payments: ["payments", "payment", "refunds", "refund", "payouts"],
     wallets: ["wallets", "wallet", "transactions", "user-transactions"],

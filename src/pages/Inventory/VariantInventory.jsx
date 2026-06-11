@@ -1,174 +1,276 @@
-import React, { useEffect, useState } from "react";
-import { MdGridView, MdSearch, MdRefresh } from "react-icons/md";
-import { PageHeader, StatusBadge } from "../../components/Shared";
+import React, { useCallback, useEffect, useState } from "react";
+import { MdGridView, MdRefresh } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
+import { PageHeader, DataTable, StatusBadge, FilterBar, ExportButton } from "../../components/Shared";
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
+import { useListPage } from "../../hooks/useListPage";
+
+const FILTER_FIELDS = [
+  {
+    key: "stockStatus",
+    type: "select",
+    label: "Stock Status",
+    width: "w-44",
+    options: [
+      { value: "in_stock", label: "In Stock" },
+      { value: "low_stock", label: "Low Stock" },
+      { value: "out_of_stock", label: "Out of Stock" },
+    ],
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Product Status",
+    width: "w-44",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+      { value: "pending_approval", label: "Pending Approval" },
+      { value: "draft", label: "Draft" },
+    ],
+  },
+];
+
+const FLAT_COLUMNS = [
+  { key: "productTitle", label: "Product", sortable: true },
+  { key: "productSku", label: "Product SKU" },
+  { key: "variantTitle", label: "Variant" },
+  { key: "variantSku", label: "Variant SKU" },
+  { key: "category", label: "Category" },
+  {
+    key: "stock",
+    label: "Stock",
+    sortable: true,
+    render: (v) => <span className="font-mono font-medium">{v ?? 0}</span>,
+  },
+  {
+    key: "reserved",
+    label: "Reserved",
+    render: (v) => <span className="font-mono text-gray-400">{v ?? 0}</span>,
+  },
+  {
+    key: "available",
+    label: "Available",
+    render: (_, row) => {
+      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
+      return (
+        <span
+          className={`font-mono font-semibold ${
+            avail <= 0
+              ? "text-red-500"
+              : avail <= (row.threshold ?? 5)
+              ? "text-yellow-600"
+              : "text-green-600"
+          }`}
+        >
+          {avail}
+        </span>
+      );
+    },
+  },
+  {
+    key: "variantStatus",
+    label: "Status",
+    render: (_, row) => {
+      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
+      const s =
+        avail <= 0
+          ? "out_of_stock"
+          : avail <= (row.threshold ?? 5)
+          ? "low_stock"
+          : "in_stock";
+      return <StatusBadge status={s} dot />;
+    },
+  },
+];
+
+const flattenVariants = (products) => {
+  const rows = [];
+  (products || []).forEach((p) => {
+    (p.variants || []).forEach((v) => {
+      rows.push({
+        _id: `${p._id}-${v._id || v.sku}`,
+        productId: p._id,
+        productTitle: p.title,
+        productSku: p.sku || "—",
+        variantTitle: v.title || "—",
+        variantSku: v.sku || "—",
+        category: p.category || "—",
+        stock: v.stock ?? 0,
+        reserved: v.reservedStock ?? 0,
+        threshold: p.inventorySettings?.lowStockThreshold ?? 5,
+        variantStatus: v.status || p.status,
+      });
+    });
+  });
+  return rows;
+};
 
 const VariantInventory = () => {
-  const [products, setProducts] = useState([]);
+  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "productTitle" });
+  const navigate = useNavigate();
+  const [flatRows, setFlatRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const { toQueryParams } = list;
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = toQueryParams();
+      const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
+        params: {
+          page: params.page,
+          limit: params.limit,
+          q: params.search || undefined,
+          productType: "variable",
+          hasVariants: true,
+          includeVariants: true,
+          stockStatus: params.stockStatus || undefined,
+          status: params.status || undefined,
+          sortBy: params.sortBy,
+          sortDir: params.sortDir,
+          includeAllStatuses: true,
+        },
+      });
+
+      const data = res?.data?.data;
+      const items = Array.isArray(data)
+        ? data
+        : data?.products || data?.list || data?.items || [];
+      const totalCount = Number(
+        res?.data?.pagination?.total ??
+          res?.data?.meta?.total ??
+          data?.total ??
+          items.length,
+      );
+      setFlatRows(flattenVariants(items));
+      setTotal(totalCount);
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to load variant inventory";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [toQueryParams]);
 
   useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
-          params: {
-            productType: "variable",
-            hasVariants: true,
-            limit: 50,
-            search,
-          },
-        });
-        setProducts(res.data?.data?.products || res.data?.data || []);
-      } catch {
-        toast.error("Failed to load variant data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, [search]);
+    fetchData();
+  }, [fetchData]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
       <PageHeader
         title="Variant Inventory"
-        subtitle="Per-variant stock levels for variable products"
+        subtitle="Per-variant stock levels for all variable products"
         breadcrumbs={[
           { label: "Inventory Management" },
           { label: "Variant Inventory" },
         ]}
         actions={
-          <button
-            onClick={() => setSearch("")}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-sm rounded-lg hover:bg-gray-50 text-gray-600"
-          >
-            <MdRefresh size={16} /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportButton
+              data={flatRows}
+              filename="variant-inventory"
+              requiredModule="inventory"
+            />
+            <PermissionGuard module="inventory" action={ACTIONS.ADJUST}>
+              <button
+                onClick={() => navigate("/app/inventory-adjustment")}
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+              >
+                Adjust Stock
+              </button>
+            </PermissionGuard>
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-sm rounded-lg hover:bg-gray-50 text-gray-600"
+            >
+              <MdRefresh size={16} /> Refresh
+            </button>
+          </div>
         }
       />
 
-      <div className="relative mb-5 w-full sm:w-80">
-        <MdSearch
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search variable products…"
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)]"
-        />
+      {/* Summary stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Total Products", value: total },
+          {
+            label: "Total Variants",
+            value: flatRows.length,
+            color: "text-[var(--admin-gold)]",
+          },
+          {
+            label: "Low Stock",
+            value: flatRows.filter(
+              (r) =>
+                r.stock - r.reserved > 0 && r.stock - r.reserved <= r.threshold,
+            ).length,
+            color: "text-yellow-600",
+          },
+          {
+            label: "Out of Stock",
+            value: flatRows.filter((r) => r.stock - r.reserved <= 0).length,
+            color: "text-red-500",
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className="bg-white border border-[#e7e7e7] bg-gradient-to-br from-white to-[#F4F1ED] rounded-xl shadow-sm p-4"
+          >
+            <div
+              className={`text-xl md:text-3xl font-bold ${card.color || "text-[var(--admin-navy)]"}`}
+            >
+              {loading ? (
+                <div className="h-7 w-16 bg-gray-200 rounded animate-pulse" />
+              ) : (
+                card.value
+              )}
+            </div>
+            <div className="text-sm md:text-base font-semibold text-gray-500">
+              {card.label}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl border border-gray-100 p-4 animate-pulse"
-            >
-              <div className="h-5 w-48 bg-gray-200 rounded mb-3" />
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((j) => (
-                  <div key={j} className="h-16 bg-gray-100 rounded-lg" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
-          <MdGridView size={40} className="mx-auto mb-3 text-gray-200" />
-          <p>No variable products found.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {products.map((product) => (
-            <div
-              key={product._id}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-            >
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800">
-                    {product.title}
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    {product.category} · {product.variants?.length || 0}{" "}
-                    variants
-                  </p>
-                </div>
-                <StatusBadge status={product.status} dot />
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gray-50 text-gray-400 uppercase">
-                      <th className="px-4 py-2 text-left font-semibold tracking-wide">
-                        Variant
-                      </th>
-                      <th className="px-4 py-2 text-left font-semibold tracking-wide">
-                        SKU
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold tracking-wide">
-                        Stock
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold tracking-wide">
-                        Reserved
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold tracking-wide">
-                        Available
-                      </th>
-                      <th className="px-4 py-2 text-left font-semibold tracking-wide">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {(product.variants || []).map((v) => {
-                      const avail = (v.stock ?? 0) - (v.reservedStock ?? 0);
-                      const s =
-                        avail <= 0
-                          ? "out_of_stock"
-                          : avail <= 5
-                            ? "low_stock"
-                            : "in_stock";
-                      return (
-                        <tr key={v._id} className="hover:bg-gray-50/60">
-                          <td className="px-4 py-2.5 font-medium text-gray-700">
-                            {v.title || "—"}
-                          </td>
-                          <td className="px-4 py-2.5 font-mono text-gray-500">
-                            {v.sku || "—"}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-mono">
-                            {v.stock ?? 0}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-mono text-gray-400">
-                            {v.reservedStock ?? 0}
-                          </td>
-                          <td
-                            className={`px-4 py-2.5 text-right font-mono font-semibold ${avail <= 0 ? "text-red-500" : avail <= 5 ? "text-yellow-600" : "text-green-600"}`}
-                          >
-                            {avail}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <StatusBadge status={s} size="sm" />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DataTable
+        columns={FLAT_COLUMNS}
+        data={flatRows}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={(q) => list.setSearch(q)}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        error={error}
+        searchPlaceholder="Search products or variants…"
+        requiredModule="inventory"
+        emptyText="No variable products with variants found."
+        emptyIcon={<MdGridView size={40} className="text-gray-200" />}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
     </div>
   );
 };

@@ -6,18 +6,14 @@ import { toast } from "sonner";
 
 import { CONTENT_TYPE_MAP, CONTENT_TYPES } from "./contentTypes";
 import ContentPageSetup from "../ContentPages/components/ContentPageSetup";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
-import AddButton from "../../../components/Button/AddButton";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { ConfirmModal } from "../../../components/Shared";
 import {
   getContentPages,
   createContentPage,
   updateContentPage,
   deleteContentPage,
 } from "../../../Redux/adminCoreSlice";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 
 const PAGE_SIZE = 15;
 const FALLBACK_TYPE = {
@@ -193,14 +189,8 @@ const ContentManagement = () => {
     setFilters({ search: "" });
   }, [typeKey]);
 
-  const applyFilters = useCallback(() => {
-    setSearch(filters.search?.trim() || "");
-    setPageNo(1);
-  }, [filters.search]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({ search: "" });
-    setSearch("");
+  const handleSearch = useCallback((value) => {
+    setSearch(value?.trim() || "");
     setPageNo(1);
   }, []);
 
@@ -280,8 +270,6 @@ const ContentManagement = () => {
 
   return (
     <div className="p-6 mx-auto space-y-4 max-w-7xl">
-      <Loader loading={isLoading} />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -290,7 +278,11 @@ const ContentManagement = () => {
           </h1>
           <p className="text-sm text-gray-400">{activeType.label}</p>
         </div>
-        {!isSingleton && <AddButton onClick={openAdd} />}
+        {!isSingleton && (
+          <button onClick={openAdd} className="admin-btn-primary">
+            + Add Content
+          </button>
+        )}
       </div>
 
       {/* Type tabs */}
@@ -329,15 +321,31 @@ const ContentManagement = () => {
       {/* List view */}
       {!isSingleton && (
         <>
-          <SearchComponent
-            isSearchShow={true}
-            filters={filters}
-            setFilters={setFilters}
-            placeholder="Search by title, slug, or content"
-            applyFilters={applyFilters}
-            handleSearchRemove={handleSearchRemove}
-            searchDebounce={400}
-          />
+          <div className="flex gap-2">
+            <input
+              className="flex-1 min-h-[38px] rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+              placeholder="Search by title, slug, or content"
+              value={filters.search}
+              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch(filters.search)}
+            />
+            <button
+              type="button"
+              onClick={() => handleSearch(filters.search)}
+              className="admin-btn-primary"
+            >
+              Search
+            </button>
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setFilters({ search: "" }); handleSearch(""); }}
+                className="admin-btn-secondary"
+              >
+                Clear
+              </button>
+            )}
+          </div>
 
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {normalizedPages.length === 0 && !isLoading ? (
@@ -413,11 +421,27 @@ const ContentManagement = () => {
           </div>
 
           {total > PAGE_SIZE && (
-            <Pagination
-              totalPages={Math.ceil(total / PAGE_SIZE)}
-              currentPage={pageNo}
-              onPageChange={setPageNo}
-            />
+            <div className="flex items-center justify-center gap-2 py-4">
+              <button
+                type="button"
+                disabled={pageNo <= 1}
+                onClick={() => setPageNo((p) => p - 1)}
+                className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-500">
+                Page {pageNo} of {Math.ceil(total / PAGE_SIZE)}
+              </span>
+              <button
+                type="button"
+                disabled={pageNo >= Math.ceil(total / PAGE_SIZE)}
+                onClick={() => setPageNo((p) => p + 1)}
+                className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
           )}
         </>
       )}
@@ -443,12 +467,14 @@ const ContentManagement = () => {
         isLoading={isLoading}
       />
 
-      {/* Delete confirm */}
-      <DeletePopup
-        isDeleteModalOpen={Boolean(deleteTarget)}
-        closeDeleteModal={() => setDeleteTarget(null)}
-        confirmDelete={handleDelete}
-        DeleteHeading={`Delete "${deleteTarget?.title}"?`}
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        variant="danger"
+        title="Delete Content Page?"
+        message={`Delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
       />
       {viewingPage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

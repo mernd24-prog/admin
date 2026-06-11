@@ -1,22 +1,63 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState, useMemo } from "react";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import ImageViewer from "../../../components/ImageViewer/ImageViewer";
-import EditProductReview from "./components/EditProductReview";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
+import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete } from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+  ConfirmModal,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import {
   deleteProductReview,
   getProductReviews,
   updateProductReview,
 } from "../../../Redux/adminCoreSlice";
-import Loader from "../../../components/Loader/Loader";
-import { Link } from "react-router-dom";
-import Pagination from "../../../components/Pagination/Pagination";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import { toast } from "sonner";
-const SIZE = 10;
+import EditProductReview from "./components/EditProductReview";
+import { useListPage } from "../../../hooks/useListPage";
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "published", label: "Published" },
+      { value: "hidden", label: "Hidden" },
+      { value: "pending", label: "Pending" },
+    ],
+  },
+  {
+    key: "rating",
+    type: "select",
+    label: "Rating",
+    width: "w-32",
+    options: [
+      { value: "5", label: "5 Stars" },
+      { value: "4", label: "4 Stars" },
+      { value: "3", label: "3 Stars" },
+      { value: "2", label: "2 Stars" },
+      { value: "1", label: "1 Star" },
+    ],
+  },
+];
+
+const StarRating = ({ rating = 0 }) => (
+  <div className="flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((star) =>
+      star <= rating ? (
+        <MdStar key={star} size={14} className="text-yellow-400" />
+      ) : (
+        <MdStarBorder key={star} size={14} className="text-gray-300" />
+      ),
+    )}
+    <span className="ml-1 text-xs text-gray-500">{rating}/5</span>
+  </div>
+);
 
 const getReviewsPayload = (state = {}) => {
   const payload = state?.productReviewsData?.data?.data || {};
@@ -30,262 +71,224 @@ const getReviewsPayload = (state = {}) => {
 const ProductReviews = () => {
   const dispatch = useDispatch();
   const reviewsData = useSelector((state) => state.adminCore);
+  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedReview, setSelectedReview] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pageNo, setPageNo] = useState(1);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [toggleLoadingId, setToggleLoadingId] = useState(null);
 
-  const handleImageClick = (imageUrl) => {
-    setSelectedImage(imageUrl);
-  };
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "N/A";
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { list: items, total } = getReviewsPayload(reviewsData);
 
-  const renderStars = (rating = 0) => {
-    return (
-      <div className="flex items-center justify-center">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <span
-            key={star}
-            className={`text-xl ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}
-          >
-            ★
-          </span>
-        ))}
-      </div>
-    );
-  };
-
-  const fetchReviews = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await dispatch(getProductReviews({ limit: SIZE, page: pageNo })).unwrap();
-    } catch (err) {
-      setError(
-        err?.message ||
-          err ||
-          "Failed to fetch product reviews. Please try again.",
-      );
-      console.error("Review fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
+  const fetchReviews = () => {
+    const params = list.toQueryParams();
+    setLoading(true);
+    setError("");
+    dispatch(
+      getProductReviews({
+        page: params.page,
+        limit: params.limit,
+        search: params.search || undefined,
+        status: params.status || undefined,
+        rating: params.rating || undefined,
+        sortBy: params.sortBy,
+        sortOrder: params.sortDir,
+      }),
+    )
+      .unwrap()
+      .catch((err) => {
+        const msg = err?.message || "Failed to load reviews";
+        setError(msg);
+        toast.error(msg);
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchReviews();
-  }, [dispatch, pageNo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-
-  const tableHeadings = [
-    "Product ID",
-    "Buyer ID",
-    "Order ID",
-    "Rating",
-    "Review",
-    "Status",
-    "Date",
-    "Action",
-  ];
-
-  const tableRows = useMemo(() => {
-    const { list } = getReviewsPayload(reviewsData);
-
-    return list.map((review, index) => {
-      try {
-        const reviewId = review._id || review.id;
-        const productImage = review.media?.[0] || "/placeholder-image.jpg";
-        const comment = review.reviewText || review.comment || "No comment";
-        const title = review.title || "";
-        const isPublished = (review.status || "published") === "published";
-
-        return [
-          <div
-            key={`product-${index}`}
-            className="flex items-center space-x-3 cursor-pointer hover:opacity-80"
-            onClick={() => handleImageClick(productImage)}
-          >
-            <img
-              src={productImage}
-              alt={review.productId || "Product"}
-              className="object-cover w-16 h-16 border rounded-lg shadow-sm"
-              onError={(e) => {
-                e.target.src = "/placeholder-image.jpg";
-              }}
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900 break-all line-clamp-2">
-                {review.productId || "N/A"}
-              </span>
-            </div>
-          </div>,
-
-          <span className="text-sm text-gray-700 break-all">
-            {review.buyerId || "N/A"}
-          </span>,
-
-          <span className="text-sm text-gray-700 break-all">
-            {review.orderId || "N/A"}
-          </span>,
-
-          <div className="flex flex-col items-center">
-            {renderStars(review.rating)}
-            <span className="text-xs text-gray-500 mt-1">
-              {review.rating}/5
-            </span>
-          </div>,
-
-          <div className="max-w-xs">
-            {title && (
-              <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                {title}
-              </p>
-            )}
-            <p className="text-sm text-gray-700 line-clamp-3" title={comment}>
-              {comment}
-            </p>
-          </div>,
-
-          <ToggleButton
-            isToggle={isPublished}
-            handleClick={async () => {
-              try {
-                await dispatch(
-                  updateProductReview({
-                    reviewId,
-                    status: isPublished ? "hidden" : "published",
-                  }),
-                ).unwrap();
-                toast.success("Review status updated");
-                fetchReviews();
-              } catch (err) {
-                toast.error(
-                  err?.message || err || "Failed to update review status",
-                );
-              }
-            }}
-          />,
-
-          <div className="flex flex-col">
-            <span className="text-sm text-gray-900">
-              {formatDate(review.createdAt)}
-            </span>
-            <span className="text-xs text-gray-500">
-              Updated: {formatDate(review.updatedAt)}
-            </span>
-          </div>,
-
-          <ActionButtons
-            onEdit={() => {
-              setSelectedReview(review);
-              setIsEditOpen(true);
-            }}
-            onDelete={() => setDeleteTarget(review)}
-            showLinkButton={false}
-          />,
-        ];
-      } catch (innerErr) {
-        console.error("Error rendering review row:", innerErr);
-        return ["Invalid data", "", "", "", "", "", "", ""];
-      }
-    });
-  }, [reviewsData]);
-
-  const totalReviews = getReviewsPayload(reviewsData).total;
-
-  const handleDeleteReview = async () => {
-    const reviewId = deleteTarget?._id || deleteTarget?.id;
-    if (!reviewId) return;
+  const handleToggleStatus = async (review) => {
+    const reviewId = review._id || review.id;
+    const newStatus = (review.status || "published") === "published" ? "hidden" : "published";
+    setToggleLoadingId(reviewId);
     try {
-      await dispatch(deleteProductReview({ reviewId })).unwrap();
-      toast.success("Review deleted successfully");
-      setDeleteTarget(null);
+      await dispatch(updateProductReview({ reviewId, status: newStatus })).unwrap();
+      toast.success("Review status updated");
       fetchReviews();
     } catch (err) {
-      toast.error(err?.message || err || "Failed to delete review");
+      toast.error(err?.message || "Failed to update review status");
+    } finally {
+      setToggleLoadingId(null);
     }
   };
 
-  return (
-    <>
-      <Loader loading={isLoading} />
-      <div className="p-6 max-w-7xl mx-auto space-y-3">
-        <h3>
-          <Link to="/app/setting">Home</Link> / Product Review
-        </h3>
+  const handleDelete = async () => {
+    const reviewId = deleteConfirm.review?._id || deleteConfirm.review?.id;
+    if (!reviewId) return;
+    try {
+      await dispatch(deleteProductReview({ reviewId })).unwrap();
+      toast.success("Review deleted");
+      setDeleteConfirm({ open: false, review: null });
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || "Failed to delete review");
+    }
+  };
 
-        <div className="bg-white  border border-gray-200 shadow-sm">
-          {error ? (
-            <div className="text-red-600 p-4">{error}</div>
-          ) : (
-            <TableData
-              Heading="Product Reviews"
-              tableHeadings={tableHeadings}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search reviews, products, users..."
-              showFilter={false}
-              showSummary={false}
-              showAddButton={false}
-              totalData={totalReviews}
-              totalSize={SIZE}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              loading={isLoading}
-              emptyMessage={
-                isLoading ? "Loading reviews..." : "No reviews found"
-              }
+  const columns = [
+    {
+      key: "productId",
+      label: "Product",
+      render: (v, row) => (
+        <div className="flex items-center gap-2 min-w-0">
+          {row.media?.[0] && (
+            <img
+              src={row.media[0]}
+              alt="product"
+              className="w-10 h-10 object-cover rounded border flex-shrink-0"
+              onError={(e) => { e.target.style.display = "none"; }}
             />
           )}
+          <span className="text-xs text-gray-600 font-mono truncate max-w-[100px]">{v || "—"}</span>
         </div>
+      ),
+    },
+    {
+      key: "buyerId",
+      label: "Buyer",
+      render: (v) => <span className="text-xs font-mono text-gray-500">{v || "—"}</span>,
+    },
+    {
+      key: "rating",
+      label: "Rating",
+      sortable: true,
+      render: (v) => <StarRating rating={Number(v) || 0} />,
+    },
+    {
+      key: "reviewText",
+      label: "Review",
+      render: (v, row) => (
+        <div className="max-w-[240px]">
+          {row.title && (
+            <div className="text-xs font-semibold text-gray-700 truncate">{row.title}</div>
+          )}
+          <div className="text-xs text-gray-500 line-clamp-2">{v || row.comment || "—"}</div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (v, row) => (
+        <button
+          onClick={() => handleToggleStatus(row)}
+          disabled={toggleLoadingId === (row._id || row.id)}
+          className="disabled:opacity-50"
+          title="Toggle status"
+        >
+          <StatusBadge status={v || "published"} dot />
+        </button>
+      ),
+    },
+    {
+      key: "createdAt",
+      label: "Date",
+      sortable: true,
+      render: (v) => (
+        <span className="text-xs text-gray-400">
+          {v ? new Date(v).toLocaleDateString("en-GB") : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "_actions",
+      label: "",
+      render: (_, row) => (
+        <div className="flex items-center gap-1 justify-end">
+          <PermissionGuard module="reviews" action={ACTIONS.EDIT} hide>
+            <button
+              onClick={() => setEditTarget(row)}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
+              title="Edit"
+            >
+              <MdEdit size={15} />
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="reviews" action={ACTIONS.DELETE} hide>
+            <button
+              onClick={() => setDeleteConfirm({ open: true, review: row })}
+              className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+              title="Delete"
+            >
+              <MdDelete size={15} />
+            </button>
+          </PermissionGuard>
+        </div>
+      ),
+    },
+  ];
 
-        {totalReviews > SIZE && (
-          <Pagination
-            totalPages={Math.ceil(totalReviews / SIZE)}
-            currentPage={pageNo}
-            onPageChange={onPageChange}
+  return (
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Reviews"
+        subtitle="Manage and moderate customer product reviews"
+        breadcrumbs={[
+          { label: "Orders Management" },
+          { label: "Product Reviews" },
+        ]}
+      />
+
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        error={error}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search reviews, products, buyers…"
+        emptyText="No product reviews found."
+        emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
+        requiredModule="reviews"
+        exportConfig={{ filename: "product-reviews", columns }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
           />
-        )}
-      </div>
-
-      <ImageViewer
-        imageUrl={selectedImage}
-        onClose={() => setSelectedImage(null)}
+        }
       />
 
       <EditProductReview
-        isOpen={isEditOpen}
-        onClose={() => {
-          setIsEditOpen(false);
-          setSelectedReview(null);
-        }}
-        reviewData={selectedReview}
+        isOpen={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        reviewData={editTarget}
       />
 
-      <DeletePopup
-        isDeleteModalOpen={Boolean(deleteTarget)}
-        closeDeleteModal={() => setDeleteTarget(null)}
-        confirmDelete={handleDeleteReview}
-        DeleteHeading="Are you sure you want to delete this product review?"
+      <ConfirmModal
+        isOpen={deleteConfirm.open}
+        title="Delete Review"
+        message="Are you sure you want to delete this review? This cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm({ open: false, review: null })}
       />
-    </>
+    </div>
   );
 };
 

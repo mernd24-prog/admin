@@ -1,511 +1,350 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from "react";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import { useDispatch, useSelector } from "react-redux";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import Pagination from "../../../components/Pagination/Pagination";
-import Loader from "../../../components/Loader/Loader";
-import Input from "../../../components/Atoms/Input/Input";
+import { MdAdd, MdDelete, MdEdit, MdPalette, MdToggleOff, MdToggleOn } from "react-icons/md";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   CreateFinish,
-  enableDisableFinish,
   FinishGetList,
+  enableDisableFinish,
   softDeleteFinish,
   updateFinish,
 } from "../../../Redux/productSlice";
-import AddButton from "../../../components/Button/AddButton";
-import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
+
+const FILTER_FIELDS = [
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+  },
+];
+
+const EMPTY_FORM = {
+  _id: "",
+  name: "",
+  active: true,
+};
+
+const BASE_COLUMNS = [
+  {
+    key: "name",
+    label: "Finish Name",
+    sortable: true,
+    render: (value) => <span className="font-medium text-gray-800 capitalize">{value || "-"}</span>,
+  },
+  {
+    key: "active",
+    label: "Status",
+    render: (value, row) => <StatusBadge status={(value ?? row?.isDisable !== true) ? "active" : "inactive"} dot />,
+  },
+];
+
+const normalizeList = (payload) => {
+  const root = payload?.data?.data || payload?.data || payload || {};
+  const list = root.items || root.list || root.rows || [];
+  return {
+    list,
+    total: Number(root.total ?? payload?.data?.pagination?.total ?? list.length),
+  };
+};
+
+const isActive = (row) => row?.active ?? row?.isDisable !== true;
 
 const FinishProducts = () => {
   const dispatch = useDispatch();
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    _id: "",
-    name: "",
-    isDisable: false,
-  });
+  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const { toQueryParams } = list;
+
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [modalMode, setModalMode] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
-  const [keyword, setKeyword] = useState("");
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [deleteData, setDeleteData] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-
-  const size = 10;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = toQueryParams();
+      const response = await dispatch(
+        FinishGetList({
+          page: params.page,
+          limit: params.limit,
+          search: params.search || undefined,
+          searchFields: "name",
+          active: params.active,
+          sortBy: params.sortBy,
+          sortDir: params.sortDir,
+        }),
+      ).unwrap();
+      const normalized = normalizeList(response);
+      setItems(normalized.list);
+      setTotal(normalized.total);
+    } catch (error) {
+      toast.error(error?.message || "Failed to load finishes");
+      setItems([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, toQueryParams]);
 
   useEffect(() => {
-    const reqData = {
-      page: pageNo,
-      size: size,
-      keyWord: filters.search,
-      searchFields: "name",
-      select: "name isDisable",
-    };
-    dispatch(FinishGetList(reqData));
-  }, [size, pageNo, isRefresh]);
+    load();
+  }, [load]);
 
-  const selector = useSelector((state) => state.product);
-  const listResponse = selector?.FinishGetListData?.data?.data || {};
-  const getListData = listResponse?.list || [];
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-  };
-  const validateAddUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!formData?.name) {
-      newErrors.name = "Name is required";
-      isValid = false;
-    } else if (formData?.name.length < 3) {
-      newErrors.name = "Name must be at least 3 characters";
-      isValid = false;
-    } else if (formData?.name.length > 100) {
-      newErrors.name = "Maximum Name Characters length must be 100";
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      name: "",
-      isDisable: false,
-    });
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData(EMPTY_FORM);
     setErrors({});
   };
 
-  const handleAddUserSubmit = (e) => {
-    e.preventDefault();
+  const validate = () => {
+    const nextErrors = {};
+    const name = formData.name.trim();
+    if (!name) nextErrors.name = "Finish name is required";
+    else if (name.length < 2) nextErrors.name = "Minimum 2 characters required";
+    else if (name.length > 100) nextErrors.name = "Maximum 100 characters allowed";
+    else if (!/^[a-zA-Z0-9\s-]+$/.test(name)) nextErrors.name = "Only letters, numbers, spaces, and hyphen are allowed";
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
-    if (!validateAddUserForm()) return;
-
-    const reqData = {
-      name: formData.name,
-      isDisable: formData.isDisable,
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!validate()) return;
+    setSaving(true);
+    const payload = {
+      name: formData.name.trim(),
+      active: Boolean(formData.active),
+      isDisable: !formData.active,
     };
-
-    dispatch(CreateFinish(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        } else {
-          toast.success(res.message || "Item created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error || "Error in creating Item");
-      });
-  };
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  };
-
-  const tableRows = getListData?.map((user) => [
-    <CustomCheckbox
-      key={`checkbox-${user._id}`}
-      checked={selectedRow.includes(user._id)}
-      onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    />,
-    <span key={`name-${user._id}`} className="capitalize">
-      {user?.name}
-    </span>,
-    <div key={`status-${user._id}`} className="flex flex-col">
-      <label className="relative inline-flex" title="Enable/Disable">
-        <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={!user?.isDisable}
-          readOnly
-        />
-        <ToggleButton
-          key={`toggle-${user._id}`}
-          isToggle={!user?.isDisable}
-          handleClick={() => handleToggle(user)}
-        />
-        {/* <div
-          onClick={() => handleToggle(user)}
-          className="cursor-pointer w-9 h-5 bg-gray-200 hover:bg-red-600 peer-focus:outline-0 peer-focus:ring-transparent rounded-full peer transition-all ease-in-out duration-500 peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-600 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-400 hover:peer-checked:bg-green-200"
-          title="Enable/Disable"
-        ></div> */}
-      </label>
-    </div>,
-    <span key={`actions-${user._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: user._id,
-            name: user.name,
-            isDisable: user.isDisable,
-          });
-          setIsEditModal(true);
-        }}
-        onDelete={() => {
-          setDeleteData({ _id: [user._id] });
-          setShowDeleteConfirmation(true);
-        }}
-        showLinkButton={false}
-      />
-    </span>,
-  ]);
-
-  const confirmDelete = () => {
-    dispatch(softDeleteFinish(deleteData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        } else {
-          toast.success(res.message || "Item Deleted Successfully");
-          setShowDeleteConfirmation(false);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error || "Error in Deleting ITem");
-      });
-  };
-
-  const handleDisableFunc = () => {
-    if (!toggleStates) return;
-    const obj = {
-      _id: [toggleStates._id],
-      isDisable: !toggleStates.isDisable,
-    };
-
-    dispatch(enableDisableFinish(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
-  };
-
-  const handleToggle = (user) => {
-    setToggleStates(user);
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true,
-      };
-      try {
-        const res = await dispatch(enableDisableFinish(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setIsRefresh(!isRefresh);
-          setSelectedRow([]);
-        }
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        if (error.errors) {
-          setErrors(error.errors);
-        }
-      }
+    try {
+      const response = modalMode === "edit"
+        ? await dispatch(updateFinish({ ...payload, _id: formData._id })).unwrap()
+        : await dispatch(CreateFinish(payload)).unwrap();
+      toast.success(response?.message || `Finish ${modalMode === "edit" ? "updated" : "created"}`);
+      closeModal();
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to save finish");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      _id: "",
-      name: "",
-      isDisable: false,
-    });
-    setErrors({});
-  };
-
-  const handleToggleAdd = () => {
-    setForm((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-
-  const validateEditUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!formData?.name) {
-      newErrors.name = "Name is required";
-      isValid = false;
-    } else if (formData?.name.length < 3) {
-      newErrors.name = "Name must be at least 3 characters";
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleEditUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateEditUserForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      name: formData.name,
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(updateFinish(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Finish Updated Successfully");
-          setIsEditModal(false);
-          setForm({
-            name: "",
-            isDisable: false,
-          });
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        toast.error(error.message || "Error in Updating Finish");
-      });
-  };
-
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.map((user) => user._id) || [];
-      setSelectedRow(e.target.checked ? allIds : []);
-    } else {
-      setSelectedRow([]);
+  const confirmStatus = async () => {
+    if (!statusTarget?._id) return;
+    setSaving(true);
+    try {
+      const nextActive = !isActive(statusTarget);
+      const response = await dispatch(
+        enableDisableFinish({
+          _id: [statusTarget._id],
+          active: nextActive,
+          isDisable: !nextActive,
+        }),
+      ).unwrap();
+      toast.success(response?.message || "Finish status updated");
+      setStatusTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to update finish status");
+    } finally {
+      setSaving(false);
     }
   };
-  // const handleHeaderCheckboxChange = useCallback((e) => {
 
-  //   setSelectedRow(e.target.checked ? getAllRowIds : []);
-  // }, [getAllRowIds]);
-  const handleApplySearchFilters = () => {
-    const reqData = {
-      page: pageNo,
-      size: size,
-      keyWord: filters.search,
-      searchFields: "name",
-      select: "name isDisable",
-    };
-    dispatch(FinishGetList(reqData));
-    setIsRefresh(!isRefresh);
+  const confirmDelete = async () => {
+    if (!deleteTarget?._id) return;
+    setSaving(true);
+    try {
+      const response = await dispatch(softDeleteFinish({ _id: [deleteTarget._id] })).unwrap();
+      toast.success(response?.message || "Finish deleted");
+      setDeleteTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete finish");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSearchRemove = useCallback(() => {
-    setFilters((prev) => ({ ...prev, search: "" }));
-    setKeyword("");
-    setPageNo(1);
-    setIsRefresh(!isRefresh);
-  }, [dispatch, size, isRefresh]);
+  const columns = useMemo(
+    () => [
+      ...BASE_COLUMNS,
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <PermissionGuard module="platform" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn"
+                title="Edit finish"
+                onClick={() => {
+                  setFormData({ _id: row._id, name: row.name || "", active: isActive(row) });
+                  setModalMode("edit");
+                }}
+              >
+                <MdEdit size={18} />
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="platform" action={ACTIONS.STATUS_CHANGE} hide>
+              <button
+                type="button"
+                className={isActive(row) ? "admin-icon-btn text-yellow-600" : "admin-icon-btn text-green-600"}
+                title={isActive(row) ? "Deactivate finish" : "Activate finish"}
+                onClick={() => setStatusTarget(row)}
+              >
+                {isActive(row) ? <MdToggleOff size={20} /> : <MdToggleOn size={20} />}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="platform" action={ACTIONS.DELETE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn text-red-600"
+                title="Delete finish"
+                onClick={() => setDeleteTarget(row)}
+              >
+                <MdDelete size={18} />
+              </button>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className="max-w-7xl mx-auto">
-        <div className=" overflow-hidden overflow-y-auto py-6">
-          <div className="flex justify-between items-center">
-            <h3>
-              Home / <b>Finish</b>
-            </h3>
-            <AddButton
-              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
-              onClick={() => {
-                setIsOpenAddModal(true);
-              }}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Finish Products"
+        subtitle="Manage product finish values used in catalog setup"
+        breadcrumbs={[{ label: "Catalog Masters" }, { label: "Finish Products" }]}
+        actions={
+          <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
+            <button
+              type="button"
+              onClick={() => setModalMode("add")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
             >
-              Add
-            </AddButton>
-          </div>
-          <div className="overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    placeholder="Search By Full Name"
-                    handleSearchRemove={handleSearchRemove}
-                    applyFilters={handleApplySearchFilters}
-                    totalData={listResponse?.total || 0}
-                  />
-                </div>
-              </div>
-            </div>
-            <TableData
-              Heading="Admin Users"
-              tableHeadings={["Full Name", "Status", "Actions"]}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search by..."
-              showFilter={false}
-              showSummary={false}
-              totalData={listResponse?.total || 0}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              searchTerm={keyword}
-              setSearchTerm={setKeyword}
-              isHeaderCheckbox={true}
-              handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={selectedRow.length === getListData?.length}
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {listResponse?.total &&
-              size &&
-              Math.ceil(listResponse.total / size) > 1 && (
-                <Pagination
-                  totalPages={Math.ceil(listResponse.total / size)}
-                  currentPage={pageNo}
-                  onPageChange={onPageChange}
+              <MdAdd size={16} /> Add Finish
+            </button>
+          </PermissionGuard>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search finishes..."
+        emptyText="No finish records found."
+        emptyIcon={<MdPalette size={40} className="text-gray-200" />}
+        requiredModule="platform"
+        exportConfig={{ filename: "finish-products", columns: BASE_COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
+
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
+              {modalMode === "edit" ? "Edit Finish" : "Add Finish"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Finish Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="name"
+                  value={formData.name}
+                  onChange={(event) => {
+                    setFormData((previous) => ({ ...previous, name: event.target.value }));
+                    if (errors.name) setErrors((previous) => ({ ...previous, name: undefined }));
+                  }}
+                  maxLength={100}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  placeholder="e.g. Matte, Glossy"
                 />
-              )}
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              </div>
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active</span>
+                <ToggleButton
+                  isToggle={formData.active}
+                  handleClick={() => setFormData((previous) => ({ ...previous, active: !previous.active }))}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
+                  {saving ? "Saving..." : modalMode === "edit" ? "Save Changes" : "Create Finish"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
 
-        {/* Add User Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddUserSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Reset"
-          title="Add Finish Products"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4 flex space-x-4">
-            <div className="w-full">
-              <Input
-                labelName="User Name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
-                maxLength={50}
-                required
-              />
-            </div>
-          </div>
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={confirmStatus}
+        title={`${isActive(statusTarget) ? "Deactivate" : "Activate"} Finish`}
+        message={`${isActive(statusTarget) ? "Deactivate" : "Activate"} "${statusTarget?.name || "this finish"}"?`}
+        variant={isActive(statusTarget) ? "warning" : "success"}
+        confirmLabel={isActive(statusTarget) ? "Deactivate" : "Activate"}
+        loading={saving}
+      />
 
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        {/* Edit User Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditUserSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Finish Product"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4">
-            <div className="w-full">
-              <Input
-                labelName="Name"
-                name="name"
-                type="text"
-                placeholder="Enter Name"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
-                maxLength={50}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={"Are you sure you want to delete the Item?"}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? "enable" : "disable"} this user?`}
-        />
-      </div>
-    </>
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Finish"
+        message={`Delete "${deleteTarget?.name || "this finish"}"? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={saving}
+      />
+    </div>
   );
 };
 

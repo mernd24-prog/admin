@@ -190,6 +190,10 @@ export const MODULE_DEFAULT_ROUTES = {
   "seller-bank":      "seller-bank",
   "seller-management":"seller-users",
   "sellers/commissions":"seller-finance",
+  commission:           "commission-rules",
+  "commission-rules":   "commission-rules",
+  "platform-fee":       "platform-fee-config",
+  "platform-fee-rules": "platform-fee-config",
   // CMS/Content
   cms:       "content-management",
   cms_pages: "content-management",
@@ -306,6 +310,8 @@ const ROUTE_MODULES = [
     ["orders"],
   ],
   [["/payments", "/refunds"], ["payments", "wallets", "orders"]],
+  [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
+  [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/returns", "/order-return-reasons"], ["returns", "orders"]],
   [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
@@ -385,7 +391,7 @@ const ROUTE_MODULES = [
   ],
 
   // Notifications
-  [["/messages"], ["notifications", "users"]],
+  [["/messages", "/notifications"], ["notifications", "users"]],
 
   // Misc legacy
   [

@@ -2,20 +2,25 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { MdSettings, MdAdd, MdDelete, MdEdit, MdListAlt, MdToggleOff, MdToggleOn } from "react-icons/md";
 import {
   getPlatformOptions,
   createPlatformOption,
   updatePlatformOption,
   deletePlatformOption,
 } from "../../../Redux/adminCoreSlice";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
-import AddButton from "../../../components/Button/AddButton";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  ConfirmModal,
+  FilterBar,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { useListPage } from "../../../hooks/useListPage";
 import useDropdownOptions from "../../../hooks/useDropdownOptions";
-
-const PAGE_SIZE = 15;
 
 const DISPLAY_TYPE_META = {
   button: { label: "Button", color: "bg-blue-100 text-blue-700" },
@@ -26,21 +31,23 @@ const DISPLAY_TYPE_META = {
 };
 
 const slugify = (value = "") =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
-const emptyForm = {
-  name: "",
-  slug: "",
-  displayType: "dropdown",
-  description: "",
-  active: true,
-};
-
+const emptyForm = { name: "", slug: "", displayType: "dropdown", description: "", active: true };
 const idOf = (r) => r?._id || r?.id || "";
+
+const FILTER_FIELDS = [
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+    width: "w-40",
+  },
+];
 
 const getListPayload = (sliceData = {}) => {
   const payload =
@@ -59,63 +66,89 @@ const getTotal = (sliceData = {}, fallback = 0) =>
   sliceData?.data?.total ||
   fallback;
 
+const COLUMNS = [
+  {
+    key: "name",
+    label: "Attribute Name",
+    sortable: true,
+    render: (v, row) => (
+      <div>
+        <p className="font-semibold text-gray-800">{v}</p>
+        <p className="font-mono text-xs text-gray-400">{row.slug || "—"}</p>
+      </div>
+    ),
+  },
+  {
+    key: "displayType",
+    label: "Display Type",
+    render: (v) => {
+      const meta = DISPLAY_TYPE_META[v] || DISPLAY_TYPE_META.button;
+      return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}>
+          {meta.label}
+        </span>
+      );
+    },
+  },
+  {
+    key: "description",
+    label: "Description",
+    render: (v) => <span className="text-gray-500 text-xs max-w-[200px] truncate block">{v || "—"}</span>,
+  },
+  {
+    key: "active",
+    label: "Status",
+    render: (v) => <StatusBadge status={v !== false ? "active" : "inactive"} dot />,
+  },
+];
+
 export default function ProductOptions() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const selector = useSelector((s) => s.adminCore);
+  const list = useListPage({ defaultPageSize: 15, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const selector = useSelector((s) => s.adminCore);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const displayTypes = useDropdownOptions("product-option-display-types");
+  const { toQueryParams } = list;
 
   const items = getListPayload(selector?.platformOptionsData);
   const total = getTotal(selector?.platformOptionsData, items.length);
   const loading = selector?.loading;
 
   const load = useCallback(() => {
-    dispatch(
-      getPlatformOptions({ page, limit: PAGE_SIZE, q: search || undefined }),
-    );
-  }, [dispatch, page, search]);
+    const params = toQueryParams();
+    dispatch(getPlatformOptions({
+      page: params.page,
+      limit: params.limit || 15,
+      q: params.search || undefined,
+      active: params.active || undefined,
+      sortBy: params.sortBy,
+      sortDir: params.sortDir,
+    }));
+  }, [dispatch, toQueryParams]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setErrors({});
-    setModalOpen(true);
-  };
-
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setErrors({}); setModalOpen(true); };
   const openEdit = (row) => {
     setEditing(row);
-    setForm({
-      name: row.name || "",
-      slug: row.slug || slugify(row.name),
-      displayType: row.displayType || "dropdown",
-      description: row.description || "",
-      active: row.active !== false,
-    });
+    setForm({ name: row.name || "", slug: row.slug || slugify(row.name), displayType: row.displayType || "dropdown", description: row.description || "", active: row.active !== false });
     setErrors({});
     setModalOpen(true);
   };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditing(null);
-  };
+  const closeModal = () => { setModalOpen(false); setEditing(null); };
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required";
+    if (form.slug && !/^[a-z0-9-]+$/.test(form.slug)) e.slug = "Use lowercase letters, numbers, and hyphens only";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -125,9 +158,7 @@ export default function ProductOptions() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(
-          updatePlatformOption({ id: idOf(editing), ...form }),
-        ).unwrap();
+        await dispatch(updatePlatformOption({ id: idOf(editing), ...form })).unwrap();
         toast.success("Option master updated");
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
@@ -137,13 +168,12 @@ export default function ProductOptions() {
       load();
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setSaving(true);
     try {
       await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
       toast.success("Option master deleted");
@@ -151,162 +181,137 @@ export default function ProductOptions() {
       load();
     } catch (err) {
       toast.error(err?.message || "Delete failed");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleToggleActive = async (row) => {
+    if (!row) return;
+    setSaving(true);
     try {
-      await dispatch(
-        updatePlatformOption({ id: idOf(row), active: !row.active }),
-      ).unwrap();
+      await dispatch(updatePlatformOption({ id: idOf(row), active: !row.active })).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
+      setStatusTarget(null);
       load();
     } catch (err) {
       toast.error(err?.message || "Failed");
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
-      <Loader loading={loading} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">
-            Product Option Masters
-          </h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Define reusable option masters like Size, Color, RAM, Material,
-            Warranty, Country, State, and City.
-          </p>
+  const columns = [
+    ...COLUMNS,
+    {
+      key: "actions",
+      label: "Actions",
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <PermissionGuard module="products" action={ACTIONS.VIEW} hide>
+            <button
+              type="button"
+              onClick={() => navigate(`/app/product-option-value/${idOf(row)}`)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              title="Manage values"
+            >
+              <MdListAlt size={16} />
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              title="Edit option"
+            >
+              <MdEdit size={16} />
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
+            <button
+              type="button"
+              onClick={() => setStatusTarget(row)}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
+                row.active === false
+                  ? "border-green-100 text-green-600 hover:bg-green-50"
+                  : "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
+              }`}
+              title={row.active === false ? "Enable option" : "Disable option"}
+            >
+              {row.active === false ? <MdToggleOn size={18} /> : <MdToggleOff size={18} />}
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50"
+              title="Delete option"
+            >
+              <MdDelete size={16} />
+            </button>
+          </PermissionGuard>
         </div>
-        <AddButton onClick={openAdd} />
-      </div>
+      ),
+    },
+  ];
 
-      {/* Search */}
-      <div className="flex gap-2">
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Search attributes…"
-          className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
+  return (
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Option Masters"
+        subtitle="Define reusable option attributes like Size, Color, RAM, Material"
+        breadcrumbs={[{ label: "Product Management" }, { label: "Option Masters" }]}
+        actions={
+          <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
+              <MdAdd size={16} /> Add Option
+            </button>
+          </PermissionGuard>
+        }
+      />
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              {[
-                "Attribute Name",
-                "Display Type",
-                "Description",
-                "Status",
-                "Actions",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {items.length === 0 && !loading ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-16 text-center text-sm text-gray-400"
-                >
-                  No option masters yet. Click "Add" to create your first one.
-                </td>
-              </tr>
-            ) : (
-              items.map((row) => {
-                const dtMeta =
-                  DISPLAY_TYPE_META[row.displayType] ||
-                  DISPLAY_TYPE_META.button;
-                return (
-                  <tr key={idOf(row)} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-800">{row.name}</p>
-                      <p className="font-mono text-xs text-gray-400">
-                        {row.slug || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dtMeta.color}`}
-                      >
-                        {dtMeta.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">
-                      {row.description || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <ToggleButton
-                        isToggle={row.active !== false}
-                        handleClick={() => handleToggleActive(row)}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() =>
-                            navigate(`/app/product-option-value/${idOf(row)}`)
-                          }
-                          className="px-3 py-1 text-xs font-medium text-green-600 border border-green-200 rounded hover:bg-green-50"
-                        >
-                          Manage Values →
-                        </button>
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(row)}
-                          className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search attributes…"
+        emptyText="No option masters yet."
+        emptyIcon={<MdSettings size={40} className="text-gray-200" />}
+        requiredModule="products"
+        exportConfig={{ filename: "product-option-masters", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
 
-      {total > PAGE_SIZE && (
-        <Pagination
-          totalPages={Math.ceil(total / PAGE_SIZE)}
-          currentPage={page}
-          onPageChange={setPage}
-        />
-      )}
-
-      {/* Add / Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
               {editing ? "Edit Option Master" : "New Option Master"}
             </h2>
-
             <div className="space-y-4">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name <span className="text-red-500">*</span>
@@ -314,55 +319,36 @@ export default function ProductOptions() {
                 <input
                   autoFocus
                   value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      name: e.target.value,
-                      slug: f.slug || slugify(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: f.slug || slugify(e.target.value) }))}
                   placeholder="e.g. Color, Size, RAM, Material"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? "border-red-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                )}
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Slug
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
                 <input
                   value={form.slug}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, slug: slugify(e.target.value) }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
                   placeholder="e.g. size, color, storage"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.slug ? "border-red-400" : "border-gray-300"}`}
                 />
+                {errors.slug && <p className="mt-1 text-xs text-red-500">{errors.slug}</p>}
               </div>
 
-              {/* Display Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Display Type
-                </label>
-                <p className="text-xs text-gray-400 mb-2">
-                  How values from this option appear on product and variant
-                  forms
-                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
+                <p className="text-xs text-gray-400 mb-2">How values appear on product and variant forms</p>
                 <div className="grid grid-cols-2 gap-2">
                   {displayTypes.options.map((dt) => (
                     <button
                       key={dt.value}
                       type="button"
-                      onClick={() =>
-                        setForm((f) => ({ ...f, displayType: dt.value }))
-                      }
+                      onClick={() => setForm((f) => ({ ...f, displayType: dt.value }))}
                       className={`px-3 py-2 text-sm rounded-lg border text-left transition-colors ${
                         form.displayType === dt.value
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 font-medium"
+                          ? "border-[var(--admin-gold)] bg-[var(--admin-blue-soft)] text-[var(--admin-navy)] font-medium"
                           : "border-gray-200 text-gray-600 hover:border-gray-300"
                       }`}
                     >
@@ -372,49 +358,25 @@ export default function ProductOptions() {
                 </div>
               </div>
 
-              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
                 <input
                   value={form.description}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, description: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. Available color options for this product"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                 />
               </div>
 
-              {/* Active */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, active: e.target.checked }))
-                  }
-                  className="w-4 h-4 accent-indigo-600"
-                />
-                <span className="text-sm text-gray-700">
-                  Active (visible to sellers)
-                </span>
-              </label>
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active (visible to sellers)</span>
+                <ToggleButton isToggle={form.active} handleClick={() => setForm((f) => ({ ...f, active: !f.active }))} />
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
-              >
+              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60">
                 {saving ? "Saving…" : editing ? "Update" : "Create"}
               </button>
             </div>
@@ -422,11 +384,26 @@ export default function ProductOptions() {
         </div>
       )}
 
-      <DeletePopup
-        isDeleteModalOpen={Boolean(deleteTarget)}
-        closeDeleteModal={() => setDeleteTarget(null)}
-        confirmDelete={handleDelete}
-        DeleteHeading={`Delete "${deleteTarget?.name}"?`}
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Option Master"
+        message={`Delete option master "${deleteTarget?.name}"? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={saving}
+      />
+
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={() => handleToggleActive(statusTarget)}
+        title={statusTarget?.active === false ? "Enable Option Master?" : "Disable Option Master?"}
+        message={`This will mark "${statusTarget?.name || "this option"}" as ${statusTarget?.active === false ? "active" : "inactive"}.`}
+        variant={statusTarget?.active === false ? "success" : "warning"}
+        confirmLabel={statusTarget?.active === false ? "Enable" : "Disable"}
+        loading={saving}
       />
     </div>
   );

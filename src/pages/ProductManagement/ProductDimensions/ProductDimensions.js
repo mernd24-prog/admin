@@ -1,18 +1,19 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from "react";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import Button from "../../../components/Atoms/buttons/button";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { toast } from "sonner";
-import Pagination from "../../../components/Pagination/Pagination";
-import Loader from "../../../components/Loader/Loader";
+import { MdStraighten, MdAdd, MdDelete, MdEdit, MdToggleOff, MdToggleOn } from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+  ConfirmModal,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   createDimension,
   enableDisableDimension,
@@ -20,479 +21,295 @@ import {
   softDeleteDimension,
   updateDimension,
 } from "../../../Redux/productSlice";
-import Input from "../../../components/Atoms/Input/Input";
-import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
+
+const FILTER_FIELDS = [
+  {
+    key: "isDisable",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "false", label: "Active" },
+      { value: "true", label: "Disabled" },
+    ],
+  },
+];
+
+const BASE_COLUMNS = [
+  {
+    key: "dimensions_value",
+    label: "Dimension Value",
+    sortable: true,
+    render: (v) => <span className="font-medium text-gray-800 capitalize">{v || "—"}</span>,
+  },
+  {
+    key: "isDisable",
+    label: "Status",
+    render: (v) => <StatusBadge status={v ? "inactive" : "active"} dot />,
+  },
+];
+
+const EMPTY_FORM = { _id: "", dimensions_value: "", isDisable: false };
+
 const ProductDimensions = () => {
   const dispatch = useDispatch();
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    dimensions_value: "",
-    isDisable: false,
-  });
-  const [errors, setErrors] = useState({});
-  const [keyword, setKeyword] = useState("");
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [deleteData, setDeleteData] = useState("");
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
-  };
-  const size = 10;
+  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
-  useEffect(() => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: "dimensions_value",
-      select: "dimensions_value isDisable",
-    };
-    dispatch(getListDimension(reqData));
-  }, [size, pageNo, dispatch, isRefresh]);
+  const [isRefresh, setIsRefresh] = useState(false);
+  const [modalMode, setModalMode] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const selector = useSelector((state) => state.product);
-  const getListData = selector?.getListDimensionData?.data?.data;
-  const totalUsers = getListData?.total || 0;
+  const listData = selector?.getListDimensionData?.data?.data || {};
+  const dimensionList = listData?.list || [];
+  const total = Number(listData?.total || 0);
+
+  useEffect(() => {
+    const params = list.toQueryParams();
+    dispatch(
+      getListDimension({
+        page: params.page,
+        size: params.limit || 10,
+        keyWord: params.search || "",
+        searchFields: "dimensions_value",
+        select: "dimensions_value isDisable",
+        sortBy: params.sortBy,
+        sortDir: params.sortDir,
+        ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
+      })
+    );
+  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setForm((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const validateAddForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!formData.dimensions_value || formData.dimensions_value.trim() === "") {
-      newErrors.dimensions_value = "Dimension value is required";
-      isValid = false;
-    } else if (formData.dimensions_value.trim().length < 2) {
-      newErrors.dimensions_value = "Dimension must be at least 2 characters";
-      isValid = false;
-    } else if (formData.dimensions_value.trim().length > 50) {
-      newErrors.dimensions_value = "Dimension must be less than 50 characters";
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9\s-]+$/.test(formData.dimensions_value.trim())) {
-      newErrors.dimensions_value =
-        "Dimension must not contain special characters";
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
+  const validate = () => {
+    const errs = {};
+    const val = formData.dimensions_value?.trim();
+    if (!val) errs.dimensions_value = "Dimension value is required";
+    else if (val.length < 2) errs.dimensions_value = "Min 2 characters";
+    else if (val.length > 50) errs.dimensions_value = "Max 50 characters";
+    else if (!/^[a-zA-Z0-9\s-]+$/.test(val)) errs.dimensions_value = "No special characters allowed";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      dimensions_value: "",
-      isDisable: false,
-    });
-    setErrors({});
-  };
+  const closeModal = () => { setModalMode(null); setFormData(EMPTY_FORM); setErrors({}); };
 
-  const handleAddSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateAddForm()) return;
-
-    const reqData = {
-      dimensions_value: formData.dimensions_value.trim(),
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(createDimension(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        } else {
-          toast.success(res.message || "Dimension created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.error("Error creating dimension:", error);
-        toast.error(error || "Error in creating dimension");
-      });
-  };
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  };
-
-  const tableRows = getListData?.list?.map((dimension) => [
-    // <input
-    //   type='checkbox'
-    //   checked={selectedRow.includes(dimension._id)}
-    //   onChange={(e) => handleRowCheckboxChange(e, dimension._id)}
-    //   key={`checkbox-${dimension._id}`}
-    // />
-    <CustomCheckbox
-      key={`checkbox-${dimension._id}`}
-      checked={selectedRow.includes(dimension._id)}
-      onChange={(e) => handleRowCheckboxChange(e, dimension._id)}
-    />,
-
-    <span key={`name-${dimension._id}`} className="capitalize">
-      {dimension?.dimensions_value}
-    </span>,
-    <div className="flex flex-col">
-      <ToggleButton
-        isToggle={!dimension?.isDisable}
-        handleClick={() => handleToggle(dimension)}
-      />
-    </div>,
-    <span key={`actions-${dimension._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: dimension._id,
-            dimensions_value: dimension.dimensions_value,
-            isDisable: dimension.isDisable,
-          });
-          setIsEditModal(true);
-        }}
-        onDelete={() => {
-          setDeleteData({ _id: [dimension._id] });
-          setShowDeleteConfirmation(true);
-        }}
-        showPasswordButton={false}
-        showLinkButton={false}
-      />
-    </span>,
-  ]);
-
-  const confirmDelete = () => {
-    dispatch(softDeleteDimension(deleteData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        }
-        toast.success(res.message || "Dimension Deleted Successfully");
-        setShowDeleteConfirmation(false);
-        setIsRefresh(!isRefresh);
-      })
-      .catch((error) => {
-        console.error("Error deleting dimension:", error);
-        toast.error(error.message || "Error in Deleting Dimension");
-      });
-  };
-
-  const handleDisableFunc = () => {
-    if (!toggleStates) return;
-    const obj = {
-      _id: [toggleStates._id],
-      isDisable: !toggleStates.isDisable,
-    };
-
-    dispatch(enableDisableDimension(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating status:", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
-  };
-
-  const handleToggle = (dimension) => {
-    setToggleStates(dimension);
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleBulkAction = async (action) => {
-    if (!selectedRow.length) {
-      toast.warning("Please select at least one dimension");
-      return;
-    }
-
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true,
-      };
-      try {
-        const res = await dispatch(enableDisableDimension(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setIsRefresh(!isRefresh);
-          setSelectedRow([]);
-        }
-      } catch (error) {
-        console.error("Bulk action error:", error);
-        toast.error(error?.message || error || "Failed to perform bulk action");
+    if (!validate()) return;
+    setSaving(true);
+    const payload = { dimensions_value: formData.dimensions_value.trim(), isDisable: formData.isDisable };
+    try {
+      let res;
+      if (modalMode === "edit") {
+        res = await dispatch(updateDimension({ ...payload, _id: formData._id })).unwrap();
+      } else {
+        res = await dispatch(createDimension(payload)).unwrap();
       }
-    } else if (action === "Delete") {
-      setDeleteData({ _id: selectedRow });
-      setShowDeleteConfirmation(true);
+      if (res?.error) { toast.error(res.error); return; }
+      toast.success(res?.message || `Dimension ${modalMode === "edit" ? "updated" : "created"}`);
+      closeModal();
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Save failed");
+    } finally { setSaving(false); }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await dispatch(softDeleteDimension({ _id: [deleteTarget._id] })).unwrap();
+      toast.success(res?.message || "Dimension deleted");
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Delete failed");
     }
   };
 
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      dimensions_value: "",
-      isDisable: false,
-    });
-    setErrors({});
-  };
-
-  const handleToggleAdd = () => {
-    setForm((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-
-  const handleEditSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateAddForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      dimensions_value: formData.dimensions_value.trim(),
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(updateDimension(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Dimension Updated Successfully");
-          setIsEditModal(false);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating dimension:", error);
-        toast.error(error.message || "Error in Updating Dimension");
-      });
-  };
-
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.list?.map((dimension) => dimension._id) || [];
-      setSelectedRow(allIds);
-    } else {
-      setSelectedRow([]);
+  const handleToggleConfirm = async () => {
+    if (!toggleTarget) return;
+    try {
+      const res = await dispatch(enableDisableDimension({ _id: [toggleTarget._id], isDisable: !toggleTarget.isDisable })).unwrap();
+      toast.success(res?.message || "Status updated");
+      setConfirmOpen(false);
+      setToggleTarget(null);
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Status update failed");
     }
   };
-  const handleApplySearchFilters = () => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: "dimensions_value",
-      select: "dimensions_value isDisable",
-    };
-    dispatch(getListDimension(reqData));
-    setIsRefresh(!isRefresh);
-  };
-  const handleSearchRemove = useCallback(() => {
-    setFilters((prev) => ({ ...prev, search: "" }));
-    setKeyword("");
-    setPageNo(1);
-    setIsRefresh(!isRefresh);
-  }, [dispatch, size, isRefresh]);
+
+  const columns = useMemo(
+    () => [
+      ...BASE_COLUMNS,
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn"
+                title="Edit dimension"
+                onClick={() => {
+                  setFormData({ _id: row._id, dimensions_value: row.dimensions_value || "", isDisable: row.isDisable || false });
+                  setModalMode("edit");
+                }}
+              >
+                <MdEdit size={18} />
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
+              <button
+                type="button"
+                className={row.isDisable ? "admin-icon-btn text-green-600" : "admin-icon-btn text-yellow-600"}
+                title={row.isDisable ? "Enable dimension" : "Disable dimension"}
+                onClick={() => { setToggleTarget(row); setConfirmOpen(true); }}
+              >
+                {row.isDisable ? <MdToggleOn size={20} /> : <MdToggleOff size={20} />}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
+              <button
+                type="button"
+                className="admin-icon-btn text-red-600"
+                title="Delete dimension"
+                onClick={() => { setDeleteTarget(row); setDeleteOpen(true); }}
+              >
+                <MdDelete size={18} />
+              </button>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className="max-w-7xl mx-auto">
-        <div className=" overflow-hidden overflow-y-auto py-6">
-          <div className="flex justify-between items-center">
-            <h3>
-              Home / <b>Product Dimensions</b>
-            </h3>
-            <Button
-              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
-              onClick={() => {
-                setIsOpenAddModal(true);
-              }}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Product Dimensions"
+        subtitle="Manage dimension values for products"
+        breadcrumbs={[{ label: "Product Management" }, { label: "Dimensions" }]}
+        actions={
+          <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={() => setModalMode("add")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
             >
-              Add Dimension
-            </Button>
-          </div>
-          <div className="overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    isDelete={true}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    placeholder="Search By Dimension Value"
-                    handleSearchRemove={handleSearchRemove}
-                    applyFilters={handleApplySearchFilters}
-                  />
-                </div>
-              </div>
-            </div>
-            <TableData
-              Heading="Product Dimensions"
-              tableHeadings={["Dimension Value", "Status", "Actions"]}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search by dimension..."
-              showFilter={false}
-              showSummary={false}
-              onClickFunction={() => {
-                // setIsEditMode(false);
-              }}
-              totalData={totalUsers}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              searchTerm={keyword}
-              setSearchTerm={setKeyword}
-              isHeaderCheckbox={true}
-              handleHeaderCheckboxChange={handleSelectAllChange}
-              allRowsSelected={
-                selectedRow.length === (getListData?.list?.length || 0)
-              }
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {getListData?.total &&
-              size &&
-              Math.ceil(getListData.total / size) > 1 && (
-                <Pagination
-                  totalPages={Math.ceil(getListData.total / size)}
-                  currentPage={pageNo}
-                  onPageChange={onPageChange}
+              <MdAdd size={16} /> Add Dimension
+            </button>
+          </PermissionGuard>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={dimensionList}
+        loading={selector.loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search dimensions…"
+        emptyText="No dimensions found."
+        emptyIcon={<MdStraighten size={40} className="text-gray-200" />}
+        requiredModule="products"
+        exportConfig={{ filename: "product-dimensions", columns: BASE_COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={selector.loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
+
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
+              {modalMode === "add" ? "Add Dimension" : "Edit Dimension"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dimension Value <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="dimensions_value"
+                  value={formData.dimensions_value}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  placeholder="e.g. 10x20cm, Small, XL"
+                  maxLength={50}
+                  onInput={(e) => {
+                    e.target.value = e.target.value.replace(/^\s+/, "").replace(/[^a-zA-Z0-9\s-]/g, "");
+                  }}
                 />
-              )}
+                {errors.dimensions_value && <p className="text-red-500 text-xs mt-1">{errors.dimensions_value}</p>}
+              </div>
+
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active</span>
+                <ToggleButton isToggle={!formData.isDisable} handleClick={() => setFormData((p) => ({ ...p, isDisable: !p.isDisable }))} />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
+                  {saving ? "Saving…" : modalMode === "add" ? "Create" : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
 
-        {/* Add Dimension Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Cancel"
-          title="Add New Dimension"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4">
-            <Input
-              labelName="Dimension Value"
-              name="dimensions_value"
-              type="text"
-              value={formData.dimensions_value}
-              onChange={handleInputChange}
-              error={errors.dimensions_value}
-              maxLength={50}
-              required
-              onInput={(e) => {
-                let val = e.target.value;
-                val = val.replace(/^\s+/, "");
-                val = val.replace(/[^a-zA-Z0-9\s-]/g, "");
-                if (val.length > 50) {
-                  val = val.slice(0, 50);
-                }
-                e.target.value = val;
-              }}
-            />
-          </div>
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onConfirm={handleToggleConfirm}
+        title={`${toggleTarget?.isDisable ? "Enable" : "Disable"} Dimension`}
+        message={`${toggleTarget?.isDisable ? "Enable" : "Disable"} "${toggleTarget?.dimensions_value}"?`}
+        variant={toggleTarget?.isDisable ? "success" : "warning"}
+        confirmLabel={toggleTarget?.isDisable ? "Enable" : "Disable"}
+      />
 
-        {/* Edit Dimension Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Dimension"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4">
-            <FormInput
-              label="Dimension Value"
-              name="dimensions_value"
-              type="text"
-              value={formData.dimensions_value}
-              onChange={handleInputChange}
-              error={errors.dimensions_value}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={"Are you sure you want to delete this dimension?"}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? "enable" : "disable"} this dimension?`}
-        />
-      </div>
-    </>
+      <ConfirmModal
+        open={deleteOpen}
+        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Dimension"
+        message={`Delete dimension "${deleteTarget?.dimensions_value}"? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+      />
+    </div>
   );
 };
 

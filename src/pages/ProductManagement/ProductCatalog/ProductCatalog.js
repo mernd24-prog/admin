@@ -11,7 +11,9 @@ import AddButton from "../../../components/Button/AddButton";
 // Redux
 import {
   approveDisapprove,
+  archiveProduct,
   deleteProducts,
+  duplicateProduct,
   enableDisableProductCatalogs,
   getProductById,
   getProductModerationQueue,
@@ -119,6 +121,8 @@ const ProductCatalog = () => {
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [duplicateConfirmation, setDuplicateConfirmation] = useState({ open: false, product: null });
+  const [archiveConfirmation, setArchiveConfirmation] = useState({ open: false, product: null });
   const [statusConfirmation, setStatusConfirmation] = useState({
     open: false,
     type: null,
@@ -523,6 +527,50 @@ const ProductCatalog = () => {
     });
   };
 
+  const handleDuplicateProduct = (product) => {
+    setDuplicateConfirmation({ open: true, product });
+  };
+
+  const handleDuplicateSubmit = async () => {
+    const product = duplicateConfirmation.product;
+    try {
+      setLoading(true);
+      const res = await dispatch(
+        duplicateProduct({ _id: product?._id }),
+      ).unwrap();
+      const newId = res?.data?.data?._id || res?.data?._id;
+      toast.success(res?.message || "Product duplicated successfully.");
+      setDuplicateConfirmation({ open: false, product: null });
+      fetchProductsList();
+      if (newId) navigate(`/app/product-catalog/form/${newId}`);
+    } catch (err) {
+      toast.error(err?.message || "Failed to duplicate product.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArchiveProduct = (product) => {
+    setArchiveConfirmation({ open: true, product });
+  };
+
+  const handleArchiveSubmit = async () => {
+    const product = archiveConfirmation.product;
+    try {
+      setLoading(true);
+      const res = await dispatch(
+        archiveProduct({ _id: product?._id, reason: "admin_archived" }),
+      ).unwrap();
+      toast.success(res?.message || "Product archived successfully.");
+      setArchiveConfirmation({ open: false, product: null });
+      fetchProductsList();
+    } catch (err) {
+      toast.error(err?.message || "Failed to archive product.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStatusConfirm = async () => {
     try {
       setLoading(true);
@@ -728,6 +776,26 @@ const ProductCatalog = () => {
                 </button>
               </PermissionGuard>
             )}
+            {product?.status !== "archived" && (
+              <PermissionGuard module="products" action="delete" hide>
+                <button
+                  className="rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+                  onClick={() => handleArchiveProduct(product)}
+                  title="Archive product"
+                >
+                  Archive
+                </button>
+              </PermissionGuard>
+            )}
+            <PermissionGuard module="products" action="create" hide>
+              <button
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                onClick={() => handleDuplicateProduct(product)}
+                title="Duplicate product"
+              >
+                Duplicate
+              </button>
+            </PermissionGuard>
             {canReviewProduct(product) && (
               <PermissionGuard module="products" action="approve" hide>
                 <button
@@ -747,7 +815,9 @@ const ProductCatalog = () => {
       canToggleProduct,
       formatDate,
       handleApproveToggle,
+      handleArchiveProduct,
       handleDelete,
+      handleDuplicateProduct,
       handleEditProduct,
       handleImageClick,
       handleRestoreProduct,
@@ -886,6 +956,28 @@ const ProductCatalog = () => {
         confirmLabel={statusConfirmation.confirmLabel}
         loading={loading && statusConfirmation.open}
         onConfirm={handleStatusConfirm}
+      />
+
+      <ConfirmModal
+        open={duplicateConfirmation.open}
+        onClose={() => setDuplicateConfirmation({ open: false, product: null })}
+        title="Duplicate product?"
+        message={`This will create a draft copy of "${duplicateConfirmation.product?.title || "this product"}". You can edit it before publishing.`}
+        variant="info"
+        confirmLabel="Duplicate"
+        loading={loading && duplicateConfirmation.open}
+        onConfirm={handleDuplicateSubmit}
+      />
+
+      <ConfirmModal
+        open={archiveConfirmation.open}
+        onClose={() => setArchiveConfirmation({ open: false, product: null })}
+        title="Archive product?"
+        message={`This will archive "${archiveConfirmation.product?.title || "this product"}" and remove it from the active catalog. You can restore it later.`}
+        variant="danger"
+        confirmLabel="Archive"
+        loading={loading && archiveConfirmation.open}
+        onConfirm={handleArchiveSubmit}
       />
 
       <ImageGallery

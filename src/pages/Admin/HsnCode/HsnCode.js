@@ -1,21 +1,20 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import Loader from "../../../components/Loader/Loader";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import Pagination from "../../../components/Pagination/Pagination";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import Input from "../../../components/Atoms/Input/Input";
-import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import AddButton from "../../../components/Button/AddButton";
+import { MdCode, MdAdd } from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+  ConfirmModal,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import { validateValues } from "../../../_helpers/validation";
-
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   createHsn,
   getHsnList,
@@ -24,497 +23,351 @@ import {
   softDeleteHsn,
 } from "../../../Redux/productSlice";
 
-const PAGE_SIZE = 10;
+const FILTER_FIELDS = [
+  {
+    key: "isDisable",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "false", label: "Active" },
+      { value: "true", label: "Disabled" },
+    ],
+  },
+];
 
-const INITIAL_FORM_STATE = {
+const COLUMNS = [
+  {
+    key: "code",
+    label: "HSN Code",
+    sortable: true,
+    render: (v) => (
+      <span className="font-mono font-semibold text-[var(--admin-navy)]">
+        {v}
+      </span>
+    ),
+  },
+  {
+    key: "IGST",
+    label: "IGST %",
+    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+  },
+  {
+    key: "CGST",
+    label: "CGST %",
+    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+  },
+  {
+    key: "SGST",
+    label: "SGST %",
+    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+  },
+  {
+    key: "additionalTax",
+    label: "Additional %",
+    render: (v) => <span className="text-sm">{v ?? 0}%</span>,
+  },
+  {
+    key: "description",
+    label: "Description",
+    render: (v) => (
+      <span className="text-sm text-gray-600 max-w-xs truncate block">
+        {v || "—"}
+      </span>
+    ),
+  },
+  {
+    key: "isDisable",
+    label: "Status",
+    render: (v) => <StatusBadge status={v ? "inactive" : "active"} dot />,
+  },
+];
+
+const EMPTY_FORM = {
   code: "",
   IGST: "",
   CGST: "",
   SGST: "",
-  additionalTax: "",
+  additionalTax: "0",
   description: "",
   isDisable: false,
 };
 
-const HSN_VALIDATION_SCHEMA = {
-  code: {
-    label: "HSN Code",
-    required: true,
-    hsn: true,
-    messages: { hsn: "HSN Code must be 4 to 8 digits" },
-  },
-  IGST: { label: "IGST", required: true, number: true, min: 0, max: 100 },
-  CGST: { label: "CGST", required: true, number: true, min: 0, max: 100 },
-  SGST: { label: "SGST", required: true, number: true, min: 0, max: 100 },
-  additionalTax: {
-    label: "Additional Tax",
-    required: true,
-    number: true,
-    min: 0,
-    max: 100,
-  },
-};
-
 const HsnCode = () => {
   const dispatch = useDispatch();
-  const selector = useSelector((state) => state.product); // Changed to product selector
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "code",
+    defaultSortDir: "asc",
+  });
 
-  const [apiRes, setApiRes] = useState({ list: [], total: 0 });
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [isAddModal, setIsAddModal] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [filters, setFilters] = useState({ search: "" });
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
-  const [errors, setErrors] = useState({});
+  const [hsnList, setHsnList] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [isRefresh, setIsRefresh] = useState(false);
 
-  const getAllRowIds = useMemo(
-    () => apiRes?.list?.map((row) => row?._id) || [],
-    [apiRes?.list],
-  );
+  const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  const isAllRowsSelected = useMemo(
-    () =>
-      selectedRow.length === apiRes?.list?.length && apiRes?.list?.length > 0,
-    [selectedRow.length, apiRes?.list?.length],
-  );
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const fetchHsnList = useCallback(
-    async (searchKeyword = filters?.search) => {
-      const query = {
-        page: pageNo,
-        size: PAGE_SIZE,
-        select:
-          "code IGST CGST SGST additionalTax description isDisable createdAt",
-        keyWord: searchKeyword || "",
-        searchFields: "code,description",
-        sortOrder: "asc",
-        sortBy: "code",
-      };
-
-      setIsLoading(true);
-      try {
-        const res = await dispatch(getHsnList(query)).unwrap();
-        setApiRes(res?.data || { list: [], total: 0 });
-      } catch (err) {
-        setApiRes({ list: [], total: 0 });
-        toast.error(err?.message || "Failed to fetch HSN codes");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [dispatch, pageNo, filters?.search],
-  );
+  const fetchList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = list.toQueryParams();
+      const res = await dispatch(
+        getHsnList({
+          page: params.page?.toString(),
+          size: params.limit?.toString() || "20",
+          keyWord: params.search || "",
+          ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
+        })
+      ).unwrap();
+      const data = res?.data?.data || res?.data || {};
+      const items = Array.isArray(data) ? data : data?.list || [];
+      const totalCount = Number(data?.total ?? items.length);
+      setHsnList(items);
+      setTotal(totalCount);
+    } catch (err) {
+      toast.error(err?.message || "Failed to load HSN codes");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
 
   useEffect(() => {
-    fetchHsnList();
-  }, [fetchHsnList, isRefresh]);
+    fetchList();
+  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
 
-  const handlePageChange = useCallback((newPageNo) => {
-    setPageNo(newPageNo);
-  }, []);
-
-  const handleHeaderCheckboxChange = useCallback(
-    (e) => {
-      setSelectedRow(e.target.checked ? getAllRowIds : []);
-    },
-    [getAllRowIds],
-  );
-
-  const handleRowCheckboxChange = useCallback((e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  }, []);
-
-  const handleInputChange = useCallback(
-    (e) => {
-      const { name, value, type } = e.target;
-
-      // Handle number inputs
-      const processedValue =
-        type === "number" ? (value === "" ? 0 : Number(value)) : value;
-
-      setFormData((prev) => ({ ...prev, [name]: processedValue }));
-
-      if (errors[name]) {
-        setErrors((prev) => ({ ...prev, [name]: undefined }));
-      }
-    },
-    [errors],
-  );
-
-  const validateForm = useCallback(() => {
-    return validateValues(formData, HSN_VALIDATION_SCHEMA);
-  }, [formData]);
-
-  const resetForm = useCallback(() => {
-    setFormData(INITIAL_FORM_STATE);
-    setErrors({});
-    setIsEditMode(false);
-    setIsAddModal(false);
-  }, []);
-
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-
-      const validationErrors = validateForm();
-      if (Object.keys(validationErrors).length > 0) {
-        setErrors(validationErrors);
-        return;
-      }
-
-      const basePayload = {
-        code: formData?.code,
-        IGST: Number(formData.IGST),
-        CGST: Number(formData.CGST),
-        SGST: Number(formData.SGST),
-        additionalTax: Number(formData.additionalTax),
-        description: formData.description?.trim() || "",
-        isDisable: formData?.isDisable,
-      };
-
-      try {
-        if (isEditMode) {
-          await dispatch(
-            updateHsn({ ...basePayload, _id: formData._id }),
-          ).unwrap();
-          toast.success("HSN Code updated successfully");
-        } else {
-          const createPayload = {
-            ...basePayload,
-            isDisable: formData.isDisable,
-          };
-          await dispatch(createHsn(createPayload)).unwrap();
-          toast.success("HSN Code created successfully");
-        }
-
-        resetForm();
-        setIsRefresh(!isRefresh);
-      } catch (error) {
-        toast.error(error || error?.message || "Failed to save HSN Code");
-      }
-    },
-    [formData, isEditMode, validateForm, dispatch, resetForm, isRefresh],
-  );
-
-  const handleToggle = useCallback(
-    async (data) => {
-      const apiPayload = {
-        _id: [data?._id],
-        isDisable: !data?.isDisable,
-      };
-
-      try {
-        setIsLoading(true);
-        const res = await dispatch(enableDisableHsn(apiPayload)).unwrap();
-        toast.success(res?.message || "Status updated successfully");
-        fetchHsnList();
-        setIsLoading(false);
-      } catch (error) {
-        toast.error(error?.message || "Failed to update status");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [dispatch, fetchHsnList],
-  );
-
-  const handleDelete = useCallback(
-    async (data) => {
-      const apiPayload = { _id: [data?._id] };
-      try {
-        const res = await dispatch(softDeleteHsn(apiPayload)).unwrap();
-        toast.success(res?.message || "HSN Code deleted successfully");
-        fetchHsnList();
-      } catch (error) {
-        console.log(error);
-        toast.error(error?.message || "Failed to delete HSN Code");
-      }
-    },
-    [dispatch, fetchHsnList],
-  );
-
-  const handleBulkAction = useCallback(
-    async (action) => {
-      if (!selectedRow.length) {
-        toast.error("Please select items first");
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        let res;
-        if (action === "Active" || action === "Inactive") {
-          const apiPayload = {
-            _id: selectedRow,
-            isDisable: action === "Inactive",
-          };
-          res = await dispatch(enableDisableHsn(apiPayload)).unwrap();
-        } else if (action === "Delete") {
-          const apiPayload = { _id: selectedRow };
-          res = await dispatch(softDeleteHsn(apiPayload)).unwrap();
-        }
-
-        toast.success(
-          res?.message || `${action} operation completed successfully`,
-        );
-        setSelectedRow([]);
-        fetchHsnList();
-      } catch (error) {
-        toast.error(
-          error?.message || `Failed to ${action.toLowerCase()} items`,
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [selectedRow, dispatch, fetchHsnList],
-  );
-
-  const handleEdit = useCallback((item) => {
-    setFormData({
-      _id: item._id,
-      code: item.code,
-      IGST: item.IGST || 0,
-      CGST: item.CGST || 0,
-      SGST: item.SGST || 0,
-      additionalTax: item.additionalTax || 0,
-      description: item.description || "",
-      isDisable: item?.isDisable,
-    });
-    setIsEditMode(true);
-    setIsAddModal(true);
-  }, []);
-
-  const handleAddNew = useCallback(() => {
-    setFormData(INITIAL_FORM_STATE);
-    setIsEditMode(false);
-    setIsAddModal(true);
-  }, []);
-
-  const applyFilters = useCallback(() => {
-    setPageNo(1); // Reset to first page when applying filters
-    fetchHsnList(filters?.search);
-  }, [fetchHsnList, filters?.search]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters({ search: "" });
-    setPageNo(1);
-    fetchHsnList("");
-  }, [fetchHsnList]);
-
-  const tableHeadings = [
-    "HSN Code",
-    "IGST (%)",
-    "CGST (%)",
-    "SGST (%)",
-    "Additional Tax",
-    "Description",
-    "Status",
-    "Action",
-  ];
-
-  const tableRows = useMemo(
-    () =>
-      apiRes?.list?.map((item) => [
-        <div key={`checkbox-${item._id}`}>
-          <CustomCheckbox
-            checked={selectedRow.includes(item._id)}
-            onChange={(e) => handleRowCheckboxChange(e, item._id)}
-          />
-        </div>,
-        <span
-          key={`code-${item._id}`}
-          className="text-sm font-medium text-gray-800 font-mono"
-        >
-          {item?.code}
-        </span>,
-        <span key={`igst-${item._id}`} className="text-sm text-gray-700">
-          {item?.IGST || 0}%
-        </span>,
-        <span key={`cgst-${item._id}`} className="text-sm text-gray-700">
-          {item?.CGST || 0}%
-        </span>,
-        <span key={`sgst-${item._id}`} className="text-sm text-gray-700">
-          {item?.SGST || 0}%
-        </span>,
-        <span key={`additional-${item._id}`} className="text-sm text-gray-700">
-          {item?.additionalTax || 0}
-        </span>,
-        <span
-          key={`description-${item._id}`}
-          className="text-sm text-gray-700 max-w-xs truncate"
-          title={item?.description}
-        >
-          {item?.description || "-"}
-        </span>,
-        <div
-          key={`toggle-${item._id}`}
-          className={isLoading ? " cursor-progress" : "cursor-default"}
-        >
-          <ToggleButton
-            isToggle={!item?.isDisable}
-            handleClick={() => handleToggle(item)}
-            requiredModule="tax"
-          />
-        </div>,
-        <div key={`actions-${item._id}`} className="flex justify-center gap-2">
-          <ActionButtons
-            onEdit={() => handleEdit(item)}
-            showLinkButton={false}
-            showDeleteButton={true}
-            onDelete={() => handleDelete(item)}
-            requiredModule="tax"
-          />
-        </div>,
-      ]) || [],
-    [
-      apiRes?.list,
-      selectedRow,
-      handleRowCheckboxChange,
-      handleToggle,
-      handleEdit,
-      handleDelete,
-    ],
-  );
-
-  const handleToggleAction = () => {
-    setFormData((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
+  const validateForm = () => {
+    const errs = {};
+    if (!formData.code?.trim()) errs.code = "HSN Code is required";
+    else if (!/^\d{4,8}$/.test(formData.code.trim())) errs.code = "Must be 4-8 digits";
+    if (formData.IGST === "" || formData.IGST === null) errs.IGST = "IGST is required";
+    else if (Number(formData.IGST) < 0 || Number(formData.IGST) > 100) errs.IGST = "0-100 only";
+    if (formData.CGST === "" || formData.CGST === null) errs.CGST = "CGST is required";
+    else if (Number(formData.CGST) < 0 || Number(formData.CGST) > 100) errs.CGST = "0-100 only";
+    if (formData.SGST === "" || formData.SGST === null) errs.SGST = "SGST is required";
+    else if (Number(formData.SGST) < 0 || Number(formData.SGST) > 100) errs.SGST = "0-100 only";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const closeModal = () => { setModalMode(null); setFormData(EMPTY_FORM); setErrors({}); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setSaving(true);
+    const payload = {
+      code: formData.code.trim(),
+      IGST: Number(formData.IGST),
+      CGST: Number(formData.CGST),
+      SGST: Number(formData.SGST),
+      additionalTax: Number(formData.additionalTax || 0),
+      description: formData.description?.trim() || "",
+      isDisable: formData.isDisable,
+    };
+    try {
+      let res;
+      if (modalMode === "edit") {
+        res = await dispatch(updateHsn({ ...payload, _id: formData._id })).unwrap();
+      } else {
+        res = await dispatch(createHsn(payload)).unwrap();
+      }
+      if (res?.error) { toast.error(res.error); return; }
+      toast.success(res?.message || `HSN code ${modalMode === "edit" ? "updated" : "created"}`);
+      closeModal();
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Save failed");
+    } finally { setSaving(false); }
+  };
+
+  const handleToggleStatus = useCallback(async (row) => {
+    try {
+      const res = await dispatch(enableDisableHsn({ _id: [row._id], isDisable: !row.isDisable })).unwrap();
+      toast.success(res?.message || "Status updated");
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Failed to update status");
+    }
+  }, [dispatch]);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await dispatch(softDeleteHsn({ _id: [deleteTarget._id] })).unwrap();
+      toast.success(res?.message || "HSN code deleted");
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Delete failed");
+    }
+  };
+
+  const rowActions = useCallback(
+    (row) => [
+      {
+        label: "Edit",
+        onClick: () => {
+          setFormData({
+            _id: row._id,
+            code: row.code || "",
+            IGST: row.IGST ?? "",
+            CGST: row.CGST ?? "",
+            SGST: row.SGST ?? "",
+            additionalTax: row.additionalTax ?? "0",
+            description: row.description || "",
+            isDisable: row.isDisable || false,
+          });
+          setModalMode("edit");
+        },
+      },
+      {
+        label: row.isDisable ? "Enable" : "Disable",
+        onClick: () => handleToggleStatus(row),
+        danger: !row.isDisable,
+      },
+      {
+        label: "Delete",
+        onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
+        danger: true,
+      },
+    ],
+    [handleToggleStatus]
+  );
+
   return (
-    <div className="p-6 overflow-hidden max-w-7xl mx-auto overflow-x-auto overflow-y-auto space-y-3">
-      <Loader loading={isLoading || selector?.loading} />
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="HSN Codes"
+        subtitle="Manage Harmonized System Nomenclature codes and tax rates"
+        breadcrumbs={[{ label: "Tax & Compliance" }, { label: "HSN Codes" }]}
+        actions={
+          <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={() => setModalMode("add")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
+              <MdAdd size={16} /> Add HSN Code
+            </button>
+          </PermissionGuard>
+        }
+      />
 
-      {/* Header */}
-      <div className="flex justify-between items-center ">
-        <h3 className="text-lg font-semibold text-gray-800">Home / HSN Code</h3>
-        <AddButton onClick={handleAddNew} requiredModule="tax">
-          Add HSN Code
-        </AddButton>
-      </div>
-
-      <div className=" overflow-auto overflow-y-auto  bg-white rounded-lg ">
-        <SearchComponent
-          isSearchShow={true}
-          isActionButton={true}
-          filters={filters}
-          setFilters={setFilters}
-          isStatusAction={true}
-          selectedRow={selectedRow}
-          setSelectedRow={setSelectedRow}
-          placeholder="Search by HSN code or description"
-          handleAction={handleBulkAction}
-          applyFilters={applyFilters}
-          handleSearchRemove={handleSearchRemove}
-          isDelete={true}
-          requiredModule="tax"
-        />
-
-        <TableData
-          tableHeadings={tableHeadings}
-          data={tableRows}
-          showSearch={false}
-          showFilter={false}
-          showSummary={false}
-          totalData={apiRes?.total}
-          totalSize={PAGE_SIZE}
-          currentPage={pageNo}
-          isHeaderCheckbox={true}
-          handleHeaderCheckboxChange={handleHeaderCheckboxChange}
-          allRowsSelected={isAllRowsSelected}
-        />
-
-        {apiRes?.total > PAGE_SIZE && (
-          <Pagination
-            totalPages={Math.ceil(apiRes?.total / PAGE_SIZE)}
-            currentPage={pageNo}
-            onPageChange={handlePageChange}
+      <DataTable
+        columns={COLUMNS}
+        data={hsnList}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        rowActions={rowActions}
+        searchPlaceholder="Search HSN code or description…"
+        emptyText="No HSN codes found."
+        emptyIcon={<MdCode size={40} className="text-gray-200" />}
+        requiredModule="tax"
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
           />
-        )}
-      </div>
+        }
+      />
 
-      <DefaultModal
-        title={isEditMode ? "Edit HSN Code" : "Add HSN Code"}
-        isOpen={isAddModal}
-        onClose={resetForm}
-        onSubmit={handleSubmit}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3">
-          <Input
-            labelName="HSN Code"
-            type="text"
-            value={formData.code}
-            name="code"
-            onChange={handleInputChange}
-            error={errors.code}
-            required
-            placeholder="e.g., 49012"
-          />
+      {/* Add / Edit Modal */}
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5 flex items-center gap-2">
+              <MdCode size={20} />
+              {modalMode === "add" ? "Add HSN Code" : "Edit HSN Code"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <FormInput
+                label="HSN Code"
+                name="code"
+                type="text"
+                value={formData.code}
+                onChange={handleInputChange}
+                error={errors.code}
+                placeholder="e.g. 84715000"
+                maxLength={8}
+                required
+                disabled={modalMode === "edit"}
+              />
 
-          <Input
-            labelName="IGST (%)"
-            type="number"
-            value={formData.IGST}
-            name="IGST"
-            onChange={handleInputChange}
-            error={errors.IGST}
-          />
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="IGST %" name="IGST" type="number" value={formData.IGST} onChange={handleInputChange} error={errors.IGST} min="0" max="100" step="0.01" required />
+                <FormInput label="CGST %" name="CGST" type="number" value={formData.CGST} onChange={handleInputChange} error={errors.CGST} min="0" max="100" step="0.01" required />
+              </div>
 
-          <Input
-            labelName="CGST (%)"
-            type="number"
-            value={formData.CGST}
-            name="CGST"
-            onChange={handleInputChange}
-            error={errors.CGST}
-          />
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="SGST %" name="SGST" type="number" value={formData.SGST} onChange={handleInputChange} error={errors.SGST} min="0" max="100" step="0.01" required />
+                <FormInput label="Additional Tax %" name="additionalTax" type="number" value={formData.additionalTax} onChange={handleInputChange} min="0" max="100" step="0.01" />
+              </div>
 
-          <Input
-            labelName="SGST (%)"
-            type="number"
-            value={formData.SGST}
-            name="SGST"
-            onChange={handleInputChange}
-            error={errors.SGST}
-          />
-          <div className="col-span-2">
-            <Input
-              labelName="Additional Tax"
-              type="number"
-              value={formData.additionalTax}
-              name="additionalTax"
-              onChange={handleInputChange}
-              error={errors.additionalTax}
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] resize-none"
+                  placeholder="Optional description of this HSN code"
+                />
+              </div>
 
-          <div className="md:col-span-2">
-            <FormInput
-              type="textarea"
-              value={formData?.description}
-              onChange={handleInputChange}
-              name="description"
-              labelName="Description"
-              placeholder="Enter HSN code description..."
-            />
-          </div>
-          <div className="flex items-center justify-between col-span-2 border p-2 rounded">
-            <p className="font-medium">Active Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAction}
-            />
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active</span>
+                <ToggleButton
+                  isToggle={!formData.isDisable}
+                  handleClick={() => setFormData((p) => ({ ...p, isDisable: !p.isDisable }))}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
+                  {saving ? "Saving…" : modalMode === "add" ? "Create" : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </DefaultModal>
+      )}
+
+      <ConfirmModal
+        isOpen={deleteOpen}
+        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete HSN Code"
+        message={`Delete HSN code "${deleteTarget?.code}"? This cannot be undone.`}
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { MdTune, MdAdd, MdArrowBack, MdDelete, MdEdit, MdToggleOff, MdToggleOn } from "react-icons/md";
 import {
   getPlatformOptions,
   getPlatformOptionValues,
@@ -9,23 +10,34 @@ import {
   updatePlatformOptionValue,
   deletePlatformOptionValue,
 } from "../../../Redux/adminCoreSlice";
-import Loader from "../../../components/Loader/Loader";
-import Pagination from "../../../components/Pagination/Pagination";
-import AddButton from "../../../components/Button/AddButton";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  ConfirmModal,
+  FilterBar,
+} from "../../../components/Shared";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import { useListPage } from "../../../hooks/useListPage";
 
-const PAGE_SIZE = 20;
 const idOf = (r) => r?._id || r?.id || "";
 
-const emptyForm = {
-  name: "",
-  valueCode: "",
-  colorHex: "",
-  imageUrl: "",
-  sortOrder: 0,
-  active: true,
-};
+const emptyForm = { name: "", valueCode: "", colorHex: "", imageUrl: "", sortOrder: 0, active: true };
+
+const FILTER_FIELDS = [
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+    width: "w-40",
+  },
+];
 
 const getListPayload = (sliceData = {}) => {
   const payload =
@@ -48,10 +60,9 @@ export default function ProductOptionValue() {
   const { id: optionId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const selector = useSelector((s) => s.adminCore);
+  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "sortOrder", defaultSortDir: "asc" });
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const selector = useSelector((s) => s.adminCore);
   const [parentOption, setParentOption] = useState(null);
   const [optionFilter, setOptionFilter] = useState(optionId || "");
   const [optionMasters, setOptionMasters] = useState([]);
@@ -60,6 +71,7 @@ export default function ProductOptionValue() {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const items = getListPayload(selector?.platformOptionValuesData);
@@ -69,23 +81,20 @@ export default function ProductOptionValue() {
   const selectedOptionId = optionId || optionFilter;
   const isColorSwatch = parentOption?.displayType === "color_swatch";
   const isThumbnail = parentOption?.displayType === "thumbnail";
+  const { toQueryParams } = list;
 
-  // Load parent option info
   useEffect(() => {
     dispatch(getPlatformOptions({ limit: 100 }))
       .unwrap()
       .then((res) => {
-        const list = Array.isArray(res?.data)
-          ? res.data
-          : res?.data?.list || res?.data?.items || [];
-        setOptionMasters(list);
-        const found = list.find((o) => idOf(o) === selectedOptionId);
+        const masterList = Array.isArray(res?.data) ? res.data : res?.data?.list || res?.data?.items || [];
+        setOptionMasters(masterList);
+        const found = masterList.find((o) => idOf(o) === selectedOptionId);
         if (found) setParentOption(found);
-        if (!optionId && !optionFilter && list[0])
-          setOptionFilter(idOf(list[0]));
+        if (!optionId && !optionFilter && masterList[0]) setOptionFilter(idOf(masterList[0]));
       })
       .catch(() => {});
-  }, [dispatch, optionId, optionFilter, selectedOptionId]);
+  }, [dispatch, optionFilter, optionId, selectedOptionId]);
 
   useEffect(() => {
     const found = optionMasters.find((o) => idOf(o) === selectedOptionId);
@@ -94,51 +103,47 @@ export default function ProductOptionValue() {
 
   const load = useCallback(() => {
     if (!selectedOptionId) return;
-    dispatch(
-      getPlatformOptionValues({
-        optionId: selectedOptionId,
-        page,
-        limit: PAGE_SIZE,
-        q: search || undefined,
-      }),
-    );
-  }, [dispatch, selectedOptionId, page, search]);
+    const params = toQueryParams();
+    dispatch(getPlatformOptionValues({
+      optionId: selectedOptionId,
+      page: params.page,
+      limit: params.limit || 20,
+      q: params.search || undefined,
+      active: params.active || undefined,
+      sortBy: params.sortBy,
+      sortDir: params.sortDir,
+    }));
+  }, [dispatch, selectedOptionId, toQueryParams]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm({ ...emptyForm, sortOrder: items.length });
-    setErrors({});
-    setModalOpen(true);
-  };
-
+  const openAdd = () => { setEditing(null); setForm({ ...emptyForm, sortOrder: items.length }); setErrors({}); setModalOpen(true); };
   const openEdit = (row) => {
     setEditing(row);
-    setForm({
-      name: row.name || "",
-      valueCode: row.valueCode || "",
-      colorHex: row.colorHex || "",
-      imageUrl: row.imageUrl || "",
-      sortOrder: row.sortOrder ?? 0,
-      active: row.active !== false,
-    });
+    setForm({ name: row.name || "", valueCode: row.valueCode || "", colorHex: row.colorHex || "", imageUrl: row.imageUrl || "", sortOrder: row.sortOrder ?? 0, active: row.active !== false });
     setErrors({});
     setModalOpen(true);
   };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditing(null);
-  };
+  const closeModal = () => { setModalOpen(false); setEditing(null); };
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Value name is required";
+    if (form.valueCode && !/^[a-z0-9_/-]+$/i.test(form.valueCode)) {
+      e.valueCode = "Use letters, numbers, underscores, hyphens, or slashes only";
+    }
+    if (isColorSwatch && form.colorHex && !/^#[0-9A-Fa-f]{6}$/.test(form.colorHex)) {
+      e.colorHex = "Enter a valid hex color, e.g. #111827";
+    }
+    if (isThumbnail && form.imageUrl && !/^https?:\/\/\S+$/i.test(form.imageUrl)) {
+      e.imageUrl = "Enter a valid image URL";
+    }
     setErrors(e);
     return !Object.keys(e).length;
+  };
+
+  const handleNameChange = (value) => {
+    setForm((f) => ({ ...f, name: value, valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, "_") }));
   };
 
   const handleSave = async () => {
@@ -146,251 +151,199 @@ export default function ProductOptionValue() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(
-          updatePlatformOptionValue({
-            id: idOf(editing),
-            optionId: selectedOptionId,
-            optionName: parentOption?.name || "",
-            ...form,
-          }),
-        ).unwrap();
+        await dispatch(updatePlatformOptionValue({ id: idOf(editing), optionId: selectedOptionId, optionName: parentOption?.name || "", ...form })).unwrap();
         toast.success("Value updated");
       } else {
-        await dispatch(
-          createPlatformOptionValue({
-            optionId: selectedOptionId,
-            optionName: parentOption?.name || "",
-            ...form,
-          }),
-        ).unwrap();
+        await dispatch(createPlatformOptionValue({ optionId: selectedOptionId, optionName: parentOption?.name || "", ...form })).unwrap();
         toast.success("Value created");
       }
       closeModal();
       load();
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setSaving(true);
     try {
-      await dispatch(
-        deletePlatformOptionValue({ id: idOf(deleteTarget) }),
-      ).unwrap();
+      await dispatch(deletePlatformOptionValue({ id: idOf(deleteTarget) })).unwrap();
       toast.success("Value deleted");
       setDeleteTarget(null);
       load();
     } catch (err) {
       toast.error(err?.message || "Delete failed");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleToggleActive = async (row) => {
+    if (!row) return;
+    setSaving(true);
     try {
-      await dispatch(
-        updatePlatformOptionValue({
-          id: idOf(row),
-          optionId: selectedOptionId,
-          active: !row.active,
-        }),
-      ).unwrap();
+      await dispatch(updatePlatformOptionValue({ id: idOf(row), optionId: selectedOptionId, active: !row.active })).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
+      setStatusTarget(null);
       load();
     } catch (err) {
       toast.error(err?.message || "Failed");
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Auto-generate valueCode from name
-  const handleNameChange = (value) => {
-    setForm((f) => ({
-      ...f,
-      name: value,
-      valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, "_"),
-    }));
-  };
+  const COLUMNS = [
+    {
+      key: "preview",
+      label: "Preview",
+      render: (_, row) =>
+        isColorSwatch && row.colorHex ? (
+          <span className="inline-block w-8 h-8 rounded-full border border-gray-300 shadow-sm" style={{ backgroundColor: row.colorHex }} title={row.colorHex} />
+        ) : isThumbnail && row.imageUrl ? (
+          <img src={row.imageUrl} alt={row.name} className="w-8 h-8 rounded object-cover border border-gray-200" />
+        ) : (
+          <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md font-medium">{row.name}</span>
+        ),
+    },
+    { key: "name", label: "Value Name", sortable: true, render: (v) => <span className="font-medium text-gray-800">{v}</span> },
+    { key: "valueCode", label: "Code", render: (v) => <span className="font-mono text-xs text-gray-500">{v || "—"}</span> },
+    { key: "sortOrder", label: "Sort", sortable: true, render: (v) => <span className="text-gray-500 text-xs">{v ?? "—"}</span> },
+    { key: "active", label: "Status", render: (v) => <StatusBadge status={v !== false ? "active" : "inactive"} dot /> },
+  ];
+
+  const columns = [
+    ...COLUMNS,
+    {
+      key: "actions",
+      label: "Actions",
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              title="Edit value"
+            >
+              <MdEdit size={16} />
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
+            <button
+              type="button"
+              onClick={() => setStatusTarget(row)}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
+                row.active === false
+                  ? "border-green-100 text-green-600 hover:bg-green-50"
+                  : "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
+              }`}
+              title={row.active === false ? "Enable value" : "Disable value"}
+            >
+              {row.active === false ? <MdToggleOn size={18} /> : <MdToggleOff size={18} />}
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50"
+              title="Delete value"
+            >
+              <MdDelete size={16} />
+            </button>
+          </PermissionGuard>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
-      <Loader loading={loading} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/app/product-options")}
-            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            ← Option Masters
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800">
-              {parentOption?.name || "Option"} Values
-            </h1>
-            {parentOption?.displayType && (
-              <p className="text-xs text-gray-400 mt-0.5">
-                Display type:{" "}
-                <span className="font-medium capitalize">
-                  {parentOption.displayType.replace("_", " ")}
-                </span>
-                {isColorSwatch && " · Enter hex codes for swatches"}
-                {isThumbnail && " · Enter image URLs for thumbnails"}
-              </p>
-            )}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title={parentOption?.name ? `${parentOption.name} — Values` : "Option Values"}
+        subtitle={
+          parentOption?.displayType
+            ? `Display type: ${parentOption.displayType.replace("_", " ")}${isColorSwatch ? " · Enter hex codes for swatches" : ""}${isThumbnail ? " · Enter image URLs for thumbnails" : ""}`
+            : "Manage reusable values for this option"
+        }
+        breadcrumbs={[
+          { label: "Product Management" },
+          { label: "Option Masters", href: "/app/product-options" },
+          { label: parentOption?.name || "Values" },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/app/product-options")}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <MdArrowBack size={16} /> Option Masters
+            </button>
+            <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
+              <button
+                onClick={openAdd}
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+              >
+                <MdAdd size={16} /> Add Value
+              </button>
+            </PermissionGuard>
           </div>
-        </div>
-        <AddButton onClick={openAdd} />
-      </div>
+        }
+      />
 
-      {/* Search */}
-      <div className="flex gap-2">
-        {!optionId && (
+      {!optionId && (
+        <div className="mb-4">
           <select
             value={selectedOptionId}
-            onChange={(e) => {
-              setOptionFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            onChange={(e) => { setOptionFilter(e.target.value); list.setPage(1); }}
+            className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
           >
-            {optionMasters.map((option) => (
-              <option key={idOf(option)} value={idOf(option)}>
-                {option.name}
-              </option>
+            {optionMasters.map((opt) => (
+              <option key={idOf(opt)} value={idOf(opt)}>{opt.name}</option>
             ))}
           </select>
-        )}
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Search values…"
-          className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
-      </div>
-
-      {/* Values Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Preview
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Value Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Code
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Sort
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {items.length === 0 && !loading ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-16 text-center text-sm text-gray-400"
-                >
-                  No values yet. Click "Add" to create the first reusable value
-                  for this option.
-                </td>
-              </tr>
-            ) : (
-              items.map((row) => (
-                <tr key={idOf(row)} className="hover:bg-gray-50">
-                  {/* Preview */}
-                  <td className="px-4 py-3">
-                    {isColorSwatch && row.colorHex ? (
-                      <span
-                        className="inline-block w-8 h-8 rounded-full border border-gray-300 shadow-sm"
-                        style={{ backgroundColor: row.colorHex }}
-                        title={row.colorHex}
-                      />
-                    ) : isThumbnail && row.imageUrl ? (
-                      <img
-                        src={row.imageUrl}
-                        alt={row.name}
-                        className="w-8 h-8 rounded object-cover border border-gray-200"
-                      />
-                    ) : (
-                      <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md font-medium">
-                        {row.name}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-gray-800">
-                    {row.name}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                    {row.valueCode || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {row.sortOrder ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <ToggleButton
-                      isToggle={row.active !== false}
-                      handleClick={() => handleToggleActive(row)}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(row)}
-                        className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {total > PAGE_SIZE && (
-        <Pagination
-          totalPages={Math.ceil(total / PAGE_SIZE)}
-          currentPage={page}
-          onPageChange={setPage}
-        />
+        </div>
       )}
 
-      {/* Add / Edit Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-5">
-              {editing
-                ? `Edit "${editing.name}"`
-                : `Add value to "${parentOption?.name || "Option"}"`}
-            </h2>
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        totalCount={total}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search values…"
+        emptyText="No values yet."
+        emptyIcon={<MdTune size={40} className="text-gray-200" />}
+        requiredModule="products"
+        exportConfig={{ filename: "product-option-values", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
 
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
+              {editing ? `Edit "${editing.name}"` : `Add value to "${parentOption?.name || "Option"}"`}
+            </h2>
             <div className="space-y-4">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Value Name <span className="text-red-500">*</span>
@@ -399,140 +352,54 @@ export default function ProductOptionValue() {
                   autoFocus
                   value={form.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder={
-                    isColorSwatch
-                      ? "e.g. Black, Red, Navy Blue"
-                      : isThumbnail
-                        ? "e.g. Small, Large"
-                        : "e.g. S, M, L, XL, 128GB"
-                  }
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 ${errors.name ? "border-red-400" : "border-gray-300"}`}
+                  placeholder={isColorSwatch ? "e.g. Black, Red, Navy Blue" : isThumbnail ? "e.g. Small, Large" : "e.g. S, M, L, XL, 128GB"}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                )}
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
               </div>
 
-              {/* Color Hex — shown only for color_swatch type */}
               {isColorSwatch && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Color (Hex)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Color (Hex)</label>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={form.colorHex || "#000000"}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, colorHex: e.target.value }))
-                      }
-                      className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
-                    />
-                    <input
-                      value={form.colorHex}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, colorHex: e.target.value }))
-                      }
-                      placeholder="#1A1919"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    />
-                    {form.colorHex && (
-                      <span
-                        className="w-8 h-8 rounded-full border border-gray-300 flex-shrink-0"
-                        style={{ backgroundColor: form.colorHex }}
-                      />
-                    )}
+                    <input type="color" value={form.colorHex || "#000000"} onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))} className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5" />
+                    <input value={form.colorHex} onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))} placeholder="#1A1919" className={`flex-1 px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.colorHex ? "border-red-400" : "border-gray-300"}`} />
+                    {form.colorHex && <span className="w-8 h-8 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: form.colorHex }} />}
                   </div>
+                  {errors.colorHex && <p className="mt-1 text-xs text-red-500">{errors.colorHex}</p>}
                 </div>
               )}
 
-              {/* Image URL — shown only for thumbnail type */}
               {isThumbnail && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thumbnail Image URL
-                  </label>
-                  <input
-                    value={form.imageUrl}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
-                    }
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  {form.imageUrl && (
-                    <img
-                      src={form.imageUrl}
-                      alt="Preview"
-                      className="mt-2 h-12 w-12 object-cover rounded border border-gray-200"
-                    />
-                  )}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Image URL</label>
+                  <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="https://example.com/image.jpg" className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.imageUrl ? "border-red-400" : "border-gray-300"}`} />
+                  {form.imageUrl && <img src={form.imageUrl} alt="Preview" className="mt-2 h-12 w-12 object-cover rounded border border-gray-200" />}
+                  {errors.imageUrl && <p className="mt-1 text-xs text-red-500">{errors.imageUrl}</p>}
                 </div>
               )}
 
-              {/* Value Code */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Value Code
-                </label>
-                <p className="text-xs text-gray-400 mb-1">
-                  Auto-generated from name. Used in APIs and filters.
-                </p>
-                <input
-                  value={form.valueCode}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, valueCode: e.target.value }))
-                  }
-                  placeholder="e.g. black, size_xl, 128gb"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Value Code</label>
+                <p className="text-xs text-gray-400 mb-1">Auto-generated from name. Used in APIs and filters.</p>
+                <input value={form.valueCode} onChange={(e) => setForm((f) => ({ ...f, valueCode: e.target.value }))} placeholder="e.g. black, size_xl, 128gb" className={`w-full px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.valueCode ? "border-red-400" : "border-gray-300"}`} />
+                {errors.valueCode && <p className="mt-1 text-xs text-red-500">{errors.valueCode}</p>}
               </div>
 
-              {/* Sort Order */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sort Order
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.sortOrder}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      sortOrder: Number(e.target.value),
-                    }))
-                  }
-                  className="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+                <input type="number" min={0} value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} className="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]" />
               </div>
 
-              {/* Active */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, active: e.target.checked }))
-                  }
-                  className="w-4 h-4 accent-indigo-600"
-                />
-                <span className="text-sm text-gray-700">Active</span>
-              </label>
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Active</span>
+                <ToggleButton isToggle={form.active} handleClick={() => setForm((f) => ({ ...f, active: !f.active }))} />
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
-              >
+              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60">
                 {saving ? "Saving…" : editing ? "Update" : "Add Value"}
               </button>
             </div>
@@ -540,11 +407,26 @@ export default function ProductOptionValue() {
         </div>
       )}
 
-      <DeletePopup
-        isDeleteModalOpen={Boolean(deleteTarget)}
-        closeDeleteModal={() => setDeleteTarget(null)}
-        confirmDelete={handleDelete}
-        DeleteHeading={`Delete value "${deleteTarget?.name}"?`}
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Value"
+        message={`Delete value "${deleteTarget?.name}"? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={saving}
+      />
+
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={() => handleToggleActive(statusTarget)}
+        title={statusTarget?.active === false ? "Enable Option Value?" : "Disable Option Value?"}
+        message={`This will mark "${statusTarget?.name || "this value"}" as ${statusTarget?.active === false ? "active" : "inactive"}.`}
+        variant={statusTarget?.active === false ? "success" : "warning"}
+        confirmLabel={statusTarget?.active === false ? "Enable" : "Disable"}
+        loading={saving}
       />
     </div>
   );

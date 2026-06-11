@@ -2,13 +2,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
+import { MdArticle } from "react-icons/md";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import Pagination from "../../../components/Pagination/Pagination";
-import Loader from "../../../components/Loader/Loader";
+import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
 import ContentPageSetup from "./components/ContentPageSetup";
 import {
   createContentPage,
@@ -29,56 +25,31 @@ const emptyForm = {
   excerpt: "",
   category: "",
   tags: [],
-  image: {
-    url: "",
-    alt: "",
-    title: "",
-    caption: "",
-    type: "hero",
-  },
+  image: { url: "", alt: "", title: "", caption: "", type: "hero" },
   gallery: [],
   sections: [],
-  cta: {
-    label: "",
-    url: "",
-    target: "_self",
-  },
+  cta: { label: "", url: "", target: "_self" },
   seo: {
-    metaTitle: "",
-    metaDescription: "",
-    keywords: [],
-    focusKeyword: "",
-    canonicalUrl: "",
-    robots: "index,follow",
-    ogTitle: "",
-    ogDescription: "",
-    ogImage: { url: "", alt: "" },
-    twitterTitle: "",
-    twitterDescription: "",
-    twitterImage: { url: "", alt: "" },
-    schemaType: "WebPage",
-    schemaJson: {},
+    metaTitle: "", metaDescription: "", keywords: [], focusKeyword: "",
+    canonicalUrl: "", robots: "index,follow", ogTitle: "", ogDescription: "",
+    ogImage: { url: "", alt: "" }, twitterTitle: "", twitterDescription: "",
+    twitterImage: { url: "", alt: "" }, schemaType: "WebPage", schemaJson: {},
     breadcrumbs: [],
   },
-  visibility: {
-    channels: ["web", "app"],
-    roles: ["public"],
-  },
+  visibility: { channels: ["web", "app"], roles: ["public"] },
   sortOrder: 0,
   coverImage: "",
   thumbnailUrl: "",
   heroImage: "",
   galleryImages: [],
-  author: {
-    name: "",
-    avatar: "",
-  },
+  author: { name: "", avatar: "" },
   readTime: 0,
   language: "en",
   published: false,
   publishedAt: "",
   metadata: {},
 };
+
 const slugify = (value = "") =>
   String(value || "content-page")
     .trim()
@@ -92,7 +63,7 @@ const ContentPages = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [pageNo, setPageNo] = useState(1);
-  const [filters, setFilters] = useState({ search: "" });
+  const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
@@ -104,27 +75,17 @@ const ContentPages = () => {
   const total = payload?.total || 0;
 
   const fetchPages = useCallback(() => {
-    dispatch(
-      getContentPages({
-        page: pageNo,
-        limit: PAGE_SIZE,
-        q: filters.search,
-      }),
-    );
-  }, [dispatch, pageNo, filters.search]);
+    dispatch(getContentPages({ page: pageNo, limit: PAGE_SIZE, q: search }));
+  }, [dispatch, pageNo, search]);
 
-  useEffect(() => {
-    fetchPages();
-  }, [fetchPages, isRefresh]);
+  useEffect(() => { fetchPages(); }, [fetchPages, isRefresh]);
 
   const onChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "title" && !prev.recordSlug && !prev.slug
-        ? { slug: slugify(value) }
-        : {}),
+      ...(name === "title" && !prev.recordSlug && !prev.slug ? { slug: slugify(value) } : {}),
     }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
@@ -133,25 +94,17 @@ const ContentPages = () => {
     const nextErrors = {};
     if (!formData.title.trim()) nextErrors.title = "Title is required";
     if (!formData.slug.trim()) nextErrors.slug = "Slug is required";
-    if (!formData.pageType.trim())
-      nextErrors.pageType = "Page type is required";
+    if (!formData.pageType.trim()) nextErrors.pageType = "Page type is required";
     const hasSectionContent = (formData.sections || []).some(
       (section) =>
         String(section?.title || "").trim() ||
         String(section?.description || "").trim() ||
         (section?.points || []).some(
-          (point) =>
-            String(point?.title || "").trim() ||
-            String(point?.description || "").trim(),
+          (point) => String(point?.title || "").trim() || String(point?.description || "").trim(),
         ),
     );
-    if (
-      !formData.description.trim() &&
-      !formData.body.trim() &&
-      !hasSectionContent
-    ) {
-      nextErrors.description =
-        "Description, body, or at least one section is required";
+    if (!formData.description.trim() && !formData.body.trim() && !hasSectionContent) {
+      nextErrors.description = "Description, body, or at least one section is required";
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -180,18 +133,16 @@ const ContentPages = () => {
 
     try {
       if (formData.recordSlug) {
-        await dispatch(
-          updateContentPage({ ...body, slug: formData.recordSlug }),
-        ).unwrap();
+        await dispatch(updateContentPage({ ...body, slug: formData.recordSlug })).unwrap();
         toast.success("Content page updated successfully");
       } else {
         await dispatch(createContentPage(body)).unwrap();
         toast.success("Content page created successfully");
       }
       closeModal();
-      setIsRefresh((value) => !value);
+      setIsRefresh((v) => !v);
     } catch (error) {
-      toast.error(error?.message || error || "Failed to save content page");
+      toast.error(error?.message || "Failed to save content page");
     }
   };
 
@@ -208,29 +159,12 @@ const ContentPages = () => {
       excerpt: page.excerpt || page.description || "",
       category: page.category || "",
       tags: page.tags || [],
-      image: page.image || {
-        url: page.heroImage || page.coverImage || "",
-        alt: page.title || "",
-        title: "",
-        caption: "",
-        type: "hero",
-      },
-      gallery:
-        page.gallery ||
-        (page.galleryImages || []).map((url) => ({
-          url,
-          alt: page.title || "",
-        })),
+      image: page.image || { url: page.heroImage || page.coverImage || "", alt: page.title || "", title: "", caption: "", type: "hero" },
+      gallery: page.gallery || (page.galleryImages || []).map((url) => ({ url, alt: page.title || "" })),
       sections: page.sections || [],
       cta: page.cta || emptyForm.cta,
-      seo: {
-        ...emptyForm.seo,
-        ...(page.seo || {}),
-      },
-      visibility: {
-        ...emptyForm.visibility,
-        ...(page.visibility || {}),
-      },
+      seo: { ...emptyForm.seo, ...(page.seo || {}) },
+      visibility: { ...emptyForm.visibility, ...(page.visibility || {}) },
       sortOrder: page.sortOrder || 0,
       coverImage: page.coverImage || page.image?.url || "",
       thumbnailUrl: page.thumbnailUrl || page.image?.url || "",
@@ -252,102 +186,82 @@ const ContentPages = () => {
       await dispatch(deleteContentPage({ slug })).unwrap();
       toast.success("Content page deleted successfully");
       setDeleteTarget(null);
-      setIsRefresh((value) => !value);
+      setIsRefresh((v) => !v);
     } catch (error) {
-      toast.error(error?.message || error || "Failed to delete content page");
+      toast.error(error?.message || "Failed to delete content page");
     }
   };
 
   const togglePublished = async (page) => {
     try {
       await dispatch(
-        updateContentPage({
-          slug: pageSlug(page),
-          published: !page.published,
-          status: !page.published ? "published" : "draft",
-        }),
+        updateContentPage({ slug: pageSlug(page), published: !page.published, status: !page.published ? "published" : "draft" }),
       ).unwrap();
       toast.success("Status updated successfully");
-      setIsRefresh((value) => !value);
+      setIsRefresh((v) => !v);
     } catch (error) {
-      toast.error(error?.message || error || "Failed to update status");
+      toast.error(error?.message || "Failed to update status");
     }
   };
 
-  const tableRows = pages.map((page) => [
-    <span className="font-medium">{page.title}</span>,
-    <span className="font-mono text-xs">{page.slug}</span>,
-    <span className="capitalize">{page.pageType}</span>,
-    <span>{page.language || "en"}</span>,
-    <ToggleButton
-      isToggle={Boolean(page.published)}
-      handleClick={() => togglePublished(page)}
-    />,
-    <ActionButtons
-      showLinkButton={false}
-      onEdit={() => openEdit(page)}
-      onDelete={() => setDeleteTarget(page)}
-    />,
-  ]);
+  const columns = [
+    { key: "title", label: "Title", render: (v) => <span className="font-medium text-gray-800">{v}</span> },
+    { key: "slug", label: "Slug", render: (v) => <span className="font-mono text-xs text-gray-500">{v}</span> },
+    { key: "pageType", label: "Type", render: (v) => <span className="capitalize text-sm">{v}</span> },
+    { key: "language", label: "Language", render: (v) => <span className="text-sm">{v || "en"}</span> },
+    {
+      key: "published",
+      label: "Published",
+      render: (v, row) => (
+        <ToggleButton isToggle={Boolean(v)} handleClick={() => togglePublished(row)} />
+      ),
+    },
+  ];
+
+  const rowActions = (row) => [
+    { label: "Edit", onClick: () => openEdit(row) },
+    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true },
+  ];
 
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto">
-        <div className=" overflow-auto bg-white rounded-lg border border-[#E6E6E6]">
-          <div className="border-b mb-4">
-            <SearchComponent
-              isSearchShow={true}
-              filters={filters}
-              setFilters={setFilters}
-              placeholder="Search content pages"
-              applyFilters={() => {
-                setPageNo(1);
-                setIsRefresh((value) => !value);
-              }}
-              handleSearchRemove={() => {
-                setFilters({ search: "" });
-                setPageNo(1);
-                setIsRefresh((value) => !value);
-              }}
-            />
-          </div>
-          <TableData
-            Heading="Content Pages"
-            tableHeadings={[
-              "Title",
-              "Slug",
-              "Type",
-              "Language",
-              "Published",
-              "Actions",
-            ]}
-            data={tableRows}
-            showAddButton={true}
-            addButtonLabel="Add"
-            onClickFunction={() => setIsModalOpen(true)}
-            totalData={total}
-            totalSize={PAGE_SIZE}
-            currentPage={pageNo}
-            onPageChange={setPageNo}
-          />
-          <div className="flex justify-center my-6">
-            {total > PAGE_SIZE && (
-              <Pagination
-                totalPages={Math.ceil(total / PAGE_SIZE)}
-                currentPage={pageNo}
-                onPageChange={setPageNo}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-      <DeletePopup
-        isDeleteModalOpen={Boolean(deleteTarget)}
-        closeDeleteModal={() => setDeleteTarget(null)}
-        confirmDelete={confirmDelete}
-        DeleteHeading="Are you sure you want to delete this content page?"
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Content Pages"
+        subtitle="Manage static pages, blog posts, and CMS content"
+        breadcrumbs={[{ label: "CMS" }, { label: "Content Pages" }]}
+        actions={
+          <button onClick={() => setIsModalOpen(true)} className="admin-btn-primary">
+            + Add Page
+          </button>
+        }
       />
+
+      <DataTable
+        columns={columns}
+        data={pages}
+        loading={selector.loading}
+        totalCount={total}
+        page={pageNo}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPageNo}
+        onSearch={(v) => { setSearch(v?.trim() || ""); setPageNo(1); }}
+        rowActions={rowActions}
+        searchPlaceholder="Search content pages..."
+        emptyText="No content pages found."
+        emptyIcon={<MdArticle size={40} className="text-gray-200" />}
+        requiredModule="cms"
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        variant="danger"
+        title="Delete Content Page?"
+        message={`Delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+      />
+
       <ContentPageSetup
         errors={errors}
         formData={formData}
@@ -356,7 +270,7 @@ const ContentPages = () => {
         onClose={closeModal}
         onSubmit={handleSubmit}
       />
-    </>
+    </div>
   );
 };
 

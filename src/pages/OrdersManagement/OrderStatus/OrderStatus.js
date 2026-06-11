@@ -1,10 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "react-toastify";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
+import { toast } from "sonner";
+import { MdCircle } from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  ConfirmModal,
+} from "../../../components/Shared";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import {
   createContentPage,
@@ -21,29 +25,37 @@ const extractList = (payload) => {
   return root.list || root.items || root.rows || [];
 };
 
-const toStatusRow = (status) => ({
-  slug: status.slug,
-  title: status.title,
-  pageType: PAGE_TYPE,
-  body: `${status.title} order status`,
-  metadata: {
-    name: status.title,
-    status: status.status,
-    priority: status.priority,
-    active: true,
-    isDefault: true,
+const COLUMNS = [
+  {
+    key: "metadata.priority",
+    label: "Priority",
+    render: (_, row) => <span className="text-sm text-gray-500">{row?.metadata?.priority || "—"}</span>,
   },
-});
+  {
+    key: "title",
+    label: "Order Status Name",
+    render: (v, row) => (
+      <span className="font-medium text-gray-800">{v || row?.metadata?.name || row?.slug || "—"}</span>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (_, row) => (
+      <StatusBadge status={row?.metadata?.active !== false ? "active" : "inactive"} dot />
+    ),
+  },
+];
 
 const OrderStatus = () => {
   const dispatch = useDispatch();
   const adminCoreSelector = useSelector((state) => state.adminCore);
 
   const [apiRes, setApiRes] = useState([]);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const loading = isLoading || adminCoreSelector?.loading;
 
   const getSystemOrderStatuses = async () => {
     const options = await dropdownApi.getSystemOptions("order-statuses");
@@ -65,17 +77,12 @@ const OrderStatus = () => {
             pageType: PAGE_TYPE,
             body: `${status.title} order status`,
             published: true,
-            metadata: {
-              name: status.title,
-              status: status.status,
-              priority: status.priority,
-              active: true,
-            },
-          }),
+            metadata: { name: status.title, status: status.status, priority: status.priority, active: true },
+          })
         )
           .unwrap()
-          .catch(() => null),
-      ),
+          .catch(() => null)
+      )
     );
   };
 
@@ -83,166 +90,116 @@ const OrderStatus = () => {
     try {
       setIsLoading(true);
       const systemStatuses = await getSystemOrderStatuses();
-      const response = await dispatch(
-        getContentPages({ pageType: PAGE_TYPE, limit: 100 }),
-      ).unwrap();
+      const response = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
       let list = extractList(response);
       if (!list.length) {
         await seedDefaultOrderStatuses(systemStatuses);
-        const seededResponse = await dispatch(
-          getContentPages({ pageType: PAGE_TYPE, limit: 100 }),
-        ).unwrap();
+        const seededResponse = await dispatch(getContentPages({ pageType: PAGE_TYPE, limit: 100 })).unwrap();
         list = extractList(seededResponse);
       }
-      setApiRes(list.length ? list : systemStatuses.map(toStatusRow));
+      setApiRes(
+        list.length
+          ? list
+          : systemStatuses.map((s) => ({
+              slug: s.slug,
+              title: s.title,
+              pageType: PAGE_TYPE,
+              body: `${s.title} order status`,
+              metadata: { name: s.title, status: s.status, priority: s.priority, active: true, isDefault: true },
+            }))
+      );
     } catch (error) {
       setApiRes([]);
-      toast.error(error?.message || error || "Failed to load order statuses");
+      toast.error(error?.message || "Failed to load order statuses");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadOrderStatuses();
-  }, []);
-
-  const loading = isLoading || adminCoreSelector?.loading;
-
-  const tableHeadings = useMemo(
-    () => [
-      <div
-        className="flex items-center gap-2"
-        key="order-status-priority-header"
-      >
-        <input
-          type="checkbox"
-          className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
-        />
-        <span>Order status priority</span>
-      </div>,
-      "Order Status Name",
-      "Status",
-      "Action",
-    ],
-    [],
-  );
-
-  const handleRowCheckboxChange = (e, rowId) => {
-    if (e.target.checked) {
-      setSelectedRow((prev) => [...prev, rowId]);
-      return;
-    }
-    setSelectedRow((prev) => prev.filter((id) => id !== rowId));
-  };
+  useEffect(() => { loadOrderStatuses(); }, []);
 
   const handleToggleStatus = async (item) => {
+    if (item?.metadata?.isDefault && !item?._id) return;
     try {
-      const currentMetadata = item?.metadata || {};
       await dispatch(
         updateContentPage({
           slug: item.slug,
           title: item.title,
           pageType: item.pageType || PAGE_TYPE,
           body: item.body || `${item.title || item.slug} order status`,
-          metadata: {
-            ...currentMetadata,
-            active: !(currentMetadata.active ?? true),
-          },
-        }),
+          metadata: { ...item.metadata, active: !(item?.metadata?.active ?? true) },
+        })
       ).unwrap();
-      await loadOrderStatuses();
       toast.success("Status updated successfully");
+      await loadOrderStatuses();
     } catch (error) {
       toast.error(error?.message || "Failed to update status");
     }
   };
 
   const confirmDelete = async () => {
-    if (!selectedRecord?.slug) return;
+    if (!deleteTarget?.slug) return;
     try {
-      await dispatch(deleteContentPage({ slug: selectedRecord.slug })).unwrap();
+      await dispatch(deleteContentPage({ slug: deleteTarget.slug })).unwrap();
       toast.success("Order status deleted successfully");
-      setShowDeleteConfirmation(false);
-      setSelectedRecord(null);
+      setDeleteTarget(null);
       await loadOrderStatuses();
     } catch (error) {
       toast.error(error?.message || "Failed to delete order status");
     }
   };
 
-  const tableRows = apiRes?.map((item) => {
-    const rowId = item?._id || item?.slug;
-    const isSelected = selectedRow.includes(rowId);
-    const statusPriority =
-      item?.metadata?.priority || item?.metadata?.order || "-";
-    const statusName = item?.title || item?.metadata?.name || item?.slug || "-";
-    const isDefaultFallback = item?.metadata?.isDefault && !item?._id;
-
-    return [
-      <span
-        className="inline-flex items-center gap-x-5"
-        key={`priority-${rowId}`}
-      >
-        <input
-          key={`checkbox-${rowId}`}
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => handleRowCheckboxChange(e, rowId)}
-          className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out mr-2"
-        />
-        {statusPriority}
-      </span>,
-      statusName,
-      <span key={`status-${rowId}`}>
+  const columnsWithToggle = [
+    ...COLUMNS.slice(0, 2),
+    {
+      key: "active",
+      label: "Active",
+      render: (_, row) => (
         <ToggleButton
-          isToggle={Boolean(item?.metadata?.active ?? true)}
-          handleClick={
-            isDefaultFallback ? undefined : () => handleToggleStatus(item)
-          }
+          isToggle={Boolean(row?.metadata?.active ?? true)}
+          handleClick={row?.metadata?.isDefault && !row?._id ? undefined : () => handleToggleStatus(row)}
         />
-      </span>,
-      <span key={`action-${rowId}`}>
-        <ActionButtons
-          onDelete={() => {
-            setSelectedRecord(item);
-            setShowDeleteConfirmation(true);
-          }}
-          showLinkButton={false}
-          showDeleteButton={!isDefaultFallback}
-        />
-      </span>,
+      ),
+    },
+  ];
+
+  const rowActions = (row) => {
+    if (row?.metadata?.isDefault && !row?._id) return [];
+    return [
+      { label: "Delete", onClick: () => setDeleteTarget(row), danger: true },
     ];
-  });
+  };
 
   return (
-    <>
-      <div className="p-6 overflow-hidden overflow-x-auto overflow-y-auto">
-        <div className=" overflow-auto overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-          <TableData
-            Heading="Order Status"
-            tableHeadings={tableHeadings}
-            data={tableRows}
-            showSearch={true}
-            placeholder="Search by status..."
-            showFilter={false}
-            showSummary={false}
-            showAddButton={false}
-            loading={loading}
-            totalData={tableRows.length}
-          />
-        </div>
-      </div>
-      <DeletePopup
-        isDeleteModalOpen={showDeleteConfirmation}
-        closeDeleteModal={() => {
-          setShowDeleteConfirmation(false);
-          setSelectedRecord(null);
-        }}
-        confirmDelete={confirmDelete}
-        DeleteHeading={"Are you sure you want to delete?"}
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Order Status"
+        subtitle="Manage order workflow statuses"
+        breadcrumbs={[{ label: "Orders Management" }, { label: "Order Status" }]}
       />
-    </>
+
+      <DataTable
+        columns={columnsWithToggle}
+        data={apiRes}
+        loading={loading}
+        totalCount={apiRes.length}
+        rowActions={rowActions}
+        searchPlaceholder="Search statuses…"
+        emptyText="No order statuses found."
+        emptyIcon={<MdCircle size={40} className="text-gray-200" />}
+        requiredModule="orders"
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Order Status"
+        message={`Delete order status "${deleteTarget?.title}"?`}
+        variant="danger"
+        confirmText="Delete"
+      />
+    </div>
   );
 };
 

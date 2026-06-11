@@ -50,6 +50,7 @@ const normalizeResponse = (response) => {
 
 const InventoryTransactions = () => {
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const { toQueryParams } = list;
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,7 @@ const InventoryTransactions = () => {
     setLoading(true);
     setError("");
     try {
-      const params = list.toQueryParams();
+      const params = toQueryParams();
       const response = await axiosProvider.get(ENDPOINTS.inventory.transactions, {
         params: {
           limit: params.limit,
@@ -84,7 +85,7 @@ const InventoryTransactions = () => {
     } finally {
       setLoading(false);
     }
-  }, [list]);
+  }, [toQueryParams]);
 
   useEffect(() => {
     fetchTransactions();

@@ -40,6 +40,8 @@ const InventoryAdjustment = () => {
     [selected, variantSku],
   );
   const currentStock = Number(selectedVariant?.stock ?? selected?.stock ?? 0);
+  const reservedStock = Number(selectedVariant?.reservedStock ?? selected?.reservedStock ?? 0);
+  const availableStock = currentStock - reservedStock;
   const requestedQty = Number(qty || 0);
   const adjustmentPreview = useMemo(() => {
     if (!requestedQty) return 0;
@@ -64,7 +66,7 @@ const InventoryAdjustment = () => {
     setSearching(true);
     try {
       const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
-        params: { search, limit: 10 },
+        params: { search, limit: 10, includeVariants: true, includeAllStatuses: true },
       });
       setResults(normalizeProductList(res));
     } catch {
@@ -79,8 +81,11 @@ const InventoryAdjustment = () => {
     if (!selected) nextErrors.product = "Select a product.";
     if (!qty || requestedQty <= 0) nextErrors.qty = "Enter a quantity greater than 0.";
     if (!reason) nextErrors.reason = "Select a reason.";
-    if (adjustType === "remove" && stockAfter < 0) {
-      nextErrors.qty = "Remove quantity cannot be greater than current stock.";
+    if (adjustType === "remove" && requestedQty > availableStock) {
+      nextErrors.qty = "Remove quantity cannot be greater than available stock.";
+    }
+    if (adjustType === "set" && requestedQty < reservedStock) {
+      nextErrors.qty = "Set quantity cannot be lower than reserved stock.";
     }
     if (adjustType === "set" && requestedQty === currentStock) {
       nextErrors.qty = "Set quantity must be different from current stock.";
@@ -178,7 +183,7 @@ const InventoryAdjustment = () => {
                     <div>
                       <div className="font-medium text-gray-700">{p.title}</div>
                       <div className="text-xs text-gray-400">
-                        {p.sku || "No SKU"} · Stock: {p.stock ?? 0}
+                        {p.sku || "No SKU"} · Stock: {p.stock ?? 0} · Reserved: {p.reservedStock ?? 0}
                       </div>
                     </div>
                     {selected?._id === p._id && (
@@ -198,7 +203,8 @@ const InventoryAdjustment = () => {
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">
                       SKU: {selected.sku || "—"} · Current Stock:{" "}
-                      <strong>{selected.stock ?? 0}</strong>
+                      <strong>{selected.stock ?? 0}</strong> · Reserved:{" "}
+                      <strong>{selected.reservedStock ?? 0}</strong>
                     </div>
                   </div>
                   <button
@@ -257,7 +263,7 @@ const InventoryAdjustment = () => {
                     <option value="">Root product stock</option>
                     {selected.variants.map((variant) => (
                       <option key={variant.sku || variant._id} value={variant.sku}>
-                        {variant.sku || variant.title} · Stock: {variant.stock ?? 0}
+                        {variant.sku || variant.title} · Stock: {variant.stock ?? 0} · Reserved: {variant.reservedStock ?? 0}
                       </option>
                     ))}
                   </select>
@@ -282,7 +288,7 @@ const InventoryAdjustment = () => {
                 />
                 {errors.qty && <p className="mt-1 text-xs text-red-500">{errors.qty}</p>}
                 <p className="mt-1 text-xs text-gray-400">
-                  Current stock: {currentStock} · After adjustment: {Number.isFinite(stockAfter) ? stockAfter : currentStock}
+                  Current stock: {currentStock} · Reserved: {reservedStock} · Available: {availableStock} · After adjustment: {Number.isFinite(stockAfter) ? stockAfter : currentStock}
                 </p>
               </div>
 

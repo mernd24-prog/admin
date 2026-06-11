@@ -1,228 +1,162 @@
-import React, { useState, useEffect } from "react";
-import AddButton from "../../../components/Button/AddButton";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import Input from "../../../components/Atoms/Input/Input";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-// import Button from '../../../components/Atoms/buttons/button';
+import React, { useEffect, useState } from "react";
+import { MdAdd, MdAccountTree } from "react-icons/md";
 import { IoMdAddCircleOutline } from "react-icons/io";
-// import { FiDelete } from 'react-icons/fi';
 import { MdDelete } from "react-icons/md";
+import { PageHeader, DataTable, ConfirmModal } from "../../../components/Shared";
+import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 
-const apiRes = [{ id: 1, name: "VAT", isCombined: false, components: [] }];
+const MOCK_DATA = [{ id: 1, name: "VAT", isCombined: false, components: [] }];
+
+const COLUMNS = [
+  { key: "name", label: "Tax Structure Name", sortable: true, render: (v) => <span className="font-medium">{v}</span> },
+  { key: "isCombined", label: "Combined Structure?", render: (v) => <span className={`text-xs font-medium ${v ? "text-blue-600" : "text-gray-500"}`}>{v ? "Yes" : "No"}</span> },
+];
+
+const EMPTY_FORM = { name: "", isCombined: false, components: [""] };
 
 function TaxStructure() {
-  const [filters, setFilters] = useState({ search: "" });
-  const [taxStructures, setTaxStructures] = useState(apiRes);
-  const [modalState, setModalState] = useState({
-    type: "",
-    isOpen: false,
-    data: null,
-  });
-  const [inputData, setInputData] = useState({
-    name: "",
-    isCombined: false,
-    components: [""],
-  });
-
-  console.log(inputData);
+  const [data, setData] = useState(MOCK_DATA);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
-    if (modalState.data) {
-      setInputData({
-        name: modalState.data.name,
-        isCombined: modalState.data.isCombined,
-        components:
-          modalState.data.components.length > 0
-            ? [...modalState.data.components]
-            : [""],
+    if (editing) {
+      setForm({
+        name: editing.name,
+        isCombined: editing.isCombined,
+        components: editing.components?.length > 0 ? [...editing.components] : [""],
       });
     } else {
-      setInputData({
-        name: "",
-        isCombined: false,
-        components: [""],
-      });
+      setForm(EMPTY_FORM);
     }
-  }, [modalState.data]);
+  }, [editing]);
 
-  const handleAction = (action, data = null) => {
-    switch (action) {
-      case "ADD":
-        setModalState({ type: "Add", isOpen: true, data: null });
-        break;
-      case "EDIT":
-        setModalState({ type: "Edit", isOpen: true, data });
-        break;
-      case "DELETE":
-        setTaxStructures(taxStructures.filter((item) => item.id !== data.id));
-        break;
-      default:
-        break;
-    }
-  };
-
-  const closeModal = () => {
-    setModalState({ type: "", isOpen: false, data: null });
-  };
-
-  const handleOnChange = (e) => {
-    const { name, value } = e.target;
-    setInputData({ ...inputData, [name]: value });
-  };
+  const openAdd = () => { setEditing(null); setModalOpen(true); };
+  const closeModal = () => { setModalOpen(false); setEditing(null); };
 
   const handleToggle = () => {
-    setInputData((prev) => ({
-      ...prev,
-      isCombined: !prev.isCombined,
-      components: !prev.isCombined ? [""] : [],
-    }));
+    setForm((prev) => ({ ...prev, isCombined: !prev.isCombined, components: !prev.isCombined ? [""] : [] }));
   };
 
   const handleComponentChange = (index, value) => {
-    const newComponents = [...inputData.components];
-    newComponents[index] = value;
-    setInputData({ ...inputData, components: newComponents });
+    const updated = [...form.components];
+    updated[index] = value;
+    setForm((f) => ({ ...f, components: updated }));
   };
 
-  const addComponent = () => {
-    setInputData((prev) => ({
-      ...prev,
-      components: [...prev.components, ""],
-    }));
-  };
-
+  const addComponent = () => setForm((f) => ({ ...f, components: [...f.components, ""] }));
   const removeComponent = (index) => {
-    if (inputData.components.length > 1) {
-      const newComponents = [...inputData.components];
-      newComponents.splice(index, 1);
-      setInputData({ ...inputData, components: newComponents });
+    if (form.components.length > 1) {
+      setForm((f) => ({ ...f, components: f.components.filter((_, i) => i !== index) }));
     }
   };
 
-  const handleSubmit = () => {
-    if (!inputData.name.trim()) return;
-
-    const taxStructureData = {
-      id: modalState.data?.id || Date.now(),
-      name: inputData.name,
-      isCombined: inputData.isCombined,
-      components: inputData.isCombined
-        ? inputData.components.filter((c) => c.trim())
-        : [],
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    const record = {
+      id: editing?.id || Date.now(),
+      name: form.name,
+      isCombined: form.isCombined,
+      components: form.isCombined ? form.components.filter((c) => c.trim()) : [],
     };
-
-    if (modalState.type === "Add") {
-      setTaxStructures([...taxStructures, taxStructureData]);
+    if (editing) {
+      setData((prev) => prev.map((item) => item.id === editing.id ? record : item));
     } else {
-      setTaxStructures(
-        taxStructures.map((item) =>
-          item.id === taxStructureData.id ? taxStructureData : item,
-        ),
-      );
+      setData((prev) => [...prev, record]);
     }
-
     closeModal();
   };
 
+  const rowActions = (row) => [
+    { label: "Edit", onClick: () => { setEditing(row); setModalOpen(true); } },
+    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true },
+  ];
+
   return (
-    <div className="p-3 max-w-7xl mx-auto space-y-3">
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-sm">
-          <span className="text-[#a1a5b7]">Home /</span> Tax Structure
-        </h3>
-        <AddButton onClick={() => handleAction("ADD")} />
-      </div>
-      <div className="bg-white">
-        <div className="p-2 border-b">
-          <SearchComponent filters={filters} setFilters={setFilters} />
-        </div>
-
-        <div>
-          <TableData
-            tableHeadings={[
-              "Tax Structure Name",
-              "Combined Tax Structure?",
-              "Action",
-            ]}
-            data={taxStructures.map((ele) => [
-              ele.name,
-              ele.isCombined ? "Yes" : "No",
-              <ActionButtons
-                showEditButton
-                showDeleteButton
-                onEdit={() => handleAction("EDIT", ele)}
-                onDelete={() => handleAction("DELETE", ele)}
-              />,
-            ])}
-          />
-        </div>
-      </div>
-
-      <DefaultModal
-        title={
-          modalState.type === "Add" ? "Add Tax Structure" : "Edit Tax Structure"
+    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <PageHeader
+        title="Tax Structures"
+        subtitle="Define single or combined tax structures"
+        breadcrumbs={[{ label: "Tax & Compliance" }, { label: "Tax Structures" }]}
+        actions={
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors">
+            <MdAdd size={16} /> Add Structure
+          </button>
         }
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        onSubmit={handleSubmit}
-      >
-        <div className="p-3 space-y-4">
-          <Input
-            labelName="Tax Name"
-            value={inputData.name}
-            name="name"
-            onChange={handleOnChange}
-            required
-          />
+      />
 
-          <div className="  rounded space-y-4">
-            <div className="flex justify-between items-center border p-3">
-              <p className="font-medium text-sm">Combined Tax Structure</p>
-              <ToggleButton
-                isToggle={inputData.isCombined}
-                handleClick={handleToggle}
-              />
-              {/* <input type='checkbox'
-                checked={inputData.isCombined}
-                onChange={handleToggle}
-              /> */}
-            </div>
-            {inputData.isCombined && (
-              <div className="space-y-3">
-                <p className="font-medium">Tax Components</p>
-                {inputData.components.map((component, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-3 items-center space-x-2"
-                  >
-                    <div className="col-span-2">
-                      <Input
-                        value={component}
-                        onChange={(e) =>
-                          handleComponentChange(index, e.target.value)
-                        }
-                        placeholder={`Title ${index + 1}`}
-                        className="flex-1"
-                      />
-                    </div>
-                    <div className="flex justify-evenly items-center gap-4">
-                      {index === inputData.components.length - 1 && (
-                        <IoMdAddCircleOutline onClick={addComponent} />
-                      )}
-                      {inputData.components.length > 1 && (
-                        <MdDelete onClick={() => removeComponent(index)} />
-                      )}
-                    </div>
-                  </div>
-                ))}
+      <DataTable
+        columns={COLUMNS}
+        data={data}
+        loading={false}
+        totalCount={data.length}
+        rowActions={rowActions}
+        emptyText="No tax structures found."
+        emptyIcon={<MdAccountTree size={40} className="text-gray-200" />}
+      />
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">{editing ? "Edit Tax Structure" : "Add Tax Structure"}</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tax Name <span className="text-red-500">*</span></label>
+                <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]" placeholder="e.g. VAT, GST" />
               </div>
-            )}
+
+              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
+                <span className="text-sm font-medium text-gray-700">Combined Tax Structure</span>
+                <ToggleButton isToggle={form.isCombined} handleClick={handleToggle} />
+              </div>
+
+              {form.isCombined && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700">Tax Components</p>
+                  {form.components.map((component, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        value={component}
+                        onChange={(e) => handleComponentChange(index, e.target.value)}
+                        placeholder={`Component ${index + 1}`}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                      />
+                      {index === form.components.length - 1 && (
+                        <button type="button" onClick={addComponent} className="text-[var(--admin-gold)] hover:opacity-70">
+                          <IoMdAddCircleOutline size={20} />
+                        </button>
+                      )}
+                      {form.components.length > 1 && (
+                        <button type="button" onClick={() => removeComponent(index)} className="text-red-400 hover:text-red-600">
+                          <MdDelete size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
+                <button type="submit" className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] transition-colors">{editing ? "Save" : "Create"}</button>
+              </div>
+            </form>
           </div>
         </div>
-      </DefaultModal>
+      )}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => { setData((prev) => prev.filter((item) => item.id !== deleteTarget.id)); setDeleteTarget(null); }}
+        title="Delete Tax Structure"
+        message={`Delete structure "${deleteTarget?.name}"?`}
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
   );
 }
