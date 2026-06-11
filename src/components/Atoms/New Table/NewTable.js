@@ -56,36 +56,97 @@ export default function SearchComponent({
   requiredModule,
   searchDebounce = 0,
   searchActions,
+  defaultSearchOpen = false,
+  exclusiveStatusFilters = false,
 }) {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
   const guardModule = inferredModule || requiredModule;
-  const [searchDown, setSearchDown] = useState(false);
+  const hasAdvancedFilters = Boolean(
+    isBrand ||
+      isProduct ||
+      isUser ||
+      isDelete ||
+      isCategory ||
+      isActivationStatus ||
+      isApprovalOptions ||
+      isProductType ||
+      dateFrom ||
+      dateTo ||
+      orderFrom ||
+      orderTo,
+  );
+  const [searchDown, setSearchDown] = useState(
+    defaultSearchOpen || (!isSearchDown && hasAdvancedFilters),
+  );
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
 
   const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFilters((prev) => {
+      const nextFilters = {
+        ...prev,
+        [field]: value,
+      };
+
+      if (exclusiveStatusFilters) {
+        if (field === "activationStatus" && value?.value && value.value !== "All") {
+          nextFilters.approvalStatus = { value: "All", label: "All" };
+        }
+        if (field === "approvalStatus" && value?.value && value.value !== "All") {
+          nextFilters.activationStatus = { value: "All", label: "All" };
+        }
+      }
+
+      return nextFilters;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   };
 
-  const clearFilters = useCallback(() => {
-    setFilters({
+  const getClearedFilters = useCallback(
+    (previousFilters = {}) => ({
+      ...previousFilters,
       search: "",
-      sellerName: { value: "", label: "Search By User Name" },
-      category: { value: "", label: "Search By Category" },
-      activationStatus: { value: "Does not matter", label: "Does not matter" },
-      approvalStatus: { value: "Does not matter", label: "Does not matter" },
-      productType: { value: "Select", label: "Select" },
-      dateFrom: "",
-      dateTo: "",
-    });
+      ...(isSelectNearSearch ? { country: { value: "", label: "All" } } : {}),
+      ...(isBrand ? { brand: { value: "", label: "All" } } : {}),
+      ...(isProduct ? { product: { value: "", label: "All" } } : {}),
+      ...(isUser || isDelete
+        ? { sellerName: { value: "", label: "Search By User Name" } }
+        : {}),
+      ...(isCategory
+        ? { category: { value: "", label: "Search By Category" } }
+        : {}),
+      ...(isActivationStatus
+        ? { activationStatus: { value: "All", label: "All" } }
+        : {}),
+      ...(isApprovalOptions
+        ? { approvalStatus: { value: "All", label: "All" } }
+        : {}),
+      ...(isProductType ? { productType: { value: "", label: "All" } } : {}),
+      ...(dateFrom ? { dateFrom: "" } : {}),
+      ...(dateTo ? { dateTo: "" } : {}),
+    }),
+    [
+      dateFrom,
+      dateTo,
+      isActivationStatus,
+      isApprovalOptions,
+      isBrand,
+      isCategory,
+      isDelete,
+      isProduct,
+      isProductType,
+      isSelectNearSearch,
+      isUser,
+    ],
+  );
+
+  const clearFilters = useCallback(() => {
+    setFilters((prev) => getClearedFilters(prev));
+    handleSearchRemove?.();
     setFilteredProducts([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [getClearedFilters, handleSearchRemove, setFilters]);
 
   const handleSearchDown = () => {
     setSearchDown((prev) => !prev);
@@ -114,6 +175,7 @@ export default function SearchComponent({
               handleChange={(e) => handleFilterChange("search", e.target.value)}
               disabled={isFiltering}
               handleRemove={handleSearchRemove}
+              onSubmit={applyFilters}
               debounce={searchDebounce}
             />
           </div>
@@ -129,7 +191,7 @@ export default function SearchComponent({
               />
             </div>
           )}
-          {isSearchDown && (
+          {isSearchDown && hasAdvancedFilters && (
             <Button
               onClick={handleSearchDown}
               className="border-none bg-[var(--admin-blue-soft)] py-2.5 text-[var(--admin-blue)]"
@@ -206,7 +268,7 @@ export default function SearchComponent({
         )}
       </div>
 
-      {isSearchShow && (
+      {isSearchShow && hasAdvancedFilters && (
         <div
           className={` transition-all duration-300 ease-in-out ${searchDown ? "opacity-100 mb-4 " : "opacity-0 max-h-0"}`}
         >

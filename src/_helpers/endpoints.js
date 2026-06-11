@@ -150,6 +150,11 @@ export const ENDPOINTS = {
     approve: (paymentId) => `/payments/${paymentId}/approve`,
     reject: (paymentId) => `/payments/${paymentId}/reject`,
   },
+  inventory: {
+    transactions: "/admin/inventory/transactions",
+    warehouses: "/admin/inventory/warehouses",
+    warehouse: (warehouseId) => `/admin/inventory/warehouses/${warehouseId}`,
+  },
   payouts: {
     admin: "/admin/payouts",
     summary: "/sellers/commissions/summary",

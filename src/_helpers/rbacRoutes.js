@@ -292,7 +292,7 @@ const ROUTE_MODULES = [
     [
       "/inventory-overview", "/variant-inventory",
       "/seller-Product-Inventory", "/seller-product-inventory", "/inventory-adjustment",
-      "/warehouse", "/low-stock-alerts", "/threshold-products",
+      "/inventory-transactions", "/warehouse", "/low-stock-alerts", "/threshold-products",
     ],
     ["inventory", "products"],
   ],

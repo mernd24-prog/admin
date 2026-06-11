@@ -56,6 +56,45 @@ const toOptionalNumber = (value) => {
   return Number.isFinite(number) ? number : undefined;
 };
 
+const inferWarrantyDuration = (template = {}) => {
+  const metadata = template?.metadata || {};
+  const directValue = template?.durationValue ?? metadata.durationValue;
+  const directUnit = template?.durationUnit || metadata.durationUnit;
+
+  if (directValue !== undefined && directValue !== null && directUnit) {
+    return { value: directValue, unit: directUnit };
+  }
+
+  const durationMonths = template?.durationMonths ?? metadata.durationMonths;
+  if (durationMonths !== undefined && durationMonths !== null) {
+    return { value: durationMonths, unit: 'months' };
+  }
+
+  const label = String(template?.period || template?.name || '').trim().toLowerCase();
+  if (!label || label.includes('no warranty')) {
+    return { value: 0, unit: 'months' };
+  }
+
+  const match = label.match(/(\d+)\s*(day|days|week|weeks|month|months|year|years)?/);
+  if (!match) return null;
+
+  const unitMap = {
+    day: 'days',
+    days: 'days',
+    week: 'weeks',
+    weeks: 'weeks',
+    month: 'months',
+    months: 'months',
+    year: 'years',
+    years: 'years',
+  };
+
+  return {
+    value: Number(match[1]),
+    unit: unitMap[match[2]] || 'months',
+  };
+};
+
 const compactObject = (value) => {
   if (Array.isArray(value)) {
     return value
@@ -463,16 +502,26 @@ export default function ProductManagementUI() {
       value: item?.name || item?._id || item?.id,
       label: item?.name || item?.title || item?.code || String(item?._id || item?.id || ''),
     })),
-    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData)).map((item) => {
-      const durationValue = item?.durationValue !== undefined && item?.durationValue !== null
-        ? item.durationValue
-        : item?.durationMonths || 0;
-      const durationUnit = item?.durationUnit || 'months';
-      return {
-        value: `${durationValue}:${durationUnit}`,
-        label: item?.period || item?.name || String(item?._id || item?.id || ''),
-      };
-    }),
+    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData))
+      .map((item) => {
+        const metadata = item?.metadata || {};
+        const duration = inferWarrantyDuration(item);
+        const durationValue = duration?.value;
+        const durationUnit = duration?.unit;
+        const supportedUnits = new Set(['days', 'weeks', 'months', 'years']);
+
+        if (durationValue === undefined || durationValue === null || !supportedUnits.has(durationUnit)) return null;
+
+        return {
+          value: `${durationValue}:${durationUnit}`,
+          label: item?.period || item?.name || String(item?._id || item?.id || ''),
+          durationValue,
+          durationUnit,
+          sortOrder: metadata.sortOrder || 999,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label)),
     colorList: (() => {
       const colorOption = platformOptions.find((item) => String(item.name || item.slug || '').toLowerCase() === 'color');
       const colorValues = colorOption ? (platformValues[colorOption._id || colorOption.id] || []) : [];

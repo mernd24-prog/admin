@@ -4,6 +4,8 @@ import {
   MdDelete,
   MdEdit,
   MdLocationOn,
+  MdToggleOff,
+  MdToggleOn,
   MdWarehouse,
 } from "react-icons/md";
 import { toast } from "react-toastify";
@@ -13,11 +15,13 @@ import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGu
 import {
   ConfirmModal,
   DataTable,
+  FilterBar,
   PageHeader,
   StatusBadge,
 } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ACTIONS } from "../../_helpers/usePermission";
+import { useListPage } from "../../hooks/useListPage";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 
 const ENDPOINT = "/admin/inventory/warehouses";
@@ -40,6 +44,19 @@ const EMPTY_FORM = {
   skuCount: 0,
   active: true,
 };
+
+const WAREHOUSE_FILTERS = [
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+    width: "w-40",
+  },
+];
 
 const toIdOptions = (options = []) =>
   options.map((option) => ({
@@ -293,13 +310,18 @@ const WarehouseManagement = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
 
   const countries = useDropdownOptions("countries", { limit: 250 });
   const countryOptions = useMemo(
@@ -333,22 +355,27 @@ const WarehouseManagement = () => {
     () => toIdOptions(pincodes.options),
     [pincodes.options],
   );
+  const { toQueryParams } = list;
 
   const fetchWarehouses = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
+      const params = toQueryParams();
       const res = await axiosProvider.get(ENDPOINT, {
-        params: { page, limit: 20, search },
+        params,
       });
       const payload = unwrapList(res);
       setWarehouses(payload.items);
       setTotal(payload.total);
     } catch (error) {
-      toast.error(error?.message || "Failed to load warehouses");
+      const message = error?.response?.data?.message || error?.message || "Failed to load warehouses";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [toQueryParams]);
 
   useEffect(() => {
     fetchWarehouses();
@@ -396,6 +423,27 @@ const WarehouseManagement = () => {
     ].forEach((field) => {
       if (!String(form[field] ?? "").trim()) nextErrors[field] = "Required";
     });
+    if (form.code && /\s/.test(form.code)) {
+      nextErrors.code = "Code cannot contain spaces";
+    }
+    if (
+      form.managerEmail &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.managerEmail).trim())
+    ) {
+      nextErrors.managerEmail = "Enter a valid email";
+    }
+    if (
+      form.managerPhone &&
+      !/^[0-9+\-()\s]{7,20}$/.test(String(form.managerPhone).trim())
+    ) {
+      nextErrors.managerPhone = "Enter a valid phone number";
+    }
+    if (Number(form.capacity || 0) < 0) {
+      nextErrors.capacity = "Capacity cannot be negative";
+    }
+    if (Number(form.skuCount || 0) < 0) {
+      nextErrors.skuCount = "SKU count cannot be negative";
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -482,10 +530,30 @@ const WarehouseManagement = () => {
     }
   };
 
+  const confirmStatusChange = async () => {
+    if (!statusTarget?._id) return;
+    setSubmitting(true);
+    try {
+      const nextIsDisable = statusTarget.active !== false;
+      await axiosProvider.patch(`${ENDPOINT}/status`, {
+        ids: [statusTarget._id],
+        isDisable: nextIsDisable,
+      });
+      toast.success(nextIsDisable ? "Warehouse deactivated" : "Warehouse activated");
+      setStatusTarget(null);
+      fetchWarehouses();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.message || "Failed to update warehouse status");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const columns = [
     {
       key: "name",
       label: "Warehouse",
+      sortable: true,
       render: (_, row) => (
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-lg bg-[var(--admin-blue-soft)] flex items-center justify-center text-[var(--admin-gold)]">
@@ -513,6 +581,7 @@ const WarehouseManagement = () => {
     {
       key: "skuCount",
       label: "SKUs",
+      sortable: true,
       render: (value) => (
         <span className="font-mono">{Number(value || 0).toLocaleString()}</span>
       ),
@@ -520,6 +589,7 @@ const WarehouseManagement = () => {
     {
       key: "capacity",
       label: "Capacity",
+      sortable: true,
       render: (value) => (
         <span className="font-mono">{Number(value || 0).toLocaleString()}</span>
       ),
@@ -527,6 +597,7 @@ const WarehouseManagement = () => {
     {
       key: "active",
       label: "Status",
+      sortable: true,
       render: (value) => (
         <StatusBadge status={value === false ? "inactive" : "active"} dot />
       ),
@@ -544,6 +615,20 @@ const WarehouseManagement = () => {
               title="Edit warehouse"
             >
               <MdEdit size={16} />
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="inventory" action={ACTIONS.STATUS_CHANGE}>
+            <button
+              type="button"
+              onClick={() => setStatusTarget(row)}
+              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border ${
+                row.active === false
+                  ? "border-green-100 text-green-600 hover:bg-green-50"
+                  : "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
+              }`}
+              title={row.active === false ? "Activate warehouse" : "Deactivate warehouse"}
+            >
+              {row.active === false ? <MdToggleOn size={18} /> : <MdToggleOff size={18} />}
             </button>
           </PermissionGuard>
           <PermissionGuard module="inventory" action={ACTIONS.DELETE}>
@@ -583,18 +668,30 @@ const WarehouseManagement = () => {
         columns={columns}
         data={warehouses}
         loading={loading}
+        error={error}
         totalCount={total}
-        page={page}
-        pageSize={20}
-        onPageChange={setPage}
-        onSearch={(value) => {
-          setSearch(value);
-          setPage(1);
-        }}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
         searchPlaceholder="Search warehouses..."
         onRefresh={fetchWarehouses}
         requiredModule="inventory"
         exportConfig={{ filename: "warehouses", columns }}
+        filterBar={
+          <FilterBar
+            filters={WAREHOUSE_FILTERS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
       />
 
       <WarehouseFormModal
@@ -624,6 +721,19 @@ const WarehouseManagement = () => {
         title="Delete Warehouse?"
         message={`This will permanently remove "${deleteTarget?.name || "this warehouse"}".`}
         confirmLabel="Delete Warehouse"
+      />
+
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={confirmStatusChange}
+        loading={submitting}
+        variant={statusTarget?.active === false ? "success" : "warning"}
+        title={statusTarget?.active === false ? "Activate Warehouse?" : "Deactivate Warehouse?"}
+        message={`This will mark "${statusTarget?.name || "this warehouse"}" as ${
+          statusTarget?.active === false ? "active" : "inactive"
+        }.`}
+        confirmLabel={statusTarget?.active === false ? "Activate Warehouse" : "Deactivate Warehouse"}
       />
     </div>
   );

@@ -30,6 +30,8 @@ const toProductListParams = (params = {}) => ({
     ...(params.tags ? { tags: params.tags } : {}),
     ...(params.minPrice !== undefined ? { minPrice: Number(params.minPrice) } : {}),
     ...(params.maxPrice !== undefined ? { maxPrice: Number(params.maxPrice) } : {}),
+    ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
+    ...(params.dateTo ? { dateTo: params.dateTo } : {}),
     ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
     ...(params.sortBy ? { sortBy: params.sortBy } : {}),
     ...(params.sortDir ? { sortDir: params.sortDir } : {}),
@@ -537,7 +539,12 @@ export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.
 export const getProductModerationQueue = createApiThunkPrivate('getProductModerationQueue', ENDPOINTS.products.moderationQueue, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.status ? { status: params.status } : {}),
+        ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
         ...(params.category ? { category: params.category } : {}),
+        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+        ...(params.productType ? { productType: params.productType } : {}),
+        ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
+        ...(params.dateTo ? { dateTo: params.dateTo } : {}),
         ...(params.page ? { page: Number(params.page) } : {}),
         ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
         ...(params.sortBy ? { sortBy: params.sortBy } : {}),
@@ -634,9 +641,13 @@ export const adjustProductInventory = createApiThunkPrivate(
     false,
     {
         transformBody: (payload = {}) => ({
-            adjustment: Number(payload.adjustment || 0),
+            ...(payload.adjustment !== undefined ? { adjustment: Number(payload.adjustment || 0) } : {}),
+            ...(payload.adjustmentType ? { adjustmentType: payload.adjustmentType } : {}),
+            ...(payload.quantity !== undefined ? { quantity: Number(payload.quantity || 0) } : {}),
             ...(payload.variantSku ? { variantSku: payload.variantSku } : {}),
             ...(payload.reason ? { reason: payload.reason } : {}),
+            ...(payload.note ? { note: payload.note } : {}),
+            ...(payload.reference ? { reference: payload.reference } : {}),
         }),
     }
 )

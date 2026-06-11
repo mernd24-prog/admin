@@ -32,52 +32,9 @@ import { PageSkeletonLoader } from "../Loader/SkeletonLoader";
 const valueFieldSelector =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea';
 
-const LIVE_ADMIN_ROUTE_PREFIXES = [
-  "/home",
-  "/profile",
-  "/changepassword",
-  "/product-flow",
-  "/product-catalog",
-  "/add-product",
-  "/draft-products",
-  "/pending-products",
-  "/change-pending-products",
-  "/rejected-products",
-  "/seller-product-inventory",
-  "/categories",
-  "/category-attributes",
-  "/brands",
-  "/product-options",
-  "/product-option-value",
-  "/product-option-values",
-  "/product-tags",
-  "/threshold-products",
-  "/product-variants",
-  "/product-families",
-  "/product-dimensions",
-  "/finish",
-  "/warranty",
-  "/hsn-code",
-  "/bar-code",
-  "/barcode",
-];
+ 
 
-const normalizeRoutePath = (path = "") =>
-  `/${String(path || "")
-    .trim()
-    .replace(/^\/+/, "")
-    .toLowerCase()}`;
-
-const isLiveAdminRoute = (path) => {
-  const normalizedPath = normalizeRoutePath(path);
-  return LIVE_ADMIN_ROUTE_PREFIXES.some((prefix) => {
-    const normalizedPrefix = normalizeRoutePath(prefix);
-    return (
-      normalizedPath === normalizedPrefix ||
-      normalizedPath.startsWith(`${normalizedPrefix}/`)
-    );
-  });
-};
+ 
 
 const syncPrefilledFieldState = (root) => {
   if (!root) return;
@@ -308,6 +265,9 @@ const VariantInventory = React.lazy(
 const InventoryAdjustment = React.lazy(
   () => import("../../pages/Inventory/InventoryAdjustment"),
 );
+const InventoryTransactions = React.lazy(
+  () => import("../../pages/Inventory/InventoryTransactions"),
+);
 const WarehouseManagement = React.lazy(
   () => import("../../pages/Inventory/WarehouseManagement"),
 );
@@ -437,22 +397,22 @@ function Layout() {
       modules.forEach((module) => {
         const moduleCode = normalizeModule(
           module.slug ||
-            module.moduleKey ||
-            module.moduleSlug ||
-            module.module ||
-            module.module_code?.module_code ||
-            module.module_code ||
-            module.metadata?.requiredModule,
+          module.moduleKey ||
+          module.moduleSlug ||
+          module.module ||
+          module.module_code?.module_code ||
+          module.module_code ||
+          module.metadata?.requiredModule,
         );
 
         if (!moduleCode) return;
 
         const hasViewAction = Array.isArray(module.permissions)
           ? module.permissions.some(
-              (permission) =>
-                String(permission.action || "").toLowerCase() === "view" &&
-                permission.assigned === true,
-            )
+            (permission) =>
+              String(permission.action || "").toLowerCase() === "view" &&
+              permission.assigned === true,
+          )
           : module.assigned !== false;
         const isAssigned = module.assigned !== false && hasViewAction;
 
@@ -506,9 +466,7 @@ function Layout() {
       return <PermissionNotAllowed loading={isPermissionShow} />;
     }
 
-    if (!isLiveAdminRoute(path)) {
-      return <ComingSoonPage />;
-    }
+ 
 
     return element;
   };
@@ -547,9 +505,8 @@ function Layout() {
       </div>
 
       <div
-        className={`relative flex flex-col flex-1 overflow-hidden bg-[var(--admin-shell)] ${
-          navbarOpen ? "" : "lg:ml-0"
-        }`}
+        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${navbarOpen ? "" : "lg:ml-0"
+          }`}
       >
         <Header
           handleNavbar={handleSidebarToggle}
@@ -1090,6 +1047,13 @@ function Layout() {
                     element={renderRoute(
                       "/inventory-adjustment",
                       <InventoryAdjustment />,
+                    )}
+                  />
+                  <Route
+                    path="/inventory-transactions"
+                    element={renderRoute(
+                      "/inventory-transactions",
+                      <InventoryTransactions />,
                     )}
                   />
                   <Route

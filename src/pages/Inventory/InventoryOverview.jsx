@@ -73,24 +73,35 @@ const InventoryOverview = () => {
   const [stats,    setStats]    = useState({});
   const [loading,  setLoading]  = useState(true);
   const [total,    setTotal]    = useState(0);
+  const [error,    setError]    = useState("");
+
+  const normalizeProductListResponse = (response) => {
+    const data = response?.data?.data;
+    const pagination = response?.data?.pagination || response?.data?.meta?.pagination || response?.data?.meta;
+    const items = Array.isArray(data) ? data : data?.products || data?.list || data?.items || [];
+    return {
+      items,
+      total: Number(pagination?.total ?? data?.total ?? items.length),
+    };
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError("");
       try {
         const params = list.toQueryParams();
         const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
           params: {
             page:   params.page,
             limit:  params.limit,
-            search: params.search || undefined,
+            q:      params.search || undefined,
             stockStatus: params.stockStatus || undefined,
             sortBy: params.sortBy,
             sortDir:params.sortDir,
           },
         });
-        const items     = res.data?.data?.products || res.data?.data || [];
-        const nextTotal = res.data?.pagination?.total || res.data?.data?.total || items.length;
+        const { items, total: nextTotal } = normalizeProductListResponse(res);
         setProducts(items);
         setTotal(nextTotal);
 
@@ -102,7 +113,8 @@ const InventoryOverview = () => {
           else s.inStock++;
         });
         setStats(s);
-      } catch {
+      } catch (err) {
+        setError(err?.response?.data?.message || "Failed to load inventory data");
         toast.error("Failed to load inventory data");
       } finally {
         setLoading(false);
@@ -169,6 +181,7 @@ const InventoryOverview = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
+        error={error}
         searchPlaceholder="Search products…"
         requiredModule="inventory"
         exportConfig={{ filename: "inventory-products", columns: COLUMNS }}

@@ -126,6 +126,7 @@ export default function BasicDetailsTab({
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isCustomWarranty, setIsCustomWarranty] = useState(false);
 
   const selectedColorOption = useMemo(() => {
     const currentColor = String(formData.color || '').trim();
@@ -135,6 +136,42 @@ export default function BasicDetailsTab({
       { value: currentColor, label: currentColor }
     );
   }, [formattedColorList, formData.color]);
+
+  const selectedWarrantyOption = useMemo(() => {
+    const currentValue = `${String(formData.warranty?.period ?? '')}:${String(formData.warranty?.periodUnit || '')}`;
+    return (formattedWarrantyList || []).find((opt) => String(opt.value) === currentValue) || null;
+  }, [formattedWarrantyList, formData.warranty?.period, formData.warranty?.periodUnit]);
+  const hasUnmatchedWarranty = Boolean(
+    (formData.warranty?.period || formData.warranty?.periodUnit) &&
+    !selectedWarrantyOption
+  );
+  const showCustomWarranty = isCustomWarranty || hasUnmatchedWarranty;
+
+  const handleWarrantyTemplateChange = (option) => {
+    const durationValue = option?.durationValue ?? String(option?.value || '').split(':')[0] ?? '';
+    const durationUnit = option?.durationUnit ?? String(option?.value || '').split(':')[1] ?? '';
+
+    setIsCustomWarranty(false);
+    handleChange({ target: { name: 'warranty.period', value: durationValue } });
+    handleChange({ target: { name: 'warranty.periodUnit', value: durationUnit } });
+  };
+
+  const handleCustomWarrantyToggle = (event) => {
+    const checked = event.target.checked;
+    setIsCustomWarranty(checked);
+
+    if (checked) {
+      if (!formData.warranty?.periodUnit) {
+        handleChange({ target: { name: 'warranty.periodUnit', value: 'months' } });
+      }
+      return;
+    }
+
+    if (!selectedWarrantyOption) {
+      handleChange({ target: { name: 'warranty.period', value: '' } });
+      handleChange({ target: { name: 'warranty.periodUnit', value: '' } });
+    }
+  };
 
   const convertTimeToMilliseconds = (timeStr) => {
     if (!timeStr || !timeStr.includes(':')) return 0;
@@ -622,40 +659,51 @@ export default function BasicDetailsTab({
               textareaClasses='text-sm'
             />
            
+            {!showCustomWarranty && (
+              <FilterSelect
+                label="Warranty Template"
+                value={selectedWarrantyOption}
+                onChange={handleWarrantyTemplateChange}
+                options={formattedWarrantyList || []}
+                placeholder="Select warranty template"
+                isClearable
+              />
+            )}
             <Input
-              labelName="Warranty Period"
-              name="warranty.period"
-              type="number"
-              value={formData.warranty?.period || ""}
-              onChange={handleChange}
-              placeholder="Example: 12"
+              labelName="Custom warranty"
+              name="customWarranty"
+              type="switch"
+              value={showCustomWarranty}
+              onChange={handleCustomWarrantyToggle}
             />
-            <FilterSelect
-              label="Warranty Template"
-              value={(formattedWarrantyList || []).find((opt) => String(opt.value) === `${String(formData.warranty?.period || '')}:${String(formData.warranty?.periodUnit || '')}`) || null}
-              onChange={(e) => {
-                const [durationValue = '', durationUnit = ''] = String(e?.value || '').split(':');
-                handleChange({ target: { name: 'warranty.period', value: durationValue } });
-                handleChange({ target: { name: 'warranty.periodUnit', value: durationUnit } });
-              }}
-              options={formattedWarrantyList || []}
-              placeholder="Select warranty template"
-            />
-            <FilterSelect
-              label="Warranty Unit"
-              value={warrantyUnits.options.find(opt => opt.value === formData.warranty?.periodUnit) || null}
-              onChange={(e) => handleChange({ target: { name: 'warranty.periodUnit', value: e?.value || '' } })}
-              options={warrantyUnits.options}
-              placeholder="Select unit"
-              isLoading={warrantyUnits.loading}
-            />
+            {showCustomWarranty && (
+              <>
+                <Input
+                  labelName="Warranty Period"
+                  name="warranty.period"
+                  type="number"
+                  value={formData.warranty?.period ?? ""}
+                  onChange={handleChange}
+                  placeholder="Example: 12"
+                  min={0}
+                />
+                <FilterSelect
+                  label="Warranty Unit"
+                  value={warrantyUnits.options.find(opt => opt.value === formData.warranty?.periodUnit) || null}
+                  onChange={(e) => handleChange({ target: { name: 'warranty.periodUnit', value: e?.value || '' } })}
+                  options={warrantyUnits.options}
+                  placeholder="Select unit"
+                  isLoading={warrantyUnits.loading}
+                />
+              </>
+            )}
             <Input
               labelName="Warranty Provider"
               name="warranty.provider"
               type="text"
               value={formData.warranty?.provider || ""}
               onChange={handleChange}
-              placeholder="Provider"
+              placeholder="Enter provider name"
             />
             <Input
               labelName="Return Window Days"

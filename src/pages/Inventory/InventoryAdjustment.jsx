@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { MdTune, MdSearch, MdAdd, MdRemove, MdCheck } from "react-icons/md";
 import { PageHeader, FormSection } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -7,6 +7,7 @@ import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
+import ConfirmModal from "../../components/Shared/ConfirmModal";
 
 const TYPES = [
   { value: "add", label: "Add Stock", icon: MdAdd, color: "text-green-600" },
@@ -29,16 +30,43 @@ const InventoryAdjustment = () => {
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [errors, setErrors] = useState({});
   const adjustmentReasons = useDropdownOptions("inventory-adjustment-reasons");
+  const [variantSku, setVariantSku] = useState("");
+
+  const selectedVariant = useMemo(
+    () => (selected?.variants || []).find((variant) => variant.sku === variantSku) || null,
+    [selected, variantSku],
+  );
+  const currentStock = Number(selectedVariant?.stock ?? selected?.stock ?? 0);
+  const requestedQty = Number(qty || 0);
+  const adjustmentPreview = useMemo(() => {
+    if (!requestedQty) return 0;
+    if (adjustType === "add") return requestedQty;
+    if (adjustType === "remove") return -requestedQty;
+    return requestedQty - currentStock;
+  }, [adjustType, currentStock, requestedQty]);
+  const stockAfter = currentStock + adjustmentPreview;
+
+  const normalizeProductList = (response) => {
+    const data = response?.data?.data;
+    if (Array.isArray(data)) return data;
+    return data?.products || data?.list || data?.items || [];
+  };
 
   const searchProducts = async () => {
-    if (!search.trim()) return;
+    if (!search.trim()) {
+      setErrors({ search: "Enter a product name or SKU to search." });
+      return;
+    }
+    setErrors({});
     setSearching(true);
     try {
       const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
         params: { search, limit: 10 },
       });
-      setResults(res.data?.data?.products || []);
+      setResults(normalizeProductList(res));
     } catch {
       toast.error("Search failed");
     } finally {
@@ -46,22 +74,44 @@ const InventoryAdjustment = () => {
     }
   };
 
+  const validate = () => {
+    const nextErrors = {};
+    if (!selected) nextErrors.product = "Select a product.";
+    if (!qty || requestedQty <= 0) nextErrors.qty = "Enter a quantity greater than 0.";
+    if (!reason) nextErrors.reason = "Select a reason.";
+    if (adjustType === "remove" && stockAfter < 0) {
+      nextErrors.qty = "Remove quantity cannot be greater than current stock.";
+    }
+    if (adjustType === "set" && requestedQty === currentStock) {
+      nextErrors.qty = "Set quantity must be different from current stock.";
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
-    if (!selected || !qty || !reason)
-      return toast.warn("Fill all required fields");
+    if (!validate()) return;
+    setConfirmOpen(true);
+  };
+
+  const applyAdjustment = async () => {
     setSubmitting(true);
     try {
       await axiosProvider.patch(ENDPOINTS.products.inventory(selected._id), {
         adjustmentType: adjustType,
-        quantity: Number(qty),
+        quantity: requestedQty,
+        ...(variantSku ? { variantSku } : {}),
         reason,
         note,
       });
       toast.success("Inventory adjusted successfully");
       setSelected(null);
+      setVariantSku("");
       setQty("");
       setReason("");
       setNote("");
+      setConfirmOpen(false);
+      setErrors({});
     } catch {
       toast.error("Adjustment failed");
     } finally {
@@ -119,9 +169,10 @@ const InventoryAdjustment = () => {
                   <div
                     key={p._id}
                     onClick={() => {
-                      setSelected(p);
-                      setResults([]);
-                    }}
+                  setSelected(p);
+                  setVariantSku("");
+                  setResults([]);
+                }}
                     className={`flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 text-sm ${selected?._id === p._id ? "bg-[var(--admin-blue-soft)]" : ""}`}
                   >
                     <div>
@@ -159,6 +210,8 @@ const InventoryAdjustment = () => {
                 </div>
               </div>
             )}
+            {errors.product && <p className="mt-2 text-xs text-red-500">{errors.product}</p>}
+            {errors.search && <p className="mt-2 text-xs text-red-500">{errors.search}</p>}
           </FormSection>
 
           {/* Step 2: Adjustment details */}
@@ -191,19 +244,46 @@ const InventoryAdjustment = () => {
                 })}
               </div>
 
+              {Array.isArray(selected.variants) && selected.variants.length > 0 && (
+                <div className="mb-4">
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">
+                    Variant SKU
+                  </label>
+                  <select
+                    value={variantSku}
+                    onChange={(e) => setVariantSku(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)] bg-white"
+                  >
+                    <option value="">Root product stock</option>
+                    {selected.variants.map((variant) => (
+                      <option key={variant.sku || variant._id} value={variant.sku}>
+                        {variant.sku || variant.title} · Stock: {variant.stock ?? 0}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Quantity */}
               <div className="mb-4">
                 <label className="text-xs font-medium text-gray-600 mb-1 block">
-                  Quantity *
+                  {adjustType === "set" ? "New Stock Quantity *" : "Quantity *"}
                 </label>
                 <input
                   type="number"
                   min="1"
                   value={qty}
-                  onChange={(e) => setQty(e.target.value)}
+                  onChange={(e) => {
+                    setQty(e.target.value);
+                    setErrors((prev) => ({ ...prev, qty: undefined }));
+                  }}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)]"
                   placeholder="Enter quantity"
                 />
+                {errors.qty && <p className="mt-1 text-xs text-red-500">{errors.qty}</p>}
+                <p className="mt-1 text-xs text-gray-400">
+                  Current stock: {currentStock} · After adjustment: {Number.isFinite(stockAfter) ? stockAfter : currentStock}
+                </p>
               </div>
 
               {/* Reason */}
@@ -213,7 +293,10 @@ const InventoryAdjustment = () => {
                 </label>
                 <select
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    setErrors((prev) => ({ ...prev, reason: undefined }));
+                  }}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--admin-gold)] bg-white"
                 >
                   <option value="">Select reason…</option>
@@ -223,6 +306,7 @@ const InventoryAdjustment = () => {
                     </option>
                   ))}
                 </select>
+                {errors.reason && <p className="mt-1 text-xs text-red-500">{errors.reason}</p>}
               </div>
 
               {/* Note */}
@@ -255,6 +339,16 @@ const InventoryAdjustment = () => {
           )}
         </div>
       </PermissionGuard>
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={applyAdjustment}
+        title="Apply inventory adjustment?"
+        message={`This will change ${selected?.title || "the selected product"}${variantSku ? ` (${variantSku})` : ""} from ${currentStock} to ${stockAfter}.`}
+        variant={adjustmentPreview < 0 ? "warning" : "info"}
+        confirmLabel="Apply Adjustment"
+        loading={submitting}
+      />
     </div>
   );
 };

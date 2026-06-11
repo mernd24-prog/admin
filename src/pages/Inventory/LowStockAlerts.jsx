@@ -1,11 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { MdNotifications, MdAddCircleOutline } from "react-icons/md";
-import { PageHeader, DataTable, StatusBadge } from "../../components/Shared";
+import { useNavigate } from "react-router-dom";
+import { PageHeader, DataTable, StatusBadge, FilterBar } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
+import { useListPage } from "../../hooks/useListPage";
+
+const FILTER_FIELDS = [
+  {
+    key: "stockStatus",
+    type: "select",
+    label: "Alert Type",
+    options: [
+      { value: "low_stock", label: "Low Stock" },
+      { value: "out_of_stock", label: "Out of Stock" },
+    ],
+    width: "w-44",
+  },
+];
 
 const COLUMNS = [
   { key: "title", label: "Product", sortable: true },
@@ -54,38 +69,71 @@ const COLUMNS = [
 ];
 
 const LowStockAlerts = () => {
+  const navigate = useNavigate();
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "stock",
+    defaultSortDir: "asc",
+    defaultFilters: { stockStatus: "low_stock" },
+  });
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState("");
+  const { toQueryParams } = list;
+
+  const normalizeProductListResponse = (response) => {
+    const data = response?.data?.data;
+    const pagination = response?.data?.pagination || response?.data?.meta?.pagination || response?.data?.meta;
+    const items = Array.isArray(data) ? data : data?.products || data?.list || data?.items || [];
+    return {
+      items,
+      total: Number(pagination?.total ?? data?.total ?? items.length),
+    };
+  };
 
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
+      setError("");
       try {
+        const params = toQueryParams();
         const res = await axiosProvider.get(ENDPOINTS.products.listForPanel, {
-          params: { stockStatus: "low", page, limit: 20 },
+          params: {
+            page: params.page,
+            limit: params.limit,
+            q: params.search || undefined,
+            stockStatus: params.stockStatus || "low_stock",
+            sortBy: params.sortBy,
+            sortDir: params.sortDir,
+          },
         });
-        const items = res.data?.data?.products || res.data?.data || [];
-        setProducts(items);
-        setTotal(res.data?.data?.total || items.length);
-      } catch {
-        toast.error("Failed to load low stock data");
+        const payload = normalizeProductListResponse(res);
+        setProducts(payload.items);
+        setTotal(payload.total);
+      } catch (err) {
+        const message = err?.response?.data?.message || "Failed to load low stock data";
+        setError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
     };
     fetch();
-  }, [page]);
+  }, [toQueryParams]);
 
-  const tableData = products.map((p) => ({
-    _id: p._id,
-    title: p.title,
-    sku: p.sku || "—",
-    category: p.category || "—",
-    stock: p.stock ?? 0,
-    threshold: p.inventorySettings?.lowStockThreshold ?? 5,
-  }));
+  const tableData = useMemo(
+    () =>
+      products.map((p) => ({
+        _id: p._id,
+        title: p.title,
+        sku: p.sku || "—",
+        category: p.category || "—",
+        stock: p.stock ?? 0,
+        threshold: p.inventorySettings?.lowStockThreshold ?? 5,
+      })),
+    [products],
+  );
 
   return (
     <div className="max-w-7xl mx-auto mt-8">
@@ -98,8 +146,12 @@ const LowStockAlerts = () => {
         ]}
         actions={
           <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
-            <button className="admin-btn-primary">
-              <MdAddCircleOutline size={16} /> Restock All
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={() => navigate("/app/inventory-adjustment")}
+            >
+              <MdAddCircleOutline size={16} /> Adjust Stock
             </button>
           </PermissionGuard>
         }
@@ -118,13 +170,30 @@ const LowStockAlerts = () => {
         columns={COLUMNS}
         data={tableData}
         loading={loading}
+        error={error}
         totalCount={total}
-        page={page}
-        pageSize={20}
-        onPageChange={setPage}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search low-stock products..."
         emptyText="No low stock alerts — all products are well stocked!"
         requiredModule="inventory"
         exportConfig={{ filename: "low-stock-alerts", columns: COLUMNS }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
       />
     </div>
   );

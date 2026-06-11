@@ -24,20 +24,12 @@ import {
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import Loader from "../../../components/Loader/Loader";
 import { toast } from "sonner";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
-import {
-  transformArray,
-  uploadCsvFile,
-} from "../../../_helpers/globalFunctions";
-import UploadFile from "../../../components/Atoms/UploadFile/UploadFile";
-import Button from "../../../components/Atoms/buttons/button";
+import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { DataTable, ExportButton } from "../../../components/Shared";
-import { getShopList } from "../../../Redux/StoreSlice";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
@@ -48,16 +40,16 @@ const INITIAL_FILTERS = {
   product: { value: "All", label: "All" },
   sellerName: { value: "", label: "Search By User Name" },
   category: { value: "", label: "Search By Category" },
-  activationStatus: { value: "Does not matter", label: "Does not matter" },
-  approvalStatus: { value: "Does not matter", label: "Does not matter" },
-  productType: { value: "Select", label: "Select" },
+  activationStatus: { value: "All", label: "All" },
+  approvalStatus: { value: "All", label: "All" },
+  productType: { value: "", label: "All" },
   dateFrom: "",
   dateTo: "",
 };
 
 const DEFAULT_PAGE_SIZE = 10;
 const APPROVAL_STATUS_OPTIONS = [
-  { value: "Does not matter", label: "Does not matter" },
+  { value: "All", label: "All" },
   { value: "Draft", label: "Draft" },
   { value: "Pending", label: "Pending" },
   { value: "Change Pending", label: "Change Pending" },
@@ -66,11 +58,15 @@ const APPROVAL_STATUS_OPTIONS = [
   { value: "Archived", label: "Archived" },
 ];
 const ACTIVATION_STATUS_OPTIONS = [
-  { value: "Does not matter", label: "Does not matter" },
+  { value: "All", label: "All" },
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
 ];
-const BULK_IMPORT_AVAILABLE = false;
+const PRODUCT_TYPE_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "simple", label: "Simple" },
+  { value: "variable", label: "Variable" },
+];
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 const STATUS_TOGGLEABLE = new Set(["active", "inactive"]);
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
@@ -123,6 +119,17 @@ const ProductCatalog = () => {
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [statusConfirmation, setStatusConfirmation] = useState({
+    open: false,
+    type: null,
+    product: null,
+    productIds: [],
+    nextStatus: null,
+    title: "",
+    message: "",
+    confirmLabel: "Confirm",
+    variant: "warning",
+  });
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -139,13 +146,6 @@ const ProductCatalog = () => {
   const setSelectedRow = list.setSelectedKeys;
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
   const [userData, setUserData] = useState(null);
-  const [isBulkUpload, setIsBulkUpload] = useState(false);
-  const [bulkUploadData, setBulkUploadData] = useState({
-    seller_id: "",
-    store_id: "",
-    file: "",
-  });
-  const [isLoading, setIsLoading] = useState(false);
   const [reviewModal, setReviewModal] = useState({
     open: false,
     product: null,
@@ -156,9 +156,6 @@ const ProductCatalog = () => {
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(
     selector?.store?.getAllSellerListData?.data?.data?.list || [],
-  );
-  const storeList = transformArray(
-    selector?.store?.getShopListData?.data?.list || [],
   );
 
   const isChangePendingFilter = appliedFilters?.approvalStatus?.value === "Change Pending";
@@ -190,6 +187,11 @@ const ProductCatalog = () => {
       ...(appliedFilters?.sellerName?.value
         ? { sellerId: appliedFilters.sellerName.value }
         : {}),
+      ...(appliedFilters?.productType?.value
+        ? { productType: appliedFilters.productType.value }
+        : {}),
+      ...(appliedFilters?.dateFrom ? { dateFrom: appliedFilters.dateFrom } : {}),
+      ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
       ...(appliedFilters?.activationStatus?.value === "Active"
         ? { status: "active" }
         : {}),
@@ -217,6 +219,15 @@ const ProductCatalog = () => {
             ...(appliedFilters?.category?.value
               ? { category: appliedFilters.category.value }
               : {}),
+            ...(appliedFilters?.search ? { q: appliedFilters.search } : {}),
+            ...(appliedFilters?.sellerName?.value
+              ? { sellerId: appliedFilters.sellerName.value }
+              : {}),
+            ...(appliedFilters?.productType?.value
+              ? { productType: appliedFilters.productType.value }
+              : {}),
+            ...(appliedFilters?.dateFrom ? { dateFrom: appliedFilters.dateFrom } : {}),
+            ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
           }),
         )
         : await dispatch(getProducts(buildProductQuery(list.page)));
@@ -241,7 +252,6 @@ const ProductCatalog = () => {
 
   useEffect(() => {
     dispatch(getAllSellerList());
-    dispatch(getShopList({ page: 1, size: 100 }));
     dispatch(getCategoryList({ tree: true, limit: 100 }))
       .then((res) => {
         const raw = res?.payload?.data?.data || res?.payload?.data || [];
@@ -284,37 +294,6 @@ const ProductCatalog = () => {
       }
     }
   }, []);
-  const bulkUploadValidation = (userData) => {
-    const isRole9 = userData?.roleId === 9;
-
-    if (isRole9) {
-      if (!bulkUploadData.seller_id) {
-        toast.error("Please select a seller");
-        return false;
-      }
-
-      if (!bulkUploadData.store_id) {
-        toast.error("Please select a store");
-        return false;
-      }
-    }
-
-    if (!bulkUploadData.file) {
-      toast.error("Please upload a file");
-      return false;
-    }
-
-    const file = bulkUploadData.file;
-    const validTypes = ["text/csv", "application/vnd.ms-excel"];
-    const fileExtension = file.name.split(".").pop().toLowerCase();
-
-    if (!validTypes.includes(file.type) && fileExtension !== "csv") {
-      toast.error("Only CSV files are allowed.");
-      return false;
-    }
-
-    return true;
-  };
 
   const handleImageClick = useCallback((data) => {
     const images = Array.isArray(data) ? data : getProductImages(data);
@@ -338,36 +317,80 @@ const ProductCatalog = () => {
       return dateString || "N/A";
     }
   };
+  const closeStatusConfirmation = () => {
+    if (loading) return;
+    setStatusConfirmation({
+      open: false,
+      type: null,
+      product: null,
+      productIds: [],
+      nextStatus: null,
+      title: "",
+      message: "",
+      confirmLabel: "Confirm",
+      variant: "warning",
+    });
+  };
+
+  const executeToggleStatus = async (product, nextStatus) => {
+    const apiPayload = {
+      _id: [product?._id],
+      status: nextStatus,
+      isDisable: nextStatus !== "active",
+      reason: "product_status_toggle",
+    };
+    const response = await dispatch(
+      enableDisableProductCatalogs(apiPayload),
+    ).unwrap();
+    toast.success(
+      response?.message ||
+      `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`,
+    );
+  };
+
+  const executeBulkStatus = async (productIds, nextStatus) => {
+    const apiPayload = {
+      _id: productIds,
+      status: nextStatus,
+      isDisable: nextStatus !== "active",
+      reason: "product_bulk_status_toggle",
+    };
+    const response = await dispatch(
+      enableDisableProductCatalogs(apiPayload),
+    ).unwrap();
+    toast.success(response?.message || "Products updated successfully.");
+    setSelectedRow([]);
+  };
+
+  const executeRestoreProduct = async (product) => {
+    const response = await dispatch(
+      restoreProduct({
+        _id: [product?._id],
+        status: "draft",
+        visibility: "private",
+        reason: "product_restored_from_admin",
+      }),
+    ).unwrap();
+    toast.success(response?.message || "Product restored as draft.");
+  };
+
   const handleToggle = async (data) => {
     if (!canToggleProduct(data)) {
       toast.error("This product status cannot be toggled from here.");
       return;
     }
     const nextStatus = getNextToggleStatus(data);
-    const apiPayload = {
-      _id: [data?._id],
-      status: nextStatus,
-      isDisable: nextStatus !== "active",
-      reason: "product_status_toggle",
-    };
-    try {
-      setLoading(true);
-      const response = await dispatch(
-        enableDisableProductCatalogs(apiPayload),
-      ).unwrap();
-      if (response.message) {
-        toast.success(
-          `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`,
-        );
-      } else {
-        toast.info(response?.message || "Something went wrong");
-      }
-    } catch (error) {
-      toast.error(error?.message || "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-    fetchProductsList();
+    setStatusConfirmation({
+      open: true,
+      type: "toggle",
+      product: data,
+      productIds: [],
+      nextStatus,
+      title: nextStatus === "active" ? "Activate product?" : "Deactivate product?",
+      message: `This will mark "${data?.title || data?.name || "this product"}" as ${nextStatus}.`,
+      confirmLabel: nextStatus === "active" ? "Activate" : "Deactivate",
+      variant: nextStatus === "active" ? "success" : "warning",
+    });
   };
 
   const hasPendingRevision = (product) =>
@@ -487,22 +510,45 @@ const ProductCatalog = () => {
   }
 
   const handleRestoreProduct = async (product) => {
+    setStatusConfirmation({
+      open: true,
+      type: "restore",
+      product,
+      productIds: [],
+      nextStatus: "draft",
+      title: "Restore product?",
+      message: `This will restore "${product?.title || product?.name || "this product"}" as a private draft for review before it can go live again.`,
+      confirmLabel: "Restore",
+      variant: "success",
+    });
+  };
+
+  const handleStatusConfirm = async () => {
     try {
       setLoading(true);
-      const response = await dispatch(
-        restoreProduct({
-          _id: [product?._id],
-          status: "draft",
-          visibility: "private",
-          reason: "product_restored_from_admin",
-        }),
-      ).unwrap();
-      toast.success(response?.message || "Product restored as draft.");
+      if (statusConfirmation.type === "toggle") {
+        await executeToggleStatus(statusConfirmation.product, statusConfirmation.nextStatus);
+      } else if (statusConfirmation.type === "bulk_status") {
+        await executeBulkStatus(statusConfirmation.productIds, statusConfirmation.nextStatus);
+      } else if (statusConfirmation.type === "restore") {
+        await executeRestoreProduct(statusConfirmation.product);
+      }
       fetchProductsList();
     } catch (error) {
-      toast.error(error?.message || error || "Restore failed.");
+      toast.error(error?.message || error || "Action failed.");
     } finally {
       setLoading(false);
+      setStatusConfirmation({
+        open: false,
+        type: null,
+        product: null,
+        productIds: [],
+        nextStatus: null,
+        title: "",
+        message: "",
+        confirmLabel: "Confirm",
+        variant: "warning",
+      });
     }
   };
 
@@ -525,29 +571,17 @@ const ProductCatalog = () => {
     }
     if (action === "Active" || action === "Inactive") {
       const nextStatus = action === "Active" ? "active" : "inactive";
-      let apiPayload = {
-        _id: selectedRow,
-        status: nextStatus,
-        isDisable: nextStatus !== "active",
-        reason: "product_bulk_status_toggle",
-      };
-      try {
-         setLoading(true);
-        const res = await dispatch(
-          enableDisableProductCatalogs(apiPayload),
-        ).unwrap();
-        if (res) {
-          toast.success(res?.message);
-        }
-        fetchProductsList();
-        setSelectedRow([]);
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-         setLoading(true);
-        if (error.errors) {
-          toast.error(error.errors || "failed to update");
-        }
-      }
+      setStatusConfirmation({
+        open: true,
+        type: "bulk_status",
+        product: null,
+        productIds: [...selectedRow],
+        nextStatus,
+        title: nextStatus === "active" ? "Activate selected products?" : "Deactivate selected products?",
+        message: `This will mark ${selectedRow.length} selected product${selectedRow.length === 1 ? "" : "s"} as ${nextStatus}.`,
+        confirmLabel: nextStatus === "active" ? "Activate" : "Deactivate",
+        variant: nextStatus === "active" ? "success" : "warning",
+      });
     }
   };
 
@@ -723,78 +757,17 @@ const ProductCatalog = () => {
     ],
   );
 
-  const handleAddBulkUpload = () => {
-    setIsBulkUpload(true);
-  };
-  const handleSelectChange = (data, action) => {
-    if (action === "SELLER") {
-      setBulkUploadData((prev) => ({
-        ...prev,
-        seller_id: data?.value,
-      }));
-      dispatch(getShopList({ page: 1, size: 100, sellerId: data?.value }));
-    } else {
-      setBulkUploadData((prev) => ({
-        ...prev,
-        store_id: data?.value,
-      }));
-    }
-  };
-
-  const handleFileUpload = async (file) => {
-    if (!file) return;
-    setBulkUploadData((prev) => ({ ...prev, file: file }));
-  };
-  const handleSubmitBulk = async () => {
-    if (!bulkUploadValidation(userData)) return;
-
-    try {
-      setIsLoading(true);
-
-      // 👉 Clone and update bulkUploadData
-      const updatedBulkUploadData = {
-        ...bulkUploadData,
-        ...(userData?.roleId === 9 && { store_id: userData?.storeId }),
-      };
-
-      const csv = await uploadCsvFile(updatedBulkUploadData);
-      toast.info(csv?.message || "Success!");
-
-      navigate(`/app/product-catalog/bulk-history`);
-    } catch (error) {
-      toast.error(error || "Catalog upload failed. Please try again.");
-      setIsLoading(false);
-    } finally {
-      setIsLoading(false);
-      setBulkUploadData({ seller_id: "", store_id: "", file: "" });
-      setIsBulkUpload(false);
-    }
-  };
-
   return (
     <div className="p-6 mx-auto overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl">
-      <Loader loading={loading || isLoading} />
+      <Loader loading={loading} />
       <div className="flex md:flex-row flex-col items-center justify-between mb-4">
         <h1 className="text-xl font-bold ">Product Catalog</h1>
         <div className="flex justify-end gap-2">
-          {BULK_IMPORT_AVAILABLE && (
-            <Button onClick={() => navigate(`/app/product-catalog/bulk-history`)}>
-              Bulk History
-            </Button>
-          )}
           <ExportButton
             data={apiRes?.list || []}
             filename="products"
             requiredModule="products"
           />
-          {BULK_IMPORT_AVAILABLE && (
-            <AddButton
-              onClick={handleAddBulkUpload}
-              labelName={`Add in bulk`}
-              requiredModule="products"
-              requiredAction="import"
-            />
-          )}
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
@@ -846,8 +819,10 @@ const ProductCatalog = () => {
             isApprovalOptions={true}
             isCategory={true}
             categoryOptions={categoryOptions}
-            isProduct={true}
             isProductType={true}
+            dateFrom={true}
+            dateTo={true}
+            productTypeOptions={PRODUCT_TYPE_OPTIONS}
             isUser={true}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
@@ -858,6 +833,9 @@ const ProductCatalog = () => {
             isStatusAction={true}
             handleAction={handleBulkAction}
             requiredModule="products"
+            isSearchDown={true}
+            defaultSearchOpen={true}
+            exclusiveStatusFilters={true}
           />
         </section>
         <section>
@@ -899,46 +877,16 @@ const ProductCatalog = () => {
         onConfirm={handleDeleteSubmit}
       />
 
-      {BULK_IMPORT_AVAILABLE && (
-        <DefaultModal
-          isOpen={isBulkUpload}
-          onClose={() => setIsBulkUpload(false)}
-          title={`Add Bulk Product`}
-          onSubmit={handleSubmitBulk}
-        >
-          <div className="space-y-8 p-2">
-            {userData?.roleId !== 9 && (
-              <>
-                {userData?.roleId !== 3 && (
-                  <FilterSelect
-                    options={sellerListData || []}
-                    onChange={(data) => handleSelectChange(data, "SELLER")}
-                    value={
-                      sellerListData.find(
-                        (opt) => opt.value === bulkUploadData?.seller_id,
-                      ) || null
-                    }
-                    label="Seller"
-                  />
-                )}
-
-                <FilterSelect
-                  options={storeList || []}
-                  value={
-                    storeList.find(
-                      (opt) => opt.value === bulkUploadData?.store_id,
-                    ) || null
-                  }
-                  onChange={(data) => handleSelectChange(data, "STORE")}
-                  label="Store"
-                />
-              </>
-            )}
-
-            <UploadFile onFileSelect={handleFileUpload} />
-          </div>
-        </DefaultModal>
-      )}
+      <ConfirmModal
+        open={statusConfirmation.open}
+        onClose={closeStatusConfirmation}
+        title={statusConfirmation.title}
+        message={statusConfirmation.message}
+        variant={statusConfirmation.variant}
+        confirmLabel={statusConfirmation.confirmLabel}
+        loading={loading && statusConfirmation.open}
+        onConfirm={handleStatusConfirm}
+      />
 
       <ImageGallery
         images={selectedImages}
