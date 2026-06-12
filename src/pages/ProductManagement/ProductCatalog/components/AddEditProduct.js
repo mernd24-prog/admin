@@ -1378,7 +1378,7 @@ export default function ProductManagementUI() {
     <div className='relative min-h-screen p-2 mx-auto max-w-7xl'>
       <Loader loading={loading} />
       <Breadcrumb isEditMode={isEditMode} />
-      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {flowReadiness.map((item) => (
@@ -1423,7 +1423,7 @@ export default function ProductManagementUI() {
         <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
           {error.flow}
         </div>
-      )} */}
+      )}
       <div className="flex flex-col gap-6 pb-8 lg:flex-row lg:items-start">
         <div className="lg:w-44 flex-shrink-0 lg:sticky lg:top-24">
           <TabNavigation

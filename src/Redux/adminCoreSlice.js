@@ -609,8 +609,8 @@ export const createContentPage = createApiThunkPrivate("adminCore/createContentP
 export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (_, payload) => toContentPageBody(omitPayload(payload, ["id"])) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
-export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status"]) });
-export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status"]) });
+export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status", "rating", "sortBy", "sortOrder"]) });
+export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status", "adminReply"]) });
 export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "DELETE", false, { transformParams: noParams });
 
 // Platform attribute options (admin-managed: Color, Size, RAM, etc.)

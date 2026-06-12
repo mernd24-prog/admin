@@ -81,6 +81,18 @@ const FILTER_FIELDS = [
     })),
   },
   {
+    key: "buyerId",
+    type: "text",
+    label: "Buyer ID",
+    width: "w-52",
+  },
+  {
+    key: "sellerId",
+    type: "text",
+    label: "Seller ID",
+    width: "w-52",
+  },
+  {
     key: "fromDate",
     type: "date",
     label: "From Date",
@@ -201,12 +213,13 @@ const Orders = () => {
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+  const { toQueryParams } = list;
 
   const { items, total } = getListPayload(selector);
   const loading = !!selector?.getOrderListData?.loading;
 
   useEffect(() => {
-    const params = list.toQueryParams();
+    const params = toQueryParams();
     dispatch(
       getOrderList({
         page: params.page,
@@ -215,16 +228,19 @@ const Orders = () => {
         status: params.status || undefined,
         paymentStatus: params.paymentStatus || undefined,
         deliveryStatus: params.deliveryStatus || undefined,
+        buyerId: params.buyerId || undefined,
+        sellerId: params.sellerId || undefined,
         fromDate: params.fromDate || undefined,
         toDate: params.toDate || undefined,
         sortBy: params.sortBy,
-        sortOrder: params.sortDir,
+        sortDir: params.sortDir,
       }),
     ).unwrap().catch((err) => {
       toast.error(err?.message || "Failed to fetch orders");
     });
   }, [
     dispatch,
+    toQueryParams,
     list.page,
     list.pageSize,
     list.search,

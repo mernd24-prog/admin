@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { MdHistory } from "react-icons/md";
-import { PageHeader, DataTable, FilterBar, StatusBadge } from "../../components/Shared";
+import { MdHistory, MdOutlineAutorenew } from "react-icons/md";
+import { PageHeader, DataTable, FilterBar, StatusBadge, ConfirmModal } from "../../components/Shared";
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { ACTIONS } from "../../_helpers/usePermission";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
 
@@ -54,6 +56,8 @@ const InventoryTransactions = () => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
   const [error, setError] = useState("");
 
   const fetchTransactions = useCallback(async () => {
@@ -90,6 +94,32 @@ const InventoryTransactions = () => {
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
+
+  const releaseExpiredReservations = async () => {
+    setCleanupLoading(true);
+    try {
+      const response = await axiosProvider.post(
+        ENDPOINTS.inventory.releaseExpiredReservations,
+        {
+          limit: 100,
+          reason: "admin_expired_reservation_cleanup",
+        },
+      );
+      const result = response?.data?.data || {};
+      toast.success(
+        `Released ${result.released || 0} expired reservation${Number(result.released || 0) === 1 ? "" : "s"}.`,
+      );
+      if (result.failed) {
+        toast.warn(`${result.failed} reservation cleanup attempt${result.failed === 1 ? "" : "s"} failed. Check server logs and audit data.`);
+      }
+      setCleanupOpen(false);
+      fetchTransactions();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to release expired reservations");
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
 
   const columns = [
     {
@@ -138,6 +168,17 @@ const InventoryTransactions = () => {
         subtitle="Audit every stock reservation, release, sale, return, damage, and manual adjustment"
         breadcrumbs={[{ label: "Inventory Management" }, { label: "Inventory Transactions" }]}
         icon={<MdHistory size={20} />}
+        actions={
+          <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
+            <button
+              type="button"
+              onClick={() => setCleanupOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-[var(--admin-navy)] text-sm font-semibold rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
+              <MdOutlineAutorenew size={16} /> Release Expired
+            </button>
+          </PermissionGuard>
+        }
       />
 
       <DataTable
@@ -168,6 +209,17 @@ const InventoryTransactions = () => {
             activeCount={list.activeFilterCount}
           />
         }
+      />
+
+      <ConfirmModal
+        open={cleanupOpen}
+        onClose={() => setCleanupOpen(false)}
+        onConfirm={releaseExpiredReservations}
+        title="Release expired reservations?"
+        message="This will release stock held by expired unpaid orders and add release entries to the inventory transaction audit."
+        variant="warning"
+        confirmLabel="Release"
+        loading={cleanupLoading}
       />
     </div>
   );

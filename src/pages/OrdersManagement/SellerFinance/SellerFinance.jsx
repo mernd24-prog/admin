@@ -96,12 +96,57 @@ const TableShell = ({ title, headings, children, emptyText }) => (
   </section>
 );
 
+const ModalOverlay = ({ isOpen, onClose, title, children, onSubmit, submitting }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl border border-[#E6E6E6] bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-[#E6E6E6] px-5 py-4">
+          <h3 className="text-sm font-semibold text-[#202337]">{title}</h3>
+          <button type="button" onClick={onClose} className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]">
+            <MdClose size={18} />
+          </button>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+        <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
+          <button type="button" onClick={onClose} disabled={submitting} className="rounded-md border border-[#E6E6E6] px-4 py-2 text-sm font-medium text-[#65718b] hover:bg-[#f8faff]">
+            Cancel
+          </button>
+          <button type="button" onClick={onSubmit} disabled={submitting} className="rounded-md bg-[#2f6fed] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+            {submitting ? "Saving..." : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FieldRow = ({ label, children }) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-medium text-[#65718b]">{label}</label>
+    {children}
+  </div>
+);
+
+const inputCls = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]";
+
+const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "bank_transfer"];
+
 const SellerFinance = () => {
   const dispatch = useDispatch();
   const financeState = useSelector((state) => state.sellerCommissions);
   const [filters, setFilters] = useState({ sellerId: "", status: "", search: "" });
   const [orderId, setOrderId] = useState("");
-  const [payoutSellerId, setPayoutSellerId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Process Payout modal
+  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+
+  // Complete Payout modal
+  const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
+
+  // Fail Payout modal
+  const [failModal, setFailModal] = useState({ open: false, payout: null, reason: "", note: "" });
 
   const loadFinance = useCallback(async () => {
     try {
@@ -149,70 +194,97 @@ const SellerFinance = () => {
     },
   ], [summary]);
 
-  const updateFilter = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
+  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
 
   const handleCalculate = async () => {
-    if (!orderId.trim()) {
-      toast.error("Order ID is required");
-      return;
-    }
+    if (!orderId.trim()) { toast.error("Order ID is required"); return; }
     try {
+      setSubmitting(true);
       await dispatch(calculateSellerCommission({ orderId: orderId.trim() })).unwrap();
       toast.success("Commission recalculated");
       setOrderId("");
       await loadFinance();
     } catch (error) {
       toast.error(error || "Unable to calculate commission");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleProcessPayout = async () => {
-    if (!payoutSellerId.trim()) {
-      toast.error("Seller ID is required");
-      return;
-    }
+  const handleProcessPayoutSubmit = async () => {
+    if (!processModal.sellerId.trim()) { toast.error("Seller ID is required"); return; }
     try {
-      await dispatch(processSellerPayouts({
-        sellerId: payoutSellerId.trim(),
-        paymentReference: `admin_${Date.now()}`,
-        paymentMethod: "manual",
-      })).unwrap();
-      toast.success("Payout processed");
-      setPayoutSellerId("");
+      setSubmitting(true);
+      const payload = {
+        sellerId: processModal.sellerId.trim(),
+        paymentMethod: processModal.paymentMethod,
+        paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
+        note: processModal.note.trim() || undefined,
+      };
+      if (processModal.periodStart) payload.periodStart = processModal.periodStart;
+      if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
+      await dispatch(processSellerPayouts(payload)).unwrap();
+      toast.success("Payout processed successfully");
+      setProcessModal({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
       await loadFinance();
     } catch (error) {
       toast.error(error || "Unable to process payout");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleCompletePayout = async (payout) => {
-    const paymentReference = window.prompt("Payment reference", payout.payment_reference || `manual_${Date.now()}`);
-    if (!paymentReference) return;
+  const handleCompletePayoutSubmit = async () => {
+    if (!completeModal.paymentReference.trim()) { toast.error("Payment reference is required"); return; }
     try {
+      setSubmitting(true);
       await dispatch(completeSellerPayout({
-        payoutId: payout.id,
-        paymentReference,
-        paymentMethod: payout.payment_method || "manual",
+        payoutId: completeModal.payout.id,
+        paymentReference: completeModal.paymentReference.trim(),
+        paymentMethod: completeModal.paymentMethod,
+        note: completeModal.note.trim() || undefined,
       })).unwrap();
-      toast.success("Payout completed");
+      toast.success("Payout marked as completed");
+      setCompleteModal({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
       await loadFinance();
     } catch (error) {
       toast.error(error || "Unable to complete payout");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleFailPayout = async (payout) => {
-    const reason = window.prompt("Failure reason", "Payment failed");
-    if (!reason) return;
+  const handleFailPayoutSubmit = async () => {
+    if (!failModal.reason.trim()) { toast.error("Failure reason is required"); return; }
     try {
-      await dispatch(failSellerPayout({ payoutId: payout.id, reason })).unwrap();
+      setSubmitting(true);
+      await dispatch(failSellerPayout({
+        payoutId: failModal.payout.id,
+        reason: failModal.reason.trim(),
+        note: failModal.note.trim() || undefined,
+      })).unwrap();
       toast.success("Payout released back to pending");
+      setFailModal({ open: false, payout: null, reason: "", note: "" });
       await loadFinance();
     } catch (error) {
       toast.error(error || "Unable to fail payout");
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const openCompleteModal = (payout) => {
+    setCompleteModal({
+      open: true,
+      payout,
+      paymentReference: payout.payment_reference || "",
+      paymentMethod: payout.payment_method || "manual",
+      note: "",
+    });
+  };
+
+  const openFailModal = (payout) => {
+    setFailModal({ open: true, payout, reason: "", note: "" });
   };
 
   return (
@@ -232,6 +304,12 @@ const SellerFinance = () => {
         )}
       />
 
+      {/* Commission Breakdown Info Banner */}
+      <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
+        <strong>How commission is calculated:</strong> Platform deducts commission (tier-based: Bronze 15% / Silver 12% / Gold 10% / Platinum 8%) + fixed fee + closing fee from each order item.
+        Seller receives: <em>Item sale price − platform commission − GST on commission</em>. Refund adjustments are applied before payout.
+      </div>
+
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
@@ -242,9 +320,9 @@ const SellerFinance = () => {
             <MdSearch size={18} /> Filters
           </div>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-1">
-            <input className="min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]" placeholder="Seller ID" value={filters.sellerId} onChange={(event) => updateFilter("sellerId", event.target.value)} />
-            <input className="min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]" placeholder="Search order, seller, payout..." value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} />
-            <select className="min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]" value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <input className={inputCls} placeholder="Seller ID" value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)} />
+            <input className={inputCls} placeholder="Search order, seller, payout..." value={filters.search} onChange={(e) => updateFilter("search", e.target.value)} />
+            <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
               <option value="">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -261,8 +339,8 @@ const SellerFinance = () => {
             <MdCalculate size={18} /> Recalculate Order Commission
           </div>
           <div className="flex gap-2">
-            <input className="min-h-[38px] min-w-0 flex-1 rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]" placeholder="Order ID" value={orderId} onChange={(event) => setOrderId(event.target.value)} />
-            <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white" onClick={handleCalculate}>
+            <input className={`${inputCls} min-w-0 flex-1`} placeholder="Order ID" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+            <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
               Run
             </button>
           </div>
@@ -272,47 +350,68 @@ const SellerFinance = () => {
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
             <MdPayments size={18} /> Process Seller Payout
           </div>
-          <div className="flex gap-2">
-            <input className="min-h-[38px] min-w-0 flex-1 rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]" placeholder="Seller ID" value={payoutSellerId} onChange={(event) => setPayoutSellerId(event.target.value)} />
-            <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white" onClick={handleProcessPayout}>
-              Pay
-            </button>
-          </div>
+          <button
+            type="button"
+            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
+            onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
+          >
+            Initiate Payout
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <TableShell title="Seller Commissions" headings={["Order", "Seller", "Gross", "Commission", "GST", "Refund", "Payable", "Status", "Created"]} emptyText="No commissions found">
+        <TableShell
+          title="Seller Commissions"
+          headings={["Order", "Seller", "Gross", "Commission", "GST", "Refund Adj.", "Net Payable", "Status", "Created"]}
+          emptyText="No commissions found"
+        >
           {commissions.length ? commissions.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.order_id)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.tax_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold">{money(row.net_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
             </tr>
           )) : null}
         </TableShell>
 
-        <TableShell title="Seller Payouts" headings={["Payout", "Seller", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]} emptyText="No payouts found">
+        <TableShell
+          title="Seller Payouts"
+          headings={["Payout", "Seller", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
+          emptyText="No payouts found"
+        >
           {payouts.length ? payouts.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{row.period_start} - {row.period_end}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold">{money(row.net_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">
                 <div className="flex items-center gap-1">
-                  <IconButton title="Complete payout" tone="green" icon={<MdCheckCircle size={18} />} onClick={() => handleCompletePayout(row)} disabled={row.status === "completed"} />
-                  <IconButton title="Fail payout" tone="red" icon={<MdClose size={18} />} onClick={() => handleFailPayout(row)} disabled={row.status === "completed" || row.status === "failed"} />
+                  <IconButton
+                    title="Mark payout complete — enter payment reference"
+                    tone="green"
+                    icon={<MdCheckCircle size={18} />}
+                    onClick={() => openCompleteModal(row)}
+                    disabled={row.status === "completed"}
+                  />
+                  <IconButton
+                    title="Fail payout — release back to pending"
+                    tone="red"
+                    icon={<MdClose size={18} />}
+                    onClick={() => openFailModal(row)}
+                    disabled={row.status === "completed" || row.status === "failed"}
+                  />
                 </div>
               </td>
             </tr>
@@ -321,23 +420,115 @@ const SellerFinance = () => {
       </div>
 
       <div className="mt-4">
-        <TableShell title="Settlement Ledger" headings={["Settlement", "Seller", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created"]} emptyText="No settlements found">
+        <TableShell
+          title="Settlement Ledger"
+          headings={["Settlement", "Seller", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created"]}
+          emptyText="No settlements found"
+        >
           {settlements.length ? settlements.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.payout_id)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.adjustment_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold">{money(row.net_amount || row.amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.adjustment_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
             </tr>
           )) : null}
         </TableShell>
       </div>
+
+      {/* Process Payout Modal */}
+      <ModalOverlay
+        isOpen={processModal.open}
+        onClose={() => setProcessModal((prev) => ({ ...prev, open: false }))}
+        title="Initiate Seller Payout"
+        onSubmit={handleProcessPayoutSubmit}
+        submitting={submitting}
+      >
+        <div className="space-y-3">
+          <FieldRow label="Seller ID *">
+            <input className={inputCls} placeholder="Enter seller ID" value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value }))} />
+          </FieldRow>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Period Start">
+              <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
+            </FieldRow>
+            <FieldRow label="Period End">
+              <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
+            </FieldRow>
+          </div>
+          <FieldRow label="Payment Method">
+            <select className={inputCls} value={processModal.paymentMethod} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
+              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+            </select>
+          </FieldRow>
+          <FieldRow label="Payment Reference">
+            <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
+          </FieldRow>
+          <FieldRow label="Internal Note">
+            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
+          </FieldRow>
+        </div>
+      </ModalOverlay>
+
+      {/* Complete Payout Modal */}
+      <ModalOverlay
+        isOpen={completeModal.open}
+        onClose={() => setCompleteModal((prev) => ({ ...prev, open: false }))}
+        title="Complete Payout"
+        onSubmit={handleCompletePayoutSubmit}
+        submitting={submitting}
+      >
+        {completeModal.payout && (
+          <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
+            <div>Payout: <span className="font-mono">{shortId(completeModal.payout.id)}</span></div>
+            <div>Seller: <span className="font-mono">{shortId(completeModal.payout.seller_id)}</span></div>
+            <div>Net Amount: <span className="font-semibold text-[#208a3c]">{money(completeModal.payout.net_amount)}</span></div>
+          </div>
+        )}
+        <div className="space-y-3">
+          <FieldRow label="Payment Reference *">
+            <input className={inputCls} placeholder="UTR / transaction ID / cheque no." value={completeModal.paymentReference} onChange={(e) => setCompleteModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
+          </FieldRow>
+          <FieldRow label="Payment Method">
+            <select className={inputCls} value={completeModal.paymentMethod} onChange={(e) => setCompleteModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
+              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+            </select>
+          </FieldRow>
+          <FieldRow label="Internal Note">
+            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={completeModal.note} onChange={(e) => setCompleteModal((prev) => ({ ...prev, note: e.target.value }))} />
+          </FieldRow>
+        </div>
+      </ModalOverlay>
+
+      {/* Fail Payout Modal */}
+      <ModalOverlay
+        isOpen={failModal.open}
+        onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
+        title="Fail Payout"
+        onSubmit={handleFailPayoutSubmit}
+        submitting={submitting}
+      >
+        {failModal.payout && (
+          <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
+            <div>Payout: <span className="font-mono">{shortId(failModal.payout.id)}</span></div>
+            <div>This will release the payout back to <strong>pending</strong> status so it can be retried.</div>
+          </div>
+        )}
+        <div className="space-y-3">
+          <FieldRow label="Failure Reason *">
+            <input className={inputCls} placeholder="e.g. Incorrect bank details, payment bounced" value={failModal.reason} onChange={(e) => setFailModal((prev) => ({ ...prev, reason: e.target.value }))} />
+          </FieldRow>
+          <FieldRow label="Internal Note">
+            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional additional context" value={failModal.note} onChange={(e) => setFailModal((prev) => ({ ...prev, note: e.target.value }))} />
+          </FieldRow>
+        </div>
+      </ModalOverlay>
     </div>
   );
 };

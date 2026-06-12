@@ -90,8 +90,18 @@ const ThresholdProducts = React.lazy(
   () =>
     import("../../pages/ProductManagement/ThresholdProducts/ThresholdProducts"),
 );
+const InventoryAudit = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/InventoryAudit/InventoryAudit"),
+);
 const Orders = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/Orders"),
+);
+const Carts = React.lazy(
+  () => import("../../pages/OrdersManagement/Carts/Carts"),
+);
+const CheckoutQuote = React.lazy(
+  () => import("../../pages/OrdersManagement/CheckoutQuote/CheckoutQuote"),
 );
 const Payments = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/Payments"),
@@ -636,8 +646,23 @@ function Layout() {
                     )}
                   />
                   <Route
+                    path="/inventory-audit"
+                    element={renderRoute(
+                      "/inventory-audit",
+                      <InventoryAudit />,
+                    )}
+                  />
+                  <Route
                     path="/orders"
                     element={renderRoute("/orders", <Orders />)}
+                  />
+                  <Route
+                    path="/carts"
+                    element={renderRoute("/carts", <Carts />)}
+                  />
+                  <Route
+                    path="/checkout-quote"
+                    element={renderRoute("/checkout-quote", <CheckoutQuote />)}
                   />
                   <Route
                     path="/payments"

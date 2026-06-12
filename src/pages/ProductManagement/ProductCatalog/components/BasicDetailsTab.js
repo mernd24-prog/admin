@@ -15,36 +15,11 @@ import PermissionGuard from '../../../../components/Atoms/PermissionGuard/Permis
 import AddCategoryModal from './Modals/AddCategoryModal';
 
 // Redux Actions
-import { getAllCityList } from '../../../../Redux/citySlice';
-import { getAllStateList } from '../../../../Redux/stateSlice';
-import { create } from '../../../../Redux/StoreSlice';
 import { createCategory, createHsn } from '../../../../Redux/productSlice';
 
 import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
 import AddHsnModal from './Modals/AddHsnModal';
 // import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
-
-const INITIAL_FORM_STATE = {
-  name: "",
-  contact_person: "",
-  address: "",
-  country_code: "",
-  state_code: "",
-  city_code: "",
-  zip_code: "",
-  phone: "",
-  mobile: "",
-  email: "",
-  open_time: "",
-  close_time: "",
-  location: {
-    type: 'Point',
-    coordinates: ['', ''],
-  },
-  gstNumber: '',
-  panNumber: '',
-  businessLicense: '',
-};
 
 const INITIAL_FORM_CATEGORY = {
   categoryName: '',
@@ -66,12 +41,6 @@ const INITIAL_FORM_HSN = {
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
 
-const getListPayload = (sliceData) => {
-  const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
-  if (Array.isArray(data)) return data;
-  return data.list || data.items || [];
-};
-
 export default function BasicDetailsTab({
   formData,
   handleChange,
@@ -83,7 +52,7 @@ export default function BasicDetailsTab({
   handleSelectChange,
   errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, countryList = [], sellerList = [], userData
+  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], userData
 }) {
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
@@ -116,11 +85,9 @@ export default function BasicDetailsTab({
 
 
 
-  const [isAddStoreModal, setIsAddStoreModal] = useState(false);
   const [isCategoryModal, setIsCategoryModal] = useState(false);
   const [isHsnAddModal, setIsHsnAddModal] = useState(false)
 
-  const [formValues, setFormValues] = useState(INITIAL_FORM_STATE);
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
@@ -173,43 +140,6 @@ export default function BasicDetailsTab({
     }
   };
 
-  const convertTimeToMilliseconds = (timeStr) => {
-    if (!timeStr || !timeStr.includes(':')) return 0;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    if (isNaN(hours) || isNaN(minutes)) return 0;
-    return (hours * 60 + minutes) * 60 * 1000;
-  };
-
-  const handleInputChange = (e, coordIndex = null) => {
-    const { name, value } = e.target;
-    setFormValues(prev => {
-      if (name === "coordinates") {
-        const updatedCoords = [...(prev.location?.coordinates || ['', ''])];
-        updatedCoords[coordIndex] = value;
-
-        return {
-          ...prev,
-          location: {
-            ...prev.location,
-            coordinates: updatedCoords
-          }
-        };
-      }
-      return {
-        ...prev,
-        [name]: value
-      };
-    });
-
-    if (formErrors[name]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
-    }
-  };
-
-
   const handleInputCategoryChange = (e) => {
     const { name, value } = e.target;
     setCategoryForm(prev => ({ ...prev, [name]: value }));
@@ -220,114 +150,6 @@ export default function BasicDetailsTab({
     setIsHsnFormValue(prev => ({ ...prev, [name]: value }));
     setFormErrors({})
   }
-
-  const handleAction = (action) => {
-    const actionMap = {
-      'Store': () => setIsAddStoreModal(true),
-      'Category': () => setIsCategoryModal(true),
-      'Hsn': () => setIsHsnAddModal(true),
-
-    };
-
-    if (actionMap[action]) {
-      actionMap[action]();
-    }
-  };
-
-  const handleAddStore = async () => {
-    try {
-      const payloadWithTime = {
-        ...formValues,
-        open_time: convertTimeToMilliseconds(formValues.open_time),
-        close_time: convertTimeToMilliseconds(formValues.close_time),
-      };
-
-      await dispatch(create(payloadWithTime)).unwrap();
-      fetchAllData();
-      setIsAddStoreModal(false);
-      setFormValues(INITIAL_FORM_STATE);
-      toast.success('Store added successfully');
-    } catch (error) {
-      toast.error(error?.message || 'Failed to add store');
-    }
-  };
-
-  const handleSelectAddChange = (selectedOption, action) => {
-    switch (action) {
-      case 'COUNTRY':
-        setFormValues(prev => ({
-          ...prev,
-          country_code: selectedOption?.value || "",
-          state_code: "",
-          city_code: "",
-          zip_code: ""
-        }));
-        if (selectedOption?.value) {
-          dispatch(getAllStateList({ query: JSON.stringify({ country_code: selectedOption.value }) }));
-        }
-        break;
-
-      case 'STATE':
-        setFormValues(prev => ({
-          ...prev,
-          state_code: selectedOption?.value || "",
-          city_code: "",
-          zip_code: ""
-        }));
-        if (selectedOption?.value) {
-          dispatch(getAllCityList({ query: JSON.stringify({ state_code: selectedOption.value }) }));
-        }
-        break;
-
-      case 'CITY':
-        setFormValues(prev => ({
-          ...prev,
-          city_code: selectedOption?.value || "",
-          zip_code: ""
-        }));
-        break;
-
-      case 'ZIP_CODE':
-        setFormValues(prev => ({
-          ...prev,
-          zip_code: selectedOption?.value || ""
-        }));
-        break;
-      case 'user_id':
-        setFormValues(prev => ({
-          ...prev, user_id: selectedOption?.value
-        }));
-        break;
-
-      default:
-        break;
-    }
-
-    const fieldMap = {
-      'COUNTRY': 'country_code',
-      'STATE': 'state_code',
-      'CITY': 'city_code',
-      'ZIP_CODE': 'zip_code'
-    };
-
-    const fieldName = fieldMap[action];
-    if (fieldName && formErrors[fieldName]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [fieldName]: ""
-      }));
-    }
-  };
-
-  const handleProductOriginSelect = (selectedOption, action) => {
-    handleSelectChange(selectedOption, action);
-    if (action === 'PRODUCT_COUNTRY' && selectedOption?.value) {
-      dispatch(getAllStateList({ countryId: selectedOption.value }));
-    }
-    if (action === 'PRODUCT_STATE' && selectedOption?.value) {
-      dispatch(getAllCityList({ stateId: selectedOption.value }));
-    }
-  };
 
   const handleFileUploadCategory = async (file) => {
     if (!file) return;
@@ -456,47 +278,34 @@ export default function BasicDetailsTab({
 
   }
 
-  const validateStoreForm = () => {
-    const newErrors = {};
-    if (!formValues.name) newErrors.name = "Store name is required";
-    if (!formValues.contact_person) newErrors.contact_person = "Contact person is required";
-    if (!formValues.address) newErrors.address = "Address is required";
-    if (!formValues.country_code) newErrors.country_code = "Country is required";
-    if (!formValues.phone && !formValues.mobile) newErrors.contact = "At least one contact method is required";
-    if (!formValues.email) newErrors.email = "Email is required";
-    if (!formValues.open_time) newErrors.open_time = "Opening time is required";
-    if (!formValues.close_time) newErrors.close_time = "Closing time is required";
-
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const validateCategoryForm = () => {
     const newErrors = {};
     if (!categoryForm.categoryName) newErrors.categoryName = "Category name is required";
+    setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateHsnForm = () => {
     const newErrors = {};
+    const hasRate = (value) => value !== "" && value !== null && value !== undefined;
 
     if (!hsnFormValues.code) {
       newErrors.code = "Code is required";
     }
-    if (!hsnFormValues.IGST) {
+    if (!hasRate(hsnFormValues.IGST)) {
       newErrors.IGST = "IGST is required";
-    } else if (Number(hsnFormValues.IGST) > 100) {
-      newErrors.IGST = "IGST cannot be greater than 100";
+    } else if (Number(hsnFormValues.IGST) < 0 || Number(hsnFormValues.IGST) > 100) {
+      newErrors.IGST = "IGST must be between 0 and 100";
     }
-    if (!hsnFormValues.CGST) {
+    if (!hasRate(hsnFormValues.CGST)) {
       newErrors.CGST = "CGST is required";
-    } else if (Number(hsnFormValues.CGST) > 100) {
-      newErrors.CGST = "CGST cannot be greater than 100";
+    } else if (Number(hsnFormValues.CGST) < 0 || Number(hsnFormValues.CGST) > 100) {
+      newErrors.CGST = "CGST must be between 0 and 100";
     }
-    if (!hsnFormValues.SGST) {
+    if (!hasRate(hsnFormValues.SGST)) {
       newErrors.SGST = "SGST is required";
-    } else if (Number(hsnFormValues.SGST) > 100) {
-      newErrors.SGST = "SGST cannot be greater than 100";
+    } else if (Number(hsnFormValues.SGST) < 0 || Number(hsnFormValues.SGST) > 100) {
+      newErrors.SGST = "SGST must be between 0 and 100";
     }
     if (!hsnFormValues.description) {
       newErrors.description = "Description is required";
@@ -573,29 +382,55 @@ export default function BasicDetailsTab({
             </div>
 
             <div>
-              <FilterSelect
-                label="Category"
-                name="category_id"
-                value={selectedCategoryOption}
-                onChange={(e) => handleSelectChange(e, 'CATEGORY_ID')}
-                options={formattedCategoryList || []}
-                error={errors?.category_id}
-                placeholder="Select Category"
-                helperText="Attributes are controlled by the selected category schema."
-                required
-              />
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <FilterSelect
+                    label="Category"
+                    name="category_id"
+                    value={selectedCategoryOption}
+                    onChange={(e) => handleSelectChange(e, 'CATEGORY_ID')}
+                    options={formattedCategoryList || []}
+                    error={errors?.category_id}
+                    placeholder="Select Category"
+                    helperText="Attributes are controlled by the selected category schema."
+                    required
+                  />
+                </div>
+                <PermissionGuard module="categories" action="create" hide>
+                  <button
+                    type="button"
+                    className="mb-1 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    onClick={() => setIsCategoryModal(true)}
+                  >
+                    Add
+                  </button>
+                </PermissionGuard>
+              </div>
             </div>
 
             <div>
-              <FilterSelect
-                label="HSN Code"
-                name="hsn_code"
-                value={selectedHsnOption}
-                onChange={(e) => handleSelectChange(e, 'hsn_code')}
-                options={hsnCodeList || []}
-                error={errors?.hsn_code}
-                placeholder="Select HSN Code"
-              />
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <FilterSelect
+                    label="HSN Code"
+                    name="hsn_code"
+                    value={selectedHsnOption}
+                    onChange={(e) => handleSelectChange(e, 'hsn_code')}
+                    options={hsnCodeList || []}
+                    error={errors?.hsn_code}
+                    placeholder="Select HSN Code"
+                  />
+                </div>
+                <PermissionGuard module="tax" action="create" hide>
+                  <button
+                    type="button"
+                    className="mb-1 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    onClick={() => setIsHsnAddModal(true)}
+                  >
+                    Add
+                  </button>
+                </PermissionGuard>
+              </div>
             </div>
 
 

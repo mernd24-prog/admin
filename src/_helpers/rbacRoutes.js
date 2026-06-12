@@ -174,7 +174,7 @@ export const MODULE_DEFAULT_ROUTES = {
   // Inventory
   inventory:"inventory-overview",
   // Orders
-  carts:        "orders",
+  carts:        "carts",
   orders:       "orders",
   returns:      "returns",
   reviews:      "product-reviews",
@@ -296,7 +296,7 @@ const ROUTE_MODULES = [
     [
       "/inventory-overview", "/variant-inventory",
       "/seller-Product-Inventory", "/seller-product-inventory", "/inventory-adjustment",
-      "/inventory-transactions", "/warehouse", "/low-stock-alerts", "/threshold-products",
+      "/inventory-transactions", "/warehouse", "/low-stock-alerts", "/threshold-products", "/inventory-audit",
     ],
     ["inventory", "products"],
   ],
@@ -305,10 +305,11 @@ const ROUTE_MODULES = [
   [
     [
       "/orders", "/orders/view", "/view-orders", "/order-status",
-      "/gift-card-orders", "/order-cancellation-reasons",
+      "/gift-card-orders", "/order-cancellation-reasons", "/checkout-quote",
     ],
     ["orders"],
   ],
+  [["/carts"], ["carts"]],
   [["/payments", "/refunds"], ["payments", "wallets", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],

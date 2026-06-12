@@ -210,6 +210,7 @@ const initialState = {
     getCategoryAttributesData: {}, updateCategoryAttributesData: {},
     productPrefillData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
+    getInventoryTransactionsData: {},
     archiveProductData: {}, restoreProductData: {}, duplicateProductData: {},
 }
 
@@ -654,6 +655,16 @@ export const adjustProductInventory = createApiThunkPrivate(
         }),
     }
 )
+export const getInventoryTransactions = createApiThunkPrivate('getInventoryTransactions', ENDPOINTS.inventory.transactions, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.productId ? { productId: params.productId } : {}),
+        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+        ...(params.type ? { type: params.type } : {}),
+        ...(params.orderId ? { orderId: params.orderId } : {}),
+        limit: Number(params.limit || 50),
+        offset: Number(params.offset || 0),
+    }),
+})
 export const getInventoryStats = createApiThunkPrivate('getInventoryStats', ENDPOINTS.products.inventoryStats, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.sellerId ? { sellerId: params.sellerId } : {}),
@@ -748,6 +759,7 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, adjustProductInventory, 'adjustProductInventoryData')
         createExtraReducersForThunk(builder, getInventoryStats, 'getInventoryStatsData')
         createExtraReducersForThunk(builder, getTopProducts, 'getTopProductsData')
+        createExtraReducersForThunk(builder, getInventoryTransactions, 'getInventoryTransactionsData')
     }
 })
 

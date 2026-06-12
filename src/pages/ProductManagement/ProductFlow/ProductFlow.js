@@ -61,6 +61,7 @@ const steps = [
     route: "/app/seller-product-inventory",
     extraRoutes: [
       { label: "Threshold Products", route: "/app/threshold-products" },
+      { label: "Inventory Audit Log", route: "/app/inventory-audit" },
     ],
   },
 ];

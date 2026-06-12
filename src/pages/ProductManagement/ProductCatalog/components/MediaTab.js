@@ -98,7 +98,7 @@ export default function MediaTab({ setFormData, formData, images, setImages, err
       </div>
 
       {/* ── Catalog Document ───────────────────────────────────────────── */}
-      {/* <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-[var(--admin-shadow)] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[var(--admin-line)] shadow-[var(--admin-shadow)] overflow-hidden">
         <div
           className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-[var(--admin-surface-soft)] transition-colors select-none"
           onClick={() => setIsCatalogExpanded(!isCatalogExpanded)}
@@ -155,7 +155,7 @@ export default function MediaTab({ setFormData, formData, images, setImages, err
             </div>
           </div>
         )}
-      </div> */}
+      </div>
     </div>
   );
 }

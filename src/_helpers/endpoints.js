@@ -142,6 +142,11 @@ export const ENDPOINTS = {
     cancel: (orderId) => `/orders/${orderId}/cancel`,
     status: (orderId) => `/orders/${orderId}/status`,
     notes: (orderId) => `/orders/${orderId}/notes`,
+    checkoutQuote: "/orders/checkout/admin-quote",
+  },
+  carts: {
+    admin: "/admin/carts",
+    detail: (cartId) => `/admin/carts/${cartId}`,
   },
   payments: {
     admin: "/payments/admin",
@@ -154,6 +159,7 @@ export const ENDPOINTS = {
     stats: "/admin/inventory/stats",
     lowStock: "/admin/inventory/low-stock",
     transactions: "/admin/inventory/transactions",
+    releaseExpiredReservations: "/admin/inventory/reservations/release-expired",
     warehouses: "/admin/inventory/warehouses",
     warehouse: (warehouseId) => `/admin/inventory/warehouses/${warehouseId}`,
     warehouseStatus: "/admin/inventory/warehouses/status",

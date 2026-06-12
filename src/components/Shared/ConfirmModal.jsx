@@ -79,7 +79,7 @@ const ConfirmModal = ({
           </span>
           <div>
             <h3 className="text-base font-semibold text-[var(--admin-ink)]">{title}</h3>
-            {message && <p className="text-sm text-[var(--admin-muted)] mt-1">{message}</p>}
+            {message && <div className="text-sm text-[var(--admin-muted)] mt-1">{message}</div>}
           </div>
         </div>
 

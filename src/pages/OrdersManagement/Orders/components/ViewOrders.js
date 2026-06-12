@@ -19,6 +19,8 @@ import StatusBadge from "../../../../components/Shared/StatusBadge";
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
 const STATUS_OPTIONS = [
+  "pending_payment",
+  "payment_failed",
   "confirmed",
   "packed",
   "shipped",
@@ -220,7 +222,7 @@ const OrderSummary = () => {
     userData: {},
     returns: [],
   });
-  const [formData, setFormData] = useState({ status: "", reason: "", note: "" });
+  const [formData, setFormData] = useState({ status: "", reason: "", note: "", trackingNumber: "", carrierName: "", carrierUrl: "" });
   const [noteData, setNoteData] = useState({ note: "", visibility: "internal" });
 
   const setLoading = useCallback((loading) => {
@@ -314,13 +316,16 @@ const OrderSummary = () => {
         status: formData.status,
         reason: formData.reason,
         note: formData.note,
+        trackingNumber: formData.trackingNumber,
+        carrierName: formData.carrierName,
+        carrierUrl: formData.carrierUrl,
       };
       const res = formData.status === "cancelled"
         ? await dispatch(orderCancel({ orderId, reason: formData.reason })).unwrap()
         : await dispatch(updateOrderStatus(payload)).unwrap();
       toast.success(res?.message || "Order updated successfully");
       setState((prev) => ({ ...prev, statusModal: false }));
-      setFormData({ status: "", reason: "", note: "" });
+      setFormData({ status: "", reason: "", note: "", trackingNumber: "", carrierName: "", carrierUrl: "" });
       await fetchOrderInfo();
     } catch (error) {
       handleError(error, "Failed to update order");
@@ -719,6 +724,14 @@ const OrderSummary = () => {
             label="Status"
             placeholder="Select Status"
           />
+          {formData.status === "shipped" && (
+            <div className="rounded-md border border-[#e0ecff] bg-[#f0f6ff] p-3 space-y-3">
+              <p className="text-xs font-semibold text-[#2f6fed]">Shipment Details</p>
+              <Input labelName="Tracking Number" value={formData.trackingNumber} onChange={(event) => setFormData((prev) => ({ ...prev, trackingNumber: event.target.value }))} name="trackingNumber" placeholder="AWB / tracking number" maxLength={200} />
+              <Input labelName="Carrier / Courier" value={formData.carrierName} onChange={(event) => setFormData((prev) => ({ ...prev, carrierName: event.target.value }))} name="carrierName" placeholder="e.g. Delhivery, BlueDart, FedEx" maxLength={100} />
+              <Input labelName="Tracking URL (optional)" value={formData.carrierUrl} onChange={(event) => setFormData((prev) => ({ ...prev, carrierUrl: event.target.value }))} name="carrierUrl" placeholder="https://..." maxLength={500} />
+            </div>
+          )}
           <Input type="textarea" labelName="Reason" value={formData.reason} onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))} name="reason" placeholder="Reason or operational note" maxLength={1000} />
           <Input type="textarea" labelName="Internal Note" value={formData.note} onChange={(event) => setFormData((prev) => ({ ...prev, note: event.target.value }))} name="note" placeholder="Optional internal note" maxLength={1000} />
         </div>

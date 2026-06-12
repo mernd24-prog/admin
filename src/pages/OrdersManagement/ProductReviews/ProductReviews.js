@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete } from "react-icons/md";
+import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -27,8 +27,9 @@ const FILTER_FIELDS = [
     width: "w-36",
     options: [
       { value: "published", label: "Published" },
-      { value: "hidden", label: "Hidden" },
-      { value: "pending", label: "Pending" },
+      { value: "pending",   label: "Pending" },
+      { value: "hidden",    label: "Hidden" },
+      { value: "rejected",  label: "Rejected" },
     ],
   },
   {
@@ -49,15 +50,20 @@ const FILTER_FIELDS = [
 const StarRating = ({ rating = 0 }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map((star) =>
-      star <= rating ? (
-        <MdStar key={star} size={14} className="text-yellow-400" />
-      ) : (
-        <MdStarBorder key={star} size={14} className="text-gray-300" />
-      ),
+      star <= rating
+        ? <MdStar key={star} size={14} className="text-yellow-400" />
+        : <MdStarBorder key={star} size={14} className="text-gray-300" />,
     )}
     <span className="ml-1 text-xs text-gray-500">{rating}/5</span>
   </div>
 );
+
+const STATUS_COLOR = {
+  published: "success",
+  pending:   "warning",
+  hidden:    "default",
+  rejected:  "danger",
+};
 
 const getReviewsPayload = (state = {}) => {
   const payload = state?.productReviewsData?.data?.data || {};
@@ -73,10 +79,10 @@ const ProductReviews = () => {
   const reviewsData = useSelector((state) => state.adminCore);
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
-  const [editTarget, setEditTarget] = useState(null);
+  const [editTarget, setEditTarget]       = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState("");
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
 
   const { list: items, total } = getReviewsPayload(reviewsData);
@@ -87,12 +93,14 @@ const ProductReviews = () => {
     setError("");
     dispatch(
       getProductReviews({
-        page: params.page,
-        limit: params.limit,
-        search: params.search || undefined,
-        status: params.status || undefined,
-        rating: params.rating || undefined,
-        sortBy: params.sortBy,
+        page:      params.page,
+        limit:     params.limit,
+        search:    params.search || undefined,
+        status:    params.status || undefined,
+        rating:    params.rating ? Number(params.rating) : undefined,
+        productId: params.productId || undefined,
+        buyerId:   params.buyerId || undefined,
+        sortBy:    params.sortBy,
         sortOrder: params.sortDir,
       }),
     )
@@ -112,7 +120,8 @@ const ProductReviews = () => {
 
   const handleToggleStatus = async (review) => {
     const reviewId = review._id || review.id;
-    const newStatus = (review.status || "published") === "published" ? "hidden" : "published";
+    const current = review.status || "pending";
+    const newStatus = current === "published" ? "hidden" : "published";
     setToggleLoadingId(reviewId);
     try {
       await dispatch(updateProductReview({ reviewId, status: newStatus })).unwrap();
@@ -147,19 +156,19 @@ const ProductReviews = () => {
           {row.media?.[0] && (
             <img
               src={row.media[0]}
-              alt="product"
-              className="w-10 h-10 object-cover rounded border flex-shrink-0"
+              alt="media"
+              className="w-9 h-9 object-cover rounded border flex-shrink-0"
               onError={(e) => { e.target.style.display = "none"; }}
             />
           )}
-          <span className="text-xs text-gray-600 font-mono truncate max-w-[100px]">{v || "—"}</span>
+          <span className="text-xs font-mono text-gray-600 truncate max-w-[100px]">{v || "—"}</span>
         </div>
       ),
     },
     {
       key: "buyerId",
       label: "Buyer",
-      render: (v) => <span className="text-xs font-mono text-gray-500">{v || "—"}</span>,
+      render: (v) => <span className="text-xs font-mono text-gray-500 truncate max-w-[90px] block">{v || "—"}</span>,
     },
     {
       key: "rating",
@@ -171,11 +180,17 @@ const ProductReviews = () => {
       key: "reviewText",
       label: "Review",
       render: (v, row) => (
-        <div className="max-w-[240px]">
+        <div className="max-w-[220px]">
           {row.title && (
             <div className="text-xs font-semibold text-gray-700 truncate">{row.title}</div>
           )}
-          <div className="text-xs text-gray-500 line-clamp-2">{v || row.comment || "—"}</div>
+          <div className="text-xs text-gray-500 line-clamp-2">{v || "—"}</div>
+          {row.adminReply?.text && (
+            <div className="mt-1 flex items-start gap-1 text-xs text-[var(--admin-navy)]">
+              <MdReply size={12} className="mt-0.5 flex-shrink-0" />
+              <span className="line-clamp-1">{row.adminReply.text}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -187,10 +202,17 @@ const ProductReviews = () => {
           onClick={() => handleToggleStatus(row)}
           disabled={toggleLoadingId === (row._id || row.id)}
           className="disabled:opacity-50"
-          title="Toggle status"
+          title="Click to toggle published/hidden"
         >
-          <StatusBadge status={v || "published"} dot />
+          <StatusBadge status={v || "pending"} dot variant={STATUS_COLOR[v] || "default"} />
         </button>
+      ),
+    },
+    {
+      key: "helpfulVotes",
+      label: "Helpful",
+      render: (v) => (
+        <span className="text-xs text-gray-500">{v || 0}</span>
       ),
     },
     {
@@ -212,7 +234,7 @@ const ProductReviews = () => {
             <button
               onClick={() => setEditTarget(row)}
               className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
-              title="Edit"
+              title="Edit review"
             >
               <MdEdit size={15} />
             </button>
@@ -221,7 +243,7 @@ const ProductReviews = () => {
             <button
               onClick={() => setDeleteConfirm({ open: true, review: row })}
               className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-              title="Delete"
+              title="Delete review"
             >
               <MdDelete size={15} />
             </button>
@@ -275,7 +297,7 @@ const ProductReviews = () => {
 
       <EditProductReview
         isOpen={Boolean(editTarget)}
-        onClose={() => setEditTarget(null)}
+        onClose={() => { setEditTarget(null); fetchReviews(); }}
         reviewData={editTarget}
       />
 

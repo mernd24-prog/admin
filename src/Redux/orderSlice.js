@@ -18,6 +18,8 @@ const toOrderListParams = (params = {}) => {
         ...(params.keyWord || params.search ? { search: params.keyWord || params.search } : {}),
         ...(params.fromDate || params.dateFrom ? { fromDate: params.fromDate || params.dateFrom } : {}),
         ...(params.toDate || params.dateTo ? { toDate: params.toDate || params.dateTo } : {}),
+        ...(params.sortBy || params.sort ? { sortBy: params.sortBy || params.sort } : {}),
+        ...(params.sortDir || params.sortOrder ? { sortDir: params.sortDir || params.sortOrder } : {}),
         limit,
         offset: params.offset !== undefined ? Number(params.offset) : Math.max(page - 1, 0) * limit,
     };
@@ -48,6 +50,9 @@ export const updateOrderStatus = createApiThunkPrivate('updateOrderStatus', (pay
         status: normalizeOrderStatus(payload.status),
         ...(payload.reason ? { reason: payload.reason } : {}),
         ...(payload.note ? { note: payload.note } : {}),
+        ...(payload.trackingNumber ? { trackingNumber: payload.trackingNumber } : {}),
+        ...(payload.carrierName ? { carrierName: payload.carrierName } : {}),
+        ...(payload.carrierUrl ? { carrierUrl: payload.carrierUrl } : {}),
     }),
 })
 export const deleteOrder = createApiThunkPrivate('deleteOrder', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'DELETE')

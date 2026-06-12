@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiMinusCircle } from 'react-icons/fi';
 import { FaChevronDown, FaChevronUp, FaImage, FaInfoCircle } from 'react-icons/fa';
 import { MdAdd, MdClose } from 'react-icons/md';
@@ -42,7 +42,6 @@ export default function VariantsOptionsTab({
   const [variantRows, setLocalVariantRows] = useState([EMPTY_ROW()]);
   const [uploadingRows, setUploadingRows] = useState(new Set());
   const [expandedImages, setExpandedImages] = useState(new Set());
-  const fileInputRefs = useRef({});
 
   // ── Seed from parent ────────────────────────────────────────────────────────
   useEffect(() => {
