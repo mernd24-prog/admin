@@ -36,6 +36,7 @@ const normalizeOrderStatus = (status) => {
 const initialState = {
     getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
     orderCancelData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
+    , cancellationListData: {}, retryCancellationData: {}, completeCancellationRefundData: {}
 
 }
 
@@ -57,10 +58,23 @@ export const updateOrderStatus = createApiThunkPrivate('updateOrderStatus', (pay
 })
 export const deleteOrder = createApiThunkPrivate('deleteOrder', (payload) => ENDPOINTS.orders.detail(firstOrderId(payload)), 'DELETE')
 export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => ENDPOINTS.orders.cancel(firstOrderId(payload)), 'POST', false, {
-    transformBody: (payload = {}) => ({ reason: payload.reason || payload.cancelReason || "" }),
+    transformBody: (payload = {}) => ({
+        reason: payload.reason || payload.cancelReason || "",
+        reasonCode: payload.reasonCode || "other",
+        refundMethod: payload.refundMethod || "auto",
+        ...(payload.idempotencyKey ? { idempotencyKey: payload.idempotencyKey } : {}),
+        ...(Array.isArray(payload.items) && payload.items.length ? { items: payload.items } : {}),
+    }),
 })
 export const addOrderNote = createApiThunkPrivate('addOrderNote', (payload) => ENDPOINTS.orders.notes(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ note: payload.note || "", visibility: payload.visibility || "internal" }),
+})
+export const getCancellationList = createApiThunkPrivate('getCancellationList', ENDPOINTS.cancellations.list, 'GET', true)
+export const retryCancellation = createApiThunkPrivate('retryCancellation', (payload) => ENDPOINTS.cancellations.retry(payload.cancellationId || payload.id), 'POST', false, {
+    transformBody: (payload = {}) => ({ note: payload.note || "" }),
+})
+export const completeCancellationRefund = createApiThunkPrivate('completeCancellationRefund', (payload) => ENDPOINTS.cancellations.manualRefund(payload.cancellationId || payload.id), 'POST', false, {
+    transformBody: (payload = {}) => ({ referenceId: payload.referenceId, proofUrl: payload.proofUrl || null, note: payload.note || "" }),
 })
 
 
@@ -85,6 +99,9 @@ createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
         createExtraReducersForThunk(builder, deleteOrder, 'deleteOrderData')
         createExtraReducersForThunk(builder, orderCancel, 'orderCancelData')
         createExtraReducersForThunk(builder, addOrderNote, 'addOrderNoteData')
+        createExtraReducersForThunk(builder, getCancellationList, 'cancellationListData')
+        createExtraReducersForThunk(builder, retryCancellation, 'retryCancellationData')
+        createExtraReducersForThunk(builder, completeCancellationRefund, 'completeCancellationRefundData')
 
 
 

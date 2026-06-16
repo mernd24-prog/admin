@@ -8,7 +8,9 @@ import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import {
+  ConfirmModal,
   DataTable,
+  FilterBar,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -20,6 +22,9 @@ import {
   updateCodConfig,
 } from "../../../Redux/adminCoreSlice";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
+import { useListPage } from "../../../hooks/useListPage";
+import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../../_helpers/endpoints";
 
 const PROVIDERS = [
   "razorpay",
@@ -41,6 +46,14 @@ const unwrapList = (payload = {}) => {
 
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const money = (value) => Number(value || 0).toFixed(2);
+const FILTER_FIELDS = [
+  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
+  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  { key: "provider", type: "select", label: "Provider", options: PROVIDERS.map((value) => ({ value, label: display(value) })) },
+  { key: "status", type: "select", label: "Status", options: STATUSES.map((value) => ({ value, label: display(value) })) },
+  { key: "fromDate", type: "date", label: "From" },
+  { key: "toDate", type: "date", label: "To" },
+];
 
 const unwrapData = (payload = {}) => payload?.data?.data || payload?.data || {};
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
@@ -51,21 +64,21 @@ const Payments = () => {
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminPaymentsData);
   const savedCodConfig = unwrapData(selector.codConfigData);
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+    defaultFilters: { orderId: getInitialQuery("orderId") },
+  });
+  const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({
-    search: "",
-    provider: "",
-    status: "",
-    buyerId: "",
-    orderId: getInitialQuery("orderId"),
-    fromDate: "",
-    toDate: "",
-  });
   const [detailPayment, setDetailPayment] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [decision, setDecision] = useState({ open: false, type: "", payment: null, referenceId: "", reason: "" });
+  const [confirmConfig, setConfirmConfig] = useState(false);
   const [codForm, setCodForm] = useState({
     enabled: true,
     chargeAmount: 0,
@@ -77,17 +90,20 @@ const Payments = () => {
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
+      setError("");
+      const params = toQueryParams();
       await dispatch(getAdminPayments({
-        ...filters,
-        limit: 20,
-        offset: (page - 1) * 20,
+        ...params,
+        offset: (params.page - 1) * params.limit,
       })).unwrap();
     } catch (error) {
-      toast.error(error?.message || error || "Failed to load payments");
+      const message = error?.message || error || "Failed to load payments";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [dispatch, filters, page]);
+  }, [dispatch, toQueryParams]);
 
   useEffect(() => {
     fetchPayments();
@@ -116,26 +132,25 @@ const Payments = () => {
     });
   }, [savedCodConfig]);
 
-  const setFilter = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setPage(1);
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      search: "",
-      provider: "",
-      status: "",
-      buyerId: "",
-      orderId: "",
-      fromDate: "",
-      toDate: "",
-    });
-    setPage(1);
-  };
+  const openDetail = useCallback(async (payment) => {
+    setDetailPayment(payment);
+    setDetailLoading(true);
+    try {
+      const response = await axiosProvider.get(ENDPOINTS.payments.detail(payment.id));
+      setDetailPayment(response?.data?.data || payment);
+    } catch (requestError) {
+      toast.error(requestError?.response?.data?.message || "Failed to load payment detail");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   const submitDecision = useCallback(async () => {
     if (!decision.payment?.id) return;
+    if (decision.type === "approve" && decision.referenceId.trim().length < 3) {
+      toast.error("A payment collection/reference ID is required to approve");
+      return;
+    }
     if (decision.type === "reject" && !decision.reason.trim()) {
       toast.error("Reason is required to reject a payment");
       return;
@@ -172,6 +187,7 @@ const Payments = () => {
         maxOrderAmount: codForm.maxOrderAmount === "" ? null : Number(codForm.maxOrderAmount),
       })).unwrap();
       toast.success("COD settings saved");
+      setConfirmConfig(false);
       await fetchCodConfig();
     } catch (error) {
       toast.error(error?.message || error || "Failed to save COD settings");
@@ -182,38 +198,64 @@ const Payments = () => {
 
   const canManualDecision = (payment) =>
     ["manual_bank_transfer", "manual_upi", "cod"].includes(payment.provider) &&
-    !["captured", "refunded"].includes(payment.status);
+    ["initiated", "authorized"].includes(payment.status);
 
   const columns = useMemo(() => [
     {
       key: "transaction_reference",
       label: "Payment",
+      sortable: true,
       render: (_, row) => (
         <div>
-          <div className="font-semibold text-gray-800">{row.transaction_reference || row.id}</div>
+          <div className="font-semibold text-gray-800">{row.transaction_reference || row.transactionReference || row.id}</div>
           <div className="text-xs text-gray-400">Order {row.order_id}</div>
         </div>
       ),
     },
-    { key: "buyer_id", label: "Buyer" },
+    {
+      key: "buyer_id",
+      label: "Buyer",
+      sortable: true,
+      render: (value, row) => {
+        const name = row.buyerName || row.buyer?.name || row.buyerSnapshot?.name || row.buyer_name;
+        const email = row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email || row.buyer_email;
+        return (
+          <div>
+            {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
+            {email && !name && <div className="text-sm text-gray-700">{email}</div>}
+            {email && name && <div className="text-xs text-gray-400">{email}</div>}
+            {!name && !email && value && (
+              <span className="font-mono text-xs text-gray-500">
+                {String(value).slice(0, 16)}{String(value).length > 16 ? "…" : ""}
+              </span>
+            )}
+            {!name && !email && !value && "—"}
+          </div>
+        );
+      },
+    },
     {
       key: "provider",
       label: "Provider",
+      sortable: true,
       render: (value) => <span className="capitalize">{display(value)}</span>,
     },
     {
       key: "status",
       label: "Status",
+      sortable: true,
       render: (value) => <StatusBadge status={display(value)} dot />,
     },
     {
       key: "amount",
       label: "Amount",
+      sortable: true,
       render: (value, row) => `${row.currency || "INR"} ${money(value)}`,
     },
     {
       key: "created_at",
       label: "Date",
+      sortable: true,
       render: (value) => value ? moment(value).format("DD-MM-YYYY HH:mm") : "N/A",
     },
     {
@@ -221,12 +263,12 @@ const Payments = () => {
       label: "Actions",
       render: (_, row) => (
         <div className="flex items-center gap-2">
-          <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => setDetailPayment(row)}>
+          <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openDetail(row)}>
             <MdVisibility size={15} /> View
           </button>
           {canManualDecision(row) && (
             <PermissionGuard module="payments" action={ACTIONS.APPROVE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => setDecision({ open: true, type: "approve", payment: row, referenceId: row.provider_payment_id || "", reason: "" })}>
+              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => setDecision({ open: true, type: "approve", payment: row, referenceId: row.provider_payment_id || row.transaction_reference || "", reason: "" })}>
                 <MdCheckCircle size={15} /> Approve
               </button>
               <button type="button" className="admin-btn-secondary !px-2 !py-1 text-red-600" onClick={() => setDecision({ open: true, type: "reject", payment: row, referenceId: row.provider_payment_id || "", reason: "" })}>
@@ -237,11 +279,11 @@ const Payments = () => {
         </div>
       ),
     },
-  ], []);
+  ], [openDetail]);
 
   return (
     <div className="max-w-7xl mx-auto mt-8">
-      <Loader loading={loading} />
+      <Loader loading={loading || detailLoading} />
       <PageHeader
         title="Payments"
         subtitle="Reconcile online, COD, and manual payments"
@@ -260,7 +302,7 @@ const Payments = () => {
             <p className="text-xs text-gray-500 mt-1">Customer sees Cash on Delivery only when enabled and the order total is inside this range.</p>
           </div>
           <PermissionGuard module="payments" action={ACTIONS.UPDATE} hide>
-            <button type="button" className="admin-btn-primary" onClick={saveCodConfig} disabled={savingConfig}>
+            <button type="button" className="admin-btn-primary" onClick={() => setConfirmConfig(true)} disabled={savingConfig}>
               {savingConfig ? "Saving..." : "Save COD Charge"}
             </button>
           </PermissionGuard>
@@ -280,25 +322,8 @@ const Payments = () => {
           <Input labelName="Maximum Order" type="number" min="0" value={codForm.maxOrderAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, maxOrderAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
           <Input labelName="Currency" value={codForm.currency} onChange={(event) => setCodForm((prev) => ({ ...prev, currency: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
         </div>
-        <div className="text-xs text-gray-500 mb-4">
+        <div className="text-xs text-gray-500">
           COD collection amount = order payable amount including COD charge. Admin approves the COD payment after cash is collected.
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input className="admin-input" placeholder="Search ref/order" value={filters.search} onChange={(event) => setFilter("search", event.target.value)} />
-          <input className="admin-input" placeholder="Order ID" value={filters.orderId} onChange={(event) => setFilter("orderId", event.target.value)} />
-          <input className="admin-input" placeholder="Buyer ID" value={filters.buyerId} onChange={(event) => setFilter("buyerId", event.target.value)} />
-          <select className="admin-input" value={filters.provider} onChange={(event) => setFilter("provider", event.target.value)}>
-            <option value="">All providers</option>
-            {PROVIDERS.map((provider) => <option key={provider} value={provider}>{display(provider)}</option>)}
-          </select>
-          <select className="admin-input" value={filters.status} onChange={(event) => setFilter("status", event.target.value)}>
-            <option value="">All statuses</option>
-            {STATUSES.map((status) => <option key={status} value={status}>{display(status)}</option>)}
-          </select>
-          <input className="admin-input" type="date" value={filters.fromDate} onChange={(event) => setFilter("fromDate", event.target.value)} />
-          <input className="admin-input" type="date" value={filters.toDate} onChange={(event) => setFilter("toDate", event.target.value)} />
-          <button type="button" className="admin-btn-secondary" onClick={resetFilters}>Reset</button>
         </div>
       </div>
 
@@ -307,15 +332,33 @@ const Payments = () => {
         data={payload.list}
         loading={loading}
         totalCount={payload.total || payload.list.length}
-        page={page}
-        pageSize={20}
-        onPageChange={setPage}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        searchPlaceholder="Search payment, provider reference, or order"
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        onRefresh={fetchPayments}
+        error={error}
+        filterBar={(
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        )}
         requiredModule="payments"
         exportConfig={{ filename: "payments", columns, data: payload.list }}
       />
 
       <DefaultModal isOpen={Boolean(detailPayment)} onClose={() => setDetailPayment(null)} title="Payment Detail">
-        <div className="space-y-3 text-sm">
+        <div className="space-y-3 text-sm" aria-busy={detailLoading}>
           <div><strong>Payment:</strong> {detailPayment?.id}</div>
           <div><strong>Order:</strong> {detailPayment?.order_id}</div>
           <div><strong>Provider:</strong> {display(detailPayment?.provider)}</div>
@@ -328,10 +371,21 @@ const Payments = () => {
 
       <DefaultModal isOpen={decision.open} onClose={() => setDecision({ open: false, type: "", payment: null, referenceId: "", reason: "" })} title={decision.type === "approve" ? "Approve Payment" : "Reject Payment"} onSubmit={submitDecision}>
         <div className="space-y-3">
-          <Input labelName="Reference ID" value={decision.referenceId} onChange={(event) => setDecision((prev) => ({ ...prev, referenceId: event.target.value }))} />
+          <Input labelName="Reference ID" value={decision.referenceId} onChange={(event) => setDecision((prev) => ({ ...prev, referenceId: event.target.value }))} required={decision.type === "approve"} />
           <Input type="textarea" labelName="Reason" value={decision.reason} onChange={(event) => setDecision((prev) => ({ ...prev, reason: event.target.value }))} required={decision.type === "reject"} />
         </div>
       </DefaultModal>
+
+      <ConfirmModal
+        open={confirmConfig}
+        onClose={() => setConfirmConfig(false)}
+        onConfirm={saveCodConfig}
+        title="Save COD settings?"
+        message="The new charge and eligibility range will apply to future checkout quotes."
+        variant="warning"
+        confirmLabel="Save settings"
+        loading={savingConfig}
+      />
     </div>
   );
 };

@@ -141,12 +141,25 @@ const COLUMNS = [
   },
   {
     key: "buyer_id",
-    label: "Buyer ID",
-    render: (v, row) => (
-      <span className="text-xs text-gray-500 font-mono truncate max-w-[120px]">
-        {firstDefined(v, row.buyerId, row.user_id, "—")}
-      </span>
-    ),
+    label: "Buyer",
+    render: (v, row) => {
+      const name = row.buyerName || row.buyer?.name || row.buyerSnapshot?.name || row.buyer_name;
+      const email = row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email || row.buyer_email;
+      const rawId = firstDefined(v, row.buyerId, row.user_id);
+      return (
+        <div>
+          {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
+          {email && !name && <div className="text-sm text-gray-700">{email}</div>}
+          {email && name && <div className="text-xs text-gray-400">{email}</div>}
+          {!name && !email && rawId && (
+            <span className="font-mono text-xs text-gray-500">
+              {String(rawId).slice(0, 16)}{String(rawId).length > 16 ? "…" : ""}
+            </span>
+          )}
+          {!name && !email && !rawId && <span className="text-gray-400">—</span>}
+        </div>
+      );
+    },
   },
   {
     key: "items",

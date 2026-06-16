@@ -9,6 +9,8 @@ const initialState = {
   shipmentData: {},
   createShipmentData: {},
   trackingEventData: {},
+  deliveryOtpData: {},
+  confirmDeliveryData: {},
   createManifestData: {},
   getOrderEwayBillData: {},
   createOrderEwayBillData: {},
@@ -48,7 +50,7 @@ export const getShipments = createApiThunkPrivate(
   ENDPOINTS.delivery.shipments,
   "GET",
   true,
-  { transformParams: pickQuery(["orderId", "sellerId", "status", "courierName", "awbNumber", "cod", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: pickQuery(["orderId", "returnId", "shipmentType", "direction", "sellerId", "status", "courierName", "awbNumber", "search", "cod", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) }
 );
 
 export const createShipment = createApiThunkPrivate(
@@ -71,6 +73,22 @@ export const addShipmentTracking = createApiThunkPrivate(
   { transformBody: (payload = {}) => omitPayload(payload, ["shipmentId", "id"]) }
 );
 
+export const generateShipmentDeliveryOtp = createApiThunkPrivate(
+  "delivery/generateShipmentDeliveryOtp",
+  (payload) => ENDPOINTS.delivery.shipmentDeliveryOtp(payload?.shipmentId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["shipmentId", "id"]) }
+);
+
+export const confirmShipmentDelivery = createApiThunkPrivate(
+  "delivery/confirmShipmentDelivery",
+  (payload) => ENDPOINTS.delivery.shipmentConfirmDelivery(payload?.shipmentId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["shipmentId", "id"]) }
+);
+
 export const createShipmentManifest = createApiThunkPrivate(
   "delivery/createShipmentManifest",
   ENDPOINTS.delivery.manifests,
@@ -86,13 +104,17 @@ export const getSellerOrderEwayBill = createApiThunkPrivate(
 export const createSellerOrderEwayBill = createApiThunkPrivate(
   "delivery/createSellerOrderEwayBill",
   (payload) => ENDPOINTS.delivery.orderEwayBill(payload?.orderId || payload?.id),
-  "POST"
+  "POST",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["orderId", "ewayBillId", "id"]) }
 );
 
 export const updateSellerEwayBillStatus = createApiThunkPrivate(
   "delivery/updateSellerEwayBillStatus",
   (payload) => ENDPOINTS.delivery.ewayBillStatus(payload?.ewayBillId || payload?.id),
-  "PATCH"
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["ewayBillId", "id"]) }
 );
 
 const deliverySlice = createSlice({
@@ -105,6 +127,8 @@ const deliverySlice = createSlice({
     createExtraReducersForThunk(builder, getShipment, "shipmentData");
     createExtraReducersForThunk(builder, createShipment, "createShipmentData");
     createExtraReducersForThunk(builder, addShipmentTracking, "trackingEventData");
+    createExtraReducersForThunk(builder, generateShipmentDeliveryOtp, "deliveryOtpData");
+    createExtraReducersForThunk(builder, confirmShipmentDelivery, "confirmDeliveryData");
     createExtraReducersForThunk(builder, createShipmentManifest, "createManifestData");
     createExtraReducersForThunk(builder, getSellerOrderEwayBill, "getOrderEwayBillData");
     createExtraReducersForThunk(builder, createSellerOrderEwayBill, "createOrderEwayBillData");

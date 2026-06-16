@@ -36,7 +36,7 @@ const detectModeFromRuntime = () => {
 const configuredMode =
  
   // detectModeFromRuntime() ||
-  PANEL_MODES.ADMIN; // Default to admin if not specified
+  PANEL_MODES.SELLER; // Default to admin if not specified
 
 export const getPanelMode = () => configuredMode;
 

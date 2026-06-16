@@ -16,20 +16,30 @@ import PermissionGuard from "../../../../components/Atoms/PermissionGuard/Permis
 import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 
+import { usePermission } from "../../../../_helpers/usePermission";
+
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
-const STATUS_OPTIONS = [
-  "pending_payment",
-  "payment_failed",
-  "confirmed",
-  "packed",
-  "shipped",
-  "delivered",
-  "fulfilled",
-  "return_requested",
-  "returned",
-  "cancelled",
-].map((status) => ({ value: status, label: status.replace(/_/g, " ") }));
+// All structurally valid transitions (mirrors backend assertOrderTransitionAllowed)
+const ALLOWED_TRANSITIONS = {
+  pending_payment: ["confirmed", "payment_failed", "cancelled"],
+  payment_failed:  ["pending_payment", "cancelled"],
+  confirmed:       ["packed", "cancelled"],
+  packed:          ["shipped", "cancelled"],
+  shipped:         ["delivered"],
+  delivered:       ["fulfilled", "return_requested"],
+  return_requested:["returned"],
+};
+
+// Transitions a seller is allowed to trigger (backend: packed/shipped/fulfilled only)
+const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "delivered", "fulfilled", "returned"]);
+
+const ALL_STATUSES = [
+  "pending_payment", "payment_failed", "confirmed", "packed",
+  "shipped", "delivered", "fulfilled", "return_requested", "returned", "cancelled",
+];
+
+const toOption = (status) => ({ value: status, label: status.replace(/_/g, " ") });
 
 const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
@@ -213,6 +223,7 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+  const { isSeller, isAdmin, isSuperAdmin } = usePermission();
 
   const [state, setState] = useState({
     orderInfo: null,
@@ -222,8 +233,12 @@ const OrderSummary = () => {
     userData: {},
     returns: [],
   });
-  const [formData, setFormData] = useState({ status: "", reason: "", note: "", trackingNumber: "", carrierName: "", carrierUrl: "" });
+  const [formData, setFormData] = useState({
+    status: "", reason: "", reasonCode: "other", refundMethod: "auto", cancelItems: {},
+    note: "", trackingNumber: "", carrierName: "", carrierUrl: "",
+  });
   const [noteData, setNoteData] = useState({ note: "", visibility: "internal" });
+
 
   const setLoading = useCallback((loading) => {
     setState((prev) => ({ ...prev, isLoading: loading }));
@@ -290,6 +305,7 @@ const OrderSummary = () => {
   const payments = Array.isArray(relations.payments) ? relations.payments : [];
   const shipments = Array.isArray(relations.shipments) ? relations.shipments : [];
   const walletTransactions = Array.isArray(relations.walletTransactions) ? relations.walletTransactions : [];
+  const cancellations = Array.isArray(relations.cancellations) ? relations.cancellations : [];
   const invoice = relations.invoice || relations.taxInvoice || null;
   const eWayBill = relations.eWayBill || relations.ewayBill || null;
   const returns = Array.isArray(state.returns) ? state.returns : [];
@@ -298,6 +314,19 @@ const OrderSummary = () => {
   const orderTaxRates = useMemo(() => getOrderTaxRates(taxBreakup, items), [taxBreakup, items]);
   const timeline = Array.isArray(order.timeline) ? order.timeline : [];
   const notes = Array.isArray(order.notes) ? order.notes : [];
+
+  // Build role-aware status options filtered to valid next transitions from current status
+  const statusOptions = useMemo(() => {
+    const currentStatus = order.status;
+    const validNext = ALLOWED_TRANSITIONS[currentStatus] || ALL_STATUSES;
+    return validNext
+      .filter((s) => {
+        if (isSuperAdmin || isAdmin) return true;
+        if (isSeller) return SELLER_ALLOWED_NEXT.has(s);
+        return false;
+      })
+      .map(toOption);
+  }, [order.status, isSeller, isAdmin, isSuperAdmin]);
 
   const handleStatusSubmit = useCallback(async () => {
     if (!formData.status) {
@@ -308,7 +337,13 @@ const OrderSummary = () => {
       toast.error(`Please provide a cancellation reason with at least ${MINIMUM_CANCEL_REASON_LENGTH} characters`);
       return;
     }
-
+    const cancellationItems = Object.entries(formData.cancelItems || {})
+      .filter(([, quantity]) => Number(quantity) > 0)
+      .map(([orderItemId, quantity]) => ({ orderItemId, quantity: Number(quantity) }));
+    if (formData.status === "cancelled" && !cancellationItems.length) {
+      toast.error("Select at least one item quantity to cancel");
+      return;
+    }
     try {
       setLoading(true);
       const payload = {
@@ -321,11 +356,18 @@ const OrderSummary = () => {
         carrierUrl: formData.carrierUrl,
       };
       const res = formData.status === "cancelled"
-        ? await dispatch(orderCancel({ orderId, reason: formData.reason })).unwrap()
+        ? await dispatch(orderCancel({
+            orderId,
+            reason: formData.reason,
+            reasonCode: formData.reasonCode,
+            refundMethod: formData.refundMethod,
+            items: cancellationItems,
+            idempotencyKey: `admin:${orderId}:${Date.now()}`,
+          })).unwrap()
         : await dispatch(updateOrderStatus(payload)).unwrap();
       toast.success(res?.message || "Order updated successfully");
       setState((prev) => ({ ...prev, statusModal: false }));
-      setFormData({ status: "", reason: "", note: "", trackingNumber: "", carrierName: "", carrierUrl: "" });
+      setFormData({ status: "", reason: "", reasonCode: "other", refundMethod: "auto", cancelItems: {}, note: "", trackingNumber: "", carrierName: "", carrierUrl: "" });
       await fetchOrderInfo();
     } catch (error) {
       handleError(error, "Failed to update order");
@@ -384,15 +426,26 @@ const OrderSummary = () => {
                 <FaRegNoteSticky /> Note
               </button>
             </PermissionGuard>
-            <PermissionGuard module="orders" action="status_change" hide>
+            {/* Sellers see the button based on role + available transitions; admins need status_change permission */}
+            {(isSeller && statusOptions.length > 0) ? (
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
                 onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
               >
-                <FaFile /> Status
+                <FaFile /> Update Status
               </button>
-            </PermissionGuard>
+            ) : (
+              <PermissionGuard module="orders" action="status_change" hide>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
+                  onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
+                >
+                  <FaFile /> Status
+                </button>
+              </PermissionGuard>
+            )}
             </>
           )}
         />
@@ -436,8 +489,11 @@ const OrderSummary = () => {
                           SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
                         </div>
                       </div>
-                      <div className="md:col-span-2"><StatusBadge status={order.status} size="sm" dot /></div>
-                      <div className="font-medium text-[#202337] md:col-span-1 md:text-center">{Number(item.quantity || 0)}</div>
+                      <div className="md:col-span-2"><StatusBadge status={item.cancellation_status || order.status} size="sm" dot /></div>
+                      <div className="font-medium text-[#202337] md:col-span-1 md:text-center">
+                        {Number(item.quantity || 0)}
+                        {Number(item.cancelled_quantity || 0) > 0 && <div className="text-xs text-red-600">-{Number(item.cancelled_quantity)} cancelled</div>}
+                      </div>
                       <div className="font-medium text-[#202337] md:col-span-2 md:text-right">{formatMoney(firstDefined(item.unit_price, item.unitPrice))}</div>
                       <div className="md:col-span-2 md:text-right">
                         <div className="font-semibold text-[#202337]">{formatMoney(firstDefined(item.line_total, item.lineTotal))}</div>
@@ -512,7 +568,17 @@ const OrderSummary = () => {
 
           <Panel title="Buyer & Shipping">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(220px,320px)_1fr]">
-              <InfoRow label="Buyer" value={firstDefined(order.buyer_id, order.buyerId, "N/A")} />
+              <InfoRow
+                label="Buyer"
+                value={
+                  firstDefined(
+                    order.buyerSnapshot?.name || order.buyer?.name || order.buyerName || order.buyer_name,
+                    order.buyerSnapshot?.email || order.buyer?.email || order.buyerEmail || order.buyer_email,
+                    order.buyer_id, order.buyerId,
+                    "N/A"
+                  )
+                }
+              />
               <div className="rounded-md bg-[#f8faff] p-3 text-sm leading-6 text-[#202337]">
                 {[shippingAddress.line1, shippingAddress.line2, shippingAddress.city, shippingAddress.state, shippingAddress.postalCode, shippingAddress.country].filter(Boolean).join(", ") || "N/A"}
               </div>
@@ -538,6 +604,30 @@ const OrderSummary = () => {
           )}
         >
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Cancellations</h3>
+              {cancellations.length ? (
+                <div className="space-y-3">
+                  {cancellations.map((cancellation) => (
+                    <RelatedCard
+                      key={cancellation.id}
+                      title={cancellation.cancellation_number}
+                      subtitle={`${displayStatus(cancellation.scope)} · ${cancellation.reason}`}
+                      status={cancellation.status}
+                      rows={[
+                        { label: "Refund", value: formatMoney(cancellation.refund_amount) },
+                        { label: "Refund status", value: displayStatus(cancellation.refund_status) },
+                        { label: "Inventory", value: displayStatus(cancellation.inventory_status) },
+                        { label: "Shipment", value: displayStatus(cancellation.shipment_status) },
+                        { label: "Requested", value: formatDate(cancellation.created_at) },
+                      ]}
+                      action={<button type="button" className="text-xs font-medium text-[#2f6fed]" onClick={() => navigate(`/app/order-cancellation-reasons?search=${encodeURIComponent(cancellation.cancellation_number)}`)}>Open recovery queue</button>}
+                    />
+                  ))}
+                </div>
+              ) : <EmptyState>No cancellation records found</EmptyState>}
+            </div>
+
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Payments</h3>
               {payments.length ? (
@@ -569,7 +659,14 @@ const OrderSummary = () => {
                     <RelatedCard
                       key={shipment.id || shipment._id || shipment.awb_number}
                       title={firstDefined(shipment.awb_number, shipment.tracking_number, shipment.id)}
-                      subtitle={`Seller ${firstDefined(shipment.seller_id, shipment.sellerId, "N/A")}`}
+                      subtitle={(() => {
+                        const sellerName = firstDefined(
+                          shipment.sellerSnapshot?.name, shipment.sellerName,
+                          shipment.seller?.name, shipment.seller?.businessName
+                        );
+                        const sellerId = firstDefined(shipment.seller_id, shipment.sellerId);
+                        return sellerName || (sellerId ? `Seller ${sellerId}` : "N/A");
+                      })()}
                       status={shipment.status}
                       rows={[
                         { label: "Provider", value: displayStatus(firstDefined(shipment.provider, shipment.courier_name, shipment.courierName)) },
@@ -715,12 +812,20 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleStatusSubmit}>
+      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleStatusSubmit} loading={state.isLoading}>
         <div className="space-y-4">
           <FilterSelect
-            options={STATUS_OPTIONS}
-            value={STATUS_OPTIONS.find((opt) => opt.value === formData.status) || null}
-            onChange={(option) => setFormData((prev) => ({ ...prev, status: option?.value || "" }))}
+            options={statusOptions}
+            value={statusOptions.find((opt) => opt.value === formData.status) || null}
+            onChange={(option) => {
+              const status = option?.value || "";
+              const cancelItems = status === "cancelled"
+                ? Object.fromEntries(items
+                    .map((item) => [String(item.id), Number(item.quantity || 0) - Number(item.cancelled_quantity || 0)])
+                    .filter(([, quantity]) => quantity > 0))
+                : {};
+              setFormData((prev) => ({ ...prev, status, cancelItems }));
+            }}
             label="Status"
             placeholder="Select Status"
           />
@@ -730,6 +835,55 @@ const OrderSummary = () => {
               <Input labelName="Tracking Number" value={formData.trackingNumber} onChange={(event) => setFormData((prev) => ({ ...prev, trackingNumber: event.target.value }))} name="trackingNumber" placeholder="AWB / tracking number" maxLength={200} />
               <Input labelName="Carrier / Courier" value={formData.carrierName} onChange={(event) => setFormData((prev) => ({ ...prev, carrierName: event.target.value }))} name="carrierName" placeholder="e.g. Delhivery, BlueDart, FedEx" maxLength={100} />
               <Input labelName="Tracking URL (optional)" value={formData.carrierUrl} onChange={(event) => setFormData((prev) => ({ ...prev, carrierUrl: event.target.value }))} name="carrierUrl" placeholder="https://..." maxLength={500} />
+            </div>
+          )}
+          {formData.status === "cancelled" && (
+            <div className="space-y-3 rounded-md border border-[#f4d7d7] bg-[#fff8f8] p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="text-sm font-medium text-[#202337]">
+                  Reason type
+                  <select className="mt-1 w-full rounded border px-3 py-2" value={formData.reasonCode} onChange={(event) => setFormData((prev) => ({ ...prev, reasonCode: event.target.value }))}>
+                    <option value="other">Other</option>
+                    <option value="seller_unavailable">Seller unavailable</option>
+                    <option value="inventory_unavailable">Inventory unavailable</option>
+                    <option value="delivery_delay">Delivery delay</option>
+                    <option value="pricing_issue">Pricing issue</option>
+                    <option value="address_issue">Address issue</option>
+                    <option value="payment_issue">Payment issue</option>
+                  </select>
+                </label>
+                <label className="text-sm font-medium text-[#202337]">
+                  Refund handling
+                  <select className="mt-1 w-full rounded border px-3 py-2" value={formData.refundMethod} onChange={(event) => setFormData((prev) => ({ ...prev, refundMethod: event.target.value }))}>
+                    <option value="auto">Automatic</option>
+                    <option value="original_source">Original source</option>
+                    <option value="wallet">Wallet</option>
+                    <option value="manual">Manual review</option>
+                  </select>
+                </label>
+              </div>
+              <div className="text-xs font-semibold uppercase text-[#65718b]">Cancellation quantities</div>
+              {items.map((item) => {
+                const itemId = String(item.id);
+                const remaining = Number(item.quantity || 0) - Number(item.cancelled_quantity || 0);
+                const selected = Object.prototype.hasOwnProperty.call(formData.cancelItems, itemId);
+                return (
+                  <div key={itemId} className="flex items-center gap-3 rounded border bg-white p-2 text-sm">
+                    <input type="checkbox" checked={selected} disabled={remaining <= 0} onChange={(event) => setFormData((prev) => {
+                      const next = { ...prev.cancelItems };
+                      if (event.target.checked) next[itemId] = remaining;
+                      else delete next[itemId];
+                      return { ...prev, cancelItems: next };
+                    })} />
+                    <span className="min-w-0 flex-1 truncate">{firstDefined(item.product_title, item.product_id)}</span>
+                    <input type="number" min="1" max={remaining} disabled={!selected} className="w-20 rounded border px-2 py-1" value={selected ? formData.cancelItems[itemId] : ""} onChange={(event) => setFormData((prev) => ({
+                      ...prev,
+                      cancelItems: { ...prev.cancelItems, [itemId]: Math.min(Math.max(Number(event.target.value || 1), 1), remaining) },
+                    }))} />
+                    <span className="text-xs text-[#65718b]">of {remaining}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
           <Input type="textarea" labelName="Reason" value={formData.reason} onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))} name="reason" placeholder="Reason or operational note" maxLength={1000} />

@@ -99,7 +99,9 @@ const flattenVariants = (products) => {
         productSku: p.sku || "—",
         variantTitle: v.title || "—",
         variantSku: v.sku || "—",
-        category: p.category || "—",
+        category: (typeof p.category === "object"
+          ? (p.category?.name || p.category?.title || p.category?.label)
+          : p.category) || "—",
         stock: v.stock ?? 0,
         reserved: v.reservedStock ?? 0,
         threshold: p.inventorySettings?.lowStockThreshold ?? 5,

@@ -12,6 +12,7 @@ const TYPE_OPTIONS = [
   { value: "reservation", label: "Reservation" },
   { value: "release", label: "Release" },
   { value: "sale", label: "Sale" },
+  { value: "restock", label: "Restock" },
   { value: "return", label: "Return" },
   { value: "adjustment", label: "Adjustment" },
   { value: "damage", label: "Damage" },
@@ -138,11 +139,54 @@ const InventoryTransactions = () => {
         </span>
       ),
     },
-    { key: "productId", label: "Product ID", sortable: true },
+    {
+      key: "productId",
+      label: "Product",
+      sortable: true,
+      render: (value, row) => {
+        const name = row.productTitle || row.productName || row.product?.title || row.product?.name;
+        return (
+          <div>
+            {name && <div className="text-sm font-medium text-gray-800 max-w-[180px] truncate">{name}</div>}
+            <div className={`font-mono text-xs ${name ? "text-gray-400" : "text-gray-700"}`}>
+              {value ? String(value).slice(0, 16) + (String(value).length > 16 ? "…" : "") : "—"}
+            </div>
+          </div>
+        );
+      },
+    },
     { key: "variantSku", label: "Variant SKU" },
-    { key: "sellerId", label: "Seller ID", sortable: true },
-    { key: "referenceType", label: "Reference" },
-    { key: "referenceId", label: "Reference ID" },
+    {
+      key: "sellerId",
+      label: "Seller",
+      sortable: true,
+      render: (value, row) => {
+        const name = row.sellerName || row.seller?.name || row.seller?.businessName;
+        return (
+          <div>
+            {name && <div className="text-sm font-medium text-gray-800 max-w-[160px] truncate">{name}</div>}
+            <div className={`font-mono text-xs ${name ? "text-gray-400" : "text-gray-700"}`}>
+              {value ? String(value).slice(0, 16) + (String(value).length > 16 ? "…" : "") : "—"}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "referenceType",
+      label: "Reference",
+      render: (value, row) => (
+        <div>
+          {value && <div className="text-xs font-medium capitalize text-gray-600">{String(value).replace(/_/g, " ")}</div>}
+          {row.referenceId && (
+            <div className="font-mono text-xs text-gray-400">
+              {String(row.referenceId).slice(0, 16) + (String(row.referenceId).length > 16 ? "…" : "")}
+            </div>
+          )}
+          {!value && !row.referenceId && "—"}
+        </div>
+      ),
+    },
     { key: "actorRole", label: "Actor" },
     {
       key: "metadata",

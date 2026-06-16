@@ -128,7 +128,9 @@ const LowStockAlerts = () => {
         _id: p._id,
         title: p.title,
         sku: p.sku || "—",
-        category: p.category || "—",
+        category: (typeof p.category === "object"
+          ? (p.category?.name || p.category?.title || p.category?.label)
+          : p.category) || "—",
         stock: p.stock ?? 0,
         threshold: p.inventorySettings?.lowStockThreshold ?? 5,
       })),
