@@ -1,672 +1,439 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from "react";
-import TableData from "../../../components/Atoms/TableData/TableData";
-import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import { useDispatch, useSelector } from "react-redux";
-import DeletePopup from "../../../components/Atoms/DeletePopup.js/DeletePopup";
-import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
-import { showError, showSuccess } from "../../../Redux/alertSlice";
-import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import Button from "../../../components/Atoms/buttons/button";
-import {
-  create,
-  enableDisable,
-  getList,
-  update,
-} from "../../../Redux/userManagementSlice";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import moment from "moment";
 import { toast } from "sonner";
-import Pagination from "../../../components/Pagination/Pagination";
-import Loader from "../../../components/Loader/Loader";
+import { useDispatch, useSelector } from "react-redux";
+import { MdAdd, MdEdit, MdLocalShipping, MdRefresh } from "react-icons/md";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import Input from "../../../components/Atoms/Input/Input";
+import {
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
+import {
+  createDeliveryAgent,
+  getDeliveryAgents,
+  updateDeliveryAgent,
+} from "../../../Redux/deliverySlice";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
-const AdminUsers = () => {
-  const dispatch = useDispatch();
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [toggleStates, setToggleStates] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [pageNo, setPageNo] = useState(1);
-  const [formData, setForm] = useState({
-    full_name: "",
-    userName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    isDisable: false,
-  });
-  const [errors, setErrors] = useState({});
-  const [keyword, setKeyword] = useState("");
-  const [filters, setFilters] = useState({ search: "" });
-  const [isRefresh, setIsRefresh] = useState(false);
-  const [isOpenAddModal, setIsOpenAddModal] = useState(false);
-  const [isOpenEditModal, setIsEditModal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState([]);
+const VERIFICATION_STATUSES = ["pending", "verified", "rejected"];
 
-  const onPageChange = (newPageNo) => {
-    setPageNo(newPageNo);
+const EMPTY_FORM = {
+  id: "",
+  sellerId: "",
+  name: "",
+  phone: "",
+  email: "",
+  vehicleType: "",
+  vehicleNumber: "",
+  licenseNumber: "",
+  verificationStatus: "pending",
+  active: true,
+  documentsText: "{}",
+  metadataText: "{}",
+};
+
+const FILTER_FIELDS = [
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
+  {
+    key: "verificationStatus",
+    type: "select",
+    label: "Verification",
+    width: "w-44",
+    options: VERIFICATION_STATUSES.map((value) => ({
+      value,
+      label: value.replace(/_/g, " "),
+    })),
+  },
+  {
+    key: "active",
+    type: "select",
+    label: "Active",
+    width: "w-32",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+  },
+];
+
+const unwrapList = (payload = {}) => {
+  const data = payload?.data?.data;
+  if (Array.isArray(data)) return { list: data, total: data.length };
+  return {
+    list: data?.items || data?.list || [],
+    total: Number(data?.total || data?.items?.length || data?.list?.length || 0),
   };
-  const size = 10;
-  useEffect(() => {
-    const reqData = {
-      page: pageNo.toString(),
-      size: size.toString(),
-      keyWord: filters.search,
-      searchFields: "full_name",
-    };
-    dispatch(getList(reqData));
-  }, [size, pageNo, dispatch, isRefresh, filters.search]);
+};
 
-  const selector = useSelector((state) => state.user);
-  const getListData = selector?.getListData?.data?.data;
-  const totalUsers = getListData?.total || 0;
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
+const agentIdOf = (agent = {}) => agent.id || agent._id || agent.deliveryAgentId;
+const dateText = (value) => value ? moment(value).format("DD MMM YYYY HH:mm") : "N/A";
 
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
+const stringifyJson = (value) => {
+  if (!value) return "{}";
+  if (typeof value === "string") {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return value;
     }
-  };
+  }
+  return JSON.stringify(value, null, 2);
+};
 
-  const [query, setQuery] = useState("");
-  const validateAddUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = "Full name is required";
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = "Full name must be at least 3 characters";
-      isValid = false;
+const parseJsonField = (value, label) => {
+  const text = String(value || "").trim();
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`${label} must be a JSON object`);
     }
+    return parsed;
+  } catch (error) {
+    throw new Error(error?.message || `${label} must be valid JSON`);
+  }
+};
 
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = "Username is required";
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = "Username must be at least 5 characters";
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName =
-        "Username can only contain letters, numbers and underscores";
-      isValid = false;
-    }
+const toForm = (agent = {}) => ({
+  id: agentIdOf(agent),
+  sellerId: agent.seller_id || agent.sellerId || "",
+  name: agent.name || "",
+  phone: agent.phone || "",
+  email: agent.email || "",
+  vehicleType: agent.vehicle_type || agent.vehicleType || "",
+  vehicleNumber: agent.vehicle_number || agent.vehicleNumber || "",
+  licenseNumber: agent.license_number || agent.licenseNumber || "",
+  verificationStatus: agent.verification_status || agent.verificationStatus || "pending",
+  active: agent.active !== false,
+  documentsText: stringifyJson(agent.documents),
+  metadataText: stringifyJson(agent.metadata),
+});
 
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-      isValid = false;
-    }
-
-    // Password validation (only for add mode)
-    if (!isEditMode) {
-      if (!formData.password) {
-        newErrors.password = "Password is required";
-        isValid = false;
-      } else if (formData.password.length < 8) {
-        newErrors.password = "Password must be at least 8 characters long";
-        isValid = false;
-      } else if (formData.password.length > 15) {
-        newErrors.password = "Password should be maximum 15 characters long";
-        isValid = false;
-      } else if (!/[A-Z]/.test(formData.password)) {
-        newErrors.password =
-          "Password must contain at least one uppercase letter";
-        isValid = false;
-      } else if (!/[a-z]/.test(formData.password)) {
-        newErrors.password =
-          "Password must contain at least one lowercase letter";
-        isValid = false;
-      } else if (!/[0-9]/.test(formData.password)) {
-        newErrors.password = "Password must contain at least one number";
-        isValid = false;
-      } else if (!/[^A-Za-z0-9]/.test(formData.password)) {
-        newErrors.password =
-          "Password must contain at least one special character";
-        isValid = false;
-      }
-
-      // Confirm password validation
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password";
-        isValid = false;
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-        isValid = false;
-      }
-      console.log("error", newErrors);
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleClose = () => {
-    setIsOpenAddModal(false);
-    setForm({
-      full_name: "",
-      userName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      isDisable: false,
-    });
-    setErrors({});
-  };
-
-  const handleAddUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateAddUserForm()) return;
-
-    const reqData = {
-      full_name: formData.full_name,
-      userName: formData.userName,
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(create(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-          return;
-        } else {
-          toast.success(res.message || "User created successfully");
-          handleClose();
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error || "Error in creating user");
-      });
-  };
-  const handleRowCheckboxChange = (e, rowId) => {
-    setSelectedRow((prev) =>
-      e.target.checked ? [...prev, rowId] : prev.filter((id) => id !== rowId),
-    );
-  };
-  const tableRows = getListData?.list?.map((user) => [
-    <input
-      type="checkbox"
-      checked={selectedRow.includes(user._id)}
-      onChange={(e) => handleRowCheckboxChange(e, user._id)}
-    />,
-    <span key={`name-${user._id}`} className="capitalize">
-      {user?.full_name}
-    </span>,
-    <span key={`username-${user._id}`}>{user?.userName}</span>,
-    <span key={`email-${user._id}`}>{user?.email}</span>,
-    <div key={`status-${user._id}`} className="flex flex-col">
-      <label className="relative inline-flex" title="Enable/Disable">
-        <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={!user?.isDisable}
-          readOnly
-        />
-        <div
-          onClick={() => handleToggle(user)}
-          className="cursor-pointer w-9 h-5 bg-gray-200 hover:bg-red-600 peer-focus:outline-0 peer-focus:ring-transparent rounded-full peer transition-all ease-in-out duration-500 peer-checked:after:translate-x-full peer-checked:after:border-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-600 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-400 hover:peer-checked:bg-green-200"
-          title="Enable/Disable"
-        ></div>
-      </label>
-      <span
-        className={`mt-1 capitalize ${!user?.isDisable ? "text-green-600" : "text-red-500"}`}
-      >
-        {!user?.isDisable ? "enabled" : "disabled"}
-      </span>
-    </div>,
-    <span key={`actions-${user._id}`}>
-      <ActionButtons
-        onEdit={() => {
-          setForm({
-            _id: user._id,
-            full_name: user.full_name,
-            userName: user.userName,
-            email: user.email,
-            isDisable: user.isDisable,
-          });
-          setIsEditModal(true);
-        }}
-        showDeleteButton={false}
-        showPasswordButton={false}
-        showLinkButton={false}
-      />
-      {/* <AddEditShippingCompanyUsers
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      /> */}
-      {/* <UserTransactionsSetup
-        onCloseTransaction={() => setIsOpenTransaction(false)}
-        isOpenTransaction={isOpenTransaction}
-      /> */}
-    </span>,
-  ]);
-
-  const confirmDelete = () => {
-    setShowDeleteConfirmation(false);
-  };
-
-  const handleDisableFunc = () => {
-    if (!toggleStates) return;
-    const obj = {
-      _id: Array(toggleStates._id),
-      isDisable: !toggleStates.isDisable,
-    };
-
-    dispatch(enableDisable(obj))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          toast.error(res.error);
-        } else {
-          toast.success(res.message || "Status Updated Successfully");
-          setIsConfirmModalOpen(false);
-          setToggleStates(null);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-        toast.error(error.message || "Error in Updating Status");
-      });
-  };
-
-  const handleToggle = (user) => {
-    setToggleStates(user);
-    setIsConfirmModalOpen(true);
-  };
-  const handleBulkAction = async (action) => {
-    if (action === "Active" || action === "Inactive") {
-      let apiPayload = {
-        _id: selectedRow,
-        isDisable: action === "Active" ? false : true,
-      };
-      try {
-        const res = await dispatch(enableDisable(apiPayload)).unwrap();
-        if (res) {
-          toast.success(res?.message);
-          setIsRefresh(!isRefresh);
-        }
-      } catch (error) {
-        toast.error(error?.message || error || "Failed...!");
-        if (error.errors) {
-          setErrors(error.errors);
-        }
-      }
-    }
-  };
-
-  const handleEditClose = () => {
-    setIsEditModal(false);
-    setForm({
-      full_name: "",
-      userName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      isDisable: false,
-    });
-    setErrors({});
-  };
-
-  // This does nothing functionally, as it sets the same value
-  const handleToggleAdd = () => {
-    setForm((prev) => ({
-      ...prev,
-      isDisable: !prev.isDisable,
-    }));
-  };
-  const validateEditUserForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    // Full name validation
-    if (!formData?.full_name) {
-      newErrors.full_name = "Full name is required";
-      isValid = false;
-    } else if (formData?.full_name.length < 3) {
-      newErrors.full_name = "Full name must be at least 3 characters";
-      isValid = false;
-    }
-
-    // Username validation
-    if (!formData?.userName) {
-      newErrors.userName = "Username is required";
-      isValid = false;
-    } else if (formData?.userName.length < 5) {
-      newErrors.userName = "Username must be at least 5 characters";
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName)) {
-      newErrors.userName =
-        "Username can only contain letters, numbers and underscores";
-      isValid = false;
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.(com)$/.test(formData.email)) {
-      newErrors.email = "Email must be a valid .com address";
-      isValid = false;
-    }
-    setErrors(newErrors);
-    return isValid;
-  };
-  const handleEditUserSubmit = (e) => {
-    e.preventDefault();
-
-    if (!validateEditUserForm()) return;
-
-    const reqData = {
-      _id: formData._id,
-      full_name: formData.full_name,
-      // userName: formData.userName,
-      email: formData.email,
-      isDisable: formData.isDisable,
-    };
-
-    dispatch(update(reqData))
-      .unwrap()
-      .then((res) => {
-        if (res.error) {
-          dispatch(showError(res.error));
-        } else {
-          dispatch(showSuccess(res.message || "User Updated Successfully"));
-          setIsEditModal(false);
-          setIsRefresh(!isRefresh);
-        }
-      })
-      .catch((error) => {
-        dispatch(showError(error.message || "Error in Updating User"));
-      });
-  };
-  const handleSelectAllChange = (e) => {
-    if (e.target.checked) {
-      const allIds = getListData?.list?.map((user) => user._id) || [];
-      setSelectedRow(allIds);
-    } else {
-      setSelectedRow([]);
-    }
-  };
+const SellerSelectField = ({ value, onChange, required }) => {
+  const [options, setOptions] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  React.useEffect(() => {
+    setLoading(true);
+    dropdownApi.getSellers({ limit: 100 }).then(setOptions).catch(() => {}).finally(() => setLoading(false));
+  }, []);
   return (
-    <>
-      <Loader loading={selector.loading} />
-      <div className="max-w-7xl mx-auto">
-        <div className=" overflow-hidden overflow-y-auto py-6">
-          <div className="flex justify-between items-center">
-            <h3>
-              Home / <b>Admin Users</b>
-            </h3>
-            <Button
-              className="border-[var(--admin-blue)] text-[var(--admin-blue)] mb-3"
-              onClick={() => {
-                setIsOpenAddModal(true);
-              }}
-            >
-              Add User
-            </Button>
-          </div>
-          <div className="overflow-y-auto bg-white rounded-lg border border-[#E6E6E6]">
-            <div className="max-w-auto mx-auto space-y-6">
-              <div className="bg-white p-2">
-                <div className="border-b mb-4">
-                  <SearchComponent
-                    isSearchShow={true}
-                    filters={filters}
-                    setFilters={setFilters}
-                    isActionButton={true}
-                    selectedRow={selectedRow}
-                    setSelectedRow={setSelectedRow}
-                    handleAction={handleBulkAction}
-                    isStatusAction={true}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search By Full Name"
-                  />
-                </div>
-              </div>
-            </div>
-            <TableData
-              Heading="Admin Users"
-              tableHeadings={[
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedRow.length > 0 &&
-                    selectedRow.length === (getListData?.list?.length || 0)
-                  }
-                  onChange={handleSelectAllChange}
-                  // Indeterminate state when some but not all are selected
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate =
-                        selectedRow.length > 0 &&
-                        selectedRow.length < (getListData?.list?.length || 0);
-                    }
-                  }}
-                />,
-                "Full Name",
-                "Username",
-                "Email",
-                "Status",
-                "Actions",
-              ]}
-              data={tableRows}
-              showSearch={true}
-              placeholder="Search by..."
-              showFilter={false}
-              showSummary={false}
-              onClickFunction={() => {
-                setIsEditMode(false);
-                setIsOpen(true);
-              }}
-              totalData={totalUsers}
-              totalSize={size}
-              currentPage={pageNo}
-              onPageChange={onPageChange}
-              searchTerm={keyword}
-              setSearchTerm={setKeyword}
-            />
-          </div>
-          <div className="flex justify-center my-6">
-            {getListData?.total &&
-              size &&
-              Math.ceil(getListData.total / size) > 1 && (
-                <Pagination
-                  totalPages={Math.ceil(getListData.total / size)}
-                  currentPage={pageNo}
-                  onPageChange={onPageChange}
-                />
-              )}
-          </div>
-        </div>
-
-        {/* Add User Modal */}
-        <DefaultModal
-          isOpen={isOpenAddModal}
-          onClose={handleClose}
-          onSubmit={handleAddUserSubmit}
-          isButtonView={true}
-          submitButtonText="Submit"
-          closeButtonText="Reset"
-          title="Admin User Setup"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-              />
-            </div>
-          </div>
-          <div className="p-4">
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                error={errors.confirmPassword}
-                maxLength={15}
-                required
-              />
-            </div>
-          </div>
-          {/* <div className='p-4'>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div> */}
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        {/* Edit User Modal */}
-        <DefaultModal
-          isOpen={isOpenEditModal}
-          onClose={handleEditClose}
-          onSubmit={handleEditUserSubmit}
-          isButtonView={true}
-          submitButtonText="Update"
-          closeButtonText="Cancel"
-          title="Edit Admin User"
-          titleClassName="mt-5 font-medium"
-        >
-          <div className="p-4 flex space-x-4">
-            <div className="w-1/2">
-              <FormInput
-                label="Full Name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                error={errors.full_name}
-                maxLength={50}
-                required
-              />
-            </div>
-            <div className="w-1/2">
-              <FormInput
-                label="Username"
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                error={errors.userName}
-                maxLength={30}
-                required
-                disabled
-              />
-            </div>
-          </div>
-          <div className="p-4">
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={errors.email}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="flex justify-between items-center border p-3">
-            <p className="font-medium text-sm">Status</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={handleToggleAdd}
-            />
-          </div>
-        </DefaultModal>
-
-        <DeletePopup
-          isDeleteModalOpen={showDeleteConfirmation}
-          closeDeleteModal={() => setShowDeleteConfirmation(false)}
-          confirmDelete={confirmDelete}
-          DeleteHeading={"Are you sure you want to delete this user?"}
-        />
-
-        <StatusPopup
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDisableFunc}
-          heading={`Are you sure you want to ${toggleStates?.isDisable ? "enable" : "disable"} this user?`}
-        />
-      </div>
-    </>
+    <label className="block text-sm text-gray-700">
+      <span className="mb-1 block font-medium">Seller {required && <span className="text-red-500">*</span>}</span>
+      <select
+        className="admin-input w-full"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+      >
+        <option value="">— Select seller —</option>
+        {loading && <option disabled>Loading…</option>}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </label>
   );
 };
 
-export default AdminUsers;
+const ShippingCompanyUsers = () => {
+  const dispatch = useDispatch();
+  const selector = useSelector((state) => state.delivery);
+  const payload = unwrapList(selector.agentsData);
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
+  const { toQueryParams } = list;
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+
+  const fetchAgents = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const params = toQueryParams();
+      await dispatch(getDeliveryAgents({
+        sellerId: params.sellerId,
+        active: params.active,
+        verificationStatus: params.verificationStatus,
+        search: params.search,
+        limit: params.limit,
+        offset: (params.page - 1) * params.limit,
+      })).unwrap();
+    } catch (requestError) {
+      const message = requestError?.message || requestError || "Failed to load delivery agents";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, toQueryParams]);
+
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
+  const updateForm = useCallback((key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const openCreate = useCallback(() => {
+    setForm(EMPTY_FORM);
+    setModalOpen(true);
+  }, []);
+
+  const openEdit = useCallback((agent) => {
+    setForm(toForm(agent));
+    setModalOpen(true);
+  }, []);
+
+  const buildPayload = useCallback(() => {
+    if (!form.sellerId.trim()) throw new Error("Seller ID is required");
+    if (form.name.trim().length < 2) throw new Error("Agent name must be at least 2 characters");
+    if (form.phone.trim().length < 7) throw new Error("Phone number must be at least 7 characters");
+
+    return {
+      ...(form.id ? { deliveryAgentId: form.id } : {}),
+      sellerId: form.sellerId.trim(),
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim() || null,
+      vehicleType: form.vehicleType.trim() || null,
+      vehicleNumber: form.vehicleNumber.trim() || null,
+      licenseNumber: form.licenseNumber.trim() || null,
+      verificationStatus: form.verificationStatus,
+      active: Boolean(form.active),
+      documents: parseJsonField(form.documentsText, "Documents"),
+      metadata: parseJsonField(form.metadataText, "Metadata"),
+    };
+  }, [form]);
+
+  const submitAgent = useCallback(async () => {
+    let body;
+    try {
+      body = buildPayload();
+    } catch (validationError) {
+      toast.error(validationError.message);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (form.id) {
+        await dispatch(updateDeliveryAgent(body)).unwrap();
+        toast.success("Delivery agent updated");
+      } else {
+        await dispatch(createDeliveryAgent(body)).unwrap();
+        toast.success("Delivery agent created");
+      }
+      setModalOpen(false);
+      setForm(EMPTY_FORM);
+      await fetchAgents();
+    } catch (requestError) {
+      toast.error(requestError?.message || requestError || "Failed to save delivery agent");
+    } finally {
+      setLoading(false);
+    }
+  }, [buildPayload, dispatch, fetchAgents, form.id]);
+
+  const columns = useMemo(() => [
+    {
+      key: "name",
+      label: "Agent",
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <MdLocalShipping size={18} />
+          </span>
+          <div>
+            <div className="font-semibold text-gray-800">{value || "N/A"}</div>
+            <div className="text-xs text-gray-400">{row.phone || "No phone"}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "seller_id",
+      label: "Seller",
+      render: (value) => <span className="font-mono text-xs">{value || "N/A"}</span>,
+    },
+    {
+      key: "vehicle_number",
+      label: "Vehicle",
+      render: (value, row) => (
+        <div>
+          <div className="text-sm font-medium text-gray-700">{value || "N/A"}</div>
+          <div className="text-xs text-gray-400">{display(row.vehicle_type)}</div>
+        </div>
+      ),
+    },
+    {
+      key: "license_number",
+      label: "License",
+      render: (value) => value || "N/A",
+    },
+    {
+      key: "verification_status",
+      label: "Verification",
+      render: (value) => <StatusBadge status={value || "pending"} dot />,
+    },
+    {
+      key: "active",
+      label: "Active",
+      render: (value) => <StatusBadge status={value ? "active" : "inactive"} dot />,
+    },
+    {
+      key: "created_at",
+      label: "Created",
+      sortable: true,
+      render: (value) => <span className="text-xs text-gray-500">{dateText(value)}</span>,
+    },
+    {
+      key: "_actions",
+      label: "Actions",
+      render: (_, row) => (
+        <PermissionGuard module="delivery" action={ACTIONS.UPDATE} hide>
+          <button
+            type="button"
+            onClick={() => openEdit(row)}
+            className="admin-btn-secondary !px-2 !py-1"
+          >
+            <MdEdit size={15} /> Edit
+          </button>
+        </PermissionGuard>
+      ),
+    },
+  ], [openEdit]);
+
+  return (
+    <div className="max-w-7xl mx-auto mt-8">
+      <PageHeader
+        title="Delivery Partners"
+        subtitle="Manage seller delivery agents, verification, vehicle details, and active assignment eligibility"
+        breadcrumbs={[{ label: "Delivery & Shipping" }, { label: "Delivery Partners" }]}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="admin-btn-secondary" onClick={fetchAgents}>
+              <MdRefresh size={17} /> Refresh
+            </button>
+            <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
+              <button type="button" className="admin-btn-primary" onClick={openCreate}>
+                <MdAdd size={16} /> Add Agent
+              </button>
+            </PermissionGuard>
+          </div>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={payload.list}
+        loading={loading}
+        totalCount={payload.total || payload.list.length}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        searchPlaceholder="Search agent, phone, vehicle, or license"
+        error={error}
+        onRefresh={fetchAgents}
+        emptyText="No delivery agents found."
+        requiredModule="delivery"
+        exportConfig={{ filename: "delivery-agents", columns, data: payload.list }}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={list.filters}
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
+            loading={loading}
+            activeCount={list.activeFilterCount}
+          />
+        }
+      />
+
+      <DefaultModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={form.id ? "Edit Delivery Agent" : "Add Delivery Agent"}
+        onSubmit={submitAgent}
+        submitButtonText={form.id ? "Update" : "Create"}
+        loading={loading}
+        width="620px"
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <SellerSelectField
+            value={form.sellerId}
+            onChange={(value) => updateForm("sellerId", value)}
+            required
+          />
+          <Input labelName="Agent Name" value={form.name} onChange={(event) => updateForm("name", event.target.value)} required />
+          <Input labelName="Phone" value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} required />
+          <Input labelName="Email" type="email" value={form.email} onChange={(event) => updateForm("email", event.target.value)} />
+          <Input labelName="Vehicle Type" value={form.vehicleType} onChange={(event) => updateForm("vehicleType", event.target.value)} placeholder="Bike, van, truck" />
+          <Input labelName="Vehicle Number" value={form.vehicleNumber} onChange={(event) => updateForm("vehicleNumber", event.target.value)} />
+          <Input labelName="License Number" value={form.licenseNumber} onChange={(event) => updateForm("licenseNumber", event.target.value)} />
+          <label className="block text-sm text-gray-700">
+            <span className="mb-1 block font-medium">Verification Status</span>
+            <select
+              className="admin-input w-full"
+              value={form.verificationStatus}
+              onChange={(event) => updateForm("verificationStatus", event.target.value)}
+            >
+              {VERIFICATION_STATUSES.map((status) => (
+                <option key={status} value={status}>{display(status)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 pt-7 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(event) => updateForm("active", event.target.checked)}
+            />
+            Active and assignable
+          </label>
+          <div className="md:col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Input
+              type="textarea"
+              labelName="Documents JSON"
+              rows={6}
+              value={form.documentsText}
+              onChange={(event) => updateForm("documentsText", event.target.value)}
+              placeholder='{"licenseUrl":"https://..."}'
+            />
+            <Input
+              type="textarea"
+              labelName="Metadata JSON"
+              rows={6}
+              value={form.metadataText}
+              onChange={(event) => updateForm("metadataText", event.target.value)}
+              placeholder='{"shift":"day"}'
+            />
+          </div>
+        </div>
+      </DefaultModal>
+    </div>
+  );
+};
+
+export default ShippingCompanyUsers;

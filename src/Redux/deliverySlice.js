@@ -5,9 +5,14 @@ import { ENDPOINTS } from "../_helpers/endpoints";
 const initialState = {
   serviceabilityData: {},
   ratesData: {},
+  agentsData: {},
+  agentData: {},
+  createAgentData: {},
+  updateAgentData: {},
   shipmentsData: {},
   shipmentData: {},
   createShipmentData: {},
+  assignAgentData: {},
   trackingEventData: {},
   deliveryOtpData: {},
   confirmDeliveryData: {},
@@ -45,6 +50,36 @@ export const getShippingRate = createApiThunkPrivate(
   { transformParams: pickQuery(["pincode", "weightGrams", "shippingMode", "cod", "provider"]) }
 );
 
+export const getDeliveryAgents = createApiThunkPrivate(
+  "delivery/getDeliveryAgents",
+  ENDPOINTS.delivery.agents,
+  "GET",
+  true,
+  { transformParams: pickQuery(["sellerId", "active", "verificationStatus", "search", "limit", "offset"]) }
+);
+
+export const createDeliveryAgent = createApiThunkPrivate(
+  "delivery/createDeliveryAgent",
+  ENDPOINTS.delivery.agents,
+  "POST",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["id", "_id", "deliveryAgentId"]) }
+);
+
+export const getDeliveryAgent = createApiThunkPrivate(
+  "delivery/getDeliveryAgent",
+  (payload) => ENDPOINTS.delivery.agent(payload?.deliveryAgentId || payload?.id || payload?._id),
+  "GET"
+);
+
+export const updateDeliveryAgent = createApiThunkPrivate(
+  "delivery/updateDeliveryAgent",
+  (payload) => ENDPOINTS.delivery.agent(payload?.deliveryAgentId || payload?.id || payload?._id),
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["deliveryAgentId", "id", "_id"]) }
+);
+
 export const getShipments = createApiThunkPrivate(
   "delivery/getShipments",
   ENDPOINTS.delivery.shipments,
@@ -63,6 +98,14 @@ export const getShipment = createApiThunkPrivate(
   "delivery/getShipment",
   (payload) => ENDPOINTS.delivery.shipment(payload?.shipmentId || payload?.id),
   "GET"
+);
+
+export const assignDeliveryAgentToShipment = createApiThunkPrivate(
+  "delivery/assignDeliveryAgentToShipment",
+  (payload) => ENDPOINTS.delivery.shipmentAssignAgent(payload?.shipmentId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ deliveryAgentId: payload.deliveryAgentId }) }
 );
 
 export const addShipmentTracking = createApiThunkPrivate(
@@ -123,9 +166,14 @@ const deliverySlice = createSlice({
   extraReducers: (builder) => {
     createExtraReducersForThunk(builder, getDeliveryServiceabilityForSeller, "serviceabilityData");
     createExtraReducersForThunk(builder, getShippingRate, "ratesData");
+    createExtraReducersForThunk(builder, getDeliveryAgents, "agentsData");
+    createExtraReducersForThunk(builder, getDeliveryAgent, "agentData");
+    createExtraReducersForThunk(builder, createDeliveryAgent, "createAgentData");
+    createExtraReducersForThunk(builder, updateDeliveryAgent, "updateAgentData");
     createExtraReducersForThunk(builder, getShipments, "shipmentsData");
     createExtraReducersForThunk(builder, getShipment, "shipmentData");
     createExtraReducersForThunk(builder, createShipment, "createShipmentData");
+    createExtraReducersForThunk(builder, assignDeliveryAgentToShipment, "assignAgentData");
     createExtraReducersForThunk(builder, addShipmentTracking, "trackingEventData");
     createExtraReducersForThunk(builder, generateShipmentDeliveryOtp, "deliveryOtpData");
     createExtraReducersForThunk(builder, confirmShipmentDelivery, "confirmDeliveryData");

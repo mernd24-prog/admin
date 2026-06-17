@@ -12,10 +12,17 @@ import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../componen
 import { getAdminPayouts, createAdminPayout } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const STATUSES = ["pending", "processing", "completed", "failed", "cancelled"];
 const FILTER_FIELDS = [
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-56" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
@@ -63,6 +70,8 @@ const SellerPayouts = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
 
   const fetchPayouts = useCallback(async () => {
     try {
@@ -117,7 +126,7 @@ const SellerPayouts = () => {
     {
       key: "sellerId",
       label: "Seller",
-      render: (v) => <span className="font-mono text-xs">{String(v || "—").slice(-8)}</span>,
+      render: (v, row) => { const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === v)?.label; return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{String(v || "—").slice(-8)}</span>; },
     },
     {
       key: "status",
@@ -179,11 +188,31 @@ const SellerPayouts = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
+      <FilterBar
+        filters={FILTER_FIELDS}
+        values={list.filters}
+        onChange={list.setFilter}
+        onClear={list.clearFilters}
+        loading={loading}
+        activeCount={list.activeFilterCount}
+      />
       {error && <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>}
-      {loading ? <Loader /> : (
-        <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No payouts found" />
-      )}
+      <DataTable
+        columns={COLUMNS}
+        data={payload.list}
+        loading={loading}
+        totalCount={payload.total || payload.list.length}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        searchPlaceholder="Search by seller or payout ID…"
+        emptyText="No payouts found"
+      />
 
       {/* Detail */}
       <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Payout Detail">
@@ -192,7 +221,7 @@ const SellerPayouts = () => {
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-gray-500">Payout ID</p><p className="font-mono text-xs">{detail._id || detail.id}</p></div>
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} /></div>
-              <div><p className="text-gray-500">Seller ID</p><p className="font-mono text-xs">{detail.sellerId || "—"}</p></div>
+              <div><p className="text-gray-500">Seller</p><p className="text-sm font-medium">{detail.sellerName || detail.seller?.name || sellerOptions.find((o) => o.value === detail.sellerId)?.label || <span className="font-mono text-xs">{detail.sellerId || "—"}</span>}</p></div>
               <div><p className="text-gray-500">Currency</p><p>{detail.currency || "INR"}</p></div>
               <div><p className="text-gray-500">Gross Amount</p><p>{money(detail.grossAmount)}</p></div>
               <div><p className="text-gray-500">Commission</p><p className="text-red-600">-{money(detail.commissionAmount)}</p></div>
@@ -210,7 +239,13 @@ const SellerPayouts = () => {
       {/* Create modal */}
       <DefaultModal isOpen={showCreate} onClose={() => { setShowCreate(false); setForm(EMPTY_FORM); }} title="Create Seller Payout">
         <div className="p-4 space-y-4">
-          <Input label="Seller ID *" value={form.sellerId} onChange={(e) => setForm((p) => ({ ...p, sellerId: e.target.value }))} placeholder="Seller UUID..." />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Seller *</label>
+            <select value={form.sellerId} onChange={(e) => setForm((p) => ({ ...p, sellerId: e.target.value }))} required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— Select Seller —</option>
+              {sellerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Period Start" type="date" value={form.periodStart} onChange={(e) => setForm((p) => ({ ...p, periodStart: e.target.value }))} />
             <Input label="Period End" type="date" value={form.periodEnd} onChange={(e) => setForm((p) => ({ ...p, periodEnd: e.target.value }))} />

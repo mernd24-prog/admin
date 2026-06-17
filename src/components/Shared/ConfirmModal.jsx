@@ -32,23 +32,31 @@ const BTN_VARIANTS = {
  */
 const ConfirmModal = ({
   open,
+  isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title = 'Are you sure?',
   message,
+  description,
   variant = 'warning',
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   loading = false,
+  children,
 }) => {
+  const visible = open ?? isOpen;
+  const handleClose = onClose || onCancel;
+  const body = message ?? description;
+
   useEffect(() => {
-    if (!open || loading) return undefined;
-    const closeOnEscape = (event) => event.key === 'Escape' && onClose?.();
+    if (!visible || loading) return undefined;
+    const closeOnEscape = (event) => event.key === 'Escape' && handleClose?.();
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [loading, onClose, open]);
+  }, [handleClose, loading, visible]);
 
-  if (!open) return null;
+  if (!visible) return null;
 
   const { Icon, bg, color } = ICON_MAP[variant] || ICON_MAP.warning;
   const btnClass = BTN_VARIANTS[variant] || BTN_VARIANTS.primary;
@@ -58,14 +66,14 @@ const ConfirmModal = ({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-[rgba(31,27,95,0.35)] backdrop-blur-[2px]"
-        onClick={!loading ? onClose : undefined}
+        onClick={!loading ? handleClose : undefined}
       />
 
       {/* Dialog */}
       <div role="alertdialog" aria-modal="true" aria-label={title} className="admin-card relative w-full max-w-md mx-4 p-6 animate-fade-in">
         {/* Close */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           disabled={loading}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
         >
@@ -79,14 +87,16 @@ const ConfirmModal = ({
           </span>
           <div>
             <h3 className="text-base font-semibold text-[var(--admin-ink)]">{title}</h3>
-            {message && <div className="text-sm text-[var(--admin-muted)] mt-1">{message}</div>}
+            {body && <div className="text-sm text-[var(--admin-muted)] mt-1">{body}</div>}
           </div>
         </div>
+
+        {children && <div className="mt-4">{children}</div>}
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 mt-6">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
             className="admin-btn-secondary !min-h-9 px-4 py-2 text-sm disabled:opacity-50"
           >

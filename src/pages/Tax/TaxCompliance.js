@@ -20,11 +20,12 @@ import {
 } from "../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
+import { dropdownApi } from "../../_helpers/dropdownApi";
 
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-48" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-56" },
+  { key: "sellerId", type: "asyncDropdown", label: "Seller", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
+  { key: "buyerId", type: "asyncDropdown", label: "Buyer", load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }) },
   { key: "hsnCode", type: "text", label: "HSN", width: "w-32" },
   { key: "state", type: "text", label: "State", width: "w-36" },
   {
@@ -185,8 +186,11 @@ const TaxCompliance = () => {
 
   const invoiceColumns = useMemo(() => [
     { key: "invoice_number", label: "Invoice", sortable: true, render: (value) => <span className="font-mono text-xs">{value}</span> },
-    { key: "order_id", label: "Order", render: (value) => <span className="text-xs">{value}</span> },
-    { key: "buyer_id", label: "Buyer", render: (value) => <span className="text-xs">{value}</span> },
+    { key: "order_id", label: "Order", render: (value, row) => <span className="font-mono text-xs">{row.orderNumber || row.order_number || (value ? `#${String(value).slice(-8)}` : "—")}</span> },
+    { key: "buyer_id", label: "Buyer", render: (value, row) => {
+      const name = row.buyerName || row.buyer?.name || row.buyer?.full_name || row.buyer?.email;
+      return name ? <span className="text-xs font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? `${String(value).slice(0, 10)}…` : "—"}</span>;
+    } },
     { key: "taxable_amount", label: "Taxable", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "cgst_amount", label: "CGST", render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "sgst_amount", label: "SGST", render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
@@ -206,8 +210,8 @@ const TaxCompliance = () => {
 
   const creditColumns = useMemo(() => [
     { key: "credit_note_number", label: "Credit Note", sortable: true, render: (value) => <span className="font-mono text-xs">{value}</span> },
-    { key: "order_id", label: "Order", render: (value) => <span className="text-xs">{value}</span> },
-    { key: "reference", label: "Reference", render: (_, row) => <span className="text-xs">{row.reference_type}:{row.reference_id}</span> },
+    { key: "order_id", label: "Order", render: (value, row) => <span className="font-mono text-xs">{row.orderNumber || row.order_number || (value ? `#${String(value).slice(-8)}` : "—")}</span> },
+    { key: "reference", label: "Reference", render: (_, row) => <span className="text-xs text-gray-500">{[row.reference_type, row.reference_id ? `#${String(row.reference_id).slice(-8)}` : null].filter(Boolean).join(" ") || "—"}</span> },
     { key: "taxable_amount", label: "Taxable", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "tax_amount", label: "Tax", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "total_amount", label: "Total", sortable: true, render: (value) => <span className="font-mono text-sm font-medium">₹ {money(value)}</span> },

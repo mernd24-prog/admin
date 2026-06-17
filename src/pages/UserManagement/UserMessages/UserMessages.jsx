@@ -42,9 +42,14 @@ const COLUMNS = [
   {
     key: "userId",
     label: "Recipient",
-    render: (v) => (
-      <span className="text-xs font-mono text-gray-500">{v || "—"}</span>
-    ),
+    render: (v, row) => {
+      const name = row.recipientName || row.user?.name || row.user?.full_name || row.userName;
+      return name ? (
+        <span className="text-sm font-medium text-gray-700">{name}</span>
+      ) : (
+        <span className="text-xs font-mono text-gray-400">{v ? `${String(v).slice(0, 12)}…` : "—"}</span>
+      );
+    },
   },
   {
     key: "channel",

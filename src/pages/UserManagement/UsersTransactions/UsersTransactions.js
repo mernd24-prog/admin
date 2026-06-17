@@ -33,7 +33,10 @@ const titleCase = (value = "") =>
 
 const COLUMNS = [
   { key: "id", label: "Transaction ID", render: (v) => <span className="font-mono text-xs">{v || "—"}</span> },
-  { key: "userLabel", label: "User", render: (v, row) => <span className="text-sm">{v || row?.user?.name || row?.user_id || "—"}</span> },
+  { key: "userLabel", label: "User", render: (v, row) => {
+    const name = v || row?.user?.name || row?.user?.email || row?.userName;
+    return name ? <span className="text-sm">{name}</span> : <span className="font-mono text-xs text-gray-400">{row?.user_id ? String(row.user_id).slice(0, 12) + "…" : "—"}</span>;
+  } },
   {
     key: "created_at",
     label: "Date",

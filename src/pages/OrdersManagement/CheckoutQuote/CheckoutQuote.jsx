@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MdAdd, MdCalculate, MdDeleteOutline } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -6,6 +6,58 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "react-toastify";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
+
+const BuyerSearchField = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [label, setLabel] = useState('');
+  const ref = useRef(null);
+  const timer = useRef(null);
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setLoading(true);
+      dropdownApi.getBuyers({ keyWord: query, searchFields: 'full_name,email', limit: 20 })
+        .then(setOptions).catch(() => {}).finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(timer.current);
+  }, [query, open]);
+  const select = (opt) => { onChange(opt.value); setLabel(opt.label); setOpen(false); setQuery(''); };
+  const clear = (e) => { e.stopPropagation(); onChange(''); setLabel(''); };
+  return (
+    <div ref={ref} className="relative">
+      <div className="admin-input flex items-center cursor-pointer min-h-[38px]" onClick={() => setOpen((o) => !o)}>
+        {value && label ? <span className="flex-1 text-sm text-gray-700 truncate">{label}</span>
+          : value ? <span className="flex-1 font-mono text-xs text-gray-500 truncate">{String(value).slice(0,20)}…</span>
+          : <span className="flex-1 text-sm text-gray-400">Optional customer id</span>}
+        {value && <button type="button" onClick={clear} className="ml-1 text-gray-300 hover:text-gray-600">×</button>}
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="px-2 py-1.5 border-b border-gray-100">
+            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email…" className="w-full text-sm outline-none" />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {loading ? <div className="px-3 py-2 text-sm text-gray-400">Loading…</div>
+              : options.length === 0 ? <div className="px-3 py-2 text-sm text-gray-400">No customers found</div>
+              : options.map((opt) => (
+                <div key={opt.value} onClick={() => select(opt)} className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 text-gray-700">{opt.label}</div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EMPTY_ITEM = { productId: "", variantId: "", variantSku: "", quantity: 1 };
 const EMPTY_ADDRESS = {
@@ -143,8 +195,8 @@ const CheckoutQuote = () => {
         <div className="admin-card space-y-5 p-5">
           <div className="grid gap-4 md:grid-cols-3">
             <label className="space-y-1">
-              <span className="admin-label">Buyer ID</span>
-              <input className="admin-input" value={buyerId} onChange={(event) => setBuyerId(event.target.value)} placeholder="Optional customer id" />
+              <span className="admin-label">Buyer</span>
+              <BuyerSearchField value={buyerId} onChange={setBuyerId} />
             </label>
             <label className="space-y-1">
               <span className="admin-label">Payment</span>

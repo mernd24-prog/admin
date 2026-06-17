@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { MdRefresh, MdSearch, MdTune } from "react-icons/md";
 import { PageHeader, StatusBadge, DataTable } from "../../../components/Shared";
 import { getInventoryTransactions } from "../../../Redux/productSlice";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const TRANSACTION_TYPES = [
   { value: "", label: "All Types" },
@@ -118,6 +119,8 @@ const InventoryAudit = () => {
 
   const [filters, setFilters] = useState({ productId: "", sellerId: "", type: "", orderId: "" });
   const [offset, setOffset] = useState(0);
+  const [sellerOptions, setSellerOptions] = React.useState([]);
+  React.useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
   const limit = 50;
 
   const transactions = unwrapTransactions(transactionsState);
@@ -181,12 +184,14 @@ const InventoryAudit = () => {
           value={filters.productId}
           onChange={(e) => updateFilter("productId", e.target.value)}
         />
-        <input
+        <select
           className={inputCls}
-          placeholder="Seller ID"
           value={filters.sellerId}
           onChange={(e) => updateFilter("sellerId", e.target.value)}
-        />
+        >
+          <option value="">All Sellers</option>
+          {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+        </select>
         <input
           className={inputCls}
           placeholder="Order ID"

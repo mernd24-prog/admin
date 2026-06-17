@@ -4,6 +4,7 @@ import { PageHeader, DataTable, FilterBar, StatusBadge, ConfirmModal } from "../
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { dropdownApi } from "../../_helpers/dropdownApi";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
@@ -27,9 +28,9 @@ const STATUS_OPTIONS = [
 const FILTER_FIELDS = [
   { key: "type", type: "select", label: "Type", options: TYPE_OPTIONS, width: "w-40" },
   { key: "status", type: "select", label: "Status", options: STATUS_OPTIONS, width: "w-40" },
-  { key: "productId", type: "text", label: "Product ID", width: "w-52" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-52" },
-  { key: "orderId", type: "text", label: "Order ID", width: "w-52" },
+  { key: "productId", type: "text", label: "Product SKU", width: "w-52" },
+  { key: "sellerId", type: "asyncDropdown", label: "Seller", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
+  { key: "orderId", type: "text", label: "Order #", width: "w-52" },
 ];
 
 const formatDate = (value) => {

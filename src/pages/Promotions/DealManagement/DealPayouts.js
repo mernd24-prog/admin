@@ -12,12 +12,19 @@ import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../
 import { getDealPayouts, generateDealPayout, processDealPayout } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const PAYOUT_STATUSES = ["generated", "processing", "paid", "failed", "cancelled"];
 const STATUS_COLOR = { generated: "blue", processing: "yellow", paid: "green", failed: "red", cancelled: "gray" };
 
 const FILTER_FIELDS = [
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-56" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   { key: "status", type: "select", label: "Status", options: PAYOUT_STATUSES.map((v) => ({ value: v, label: v })) },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
@@ -47,6 +54,8 @@ const DealPayouts = () => {
   const [detail, setDetail] = useState(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateForm, setGenerateForm] = useState({ fromDate: "", toDate: "", sellerId: "" });
+  const [sellerOptions, setSellerOptions] = useState([]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
   const [generating, setGenerating] = useState(false);
   const [processConfirm, setProcessConfirm] = useState({ open: false, payout: null, status: "paid", referenceId: "", note: "" });
   const [processing, setProcessing] = useState(false);
@@ -108,7 +117,7 @@ const DealPayouts = () => {
 
   const COLUMNS = [
     { key: "id", label: "ID", render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "—").slice(-8)}</span> },
-    { key: "sellerId", label: "Seller", render: (v) => <span className="font-mono text-xs">{String(v || "—").slice(-8)}</span> },
+    { key: "sellerId", label: "Seller", render: (v, row) => { const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === v)?.label; return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{String(v || "—").slice(-8)}</span>; } },
     { key: "status", label: "Status", render: (v) => <StatusBadge status={v} color={STATUS_COLOR[v] || "gray"} /> },
     { key: "totalAmount", label: "Amount", render: (v) => <span className="text-sm font-semibold">{money(v)}</span> },
     { key: "periodStart", label: "Period", render: (v, row) => <span className="text-xs text-gray-500">{fmt(v)} – {fmt(row.periodEnd)}</span> },
@@ -159,7 +168,7 @@ const DealPayouts = () => {
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-gray-500">Payout ID</p><p className="font-mono text-xs">{detail._id || detail.id}</p></div>
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} /></div>
-              <div><p className="text-gray-500">Seller ID</p><p className="font-mono text-xs">{detail.sellerId || "—"}</p></div>
+              <div><p className="text-gray-500">Seller</p><p className="text-sm font-medium">{detail.sellerName || detail.seller?.name || sellerOptions.find((o) => o.value === detail.sellerId)?.label || <span className="font-mono text-xs">{detail.sellerId || "—"}</span>}</p></div>
               <div><p className="text-gray-500">Amount</p><p className="font-semibold">{money(detail.totalAmount)}</p></div>
               <div><p className="text-gray-500">Period</p><p>{fmt(detail.periodStart)} – {fmt(detail.periodEnd)}</p></div>
               <div><p className="text-gray-500">Reference ID</p><p className="font-mono text-xs">{detail.referenceId || "—"}</p></div>
@@ -173,7 +182,13 @@ const DealPayouts = () => {
         <div className="p-4 space-y-4">
           <Input label="From Date *" type="date" value={generateForm.fromDate} onChange={(e) => setGenerateForm((p) => ({ ...p, fromDate: e.target.value }))} />
           <Input label="To Date *" type="date" value={generateForm.toDate} onChange={(e) => setGenerateForm((p) => ({ ...p, toDate: e.target.value }))} />
-          <Input label="Seller ID (blank = all sellers)" value={generateForm.sellerId} onChange={(e) => setGenerateForm((p) => ({ ...p, sellerId: e.target.value }))} placeholder="Seller UUID..." />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Seller <span className="text-gray-400 font-normal">(leave blank for all sellers)</span></label>
+            <select value={generateForm.sellerId} onChange={(e) => setGenerateForm((p) => ({ ...p, sellerId: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— All Sellers —</option>
+              {sellerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
           <button onClick={handleGenerate} disabled={generating} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
             {generating ? "Generating..." : "Generate Payouts"}
           </button>

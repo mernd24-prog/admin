@@ -14,6 +14,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
 import { MdShoppingCart } from "react-icons/md";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const ORDER_STATUSES = [
   "pending_payment",
@@ -82,15 +83,17 @@ const FILTER_FIELDS = [
   },
   {
     key: "buyerId",
-    type: "text",
-    label: "Buyer ID",
+    type: "asyncDropdown",
+    label: "Buyer",
     width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
   },
   {
     key: "sellerId",
-    type: "text",
-    label: "Seller ID",
+    type: "asyncDropdown",
+    label: "Seller",
     width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
   },
   {
     key: "fromDate",

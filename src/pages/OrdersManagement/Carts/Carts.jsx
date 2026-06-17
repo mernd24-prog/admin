@@ -13,11 +13,24 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { toast } from "react-toastify";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const FILTER_FIELDS = [
-  { key: "userId", type: "text", label: "Customer ID", width: "w-56" },
-  { key: "productId", type: "text", label: "Product ID", width: "w-56" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-56" },
+  {
+    key: "userId",
+    type: "asyncDropdown",
+    label: "Customer",
+    width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+  },
+  { key: "productId", type: "text", label: "Product SKU", width: "w-48" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   {
     key: "hasItems",
     type: "select",

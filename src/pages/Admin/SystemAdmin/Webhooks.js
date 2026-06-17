@@ -12,10 +12,11 @@ import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../componen
 import { getWebhooks, createWebhook } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const STATUSES = ["active", "paused", "failed"];
 const FILTER_FIELDS = [
-  { key: "ownerId", type: "text", label: "Owner ID", width: "w-56" },
+  { key: "ownerId", type: "asyncDropdown", label: "Owner", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
 ];
 
@@ -50,6 +51,8 @@ const Webhooks = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [customEvent, setCustomEvent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
 
   const fetchWebhooks = useCallback(async () => {
     try {
@@ -136,7 +139,7 @@ const Webhooks = () => {
     {
       key: "ownerId",
       label: "Owner",
-      render: (v) => <span className="font-mono text-xs text-gray-500">{v ? String(v).slice(-8) : "platform"}</span>,
+      render: (v, row) => { const name = row.ownerName || row.owner?.name || sellerOptions.find((o) => o.value === v)?.label; return name ? <span className="text-sm text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-500">{v ? String(v).slice(-8) : "platform"}</span>; },
     },
     {
       key: "createdAt",
@@ -174,7 +177,13 @@ const Webhooks = () => {
         <div className="p-4 space-y-4">
           <Input label="Endpoint URL *" value={form.endpointUrl} onChange={(e) => setForm((p) => ({ ...p, endpointUrl: e.target.value }))} placeholder="https://your-server.com/webhook" />
           <Input label="Secret (for HMAC signing)" value={form.secret} onChange={(e) => setForm((p) => ({ ...p, secret: e.target.value }))} placeholder="Leave blank to auto-generate" />
-          <Input label="Owner ID (optional)" value={form.ownerId} onChange={(e) => setForm((p) => ({ ...p, ownerId: e.target.value }))} placeholder="Seller ID for seller-owned webhooks" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Owner <span className="text-gray-400 font-normal">(leave blank for platform)</span></label>
+            <select value={form.ownerId} onChange={(e) => setForm((p) => ({ ...p, ownerId: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— Platform (no specific seller) —</option>
+              {sellerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
           <Input label="Max Retries" type="number" value={form.maxRetries} onChange={(e) => setForm((p) => ({ ...p, maxRetries: e.target.value }))} />
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Event Types *</p>

@@ -614,7 +614,11 @@ const ReferralCommerce = () => {
   const codeRows = codes.map((code) => ({
     key: getId(code),
     code: <span className="font-semibold text-gray-900">{code.code}</span>,
-    influencer: code.influencerId,
+    influencer: (() => {
+      const inf = influencers.find((i) => getId(i) === code.influencerId);
+      const name = code.influencerName || (inf ? fullName(inf.user) : null) || inf?.user?.email;
+      return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{String(code.influencerId || "—").slice(0, 12)}…</span>;
+    })(),
     discount: `${Number(code.discountPercent || 0)}%`,
     maxDiscount: formatAmount(code.maxDiscountAmount),
     usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
@@ -887,7 +891,7 @@ const ReferralCommerce = () => {
           <DataTable
             columns={[
               { key: "code", label: "Code" },
-              { key: "influencer", label: "Influencer ID" },
+              { key: "influencer", label: "Influencer" },
               { key: "discount", label: "Discount" },
               { key: "maxDiscount", label: "Max Discount" },
               { key: "usage", label: "Usage" },

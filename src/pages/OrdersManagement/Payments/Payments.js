@@ -25,6 +25,7 @@ import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const PROVIDERS = [
   "razorpay",
@@ -47,8 +48,14 @@ const unwrapList = (payload = {}) => {
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const money = (value) => Number(value || 0).toFixed(2);
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  {
+    key: "buyerId",
+    type: "asyncDropdown",
+    label: "Buyer",
+    width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+  },
   { key: "provider", type: "select", label: "Provider", options: PROVIDERS.map((value) => ({ value, label: display(value) })) },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((value) => ({ value, label: display(value) })) },
   { key: "fromDate", type: "date", label: "From" },

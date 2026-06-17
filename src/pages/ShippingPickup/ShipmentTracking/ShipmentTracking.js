@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdDescription, MdFileDownload, MdLocalShipping, MdTimeline, MdVerified } from "react-icons/md";
+import { MdAdd, MdDescription, MdFileDownload, MdLocalShipping, MdPersonAdd, MdTimeline, MdVerified } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -16,11 +16,13 @@ import {
 } from "../../../components/Shared";
 import {
   addShipmentTracking,
+  assignDeliveryAgentToShipment,
   confirmShipmentDelivery,
   createSellerOrderEwayBill,
   createShipment,
   createShipmentManifest,
   generateShipmentDeliveryOtp,
+  getDeliveryAgents,
   getSellerOrderEwayBill,
   getShipment,
   getShipments,
@@ -28,6 +30,7 @@ import {
 } from "../../../Redux/deliverySlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -73,6 +76,12 @@ const EMPTY_TRACKING = {
   deliveryException: "",
 };
 
+const EMPTY_ASSIGNMENT = {
+  shipmentId: "",
+  sellerId: "",
+  deliveryAgentId: "",
+};
+
 const EMPTY_VERIFICATION = {
   shipmentId: "",
   method: "otp",
@@ -110,12 +119,22 @@ const unwrapResult = (payload = {}) => payload?.data?.data || payload?.data || p
 const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const csvValue = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
+const agentIdOf = (row = {}) => row.id || row._id || row.deliveryAgentId;
+const agentNameOf = (agent = {}) =>
+  agent.name || agent.fullName || agent.deliveryAgentSnapshot?.name || agent.phone || agentIdOf(agent);
+
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "returnId", type: "text", label: "Return ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  { key: "returnId", type: "text", label: "Return #", width: "w-44" },
   { key: "shipmentType", type: "select", label: "Type", options: [{ value: "forward", label: "Forward" }, { value: "return", label: "Return" }] },
   { key: "direction", type: "select", label: "Direction", options: [{ value: "forward", label: "Forward" }, { value: "reverse", label: "Reverse" }] },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-48" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   { key: "awbNumber", type: "text", label: "AWB / Tracking", width: "w-44" },
   { key: "courierName", type: "text", label: "Courier", width: "w-40" },
   { key: "status", type: "select", label: "Status", options: STATUS_OPTIONS.map((value) => ({ value, label: displayStatus(value) })) },
@@ -127,6 +146,7 @@ const ShipmentTracking = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
+  const agentPayload = unwrapList(selector.agentsData);
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
@@ -138,17 +158,36 @@ const ShipmentTracking = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [shipmentModal, setShipmentModal] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => {}); }, []);
   const [trackingModal, setTrackingModal] = useState(false);
+  const [assignmentModal, setAssignmentModal] = useState(false);
   const [verificationModal, setVerificationModal] = useState(false);
   const [detailModal, setDetailModal] = useState(false);
   const [ewayModal, setEwayModal] = useState(false);
   const [manifestConfirm, setManifestConfirm] = useState(false);
   const [shipmentForm, setShipmentForm] = useState(EMPTY_SHIPMENT);
   const [trackingForm, setTrackingForm] = useState(EMPTY_TRACKING);
+  const [assignmentForm, setAssignmentForm] = useState(EMPTY_ASSIGNMENT);
   const [verificationForm, setVerificationForm] = useState(EMPTY_VERIFICATION);
   const [ewayForm, setEwayForm] = useState(EMPTY_EWAY);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
+
+  const fetchAssignableAgents = useCallback(async (sellerId) => {
+    if (!sellerId) return;
+    try {
+      await dispatch(getDeliveryAgents({
+        sellerId,
+        active: true,
+        verificationStatus: "verified",
+        limit: 200,
+        offset: 0,
+      })).unwrap();
+    } catch (error) {
+      toast.error(error?.message || error || "Failed to load delivery agents");
+    }
+  }, [dispatch]);
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -219,6 +258,25 @@ const ShipmentTracking = () => {
       setLoading(false);
     }
   }, [dispatch, fetchShipments, trackingForm]);
+
+  const submitAssignment = useCallback(async () => {
+    if (!assignmentForm.shipmentId || !assignmentForm.deliveryAgentId) {
+      toast.error("Select a delivery agent");
+      return;
+    }
+    try {
+      setLoading(true);
+      await dispatch(assignDeliveryAgentToShipment(assignmentForm)).unwrap();
+      toast.success("Delivery agent assigned");
+      setAssignmentModal(false);
+      setAssignmentForm(EMPTY_ASSIGNMENT);
+      await fetchShipments();
+    } catch (error) {
+      toast.error(error?.message || error || "Failed to assign delivery agent");
+    } finally {
+      setLoading(false);
+    }
+  }, [assignmentForm, dispatch, fetchShipments]);
 
   const sendDeliveryOtp = useCallback(async (row) => {
     if (row.status !== "out_for_delivery") {
@@ -306,12 +364,26 @@ const ShipmentTracking = () => {
     }
   }, [dispatch, fetchShipments, selectedRows]);
 
-  const openTracking = (row) => {
+  const openTracking = useCallback((row) => {
     setTrackingForm({ ...EMPTY_TRACKING, shipmentId: row.id });
     setTrackingModal(true);
-  };
+  }, []);
 
-  const openVerification = (row) => {
+  const openAssignment = useCallback((row) => {
+    if (!row.seller_id) {
+      toast.error("Shipment seller is required before assigning an agent");
+      return;
+    }
+    setAssignmentForm({
+      shipmentId: row.id,
+      sellerId: row.seller_id,
+      deliveryAgentId: row.delivery_agent_id || "",
+    });
+    setAssignmentModal(true);
+    fetchAssignableAgents(row.seller_id);
+  }, [fetchAssignableAgents]);
+
+  const openVerification = useCallback((row) => {
     const methods = Array.isArray(row.verification_methods) ? row.verification_methods : [];
     setVerificationForm({
       ...EMPTY_VERIFICATION,
@@ -319,7 +391,7 @@ const ShipmentTracking = () => {
       method: methods[0] || "otp",
     });
     setVerificationModal(true);
-  };
+  }, []);
 
   const openDetail = useCallback(async (row) => {
     setSelectedShipment(row);
@@ -408,13 +480,31 @@ const ShipmentTracking = () => {
           <div>
             <div className="font-semibold text-gray-800">{row.awb_number || row.tracking_number || row.id}</div>
             <div className="text-xs text-gray-400">
-              Order {row.order_id}{row.return_id ? ` · Return ${row.return_id}` : ""}
+              Order #{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}{row.return_id ? ` · Return #${String(row.return_id).slice(-8)}` : ""}
             </div>
           </div>
         </div>
       ),
     },
-    { key: "seller_id", label: "Seller", sortable: true },
+    { key: "seller_id", label: "Seller", sortable: true, render: (value, row) => {
+      const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === value)?.label;
+      return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? String(value).slice(0, 10) + "…" : "—"}</span>;
+    } },
+    {
+      key: "delivery_agent_id",
+      label: "Agent",
+      render: (value, row) => {
+        const snapshot = row.delivery_agent_snapshot || {};
+        return value ? (
+          <div>
+            <div className="font-medium text-gray-800">{snapshot.name || value}</div>
+            {snapshot.phone && <div className="text-xs text-gray-400">{snapshot.phone}</div>}
+          </div>
+        ) : (
+          <span className="text-gray-400">Unassigned</span>
+        );
+      },
+    },
     {
       key: "shipment_type",
       label: "Type",
@@ -461,6 +551,16 @@ const ShipmentTracking = () => {
               <MdTimeline size={15} /> Track
             </button>
           </PermissionGuard>
+          <PermissionGuard module="delivery" action={ACTIONS.ASSIGN} hide>
+            <button
+              type="button"
+              className="admin-btn-secondary !px-2 !py-1"
+              onClick={() => openAssignment(row)}
+              disabled={row.direction === "reverse" || row.shipment_type === "return"}
+            >
+              <MdPersonAdd size={15} /> Agent
+            </button>
+          </PermissionGuard>
           <PermissionGuard module="delivery" action={ACTIONS.STATUS_CHANGE} hide>
             <button
               type="button"
@@ -496,7 +596,7 @@ const ShipmentTracking = () => {
         </div>
       ),
     },
-  ], [openDetail, openEwayBill, sendDeliveryOtp]);
+  ], [openAssignment, openDetail, openEwayBill, openTracking, openVerification, sendDeliveryOtp]);
 
   const updatePackageField = (field, value) => {
     setShipmentForm((prev) => ({
@@ -565,7 +665,17 @@ const ShipmentTracking = () => {
       <DefaultModal isOpen={shipmentModal} onClose={() => setShipmentModal(false)} title="Create Shipment" onSubmit={submitShipment}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Input labelName="Order ID" name="orderId" value={shipmentForm.orderId} onChange={(event) => setShipmentForm((prev) => ({ ...prev, orderId: event.target.value }))} required />
-          <Input labelName="Seller ID" name="sellerId" value={shipmentForm.sellerId} onChange={(event) => setShipmentForm((prev) => ({ ...prev, sellerId: event.target.value }))} />
+          <label className="block text-sm text-gray-700">
+            <span className="block mb-1 font-medium">Seller</span>
+            <select
+              className="admin-input w-full"
+              value={shipmentForm.sellerId}
+              onChange={(event) => setShipmentForm((prev) => ({ ...prev, sellerId: event.target.value }))}
+            >
+              <option value="">— Select seller —</option>
+              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </label>
           <Input labelName="Courier" name="courierName" value={shipmentForm.courierName} onChange={(event) => setShipmentForm((prev) => ({ ...prev, courierName: event.target.value }))} />
           <Input labelName="AWB Number" name="awbNumber" value={shipmentForm.awbNumber} onChange={(event) => setShipmentForm((prev) => ({ ...prev, awbNumber: event.target.value }))} />
           <Input labelName="Tracking Number" name="trackingNumber" value={shipmentForm.trackingNumber} onChange={(event) => setShipmentForm((prev) => ({ ...prev, trackingNumber: event.target.value }))} />
@@ -622,6 +732,43 @@ const ShipmentTracking = () => {
         </div>
       </DefaultModal>
 
+      <DefaultModal
+        isOpen={assignmentModal}
+        onClose={() => setAssignmentModal(false)}
+        title="Assign Delivery Agent"
+        onSubmit={submitAssignment}
+        submitButtonText="Assign"
+        loading={loading}
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600">
+            <div><strong>Shipment:</strong> {assignmentForm.shipmentId || "N/A"}</div>
+            <div><strong>Seller:</strong> {assignmentForm.sellerId || "N/A"}</div>
+          </div>
+          <label className="block text-sm text-gray-700">
+            <span className="mb-1 block font-medium">Verified active agent</span>
+            <select
+              className="admin-input w-full"
+              value={assignmentForm.deliveryAgentId}
+              onChange={(event) => setAssignmentForm((prev) => ({ ...prev, deliveryAgentId: event.target.value }))}
+              disabled={loading}
+            >
+              <option value="">Select delivery agent</option>
+              {agentPayload.list.map((agent) => (
+                <option key={agentIdOf(agent)} value={agentIdOf(agent)}>
+                  {agentNameOf(agent)}{agent.phone ? ` - ${agent.phone}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!agentPayload.list.length && (
+            <div className="rounded-lg border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
+              No verified active agents found for this seller.
+            </div>
+          )}
+        </div>
+      </DefaultModal>
+
       <DefaultModal isOpen={verificationModal} onClose={() => setVerificationModal(false)} title="Verify Delivery" onSubmit={submitVerification}>
         <div className="space-y-3">
           <select
@@ -656,12 +803,13 @@ const ShipmentTracking = () => {
       <DefaultModal isOpen={detailModal} onClose={() => setDetailModal(false)} title="Shipment Detail">
         <div className="space-y-3 text-sm">
           <div><strong>Shipment:</strong> {selectedShipment?.id}</div>
-          <div><strong>Order:</strong> {selectedShipment?.order_id}</div>
+          <div><strong>Order:</strong> #{selectedShipment?.orderNumber || selectedShipment?.order_number || String(selectedShipment?.order_id || "").slice(-8)}</div>
           <div><strong>Type:</strong> {displayStatus(selectedShipment?.shipment_type || selectedShipment?.direction || "forward")}</div>
           <div><strong>Return:</strong> {selectedShipment?.return_id || "N/A"}</div>
           <div><strong>AWB:</strong> {selectedShipment?.awb_number || "N/A"}</div>
           <div><strong>Status:</strong> {displayStatus(selectedShipment?.status)}</div>
           <div><strong>Verification:</strong> {selectedShipment?.verification_required ? `Required (${(selectedShipment?.verification_methods || []).join(", ") || "any"})` : "Not required"}</div>
+          <div><strong>Delivery Agent:</strong> {selectedShipment?.delivery_agent_snapshot?.name || selectedShipment?.delivery_agent_id || "Unassigned"}</div>
           <div><strong>Verified At:</strong> {selectedShipment?.delivered_verified_at ? moment(selectedShipment.delivered_verified_at).format("DD-MM-YYYY HH:mm") : "N/A"}</div>
           <div><strong>Label/Manifest:</strong> {selectedShipment?.manifest_id || "N/A"}</div>
           <div className="border-t pt-3">
@@ -688,7 +836,7 @@ const ShipmentTracking = () => {
                   <div className="font-medium capitalize">{displayStatus(event.status)} · {displayStatus(event.method)}</div>
                   <div className="text-xs text-gray-500">
                     {event.created_at ? moment(event.created_at).format("DD-MM-YYYY HH:mm") : "N/A"}
-                    {event.actor_id ? ` · ${event.actor_id}` : ""}
+                    {event.actor_id ? ` · Actor #${String(event.actor_id).slice(-8)}` : ""}
                   </div>
                   {event.failure_reason && <div className="text-xs text-red-600 mt-1">{event.failure_reason}</div>}
                 </div>

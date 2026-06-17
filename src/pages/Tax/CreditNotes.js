@@ -17,13 +17,14 @@ import {
 import { getTaxCreditNotes, createTaxCreditNote } from "../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
+import { dropdownApi } from "../../_helpers/dropdownApi";
 
 const REF_TYPES = ["return", "cancellation", "adjustment", "discount", "other"];
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-56" },
+  { key: "buyerId", type: "asyncDropdown", label: "Buyer", load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }) },
   { key: "referenceType", type: "select", label: "Ref Type", options: REF_TYPES.map((v) => ({ value: v, label: v })) },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },

@@ -1,7 +1,68 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../../components/Shared';
 import { axiosPrivate as axiosProvider } from '../../../_helpers/axiosProvider';
+import { dropdownApi } from '../../../_helpers/dropdownApi';
 import { toast } from 'sonner';
+
+const UserSearchSelect = ({ value, onChange, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState('');
+  const ref = useRef(null);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setLoading(true);
+      dropdownApi.getUsers({ keyWord: query, searchFields: 'full_name,email', limit: 20 })
+        .then(setOptions).catch(() => {}).finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(timer.current);
+  }, [query, open]);
+
+  const select = (opt) => { onChange(opt.value); setSelectedLabel(opt.label); setOpen(false); setQuery(''); };
+  const clear = (e) => { e.stopPropagation(); onChange(''); setSelectedLabel(''); };
+  const inputCls = 'w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30';
+
+  return (
+    <div ref={ref} className="relative">
+      <div className={`${inputCls} flex items-center cursor-pointer min-h-[30px]`} onClick={() => setOpen((o) => !o)}>
+        {value && selectedLabel ? (
+          <span className="flex-1 text-xs text-gray-700 truncate">{selectedLabel}</span>
+        ) : value ? (
+          <span className="flex-1 font-mono text-xs text-gray-400 truncate">{String(value).slice(0, 16)}…</span>
+        ) : (
+          <span className="flex-1 text-xs text-gray-400">{placeholder}</span>
+        )}
+        {value && <button type="button" onClick={clear} className="ml-1 text-gray-300 hover:text-gray-600 text-base leading-none">×</button>}
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[var(--admin-line)] rounded-lg shadow-lg overflow-hidden">
+          <div className="px-2 py-1.5 border-b border-[var(--admin-line)]">
+            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email…" className="w-full text-xs outline-none" />
+          </div>
+          <div className="max-h-40 overflow-y-auto">
+            {loading ? <div className="px-3 py-2 text-xs text-gray-400">Loading…</div>
+              : options.length === 0 ? <div className="px-3 py-2 text-xs text-gray-400">No users found</div>
+              : options.map((opt) => (
+                <div key={opt.value} onClick={() => select(opt)} className="px-3 py-1.5 text-xs cursor-pointer hover:bg-[var(--admin-surface-soft)] text-gray-700">{opt.label}</div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ACTION_COLORS = {
   grant:           'bg-green-100 text-green-700',
@@ -95,22 +156,12 @@ const RbacAuditLog = () => {
             />
           </div>
           <div>
-            <label className="block text-gray-500 mb-1 font-medium">Actor ID</label>
-            <input
-              value={filters.actorId}
-              onChange={(e) => setFilters((f) => ({ ...f, actorId: e.target.value }))}
-              placeholder="User ID"
-              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
-            />
+            <label className="block text-gray-500 mb-1 font-medium">Actor</label>
+            <UserSearchSelect value={filters.actorId} onChange={(v) => setFilters((f) => ({ ...f, actorId: v }))} placeholder="Search actor…" />
           </div>
           <div>
-            <label className="block text-gray-500 mb-1 font-medium">Target User ID</label>
-            <input
-              value={filters.targetUserId}
-              onChange={(e) => setFilters((f) => ({ ...f, targetUserId: e.target.value }))}
-              placeholder="User ID"
-              className="w-full border border-[var(--admin-line)] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/30"
-            />
+            <label className="block text-gray-500 mb-1 font-medium">Target User</label>
+            <UserSearchSelect value={filters.targetUserId} onChange={(v) => setFilters((f) => ({ ...f, targetUserId: v }))} placeholder="Search target user…" />
           </div>
           <div>
             <label className="block text-gray-500 mb-1 font-medium">From</label>
@@ -176,11 +227,11 @@ const RbacAuditLog = () => {
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="font-mono text-[10px] text-gray-600">{row.actorId || '—'}</div>
+                        <div className="text-[10px] text-gray-700 font-medium">{row.actorName || row.actor?.name || row.actor?.full_name || row.actor?.email || <span className="font-mono text-gray-400">{String(row.actorId || '—').slice(0, 14)}</span>}</div>
                         <div className="text-[10px] text-gray-400 capitalize">{row.actorRole || ''}</div>
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="font-mono text-[10px] text-gray-600">{row.targetUserId || '—'}</div>
+                        <div className="text-[10px] text-gray-700 font-medium">{row.targetUserName || row.targetUser?.name || row.targetUser?.full_name || row.targetUser?.email || <span className="font-mono text-gray-400">{String(row.targetUserId || '—').slice(0, 14)}</span>}</div>
                         <div className="text-[10px] text-gray-400 capitalize">{row.targetRole || ''}</div>
                       </td>
                       <td className="px-4 py-2.5">

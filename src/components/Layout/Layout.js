@@ -837,6 +837,10 @@ function Layout() {
                     element={renderRoute("/returns", <Returns />)}
                   />
                   <Route
+                    path="/refunds"
+                    element={renderRoute("/refunds", <Returns />)}
+                  />
+                  <Route
                     path="/order-status"
                     element={renderRoute("/order-status", <OrderStatus />)}
                   />

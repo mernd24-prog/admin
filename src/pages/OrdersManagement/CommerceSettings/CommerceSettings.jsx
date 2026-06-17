@@ -5,6 +5,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { toast } from "react-toastify";
 
 const DEFAULT_SETTINGS = {
@@ -121,6 +122,8 @@ const CommerceSettings = () => {
   const [sellerSettings, setSellerSettings] = useState(DEFAULT_SELLER);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [sellerSaving, setSellerSaving] = useState(false);
+  const [sellerOptions, setSellerOptions] = React.useState([]);
+  React.useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => {}); }, []);
 
   const patchSettings = (section, patch) => {
     setSettings((current) => ({
@@ -492,7 +495,17 @@ const CommerceSettings = () => {
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
           <div className="space-y-3">
-            <InputField label="Seller ID" value={sellerId} onChange={setSellerId} placeholder="Seller user id" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seller</label>
+              <select
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                value={sellerId}
+                onChange={(e) => setSellerId(e.target.value)}
+              >
+                <option value="">— Select seller —</option>
+                {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
             <div className="flex gap-2">
               <button type="button" className="admin-btn-secondary" onClick={() => loadSeller()} disabled={sellerLoading}>
                 <MdSearch size={16} /> {sellerLoading ? "Loading..." : "Load"}
@@ -511,7 +524,9 @@ const CommerceSettings = () => {
                   className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-gray-50"
                   onClick={() => loadSeller(row.sellerId)}
                 >
-                  <span className="truncate font-medium text-gray-700">{row.sellerId}</span>
+                  <span className="truncate font-medium text-gray-700">
+                    {sellerOptions.find((o) => o.value === row.sellerId)?.label || row.sellerId}
+                  </span>
                   <span className="text-xs text-gray-400">{money(row.delivery?.chargeAmount)}</span>
                 </button>
               )) : (

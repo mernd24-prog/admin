@@ -88,4 +88,16 @@ export const dropdownApi = {
     id: item._id || item.id,
     meta: { action: item.action || "", module: item.moduleKey || item.module || "" },
   })),
+  getUsers: (params) => loadProtected("users", ENDPOINTS.users.adminUsers, { limit: 20, ...params }, (item) => ({
+    label: item.full_name || [item.profile?.firstName, item.profile?.lastName].filter(Boolean).join(" ") || item.email || item._id || item.id,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { email: item.email || "", phone: item.phone || "" },
+  })),
+  getBuyers: (params) => loadProtected("buyers", ENDPOINTS.users.adminUsers, { limit: 20, role: "user", ...params }, (item) => ({
+    label: item.full_name || [item.profile?.firstName, item.profile?.lastName].filter(Boolean).join(" ") || item.email || item._id || item.id,
+    value: item._id || item.id,
+    id: item._id || item.id,
+    meta: { email: item.email || "" },
+  })),
 };

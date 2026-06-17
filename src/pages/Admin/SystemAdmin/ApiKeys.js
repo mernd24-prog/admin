@@ -12,10 +12,11 @@ import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../componen
 import { getApiKeys, createApiKey } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const STATUSES = ["active", "revoked", "expired"];
 const FILTER_FIELDS = [
-  { key: "ownerId", type: "text", label: "Owner ID", width: "w-56" },
+  { key: "ownerId", type: "asyncDropdown", label: "Owner", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
 ];
 
@@ -43,6 +44,8 @@ const ApiKeys = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
   const [createdKey, setCreatedKey] = useState(null);
   const [showKeys, setShowKeys] = useState({});
 
@@ -112,7 +115,7 @@ const ApiKeys = () => {
     {
       key: "ownerId",
       label: "Owner",
-      render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "platform").slice(-8)}</span>,
+      render: (v, row) => { const name = row.ownerName || row.owner?.name || sellerOptions.find((o) => o.value === v)?.label; return name ? <span className="text-sm text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-500">{v ? String(v).slice(-8) : "platform"}</span>; },
     },
     {
       key: "scopes",
@@ -172,7 +175,13 @@ const ApiKeys = () => {
       <DefaultModal isOpen={showCreate} onClose={() => { setShowCreate(false); setForm(EMPTY_FORM); }} title="Create API Key">
         <div className="p-4 space-y-4">
           <Input label="Key Name *" value={form.keyName} onChange={(e) => setForm((p) => ({ ...p, keyName: e.target.value }))} placeholder="e.g. Mobile App Key" />
-          <Input label="Owner ID" value={form.ownerId} onChange={(e) => setForm((p) => ({ ...p, ownerId: e.target.value }))} placeholder="Seller or user ID (leave blank for platform)" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Owner <span className="text-gray-400 font-normal">(leave blank for platform)</span></label>
+            <select value={form.ownerId} onChange={(e) => setForm((p) => ({ ...p, ownerId: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— Platform (no specific seller) —</option>
+              {sellerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
           <Input label="Scopes (comma separated)" value={form.scopes} onChange={(e) => setForm((p) => ({ ...p, scopes: e.target.value }))} placeholder="read:products, write:orders" />
           <Input label="Expires At" type="datetime-local" value={form.expiresAt} onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))} />
           <button onClick={handleCreate} disabled={saving} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">

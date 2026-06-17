@@ -232,8 +232,11 @@ export const ENDPOINTS = {
   delivery: {
     serviceability: "/delivery/serviceability",
     rates: "/delivery/rates",
+    agents: "/delivery/agents",
+    agent: (deliveryAgentId) => `/delivery/agents/${deliveryAgentId}`,
     shipments: "/delivery/shipments",
     shipment: (shipmentId) => `/delivery/shipments/${shipmentId}`,
+    shipmentAssignAgent: (shipmentId) => `/delivery/shipments/${shipmentId}/assign-agent`,
     shipmentTracking: (shipmentId) => `/delivery/shipments/${shipmentId}/tracking`,
     shipmentDeliveryOtp: (shipmentId) => `/delivery/shipments/${shipmentId}/delivery-otp`,
     shipmentConfirmDelivery: (shipmentId) => `/delivery/shipments/${shipmentId}/confirm-delivery`,

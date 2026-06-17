@@ -10,6 +10,7 @@ import {
   MdSearch,
 } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../../components/Shared";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
   calculateSellerCommission,
   completeSellerPayout,
@@ -36,6 +37,8 @@ const shortId = (value = "") => {
   const text = String(value || "");
   return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "-";
 };
+
+const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || shortId(id);
 
 const dateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
 
@@ -138,6 +141,11 @@ const SellerFinance = () => {
   const [filters, setFilters] = useState({ sellerId: "", status: "", search: "" });
   const [orderId, setOrderId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sellerOptions, setSellerOptions] = React.useState([]);
+
+  React.useEffect(() => {
+    dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {});
+  }, []);
 
   // Process Payout modal
   const [processModal, setProcessModal] = useState({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
@@ -320,7 +328,10 @@ const SellerFinance = () => {
             <MdSearch size={18} /> Filters
           </div>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-1">
-            <input className={inputCls} placeholder="Seller ID" value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)} />
+            <select className={inputCls} value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)}>
+              <option value="">All Sellers</option>
+              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
             <input className={inputCls} placeholder="Search order, seller, payout..." value={filters.search} onChange={(e) => updateFilter("search", e.target.value)} />
             <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
               <option value="">All Status</option>
@@ -368,8 +379,8 @@ const SellerFinance = () => {
         >
           {commissions.length ? commissions.map((row) => (
             <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.order_id)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
@@ -389,7 +400,7 @@ const SellerFinance = () => {
           {payouts.length ? payouts.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -428,7 +439,7 @@ const SellerFinance = () => {
           {settlements.length ? settlements.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.seller_id)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.payout_id)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -451,8 +462,11 @@ const SellerFinance = () => {
         submitting={submitting}
       >
         <div className="space-y-3">
-          <FieldRow label="Seller ID *">
-            <input className={inputCls} placeholder="Enter seller ID" value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value }))} />
+          <FieldRow label="Seller *">
+            <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value }))}>
+              <option value="">— Select seller —</option>
+              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
           </FieldRow>
           <div className="grid grid-cols-2 gap-3">
             <FieldRow label="Period Start">
@@ -487,7 +501,7 @@ const SellerFinance = () => {
         {completeModal.payout && (
           <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
             <div>Payout: <span className="font-mono">{shortId(completeModal.payout.id)}</span></div>
-            <div>Seller: <span className="font-mono">{shortId(completeModal.payout.seller_id)}</span></div>
+            <div>Seller: <span className="font-medium">{completeModal.payout.sellerName || completeModal.payout.seller?.name || sellerLabel(completeModal.payout.seller_id, sellerOptions)}</span></div>
             <div>Net Amount: <span className="font-semibold text-[#208a3c]">{money(completeModal.payout.net_amount)}</span></div>
           </div>
         )}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
   MdAssignmentReturn,
   MdCheckCircle,
@@ -89,9 +90,21 @@ const ACTION_TITLES = {
 };
 
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  {
+    key: "buyerId",
+    type: "asyncDropdown",
+    label: "Buyer",
+    width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+  },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((value) => ({ value, label: value.replace(/_/g, " ") })) },
   { key: "refundStatus", type: "select", label: "Refund", options: ["not_started", "pending", "provider_pending", "completed", "failed", "manual_review"].map((value) => ({ value, label: value.replace(/_/g, " ") })) },
   { key: "shipmentStatus", type: "text", label: "Reverse shipment", width: "w-44" },

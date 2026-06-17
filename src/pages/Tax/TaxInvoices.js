@@ -14,6 +14,7 @@ import {
 } from "../../components/Shared";
 import { getTaxInvoices } from "../../Redux/adminCoreSlice";
 import { useListPage } from "../../hooks/useListPage";
+import { dropdownApi } from "../../_helpers/dropdownApi";
 
 const STATES = [
   "draft", "issued", "cancelled", "amended",
@@ -21,8 +22,20 @@ const STATES = [
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-48" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
+  {
+    key: "buyerId",
+    type: "asyncDropdown",
+    label: "Buyer",
+    width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+  },
   { key: "state", type: "select", label: "State", options: STATES.map((v) => ({ value: v, label: v })) },
   { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
   { key: "fromDate", type: "date", label: "From" },

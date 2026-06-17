@@ -69,10 +69,24 @@
     "module": "orders",
     "subItems": [
       { "label": "Orders",            "icon": "MdReceipt",         "key": "orders",            "route": "orders"            },
-      { "label": "Returns",           "icon": "MdUndo",            "key": "returns",           "route": "order-return-reasons" },
+      { "label": "Returns & Refunds", "icon": "MdUndo",            "key": "returns",           "route": "returns"           },
+      { "label": "Cancellations",     "icon": "MdCancel",          "key": "cancellations",     "route": "cancellations"     },
       { "label": "Refunds",           "icon": "MdCurrencyRupee",   "key": "refunds",           "route": "refunds"           },
-      { "label": "Transactions",      "icon": "MdPayments",        "key": "transactions",      "route": "transactions"      },
-      { "label": "Shipment Tracking", "icon": "MdLocalShipping",   "key": "shipment-tracking", "route": "shipment-tracking" }
+      { "label": "Payments",          "icon": "MdPayments",        "key": "payments",          "route": "payments"          },
+      { "label": "Transactions",      "icon": "MdPayments",        "key": "transactions",      "route": "transactions"      }
+    ]
+  },
+  {
+    "label": "Delivery & Shipping",
+    "icon": "MdLocalShipping",
+    "key": "delivery-shipping",
+    "module": "delivery",
+    "subItems": [
+      { "label": "Shipment Tracking", "icon": "MdLocalShipping",   "key": "shipment-tracking", "route": "shipment-tracking" },
+      { "label": "Delivery Partners", "icon": "MdPeople",          "key": "shipping-company-users", "route": "shipping-company-users" },
+      { "label": "Shipping Packages", "icon": "MdInventory",       "key": "shipping-packages", "route": "shipping-packages" },
+      { "label": "Shipping Profiles", "icon": "MdAssignment",      "key": "shipping-profile",  "route": "shipping-profile" },
+      { "label": "Pickup Addresses",  "icon": "MdLocationOn",      "key": "pickup-addresses",  "route": "pickup-addresses" }
     ]
   },
   {

@@ -4,6 +4,7 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh, MdReplay, MdVisibility, MdPayment } from "react-icons/md";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -37,8 +38,14 @@ const STATUS_COLOR = {
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "orderId", type: "text", label: "Order ID", width: "w-56" },
-  { key: "buyerId", type: "text", label: "Buyer ID", width: "w-48" },
+  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  {
+    key: "buyerId",
+    type: "asyncDropdown",
+    label: "Buyer",
+    width: "w-52",
+    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+  },
   { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "refundStatus", type: "select", label: "Refund", options: REFUND_STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "scope", type: "select", label: "Scope", options: SCOPES.map((v) => ({ value: v, label: v })) },
@@ -143,8 +150,8 @@ const Cancellations = () => {
     },
     {
       key: "orderId",
-      label: "Order ID",
-      render: (v) => <span className="font-mono text-xs">{String(v || "—").slice(-8)}</span>,
+      label: "Order",
+      render: (v, row) => <span className="font-mono text-xs">#{row.orderNumber || row.order_number || String(v || "—").slice(-8)}</span>,
     },
     {
       key: "status",
@@ -256,7 +263,7 @@ const Cancellations = () => {
           <div className="p-4 space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <div><p className="text-gray-500">Cancellation ID</p><p className="font-mono text-xs">{detail._id || detail.id}</p></div>
-              <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
+              <div><p className="text-gray-500">Order</p><p className="font-mono text-xs">#{detail.orderNumber || detail.order_number || String(detail.orderId || "—").slice(-8)}</p></div>
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} /></div>
               <div><p className="text-gray-500">Refund Status</p><p>{display(detail.refundStatus)}</p></div>
               <div><p className="text-gray-500">Scope</p><p className="capitalize">{detail.scope || "—"}</p></div>

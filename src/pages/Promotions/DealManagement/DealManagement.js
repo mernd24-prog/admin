@@ -35,6 +35,7 @@ import {
 } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const DEAL_STATUSES = [
   "draft",
@@ -75,7 +76,13 @@ const STATUS_COLOR = {
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "sellerId", type: "text", label: "Seller ID", width: "w-48" },
+  {
+    key: "sellerId",
+    type: "asyncDropdown",
+    label: "Seller",
+    width: "w-52",
+    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+  },
   { key: "status", type: "select", label: "Status", options: DEAL_STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "dealType", type: "select", label: "Type", options: DEAL_TYPES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "fromDate", type: "date", label: "From" },
