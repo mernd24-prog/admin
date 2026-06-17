@@ -118,6 +118,9 @@ const CommissionRules = React.lazy(
 const PlatformFeeConfig = React.lazy(
   () => import("../../pages/OrdersManagement/PlatformFeeConfig/PlatformFeeConfig"),
 );
+const CommerceSettings = React.lazy(
+  () => import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
+);
 const OrderStatus = React.lazy(
   () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
 );
@@ -312,9 +315,154 @@ const SellerAnalytics = React.lazy(() =>
     default: m.SellerAnalytics,
   })),
 );
+const OrdersReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.OrdersReport,
+  })),
+);
+const PaymentsReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.PaymentsReport,
+  })),
+);
+const ReturnsReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.ReturnsReport,
+  })),
+);
+const CancellationReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.CancellationReport,
+  })),
+);
+const DeliveryReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.DeliveryReport,
+  })),
+);
+const CommissionReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.CommissionReport,
+  })),
+);
+const UserReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.UserReport,
+  })),
+);
+const AnalyticsDashboard = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.AnalyticsDashboard,
+  })),
+);
+const DynamicPricingReport = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.DynamicPricingReport,
+  })),
+);
+const NotificationsOverview = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.NotificationsOverview,
+  })),
+);
+const SubscriptionsOverview = React.lazy(() =>
+  import("../../pages/Reports/ReportShell").then((m) => ({
+    default: m.SubscriptionsOverview,
+  })),
+);
 
 const UserMessages = React.lazy(
   () => import("../../pages/UserManagement/UserMessages/UserMessages"),
+);
+
+// ── New feature pages ────────────────────────────────────────────────────────
+const DealManagement = React.lazy(
+  () => import("../../pages/Promotions/DealManagement/DealManagement"),
+);
+const DealPayouts = React.lazy(
+  () => import("../../pages/Promotions/DealManagement/DealPayouts"),
+);
+const DealSponsorships = React.lazy(
+  () => import("../../pages/Promotions/DealManagement/DealSponsorships"),
+);
+const Cancellations = React.lazy(
+  () => import("../../pages/OrdersManagement/Cancellations/Cancellations"),
+);
+const TaxInvoices = React.lazy(
+  () => import("../../pages/Tax/TaxInvoices"),
+);
+const CreditNotes = React.lazy(
+  () => import("../../pages/Tax/CreditNotes"),
+);
+const SubscriptionPlans = React.lazy(
+  () => import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionPlans"),
+);
+const Chargebacks = React.lazy(
+  () => import("../../pages/OrdersManagement/Payments/Chargebacks"),
+);
+const FraudCases = React.lazy(
+  () => import("../../pages/OrdersManagement/Payments/FraudCases"),
+);
+const CodConfig = React.lazy(
+  () => import("../../pages/OrdersManagement/Payments/CodConfig"),
+);
+const SellerPayouts = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
+);
+const NotificationTemplates = React.lazy(
+  () => import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
+);
+const InfluencerManagement = React.lazy(
+  () => import("../../pages/ReferralCommerce/InfluencerManagement/InfluencerManagement"),
+);
+const CollectionsPage = React.lazy(
+  () => import("../../pages/Admin/Collection/Collections"),
+);
+const BadgesPage = React.lazy(
+  () => import("../../pages/Admin/Badge/Badges"),
+);
+const AnalyticsEvents = React.lazy(
+  () => import("../../pages/Reports/AnalyticsEvents"),
+);
+// ── System Admin pages ───────────────────────────────────────────────────────
+const SystemHealth = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/SystemHealth"),
+);
+const QueueManagement = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/QueueManagement"),
+);
+const DeadLetterQueue = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/DeadLetterQueue"),
+);
+const ApiKeys = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/ApiKeys"),
+);
+const FeatureFlags = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/FeatureFlags"),
+);
+const Webhooks = React.lazy(
+  () => import("../../pages/Admin/SystemAdmin/Webhooks"),
+);
+
+// ── Seller Management ────────────────────────────────────────────────────────
+const SellerOnboarding = React.lazy(
+  () => import("../../pages/SellerOnboarding/SellerOnboarding"),
+);
+const SellerStatusPage = React.lazy(
+  () => import("../../pages/SellerStatus/SellerStatusPage"),
+);
+const SellerSubAdminManagement = React.lazy(
+  () => import("../../pages/SellerManagement/SellerSubAdminManagement"),
+);
+
+// ── CMS & Content ────────────────────────────────────────────────────────────
+const ContentPages = React.lazy(
+  () => import("../../pages/CMS/ContentPages/ContentPages"),
+);
+
+// ── User Preferences ─────────────────────────────────────────────────────────
+const Preferences = React.lazy(
+  () => import("../../pages/UserManagement/preferences/Preferences"),
 );
 
 // ── RBAC Management Pages ───────────────────────────────────────────────────
@@ -679,6 +827,10 @@ function Layout() {
                   <Route
                     path="/platform-fee-config"
                     element={renderRoute("/platform-fee-config", <PlatformFeeConfig />)}
+                  />
+                  <Route
+                    path="/commerce-settings"
+                    element={renderRoute("/commerce-settings", <CommerceSettings />)}
                   />
                   <Route
                     path="/returns"
@@ -1154,6 +1306,210 @@ function Layout() {
 
                   {/* ── Marketing — new routes ──────────────────────────────── */}
 
+                  {/* ── Seller Management — additional pages ────────────────── */}
+                  <Route
+                    path="/seller-onboarding"
+                    element={renderRoute(
+                      "/seller-onboarding",
+                      <SellerOnboarding />,
+                    )}
+                  />
+                  <Route
+                    path="/seller-status"
+                    element={renderRoute("/seller-status", <SellerStatusPage />)}
+                  />
+                  <Route
+                    path="/seller-sub-admins"
+                    element={renderRoute(
+                      "/seller-sub-admins",
+                      <SellerSubAdminManagement />,
+                    )}
+                  />
+
+                  {/* ── CMS & Content ───────────────────────────────────────── */}
+                  <Route
+                    path="/content-pages"
+                    element={renderRoute("/content-pages", <ContentPages />)}
+                  />
+
+                  {/* ── Users & Access — additional ─────────────────────────── */}
+                  <Route
+                    path="/users-addresses"
+                    element={renderRoute("/users-addresses", <Users />)}
+                  />
+                  <Route
+                    path="/preferences"
+                    element={renderSupportedRoute("/preferences", <Preferences />)}
+                  />
+
+                  {/* ── Deals Management ────────────────────────────────────── */}
+                  <Route
+                    path="/deal-management"
+                    element={renderRoute("/deal-management", <DealManagement />)}
+                  />
+
+                  {/* ── Fraud Management ────────────────────────────────────── */}
+                  <Route
+                    path="/fraud-cases"
+                    element={renderRoute("/fraud-cases", <FraudCases />)}
+                  />
+
+                  {/* ── Wallet Management ───────────────────────────────────── */}
+                  <Route
+                    path="/wallet-management"
+                    element={renderRoute(
+                      "/wallet-management",
+                      <UsersTransactions />,
+                    )}
+                  />
+
+                  {/* ── Notification Templates ──────────────────────────────── */}
+                  <Route
+                    path="/notification-templates"
+                    element={renderRoute(
+                      "/notification-templates",
+                      <NotificationTemplates />,
+                    )}
+                  />
+
+                  {/* ── Cancellations ───────────────────────────────────────── */}
+                  <Route
+                    path="/cancellations"
+                    element={renderRoute("/cancellations", <Cancellations />)}
+                  />
+
+                  {/* ── Platform Catalog — collections / badges ─────────────── */}
+                  <Route
+                    path="/collections"
+                    element={renderRoute("/collections", <CollectionsPage />)}
+                  />
+                  <Route
+                    path="/badges"
+                    element={renderRoute("/badges", <BadgesPage />)}
+                  />
+
+                  {/* ── Tax & Finance — invoices / credit notes ──────────────── */}
+                  <Route
+                    path="/tax-invoices"
+                    element={renderRoute("/tax-invoices", <TaxInvoices />)}
+                  />
+                  <Route
+                    path="/credit-notes"
+                    element={renderRoute("/credit-notes", <CreditNotes />)}
+                  />
+
+                  {/* ── Subscription Plans Management ────────────────────────── */}
+                  <Route
+                    path="/subscription-plans"
+                    element={renderRoute(
+                      "/subscription-plans",
+                      <SubscriptionPlans />,
+                    )}
+                  />
+
+                  {/* ── Payment Config & Chargebacks ─────────────────────────── */}
+                  <Route
+                    path="/cod-config"
+                    element={renderRoute("/cod-config", <CodConfig />)}
+                  />
+                  <Route
+                    path="/chargebacks"
+                    element={renderRoute("/chargebacks", <Chargebacks />)}
+                  />
+
+                  {/* ── Seller Payouts ───────────────────────────────────────── */}
+                  <Route
+                    path="/seller-payouts"
+                    element={renderRoute("/seller-payouts", <SellerPayouts />)}
+                  />
+
+                  {/* ── Deal Sub-sections ────────────────────────────────────── */}
+                  <Route
+                    path="/deal-payouts"
+                    element={renderRoute("/deal-payouts", <DealPayouts />)}
+                  />
+                  <Route
+                    path="/deal-sponsorships"
+                    element={renderRoute(
+                      "/deal-sponsorships",
+                      <DealSponsorships />,
+                    )}
+                  />
+
+                  {/* ── Referral — Influencers ───────────────────────────────── */}
+                  <Route
+                    path="/influencer-management"
+                    element={renderRoute(
+                      "/influencer-management",
+                      <InfluencerManagement />,
+                    )}
+                  />
+
+                  {/* ── Analytics Events ─────────────────────────────────────── */}
+                  <Route
+                    path="/analytics-events"
+                    element={renderRoute(
+                      "/analytics-events",
+                      <AnalyticsEvents />,
+                    )}
+                  />
+
+                  {/* ── Platform Settings ────────────────────────────────────── */}
+                  <Route
+                    path="/api-keys"
+                    element={renderRoute("/api-keys", <ApiKeys />)}
+                  />
+                  <Route
+                    path="/feature-flags"
+                    element={renderRoute("/feature-flags", <FeatureFlags />)}
+                  />
+                  <Route
+                    path="/webhooks"
+                    element={renderRoute("/webhooks", <Webhooks />)}
+                  />
+
+                  {/* ── System Management ────────────────────────────────────── */}
+                  <Route
+                    path="/system-health"
+                    element={renderRoute("/system-health", <SystemHealth />)}
+                  />
+                  <Route
+                    path="/queue-management"
+                    element={renderRoute(
+                      "/queue-management",
+                      <QueueManagement />,
+                    )}
+                  />
+                  <Route
+                    path="/dead-letter-queue"
+                    element={renderRoute(
+                      "/dead-letter-queue",
+                      <DeadLetterQueue />,
+                    )}
+                  />
+
+                  {/* ── Analytics & Dynamic Pricing ─────────────────────────── */}
+                  <Route
+                    path="/analytics"
+                    element={renderRoute("/analytics", <AnalyticsDashboard />)}
+                  />
+                  <Route
+                    path="/dynamic-pricing"
+                    element={renderRoute("/dynamic-pricing", <DynamicPricingReport />)}
+                  />
+
+                  {/* ── Notifications ────────────────────────────────────────── */}
+                  <Route
+                    path="/notifications"
+                    element={renderRoute("/notifications", <NotificationsOverview />)}
+                  />
+
+                  {/* ── Subscriptions Overview ───────────────────────────────── */}
+                  <Route
+                    path="/subscriptions"
+                    element={renderRoute("/subscriptions", <SubscriptionsOverview />)}
+                  />
+
                   {/* ── Reports & Analytics ─────────────────────────────────── */}
                   <Route
                     path="/reports-sales"
@@ -1179,6 +1535,46 @@ function Layout() {
                       "/reports-sellers",
                       <SellerAnalytics />,
                     )}
+                  />
+                  <Route
+                    path="/reports-orders"
+                    element={renderRoute("/reports-orders", <OrdersReport />)}
+                  />
+                  <Route
+                    path="/reports-payments"
+                    element={renderRoute(
+                      "/reports-payments",
+                      <PaymentsReport />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-returns"
+                    element={renderRoute("/reports-returns", <ReturnsReport />)}
+                  />
+                  <Route
+                    path="/reports-cancellations"
+                    element={renderRoute(
+                      "/reports-cancellations",
+                      <CancellationReport />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-delivery"
+                    element={renderRoute(
+                      "/reports-delivery",
+                      <DeliveryReport />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-commissions"
+                    element={renderRoute(
+                      "/reports-commissions",
+                      <CommissionReport />,
+                    )}
+                  />
+                  <Route
+                    path="/reports-users"
+                    element={renderRoute("/reports-users", <UserReport />)}
                   />
                   <Route
                     path="/messages"

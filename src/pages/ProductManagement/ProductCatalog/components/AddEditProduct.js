@@ -22,7 +22,6 @@ import TabNavigation from './TabNavigation';
 import Breadcrumb from './Breadcrumb';
 import selectJson from '../../../../_helpers/SelectJson.json'
 import { BsMenuApp } from 'react-icons/bs';
-import VariantsOptionsTab from './VariantsOptionsTab';
 import DynamicAttributesTab from './DynamicAttributesTab';
 import VariantBuilder from '../../../../components/Product/VariantBuilder';
 import ProductTypeSelector from '../../../../components/Product/ProductTypeSelector';
@@ -423,7 +422,7 @@ export default function ProductManagementUI() {
         const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
         setPlatformOptions(list);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [dispatch, prefillData.optionValuesByOptionId, prefillList]);
 
   useEffect(() => {
@@ -477,7 +476,7 @@ export default function ProductManagementUI() {
         const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
         setPlatformOptions(list);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [dispatch]);
 
   useEffect(() => {
@@ -997,7 +996,7 @@ export default function ProductManagementUI() {
           stock: Number(option.stock || 0),
           attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
           images: [],
-      })),
+        })),
       hsnCode: updatedFormData.hsnCode || updatedFormData.hsn_code,
       origin,
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
@@ -1223,17 +1222,7 @@ export default function ProductManagementUI() {
             onOptionSearch={handleOptionSearch}
           />
         </div>
-      ) : (
-        <VariantsOptionsTab
-          optionsData={selector?.productOptionListData?.data?.data}
-          setVariantRows={setVariantRows}
-          options={options}
-          formData={formData}
-          handleChange={handleChange}
-          setFormData={setFormData}
-          platformOptions={platformOptions}
-        />
-      )
+      ) : <></>
     },
     {
       id: 'media',

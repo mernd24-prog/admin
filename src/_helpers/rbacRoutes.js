@@ -67,6 +67,7 @@ const MODULE_LABELS = {
   orders: "Order Management",
   returns: "Return Management",
   payments: "Payment Management",
+  "commerce-settings": "Commerce Settings",
   wallets: "Wallet Management",
   subscriptions: "Subscriptions",
   coupons: "Coupon Management",
@@ -88,6 +89,45 @@ const MODULE_LABELS = {
   loyalty: "Loyalty",
   recommendations: "Recommendations",
   fraud: "Fraud Management",
+  deals: "Deal Management",
+  "deal-management": "Deal Management",
+  cancellations: "Cancellation Management",
+  "seller-onboarding": "Seller Onboarding",
+  "seller-status": "Seller Status Management",
+  "seller-sub-admins": "Seller Sub-Admin Management",
+  "content-pages": "CMS Pages",
+  "users-addresses": "User Addresses",
+  preferences: "Preferences",
+  collections: "Collections",
+  badges: "Badges & Ribbons",
+  "wallet-management": "Wallet Management",
+  "notification-templates": "Notification Templates",
+  "fraud-cases": "Fraud Cases",
+  // Tax & Finance
+  "tax-invoices": "Tax Invoice Management",
+  "credit-notes": "Credit Note Management",
+  // Subscription plans
+  "subscription-plans": "Subscription Plan Management",
+  // Payment config
+  "cod-config": "COD Configuration",
+  chargebacks: "Chargeback Management",
+  // Payouts
+  "seller-payouts": "Seller Payout Management",
+  // Deal sub-sections
+  "deal-payouts": "Deal Payout Management",
+  "deal-sponsorships": "Deal Sponsorship Management",
+  // Referral
+  "influencer-management": "Influencer Management",
+  // Analytics
+  "analytics-events": "Analytics Events",
+  // Platform settings
+  "api-keys": "API Key Management",
+  "feature-flags": "Feature Flags",
+  webhooks: "Webhook Management",
+  // System management
+  "system-health": "System Health",
+  "queue-management": "Queue Management",
+  "dead-letter-queue": "Dead Letter Queue",
 };
 
 const MODULE_TABS = {
@@ -122,6 +162,7 @@ const MODULE_TABS = {
   orders: "Orders Management",
   returns: "Orders Management",
   payments: "Orders Management",
+  "commerce-settings": "Orders Management",
   wallets: "Orders Management",
   subscriptions: "Orders Management",
   coupons: "Marketing",
@@ -146,6 +187,45 @@ const MODULE_TABS = {
   cms_pages: "Settings",
   "cms-pages": "Settings",
   fraud: "Settings",
+  deals: "Marketing",
+  "deal-management": "Marketing",
+  cancellations: "Orders Management",
+  "seller-onboarding": "Users & Access",
+  "seller-status": "Users & Access",
+  "seller-sub-admins": "Users & Access",
+  "content-pages": "Settings",
+  "users-addresses": "Users & Access",
+  preferences: "Settings",
+  collections: "Catalog Management",
+  badges: "Marketing",
+  "wallet-management": "Orders Management",
+  "notification-templates": "Marketing",
+  "fraud-cases": "Settings",
+  // Tax & Finance
+  "tax-invoices": "Tax & Compliance",
+  "credit-notes": "Tax & Compliance",
+  // Subscription plans
+  "subscription-plans": "Orders Management",
+  // Payment config & chargebacks
+  "cod-config": "Orders Management",
+  chargebacks: "Orders Management",
+  // Payouts
+  "seller-payouts": "Orders Management",
+  // Deal sub-sections
+  "deal-payouts": "Marketing",
+  "deal-sponsorships": "Marketing",
+  // Referral
+  "influencer-management": "Marketing",
+  // Analytics
+  "analytics-events": "Reports & Analytics",
+  // Platform settings
+  "api-keys": "Settings",
+  "feature-flags": "Settings",
+  webhooks: "Settings",
+  // System management
+  "system-health": "Settings",
+  "queue-management": "Settings",
+  "dead-letter-queue": "Settings",
 };
 
 const formatModuleLabel = (value = "") =>
@@ -157,7 +237,7 @@ const formatModuleLabel = (value = "") =>
 export const MODULE_DEFAULT_ROUTES = {
   // Core
   admin:      "home",
-  analytics:  "home",
+  analytics:  "analytics",
   rbac:       "roles-permissions",
   admin_users:"admin-users",
   "admin-users": "admin-users",
@@ -194,6 +274,7 @@ export const MODULE_DEFAULT_ROUTES = {
   "commission-rules":   "commission-rules",
   "platform-fee":       "platform-fee-config",
   "platform-fee-rules": "platform-fee-config",
+  "commerce-settings":  "commerce-settings",
   // CMS/Content
   cms:       "content-management",
   cms_pages: "content-management",
@@ -205,7 +286,9 @@ export const MODULE_DEFAULT_ROUTES = {
   referral:        "referral-commerce",
   loyalty:         "reward-on-purchase",
   recommendations: "similar-products",
-  notifications:   "messages",
+  notifications:   "notifications",
+  "dynamic-pricing": "dynamic-pricing",
+  subscriptions:   "subscriptions",
   reports:         "reports-sales",
   // Tax & Compliance
   tax:       "tax",
@@ -216,7 +299,54 @@ export const MODULE_DEFAULT_ROUTES = {
   zip_codes: "zip-codes",
   delivery:  "shipping-packages",
   // Settings / misc
-  fraud: "settings",
+  fraud: "fraud-cases",
+  "fraud-cases": "fraud-cases",
+  deals: "deal-management",
+  "deal-management": "deal-management",
+  cancellations: "cancellations",
+  "seller-onboarding": "seller-onboarding",
+  "seller-status": "seller-status",
+  "seller-sub-admins": "seller-sub-admins",
+  "content-pages": "content-pages",
+  "users-addresses": "users-addresses",
+  preferences: "preferences",
+  collections: "collections",
+  badges: "badges",
+  "wallet-management": "wallet-management",
+  "notification-templates": "notification-templates",
+  // Reports
+  "reports-orders": "reports-orders",
+  "reports-payments": "reports-payments",
+  "reports-returns": "reports-returns",
+  "reports-cancellations": "reports-cancellations",
+  "reports-delivery": "reports-delivery",
+  "reports-commissions": "reports-commissions",
+  "reports-users": "reports-users",
+  // Tax & Finance
+  "tax-invoices": "tax-invoices",
+  "credit-notes": "credit-notes",
+  // Subscription plans
+  "subscription-plans": "subscription-plans",
+  // Payment config
+  "cod-config": "cod-config",
+  chargebacks: "chargebacks",
+  // Payouts
+  "seller-payouts": "seller-payouts",
+  // Deal sub-sections
+  "deal-payouts": "deal-payouts",
+  "deal-sponsorships": "deal-sponsorships",
+  // Referral
+  "influencer-management": "influencer-management",
+  // Analytics events
+  "analytics-events": "analytics-events",
+  // Platform settings
+  "api-keys": "api-keys",
+  "feature-flags": "feature-flags",
+  webhooks: "webhooks",
+  // System management
+  "system-health": "system-health",
+  "queue-management": "queue-management",
+  "dead-letter-queue": "dead-letter-queue",
 };
 
 export const getModuleLabel = (moduleSlug) => {
@@ -313,6 +443,7 @@ const ROUTE_MODULES = [
   [["/payments", "/refunds"], ["payments", "wallets", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
+  [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/returns", "/order-return-reasons"], ["returns", "orders"]],
   [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
@@ -361,6 +492,16 @@ const ROUTE_MODULES = [
     ["delivery"],
   ],
 
+  // Analytics & Dynamic Pricing
+  [["/analytics"], ["analytics", "reports"]],
+  [["/dynamic-pricing"], ["pricing", "dynamic-pricing", "admin"]],
+
+  // Notifications
+  [["/messages", "/notifications"], ["notifications", "users"]],
+
+  // Subscriptions overview
+  [["/subscriptions"], ["subscriptions", "orders"]],
+
   // Reports & Analytics
   [
     [
@@ -391,8 +532,81 @@ const ROUTE_MODULES = [
     ["admin", "platform", "fraud"],
   ],
 
-  // Notifications
-  [["/messages", "/notifications"], ["notifications", "users"]],
+  // Seller Management — additional
+  [["/seller-onboarding"], ["sellers", "seller_kyc"]],
+  [["/seller-status"], ["sellers"]],
+  [["/seller-sub-admins"], ["seller-management", "sellers"]],
+
+  // CMS & Content — additional
+  [["/content-pages"], ["cms_pages", "cms"]],
+
+  // Users — additional
+  [["/users-addresses", "/user-addresses"], ["users"]],
+
+  // Deals
+  [["/deal-management", "/deals"], ["deals"]],
+
+  // Fraud
+  [["/fraud-cases", "/fraud"], ["fraud"]],
+
+  // Wallet
+  [["/wallet-management", "/wallet-transactions"], ["wallets"]],
+
+  // Notification templates
+  [["/notification-templates"], ["notifications"]],
+
+  // Cancellations
+  [["/cancellations"], ["orders", "cancellations"]],
+
+  // Collections & Badges
+  [["/collections"], ["platform", "products"]],
+  [["/badges", "/ribbons", "/campaigns"], ["platform", "pricing"]],
+
+  // Preferences
+  [["/preferences"], ["admin"]],
+
+  // Reports — extended
+  [["/reports-orders"], ["reports", "orders", "analytics"]],
+  [["/reports-payments"], ["reports", "payments", "analytics"]],
+  [["/reports-returns"], ["reports", "returns", "analytics"]],
+  [["/reports-cancellations"], ["reports", "orders", "analytics"]],
+  [["/reports-delivery"], ["reports", "delivery", "analytics"]],
+  [["/reports-commissions"], ["reports", "sellers/commissions", "analytics"]],
+  [["/reports-users"], ["reports", "users", "analytics"]],
+
+  // Tax & Finance — invoices / credit notes
+  [["/tax-invoices"], ["tax", "payments", "orders"]],
+  [["/credit-notes"], ["tax", "returns", "payments"]],
+
+  // Subscription plans
+  [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
+
+  // Payment config & chargebacks
+  [["/cod-config"], ["payments", "commerce-settings", "admin"]],
+  [["/chargebacks"], ["payments", "orders"]],
+
+  // Seller payouts
+  [["/seller-payouts"], ["sellers/commissions", "payments"]],
+
+  // Deal sub-sections
+  [["/deal-payouts"], ["deals"]],
+  [["/deal-sponsorships"], ["deals"]],
+
+  // Referral influencers
+  [["/influencer-management"], ["referral"]],
+
+  // Analytics events
+  [["/analytics-events"], ["analytics", "reports"]],
+
+  // Platform settings
+  [["/api-keys"], ["admin", "platform"]],
+  [["/feature-flags"], ["admin", "platform"]],
+  [["/webhooks"], ["admin", "platform"]],
+
+  // System management
+  [["/system-health"], ["admin"]],
+  [["/queue-management"], ["admin"]],
+  [["/dead-letter-queue"], ["admin"]],
 
   // Misc legacy
   [

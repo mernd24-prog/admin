@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authReducer from "./auth-Slice"
 import alertReducer from "./alertSlice"
-// import adminReducer from "./adminSlice"
+import adminReducer from "./adminSlice"
 import countryReducer from './CountrySlice'
 import productReducer from './productSlice'
 import stateReducer from './stateSlice'
@@ -61,8 +61,7 @@ export const store = configureStore({
     notifications: notificationsReducer,
     sellerReturns: sellerReturnsReducer,
     sellerAnalytics: sellerAnalyticsReducer,
-    referralCommerce: referralCommerceReducer
-
-    // adminSlice: adminReducer
+    referralCommerce: referralCommerceReducer,
+    admin: adminReducer,
   },
 })

@@ -227,6 +227,7 @@ const CheckoutQuote = () => {
                 <div className="flex justify-between"><span>Discount</span><span>-{money(summary.discountAmount)}</span></div>
                 <div className="flex justify-between"><span>Tax Payable</span><span>{money(summary.taxPayableAmount)}</span></div>
                 <div className="flex justify-between"><span>Tax Included</span><span>{money(summary.taxIncludedAmount)}</span></div>
+                <div className="flex justify-between"><span>Delivery</span><span>{money(summary.deliveryChargeAmount ?? summary.shippingFeeAmount)}</span></div>
                 <div className="flex justify-between"><span>COD Charge</span><span>{money(summary.codChargeAmount)}</span></div>
                 <div className="flex justify-between"><span>Wallet</span><span>-{money(summary.walletDiscountAmount)}</span></div>
                 <div className="border-t pt-2 flex justify-between text-base font-semibold"><span>Payable</span><span>{money(summary.customerPayableAmount)}</span></div>
@@ -240,6 +241,7 @@ const CheckoutQuote = () => {
                       <p className="font-semibold">{seller.sellerId}</p>
                       <p>Gross: {money(seller.grossSalesAmount)}</p>
                       <p>Fee: {money(seller.platformFeeAmount)}</p>
+                      <p>Delivery: {money(seller.sellerDeliveryChargeAmount)}</p>
                       <p>Payout: {money(seller.sellerPayoutAmount)}</p>
                     </div>
                   )) : <p className="text-xs text-gray-500">No settlement rows.</p>}

@@ -14,7 +14,7 @@ const resolvePanelMode = (value) => {
     return PANEL_MODES.SELLER;
   }
   if (["admin", "administrator", "admin-panel", "admin_panel"].includes(mode)) {
-    return PANEL_MODES.SELLER;
+    return PANEL_MODES.ADMIN;
   }
   return "";
 };
@@ -36,7 +36,7 @@ const detectModeFromRuntime = () => {
 const configuredMode =
  
   // detectModeFromRuntime() ||
-  PANEL_MODES.SELLER; // Default to admin if not specified
+  PANEL_MODES.ADMIN; // Default to admin if not specified
 
 export const getPanelMode = () => configuredMode;
 
