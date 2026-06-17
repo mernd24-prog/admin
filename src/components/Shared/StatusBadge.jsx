@@ -40,7 +40,7 @@ const VARIANTS = {
   closed:        'bg-gray-100 text-gray-500',
   // ── Inventory ────────────────────────────────────────────────────────────
   in_stock:      'bg-green-100 text-green-700',
-  low_stock:     'bg-yellow-100 text-yellow-700',
+  low_stock:     'bg-red-100 text-red-700',
   out_of_stock:  'bg-red-100 text-red-700',
   backorder:     'bg-orange-100 text-orange-700',
   discontinued:  'bg-gray-100 text-gray-500',
@@ -78,7 +78,7 @@ const DOT_COLORS = {
   in_stock:       'bg-green-500',
   pending:        'bg-yellow-400',
   under_review:   'bg-yellow-400',
-  low_stock:      'bg-yellow-400',
+  low_stock:      'bg-red-500',
   paused:         'bg-yellow-400',
   processing:     'bg-indigo-400',
   packed:         'bg-purple-400',

@@ -1,22 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   MdInventory,
   MdWarning,
   MdAddCircleOutline,
   MdTrendingDown,
+  MdTune,
+  MdVisibility,
+  MdFilterList,
+  MdClose,
 } from "react-icons/md";
-import { PageHeader, DataTable, StatusBadge, FilterBar } from "../../components/Shared";
+import { useNavigate } from "react-router-dom";
+import { PageHeader, DataTable, StatusBadge } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  getAvailableStock,
+  getInventoryStatus,
+  getStockTextClass,
+  useLowStockThreshold,
+} from "./lowStockThreshold";
 
 const STAT_CARDS = [
   { label: "Total SKUs",    key: "totalSkus",   icon: MdInventory,    color: "text-[var(--admin-gold)] bg-[var(--admin-blue-soft)]" },
   { label: "In Stock",      key: "inStock",      icon: MdInventory,    color: "text-green-600 bg-green-50" },
-  { label: "Low Stock",     key: "lowStock",     icon: MdWarning,      color: "text-yellow-600 bg-yellow-50" },
+  { label: "Low Stock",     key: "lowStock",     icon: MdWarning,      color: "text-red-600 bg-red-50" },
   { label: "Out of Stock",  key: "outOfStock",   icon: MdTrendingDown, color: "text-red-600 bg-red-50" },
 ];
 
@@ -34,7 +46,7 @@ const FILTER_FIELDS = [
   },
 ];
 
-const COLUMNS = [
+const createColumns = (lowStockThreshold) => [
   { key: "title",     label: "Product",   sortable: true },
   { key: "sku",       label: "SKU",       sortable: true },
   { key: "category",  label: "Category" },
@@ -49,9 +61,9 @@ const COLUMNS = [
   {
     key: "available", label: "Available",
     render: (_, row) => {
-      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
+      const avail = getAvailableStock(row);
       return (
-        <span className={`font-mono font-semibold ${avail <= 0 ? "text-red-500" : avail <= 5 ? "text-yellow-600" : "text-green-600"}`}>
+        <span className={`font-mono font-semibold ${getStockTextClass(avail, lowStockThreshold)}`}>
           {avail}
         </span>
       );
@@ -60,20 +72,25 @@ const COLUMNS = [
   {
     key: "status", label: "Status",
     render: (_, row) => {
-      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
-      const s = avail <= 0 ? "out_of_stock" : avail <= 5 ? "low_stock" : "in_stock";
-      return <StatusBadge status={s} dot />;
+      const status = getInventoryStatus(row, lowStockThreshold);
+      return <StatusBadge status={status} dot />;
     },
   },
 ];
 
 const InventoryOverview = () => {
   const list    = useListPage({ defaultPageSize: 20, defaultSortKey: "title" });
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [stats,    setStats]    = useState({});
   const [loading,  setLoading]  = useState(true);
   const [total,    setTotal]    = useState(0);
   const [error,    setError]    = useState("");
+  const {
+    lowStockThreshold,
+    setLowStockThreshold,
+    resetLowStockThreshold,
+  } = useLowStockThreshold();
 
   const normalizeProductListResponse = (response) => {
     const data = response?.data?.data;
@@ -96,7 +113,6 @@ const InventoryOverview = () => {
             page:   params.page,
             limit:  params.limit,
             q:      params.search || undefined,
-            stockStatus: params.stockStatus || undefined,
             sortBy: params.sortBy,
             sortDir:params.sortDir,
           },
@@ -107,9 +123,12 @@ const InventoryOverview = () => {
 
         const s = { totalSkus: nextTotal, inStock: 0, lowStock: 0, outOfStock: 0 };
         items.forEach((p) => {
-          const avail = (p.stock ?? 0) - (p.reservedStock ?? 0);
-          if (avail <= 0) s.outOfStock++;
-          else if (avail <= (p.inventorySettings?.lowStockThreshold ?? 5)) s.lowStock++;
+          const status = getInventoryStatus({
+            stock: p.stock ?? 0,
+            reserved: p.reservedStock ?? 0,
+          }, lowStockThreshold);
+          if (status === "out_of_stock") s.outOfStock++;
+          else if (status === "low_stock") s.lowStock++;
           else s.inStock++;
         });
         setStats(s);
@@ -122,16 +141,63 @@ const InventoryOverview = () => {
     };
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
+  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, lowStockThreshold]);
 
-  const tableData = products.map((p) => ({
-    _id:      p._id,
-    title:    p.title,
-    sku:      p.sku || "—",
-    category: p.category || "—",
-    stock:    p.stock ?? 0,
-    reserved: p.reservedStock ?? 0,
-  }));
+  const tableData = useMemo(
+    () =>
+      products.map((p) => ({
+        _id:      p._id,
+        title:    p.title,
+        sku:      p.sku || "—",
+        category: (typeof p.category === "object"
+          ? (p.category?.name || p.category?.title || p.category?.label)
+          : p.category) || "—",
+        stock:    p.stock ?? 0,
+        reserved: p.reservedStock ?? 0,
+      })),
+    [products],
+  );
+
+  const filteredTableData = useMemo(() => {
+    if (!list.filters.stockStatus) return tableData;
+    return tableData.filter(
+      (row) => getInventoryStatus(row, lowStockThreshold) === list.filters.stockStatus,
+    );
+  }, [list.filters.stockStatus, lowStockThreshold, tableData]);
+
+  const columns = [
+    ...createColumns(lowStockThreshold),
+    {
+      key: "actions",
+      label: "Actions",
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/app/product-catalog/view/${row._id}`)}
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-[var(--admin-navy)] hover:text-[var(--admin-navy)]"
+          >
+            <MdVisibility size={14} />
+            View
+          </button>
+          <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/app/inventory-adjustment?productId=${row._id}`, {
+                  state: { product: row },
+                })
+              }
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--admin-gold)] px-2.5 py-1.5 text-xs font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-blue-soft)]"
+            >
+              <MdTune size={14} />
+              Adjust
+            </button>
+          </PermissionGuard>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
@@ -141,7 +207,11 @@ const InventoryOverview = () => {
         breadcrumbs={[{ label: "Inventory Management" }, { label: "Stock Overview" }]}
         actions={
           <PermissionGuard module="inventory" action={ACTIONS.ADJUST}>
-            <button className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors">
+            <button
+              type="button"
+              onClick={() => navigate("/app/inventory-adjustment")}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            >
               <MdAddCircleOutline size={16} /> Adjust Stock
             </button>
           </PermissionGuard>
@@ -169,10 +239,10 @@ const InventoryOverview = () => {
       </div>
 
       <DataTable
-        columns={COLUMNS}
-        data={tableData}
+        columns={columns}
+        data={filteredTableData}
         loading={loading}
-        totalCount={total}
+        totalCount={list.filters.stockStatus ? filteredTableData.length : total}
         page={list.page}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
@@ -184,16 +254,75 @@ const InventoryOverview = () => {
         error={error}
         searchPlaceholder="Search products…"
         requiredModule="inventory"
-        exportConfig={{ filename: "inventory-products", columns: COLUMNS }}
+        exportConfig={{ filename: "inventory-products", columns: createColumns(lowStockThreshold) }}
         filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex w-40 flex-col gap-0.5">
+                <label className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                  Low stock limit
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={lowStockThreshold}
+                  onChange={(event) => setLowStockThreshold(event.target.value)}
+                  className="admin-input py-1.5 text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={resetLowStockThreshold}
+                className="mb-0.5 text-xs font-semibold text-gray-500 hover:text-[var(--admin-navy)]"
+              >
+                Default {DEFAULT_LOW_STOCK_THRESHOLD}
+              </button>
+              <p className="mb-1.5 text-xs text-gray-400">
+                Low Stock shows when available stock is below this limit.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center gap-1.5 self-end pb-1.5 text-[var(--admin-muted)]">
+                <MdFilterList size={16} />
+                {list.activeFilterCount > 0 && (
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--admin-gold)] text-[9px] font-bold text-[var(--admin-navy)]">
+                    {list.activeFilterCount}
+                  </span>
+                )}
+              </div>
+              {FILTER_FIELDS.map((field) => (
+                <div key={field.key} className={`flex flex-col gap-0.5 ${field.width || "w-36"}`}>
+                  <label className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                    {field.label}
+                  </label>
+                  <select
+                    value={list.filters[field.key] ?? ""}
+                    onChange={(event) => list.setFilter(field.key, event.target.value)}
+                    className="admin-input py-1.5 text-sm"
+                  >
+                    <option value="">All {field.label}</option>
+                    {field.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              {list.activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={list.clearFilters}
+                  disabled={loading}
+                  className="mb-0.5 flex items-center gap-1 whitespace-nowrap text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                >
+                  <MdClose size={13} />
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </div>
         }
       />
     </div>

@@ -48,6 +48,8 @@ const SkeletonRow = ({ cols }) => (
  *   exportConfig     {object}
  *   importConfig     {object}
  *   requiredModule   {string}
+ *   onRowClick       {(row) => void}
+ *   rowClassName     {string | (row) => string}
  */
 const DataTable = ({
   columns = [],
@@ -80,6 +82,8 @@ const DataTable = ({
   exportConfig,
   importConfig,
   requiredModule,
+  onRowClick,
+  rowClassName = "",
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -262,7 +266,19 @@ const DataTable = ({
               data.map((row, index) => (
                 <tr
                   key={getKey(row, index)}
-                  className="hover:bg-[var(--admin-surface-soft)] transition-colors"
+                  onClick={() => onRowClick?.(row)}
+                  onKeyDown={(event) => {
+                    if (!onRowClick) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onRowClick(row);
+                    }
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  className={`hover:bg-[var(--admin-surface-soft)] transition-colors ${
+                    onRowClick ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none" : ""
+                  } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName}`}
                 >
                   {selectable && (
                     <td className="px-4 py-3">

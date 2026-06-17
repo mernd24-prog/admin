@@ -57,9 +57,7 @@
       { "label": "Stock Overview",       "icon": "MdDashboard",       "key": "inventory-overview",    "route": "inventory-overview"    },
       { "label": "Variant Inventory",    "icon": "MdGridView",        "key": "variant-inventory",     "route": "variant-inventory"     },
       { "label": "Inventory Adjustment", "icon": "MdTune",            "key": "inventory-adjustment",  "route": "inventory-adjustment"  },
-      { "label": "Inventory Transactions", "icon": "MdHistory",       "key": "inventory-transactions", "route": "inventory-transactions" },
-      { "label": "Warehouse Management", "icon": "MdWarehouse",       "key": "warehouse",             "route": "warehouse"             },
-      { "label": "Low Stock Alerts",     "icon": "MdNotifications",   "key": "low-stock-alerts",      "route": "low-stock-alerts"      }
+      { "label": "Inventory Transactions", "icon": "MdHistory",       "key": "inventory-transactions", "route": "inventory-transactions" }
     ]
   },
   {

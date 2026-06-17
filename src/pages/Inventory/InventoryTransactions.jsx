@@ -1,5 +1,12 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { MdHistory, MdOutlineAutorenew } from "react-icons/md";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MdClose,
+  MdHistory,
+  MdLaunch,
+  MdOutlineAutorenew,
+  MdVisibility,
+} from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, DataTable, FilterBar, StatusBadge, ConfirmModal } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -17,6 +24,8 @@ const TYPE_OPTIONS = [
   { value: "return", label: "Return" },
   { value: "adjustment", label: "Adjustment" },
   { value: "damage", label: "Damage" },
+  { value: "cancellation_release", label: "Cancellation Release" },
+  { value: "cancellation_restock", label: "Cancellation Restock" },
 ];
 
 const STATUS_OPTIONS = [
@@ -28,9 +37,8 @@ const STATUS_OPTIONS = [
 const FILTER_FIELDS = [
   { key: "type", type: "select", label: "Type", options: TYPE_OPTIONS, width: "w-40" },
   { key: "status", type: "select", label: "Status", options: STATUS_OPTIONS, width: "w-40" },
-  { key: "productId", type: "text", label: "Product SKU", width: "w-52" },
-  { key: "sellerId", type: "asyncDropdown", label: "Seller", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
-  { key: "orderId", type: "text", label: "Order #", width: "w-52" },
+  { key: "productId", type: "text", label: "Product", width: "w-52" },
+  { key: "orderId", type: "text", label: "Order", width: "w-52" },
 ];
 
 const formatDate = (value) => {
@@ -38,11 +46,29 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString();
 };
 
+const formatType = (value) =>
+  String(value || "unknown")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const formatMetadata = (value = {}) => {
   if (!value || typeof value !== "object" || !Object.keys(value).length) return "-";
   const reason = value.reason || value.note || value.adjustmentType;
   return reason || JSON.stringify(value);
 };
+
+const shortId = (value, length = 12) => {
+  if (!value) return "—";
+  const text = String(value);
+  return text.length > length ? `${text.slice(0, length)}…` : text;
+};
+
+const getTransactionReason = (row = {}) =>
+  row.metadata?.reason ||
+  row.metadata?.note ||
+  row.metadata?.adjustmentType ||
+  row.referenceType ||
+  "-";
 
 const normalizeResponse = (response) => {
   const data = response?.data?.data || {};
@@ -53,6 +79,7 @@ const normalizeResponse = (response) => {
 };
 
 const InventoryTransactions = () => {
+  const navigate = useNavigate();
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
   const { toQueryParams } = list;
   const [items, setItems] = useState([]);
@@ -61,6 +88,7 @@ const InventoryTransactions = () => {
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -123,12 +151,53 @@ const InventoryTransactions = () => {
     }
   };
 
+  const openLinkedRoute = (path) => {
+    if (!path) return;
+    setSelectedTransaction(null);
+    navigate(path);
+  };
+
+  const getReferenceRoute = (row = {}) => {
+    if (row.orderId) return `/app/orders/view/${row.orderId}`;
+    if (row.referenceType === "order" && row.referenceId) {
+      return `/app/orders/view/${row.referenceId}`;
+    }
+    if (row.referenceType === "return" && (row.orderId || row.referenceId)) {
+      return `/app/returns?${row.orderId ? `orderId=${encodeURIComponent(row.orderId)}` : `returnId=${encodeURIComponent(row.referenceId)}`}`;
+    }
+    return "";
+  };
+
+  const detailRows = useMemo(() => {
+    if (!selectedTransaction) return [];
+    return [
+      ["Transaction ID", selectedTransaction._id || selectedTransaction.id],
+      ["Product ID", selectedTransaction.productId],
+      ["Variant SKU", selectedTransaction.variantSku],
+      ["Seller ID", selectedTransaction.sellerId],
+      ["Order ID", selectedTransaction.orderId],
+      ["Return ID", selectedTransaction.returnId],
+      ["Shipment ID", selectedTransaction.shipmentId],
+      ["Reference Type", selectedTransaction.referenceType],
+      ["Reference ID", selectedTransaction.referenceId],
+      ["Actor ID", selectedTransaction.actorId],
+      ["Actor Role", selectedTransaction.actorRole],
+      ["Created", formatDate(selectedTransaction.createdAt)],
+      ["Updated", formatDate(selectedTransaction.updatedAt)],
+    ].filter(([, value]) => value !== undefined && value !== null && value !== "");
+  }, [selectedTransaction]);
+
   const columns = [
     {
       key: "type",
-      label: "Type",
+      label: "Movement",
       sortable: true,
-      render: (value) => <StatusBadge status={value || "unknown"} dot />,
+      render: (value, row) => (
+        <div className="space-y-1">
+          <StatusBadge status={value || "unknown"} label={formatType(value)} dot />
+          <div className="text-xs text-gray-400">{row.status || "completed"}</div>
+        </div>
+      ),
     },
     {
       key: "quantity",
@@ -147,54 +216,57 @@ const InventoryTransactions = () => {
       render: (value, row) => {
         const name = row.productTitle || row.productName || row.product?.title || row.product?.name;
         return (
-          <div>
+          <div className="min-w-[170px]">
             {name && <div className="text-sm font-medium text-gray-800 max-w-[180px] truncate">{name}</div>}
-            <div className={`font-mono text-xs ${name ? "text-gray-400" : "text-gray-700"}`}>
-              {value ? String(value).slice(0, 16) + (String(value).length > 16 ? "…" : "") : "—"}
-            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (value) navigate(`/app/product-catalog/view/${value}`);
+              }}
+              disabled={!value}
+              className={`font-mono text-xs ${value ? "text-[var(--admin-blue)] hover:underline" : "text-gray-400"}`}
+            >
+              {shortId(value, 16)}
+            </button>
           </div>
         );
       },
     },
-    { key: "variantSku", label: "Variant SKU" },
     {
-      key: "sellerId",
-      label: "Seller",
-      sortable: true,
-      render: (value, row) => {
-        const name = row.sellerName || row.seller?.name || row.seller?.businessName;
-        return (
-          <div>
-            {name && <div className="text-sm font-medium text-gray-800 max-w-[160px] truncate">{name}</div>}
-            <div className={`font-mono text-xs ${name ? "text-gray-400" : "text-gray-700"}`}>
-              {value ? String(value).slice(0, 16) + (String(value).length > 16 ? "…" : "") : "—"}
-            </div>
-          </div>
-        );
-      },
+      key: "variantSku",
+      label: "Variant",
+      render: (value) => <span className="font-mono text-xs text-gray-600">{value || "Root stock"}</span>,
     },
     {
       key: "referenceType",
       label: "Reference",
       render: (value, row) => (
-        <div>
+        <div className="min-w-[150px]">
           {value && <div className="text-xs font-medium capitalize text-gray-600">{String(value).replace(/_/g, " ")}</div>}
-          {row.referenceId && (
-            <div className="font-mono text-xs text-gray-400">
-              {String(row.referenceId).slice(0, 16) + (String(row.referenceId).length > 16 ? "…" : "")}
-            </div>
+          {(row.orderId || row.referenceId) && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                const path = getReferenceRoute(row);
+                if (path) navigate(path);
+              }}
+              className="font-mono text-xs text-[var(--admin-blue)] hover:underline"
+            >
+              {shortId(row.orderId || row.referenceId, 16)}
+            </button>
           )}
-          {!value && !row.referenceId && "—"}
+          {!value && !row.referenceId && !row.orderId && "—"}
         </div>
       ),
     },
-    { key: "actorRole", label: "Actor" },
     {
       key: "metadata",
-      label: "Reason / Note",
-      render: (value) => (
+      label: "Reason",
+      render: (_, row) => (
         <span className="block max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap">
-          {formatMetadata(value)}
+          {getTransactionReason(row)}
         </span>
       ),
     },
@@ -203,6 +275,23 @@ const InventoryTransactions = () => {
       label: "Created",
       sortable: true,
       render: formatDate,
+    },
+    {
+      key: "details",
+      label: "",
+      render: (_, row) => (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setSelectedTransaction(row);
+          }}
+          className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)]"
+        >
+          <MdVisibility size={14} />
+          Details
+        </button>
+      ),
     },
   ];
 
@@ -244,6 +333,8 @@ const InventoryTransactions = () => {
         requiredModule="inventory"
         emptyText="No inventory transactions found."
         exportConfig={{ filename: "inventory-transactions", columns }}
+        onRowClick={setSelectedTransaction}
+        rowClassName="align-top"
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
@@ -266,6 +357,113 @@ const InventoryTransactions = () => {
         confirmLabel="Release"
         loading={cleanupLoading}
       />
+
+      {selectedTransaction && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close transaction details"
+            className="absolute inset-0 bg-[rgba(31,27,95,0.35)] backdrop-blur-[2px]"
+            onClick={() => setSelectedTransaction(null)}
+          />
+
+          <div className="admin-card relative z-10 flex max-h-[calc(100vh-3rem)] w-full max-w-4xl flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--admin-line)] px-5 py-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={selectedTransaction.type || "unknown"} label={formatType(selectedTransaction.type)} dot />
+                  <StatusBadge status={selectedTransaction.status || "completed"} dot />
+                </div>
+                <h2 className="mt-3 text-lg font-semibold text-[var(--admin-ink)]">
+                  Inventory Transaction Details
+                </h2>
+                <p className="mt-1 font-mono text-xs text-gray-400">
+                  {selectedTransaction._id || selectedTransaction.id || "No transaction id"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTransaction(null)}
+                className="rounded-md p-1 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              >
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <div className="hide-scrollbar overflow-y-auto p-5">
+              <div className="grid gap-3 md:grid-cols-4">
+                {[
+                  ["Type", formatType(selectedTransaction.type)],
+                  ["Quantity", selectedTransaction.quantity],
+                  ["Variant", selectedTransaction.variantSku || "Root stock"],
+                  ["Created", formatDate(selectedTransaction.createdAt)],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-lg bg-[var(--admin-surface-soft)] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase text-gray-400">{label}</p>
+                    <p className="mt-1 break-words text-sm font-semibold text-[var(--admin-ink)]">{value ?? "—"}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {selectedTransaction.productId && (
+                  <button
+                    type="button"
+                    onClick={() => openLinkedRoute(`/app/product-catalog/view/${selectedTransaction.productId}`)}
+                    className="admin-btn-secondary"
+                  >
+                    <MdLaunch size={15} />
+                    Open Product
+                  </button>
+                )}
+                {getReferenceRoute(selectedTransaction) && (
+                  <button
+                    type="button"
+                    onClick={() => openLinkedRoute(getReferenceRoute(selectedTransaction))}
+                    className="admin-btn-secondary"
+                  >
+                    <MdLaunch size={15} />
+                    Open Reference
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+                <section className="rounded-lg border border-[var(--admin-line)]">
+                  <div className="border-b border-[var(--admin-line)] px-4 py-3 text-sm font-semibold text-[var(--admin-ink)]">
+                    Transaction Fields
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {detailRows.map(([label, value]) => (
+                      <div key={label} className="grid gap-1 px-4 py-3 sm:grid-cols-[150px_1fr]">
+                        <p className="text-xs font-semibold uppercase text-gray-400">{label}</p>
+                        <p className="break-all font-mono text-xs text-gray-700">{String(value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-lg border border-[var(--admin-line)]">
+                  <div className="border-b border-[var(--admin-line)] px-4 py-3 text-sm font-semibold text-[var(--admin-ink)]">
+                    Reason & Metadata
+                  </div>
+                  <div className="space-y-4 p-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-gray-400">Reason / Note</p>
+                      <p className="mt-1 break-words text-sm text-gray-700">
+                        {formatMetadata(selectedTransaction.metadata)}
+                      </p>
+                    </div>
+                    <pre className="hide-scrollbar max-h-72 overflow-auto rounded-lg bg-gray-950 p-4 text-xs text-gray-100">
+                      {JSON.stringify(selectedTransaction.metadata || {}, null, 2)}
+                    </pre>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
