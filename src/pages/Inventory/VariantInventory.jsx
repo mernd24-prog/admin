@@ -1,13 +1,20 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { MdGridView, MdRefresh } from "react-icons/md";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { MdClose, MdFilterList, MdGridView, MdRefresh } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import { PageHeader, DataTable, StatusBadge, FilterBar, ExportButton } from "../../components/Shared";
+import { PageHeader, DataTable, StatusBadge, ExportButton } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  getAvailableStock,
+  getInventoryStatus,
+  getStockTextClass,
+  useLowStockThreshold,
+} from "./lowStockThreshold";
 
 const FILTER_FIELDS = [
   {
@@ -35,7 +42,7 @@ const FILTER_FIELDS = [
   },
 ];
 
-const FLAT_COLUMNS = [
+const createFlatColumns = (lowStockThreshold) => [
   { key: "productTitle", label: "Product", sortable: true },
   { key: "productSku", label: "Product SKU" },
   { key: "variantTitle", label: "Variant" },
@@ -56,17 +63,9 @@ const FLAT_COLUMNS = [
     key: "available",
     label: "Available",
     render: (_, row) => {
-      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
+      const avail = getAvailableStock(row);
       return (
-        <span
-          className={`font-mono font-semibold ${
-            avail <= 0
-              ? "text-red-500"
-              : avail <= (row.threshold ?? 5)
-              ? "text-yellow-600"
-              : "text-green-600"
-          }`}
-        >
+        <span className={`font-mono font-semibold ${getStockTextClass(avail, lowStockThreshold)}`}>
           {avail}
         </span>
       );
@@ -76,14 +75,7 @@ const FLAT_COLUMNS = [
     key: "variantStatus",
     label: "Status",
     render: (_, row) => {
-      const avail = (row.stock ?? 0) - (row.reserved ?? 0);
-      const s =
-        avail <= 0
-          ? "out_of_stock"
-          : avail <= (row.threshold ?? 5)
-          ? "low_stock"
-          : "in_stock";
-      return <StatusBadge status={s} dot />;
+      return <StatusBadge status={getInventoryStatus(row, lowStockThreshold)} dot />;
     },
   },
 ];
@@ -104,7 +96,6 @@ const flattenVariants = (products) => {
           : p.category) || "—",
         stock: v.stock ?? 0,
         reserved: v.reservedStock ?? 0,
-        threshold: p.inventorySettings?.lowStockThreshold ?? 5,
         variantStatus: v.status || p.status,
       });
     });
@@ -120,6 +111,11 @@ const VariantInventory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { toQueryParams } = list;
+  const {
+    lowStockThreshold,
+    setLowStockThreshold,
+    resetLowStockThreshold,
+  } = useLowStockThreshold();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -134,7 +130,6 @@ const VariantInventory = () => {
           productType: "variable",
           hasVariants: true,
           includeVariants: true,
-          stockStatus: params.stockStatus || undefined,
           status: params.status || undefined,
           sortBy: params.sortBy,
           sortDir: params.sortDir,
@@ -166,6 +161,18 @@ const VariantInventory = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const filteredRows = useMemo(() => {
+    if (!list.filters.stockStatus) return flatRows;
+    return flatRows.filter(
+      (row) => getInventoryStatus(row, lowStockThreshold) === list.filters.stockStatus,
+    );
+  }, [flatRows, list.filters.stockStatus, lowStockThreshold]);
+
+  const columns = useMemo(
+    () => createFlatColumns(lowStockThreshold),
+    [lowStockThreshold],
+  );
 
   return (
     <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
@@ -213,14 +220,13 @@ const VariantInventory = () => {
           {
             label: "Low Stock",
             value: flatRows.filter(
-              (r) =>
-                r.stock - r.reserved > 0 && r.stock - r.reserved <= r.threshold,
+              (row) => getInventoryStatus(row, lowStockThreshold) === "low_stock",
             ).length,
-            color: "text-yellow-600",
+            color: "text-red-600",
           },
           {
             label: "Out of Stock",
-            value: flatRows.filter((r) => r.stock - r.reserved <= 0).length,
+            value: flatRows.filter((row) => getInventoryStatus(row, lowStockThreshold) === "out_of_stock").length,
             color: "text-red-500",
           },
         ].map((card) => (
@@ -245,10 +251,10 @@ const VariantInventory = () => {
       </div>
 
       <DataTable
-        columns={FLAT_COLUMNS}
-        data={flatRows}
+        columns={columns}
+        data={filteredRows}
         loading={loading}
-        totalCount={total}
+        totalCount={list.filters.stockStatus ? filteredRows.length : total}
         page={list.page}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
@@ -263,14 +269,73 @@ const VariantInventory = () => {
         emptyText="No variable products with variants found."
         emptyIcon={<MdGridView size={40} className="text-gray-200" />}
         filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex w-40 flex-col gap-0.5">
+                <label className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                  Low stock limit
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={lowStockThreshold}
+                  onChange={(event) => setLowStockThreshold(event.target.value)}
+                  className="admin-input py-1.5 text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={resetLowStockThreshold}
+                className="mb-0.5 text-xs font-semibold text-gray-500 hover:text-[var(--admin-navy)]"
+              >
+                Default {DEFAULT_LOW_STOCK_THRESHOLD}
+              </button>
+              <p className="mb-1.5 text-xs text-gray-400">
+                Variant Low Stock uses this available stock limit.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center gap-1.5 self-end pb-1.5 text-[var(--admin-muted)]">
+                <MdFilterList size={16} />
+                {list.activeFilterCount > 0 && (
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--admin-gold)] text-[9px] font-bold text-[var(--admin-navy)]">
+                    {list.activeFilterCount}
+                  </span>
+                )}
+              </div>
+              {FILTER_FIELDS.map((field) => (
+                <div key={field.key} className={`flex flex-col gap-0.5 ${field.width || "w-36"}`}>
+                  <label className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                    {field.label}
+                  </label>
+                  <select
+                    value={list.filters[field.key] ?? ""}
+                    onChange={(event) => list.setFilter(field.key, event.target.value)}
+                    className="admin-input py-1.5 text-sm"
+                  >
+                    <option value="">All {field.label}</option>
+                    {field.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              {list.activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={list.clearFilters}
+                  disabled={loading}
+                  className="mb-0.5 flex items-center gap-1 whitespace-nowrap text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                >
+                  <MdClose size={13} />
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </div>
         }
       />
     </div>

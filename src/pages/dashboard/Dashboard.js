@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import {
   Area,
@@ -93,6 +94,7 @@ function EmptyTableRow({ colSpan, children }) {
 
 export default function Dashboard() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const dashboardState = useSelector(
     (state) => state.adminCore?.dashboardOverviewData,
   );
@@ -160,7 +162,7 @@ export default function Dashboard() {
         iconBg: "#ffd4d2",
         iconColor: "#ff4b55",
         label: "Pending Payouts",
-        value: formatNumber(
+        value: formatCurrency(
           sellerMetrics.pendingPayouts ??
             payouts.pendingAmount ??
             overview.pendingPayouts,
@@ -185,12 +187,33 @@ export default function Dashboard() {
     ];
   }, [overview]);
 
+  const recentOrders = useMemo(
+    () => (Array.isArray(overview?.recentOrders) ? overview.recentOrders : []),
+    [overview],
+  );
+
   const performanceData = useMemo(() => {
     const source =
       overview?.orderPerformance ||
       overview?.ordersPerformance ||
       overview?.salesTrend;
-    if (!Array.isArray(source) || source.length === 0) return EMPTY_PERFORMANCE;
+    if (!Array.isArray(source) || source.length === 0) {
+      if (!recentOrders.length) return EMPTY_PERFORMANCE;
+
+      const weekdayCounts = recentOrders.reduce((acc, order) => {
+        const rawDate = order.created_at || order.createdAt || order.date;
+        const date = rawDate ? new Date(rawDate) : null;
+        if (!date || Number.isNaN(date.getTime())) return acc;
+        const label = date.toLocaleDateString("en-IN", { weekday: "short" });
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      }, {});
+
+      return EMPTY_PERFORMANCE.map((item) => ({
+        ...item,
+        value: weekdayCounts[item.label] || 0,
+      }));
+    }
 
     return source.map((item, index) => ({
       label: item.label || item.name || item.date || `Day ${index + 1}`,
@@ -198,7 +221,7 @@ export default function Dashboard() {
         item.value ?? item.orders ?? item.totalOrders ?? item.total,
       ),
     }));
-  }, [overview]);
+  }, [overview, recentOrders]);
 
   const hasPerformanceSeries = performanceData.some((item) => item.value > 0);
   const topProducts = useMemo(
@@ -208,10 +231,6 @@ export default function Dashboard() {
             Boolean(product?.name || product?.title),
           )
         : [],
-    [overview],
-  );
-  const recentOrders = useMemo(
-    () => (Array.isArray(overview?.recentOrders) ? overview.recentOrders : []),
     [overview],
   );
   const statusRows = useMemo(() => {
@@ -409,7 +428,11 @@ export default function Dashboard() {
                 <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
                   Top Products
                 </h2>
-                <button type="button" className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]">
+                <button
+                  type="button"
+                  className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]"
+                  onClick={() => navigate("/app/product-catalog")}
+                >
                   See All
                 </button>
               </div>
@@ -448,7 +471,11 @@ export default function Dashboard() {
               <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
                 Recent Orders
               </h2>
-              <button type="button" className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]">
+              <button
+                type="button"
+                className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]"
+                onClick={() => navigate("/app/orders")}
+              >
                 See All
               </button>
             </div>

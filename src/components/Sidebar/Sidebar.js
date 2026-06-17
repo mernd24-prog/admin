@@ -125,6 +125,12 @@ const toRouteCode = (routePath = "") =>
     .replace(/^\/+/, "")
     .replace(/\/+$/, "");
 
+const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
+  "warehouse",
+  "low-stock-alerts",
+  "threshold-products",
+]);
+
 const normalizeModuleCode = (value = "") =>
   String(value || "")
     .trim()
@@ -139,7 +145,7 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
       : item.moduleName || item.name;
     const route = toRouteCode(item.routePath);
     const children = flattenSidebarChildren(item.children || [], label);
-    const self = route
+    const self = route && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route)
       ? [
           {
             name: label,
