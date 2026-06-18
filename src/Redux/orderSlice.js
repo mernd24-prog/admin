@@ -28,7 +28,6 @@ const toOrderListParams = (params = {}) => {
 const normalizeOrderStatus = (status) => {
     const aliases = {
         out_for_shipping: "shipped",
-        out_for_delivery: "shipped",
     };
     return aliases[status] || status;
 };

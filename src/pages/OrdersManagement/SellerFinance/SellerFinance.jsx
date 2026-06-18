@@ -1,16 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import {
   MdCalculate,
   MdCheckCircle,
   MdClose,
+  MdDownload,
   MdPayments,
   MdRefresh,
   MdSearch,
 } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import { downloadApiFile } from "../../../_helpers/downloadApi";
+import { ENDPOINTS } from "../../../_helpers/endpoints";
 import {
   calculateSellerCommission,
   completeSellerPayout,
@@ -148,7 +153,7 @@ const SellerFinance = () => {
   }, []);
 
   // Process Payout modal
-  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
 
   // Complete Payout modal
   const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
@@ -165,7 +170,7 @@ const SellerFinance = () => {
         dispatch(getSellerSettlements({ sellerId: filters.sellerId, limit: 50 })).unwrap(),
       ]);
     } catch (error) {
-      toast.error(error || "Unable to load seller finance");
+      toast.error(error?.message || error || "Unable to load seller finance");
     }
   }, [dispatch, filters]);
 
@@ -213,7 +218,7 @@ const SellerFinance = () => {
       setOrderId("");
       await loadFinance();
     } catch (error) {
-      toast.error(error || "Unable to calculate commission");
+      toast.error(error?.message || error || "Unable to calculate commission");
     } finally {
       setSubmitting(false);
     }
@@ -228,15 +233,16 @@ const SellerFinance = () => {
         paymentMethod: processModal.paymentMethod,
         paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
+        autoProcess: processModal.autoProcess,
       };
       if (processModal.periodStart) payload.periodStart = processModal.periodStart;
       if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
       await dispatch(processSellerPayouts(payload)).unwrap();
-      toast.success("Payout processed successfully");
-      setProcessModal({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+      toast.success(processModal.autoProcess ? "Payout processed successfully" : "Payout initiated for approval");
+      setProcessModal({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
       await loadFinance();
     } catch (error) {
-      toast.error(error || "Unable to process payout");
+      toast.error(error?.message || error || "Unable to process payout");
     } finally {
       setSubmitting(false);
     }
@@ -256,7 +262,7 @@ const SellerFinance = () => {
       setCompleteModal({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
       await loadFinance();
     } catch (error) {
-      toast.error(error || "Unable to complete payout");
+      toast.error(error?.message || error || "Unable to complete payout");
     } finally {
       setSubmitting(false);
     }
@@ -275,7 +281,7 @@ const SellerFinance = () => {
       setFailModal({ open: false, payout: null, reason: "", note: "" });
       await loadFinance();
     } catch (error) {
-      toast.error(error || "Unable to fail payout");
+      toast.error(error?.message || error || "Unable to fail payout");
     } finally {
       setSubmitting(false);
     }
@@ -338,6 +344,7 @@ const SellerFinance = () => {
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="processing">Processing</option>
+              <option value="on_hold">On Hold</option>
               <option value="paid">Paid</option>
               <option value="completed">Completed</option>
               <option value="failed">Failed</option>
@@ -361,13 +368,15 @@ const SellerFinance = () => {
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
             <MdPayments size={18} /> Process Seller Payout
           </div>
-          <button
-            type="button"
-            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
-            onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
-          >
-            Initiate Payout
-          </button>
+          <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+            <button
+              type="button"
+              className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
+              onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
+            >
+              Initiate Payout
+            </button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -408,22 +417,24 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">
-                <div className="flex items-center gap-1">
-                  <IconButton
-                    title="Mark payout complete — enter payment reference"
-                    tone="green"
-                    icon={<MdCheckCircle size={18} />}
-                    onClick={() => openCompleteModal(row)}
-                    disabled={row.status === "completed"}
-                  />
-                  <IconButton
-                    title="Fail payout — release back to pending"
-                    tone="red"
-                    icon={<MdClose size={18} />}
-                    onClick={() => openFailModal(row)}
-                    disabled={row.status === "completed" || row.status === "failed"}
-                  />
-                </div>
+                <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <div className="flex items-center gap-1">
+                    <IconButton
+                      title="Mark payout complete — enter payment reference"
+                      tone="green"
+                      icon={<MdCheckCircle size={18} />}
+                      onClick={() => openCompleteModal(row)}
+                      disabled={row.status === "completed" || row.status === "on_hold"}
+                    />
+                    <IconButton
+                      title="Fail payout — release back to pending"
+                      tone="red"
+                      icon={<MdClose size={18} />}
+                      onClick={() => openFailModal(row)}
+                      disabled={row.status === "completed" || row.status === "failed"}
+                    />
+                  </div>
+                </PermissionGuard>
               </td>
             </tr>
           )) : null}
@@ -433,7 +444,7 @@ const SellerFinance = () => {
       <div className="mt-4">
         <TableShell
           title="Settlement Ledger"
-          headings={["Settlement", "Seller", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created"]}
+          headings={["Settlement", "Seller", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", ""]}
           emptyText="No settlements found"
         >
           {settlements.length ? settlements.map((row) => (
@@ -448,6 +459,23 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
+              <td className="whitespace-nowrap px-4 py-3">
+                <PermissionGuard module="sellers" action={ACTIONS.VIEW} hide>
+                  <button
+                    type="button"
+                    title="Download Settlement Statement"
+                    aria-label="Download settlement statement"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#2f6fed] transition hover:bg-[#f3f6ff]"
+                    onClick={() => downloadApiFile(
+                      ENDPOINTS.payouts.settlementStatement(row.id),
+                      {},
+                      { filename: `settlement-${row.id}.pdf`, format: "pdf" }
+                    )}
+                  >
+                    <MdDownload size={18} />
+                  </button>
+                </PermissionGuard>
+              </td>
             </tr>
           )) : null}
         </TableShell>
@@ -484,6 +512,14 @@ const SellerFinance = () => {
           <FieldRow label="Payment Reference">
             <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
           </FieldRow>
+          <label className="flex items-center gap-2 text-sm font-medium text-[#65718b]">
+            <input
+              type="checkbox"
+              checked={processModal.autoProcess}
+              onChange={(e) => setProcessModal((prev) => ({ ...prev, autoProcess: e.target.checked }))}
+            />
+            Auto complete payout after creation
+          </label>
           <FieldRow label="Internal Note">
             <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
           </FieldRow>

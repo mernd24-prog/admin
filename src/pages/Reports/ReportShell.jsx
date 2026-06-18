@@ -1,43 +1,200 @@
-import React from "react";
-import { MdFileDownload } from "react-icons/md";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { MdFileDownload, MdRefresh } from "react-icons/md";
+import { toast } from "sonner";
 import Cards from "../../components/Cards/Cards";
 import { StatCardSkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import { PageHeader } from "../../components/Shared";
+import { axiosPrivate } from "../../_helpers/axiosProvider";
+import { downloadApiFile } from "../../_helpers/downloadApi";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 
-/**
- * Shared shell for all report pages.
- * Shows date-range selector, export button, and a chart placeholder.
- */
-const RANGE_OPTIONS = [
-  "Today",
-  "Last 7 days",
-  "Last 30 days",
-  "Last 90 days",
-  "Custom",
-];
+const RANGE_OPTIONS = ["Today", "Last 7 days", "Last 30 days", "Last 90 days"];
+const CHART_COLORS = ["#1f4fb2", "#d6a323", "#24b8c3", "#37b446", "#ff453d", "#6f4edb"];
 
-const StatCard = ({ label, value, sub, trend, loading }) => (
+const integerFormatter = new Intl.NumberFormat("en-IN");
+const currencyFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+const asNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const formatNumber = (value) => integerFormatter.format(asNumber(value));
+const formatCurrency = (value) => currencyFormatter.format(asNumber(value));
+const titleize = (value = "") =>
+  String(value || "unknown")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const toIsoDate = (date) => date.toISOString().slice(0, 10);
+
+const rangeToDates = (range) => {
+  const to = new Date();
+  const from = new Date();
+  if (range === "Today") {
+    return { fromDate: toIsoDate(to), toDate: toIsoDate(to) };
+  }
+  if (range === "Last 7 days") from.setDate(to.getDate() - 7);
+  else if (range === "Last 90 days") from.setDate(to.getDate() - 90);
+  else from.setDate(to.getDate() - 30);
+  return { fromDate: toIsoDate(from), toDate: toIsoDate(to) };
+};
+
+const unwrapData = (response) => response?.data?.data ?? response?.data ?? response ?? {};
+const listFrom = (value) => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.list)) return value.list;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.data)) return value.data;
+  return [];
+};
+
+const statusRows = (bucket = {}) =>
+  Object.entries(bucket?.byStatus || {}).map(([status, row]) => ({
+    status: titleize(status),
+    count: asNumber(row?.count),
+    amount: asNumber(row?.netAmount ?? row?.grossAmount),
+  }));
+
+const fetchJson = async (endpoint, params = {}) => unwrapData(await axiosPrivate.get(endpoint, { params }));
+
+const useReportFilters = (defaultRange = "Last 30 days") => {
+  const initial = rangeToDates(defaultRange);
+  const [range, setRange] = useState(defaultRange);
+  const [fromDate, setFromDate] = useState(initial.fromDate);
+  const [toDate, setToDate] = useState(initial.toDate);
+
+  const setPresetRange = (nextRange) => {
+    setRange(nextRange);
+    const dates = rangeToDates(nextRange);
+    setFromDate(dates.fromDate);
+    setToDate(dates.toDate);
+  };
+
+  const setCustomFromDate = (value) => {
+    setRange("Custom");
+    setFromDate(value);
+  };
+
+  const setCustomToDate = (value) => {
+    setRange("Custom");
+    setToDate(value);
+  };
+
+  return {
+    range,
+    fromDate,
+    toDate,
+    setRange: setPresetRange,
+    setFromDate: setCustomFromDate,
+    setToDate: setCustomToDate,
+  };
+};
+
+const useApiReport = (loadData, filters) => {
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setData(await loadData({ fromDate: filters.fromDate, toDate: filters.toDate }));
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to load report";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.fromDate, filters.toDate, loadData]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { data, loading, error, refresh };
+};
+
+const StatCard = ({ label, value, sub, loading }) => (
   <div className="h-full">
     {loading ? (
       <StatCardSkeletonLoader />
     ) : (
-      <Cards
-        label={label}
-        value={value}
-        helper={trend != null ? sub || "vs prev period" : sub}
-        trend={trend != null ? `${Math.abs(trend)}%` : undefined}
-        trendNegative={trend < 0}
-      />
+      <Cards label={label} value={value} helper={sub} />
     )}
   </div>
 );
 
-const ChartPlaceholder = ({ height = 300 }) => (
-  <div
-    className="w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm"
-    style={{ height }}
-  >
-    Chart visualization (connect chart library)
+const EmptyPanel = ({ text = "No data returned for this period." }) => (
+  <div className="admin-card flex min-h-[220px] items-center justify-center p-6 text-center text-sm text-[var(--admin-muted)]">
+    {text}
+  </div>
+);
+
+const ErrorPanel = ({ message }) => (
+  <div className="admin-card border-red-100 bg-red-50 p-5 text-sm text-red-600">
+    {message}
+  </div>
+);
+
+const ChartPanel = ({ title, data = [], children }) => (
+  <div className="admin-card p-5">
+    <h3 className="mb-4 text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
+    {data.length ? children : <EmptyPanel text="No chart data returned." />}
+  </div>
+);
+
+const ReportTable = ({ title, columns = [], rows = [] }) => (
+  <div className="admin-card overflow-hidden">
+    <div className="border-b border-[var(--admin-line)] px-4 py-3">
+      <h3 className="text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
+    </div>
+    {rows.length ? (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="admin-table-head">
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key} className="px-4 py-3 text-left text-xs font-semibold text-[var(--admin-navy)]">
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#f0e8dc]">
+            {rows.map((row, index) => (
+              <tr key={row.id || row.sellerId || row.sku || index}>
+                {columns.map((column) => (
+                  <td key={column.key} className="px-4 py-3 text-sm text-[var(--admin-ink)]">
+                    {column.render ? column.render(row[column.key], row) : row[column.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <EmptyPanel text="No rows returned for this report." />
+    )}
   </div>
 );
 
@@ -48,504 +205,463 @@ export const ReportShell = ({
   stats = [],
   children,
   loading = false,
+  error = "",
+  filters,
+  onRefresh,
+  exportEndpoint,
+  exportFilename,
 }) => {
-  const [range, setRange] = React.useState("Last 30 days");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!exportEndpoint) return;
+    try {
+      setExporting(true);
+      await downloadApiFile(
+        exportEndpoint,
+        { fromDate: filters.fromDate, toDate: filters.toDate, format: "csv" },
+        { filename: exportFilename || "report.csv", format: "csv" },
+      );
+    } catch (err) {
+      toast.error(err?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
-    <div className="p-4 md:p-6 ">
+    <div className="p-4 md:p-6">
       <PageHeader
         title={title}
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              value={range}
-              onChange={(e) => setRange(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-[var(--admin-gold)]"
+              value={filters.range}
+              onChange={(event) => filters.setRange(event.target.value)}
+              className="admin-input w-40"
             >
-              {RANGE_OPTIONS.map((o) => (
-                <option key={o}>{o}</option>
+              {RANGE_OPTIONS.map((option) => (
+                <option key={option}>{option}</option>
               ))}
+              {filters.range === "Custom" && <option>Custom</option>}
             </select>
-            <button className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
-              <MdFileDownload size={16} /> Export
+            <input
+              type="date"
+              value={filters.fromDate}
+              onChange={(event) => filters.setFromDate(event.target.value)}
+              className="admin-input w-36"
+            />
+            <input
+              type="date"
+              value={filters.toDate}
+              onChange={(event) => filters.setToDate(event.target.value)}
+              className="admin-input w-36"
+            />
+            <button type="button" onClick={onRefresh} disabled={loading} className="admin-btn-secondary">
+              <MdRefresh size={16} /> {loading ? "Refreshing" : "Refresh"}
             </button>
+            {exportEndpoint && (
+              <button type="button" onClick={handleExport} disabled={exporting} className="admin-btn-secondary">
+                <MdFileDownload size={16} /> {exporting ? "Exporting" : "Export CSV"}
+              </button>
+            )}
           </div>
         }
       />
 
-      {stats.length > 0 && (
-        <div
-          className={`grid grid-cols-2 xl:grid-cols-${Math.min(stats.length, 4)} gap-4 mb-6`}
-        >
-          {stats.map((s) => (
-            <StatCard key={s.label} {...s} loading={loading} />
-          ))}
-        </div>
-      )}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} {...stat} loading={loading} />
+        ))}
+      </div>
 
-      {children ?? <ChartPlaceholder />}
+      {error ? <ErrorPanel message={error} /> : children}
     </div>
   );
 };
 
-// ─── Individual report pages ──────────────────────────────────────────────────
+const useMarketplaceAnalytics = () => {
+  const filters = useReportFilters();
+  const loadData = useCallback(
+    ({ fromDate, toDate }) => fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
+    [],
+  );
+  const report = useApiReport(loadData, filters);
+  return { filters, ...report };
+};
 
-export const SalesReport = () => (
-  <ReportShell
-    title="Sales Reports"
-    subtitle="Revenue, orders, and conversion data"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Sales Reports" }]}
-    stats={[
-      { label: "Total Revenue", value: "₹12,40,500", trend: 8.3 },
-      { label: "Total Orders", value: "3,842", trend: 5.1 },
-      { label: "Avg Order Value", value: "₹1,620", trend: -1.2 },
-      { label: "Conversion Rate", value: "3.4%", trend: 0.2 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Revenue Over Time
-        </h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Line chart — revenue by day/week
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Sales by Category
-        </h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Pie / donut chart
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+export const SalesReport = () => {
+  const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
+  const orders = data.orders || {};
+  const payments = data.payments || {};
+  const returns = data.returns || {};
+  const orderStatusRows = listFrom(orders.statusBreakdown);
+  const paymentRows = statusRows(payments);
 
-export const ProductAnalytics = () => (
-  <ReportShell
-    title="Product Analytics"
-    subtitle="Top performers, views, and conversion by product"
-    breadcrumbs={[
-      { label: "Reports & Analytics" },
-      { label: "Product Analytics" },
-    ]}
-    stats={[
-      { label: "Total Products", value: "4,231" },
-      { label: "Active Listings", value: "3,890", trend: 2.1 },
-      { label: "Avg Rating", value: "4.2 ★" },
-      { label: "Reviews This Month", value: "1,204", trend: 14 },
-    ]}
-  >
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">
-        Top Products by Revenue
-      </h3>
-      <div className="h-72 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-        Horizontal bar chart — top 10 products
-      </div>
-    </div>
-  </ReportShell>
-);
+  const stats = [
+    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount), sub: "GMV in selected range" },
+    { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
+    { label: "Delivered Orders", value: formatNumber(orders.deliveredOrders), sub: "Completed fulfilment" },
+    { label: "Refund Amount", value: formatCurrency(returns.refundAmount), sub: "Return refunds" },
+  ];
 
-export const InventoryAnalytics = () => (
-  <ReportShell
-    title="Inventory Analytics"
-    subtitle="Stock health, turnover, and restock predictions"
-    breadcrumbs={[
-      { label: "Reports & Analytics" },
-      { label: "Inventory Analytics" },
-    ]}
-    stats={[
-      { label: "Total SKUs", value: "12,430" },
-      { label: "Low Stock Items", value: "342", trend: -5 },
-      { label: "Out of Stock", value: "89", trend: -12 },
-      { label: "Turnover Rate", value: "8.2×" },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Stock Level Distribution
-        </h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Stacked bar — in_stock / low / OOS by category
-        </div>
+  return (
+    <ReportShell
+      title="Sales Reports"
+      subtitle="Revenue, order status, payments, and refunds from live marketplace analytics"
+      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Sales Reports" }]}
+      stats={stats}
+      loading={loading}
+      error={error}
+      filters={filters}
+      onRefresh={refresh}
+      exportEndpoint={ENDPOINTS.operationsReports.orders}
+      exportFilename="sales-report.csv"
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartPanel title="Order Status Summary" data={orderStatusRows}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={orderStatusRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value, name) => [name === "amount" ? formatCurrency(value) : formatNumber(value), titleize(name)]} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {orderStatusRows.map((_, index) => (
+                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title="Payment Status Summary" data={paymentRows}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={paymentRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatNumber(value)} />
+              <Bar dataKey="count" fill="#1f4fb2" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Inventory Movement
-        </h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Area chart — stock in/out over time
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+    </ReportShell>
+  );
+};
 
-export const SellerAnalytics = () => (
-  <ReportShell
-    title="Seller Analytics"
-    subtitle="Seller performance, GMV, and compliance metrics"
-    breadcrumbs={[
-      { label: "Reports & Analytics" },
-      { label: "Seller Analytics" },
-    ]}
-    stats={[
-      { label: "Active Sellers", value: "284", trend: 6 },
-      { label: "Total GMV", value: "₹8.4 Cr", trend: 11 },
-      { label: "Avg Seller Rating", value: "4.1 ★" },
-      { label: "Pending KYC", value: "17", trend: -3 },
-    ]}
-  >
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">
-        GMV by Seller (Top 20)
-      </h3>
-      <div className="h-72 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-        Bar chart — GMV ranked by seller
-      </div>
-    </div>
-  </ReportShell>
-);
+export const ProductAnalytics = () => {
+  const filters = useReportFilters();
+  const loadData = useCallback(async () => {
+    const [topProducts, inventoryStats] = await Promise.all([
+      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases" }),
+      fetchJson(ENDPOINTS.products.inventoryStats),
+    ]);
+    return { topProducts: listFrom(topProducts), inventoryStats };
+  }, []);
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
+  const products = listFrom(data.topProducts);
+  const inventory = data.inventoryStats || {};
+  const purchaseTotal = products.reduce((sum, product) => sum + asNumber(product.analytics?.purchases), 0);
+  const revenueTotal = products.reduce((sum, product) => sum + asNumber(product.analytics?.revenue), 0);
 
-export const OrdersReport = () => (
-  <ReportShell
-    title="Orders Report"
-    subtitle="Order volume, fulfilment rate, and status breakdown"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Orders Report" }]}
-    stats={[
-      { label: "Total Orders", value: "50,240", trend: 9.2 },
-      { label: "Fulfilled", value: "46,180", trend: 7.4 },
-      { label: "Cancelled", value: "2,340", trend: -3.1 },
-      { label: "Pending", value: "1,720", trend: -1.8 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Order Volume Over Time</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Bar chart — daily/weekly order count
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Order Status Breakdown</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Donut — status distribution
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+  const rows = products.map((product) => ({
+    id: product._id || product.id,
+    title: product.title || product.name || "Untitled",
+    sku: product.sku || "-",
+    price: formatCurrency(product.price),
+    purchases: asNumber(product.analytics?.purchases),
+    revenue: asNumber(product.analytics?.revenue),
+    views: asNumber(product.analytics?.views),
+  }));
 
-export const PaymentsReport = () => (
-  <ReportShell
-    title="Payments Report"
-    subtitle="Revenue collected, payment methods, failures, and refund rates"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Payments Report" }]}
-    stats={[
-      { label: "Total Collected", value: "₹9.2 Cr", trend: 12.1 },
-      { label: "Online Payments", value: "₹7.8 Cr", trend: 14 },
-      { label: "COD Collected", value: "₹1.4 Cr", trend: -2 },
-      { label: "Refunds Issued", value: "₹18.4 L", trend: -5.3 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Revenue by Payment Method</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Pie — UPI / Card / COD / Wallet / Netbanking
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Payment Failure Rate</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Line — daily failure % by method
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+  const stats = [
+    { label: "Total Products", value: formatNumber(inventory.totalProducts), sub: "Current catalog" },
+    { label: "Top Product Purchases", value: formatNumber(purchaseTotal), sub: "Top 10 products" },
+    { label: "Top Product Revenue", value: formatCurrency(revenueTotal), sub: "Tracked product analytics" },
+    { label: "Out of Stock", value: formatNumber(inventory.outOfStockCount), sub: "Current inventory" },
+  ];
 
-export const ReturnsReport = () => (
-  <ReportShell
-    title="Returns & Refunds Report"
-    subtitle="Return requests, approval rates, refund timelines, and restock impact"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Returns Report" }]}
-    stats={[
-      { label: "Return Requests", value: "4,820", trend: -2.4 },
-      { label: "Approved Returns", value: "3,940", trend: -1.8 },
-      { label: "Refunds Issued", value: "₹21.6 L", trend: -4.2 },
-      { label: "Avg Resolution Days", value: "3.2d", trend: -0.8 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Returns by Reason</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Horizontal bar — top return reasons
-        </div>
+  return (
+    <ReportShell
+      title="Product Analytics"
+      subtitle="Top-selling products and current catalog health from product analytics APIs"
+      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Product Analytics" }]}
+      stats={stats}
+      loading={loading}
+      error={error}
+      filters={filters}
+      onRefresh={refresh}
+      exportEndpoint={ENDPOINTS.operationsReports.products}
+      exportFilename="product-analytics.csv"
+    >
+      <div className="space-y-4">
+        <ChartPanel title="Top Products by Purchases" data={rows}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={rows} layout="vertical" margin={{ left: 80, right: 20, top: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="title" width={120} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatNumber(value)} />
+              <Bar dataKey="purchases" fill="#1f4fb2" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ReportTable
+          title="Top Product Details"
+          rows={rows}
+          columns={[
+            { key: "title", label: "Product" },
+            { key: "sku", label: "SKU" },
+            { key: "price", label: "Price" },
+            { key: "purchases", label: "Purchases", render: (value) => formatNumber(value) },
+            { key: "revenue", label: "Revenue", render: (value) => formatCurrency(value) },
+            { key: "views", label: "Views", render: (value) => formatNumber(value) },
+          ]}
+        />
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Refund Timeline Distribution</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Histogram — days to refund
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+    </ReportShell>
+  );
+};
 
-export const CancellationReport = () => (
-  <ReportShell
-    title="Cancellations Report"
-    subtitle="Order cancellations by reason, stage, and seller"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Cancellations Report" }]}
-    stats={[
-      { label: "Total Cancellations", value: "2,340", trend: -3.1 },
-      { label: "Customer Initiated", value: "1,680", trend: -4.2 },
-      { label: "Seller Initiated", value: "480", trend: -1.5 },
-      { label: "System Auto-cancel", value: "180", trend: -8 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Cancellations by Reason</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Horizontal bar — cancellation reasons
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Cancellations Over Time</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Line — daily cancellation trend
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+export const InventoryAnalytics = () => {
+  const filters = useReportFilters();
+  const loadData = useCallback(async () => {
+    const [stats, lowStock] = await Promise.all([
+      fetchJson(ENDPOINTS.inventory.stats),
+      fetchJson(ENDPOINTS.inventory.lowStock, { limit: 10, page: 1 }),
+    ]);
+    return { stats, lowStock: listFrom(lowStock) };
+  }, []);
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
+  const statsData = data.stats || {};
+  const stockRows = [
+    { status: "Total Stock", count: asNumber(statsData.totalStock) },
+    { status: "Reserved", count: asNumber(statsData.totalReserved) },
+    { status: "Low Stock", count: asNumber(statsData.lowStockCount) },
+    { status: "Out of Stock", count: asNumber(statsData.outOfStockCount) },
+  ];
+  const lowStockRows = listFrom(data.lowStock).map((product) => ({
+    id: product._id || product.id,
+    title: product.title || product.name || "Untitled",
+    sku: product.sku || "-",
+    stock: asNumber(product.stock),
+    reservedStock: asNumber(product.reservedStock),
+    availableStock: Math.max(0, asNumber(product.stock) - asNumber(product.reservedStock)),
+  }));
 
-export const DeliveryReport = () => (
-  <ReportShell
-    title="Delivery Report"
-    subtitle="Shipment status, SLA adherence, carrier performance, and RTO rates"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Delivery Report" }]}
-    stats={[
-      { label: "Shipments Created", value: "46,100", trend: 8.4 },
-      { label: "On-Time Delivery", value: "94.2%", trend: 1.1 },
-      { label: "RTO Rate", value: "3.8%", trend: -0.6 },
-      { label: "Avg Delivery Days", value: "2.4d", trend: -0.3 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">SLA Adherence Over Time</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Line — on-time % by day
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Carrier Performance</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Bar — on-time % by carrier
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+  const stats = [
+    { label: "Total Products", value: formatNumber(statsData.totalProducts), sub: "Inventory-tracked products" },
+    { label: "Total Stock", value: formatNumber(statsData.totalStock), sub: "Units on hand" },
+    { label: "Reserved Stock", value: formatNumber(statsData.totalReserved), sub: "Allocated to orders" },
+    { label: "Low Stock Items", value: formatNumber(statsData.lowStockCount), sub: "At or below threshold" },
+  ];
 
-export const CommissionReport = () => (
-  <ReportShell
-    title="Commission & Payout Report"
-    subtitle="Seller commissions earned, platform fee collected, payouts processed"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Commission Report" }]}
-    stats={[
-      { label: "Total Commission", value: "₹84.2 L", trend: 11.3 },
-      { label: "Platform Fees", value: "₹12.6 L", trend: 9.8 },
-      { label: "Payouts Processed", value: "₹71.4 L", trend: 10.2 },
-      { label: "Pending Settlement", value: "₹6.2 L", trend: 3 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Commission by Category</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Pie — commission split by category
-        </div>
+  return (
+    <ReportShell
+      title="Inventory Analytics"
+      subtitle="Current stock health and low-stock products from inventory APIs"
+      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Inventory Analytics" }]}
+      stats={stats}
+      loading={loading}
+      error={error}
+      filters={filters}
+      onRefresh={refresh}
+      exportEndpoint={ENDPOINTS.operationsReports.inventory}
+      exportFilename="inventory-report.csv"
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartPanel title="Stock Health" data={stockRows.filter((row) => row.count > 0)}>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie data={stockRows.filter((row) => row.count > 0)} dataKey="count" nameKey="status" outerRadius={94} label>
+                {stockRows.map((_, index) => (
+                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => formatNumber(value)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ReportTable
+          title="Low Stock Products"
+          rows={lowStockRows}
+          columns={[
+            { key: "title", label: "Product" },
+            { key: "sku", label: "SKU" },
+            { key: "stock", label: "Stock", render: (value) => formatNumber(value) },
+            { key: "reservedStock", label: "Reserved", render: (value) => formatNumber(value) },
+            { key: "availableStock", label: "Available", render: (value) => formatNumber(value) },
+          ]}
+        />
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Payout Timeline</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Bar — weekly payout batches
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+    </ReportShell>
+  );
+};
 
-export const UserReport = () => (
-  <ReportShell
-    title="User Report"
-    subtitle="Customer acquisition, retention, lifetime value, and activity"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "User Report" }]}
-    stats={[
-      { label: "Total Customers", value: "10,240", trend: 14.6 },
-      { label: "New This Month", value: "842", trend: 22 },
-      { label: "Repeat Buyers", value: "4,180", trend: 8.1 },
-      { label: "Avg LTV", value: "₹3,420", trend: 5.4 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">New Customer Acquisition</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Area chart — daily new signups
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Retention Cohorts</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Cohort heatmap
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+export const SellerAnalytics = () => {
+  const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
+  const sellers = listFrom(data.sellerPerformance);
+  const finance = data.finance || {};
+  const payouts = data.payouts || {};
+  const rows = sellers.map((seller) => ({
+    sellerId: seller.sellerId,
+    sellerName: seller.sellerName || seller.sellerId,
+    orderCount: asNumber(seller.orderCount),
+    deliveredOrders: asNumber(seller.deliveredOrders),
+    gmvAmount: asNumber(seller.gmvAmount),
+    commissionAmount: asNumber(seller.commissionAmount),
+    deliveryRate: asNumber(seller.deliveryRate),
+  }));
+  const gmvTotal = rows.reduce((sum, row) => sum + row.gmvAmount, 0);
 
-export const AnalyticsDashboard = () => (
-  <ReportShell
-    title="Analytics Dashboard"
-    subtitle="Platform-wide metrics: GMV, orders, users, and seller health at a glance"
-    breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
-    stats={[
-      { label: "Platform GMV", value: "₹8.4 Cr", trend: 11.2 },
-      { label: "Total Orders", value: "50,240", trend: 9.2 },
-      { label: "Active Customers", value: "10,240", trend: 14.6 },
-      { label: "Active Sellers", value: "284", trend: 6 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">GMV Over Time</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Area chart — daily GMV trend
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Revenue by Category</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Donut — top categories by GMV
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Order Status Health</h3>
-        <div className="h-48 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Stacked bar — fulfilled / pending / cancelled
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Customer Acquisition</h3>
-        <div className="h-48 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Bar chart — new signups per week
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Top Sellers by GMV</h3>
-        <div className="h-48 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Horizontal bar — top 10 sellers
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+  const stats = [
+    { label: "Top Seller GMV", value: formatCurrency(gmvTotal), sub: "Visible seller rows" },
+    { label: "Platform Revenue", value: formatCurrency(finance.platformRevenueTotalAmount), sub: "Commission plus tax" },
+    { label: "Seller Payable", value: formatCurrency(finance.sellerPayableAmount), sub: "Net seller revenue" },
+    { label: "Pending Payouts", value: formatCurrency(payouts.byStatus?.pending?.netAmount), sub: "Current payout queue" },
+  ];
 
-export const DynamicPricingReport = () => (
-  <ReportShell
-    title="Dynamic Pricing"
-    subtitle="Algorithmic price rules, surge pricing events, and competitive benchmarks"
-    breadcrumbs={[{ label: "Marketing" }, { label: "Dynamic Pricing" }]}
-    stats={[
-      { label: "Active Rules", value: "34", trend: 2 },
-      { label: "Price Adjustments Today", value: "1,204", trend: 8.6 },
-      { label: "Avg Price Lift", value: "+4.2%", trend: 0.3 },
-      { label: "Rules Triggered (7d)", value: "8,420", trend: 5.1 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Price Rule Coverage</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Pie — products under dynamic vs static pricing
-        </div>
+  return (
+    <ReportShell
+      title="Seller Analytics"
+      subtitle="Seller GMV, fulfilment, commissions, and payout exposure"
+      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Seller Analytics" }]}
+      stats={stats}
+      loading={loading}
+      error={error}
+      filters={filters}
+      onRefresh={refresh}
+      exportEndpoint={ENDPOINTS.operationsReports.sellerScorecards}
+      exportFilename="seller-analytics.csv"
+    >
+      <div className="space-y-4">
+        <ChartPanel title="Top Sellers by GMV" data={rows}>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={rows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(value) => formatCurrency(value)} />
+              <YAxis type="category" dataKey="sellerName" width={130} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Bar dataKey="gmvAmount" fill="#1f4fb2" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ReportTable
+          title="Seller Scorecard"
+          rows={rows}
+          columns={[
+            { key: "sellerName", label: "Seller" },
+            { key: "orderCount", label: "Orders", render: (value) => formatNumber(value) },
+            { key: "deliveredOrders", label: "Delivered", render: (value) => formatNumber(value) },
+            { key: "gmvAmount", label: "GMV", render: (value) => formatCurrency(value) },
+            { key: "commissionAmount", label: "Commission", render: (value) => formatCurrency(value) },
+            { key: "deliveryRate", label: "Delivery Rate", render: (value) => `${asNumber(value)}%` },
+          ]}
+        />
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Price Change Events Over Time</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Line — hourly price adjustments by rule type
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+    </ReportShell>
+  );
+};
 
-export const NotificationsOverview = () => (
-  <ReportShell
-    title="Notifications"
-    subtitle="Send and manage platform notifications to customers, sellers, and admins"
-    breadcrumbs={[{ label: "Marketing" }, { label: "Notifications" }]}
-    stats={[
-      { label: "Sent This Week", value: "42,800", trend: 6.2 },
-      { label: "Delivery Rate", value: "98.4%", trend: 0.3 },
-      { label: "Open Rate", value: "34.2%", trend: 2.1 },
-      { label: "Failed / Bounced", value: "682", trend: -4.8 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Notification Volume Over Time</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Stacked area — email / SMS / push by day
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Channel Breakdown</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Donut — Email / SMS / Push / In-App
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+export const AnalyticsDashboard = () => {
+  const filters = useReportFilters();
+  const loadData = useCallback(async ({ fromDate, toDate }) => {
+    const [marketplace, topProducts, inventoryStats] = await Promise.all([
+      fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
+      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases" }),
+      fetchJson(ENDPOINTS.inventory.stats),
+    ]);
+    return { marketplace, topProducts: listFrom(topProducts), inventoryStats };
+  }, []);
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
+  const marketplace = data.marketplace || {};
+  const orders = marketplace.orders || {};
+  const returns = marketplace.returns || {};
+  const payouts = marketplace.payouts || {};
+  const inventory = data.inventoryStats || {};
+  const orderStatusRows = listFrom(orders.statusBreakdown);
+  const sellerRows = listFrom(marketplace.sellerPerformance).map((seller) => ({
+    sellerName: seller.sellerName || seller.sellerId,
+    gmvAmount: asNumber(seller.gmvAmount),
+  }));
+  const productRows = listFrom(data.topProducts).map((product) => ({
+    title: product.title || product.name || "Untitled",
+    purchases: asNumber(product.analytics?.purchases),
+  }));
+  const stockRows = [
+    { status: "Low Stock", count: asNumber(inventory.lowStockCount) },
+    { status: "Out of Stock", count: asNumber(inventory.outOfStockCount) },
+    { status: "Reserved", count: asNumber(inventory.totalReserved) },
+  ];
 
-export const SubscriptionsOverview = () => (
-  <ReportShell
-    title="Subscriptions Overview"
-    subtitle="Active subscriptions, MRR, churn rate, and plan distribution"
-    breadcrumbs={[{ label: "Orders Management" }, { label: "Subscriptions Overview" }]}
-    stats={[
-      { label: "Active Subscriptions", value: "1,840", trend: 12.4 },
-      { label: "MRR", value: "₹18.4 L", trend: 9.6 },
-      { label: "Churn Rate", value: "2.1%", trend: -0.4 },
-      { label: "New This Month", value: "234", trend: 18.2 },
-    ]}
-  >
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">MRR Growth</h3>
-        <div className="h-64 w-full rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Area chart — monthly recurring revenue trend
-        </div>
+  const stats = [
+    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount), sub: "GMV in selected range" },
+    { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
+    { label: "Return Requests", value: formatNumber(returns.returnCount), sub: "Return workflow" },
+    { label: "Pending Payouts", value: formatCurrency(payouts.byStatus?.pending?.netAmount), sub: "Seller settlements" },
+  ];
+
+  return (
+    <ReportShell
+      title="Analytics Dashboard"
+      subtitle="Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"
+      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
+      stats={stats}
+      loading={loading}
+      error={error}
+      filters={filters}
+      onRefresh={refresh}
+    >
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartPanel title="Order Status Summary" data={orderStatusRows}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={orderStatusRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatNumber(value)} />
+              <Bar dataKey="count" fill="#1f4fb2" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title="Top Sellers by GMV" data={sellerRows}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={sellerRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(value) => formatCurrency(value)} />
+              <YAxis type="category" dataKey="sellerName" width={120} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Bar dataKey="gmvAmount" fill="#d6a323" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title="Top Products by Purchases" data={productRows}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={productRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="title" width={120} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatNumber(value)} />
+              <Bar dataKey="purchases" fill="#24b8c3" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title="Inventory Risk" data={stockRows.filter((row) => row.count > 0)}>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={stockRows.filter((row) => row.count > 0)} dataKey="count" nameKey="status" outerRadius={90} label>
+                {stockRows.map((_, index) => (
+                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => formatNumber(value)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartPanel>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Plan Distribution</h3>
-        <div className="h-64 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-sm">
-          Donut — Basic / Standard / Premium plans
-        </div>
-      </div>
-    </div>
-  </ReportShell>
-);
+    </ReportShell>
+  );
+};

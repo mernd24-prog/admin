@@ -48,13 +48,20 @@ const initialState = {
   taxReportsData: {},
   taxInvoicesData: {},
   taxCreditNotesData: {},
+  marketplaceInvoicesData: {},
   createTaxInvoiceData: {},
+  createMarketplaceInvoicesData: {},
   createTaxCreditNoteData: {},
+  dispatchTaxInvoiceData: {},
+  dispatchTaxCreditNoteData: {},
+  taxDocumentDispatchesData: {},
+  retryTaxDocumentDispatchData: {},
   deliveryServiceabilityData: {},
   orderEwayBillData: {},
   createOrderEwayBillData: {},
   updateEwayBillStatusData: {},
   realtimeAnalyticsData: {},
+  adminMarketplaceAnalyticsData: {},
   returnsAnalyticsData: {},
   chargebacksData: {},
   apiKeysData: {},
@@ -557,17 +564,24 @@ export const closeReturn = createApiThunkPrivate("adminCore/closeReturn", (paylo
 export const getAdminPayouts = createApiThunkPrivate("adminCore/getAdminPayouts", ENDPOINTS.payouts.admin, "GET", true, { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) });
 export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST", false, { transformBody: toAdminPayoutBody });
 export const getWalletTransactions = createApiThunkPrivate("adminCore/getWalletTransactions", ENDPOINTS.wallets.adminTransactions, "GET", true, { transformParams: pickQuery(["userId", "type", "status", "referenceType", "referenceId", "search", "fromDate", "toDate", "limit", "offset"]) });
-export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.adminReports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "limit", "offset"]) });
+export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.reports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "format", "limit", "offset"]) });
 export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoice", (payload) => ENDPOINTS.tax.adminInvoice(payload.orderId), "POST", false, { transformBody: noBody });
-export const getTaxInvoices = createApiThunkPrivate("adminCore/getTaxInvoices", ENDPOINTS.tax.invoices, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "buyerId", "state", "hsnCode", "search", "sortBy", "sortDir", "limit", "offset"]) });
-export const getTaxCreditNotes = createApiThunkPrivate("adminCore/getTaxCreditNotes", ENDPOINTS.tax.creditNotes, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "orderId", "buyerId", "referenceType", "search", "sortBy", "sortDir", "limit", "offset"]) });
+export const getMarketplaceInvoices = createApiThunkPrivate("adminCore/getMarketplaceInvoices", (payload) => ENDPOINTS.tax.marketplaceInvoices(payload.orderId || payload.id), "GET", true, { transformParams: pickQuery(["format"]) });
+export const createMarketplaceInvoices = createApiThunkPrivate("adminCore/createMarketplaceInvoices", (payload) => ENDPOINTS.tax.marketplaceInvoices(payload.orderId || payload.id), "POST", false, { transformBody: noBody });
+export const getTaxInvoices = createApiThunkPrivate("adminCore/getTaxInvoices", ENDPOINTS.tax.invoices, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "buyerId", "state", "status", "invoiceType", "referenceType", "referenceId", "hsnCode", "search", "sortBy", "sortDir", "limit", "offset"]) });
+export const getTaxCreditNotes = createApiThunkPrivate("adminCore/getTaxCreditNotes", ENDPOINTS.tax.creditNotes, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "orderId", "buyerId", "sellerId", "referenceType", "referenceId", "status", "search", "sortBy", "sortDir", "limit", "offset"]) });
 export const createTaxCreditNote = createApiThunkPrivate("adminCore/createTaxCreditNote", ENDPOINTS.tax.creditNotes, "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
+export const dispatchTaxInvoice = createApiThunkPrivate("adminCore/dispatchTaxInvoice", (payload) => ENDPOINTS.tax.invoiceDispatch(payload.invoiceId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["channel", "recipient", "note"]) });
+export const dispatchTaxCreditNote = createApiThunkPrivate("adminCore/dispatchTaxCreditNote", (payload) => ENDPOINTS.tax.creditNoteDispatch(payload.creditNoteId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["channel", "recipient", "note"]) });
+export const getTaxDocumentDispatches = createApiThunkPrivate("adminCore/getTaxDocumentDispatches", ENDPOINTS.tax.documentDispatches, "GET", true, { transformParams: pickQuery(["documentType", "status", "channel", "search", "fromDate", "toDate", "limit", "offset"]) });
+export const retryTaxDocumentDispatch = createApiThunkPrivate("adminCore/retryTaxDocumentDispatch", (payload) => ENDPOINTS.tax.documentDispatchRetry(payload.dispatchId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["note"]) });
 export const getDeliveryServiceability = createApiThunkPrivate("adminCore/getDeliveryServiceability", ENDPOINTS.delivery.serviceability, "GET");
 export const getOrderEwayBill = createApiThunkPrivate("adminCore/getOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "GET");
 export const createOrderEwayBill = createApiThunkPrivate("adminCore/createOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["orderId", "id"]) });
 export const updateEwayBillStatus = createApiThunkPrivate("adminCore/updateEwayBillStatus", (payload) => ENDPOINTS.delivery.ewayBillStatus(payload.ewayBillId), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["ewayBillId", "id"]) });
 
 export const getRealtimeAnalytics = createApiThunkPrivate("adminCore/getRealtimeAnalytics", ENDPOINTS.analytics.realtime, "GET", true, { transformParams: pickQuery(["hours"]) });
+export const getAdminMarketplaceAnalytics = createApiThunkPrivate("adminCore/getAdminMarketplaceAnalytics", ENDPOINTS.analytics.adminDashboard, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "granularity"]) });
 export const getReturnsAnalytics = createApiThunkPrivate("adminCore/getReturnsAnalytics", ENDPOINTS.analytics.returns, "GET", true, { transformParams: pickQuery(["fromDate", "toDate"]) });
 export const getChargebacks = createApiThunkPrivate("adminCore/getChargebacks", ENDPOINTS.analytics.chargebacks, "GET", true, { transformParams: pickQuery(["status", "fromDate", "toDate", "limit", "offset"]) });
 
@@ -741,13 +755,20 @@ const adminCoreSlice = createSlice({
       [getTaxReports, "taxReportsData"],
       [getTaxInvoices, "taxInvoicesData"],
       [getTaxCreditNotes, "taxCreditNotesData"],
+      [getMarketplaceInvoices, "marketplaceInvoicesData"],
       [createTaxInvoice, "createTaxInvoiceData"],
+      [createMarketplaceInvoices, "createMarketplaceInvoicesData"],
       [createTaxCreditNote, "createTaxCreditNoteData"],
+      [dispatchTaxInvoice, "dispatchTaxInvoiceData"],
+      [dispatchTaxCreditNote, "dispatchTaxCreditNoteData"],
+      [getTaxDocumentDispatches, "taxDocumentDispatchesData"],
+      [retryTaxDocumentDispatch, "retryTaxDocumentDispatchData"],
       [getDeliveryServiceability, "deliveryServiceabilityData"],
       [getOrderEwayBill, "orderEwayBillData"],
       [createOrderEwayBill, "createOrderEwayBillData"],
       [updateEwayBillStatus, "updateEwayBillStatusData"],
       [getRealtimeAnalytics, "realtimeAnalyticsData"],
+      [getAdminMarketplaceAnalytics, "adminMarketplaceAnalyticsData"],
       [getReturnsAnalytics, "returnsAnalyticsData"],
       [getChargebacks, "chargebacksData"],
       [getApiKeys, "apiKeysData"],

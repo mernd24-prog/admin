@@ -25,6 +25,7 @@ const ORDER_STATUSES = [
   "delivered",
   "fulfilled",
   "return_requested",
+  "partially_returned",
   "returned",
   "cancelled",
 ];
@@ -34,6 +35,7 @@ const PAYMENT_STATUSES = [
   "authorized",
   "captured",
   "failed",
+  "partially_refunded",
   "refunded",
   "cancelled",
 ];
@@ -44,10 +46,14 @@ const DELIVERY_STATUSES = [
   "picked_up",
   "in_transit",
   "out_for_delivery",
+  "partially_delivered",
   "delivered",
+  "delivered_verified",
   "failed",
   "cancelled",
   "rto",
+  "lost",
+  "damaged",
 ];
 
 const FILTER_FIELDS = [

@@ -66,7 +66,7 @@ const SELLER_SIDEBAR_SECTIONS = [
     module: "returns",
     tab: "Orders Management",
     label: "Returns",
-    route: "order-return-reasons",
+    route: "returns",
   },
   {
     module: "sellers",

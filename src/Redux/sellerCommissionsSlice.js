@@ -9,10 +9,18 @@ const initialState = {
   adminCommissionsData: {},
   adminPayoutsData: {},
   settlementsData: {},
+  walletSummaryData: {},
+  payoutOperationsQueueData: {},
+  negativeBalancesData: {},
   calculateCommissionData: {},
   processPayoutsData: {},
   completePayoutData: {},
   failPayoutData: {},
+  approvePayoutData: {},
+  holdPayoutData: {},
+  releasePayoutHoldData: {},
+  retryPayoutData: {},
+  resolveNegativeBalanceData: {},
 };
 
 const pickQuery = (keys = []) => (payload = {}) =>
@@ -40,7 +48,8 @@ export const getSellerSettlements = createApiThunkPrivate(
   "sellerCommissions/getSellerSettlements",
   ENDPOINTS.payouts.settlements,
   "GET",
-  true
+  true,
+  { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerFinanceSummary = createApiThunkPrivate(
@@ -67,6 +76,30 @@ export const getAdminSellerPayouts = createApiThunkPrivate(
   { transformParams: pickQuery(["sellerId", "status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
+export const getSellerWalletSummary = createApiThunkPrivate(
+  "sellerCommissions/getSellerWalletSummary",
+  (payload) => ENDPOINTS.payouts.sellerWallet(payload?.sellerId || payload?.id),
+  "GET",
+  true,
+  { transformParams: pickQuery(["fromDate", "toDate"]) }
+);
+
+export const getPayoutOperationsQueue = createApiThunkPrivate(
+  "sellerCommissions/getPayoutOperationsQueue",
+  ENDPOINTS.payouts.operationsQueue,
+  "GET",
+  true,
+  { transformParams: pickQuery(["sellerId", "status", "queue", "search", "fromDate", "toDate", "limit", "offset"]) }
+);
+
+export const getNegativeBalances = createApiThunkPrivate(
+  "sellerCommissions/getNegativeBalances",
+  ENDPOINTS.payouts.negativeBalances,
+  "GET",
+  true,
+  { transformParams: pickQuery(["sellerId", "status", "search", "limit", "offset"]) }
+);
+
 export const calculateSellerCommission = createApiThunkPrivate(
   "sellerCommissions/calculateSellerCommission",
   (payload) => ENDPOINTS.payouts.calculate(payload?.orderId || payload?.id),
@@ -86,7 +119,7 @@ export const completeSellerPayout = createApiThunkPrivate(
   (payload) => ENDPOINTS.payouts.complete(payload?.payoutId || payload?.id),
   "POST",
   false,
-  { transformBody: (payload = {}) => ({ paymentReference: payload.paymentReference, paymentMethod: payload.paymentMethod, notes: payload.notes }) }
+  { transformBody: (payload = {}) => ({ paymentReference: payload.paymentReference, paymentMethod: payload.paymentMethod, notes: payload.notes || payload.note }) }
 );
 
 export const failSellerPayout = createApiThunkPrivate(
@@ -95,6 +128,59 @@ export const failSellerPayout = createApiThunkPrivate(
   "POST",
   false,
   { transformBody: (payload = {}) => ({ reason: payload.reason }) }
+);
+
+export const approveSellerPayout = createApiThunkPrivate(
+  "sellerCommissions/approveSellerPayout",
+  (payload) => ENDPOINTS.payouts.approve(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ note: payload.note, paymentMethod: payload.paymentMethod }) }
+);
+
+export const holdSellerPayout = createApiThunkPrivate(
+  "sellerCommissions/holdSellerPayout",
+  (payload) => ENDPOINTS.payouts.hold(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ reason: payload.reason }) }
+);
+
+export const releaseSellerPayoutHold = createApiThunkPrivate(
+  "sellerCommissions/releaseSellerPayoutHold",
+  (payload) => ENDPOINTS.payouts.releaseHold(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ approve: payload.approve === true, note: payload.note }) }
+);
+
+export const retrySellerPayout = createApiThunkPrivate(
+  "sellerCommissions/retrySellerPayout",
+  (payload) => ENDPOINTS.payouts.retry(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      paymentReference: payload.paymentReference,
+      paymentMethod: payload.paymentMethod,
+      autoProcess: payload.autoProcess === true,
+    }),
+  }
+);
+
+export const resolveNegativeBalance = createApiThunkPrivate(
+  "sellerCommissions/resolveNegativeBalance",
+  (payload) => ENDPOINTS.payouts.resolveNegativeBalance(payload?.settlementId || payload?.id),
+  "POST",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      action: payload.action,
+      amount: payload.amount,
+      referenceId: payload.referenceId,
+      note: payload.note,
+    }),
+  }
 );
 
 const sellerCommissionsSlice = createSlice({
@@ -107,10 +193,18 @@ const sellerCommissionsSlice = createSlice({
     createExtraReducersForThunk(builder, getAdminSellerCommissions, "adminCommissionsData");
     createExtraReducersForThunk(builder, getAdminSellerPayouts, "adminPayoutsData");
     createExtraReducersForThunk(builder, getSellerSettlements, "settlementsData");
+    createExtraReducersForThunk(builder, getSellerWalletSummary, "walletSummaryData");
+    createExtraReducersForThunk(builder, getPayoutOperationsQueue, "payoutOperationsQueueData");
+    createExtraReducersForThunk(builder, getNegativeBalances, "negativeBalancesData");
     createExtraReducersForThunk(builder, calculateSellerCommission, "calculateCommissionData");
     createExtraReducersForThunk(builder, processSellerPayouts, "processPayoutsData");
     createExtraReducersForThunk(builder, completeSellerPayout, "completePayoutData");
     createExtraReducersForThunk(builder, failSellerPayout, "failPayoutData");
+    createExtraReducersForThunk(builder, approveSellerPayout, "approvePayoutData");
+    createExtraReducersForThunk(builder, holdSellerPayout, "holdPayoutData");
+    createExtraReducersForThunk(builder, releaseSellerPayoutHold, "releasePayoutHoldData");
+    createExtraReducersForThunk(builder, retrySellerPayout, "retryPayoutData");
+    createExtraReducersForThunk(builder, resolveNegativeBalance, "resolveNegativeBalanceData");
   },
 });
 

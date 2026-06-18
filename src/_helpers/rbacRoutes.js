@@ -84,7 +84,6 @@ const MODULE_LABELS = {
   "zip-codes": "Zip Code Management",
   delivery: "Delivery Management",
   pricing: "Pricing & Promotions",
-  "dynamic-pricing": "Dynamic Pricing",
   referral: "Referral Commerce",
   loyalty: "Loyalty",
   recommendations: "Recommendations",
@@ -169,7 +168,6 @@ const MODULE_TABS = {
   pricing: "Marketing",
   banners: "Marketing",
   notifications: "Marketing",
-  "dynamic-pricing": "Marketing",
   loyalty: "Marketing",
   referral: "Marketing",
   recommendations: "Marketing",
@@ -259,7 +257,7 @@ export const MODULE_DEFAULT_ROUTES = {
   returns:      "returns",
   reviews:      "product-reviews",
   payments:     "payments",
-  wallets:      "transactions",
+  wallets:      "wallet-transactions",
   subscriptions:"subscription-orders",
   // Users
   users:              "users",
@@ -282,13 +280,9 @@ export const MODULE_DEFAULT_ROUTES = {
   // Marketing
   coupons:         "discount-coupons",
   pricing:         "discount-coupons",
-  "dynamic-pricing":"special-price",
   referral:        "referral-commerce",
-  loyalty:         "reward-on-purchase",
-  recommendations: "similar-products",
-  notifications:   "notifications",
-  "dynamic-pricing": "dynamic-pricing",
-  subscriptions:   "subscriptions",
+  notifications:   "messages",
+  subscriptions:   "subscription-orders",
   reports:         "reports-sales",
   // Tax & Compliance
   tax:       "tax",
@@ -297,7 +291,7 @@ export const MODULE_DEFAULT_ROUTES = {
   states:    "state",
   cities:    "city",
   zip_codes: "zip-codes",
-  delivery:  "shipping-packages",
+  delivery:  "shipment-tracking",
   // Settings / misc
   fraud: "fraud-cases",
   "fraud-cases": "fraud-cases",
@@ -315,13 +309,6 @@ export const MODULE_DEFAULT_ROUTES = {
   "wallet-management": "wallet-management",
   "notification-templates": "notification-templates",
   // Reports
-  "reports-orders": "reports-orders",
-  "reports-payments": "reports-payments",
-  "reports-returns": "reports-returns",
-  "reports-cancellations": "reports-cancellations",
-  "reports-delivery": "reports-delivery",
-  "reports-commissions": "reports-commissions",
-  "reports-users": "reports-users",
   // Tax & Finance
   "tax-invoices": "tax-invoices",
   "credit-notes": "credit-notes",
@@ -384,7 +371,7 @@ const ROUTE_MODULES = [
   [["/permission-templates"], ["rbac"]],
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
-  [["/seller-finance"], ["sellers/commissions"]],
+  [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller"], ["sellers"]],
   [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins"], ["seller-management", "sellers"]],
   [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
@@ -394,10 +381,7 @@ const ROUTE_MODULES = [
   // Catalog Management — products
   [
     [
-      "/product-catalog", "/add-product", "/draft-products",
-      "/pending-products", "/change-pending-products", "/rejected-products",
-      "/product-tags", "/store", "/bar-code", "/qty-head",
-      "/seo-media",
+      "/product-catalog", "/store", "/bar-code", "/qty-head",
     ],
     ["products"],
   ],
@@ -434,38 +418,27 @@ const ROUTE_MODULES = [
   // Orders Management
   [
     [
-      "/orders", "/orders/view", "/view-orders", "/order-status",
-      "/gift-card-orders", "/order-cancellation-reasons", "/checkout-quote",
+      "/orders", "/orders/view", "/view-orders", "/checkout-quote",
     ],
     ["orders"],
   ],
   [["/carts"], ["carts"]],
-  [["/payments", "/refunds"], ["payments", "wallets", "orders"]],
+  [["/payments"], ["payments", "wallets", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
   [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
   [["/product-reviews"], ["reviews", "orders"]],
-  [["/returns", "/order-return-reasons"], ["returns", "orders"]],
-  [["/subscription-orders", "/view-subscription-orders"], ["subscriptions", "orders"]],
+  [["/returns"], ["returns", "orders"]],
+  [["/subscription-orders"], ["subscriptions", "orders"]],
 
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
   [
     [
-      "/special-price", "/volume-discounts",
-      "/PPC-promotions-management",
-      "/badges", "/ribbons", "/campaigns",
+      "/badges", "/ribbons",
     ],
     ["pricing"],
   ],
-  [
-    [
-      "/similar-products", "/frequently-bought-together",
-      "/product-event-weightages", "/recommended-product-tag-weightages",
-    ],
-    ["recommendations", "pricing"],
-  ],
-  [["/reward-on-purchase"], ["loyalty"]],
   [["/referral-commerce"], ["referral"]],
   [["/promotions-banners", "/content-management/promotion-banner"], ["banners", "cms_pages", "cms", "pricing"]],
 
@@ -473,7 +446,6 @@ const ROUTE_MODULES = [
   [
     [
       "/tax", "/subTax", "/tax-rule", "/hsn-code",
-      "/tax-structure", "/tax-category", "/tax-category-rules",
       "/tax-documents",
     ],
     ["tax"],
@@ -486,21 +458,18 @@ const ROUTE_MODULES = [
   [
     [
       "/shipping-company-users", "/shipping-packages", "/shipment-tracking",
-      "/shipping-profile", "/pickup-addresses", "/delivery-staff",
+      "/pickup-addresses", "/delivery-staff",
+      "/delivery-agents",
       "/shipping-duration",
     ],
     ["delivery"],
   ],
 
-  // Analytics & Dynamic Pricing
+  // Analytics
   [["/analytics"], ["analytics", "reports"]],
-  [["/dynamic-pricing"], ["pricing", "dynamic-pricing", "admin"]],
 
   // Notifications
-  [["/messages", "/notifications"], ["notifications", "users"]],
-
-  // Subscriptions overview
-  [["/subscriptions"], ["subscriptions", "orders"]],
+  [["/messages"], ["notifications", "users"]],
 
   // Reports & Analytics
   [
@@ -527,10 +496,7 @@ const ROUTE_MODULES = [
   ],
 
   // Settings
-  [
-    ["/settings", "/setting", "/payment-settings", "/seo-settings", "/rotate"],
-    ["admin", "platform", "fraud"],
-  ],
+  [["/settings", "/setting", "/rotate"], ["admin", "platform", "fraud"]],
 
   // Seller Management — additional
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
@@ -560,19 +526,10 @@ const ROUTE_MODULES = [
 
   // Collections & Badges
   [["/collections"], ["platform", "products"]],
-  [["/badges", "/ribbons", "/campaigns"], ["platform", "pricing"]],
+  [["/badges", "/ribbons"], ["platform", "pricing"]],
 
   // Preferences
   [["/preferences"], ["admin"]],
-
-  // Reports — extended
-  [["/reports-orders"], ["reports", "orders", "analytics"]],
-  [["/reports-payments"], ["reports", "payments", "analytics"]],
-  [["/reports-returns"], ["reports", "returns", "analytics"]],
-  [["/reports-cancellations"], ["reports", "orders", "analytics"]],
-  [["/reports-delivery"], ["reports", "delivery", "analytics"]],
-  [["/reports-commissions"], ["reports", "sellers/commissions", "analytics"]],
-  [["/reports-users"], ["reports", "users", "analytics"]],
 
   // Tax & Finance — invoices / credit notes
   [["/tax-invoices"], ["tax", "payments", "orders"]],

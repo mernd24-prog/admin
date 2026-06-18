@@ -28,15 +28,17 @@ const ALLOWED_TRANSITIONS = {
   packed:          ["shipped", "cancelled"],
   shipped:         ["delivered"],
   delivered:       ["fulfilled", "return_requested"],
-  return_requested:["returned"],
+  fulfilled:       ["return_requested"],
+  return_requested:["partially_returned", "returned"],
+  partially_returned:["return_requested", "fulfilled"],
 };
 
 // Transitions a seller is allowed to trigger (backend: packed/shipped/fulfilled only)
-const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "delivered", "fulfilled", "returned"]);
+const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "delivered", "fulfilled", "return_requested", "partially_returned", "returned"]);
 
 const ALL_STATUSES = [
   "pending_payment", "payment_failed", "confirmed", "packed",
-  "shipped", "delivered", "fulfilled", "return_requested", "returned", "cancelled",
+  "shipped", "delivered", "fulfilled", "return_requested", "partially_returned", "returned", "cancelled",
 ];
 
 const toOption = (status) => ({ value: status, label: status.replace(/_/g, " ") });
@@ -621,7 +623,7 @@ const OrderSummary = () => {
                         { label: "Shipment", value: displayStatus(cancellation.shipment_status) },
                         { label: "Requested", value: formatDate(cancellation.created_at) },
                       ]}
-                      action={<button type="button" className="text-xs font-medium text-[#2f6fed]" onClick={() => navigate(`/app/order-cancellation-reasons?search=${encodeURIComponent(cancellation.cancellation_number)}`)}>Open recovery queue</button>}
+                      action={<button type="button" className="text-xs font-medium text-[#2f6fed]" onClick={() => navigate(`/app/cancellations?search=${encodeURIComponent(cancellation.cancellation_number)}`)}>Open recovery queue</button>}
                     />
                   ))}
                 </div>

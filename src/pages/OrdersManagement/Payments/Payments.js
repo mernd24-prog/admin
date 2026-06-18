@@ -34,7 +34,7 @@ const PROVIDERS = [
   "manual_upi",
   "wallet_only",
 ];
-const STATUSES = ["initiated", "authorized", "captured", "failed", "refunded"];
+const STATUSES = ["initiated", "authorized", "captured", "failed", "partially_refunded", "refunded"];
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;

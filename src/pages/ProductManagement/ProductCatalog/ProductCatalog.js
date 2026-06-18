@@ -96,22 +96,7 @@ const refToLabel = (value) => {
   return String(value);
 };
 
-const getInitialFiltersForPath = (pathname = "") => {
-  const path = String(pathname || "").toLowerCase();
-  if (path.includes("draft-products")) {
-    return { ...INITIAL_FILTERS, approvalStatus: { value: "Draft", label: "Draft" } };
-  }
-  if (path.includes("change-pending-products")) {
-    return { ...INITIAL_FILTERS, approvalStatus: { value: "Change Pending", label: "Change Pending" } };
-  }
-  if (path.includes("pending-products")) {
-    return { ...INITIAL_FILTERS, approvalStatus: { value: "Pending", label: "Pending" } };
-  }
-  if (path.includes("rejected-products")) {
-    return { ...INITIAL_FILTERS, approvalStatus: { value: "Rejected", label: "Rejected" } };
-  }
-  return INITIAL_FILTERS;
-};
+const getInitialFiltersForPath = () => INITIAL_FILTERS;
 
 const ProductCatalog = () => {
   const dispatch = useDispatch();
@@ -870,42 +855,6 @@ const ProductCatalog = () => {
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
-      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <p className="text-sm font-semibold text-blue-900">
-          Product Setup Flow
-        </p>
-        <p className="mt-1 text-xs text-blue-800">
-          Recommended sequence: Categories/Attributes → Brands → Families →
-          Options/Option Values → Variants → Dimensions/Warranty/Batch/HSN →
-          Product Catalog.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button onClick={() => navigate("/app/product-flow")}>
-            Open Full Flow
-          </Button>
-          <Button onClick={() => navigate("/app/categories")}>
-            Categories
-          </Button>
-          <Button onClick={() => navigate("/app/brands")}>Brands</Button>
-          <Button onClick={() => navigate("/app/product-families")}>
-            Families
-          </Button>
-          <Button onClick={() => navigate("/app/product-options")}>
-            Options
-          </Button>
-          <Button onClick={() => navigate("/app/product-variants")}>
-            Variants
-          </Button>
-          <Button onClick={() => navigate("/app/product-dimensions")}>
-            Dimensions
-          </Button>
-          <Button onClick={() => navigate("/app/warranty")}>Warranty</Button>
-          <Button onClick={() => navigate("/app/batch")}>Batch</Button>
-          <PermissionGuard module="tax" action="view" hide>
-            <Button onClick={() => navigate("/app/hsn-code")}>HSN</Button>
-          </PermissionGuard>
-        </div>
-      </div> */}
       <div className="bg-white">
         <section className="p-2 border-b">
           <SearchComponent

@@ -298,54 +298,6 @@ export const createCategory = createApiThunkPrivate('product/createCategory', EN
 
 
 
-////Finish->>>>>>>>>>>
-export const FinishGetList = createApiThunkPrivate('finish/getList', ENDPOINTS.platform.finishes, 'GET', true, {
-    transformParams: (params = {}) => toListParams(params),
-})
-export const CreateFinish = createApiThunkPrivate('finish/create', ENDPOINTS.platform.finishes, 'POST', false, {
-    transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        active: payload.active ?? payload.isDisable !== true,
-    }),
-})
-export const softDeleteFinish = deleteMany('finish/softDelete', ENDPOINTS.platform.finish, 'Finish deleted successfully')
-export const enableDisableFinish = patchMany(
-    'finish/enableDisable',
-    ENDPOINTS.platform.finish,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Finish status updated successfully',
-)
-export const updateFinish = createApiThunkPrivate('finish/update', (payload) => ENDPOINTS.platform.finish(firstId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
-    }),
-})
-
-////Dimension--->>>>>>>>>>
-export const getListDimension = createApiThunkPrivate('dimension/getList', ENDPOINTS.platform.dimensions, 'GET', true, {
-    transformParams: (params = {}) => toListParams(params),
-})
-export const createDimension = createApiThunkPrivate('dimension/create', ENDPOINTS.platform.dimensions, 'POST', false, {
-    transformBody: (payload = {}) => ({
-        dimensions_value: String(payload.dimensions_value || '').trim(),
-        active: payload.active ?? payload.isDisable !== true,
-    }),
-})
-export const enableDisableDimension = patchMany(
-    'dimension/enableDisable',
-    ENDPOINTS.platform.dimension,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Dimension status updated successfully',
-)
-export const softDeleteDimension = deleteMany('dimension/softDelete', ENDPOINTS.platform.dimension, 'Dimension deleted successfully')
-export const updateDimension = createApiThunkPrivate('dimension/update', (payload) => ENDPOINTS.platform.dimension(firstId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.dimensions_value !== undefined ? { dimensions_value: String(payload.dimensions_value || '').trim() } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
-    }),
-})
-
 /// brand functions===>>>>>>>>>>>>>>>>>
 
 export const getBrandList = createApiThunkPrivate('brands/getList', ENDPOINTS.platform.brands, 'GET', true, {
@@ -408,36 +360,6 @@ export const enableDisableBatch = patchMany(
 export const getAllBatchList = createApiThunkPrivate('batch/getAllDocuments', ENDPOINTS.platform.batches, 'GET', true, {
     transformParams: (params = {}) => toListParams(params, { limit: 100 }),
 })
-
-/// product Warranty===>>>>>>>>>>>>>>>>>
-export const getWarrantyList = createApiThunkPrivate('warranty/getList', ENDPOINTS.platform.warrantyTemplates, 'GET', true, {
-    transformParams: (params = {}) => toListParams(params),
-})
-export const enableDisableWarranty = patchMany(
-    'warranty/enableDisable',
-    ENDPOINTS.platform.warrantyTemplate,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Warranty template status updated successfully',
-)
-export const softDeleteWarranty = deleteMany('warranty/softDelete', ENDPOINTS.platform.warrantyTemplate, 'Warranty template deleted successfully')
-export const createWarranty = createApiThunkPrivate('warranty/create', ENDPOINTS.platform.warrantyTemplates, 'POST', false, {
-    transformBody: (payload = {}) => ({
-        period: String(payload.period || '').trim(),
-        active: payload.active ?? payload.isDisable !== true,
-        metadata: payload.metadata || {},
-    }),
-})
-export const updateWarranty = createApiThunkPrivate('warranty/update', (payload) => ENDPOINTS.platform.warrantyTemplate(firstId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.period !== undefined ? { period: String(payload.period || '').trim() } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
-        ...(payload.metadata !== undefined ? { metadata: payload.metadata || {} } : {}),
-    }),
-})
-export const getAllWarrantyList = createApiThunkPrivate('warranty/getAllDocuments', ENDPOINTS.platform.warrantyTemplates, 'GET', true, {
-    transformParams: (params = {}) => toListParams(params, { limit: 100 }),
-})
-
 
 //product-options
 export const getListProduct = createApiThunkPrivate('product-option/getList', ENDPOINTS.platform.productOptions, 'GET', true, {

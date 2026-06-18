@@ -5,13 +5,12 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
-import ComingSoonPage from "../Shared/ComingSoonPage";
 import { socketConnection } from "../../_helpers/socket";
 import { hasModuleAccess } from "../../_helpers/authStorage";
 import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
@@ -83,9 +82,6 @@ const Brands = React.lazy(
 const ProductOptions = React.lazy(
   () => import("../../pages/ProductManagement/ProductOptions/ProductOptions"),
 );
-const ProductTags = React.lazy(
-  () => import("../../pages/ProductManagement/ProductTags/ProductTags"),
-);
 const ThresholdProducts = React.lazy(
   () =>
     import("../../pages/ProductManagement/ThresholdProducts/ThresholdProducts"),
@@ -121,39 +117,8 @@ const PlatformFeeConfig = React.lazy(
 const CommerceSettings = React.lazy(
   () => import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
 );
-const OrderStatus = React.lazy(
-  () => import("../../pages/OrdersManagement/OrderStatus/OrderStatus"),
-);
 const ProductReviews = React.lazy(
   () => import("../../pages/OrdersManagement/ProductReviews/ProductReviews"),
-);
-const SpecialPrice = React.lazy(
-  () => import("../../pages/Promotions/SpecialPrice/SpecialPrice"),
-);
-const VolumeDiscount = React.lazy(
-  () => import("../../pages/Promotions/VolumeDiscount/VolumeDiscount"),
-);
-const SimilarProducts = React.lazy(
-  () => import("../../pages/Promotions/SimilarProducts/SimilarProducts"),
-);
-const FrequentlyBoughtTogether = React.lazy(
-  () =>
-    import("../../pages/Promotions/FrequentlyBoughtTogether/FrequentlyBoughtTogether"),
-);
-const PPCPromotionsManagement = React.lazy(
-  () =>
-    import("../../pages/Promotions/PPCPromotionsManagement/PPCPromotionsManagement"),
-);
-const RewardOnPurchase = React.lazy(
-  () => import("../../pages/Promotions/RewardOnPurchase/RewardOnPurchase"),
-);
-const ProductEventWeightages = React.lazy(
-  () =>
-    import("../../pages/Promotions/ProductEventWeightages/ProductEventWeightages"),
-);
-const RecommendedProductTagWeightages = React.lazy(
-  () =>
-    import("../../pages/Promotions/RecommendedProductTagWeightages/RecommendedProductTagWeightages"),
 );
 const DiscountCoupons = React.lazy(
   () => import("../../pages/Promotions/DiscountCoupons/DiscountCoupons"),
@@ -169,14 +134,14 @@ const ShippingCompanyUsers = React.lazy(
 const ShippingPackages = React.lazy(
   () => import("../../pages/ShippingPickup/ShippingPackages/ShippingPackages"),
 );
-const ShippingProfiles = React.lazy(
-  () => import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles"),
-);
 const PickupAddresses = React.lazy(
   () => import("../../pages/ShippingPickup/PickupAddresses/PickupAddresses"),
 );
 const ShipmentTracking = React.lazy(
   () => import("../../pages/ShippingPickup/ShipmentTracking/ShipmentTracking"),
+);
+const DeliveryAgents = React.lazy(
+  () => import("../../pages/ShippingPickup/DeliveryAgents/DeliveryAgents"),
 );
 
 const AddEditProductPopup = React.lazy(
@@ -202,10 +167,6 @@ const SubscriptionOrders = React.lazy(
   () =>
     import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionOrders"),
 );
-const ViewSubscriptionOrders = React.lazy(
-  () =>
-    import("../../pages/OrdersManagement/SubscriptionOrders/components/ViewSubscriptionOrders"),
-);
 const ManageCountry = React.lazy(
   () => import("../../pages/UserManagement/ManageCountry/ManageCountry"),
 );
@@ -221,48 +182,16 @@ const ManageZipCode = React.lazy(
 const ContentManagement = React.lazy(
   () => import("../../pages/CMS/ContentManagement/ContentManagement"),
 );
-const GiftCardOrder = React.lazy(
-  () => import("../../pages/OrdersManagement/GiftCardOrder/GiftCardOrder"),
-);
-const OrderCancellationReasons = React.lazy(
-  () =>
-    import("../../pages/OrdersManagement/Order Cancellation Reasons/OrderCancellationReasons"),
-);
-const OrderReturn = React.lazy(
-  () => import("../../pages/OrdersManagement/Order Return Reason/OrderReturn"),
-);
 const Profile = React.lazy(() => import("../../pages/My Profile/Profile"));
 const ChangePassword = React.lazy(
   () => import("../../pages/Change Password/ChangePassword"),
 );
-
-const TaxStructure = React.lazy(
-  () => import("../../pages/Admin/Tax/TaxStructure"),
-);
-const TaxCategory = React.lazy(
-  () => import("../../pages/Admin/Tax/TaxCategory"),
-);
-const TaxRules = React.lazy(() => import("../../pages/Admin/Tax/TaxRules"));
 
 const ProductVariants = React.lazy(
   () => import("../../pages/ProductManagement/ProductVariants/ProductVariants"),
 );
 const ProductFamilies = React.lazy(
   () => import("../../pages/ProductManagement/ProductFamilies/ProductFamilies"),
-);
-const ProductFlow = React.lazy(
-  () => import("../../pages/ProductManagement/ProductFlow/ProductFlow"),
-);
-const ProductDimensions = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/ProductDimensions/ProductDimensions"),
-);
-const FinishProducts = React.lazy(
-  () => import("../../pages/ProductManagement/FinishProduct/FinishProduct"),
-);
-
-const ProductWarranty = React.lazy(
-  () => import("../../pages/ProductManagement/ProductWarranty/ProductWarranty"),
 );
 const Sellers = React.lazy(
   () => import("../../pages/UserManagement/Sellers/Seller"),
@@ -315,59 +244,9 @@ const SellerAnalytics = React.lazy(() =>
     default: m.SellerAnalytics,
   })),
 );
-const OrdersReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.OrdersReport,
-  })),
-);
-const PaymentsReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.PaymentsReport,
-  })),
-);
-const ReturnsReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.ReturnsReport,
-  })),
-);
-const CancellationReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.CancellationReport,
-  })),
-);
-const DeliveryReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.DeliveryReport,
-  })),
-);
-const CommissionReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.CommissionReport,
-  })),
-);
-const UserReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.UserReport,
-  })),
-);
 const AnalyticsDashboard = React.lazy(() =>
   import("../../pages/Reports/ReportShell").then((m) => ({
     default: m.AnalyticsDashboard,
-  })),
-);
-const DynamicPricingReport = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.DynamicPricingReport,
-  })),
-);
-const NotificationsOverview = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.NotificationsOverview,
-  })),
-);
-const SubscriptionsOverview = React.lazy(() =>
-  import("../../pages/Reports/ReportShell").then((m) => ({
-    default: m.SubscriptionsOverview,
   })),
 );
 
@@ -408,6 +287,18 @@ const CodConfig = React.lazy(
 );
 const SellerPayouts = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
+);
+const PayoutOpsQueue = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/PayoutOpsQueue"),
+);
+const NegativeBalances = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/NegativeBalances"),
+);
+const WalletTransactions = React.lazy(
+  () => import("../../pages/OrdersManagement/WalletTransactions/WalletTransactions"),
+);
+const ProductModerationQueue = React.lazy(
+  () => import("../../pages/ProductManagement/ProductModerationQueue/ProductModerationQueue"),
 );
 const NotificationTemplates = React.lazy(
   () => import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
@@ -743,10 +634,6 @@ function Layout() {
                   />
 
                   <Route
-                    path="/product-flow"
-                    element={renderRoute("/product-flow", <ProductFlow />)}
-                  />
-                  <Route
                     path="/product-catalog"
                     element={renderRoute(
                       "/product-catalog",
@@ -781,10 +668,6 @@ function Layout() {
                       "/product-options",
                       <ProductOptions />,
                     )}
-                  />
-                  <Route
-                    path="/product-tags"
-                    element={renderRoute("/product-tags", <ProductTags />)}
                   />
                   <Route
                     path="/threshold-products"
@@ -837,92 +720,10 @@ function Layout() {
                     element={renderRoute("/returns", <Returns />)}
                   />
                   <Route
-                    path="/refunds"
-                    element={renderRoute("/refunds", <Returns />)}
-                  />
-                  <Route
-                    path="/order-status"
-                    element={renderRoute("/order-status", <OrderStatus />)}
-                  />
-                  <Route
-                    path="/gift-card-orders"
-                    element={renderRoute(
-                      "/gift-card-orders",
-                      <GiftCardOrder />,
-                    )}
-                  />
-                  <Route
-                    path="/order-cancellation-reasons"
-                    element={renderRoute(
-                      "/order-cancellation-reasons",
-                      <OrderCancellationReasons />,
-                    )}
-                  />
-                  <Route
-                    path="/order-return-reasons"
-                    element={renderRoute(
-                      "/order-return-reasons",
-                      <OrderReturn />,
-                    )}
-                  />
-                  <Route
                     path="/product-reviews"
                     element={renderRoute(
                       "/product-reviews",
                       <ProductReviews />,
-                    )}
-                  />
-                  <Route
-                    path="/special-price"
-                    element={renderRoute("/special-price", <SpecialPrice />)}
-                  />
-                  <Route
-                    path="/volume-discounts"
-                    element={renderRoute(
-                      "/volume-discounts",
-                      <VolumeDiscount />,
-                    )}
-                  />
-                  <Route
-                    path="/similar-products"
-                    element={renderRoute(
-                      "/similar-products",
-                      <SimilarProducts />,
-                    )}
-                  />
-                  <Route
-                    path="/frequently-bought-together"
-                    element={renderRoute(
-                      "/frequently-bought-together",
-                      <FrequentlyBoughtTogether />,
-                    )}
-                  />
-                  <Route
-                    path="/PPC-promotions-management"
-                    element={renderRoute(
-                      "/PPC-promotions-management",
-                      <PPCPromotionsManagement />,
-                    )}
-                  />
-                  <Route
-                    path="/reward-on-purchase"
-                    element={renderRoute(
-                      "/reward-on-purchase",
-                      <RewardOnPurchase />,
-                    )}
-                  />
-                  <Route
-                    path="/product-event-weightages"
-                    element={renderRoute(
-                      "/product-event-weightages",
-                      <ProductEventWeightages />,
-                    )}
-                  />
-                  <Route
-                    path="/recommended-product-tag-weightages"
-                    element={renderRoute(
-                      "/recommended-product-tag-weightages",
-                      <RecommendedProductTagWeightages />,
                     )}
                   />
                   <Route
@@ -955,13 +756,6 @@ function Layout() {
                     )}
                   />
                   <Route
-                    path="/shipping-profile"
-                    element={renderRoute(
-                      "/shipping-profile",
-                      <ShippingProfiles />,
-                    )}
-                  />
-                  <Route
                     path="/pickup-addresses"
                     element={renderRoute(
                       "/pickup-addresses",
@@ -973,6 +767,20 @@ function Layout() {
                     element={renderRoute(
                       "/shipment-tracking",
                       <ShipmentTracking />,
+                    )}
+                  />
+                  <Route
+                    path="/delivery-agents"
+                    element={renderRoute(
+                      "/delivery-agents",
+                      <DeliveryAgents />,
+                    )}
+                  />
+                  <Route
+                    path="/delivery-staff"
+                    element={renderRoute(
+                      "/delivery-staff",
+                      <DeliveryAgents />,
                     )}
                   />
 
@@ -1027,13 +835,6 @@ function Layout() {
                     )}
                   />
                   <Route
-                    path="/view-subscription-orders"
-                    element={renderRoute(
-                      "/view-subscription-orders",
-                      <ViewSubscriptionOrders />,
-                    )}
-                  />
-                  <Route
                     path="/profile"
                     element={renderRoute("/profile", <Profile />)}
                   />
@@ -1059,19 +860,6 @@ function Layout() {
                   />
 
                   <Route
-                    path="/tax-structure"
-                    element={renderRoute("/tax-structure", <TaxStructure />)}
-                  />
-                  <Route
-                    path="/tax-category"
-                    element={renderRoute("/tax-category", <TaxCategory />)}
-                  />
-                  <Route
-                    path="/tax-category-rules"
-                    element={renderRoute("/tax-category-rules", <TaxRules />)}
-                  />
-
-                  <Route
                     path="/product-variants"
                     element={renderRoute(
                       "/product-variants",
@@ -1085,19 +873,6 @@ function Layout() {
                       <ProductFamilies />,
                     )}
                   />
-                  <Route
-                    path="/product-dimensions"
-                    element={renderRoute(
-                      "/product-dimensions",
-                      <ProductDimensions />,
-                    )}
-                  />
-
-                  <Route
-                    path="/finish"
-                    element={renderRoute("/finish", <FinishProducts />)}
-                  />
-
                   <Route
                     path="/user-permissions/:id"
                     element={renderSupportedRoute(
@@ -1137,10 +912,6 @@ function Layout() {
                     )}
                   />
 
-                  <Route
-                    path="/warranty"
-                    element={renderRoute("/warranty", <ProductWarranty />)}
-                  />
                   <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
                   <Route
                     path="/tax-documents"
@@ -1188,36 +959,6 @@ function Layout() {
                     element={renderRoute("/orders/view", <OrderSummary />)}
                   />
 
-                  {/* ── Catalog Management — filtered product views ─────────── */}
-                  <Route
-                    path="/add-product"
-                    element={renderRoute("/add-product", <ProductCatalog />)}
-                  />
-                  <Route
-                    path="/draft-products"
-                    element={renderRoute("/draft-products", <ProductCatalog />)}
-                  />
-                  <Route
-                    path="/pending-products"
-                    element={renderRoute(
-                      "/pending-products",
-                      <ProductCatalog />,
-                    )}
-                  />
-                  <Route
-                    path="/change-pending-products"
-                    element={renderRoute(
-                      "/change-pending-products",
-                      <ProductCatalog />,
-                    )}
-                  />
-                  <Route
-                    path="/rejected-products"
-                    element={renderRoute(
-                      "/rejected-products",
-                      <ProductCatalog />,
-                    )}
-                  />
                   <Route
                     path="/product-option-values"
                     element={renderRoute(
@@ -1265,12 +1006,6 @@ function Layout() {
                       "/low-stock-alerts",
                       <LowStockAlerts />,
                     )}
-                  />
-
-                  {/* ── Orders Management — new routes ──────────────────────── */}
-                  <Route
-                    path="/refunds"
-                    element={renderRoute("/refunds", <UsersTransactions />)}
                   />
 
                   {/* ── Users & Access — new routes ─────────────────────────── */}
@@ -1363,7 +1098,14 @@ function Layout() {
                     path="/wallet-management"
                     element={renderRoute(
                       "/wallet-management",
-                      <UsersTransactions />,
+                      <WalletTransactions />,
+                    )}
+                  />
+                  <Route
+                    path="/wallet-transactions"
+                    element={renderRoute(
+                      "/wallet-transactions",
+                      <WalletTransactions />,
                     )}
                   />
 
@@ -1425,6 +1167,14 @@ function Layout() {
                   <Route
                     path="/seller-payouts"
                     element={renderRoute("/seller-payouts", <SellerPayouts />)}
+                  />
+                  <Route
+                    path="/payout-ops-queue"
+                    element={renderRoute("/payout-ops-queue", <PayoutOpsQueue />)}
+                  />
+                  <Route
+                    path="/negative-balances"
+                    element={renderRoute("/negative-balances", <NegativeBalances />)}
                   />
 
                   {/* ── Deal Sub-sections ────────────────────────────────────── */}
@@ -1492,26 +1242,19 @@ function Layout() {
                     )}
                   />
 
-                  {/* ── Analytics & Dynamic Pricing ─────────────────────────── */}
+                  {/* ── Product Moderation ───────────────────────────────────── */}
+                  <Route
+                    path="/product-moderation-queue"
+                    element={renderRoute(
+                      "/product-moderation-queue",
+                      <ProductModerationQueue />,
+                    )}
+                  />
+
+                  {/* ── Analytics ───────────────────────────────────────────── */}
                   <Route
                     path="/analytics"
                     element={renderRoute("/analytics", <AnalyticsDashboard />)}
-                  />
-                  <Route
-                    path="/dynamic-pricing"
-                    element={renderRoute("/dynamic-pricing", <DynamicPricingReport />)}
-                  />
-
-                  {/* ── Notifications ────────────────────────────────────────── */}
-                  <Route
-                    path="/notifications"
-                    element={renderRoute("/notifications", <NotificationsOverview />)}
-                  />
-
-                  {/* ── Subscriptions Overview ───────────────────────────────── */}
-                  <Route
-                    path="/subscriptions"
-                    element={renderRoute("/subscriptions", <SubscriptionsOverview />)}
                   />
 
                   {/* ── Reports & Analytics ─────────────────────────────────── */}
@@ -1541,50 +1284,10 @@ function Layout() {
                     )}
                   />
                   <Route
-                    path="/reports-orders"
-                    element={renderRoute("/reports-orders", <OrdersReport />)}
-                  />
-                  <Route
-                    path="/reports-payments"
-                    element={renderRoute(
-                      "/reports-payments",
-                      <PaymentsReport />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-returns"
-                    element={renderRoute("/reports-returns", <ReturnsReport />)}
-                  />
-                  <Route
-                    path="/reports-cancellations"
-                    element={renderRoute(
-                      "/reports-cancellations",
-                      <CancellationReport />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-delivery"
-                    element={renderRoute(
-                      "/reports-delivery",
-                      <DeliveryReport />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-commissions"
-                    element={renderRoute(
-                      "/reports-commissions",
-                      <CommissionReport />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-users"
-                    element={renderRoute("/reports-users", <UserReport />)}
-                  />
-                  <Route
                     path="/messages"
                     element={renderRoute("/messages", <UserMessages />)}
                   />
-                  <Route path="*" element={<ComingSoonPage />} />
+                  <Route path="*" element={<Navigate to="/app/home" replace />} />
                 </Routes>
               </motion.div>
             </AnimatePresence>

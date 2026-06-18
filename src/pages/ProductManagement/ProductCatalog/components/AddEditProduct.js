@@ -1380,18 +1380,11 @@ export default function ProductManagementUI() {
               {item.label}: {item.count}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => navigate('/app/product-flow')}
-            className="rounded bg-[var(--admin-blue)] px-3 py-1 text-xs text-white"
-          >
-            Open Full Flow
-          </button>
         </div>
       </div>
       {flowGateErrors.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
-          <p className="text-sm font-semibold text-amber-900">Complete Product Setup Flow Before Save</p>
+          <p className="text-sm font-semibold text-amber-900">Complete Required Master Data Before Save</p>
           <ul className="mt-2 space-y-2 text-xs text-amber-900">
             {flowGateErrors.map((item) => (
               <li key={item.key} className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-white p-2">

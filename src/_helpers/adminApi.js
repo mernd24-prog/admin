@@ -24,7 +24,6 @@ export const DEFAULT_PLATFORM_MODULES = [
   "recommendations",
   "returns",
   "fraud",
-  "dynamic-pricing",
   "referral",
   "delivery",
   "admin",
