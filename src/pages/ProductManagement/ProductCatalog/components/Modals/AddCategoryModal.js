@@ -37,12 +37,18 @@ const AddCategoryModal = ({
                     />
                 </div>
                 <ImageUpload
-                    id="thumbnails"
-                    label="Thumbnails"
-                    file={formData?.seoUrl}
-                    onChange={(file) => handleFileUpload(file)}
+                    id="category-icon"
+                    label="Icon"
+                    file={formData?.iconUrl}
+                    onChange={(file) => handleFileUpload(file, 'iconUrl')}
                     accept="image/jpeg,image/jpg,image/png,image/webp"
-                    required
+                />
+                <ImageUpload
+                    id="category-banner"
+                    label="Banner Image"
+                    file={formData?.bannerUrl}
+                    onChange={(file) => handleFileUpload(file, 'bannerUrl')}
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                 />
 
                 <div className="mb-4">

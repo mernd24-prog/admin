@@ -29,7 +29,6 @@ const CategorySetup = ({
 }) => {
   const [localErrors, setLocalErrors] = useState({
     categoryName: '',
-    seoUrl: ''
   });
   const [isLoading, setIsLoading] = useState(false)
   
@@ -49,13 +48,6 @@ const CategorySetup = ({
           error = 'Category name is required';
         } else if (value.length > 50) {
           error = 'Category name must be less than 50 characters';
-        }
-        break;
-      case 'seoUrl':
-        if (!value.trim()) {
-          error = 'Thumbnail URL is required';
-        } else if (!/^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/.test(value)) {
-          error = 'Please enter a valid URL';
         }
         break;
       default:
@@ -92,7 +84,6 @@ const CategorySetup = ({
   const validateForm = () => {
     const newErrors = {
       categoryName: validateField('categoryName', formData.categoryName),
-      seoUrl: validateField('seoUrl', formData.seoUrl)
     };
 
     setLocalErrors(newErrors);
@@ -107,7 +98,7 @@ const CategorySetup = ({
     }
   };
 
-  const handleFileUpload = async (file) => {
+  const handleImageUpload = async (file, fieldName) => {
     if (!file) return;
     const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
     const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
@@ -128,13 +119,8 @@ const CategorySetup = ({
       const uploadedImageUrl = await uploadFile(file, 'THUMBNAILS');
       setFormData((prev) => ({
         ...prev,
-        seoUrl: uploadedImageUrl,
+        [fieldName]: uploadedImageUrl,
       }))
-      setLocalErrors((prev) => ({
-        ...prev,
-        seoUrl: '',
-      }));;
-
       toast.success('Image uploaded successfully');
     } catch (error) {
       toast.error(error || 'Failed to upload image');
@@ -195,20 +181,24 @@ const CategorySetup = ({
             />
           </div>
 
-          {/* Image Upload */}
           <div>
             <ImageUpload
-              id="thumbnails"
-              label="Thumbnails"
-              file={formData?.seoUrl}
-              onChange={(file) => handleFileUpload(file)}
-              error={errors?.seoUrl}
+              id="category-icon"
+              label="Icon"
+              file={formData?.iconUrl}
+              onChange={(file) => handleImageUpload(file, 'iconUrl')}
               accept="image/jpeg,image/jpg,image/png,image/webp"
-              required
             />
-            {localErrors.seoUrl && (
-              <p className="mt-1 text-xs text-red-600">{localErrors.seoUrl}</p>
-            )}
+          </div>
+
+          <div>
+            <ImageUpload
+              id="category-banner"
+              label="Banner Image"
+              file={formData?.bannerUrl}
+              onChange={(file) => handleImageUpload(file, 'bannerUrl')}
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+            />
           </div>
 
           {/* Parent Category */}
