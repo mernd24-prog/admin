@@ -36,7 +36,8 @@ const ProductCategories = () => {
   const [allCategories, setAllCategories] = useState([]);
   const [formData, setFormData] = useState({
     categoryName: "",
-    seoUrl: "",
+    bannerUrl: "",
+    iconUrl: "",
     parentCategory: null,
     isPublish: false,
     isDashboardVisible: false,
@@ -44,7 +45,6 @@ const ProductCategories = () => {
   });
   const [errors, setErrors] = useState({
     categoryName: "",
-    seoUrl: "",
   });
   const [filters, setFilters] = useState({
     search: "",
@@ -69,14 +69,6 @@ const ProductCategories = () => {
         }
         break;
 
-      case "seoUrl":
-        if (!value.trim()) {
-          error = "Thumbnail URL is required";
-        } else if (!/^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/.test(value)) {
-          error = "Please enter a valid URL";
-        }
-        break;
-
       default:
         break;
     }
@@ -86,7 +78,6 @@ const ProductCategories = () => {
   const validateForm = () => {
     const newErrors = {
       categoryName: validateField("categoryName", formData.categoryName),
-      seoUrl: validateField("seoUrl", formData.seoUrl),
     };
 
     setErrors(newErrors);
@@ -133,7 +124,8 @@ const ProductCategories = () => {
       name: category?.title || category?.name || category?.categoryKey,
       isDisable: category?.active === false,
       active: category?.active !== false,
-      thumbnails: category?.imageUrl || category?.thumbnails || "",
+      bannerUrl: category?.bannerUrl || "",
+      iconUrl: category?.iconUrl || "",
       isExpanded: false,
       parentId: category?.parentKey || null,
       parentName: null,
@@ -233,7 +225,8 @@ const ProductCategories = () => {
   const handleResetForm = useCallback(() => {
     setFormData({
       categoryName: "",
-      seoUrl: "",
+      bannerUrl: "",
+      iconUrl: "",
       parentCategory: null,
       isDashboardVisible: false,
       priority: "0",
@@ -242,7 +235,6 @@ const ProductCategories = () => {
     setIsPublish(false);
     setErrors({
       categoryName: "",
-      seoUrl: "",
     });
   }, []);
 
@@ -259,7 +251,8 @@ const ProductCategories = () => {
 
     const reqData = {
       name: formData.categoryName,
-      thumbnails: formData.seoUrl,
+      bannerUrl: formData.bannerUrl,
+      iconUrl: formData.iconUrl,
       parentKey,
       level,
       isDisable: !isPublish,
@@ -306,7 +299,8 @@ const ProductCategories = () => {
     }
     setFormData({
       categoryName: category.name,
-      seoUrl: category.thumbnails || "",
+      bannerUrl: category.bannerUrl || "",
+      iconUrl: category.iconUrl || "",
       parentCategory: parentCategoryValue,
       isDashboardVisible: category?.isDashboardVisible,
       priority: category?.priority,
@@ -543,7 +537,8 @@ const ProductCategories = () => {
     const reqData = {
       _id: selectedCategory.categoryKey || selectedCategory._id,
       name: formData.categoryName,
-      thumbnails: formData.seoUrl,
+      bannerUrl: formData.bannerUrl,
+      iconUrl: formData.iconUrl,
       isDisable: !isPublish,
       parentKey,
       level,

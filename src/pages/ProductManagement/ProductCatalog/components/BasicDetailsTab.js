@@ -23,7 +23,8 @@ import AddHsnModal from './Modals/AddHsnModal';
 
 const INITIAL_FORM_CATEGORY = {
   categoryName: '',
-  seoUrl: '',
+  bannerUrl: '',
+  iconUrl: '',
   parentCategory: null,
   isPublish: true,
   isDashboardVisible: false, priority: "0"
@@ -151,12 +152,12 @@ export default function BasicDetailsTab({
     setFormErrors({})
   }
 
-  const handleFileUploadCategory = async (file) => {
+  const handleFileUploadCategory = async (file, fieldName) => {
     if (!file) return;
     try {
       setIsLoading(true);
       const uploadedImageUrl = await uploadFile(file, 'THUMBNAILS');
-      setCategoryForm(prev => ({ ...prev, seoUrl: uploadedImageUrl }));
+      setCategoryForm(prev => ({ ...prev, [fieldName]: uploadedImageUrl }));
       toast.success('Image uploaded successfully');
     } catch (error) {
       toast.error(error?.message || 'Failed to upload image');
@@ -229,7 +230,8 @@ export default function BasicDetailsTab({
       const type = categoryForm.parentCategory?.value !== "ROOT" ? "CHILD" : "ROOT";
       const reqData = {
         name: categoryForm.categoryName,
-        thumbnails: categoryForm.seoUrl,
+        bannerUrl: categoryForm.bannerUrl,
+        iconUrl: categoryForm.iconUrl,
         type,
         isDisable: true,
         isDashboardVisible: categoryForm?.isDashboardVisible,
