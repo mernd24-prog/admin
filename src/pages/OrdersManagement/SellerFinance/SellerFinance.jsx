@@ -16,6 +16,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { apiRequest } from "../../../_helpers/apiConfig";
 import {
   calculateSellerCommission,
   completeSellerPayout,
@@ -44,6 +45,10 @@ const shortId = (value = "") => {
 };
 
 const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || shortId(id);
+const organizationName = (row = {}) => {
+  const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
+  return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || shortId(row.organizationId || row.organization_id);
+};
 
 const dateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
 
@@ -143,17 +148,19 @@ const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "ban
 const SellerFinance = () => {
   const dispatch = useDispatch();
   const financeState = useSelector((state) => state.sellerCommissions);
-  const [filters, setFilters] = useState({ sellerId: "", status: "", search: "" });
+  const [filters, setFilters] = useState({ sellerId: "", organizationId: "", status: "", search: "" });
   const [orderId, setOrderId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
+  const [organizationOptions, setOrganizationOptions] = useState([]);
+  const [processOrganizationOptions, setProcessOrganizationOptions] = useState([]);
 
   React.useEffect(() => {
     dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {});
   }, []);
 
   // Process Payout modal
-  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
+  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
 
   // Complete Payout modal
   const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
@@ -167,7 +174,7 @@ const SellerFinance = () => {
         dispatch(getSellerFinanceSummary(filters)).unwrap(),
         dispatch(getAdminSellerCommissions({ ...filters, limit: 100 })).unwrap(),
         dispatch(getAdminSellerPayouts({ ...filters, limit: 100 })).unwrap(),
-        dispatch(getSellerSettlements({ sellerId: filters.sellerId, limit: 50 })).unwrap(),
+        dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
       ]);
     } catch (error) {
       toast.error(error?.message || error || "Unable to load seller finance");
@@ -207,13 +214,65 @@ const SellerFinance = () => {
     },
   ], [summary]);
 
-  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
+  const loadOrganizationsForSeller = useCallback(async (sellerId) => {
+    if (!sellerId) return [];
+    const response = await apiRequest("GET", ENDPOINTS.sellers.organizations(sellerId), { limit: 100 });
+    const data = response?.data?.data || response?.normalized?.data || response?.data || {};
+    const list = data.organizations || data.items || data.list || [];
+    return list.map((item) => ({
+      value: item.id || item.organizationId,
+      label: item.storeDisplayName || item.legalBusinessName || item.id || item.organizationId,
+      status: item.approvalStatus,
+    })).filter((item) => item.value);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadOrganizationsForSeller(filters.sellerId)
+      .then((options) => {
+        if (!active) return;
+        setOrganizationOptions(options);
+        setFilters((prev) => (
+          prev.organizationId && !options.some((option) => String(option.value) === String(prev.organizationId))
+            ? { ...prev, organizationId: "" }
+            : prev
+        ));
+      })
+      .catch(() => {
+        if (active) setOrganizationOptions([]);
+      });
+    return () => { active = false; };
+  }, [filters.sellerId, loadOrganizationsForSeller]);
+
+  useEffect(() => {
+    let active = true;
+    loadOrganizationsForSeller(processModal.sellerId)
+      .then((options) => {
+        if (!active) return;
+        setProcessOrganizationOptions(options);
+        setProcessModal((prev) => (
+          prev.organizationId && !options.some((option) => String(option.value) === String(prev.organizationId))
+            ? { ...prev, organizationId: "" }
+            : prev
+        ));
+      })
+      .catch(() => {
+        if (active) setProcessOrganizationOptions([]);
+      });
+    return () => { active = false; };
+  }, [processModal.sellerId, loadOrganizationsForSeller]);
+
+  const updateFilter = (key, value) => setFilters((prev) => ({
+    ...prev,
+    [key]: value,
+    ...(key === "sellerId" ? { organizationId: "" } : {}),
+  }));
 
   const handleCalculate = async () => {
     if (!orderId.trim()) { toast.error("Order ID is required"); return; }
     try {
       setSubmitting(true);
-      await dispatch(calculateSellerCommission({ orderId: orderId.trim() })).unwrap();
+      await dispatch(calculateSellerCommission({ orderId: orderId.trim(), organizationId: filters.organizationId || undefined })).unwrap();
       toast.success("Commission recalculated");
       setOrderId("");
       await loadFinance();
@@ -230,6 +289,7 @@ const SellerFinance = () => {
       setSubmitting(true);
       const payload = {
         sellerId: processModal.sellerId.trim(),
+        organizationId: processModal.organizationId || undefined,
         paymentMethod: processModal.paymentMethod,
         paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
@@ -239,7 +299,7 @@ const SellerFinance = () => {
       if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
       await dispatch(processSellerPayouts(payload)).unwrap();
       toast.success(processModal.autoProcess ? "Payout processed successfully" : "Payout initiated for approval");
-      setProcessModal({ open: false, sellerId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
+      setProcessModal({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to process payout");
@@ -338,6 +398,10 @@ const SellerFinance = () => {
               <option value="">All Sellers</option>
               {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
+            <select className={inputCls} value={filters.organizationId} onChange={(e) => updateFilter("organizationId", e.target.value)} disabled={!filters.sellerId}>
+              <option value="">{filters.sellerId ? "All Organizations" : "Select seller first"}</option>
+              {organizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
             <input className={inputCls} placeholder="Search order, seller, payout..." value={filters.search} onChange={(e) => updateFilter("search", e.target.value)} />
             <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
               <option value="">All Status</option>
@@ -383,13 +447,14 @@ const SellerFinance = () => {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TableShell
           title="Seller Commissions"
-          headings={["Order", "Seller", "Gross", "Commission", "GST", "Refund Adj.", "Net Payable", "Status", "Created"]}
+          headings={["Order", "Seller", "Organization", "Gross", "Commission", "GST", "Refund Adj.", "Net Payable", "Status", "Created"]}
           emptyText="No commissions found"
         >
           {commissions.length ? commissions.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
@@ -403,13 +468,14 @@ const SellerFinance = () => {
 
         <TableShell
           title="Seller Payouts"
-          headings={["Payout", "Seller", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
+          headings={["Payout", "Seller", "Organization", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
           emptyText="No payouts found"
         >
           {payouts.length ? payouts.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -444,13 +510,14 @@ const SellerFinance = () => {
       <div className="mt-4">
         <TableShell
           title="Settlement Ledger"
-          headings={["Settlement", "Seller", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", ""]}
+          headings={["Settlement", "Seller", "Organization", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", ""]}
           emptyText="No settlements found"
         >
           {settlements.length ? settlements.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.payout_id)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -491,9 +558,15 @@ const SellerFinance = () => {
       >
         <div className="space-y-3">
           <FieldRow label="Seller *">
-            <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value }))}>
+            <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value, organizationId: "" }))}>
               <option value="">— Select seller —</option>
               {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </FieldRow>
+          <FieldRow label="Organization">
+            <select className={inputCls} value={processModal.organizationId} onChange={(e) => setProcessModal((prev) => ({ ...prev, organizationId: e.target.value }))} disabled={!processModal.sellerId}>
+              <option value="">{processModal.sellerId ? "All Organizations Separately" : "Select seller first"}</option>
+              {processOrganizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           </FieldRow>
           <div className="grid grid-cols-2 gap-3">

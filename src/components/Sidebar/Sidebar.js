@@ -81,6 +81,12 @@ const SELLER_SIDEBAR_SECTIONS = [
     route: "seller-users",
   },
   {
+    module: "sellers",
+    tab: "Users & Access",
+    label: "Organizations",
+    route: "my-organizations",
+  },
+  {
     module: "sellers/commissions",
     tab: "Orders Management",
     label: "Commissions",

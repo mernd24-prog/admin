@@ -45,6 +45,7 @@ const MODULE_LABELS = {
   seller_bank: "Seller Bank Management",
   "seller-bank": "Seller Bank Management",
   "seller-management": "Seller Admin Management",
+  "seller-organizations": "Seller Organization Management",
   "sellers/commissions": "Seller Commissions",
   products: "Product Management",
   categories: "Category Management",
@@ -141,6 +142,7 @@ const MODULE_TABS = {
   seller_bank: "Users & Access",
   "seller-bank": "Users & Access",
   "seller-management": "Users & Access",
+  "seller-organizations": "Users & Access",
   "sellers/commissions": "Orders Management",
   products: "Catalog Management",
   categories: "Catalog Management",
@@ -373,7 +375,7 @@ const ROUTE_MODULES = [
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller"], ["sellers"]],
-  [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins"], ["seller-management", "sellers"]],
+  [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
   [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
   [["/seller-bank", "/seller-bank-detail"], ["seller_bank", "seller-bank", "sellers"]],
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
@@ -501,7 +503,7 @@ const ROUTE_MODULES = [
   // Seller Management — additional
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
   [["/seller-status"], ["sellers"]],
-  [["/seller-sub-admins"], ["seller-management", "sellers"]],
+  [["/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
 
   // CMS & Content — additional
   [["/content-pages"], ["cms_pages", "cms"]],

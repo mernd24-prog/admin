@@ -209,8 +209,9 @@ export function usePermission() {
    */
   const can = (moduleSlug, action) => {
     const normalizedModule = normalizeModuleCode(moduleSlug);
-    // Super-admin bypasses permission matrix checks.
-    if (role === ROLES.SUPER_ADMIN) return true;
+    // Super-admin and admin bypass permission matrix checks.
+    // Only sub-admin (and seller-sub-admin on the seller panel) is RBAC-restricted.
+    if (role === ROLES.SUPER_ADMIN || role === ROLES.ADMIN) return true;
 
     const mod = permMap[normalizedModule] || permMap[moduleSlug];
     const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;

@@ -36,6 +36,7 @@ const FILTER_FIELDS = [
     width: "w-52",
     load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
   },
+  { key: "organizationId", type: "text", label: "Organization ID", width: "w-52" },
   { key: "state", type: "select", label: "State", options: STATES.map((v) => ({ value: v, label: v })) },
   { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
   { key: "fromDate", type: "date", label: "From" },
@@ -53,6 +54,10 @@ const unwrapList = (payload = {}) => {
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+const shortId = (value = "") => {
+  const text = String(value || "");
+  return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
+};
 
 const TaxInvoices = () => {
   const dispatch = useDispatch();
@@ -108,6 +113,11 @@ const TaxInvoices = () => {
           color={v === "issued" ? "green" : v === "cancelled" ? "red" : v === "amended" ? "yellow" : "gray"}
         />
       ),
+    },
+    {
+      key: "organizationId",
+      label: "Organization",
+      render: (v, row) => <span className="font-mono text-xs text-gray-500">{shortId(v || row.organization_id)}</span>,
     },
     {
       key: "taxableAmount",
@@ -204,6 +214,7 @@ const TaxInvoices = () => {
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.state} color={detail.state === "issued" ? "green" : "gray"} /></div>
               <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
               <div><p className="text-gray-500">Seller ID</p><p className="font-mono text-xs">{detail.sellerId || "—"}</p></div>
+              <div><p className="text-gray-500">Organization ID</p><p className="font-mono text-xs">{detail.organizationId || detail.organization_id || "—"}</p></div>
               <div><p className="text-gray-500">Buyer ID</p><p className="font-mono text-xs">{detail.buyerId || "—"}</p></div>
               <div><p className="text-gray-500">Issue Date</p><p>{fmt(detail.issueDate)}</p></div>
               <div><p className="text-gray-500">Taxable Amount</p><p>{money(detail.taxableAmount)}</p></div>

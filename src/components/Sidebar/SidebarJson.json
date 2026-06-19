@@ -100,6 +100,7 @@
       { "label": "Sellers", "icon": "MdStorefront", "key": "seller", "route": "seller" },
       { "label": "Admin Users", "icon": "MdAdminPanelSettings", "key": "admin-users", "route": "admin-users" },
       { "label": "Seller Users", "icon": "MdGroup", "key": "seller-users", "route": "seller-users" },
+      { "label": "Seller Organizations", "icon": "MdBusiness", "key": "seller-organizations", "route": "seller-organizations" },
       { "label": "Seller KYC", "icon": "MdFactCheck", "key": "seller-kyc", "route": "seller-kyc" },
       { "label": "Seller Bank", "icon": "MdAccountBalance", "key": "seller-bank", "route": "seller-bank" },
       { "label": "Roles & Permissions", "icon": "MdSecurity", "key": "roles-permissions", "route": "roles-permissions" },

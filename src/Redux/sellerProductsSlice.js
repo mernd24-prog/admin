@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { createApiThunkPrivate, createExtraReducersForThunk } from "../_helpers/ApiThunk";
 import { ENDPOINTS } from "../_helpers/endpoints";
+import { getSelectedSellerOrganizationId } from "../_helpers/sellerOrganizationContext";
 
 const initialState = {
   listSellerProductsData: {},
@@ -14,7 +15,16 @@ export const listSellerProducts = createApiThunkPrivate(
   "sellerProducts/listSellerProducts",
   ENDPOINTS.products.sellerMine,
   "GET",
-  true
+  true,
+  {
+    transformParams: (params = {}) => {
+      const organizationId = params.organizationId || getSelectedSellerOrganizationId();
+      return {
+        ...params,
+        ...(organizationId ? { organizationId } : {}),
+      };
+    },
+  }
 );
 
 export const getSellerProductDetails = createApiThunkPrivate(

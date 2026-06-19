@@ -202,6 +202,12 @@ const UserPermissions = React.lazy(
 const SellerUsers = React.lazy(
   () => import("../../pages/SellerManagement/SellerUsers"),
 );
+const SellerOrganizations = React.lazy(
+  () => import("../../pages/SellerManagement/SellerOrganizations"),
+);
+const MyOrganizations = React.lazy(
+  () => import("../../pages/SellerManagement/MyOrganizations"),
+);
 
 // ── Inventory Management ────────────────────────────────────────────────────
 const InventoryOverview = React.lazy(
@@ -608,6 +614,20 @@ function Layout() {
                   <Route
                     path="/seller-users"
                     element={renderRoute("/seller-users", <SellerUsers />)}
+                  />
+                  <Route
+                    path="/seller-organizations"
+                    element={renderRoute(
+                      "/seller-organizations",
+                      <SellerOrganizations />,
+                    )}
+                  />
+                  <Route
+                    path="/my-organizations"
+                    element={renderRoute(
+                      "/my-organizations",
+                      <MyOrganizations />,
+                    )}
                   />
                   <Route
                     path="/users"

@@ -25,6 +25,7 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
   { key: "sellerId", type: "asyncDropdown", label: "Seller", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
+  { key: "organizationId", type: "text", label: "Organization ID", width: "w-52" },
   { key: "buyerId", type: "asyncDropdown", label: "Buyer", load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }) },
   { key: "hsnCode", type: "text", label: "HSN", width: "w-32" },
   { key: "state", type: "text", label: "State", width: "w-36" },
@@ -71,6 +72,10 @@ const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
 
 const money = (value) => Number(value || 0).toFixed(2);
+const shortId = (value = "") => {
+  const text = String(value || "");
+  return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
+};
 
 const getListData = (payload = {}) => {
   const data = payload?.data?.data;
@@ -187,6 +192,7 @@ const TaxCompliance = () => {
   const invoiceColumns = useMemo(() => [
     { key: "invoice_number", label: "Invoice", sortable: true, render: (value) => <span className="font-mono text-xs">{value}</span> },
     { key: "order_id", label: "Order", render: (value, row) => <span className="font-mono text-xs">{row.orderNumber || row.order_number || (value ? `#${String(value).slice(-8)}` : "—")}</span> },
+    { key: "organization_id", label: "Organization", render: (value, row) => <span className="font-mono text-xs text-gray-500">{shortId(value || row.organizationId)}</span> },
     { key: "buyer_id", label: "Buyer", render: (value, row) => {
       const name = row.buyerName || row.buyer?.name || row.buyer?.full_name || row.buyer?.email;
       return name ? <span className="text-xs font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? `${String(value).slice(0, 10)}…` : "—"}</span>;
@@ -211,6 +217,7 @@ const TaxCompliance = () => {
   const creditColumns = useMemo(() => [
     { key: "credit_note_number", label: "Credit Note", sortable: true, render: (value) => <span className="font-mono text-xs">{value}</span> },
     { key: "order_id", label: "Order", render: (value, row) => <span className="font-mono text-xs">{row.orderNumber || row.order_number || (value ? `#${String(value).slice(-8)}` : "—")}</span> },
+    { key: "organization_id", label: "Organization", render: (value, row) => <span className="font-mono text-xs text-gray-500">{shortId(value || row.organizationId)}</span> },
     { key: "reference", label: "Reference", render: (_, row) => <span className="text-xs text-gray-500">{[row.reference_type, row.reference_id ? `#${String(row.reference_id).slice(-8)}` : null].filter(Boolean).join(" ") || "—"}</span> },
     { key: "taxable_amount", label: "Taxable", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "tax_amount", label: "Tax", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
@@ -228,6 +235,7 @@ const TaxCompliance = () => {
   ], []);
 
   const reportColumns = useMemo(() => [
+    { key: "organization_id", label: "Organization", render: (value, row) => <span className="font-mono text-xs text-gray-500">{shortId(value || row.organizationId)}</span> },
     { key: "tax_component", label: "Component", render: (value) => <span className="font-medium">{firstDefined(value, "N/A")}</span> },
     { key: "entry_type", label: "Entry Type", render: (value) => <span className="text-sm text-gray-600">{firstDefined(value, "N/A")}</span> },
     { key: "entry_count", label: "Count", render: (value) => <span className="font-mono text-sm">{value || 0}</span> },

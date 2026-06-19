@@ -52,7 +52,7 @@ export default function BasicDetailsTab({
   handleSelectChange,
   errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], userData
+  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], organizationList = [], userData
 }) {
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
@@ -357,6 +357,18 @@ export default function BasicDetailsTab({
                 />
               </div>
             )}
+            <div>
+              <FilterSelect
+                label="Legal Organization"
+                name="organizationId"
+                value={organizationList.find((opt) => String(opt.value) === String(formData.organizationId || '')) || null}
+                onChange={(e) => handleSelectChange(e, 'ORGANIZATION_ID')}
+                options={organizationList || []}
+                error={errors?.organizationId}
+                placeholder="Select Organization"
+                required
+              />
+            </div>
             <div className={`${userData?.roleId !== 9 ? "col-span-1" : "col-span-2"}`}>
               <Input
                 labelName="Product Name"

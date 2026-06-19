@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   createProducts, getProductPrefill,
   getProductById, updateProductsById, getCategoryAttributes,
-  getAllWarrantyList,
+
 } from '../../../../Redux/productSlice';
 import { getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
 import { transformArray } from '../../../../_helpers/globalFunctions';
@@ -35,7 +35,7 @@ import { normalizeImageList } from '../../../../_helpers/productMedia';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
-  { action: () => getAllWarrantyList({ limit: 200, active: true }), name: 'Warranty Templates' },
+
 ];
 
 const API_CALL_OBJECT = {
@@ -221,6 +221,9 @@ export default function ProductManagementUI() {
             category: resolvedCategoryKey,
             category_key: resolvedCategoryKey,
             sellerId: productData?.sellerId || '',
+            organizationId: productData?.organizationId || '',
+            storeId: productData?.storeId || '',
+            warehouseId: productData?.warehouseId || '',
             stock: productData?.stock ?? '',
             price: productData?.price ?? '',
             mrp: productData?.mrp ?? '',
@@ -541,8 +544,38 @@ export default function ProductManagementUI() {
     })),
     countryList: transformArray(prefillList('countries')),
     sellerList: transformArray(prefillList('sellers')),
+    organizationList: prefillList('organizations').map((item) => ({
+      value: item.id || item.organizationId,
+      label: [
+        item.storeDisplayName || item.legalBusinessName || item.id || item.organizationId,
+        item.gstin ? `GSTIN ${item.gstin}` : null,
+        item.approvalStatus ? String(item.approvalStatus).replace(/_/g, ' ') : null,
+      ].filter(Boolean).join(' | '),
+      sellerId: item.sellerId,
+      approvalStatus: item.approvalStatus,
+      raw: item,
+    })),
 
   }), [selector, adminCoreSelector?.productFamiliesData, platformOptions, platformValues, prefillList]);
+
+  const organizationOptions = useMemo(() => {
+    const selectedSellerId = String(formData?.sellerId || userData?.ownerSellerId || userData?._id || userData?.id || '');
+    if (!selectedSellerId) return formattedData.organizationList;
+    return formattedData.organizationList.filter((option) => String(option.sellerId || '') === selectedSellerId);
+  }, [formattedData.organizationList, formData?.sellerId, userData]);
+
+  useEffect(() => {
+    if (formData?.organizationId) {
+      const exists = organizationOptions.some((option) => String(option.value) === String(formData.organizationId));
+      if (!exists) {
+        setFormData((prev) => ({ ...prev, organizationId: '' }));
+      }
+      return;
+    }
+    if (organizationOptions.length === 1) {
+      setFormData((prev) => ({ ...prev, organizationId: organizationOptions[0].value }));
+    }
+  }, [organizationOptions, formData?.organizationId]);
 
   const createSelectOptions = useMemo(() => {
     const categorySource = prefillList('categories', getListPayload(selector?.getListData));
@@ -609,6 +642,7 @@ export default function ProductManagementUI() {
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
     if (formData?.description?.trim() && formData.description.trim().length < 10) newErrors.description = "Description must be at least 10 characters.";
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
+    if (!formData?.organizationId) newErrors.organizationId = "Organization is required.";
     if (!(formData?.category_id || formData?.category || formData?.category_key)) {
       newErrors.category_id = "Category is required.";
     }
@@ -772,6 +806,10 @@ export default function ProductManagementUI() {
           break;
         case 'SELLER_ID':
           delete newErrors.sellerId;
+          delete newErrors.organizationId;
+          break;
+        case 'ORGANIZATION_ID':
+          delete newErrors.organizationId;
           break;
         case 'BRAND_ID':
           delete newErrors.brand_id;
@@ -815,7 +853,10 @@ export default function ProductManagementUI() {
         setError({})
         break;
       case 'SELLER_ID':
-        setFormData(prev => ({ ...prev, sellerId: selectedOption?.value || "" }));
+        setFormData(prev => ({ ...prev, sellerId: selectedOption?.value || "", organizationId: "" }));
+        break;
+      case 'ORGANIZATION_ID':
+        setFormData(prev => ({ ...prev, organizationId: selectedOption?.value || "" }));
         break;
 
       case 'BRAND_ID':
@@ -973,6 +1014,9 @@ export default function ProductManagementUI() {
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
+      organizationId: updatedFormData.organizationId,
+      ...(updatedFormData.storeId ? { storeId: updatedFormData.storeId } : {}),
+      ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
@@ -1110,6 +1154,7 @@ export default function ProductManagementUI() {
           allCategories={prefillList('categories', getListPayload(selector?.getListData))}
           countryList={formattedData.countryList}
           sellerList={formattedData.sellerList}
+          organizationList={organizationOptions}
           hsnCodeList={formattedData?.hsnCodeList}
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}
