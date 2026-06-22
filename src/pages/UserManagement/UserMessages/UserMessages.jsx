@@ -105,6 +105,7 @@ const UserMessages = () => {
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+  const { toQueryParams } = list;
   const [notifications, setNotifications] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -117,7 +118,7 @@ const UserMessages = () => {
     setLoading(true);
     setError("");
     try {
-      const params = list.toQueryParams();
+      const params = toQueryParams();
       const res = await axiosProvider.get(ENDPOINTS.notifications.admin, {
         params: {
           page: params.page,
@@ -140,12 +141,11 @@ const UserMessages = () => {
     } finally {
       setLoading(false);
     }
-  }, [list.page, list.pageSize, list.search, list.filters]);
+  }, [toQueryParams]);
 
   useEffect(() => {
     fetchNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.page, list.pageSize, list.search, list.filters]);
+  }, [fetchNotifications]);
 
   const handleSend = async () => {
     if (!form.userId.trim()) return toast.error("Recipient User ID is required");

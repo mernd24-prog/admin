@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { getProducts } from '../../Redux/productSlice';
 
 /**
@@ -16,9 +16,6 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
-
-  const { getProductsData } = useSelector((s) => s.product);
-  const allProducts = getProductsData?.data?.products || getProductsData?.data?.docs || [];
 
   const doSearch = useCallback(async () => {
     if (!search.trim()) { setResults([]); return; }

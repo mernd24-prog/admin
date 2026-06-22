@@ -23,7 +23,7 @@ Scope: Admin UI wiring for completed backend product lifecycle, revision, visibi
 - `src/Redux/productSlice.js`
 - `src/components/Product/ProductStatusBadge.js`
 - `src/components/Product/ProductReviewModal.js`
-- `src/components/Sidebar/SidebarJson.json`
+- `src/components/Sidebar/Sidebar.js` renders the dynamic RBAC sidebar returned by the backend.
 - `src/components/Layout/Layout.js`
 - `src/_helpers/rbacRoutes.js`
 - `src/pages/ProductManagement/ProductCatalog/ProductCatalog.js`
@@ -83,4 +83,3 @@ Run from `/home/user/Projects/Ecommerce/Admin`:
 npm run build
 git diff --check
 ```
-

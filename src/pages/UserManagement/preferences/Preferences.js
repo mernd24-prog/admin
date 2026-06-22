@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { MdSettings } from "react-icons/md";
 import Input from "../../../components/Atoms/Input/Input";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
+import { ConfirmModal, DataTable, PageHeader } from "../../../components/Shared";
 import {
   createInterest,
   deleteInterest,

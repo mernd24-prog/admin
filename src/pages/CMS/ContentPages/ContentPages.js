@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { MdArticle } from "react-icons/md";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
+import { ConfirmModal, DataTable, PageHeader } from "../../../components/Shared";
 import ContentPageSetup from "./components/ContentPageSetup";
 import {
   createContentPage,

@@ -1,9 +1,0 @@
-{
-    "heading" : "Login",
-    "signin" : "Login",
-    "ErrorMsg" : {
-        "password" : "Please enter password!",
-        "email" : "Please enter email"
-    },
-    "messageWeLCome" : "Admin Login"
-}

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MdRefresh, MdVisibility, MdAccountBalanceWallet } from "react-icons/md";
 import { toast } from "sonner";
-import { PageHeader, DataTable, StatusBadge } from "../../../components/Shared";
+import { PageHeader, DataTable } from "../../../components/Shared";
 import { getWalletTransactions } from "../../../Redux/adminCoreSlice";
 
 const extractList = (payload) => {

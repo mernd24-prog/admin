@@ -87,8 +87,6 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const display = (value = "") =>
-  String(value || "N/A").replace(/_/g, " ");
 const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
 const settlementId = (row) => row?._id || row?.id || row?.settlementId;
 

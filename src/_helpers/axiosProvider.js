@@ -12,6 +12,7 @@ import {
     persistAuthTokens,
     shouldForceLogoutForResponse,
 } from './authSession';
+import { getSelectedSellerOrganizationId } from './sellerOrganizationContext';
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
@@ -101,11 +102,18 @@ export const refreshAccessToken = async () => {
 const authRequestInterceptor = (config) => {
     const authData = sessionStorageGetItem();
     const token = getStoredAccessToken() || authData?.token;
-    if (!token) {
+    const suppliedAuthorization = config.headers?.Authorization;
+    if (!token && !suppliedAuthorization) {
         return Promise.reject(new Error("No authentication token found"));
     }
 
-    config.headers.Authorization = `Bearer ${token}`;
+    if (!suppliedAuthorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    const organizationId = getSelectedSellerOrganizationId();
+    if (organizationId) {
+        config.headers['X-Organization-Id'] = organizationId;
+    }
     return config;
 };
 
@@ -172,6 +180,14 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
 };
 
 const refreshBeforeRequestInterceptor = async (config) => {
+    const organizationId = getSelectedSellerOrganizationId();
+    if (organizationId) {
+        config.headers['X-Organization-Id'] = organizationId;
+    }
+    if (config.headers?.Authorization) {
+        return authRequestInterceptor(config);
+    }
+
     const storedAccessToken = getStoredAccessToken();
     const shouldRefreshBeforeRequest =
         !isAuthEndpoint(config.url) &&

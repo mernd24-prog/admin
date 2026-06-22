@@ -31,13 +31,11 @@ const NotificationTemplates = () => {
   const [showSend, setShowSend] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
-  const [page, setPage] = useState(1);
-
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get(ENDPOINTS.notifications.admin, {
-        params: { limit: 20, offset: (page - 1) * 20 },
+        params: { limit: 20, offset: 0 },
       });
       const data = res?.data?.data;
       setNotifications(data?.list || data?.notifications || data || []);
@@ -47,7 +45,7 @@ const NotificationTemplates = () => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, []);
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 

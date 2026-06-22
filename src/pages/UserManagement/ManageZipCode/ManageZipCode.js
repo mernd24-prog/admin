@@ -6,7 +6,7 @@ import { MdLocationPin } from "react-icons/md";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../../components/Atoms/Input/Input";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
+import { ConfirmModal, DataTable, PageHeader } from "../../../components/Shared";
 import {
   create,
   edit,

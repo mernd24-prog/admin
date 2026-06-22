@@ -5,18 +5,12 @@ import { toast } from "sonner";
 import { MdRefresh, MdTrendingUp, MdVisibility } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
 import Input from "../../../components/Atoms/Input/Input";
 import { axiosPrivate as api } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
-const STATUSES = ["active", "inactive", "pending", "suspended"];
 const STATUS_COLOR = { active: "green", inactive: "gray", pending: "yellow", suspended: "red" };
-
-const FILTER_FIELDS = [
-  { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
-  { key: "search", type: "text", label: "Search", width: "w-56" },
-];
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
@@ -30,15 +24,12 @@ const InfluencerManagement = () => {
   const [statusConfirm, setStatusConfirm] = useState({ open: false, item: null, newStatus: "" });
   const [promoteConfirm, setPromoteConfirm] = useState({ open: false, item: null, tier: "" });
   const [actionLoading, setActionLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({});
-
   const fetchInfluencers = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const res = await api.get(ENDPOINTS.referral.influencers, {
-        params: { limit: 20, offset: (page - 1) * 20, ...filters },
+        params: { limit: 20, offset: 0 },
       });
       const data = res?.data?.data;
       setInfluencers(data?.list || data?.influencers || data || []);
@@ -50,7 +41,7 @@ const InfluencerManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, []);
 
   useEffect(() => { fetchInfluencers(); }, [fetchInfluencers]);
 

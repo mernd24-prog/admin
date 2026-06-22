@@ -333,8 +333,6 @@ const BarcodePage = () => {
     }
 
     const barcodeNumber = product._id.toUpperCase();
-    const productCode =
-      product?.name?.substring(0, 15).toUpperCase() || "PRODUCT";
     const currentDate = formatDate(new Date());
 
     const printContent = `
@@ -645,8 +643,6 @@ const BarcodePage = () => {
 
     for (let i = 0; i < apiRes.list.length; i++) {
       const product = apiRes.list[i];
-      const barcodeNumber = product._id.toUpperCase();
-
       htmlContent += `
         <div class="label-container">
             <div class="header">

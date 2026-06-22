@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { uploadFile, uploadFileMulti } from '../../_helpers/globalFunctions';
+import { uploadFileMulti } from '../../_helpers/globalFunctions';
 import { toast } from 'sonner';
 import useDropdownOptions from '../../hooks/useDropdownOptions';
 import { FaImage, FaInfoCircle } from 'react-icons/fa';
-import { MdDragIndicator, MdClose, MdAdd } from 'react-icons/md';
+import { MdDragIndicator, MdAdd } from 'react-icons/md';
 
 const MAX_VARIANT_IMAGES = 5;
 
@@ -55,8 +55,6 @@ const VariantBuilder = ({
   const optionSearchRef = useRef(null);
   const dragOptionIdx = useRef(null);
   const dragVariantIdx = useRef(null);
-  const variantFileRefs = useRef({});
-
   useEffect(() => { onOptionSearch?.(optionSearch); }, [optionSearch, onOptionSearch]);
 
   // ── Step progress ───────────────────────────────────────────────────────────

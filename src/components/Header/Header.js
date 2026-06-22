@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { logoutFunction } from "../../_helpers";
+import { forceLogout } from "../../_helpers/authSession";
 import { IoLogOutOutline } from "react-icons/io5";
 import {
   MdOutlineMenu,
@@ -157,7 +157,7 @@ export default function Header({
   }, [userData?.role]);
 
   const handleLogout = () => {
-    logoutFunction();
+    forceLogout("Logged out");
     dispatch(logout());
   };
 

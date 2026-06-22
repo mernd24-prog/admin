@@ -90,6 +90,7 @@ const EMPTY_FORM = {
 
 const CommissionRules = () => {
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "priority" });
+  const { toQueryParams } = list;
   const [rules, setRules] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -104,7 +105,7 @@ const CommissionRules = () => {
     setLoading(true);
     setError("");
     try {
-      const params = list.toQueryParams();
+      const params = toQueryParams();
       const res = await axiosProvider.get(ENDPOINTS.finance.commissionRules, {
         params: {
           page: params.page,
@@ -125,12 +126,11 @@ const CommissionRules = () => {
     } finally {
       setLoading(false);
     }
-  }, [list.page, list.pageSize, list.filters]);
+  }, [toQueryParams]);
 
   useEffect(() => {
     fetchRules();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.page, list.pageSize, list.filters]);
+  }, [fetchRules]);
 
   const openCreate = () => {
     setEditingRule(null);

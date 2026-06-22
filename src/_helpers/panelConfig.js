@@ -34,9 +34,9 @@ const detectModeFromRuntime = () => {
 };
 
 const configuredMode =
- 
+  // resolvePanelMode(process.env.REACT_APP_PANEL_MODE) ||
   // detectModeFromRuntime() ||
-  PANEL_MODES.ADMIN; // Default to admin if not specified
+  PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 

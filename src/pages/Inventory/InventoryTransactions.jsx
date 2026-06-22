@@ -11,7 +11,6 @@ import { PageHeader, DataTable, FilterBar, StatusBadge, ConfirmModal } from "../
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { dropdownApi } from "../../_helpers/dropdownApi";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { toast } from "react-toastify";
 import { useListPage } from "../../hooks/useListPage";
