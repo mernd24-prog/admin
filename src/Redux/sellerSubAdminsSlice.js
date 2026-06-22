@@ -2,6 +2,17 @@ import { createSlice } from "@reduxjs/toolkit";
 import { createApiThunkPrivate, createExtraReducersForThunk } from "../_helpers/ApiThunk";
 import { ENDPOINTS } from "../_helpers/endpoints";
 import { DEFAULT_SELLER_MODULES, firstId, normalizeAllowedModules, toSubAdminCreateBody } from "../_helpers/adminApi";
+import { getSelectedSellerOrganizationId } from "../_helpers/sellerOrganizationContext";
+
+const withActiveOrg = (keys = []) => (payload = {}) => {
+  const base = keys.reduce((acc, key) => {
+    const v = payload?.[key];
+    if (v !== undefined && v !== null && v !== "") acc[key] = v;
+    return acc;
+  }, {});
+  const organizationId = payload?.organizationId || getSelectedSellerOrganizationId();
+  return organizationId ? { ...base, organizationId } : base;
+};
 
 const initialState = {
   listSubAdminsData: {},
@@ -16,7 +27,8 @@ export const listSellerSubAdmins = createApiThunkPrivate(
   "sellerSubAdmins/listSellerSubAdmins",
   ENDPOINTS.sellers.subAdmins,
   "GET",
-  true
+  true,
+  { transformParams: withActiveOrg(["limit", "q", "search"]) }
 );
 
 export const getSellerSubAdminHierarchy = createApiThunkPrivate(
@@ -25,11 +37,15 @@ export const getSellerSubAdminHierarchy = createApiThunkPrivate(
   "GET",
   true,
   {
-    transformParams: (params = {}) => ({
-      hierarchy: true,
-      ...(params.limit ? { limit: params.limit } : {}),
-      ...(params.q || params.search ? { q: params.q || params.search } : {}),
-    }),
+    transformParams: (params = {}) => {
+      const organizationId = params?.organizationId || getSelectedSellerOrganizationId();
+      return {
+        hierarchy: true,
+        ...(params.limit ? { limit: params.limit } : {}),
+        ...(params.q || params.search ? { q: params.q || params.search } : {}),
+        ...(organizationId ? { organizationId } : {}),
+      };
+    },
   }
 );
 

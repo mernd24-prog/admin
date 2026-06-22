@@ -32,6 +32,7 @@ import SubscriptionPanel from '../../../../components/Product/SubscriptionPanel'
 import BundleBuilder from '../../../../components/Product/BundleBuilder';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { normalizeImageList } from '../../../../_helpers/productMedia';
+import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -565,6 +566,17 @@ export default function ProductManagementUI() {
   }, [formattedData.organizationList, formData?.sellerId, userData]);
 
   useEffect(() => {
+    const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
+    if (isSellerPanelUser) {
+      // Seller panel: always use the active organization from the header switcher
+      const activeOrgId = getSelectedSellerOrganizationId();
+      if (activeOrgId && formData?.organizationId !== activeOrgId) {
+        setFormData((prev) => ({ ...prev, organizationId: activeOrgId }));
+      }
+      return;
+    }
+
+    // Admin: derive from the organization list (existing behavior)
     if (formData?.organizationId) {
       const exists = organizationOptions.some((option) => String(option.value) === String(formData.organizationId));
       if (!exists) {
@@ -575,7 +587,7 @@ export default function ProductManagementUI() {
     if (organizationOptions.length === 1) {
       setFormData((prev) => ({ ...prev, organizationId: organizationOptions[0].value }));
     }
-  }, [organizationOptions, formData?.organizationId]);
+  }, [organizationOptions, formData?.organizationId, userData?.role]);
 
   const createSelectOptions = useMemo(() => {
     const categorySource = prefillList('categories', getListPayload(selector?.getListData));
@@ -642,7 +654,15 @@ export default function ProductManagementUI() {
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
     if (formData?.description?.trim() && formData.description.trim().length < 10) newErrors.description = "Description must be at least 10 characters.";
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
-    if (!formData?.organizationId) newErrors.organizationId = "Organization is required.";
+    if (!formData?.organizationId) {
+      if (isSellerPanelUser) {
+        // Silently resolve from the active organization switcher
+        const activeOrgId = getSelectedSellerOrganizationId();
+        if (!activeOrgId) newErrors.organizationId = "No active organization. Please select one from the header switcher.";
+      } else {
+        newErrors.organizationId = "Organization is required.";
+      }
+    }
     if (!(formData?.category_id || formData?.category || formData?.category_key)) {
       newErrors.category_id = "Category is required.";
     }
@@ -1014,7 +1034,7 @@ export default function ProductManagementUI() {
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
-      organizationId: updatedFormData.organizationId,
+      organizationId: updatedFormData.organizationId || (SELLER_PANEL_ROLES.has(userData?.role) ? getSelectedSellerOrganizationId() : ''),
       ...(updatedFormData.storeId ? { storeId: updatedFormData.storeId } : {}),
       ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
       title: updatedFormData.name || updatedFormData.title,
@@ -1352,7 +1372,7 @@ export default function ProductManagementUI() {
   const flowReadiness = useMemo(() => {
     const items = [
       { label: 'Categories', count: createSelectOptions?.length || 0, route: '/app/categories' },
-      { label: 'Attributes (selected category)', count: categoryAttributeSchema?.length || 0, route: '/app/category-attributes' },
+      { label: 'Attributes (selected category)', count: categoryAttributeSchema?.length || 0, route: '/app/categories' },
       { label: 'Brands', count: formattedData?.brandList?.length || 0, route: '/app/brands' },
       { label: 'HSN Codes', count: formattedData?.hsnCodeList?.length || 0, route: '/app/hsn-code' },
       { label: 'Warranty Templates', count: formattedData?.warrantyTemplateList?.length || 0, route: '/app/warranty' },

@@ -116,11 +116,11 @@ const MODULE_TABS = {
   reviews: 'Catalog Management',
   carts: 'Orders Management',
   orders: 'Orders Management',
-  returns: 'Orders Management',
-  delivery: 'Delivery & Shipping',
-  payments: 'Orders Management',
-  wallets: 'Orders Management',
-  tax: 'Tax & Compliance',
+  returns: 'Returns & Cancellations',
+  delivery: 'Shipping & Fulfilment',
+  payments: 'Payments & Finance',
+  wallets: 'Payments & Finance',
+  tax: 'Invoices & Taxation',
   locations: 'Location Management',
   countries: 'Location Management',
   states: 'Location Management',
@@ -137,7 +137,7 @@ const MODULE_TABS = {
   notifications: 'Marketing',
   analytics: 'Reports & Analytics',
   reports: 'Reports & Analytics',
-  fraud: 'Settings',
+  fraud: 'Payments & Finance',
 };
 
 const TAB_ORDER = [
@@ -145,10 +145,14 @@ const TAB_ORDER = [
   'Catalog Management',
   'Inventory Management',
   'Orders Management',
-  'Delivery & Shipping',
+  'Payments & Finance',
+  'Shipping & Fulfilment',
+  'Returns & Cancellations',
+  'Invoices & Taxation',
+  'Seller Finance & Payouts',
+  'Commerce Settings',
   'Users & Access',
   'Marketing',
-  'Tax & Compliance',
   'Reports & Analytics',
   'Location Management',
   'Settings',
@@ -879,6 +883,7 @@ const UserDetails = () => {
                         <StatusBadge value={organization.approvalStatus} />
                         <StatusBadge value={`KYC ${organization.kycStatus || 'not_submitted'}`} />
                         <StatusBadge value={`Bank ${organization.bankVerificationStatus || 'not_submitted'}`} />
+                        <StatusBadge value={`Go Live ${organization.goLiveStatus || 'pending'}`} />
                       </div>
                     </div>
 
@@ -912,12 +917,50 @@ const UserDetails = () => {
                         type="button"
                         className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100"
                         onClick={() => handleOrganizationReview(organization, {
-                          approvalStatus: 'approved',
                           kycStatus: 'verified',
+                        })}
+                        disabled={organization.kycStatus === 'verified'}
+                      >
+                        Approve KYC
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
                           bankVerificationStatus: 'verified',
                         })}
+                        disabled={organization.kycStatus !== 'verified' || organization.bankVerificationStatus === 'verified'}
+                      >
+                        Verify Bank
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
+                          approvalStatus: 'approved',
+                        })}
+                        disabled={
+                          organization.kycStatus !== 'verified' ||
+                          organization.bankVerificationStatus !== 'verified' ||
+                          ['approved', 'active'].includes(organization.approvalStatus)
+                        }
                       >
                         Approve Organization
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
+                          goLiveStatus: 'live',
+                        })}
+                        disabled={
+                          organization.kycStatus !== 'verified' ||
+                          organization.bankVerificationStatus !== 'verified' ||
+                          !['approved', 'active'].includes(organization.approvalStatus) ||
+                          organization.goLiveStatus === 'live'
+                        }
+                      >
+                        Approve Go Live
                       </button>
                       <button
                         type="button"
@@ -936,7 +979,6 @@ const UserDetails = () => {
                         onClick={() => handleOrganizationReview(organization, {
                           approvalStatus: 'rejected',
                           kycStatus: 'rejected',
-                          bankVerificationStatus: 'rejected',
                         })}
                       >
                         Reject Organization
@@ -946,6 +988,7 @@ const UserDetails = () => {
                         className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
                         onClick={() => handleOrganizationReview(organization, {
                           approvalStatus: 'blocked',
+                          goLiveStatus: 'blocked',
                         })}
                       >
                         Block

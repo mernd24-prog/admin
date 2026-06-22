@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { toast } from "sonner";
@@ -10,10 +10,10 @@ import {
   FilterBar,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
-import { MdShoppingCart } from "react-icons/md";
+import { MdShoppingCart, MdVisibility } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const ORDER_STATUSES = [
@@ -171,6 +171,46 @@ const COLUMNS = [
     },
   },
   {
+    key: "seller",
+    label: "Seller / Org",
+    render: (_, row) => {
+      const sellerName = firstDefined(
+        row.sellerName,
+        row.seller?.name,
+        row.sellerSnapshot?.name,
+        row.seller_snapshot?.name,
+      );
+      const organizationName = firstDefined(
+        row.organizationName,
+        row.organization?.legalName,
+        row.organizationSnapshot?.legalName,
+        row.organization_snapshot?.legalName,
+        row.organizationSnapshot?.storeDisplayName,
+        row.organization_snapshot?.storeDisplayName,
+      );
+      const sellerId = firstDefined(row.sellerId, row.seller_id);
+      const organizationId = firstDefined(row.organizationId, row.organization_id);
+      if (!sellerName && !organizationName && !sellerId && !organizationId) {
+        return <span className="text-gray-400">—</span>;
+      }
+      return (
+        <div>
+          <div className="text-sm font-medium text-gray-800">
+            {organizationName || sellerName || "Seller"}
+          </div>
+          {sellerName && organizationName && (
+            <div className="text-xs text-gray-400">{sellerName}</div>
+          )}
+          {!sellerName && sellerId && (
+            <div className="font-mono text-xs text-gray-400">
+              {String(sellerId).slice(0, 12)}
+            </div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     key: "items",
     label: "Items",
     render: (v, row) => {
@@ -192,8 +232,18 @@ const COLUMNS = [
   },
   {
     key: "status",
-    label: "Status",
+    label: "Order Status",
     render: (v) => <StatusBadge status={v} />,
+  },
+  {
+    key: "fulfillment_status",
+    label: "Fulfilment",
+    render: (v, row) => (
+      <StatusBadge
+        status={firstDefined(v, row.fulfilmentStatus, row.fulfillmentStatus, row.status)}
+        dot
+      />
+    ),
   },
   {
     key: "payment_status",
@@ -207,7 +257,7 @@ const COLUMNS = [
   },
   {
     key: "delivery_status",
-    label: "Delivery",
+    label: "Shipment Status",
     render: (v, row) => {
       const s = firstDefined(v, row.deliveryStatus);
       return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">—</span>;
@@ -229,6 +279,7 @@ const getListPayload = (selector = {}) => {
 const Orders = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isSeller } = usePermission();
   const selector = useSelector((state) => state.order);
   const list = useListPage({
     defaultPageSize: 20,
@@ -271,20 +322,28 @@ const Orders = () => {
     list.filters,
   ]);
 
+  const filterFields = useMemo(
+    () => (isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS),
+    [isSeller],
+  );
+
   const columns = [
     ...COLUMNS,
     {
       key: "_actions",
       label: "",
       render: (_, row) => (
-        <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>
-          <button
-            onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--admin-navy)] text-[var(--admin-navy)] hover:bg-[var(--admin-navy)] hover:text-white transition-colors"
-          >
-            View
-          </button>
-        </PermissionGuard>
+        <div className="flex flex-wrap items-center gap-2">
+          <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>
+            <button
+              type="button"
+              onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-navy)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-navy)] hover:text-white"
+            >
+              <MdVisibility size={15} /> View Details
+            </button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ];
@@ -320,7 +379,7 @@ const Orders = () => {
         exportConfig={{ filename: "orders", columns: COLUMNS }}
         filterBar={
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={filterFields}
             values={list.filters}
             onChange={list.setFilter}
             onClear={list.clearFilters}
@@ -329,6 +388,7 @@ const Orders = () => {
           />
         }
       />
+
     </div>
   );
 };

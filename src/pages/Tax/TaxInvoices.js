@@ -175,6 +175,7 @@ const TaxInvoices = () => {
       <PageHeader
         title="Tax Invoices"
         subtitle="View and manage all tax invoices"
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
         actions={
           <button
             onClick={fetchInvoices}

@@ -282,7 +282,7 @@ const CommerceSettings = () => {
       <PageHeader
         title="Commerce Settings"
         subtitle="Checkout, COD, wallet, taxation, seller payout, and seller charge controls"
-        breadcrumbs={[{ label: "Orders Management" }, { label: "Commerce Settings" }]}
+        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Commerce Settings" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="admin-btn-secondary" onClick={() => { fetchSettings(); fetchSellerRows(); }} disabled={loading}>

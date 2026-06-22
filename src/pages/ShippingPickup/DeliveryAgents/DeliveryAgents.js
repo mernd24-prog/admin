@@ -371,7 +371,7 @@ const DeliveryAgents = () => {
       <PageHeader
         title="Delivery Agents"
         subtitle="Manage in-house delivery agents and seller-specific shipment assignees"
-        breadcrumbs={[{ label: "Delivery & Shipping" }, { label: "Delivery Agents" }]}
+        breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Delivery Agents" }]}
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" className="admin-btn-secondary" onClick={fetchAgents} disabled={loading}>

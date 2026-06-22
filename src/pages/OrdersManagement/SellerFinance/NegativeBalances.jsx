@@ -298,8 +298,7 @@ const NegativeBalances = () => {
         title="Negative Balances"
         subtitle="Review and resolve seller accounts with negative payout balances"
         breadcrumbs={[
-          { label: "Orders Management" },
-          { label: "Seller Finance" },
+          { label: "Seller Finance & Payouts" },
           { label: "Negative Balances" },
         ]}
         actions={

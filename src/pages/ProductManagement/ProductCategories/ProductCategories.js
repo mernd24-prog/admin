@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { FaPlus, FaMinus } from "react-icons/fa";
-import { MdSearch, MdClose, MdAdd } from "react-icons/md";
+import { MdSearch, MdClose, MdAdd, MdTune } from "react-icons/md";
 
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -12,6 +12,7 @@ import { PageHeader, ConfirmModal } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import CategorySetup from "./components/CategorySetup";
+import { CategoryAttributesPanel } from "./CategoryAttributes";
 
 // Redux actions
 import {
@@ -28,6 +29,7 @@ const ProductCategories = () => {
   const [categoryEditOpen, setCategoryEditOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [statusTarget, setStatusTarget] = useState(null);
+  const [attributeCategory, setAttributeCategory] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isRefresh, setIsRefresh] = useState(false);
   const [isPublish, setIsPublish] = useState(false);
@@ -831,6 +833,16 @@ const ProductCategories = () => {
               requiredModule="categories"
               size="sm"
             />
+            <PermissionGuard module="categories" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                onClick={() => setAttributeCategory(category)}
+                className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
+                title="Manage category attributes"
+              >
+                <MdTune size={18} />
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -978,6 +990,24 @@ const ProductCategories = () => {
         confirmLabel={statusTarget?.isDisable ? "Enable" : "Disable"}
         loading={isLoading}
       />
+
+      {attributeCategory && (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            aria-label="Close category attributes"
+            onClick={() => setAttributeCategory(null)}
+          />
+          <aside className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl">
+            <CategoryAttributesPanel
+              embedded
+              initialCategory={attributeCategory}
+              onClose={() => setAttributeCategory(null)}
+            />
+          </aside>
+        </div>
+      )}
     </div>
   );
 };

@@ -251,7 +251,7 @@ const TaxCompliance = () => {
       <PageHeader
         title="Tax Documents"
         subtitle="Invoices, credit notes, and tax ledger reports"
-        breadcrumbs={[{ label: "Tax & Compliance" }, { label: "Tax Documents" }]}
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Documents" }]}
         actions={(
           <div className="flex flex-wrap gap-2">
             <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>

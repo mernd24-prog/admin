@@ -127,16 +127,6 @@ const ReferralCommerce = React.lazy(
   () => import("../../pages/ReferralCommerce/ReferralCommerce"),
 );
 
-const ShippingCompanyUsers = React.lazy(
-  () =>
-    import("../../pages/ShippingPickup/ShippingCompanyUsers/ShippingCompanyUsers"),
-);
-const ShippingPackages = React.lazy(
-  () => import("../../pages/ShippingPickup/ShippingPackages/ShippingPackages"),
-);
-const PickupAddresses = React.lazy(
-  () => import("../../pages/ShippingPickup/PickupAddresses/PickupAddresses"),
-);
 const ShipmentTracking = React.lazy(
   () => import("../../pages/ShippingPickup/ShipmentTracking/ShipmentTracking"),
 );
@@ -155,10 +145,6 @@ const ProductAdminDetails = React.lazy(
 const ProductCategories = React.lazy(
   () =>
     import("../../pages/ProductManagement/ProductCategories/ProductCategories"),
-);
-const CategoryAttributes = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/ProductCategories/CategoryAttributes"),
 );
 const OrderSummary = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/components/ViewOrders"),
@@ -342,12 +328,6 @@ const Webhooks = React.lazy(
 );
 
 // ── Seller Management ────────────────────────────────────────────────────────
-const SellerOnboarding = React.lazy(
-  () => import("../../pages/SellerOnboarding/SellerOnboarding"),
-);
-const SellerStatusPage = React.lazy(
-  () => import("../../pages/SellerStatus/SellerStatusPage"),
-);
 const SellerSubAdminManagement = React.lazy(
   () => import("../../pages/SellerManagement/SellerSubAdminManagement"),
 );
@@ -763,24 +743,15 @@ function Layout() {
 
                   <Route
                     path="/shipping-company-users"
-                    element={renderRoute(
-                      "/shipping-company-users",
-                      <ShippingCompanyUsers />,
-                    )}
+                    element={<Navigate to="/app/delivery-agents" replace />}
                   />
                   <Route
                     path="/shipping-packages"
-                    element={renderRoute(
-                      "/shipping-packages",
-                      <ShippingPackages />,
-                    )}
+                    element={<Navigate to="/app/shipment-tracking" replace />}
                   />
                   <Route
                     path="/pickup-addresses"
-                    element={renderRoute(
-                      "/pickup-addresses",
-                      <PickupAddresses />,
-                    )}
+                    element={<Navigate to="/app/shipment-tracking" replace />}
                   />
                   <Route
                     path="/shipment-tracking"
@@ -810,10 +781,7 @@ function Layout() {
                   />
                   <Route
                     path="/category-attributes"
-                    element={renderRoute(
-                      "/category-attributes",
-                      <CategoryAttributes />,
-                    )}
+                    element={<Navigate to="/app/categories" replace />}
                   />
                   <Route
                     path="/subscription-orders"
@@ -906,11 +874,11 @@ function Layout() {
                   />
                   <Route
                     path="/seller-kyc"
-                    element={renderRoute("/seller-kyc", <Sellers />)}
+                    element={<Navigate to="/app/seller" replace />}
                   />
                   <Route
                     path="/seller-bank"
-                    element={renderRoute("/seller-bank", <Sellers />)}
+                    element={<Navigate to="/app/seller" replace />}
                   />
                   <Route
                     path="/seller-kyc-detail/:id"
@@ -1068,14 +1036,11 @@ function Layout() {
                   {/* ── Seller Management — additional pages ────────────────── */}
                   <Route
                     path="/seller-onboarding"
-                    element={renderRoute(
-                      "/seller-onboarding",
-                      <SellerOnboarding />,
-                    )}
+                    element={<Navigate to="/app/seller" replace />}
                   />
                   <Route
                     path="/seller-status"
-                    element={renderRoute("/seller-status", <SellerStatusPage />)}
+                    element={<Navigate to="/app/seller" replace />}
                   />
                   <Route
                     path="/seller-sub-admins"

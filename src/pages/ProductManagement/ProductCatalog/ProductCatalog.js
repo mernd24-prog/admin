@@ -35,6 +35,7 @@ import { DataTable, ExportButton } from "../../../components/Shared";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
+import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
 // import { GoDesktopDownload } from "react-icons/go";
 
 const INITIAL_FILTERS = {
@@ -170,6 +171,8 @@ const ProductCatalog = () => {
       includeAllStatuses: true,
       sortBy: getSortByParam(list.sortKey, list.sortDir),
       sortDir: list.sortDir,
+      // Seller panel users always filter by their active organization
+      ...(isSellerPanelUser ? { organizationId: getSelectedSellerOrganizationId() } : {}),
       ...(appliedFilters?.category?.value
         ? { category: appliedFilters.category.value }
         : {}),
@@ -191,7 +194,7 @@ const ProductCatalog = () => {
         ? { status: approvalStatusToProductStatus[appliedFilters.approvalStatus.value] }
         : {}),
     }),
-    [appliedFilters, list.page, list.pageSize, list.sortDir, list.sortKey],
+    [appliedFilters, isSellerPanelUser, list.page, list.pageSize, list.sortDir, list.sortKey],
   );
 
   const fetchProductsList = useCallback(async () => {
@@ -205,6 +208,7 @@ const ProductCatalog = () => {
             limit: list.pageSize,
             sortBy: getSortByParam(list.sortKey, list.sortDir),
             sortDir: list.sortDir,
+            ...(isSellerPanelUser ? { organizationId: getSelectedSellerOrganizationId() } : {}),
             ...(appliedFilters?.category?.value
               ? { category: appliedFilters.category.value }
               : {}),

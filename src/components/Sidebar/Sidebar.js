@@ -58,9 +58,9 @@ const SELLER_SIDEBAR_SECTIONS = [
   },
   {
     module: "delivery",
-    tab: "Delivery & Shipping",
-    label: "Delivery",
-    route: "shipping-packages",
+    tab: "Orders Management",
+    label: "Shipments",
+    route: "shipment-tracking",
   },
   {
     module: "returns",
@@ -114,6 +114,12 @@ const SECTION_ICONS = {
   "inventory operations": MdWarehouse,
   "orders management": MdShoppingCart,
   "delivery & shipping": MdLocalShipping,
+  "payments & finance": MdAccountBalance,
+  "shipping & fulfilment": MdLocalShipping,
+  "returns & cancellations": MdShoppingCart,
+  "invoices & taxation": MdAccountBalance,
+  "seller finance & payouts": MdAccountBalance,
+  "commerce settings": CiSettings,
   "users & access": MdPeople,
   marketing: MdCampaign,
   "tax & compliance": MdAccountBalance,
@@ -135,6 +141,14 @@ const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
   "warehouse",
   "low-stock-alerts",
   "threshold-products",
+  "category-attributes",
+  "seller-kyc",
+  "seller-bank",
+  "seller-onboarding",
+  "seller-status",
+  "shipping-packages",
+  "pickup-addresses",
+  "shipping-company-users",
 ]);
 
 const normalizeModuleCode = (value = "") =>

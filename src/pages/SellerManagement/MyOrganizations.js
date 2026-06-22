@@ -27,6 +27,15 @@ const BUSINESS_TYPES = [
   "public_limited",
 ];
 const PAYOUT_SCHEDULES = ["daily", "weekly", "biweekly", "monthly"];
+const TAX_REGISTRATION_TYPES = ["regular", "composition", "unregistered"];
+const ORGANIZATION_DOCUMENTS = [
+  ["panDocumentUrl", "PAN Document"],
+  ["gstCertificateUrl", "GST Certificate"],
+  ["aadhaarFrontUrl", "Aadhaar Front"],
+  ["aadhaarBackUrl", "Aadhaar Back"],
+  ["bankProofUrl", "Cancelled Cheque / Bank Proof"],
+  ["addressProofUrl", "Business Address Proof"],
+];
 
 const emptyAddress = {
   line1: "",
@@ -49,12 +58,23 @@ const createEmptyForm = () => ({
   legalBusinessName: "",
   storeDisplayName: "",
   businessType: "proprietorship",
+  description: "",
+  supportEmail: "",
+  supportPhone: "",
+  registrationNumber: "",
   gstin: "",
   pan: "",
+  aadhaarNumber: "",
+  dateOfBirth: "",
+  businessWebsite: "",
+  primaryContactName: "",
+  documents: {},
   bankDetails: { ...emptyBankDetails },
   billingAddress: { ...emptyAddress },
   pickupAddress: { ...emptyAddress },
+  returnAddress: { ...emptyAddress },
   taxState: "",
+  taxRegistrationType: "regular",
   invoicePrefix: "INV",
   invoiceSeries: "",
   payoutSchedule: "weekly",
@@ -80,6 +100,19 @@ const orgLabel = (org = {}) =>
 
 const orgId = (org = {}) => org.id || org.organizationId || "";
 
+const readDocument = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      resolve({
+        dataUri: reader.result,
+        fileName: file.name,
+        mimeType: file.type,
+      });
+    reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+
 const buildPayload = (form = {}) => {
   const billingState = cleanString(form.billingAddress?.state);
   const pickupState = cleanString(form.pickupAddress?.state);
@@ -89,8 +122,17 @@ const buildPayload = (form = {}) => {
     legalBusinessName: cleanString(form.legalBusinessName),
     storeDisplayName: cleanString(form.storeDisplayName),
     businessType: cleanString(form.businessType) || null,
+    description: cleanString(form.description) || null,
+    supportEmail: cleanString(form.supportEmail),
+    supportPhone: cleanString(form.supportPhone),
+    registrationNumber: cleanString(form.registrationNumber) || null,
     gstin: cleanString(form.gstin) || null,
     pan: cleanString(form.pan),
+    aadhaarNumber: cleanString(form.aadhaarNumber),
+    dateOfBirth: form.dateOfBirth || null,
+    businessWebsite: cleanString(form.businessWebsite) || null,
+    primaryContactName: cleanString(form.primaryContactName),
+    documents: form.documents || {},
     bankDetails: {
       accountHolderName: cleanString(form.bankDetails?.accountHolderName),
       accountNumber: cleanString(form.bankDetails?.accountNumber),
@@ -118,10 +160,21 @@ const buildPayload = (form = {}) => {
       postalCode: cleanString(form.pickupAddress?.postalCode),
       country: cleanString(form.pickupAddress?.country) || "India",
     },
+    returnAddress: {
+      ...emptyAddress,
+      ...(form.returnAddress || {}),
+      line1: cleanString(form.returnAddress?.line1),
+      line2: cleanString(form.returnAddress?.line2),
+      city: cleanString(form.returnAddress?.city),
+      state: cleanString(form.returnAddress?.state),
+      postalCode: cleanString(form.returnAddress?.postalCode),
+      country: cleanString(form.returnAddress?.country) || "India",
+    },
     taxSettings: {
       state: taxState,
       gstin: cleanString(form.gstin) || null,
       pan: cleanString(form.pan),
+      registrationType: cleanString(form.taxRegistrationType) || "regular",
     },
     invoiceSettings: {
       invoicePrefix: cleanString(form.invoicePrefix) || "INV",
@@ -131,6 +184,11 @@ const buildPayload = (form = {}) => {
     payoutSettings: {
       payoutSchedule: cleanString(form.payoutSchedule) || "weekly",
     },
+    complianceSettings: {
+      gstRegistered: cleanString(form.taxRegistrationType) !== "unregistered",
+      taxRegistrationType: cleanString(form.taxRegistrationType) || "regular",
+      taxRegion: taxState,
+    },
   };
 };
 
@@ -138,18 +196,33 @@ const validateForm = (form = {}) => {
   const required = [
     [form.legalBusinessName, "Legal business name is required"],
     [form.storeDisplayName, "Store / display name is required"],
+    [form.businessType, "Business type is required"],
+    [form.supportEmail, "Support email is required"],
+    [form.supportPhone, "Support phone is required"],
+    [form.primaryContactName, "Primary contact name is required"],
+    [form.gstin, "GSTIN is required"],
     [form.pan, "PAN is required"],
+    [form.aadhaarNumber, "Aadhaar number is required"],
+    [form.dateOfBirth, "Date of birth is required"],
+    [form.bankDetails?.accountHolderName, "Account holder name is required"],
     [form.bankDetails?.accountNumber, "Bank account number is required"],
     [form.bankDetails?.ifscCode, "IFSC code is required"],
+    [form.bankDetails?.bankName, "Bank name is required"],
     [form.billingAddress?.line1, "Billing address line 1 is required"],
     [form.billingAddress?.city, "Billing city is required"],
     [form.billingAddress?.state, "Billing state is required"],
     [form.billingAddress?.postalCode, "Billing pincode is required"],
     [form.pickupAddress?.line1, "Pickup address line 1 is required"],
+    [form.pickupAddress?.city, "Pickup city is required"],
     [form.pickupAddress?.state, "Pickup state is required"],
+    [form.pickupAddress?.postalCode, "Pickup pincode is required"],
   ];
   const missing = required.find(([val]) => !cleanString(val));
-  return missing?.[1] || "";
+  if (missing) return missing[1];
+  const missingDocument = ORGANIZATION_DOCUMENTS.find(
+    ([key]) => !form.documents?.[key],
+  );
+  return missingDocument ? `${missingDocument[1]} is required` : "";
 };
 
 const normalizeForEdit = (org = {}) => {
@@ -160,12 +233,26 @@ const normalizeForEdit = (org = {}) => {
     legalBusinessName: org.legalBusinessName || "",
     storeDisplayName: org.storeDisplayName || "",
     businessType: org.businessType || "proprietorship",
+    description: org.description || "",
+    supportEmail: org.supportEmail || "",
+    supportPhone: org.supportPhone || "",
+    registrationNumber: org.registrationNumber || "",
     gstin: org.gstin || "",
     pan: org.pan || "",
+    aadhaarNumber: org.aadhaarNumber || "",
+    dateOfBirth: org.dateOfBirth ? String(org.dateOfBirth).slice(0, 10) : "",
+    businessWebsite: org.businessWebsite || "",
+    primaryContactName: org.primaryContactName || "",
+    documents: { ...(org.documents || org.kycDocuments || {}) },
     bankDetails: { ...emptyBankDetails, ...(org.bankDetails || {}) },
     billingAddress: { ...emptyAddress, ...(org.billingAddress || {}) },
     pickupAddress: { ...emptyAddress, ...(org.pickupAddress || {}) },
+    returnAddress: { ...emptyAddress, ...(org.returnAddress || {}) },
     taxState: taxSettings.state || org.billingAddress?.state || "",
+    taxRegistrationType:
+      org.complianceSettings?.taxRegistrationType ||
+      taxSettings.registrationType ||
+      "regular",
     invoicePrefix: invoiceSettings.invoicePrefix || "INV",
     invoiceSeries: invoiceSettings.invoiceSeries || "",
     payoutSchedule: payoutSettings.payoutSchedule || "weekly",
@@ -293,7 +380,17 @@ const ApprovalBanner = ({ org }) => {
 
 // ─── Organization Form Modal ──────────────────────────────────────────────────
 
-const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChange, onNestedChange }) => {
+const OrgFormModal = ({
+  open,
+  mode,
+  form,
+  submitting,
+  onClose,
+  onSubmit,
+  onChange,
+  onNestedChange,
+  onDocumentChange,
+}) => {
   if (!open) return null;
   const isEdit = mode === "edit";
 
@@ -358,7 +455,37 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
                   ))}
                 </select>
               </FieldRow>
-              <FieldRow label="GSTIN">
+              <FieldRow label="Primary Contact Name" required>
+                <input
+                  className={inputCls}
+                  value={form.primaryContactName}
+                  onChange={(e) => onChange("primaryContactName", e.target.value)}
+                />
+              </FieldRow>
+              <FieldRow label="Support Email" required>
+                <input
+                  type="email"
+                  className={inputCls}
+                  value={form.supportEmail}
+                  onChange={(e) => onChange("supportEmail", e.target.value)}
+                />
+              </FieldRow>
+              <FieldRow label="Support Phone" required>
+                <input
+                  className={inputCls}
+                  value={form.supportPhone}
+                  onChange={(e) => onChange("supportPhone", e.target.value)}
+                  maxLength={15}
+                />
+              </FieldRow>
+              <FieldRow label="Registration Number">
+                <input
+                  className={inputCls}
+                  value={form.registrationNumber}
+                  onChange={(e) => onChange("registrationNumber", e.target.value)}
+                />
+              </FieldRow>
+              <FieldRow label="GSTIN" required>
                 <input
                   className={inputCls}
                   value={form.gstin}
@@ -376,6 +503,39 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
                   maxLength={10}
                 />
               </FieldRow>
+              <FieldRow label="Aadhaar Number" required>
+                <input
+                  className={inputCls}
+                  value={form.aadhaarNumber}
+                  onChange={(e) => onChange("aadhaarNumber", e.target.value.replace(/\D/g, ""))}
+                  maxLength={12}
+                />
+              </FieldRow>
+              <FieldRow label="Date of Birth" required>
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={form.dateOfBirth}
+                  onChange={(e) => onChange("dateOfBirth", e.target.value)}
+                />
+              </FieldRow>
+              <FieldRow label="Business Website">
+                <input
+                  type="url"
+                  className={inputCls}
+                  value={form.businessWebsite}
+                  onChange={(e) => onChange("businessWebsite", e.target.value)}
+                  placeholder="https://example.com"
+                />
+              </FieldRow>
+              <FieldRow label="Business Description">
+                <textarea
+                  className={`${inputCls} min-h-[76px] py-2 md:col-span-2`}
+                  value={form.description}
+                  onChange={(e) => onChange("description", e.target.value)}
+                  rows={3}
+                />
+              </FieldRow>
             </div>
           </section>
 
@@ -383,7 +543,7 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
           <section className="rounded-lg border border-[#E6E6E6] p-4">
             <h4 className="mb-3 text-sm font-semibold text-[#202337]">Bank Details</h4>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FieldRow label="Account Holder Name">
+              <FieldRow label="Account Holder Name" required>
                 <input
                   className={inputCls}
                   value={form.bankDetails.accountHolderName}
@@ -405,13 +565,56 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
                   maxLength={11}
                 />
               </FieldRow>
-              <FieldRow label="Bank Name">
+              <FieldRow label="Bank Name" required>
                 <input
                   className={inputCls}
                   value={form.bankDetails.bankName}
                   onChange={(e) => onNestedChange("bankDetails", "bankName", e.target.value)}
                 />
               </FieldRow>
+              <FieldRow label="Branch Name">
+                <input
+                  className={inputCls}
+                  value={form.bankDetails.branchName}
+                  onChange={(e) => onNestedChange("bankDetails", "branchName", e.target.value)}
+                />
+              </FieldRow>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-[#E6E6E6] p-4">
+            <h4 className="mb-1 text-sm font-semibold text-[#202337]">
+              KYC &amp; Compliance Documents
+            </h4>
+            <p className="mb-3 text-xs text-[#65718b]">
+              Upload PDF, JPG, PNG, or WebP files. Every organization is verified independently.
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {ORGANIZATION_DOCUMENTS.map(([key, label]) => {
+                const document = form.documents?.[key];
+                const existingUrl = typeof document === "string" ? document : "";
+                return (
+                  <FieldRow key={key} label={label} required>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp"
+                      className={`${inputCls} py-1.5`}
+                      onChange={(event) => onDocumentChange(key, event.target.files?.[0])}
+                    />
+                    {document && (
+                      <span className="text-[11px] text-[#65718b]">
+                        {existingUrl ? (
+                          <a href={existingUrl} target="_blank" rel="noreferrer" className="text-[#2f6fed] hover:underline">
+                            View uploaded document
+                          </a>
+                        ) : (
+                          document.fileName || "Selected"
+                        )}
+                      </span>
+                    )}
+                  </FieldRow>
+                );
+              })}
             </div>
           </section>
 
@@ -478,12 +681,46 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
             </section>
           </div>
 
+          <section className="rounded-lg border border-[#E6E6E6] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-[#202337]">Return Address</h4>
+              <button
+                type="button"
+                className="text-xs text-[#2f6fed] hover:underline"
+                onClick={() =>
+                  Object.entries(form.pickupAddress).forEach(([key, value]) =>
+                    onNestedChange("returnAddress", key, value),
+                  )
+                }
+              >
+                Same as pickup address
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <FieldRow label="Line 1">
+                <input className={inputCls} value={form.returnAddress.line1} onChange={(e) => onNestedChange("returnAddress", "line1", e.target.value)} />
+              </FieldRow>
+              <FieldRow label="Line 2">
+                <input className={inputCls} value={form.returnAddress.line2} onChange={(e) => onNestedChange("returnAddress", "line2", e.target.value)} />
+              </FieldRow>
+              <FieldRow label="City">
+                <input className={inputCls} value={form.returnAddress.city} onChange={(e) => onNestedChange("returnAddress", "city", e.target.value)} />
+              </FieldRow>
+              <FieldRow label="State">
+                <input className={inputCls} value={form.returnAddress.state} onChange={(e) => onNestedChange("returnAddress", "state", e.target.value)} />
+              </FieldRow>
+              <FieldRow label="Pincode">
+                <input className={inputCls} value={form.returnAddress.postalCode} onChange={(e) => onNestedChange("returnAddress", "postalCode", e.target.value)} maxLength={6} />
+              </FieldRow>
+            </div>
+          </section>
+
           {/* Invoice & payout settings */}
           <section>
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#65718b]">
               Invoice &amp; Payout Settings
             </h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <FieldRow label="Tax State">
                 <input
                   className={inputCls}
@@ -491,6 +728,17 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
                   onChange={(e) => onChange("taxState", e.target.value)}
                   placeholder="Auto-filled from billing state"
                 />
+              </FieldRow>
+              <FieldRow label="Tax Registration">
+                <select
+                  className={inputCls}
+                  value={form.taxRegistrationType}
+                  onChange={(e) => onChange("taxRegistrationType", e.target.value)}
+                >
+                  {TAX_REGISTRATION_TYPES.map((type) => (
+                    <option key={type} value={type}>{labelize(type)}</option>
+                  ))}
+                </select>
               </FieldRow>
               <FieldRow label="Invoice Prefix">
                 <input
@@ -534,7 +782,8 @@ const OrgFormModal = ({ open, mode, form, submitting, onClose, onSubmit, onChang
 const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
   const id = orgId(org);
   const status = org.approvalStatus || "draft";
-  const isApproved = status === "approved" || status === "active";
+  const isApproved =
+    (status === "approved" || status === "active") && org.goLiveStatus === "live";
 
   return (
     <div
@@ -585,6 +834,13 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
           <StatusBadge
             status={org.bankVerificationStatus}
             label={`Bank: ${labelize(org.bankVerificationStatus)}`}
+            size="xs"
+          />
+        )}
+        {org.goLiveStatus && (
+          <StatusBadge
+            status={org.goLiveStatus}
+            label={`Go Live: ${labelize(org.goLiveStatus)}`}
             size="xs"
           />
         )}
@@ -720,6 +976,16 @@ const MyOrganizations = () => {
       [section]: { ...(prev[section] || {}), [key]: value },
     }));
 
+  const handleDocumentChange = async (key, file) => {
+    if (!file) return;
+    try {
+      const document = await readDocument(file);
+      updateNestedForm("documents", key, document);
+    } catch (error) {
+      toast.error(error?.message || "Failed to read document");
+    }
+  };
+
   const handleSubmit = async () => {
     const error = validateForm(form);
     if (error) {
@@ -738,7 +1004,7 @@ const MyOrganizations = () => {
         await apiRequest("POST", ENDPOINTS.sellers.myOrganizations, payload);
         toast.success("Organization submitted for review");
       }
-      closeModal();
+      setModal({ open: false, mode: "create", org: null });
       await loadOrganizations();
     } catch (error) {
       toast.error(error?.message || "Failed to save organization");
@@ -762,7 +1028,9 @@ const MyOrganizations = () => {
   };
 
   const approvedCount = organizations.filter(
-    (o) => o.approvalStatus === "approved" || o.approvalStatus === "active",
+    (o) =>
+      (o.approvalStatus === "approved" || o.approvalStatus === "active") &&
+      o.goLiveStatus === "live",
   ).length;
   const pendingCount = organizations.filter(
     (o) => o.approvalStatus === "pending_review" || o.approvalStatus === "resubmitted",
@@ -876,6 +1144,7 @@ const MyOrganizations = () => {
         onSubmit={handleSubmit}
         onChange={updateForm}
         onNestedChange={updateNestedForm}
+        onDocumentChange={handleDocumentChange}
       />
     </div>
   );

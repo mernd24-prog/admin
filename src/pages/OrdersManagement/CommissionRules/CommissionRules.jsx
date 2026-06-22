@@ -236,7 +236,7 @@ const CommissionRules = () => {
       <PageHeader
         title="Commission Rules"
         subtitle="Configure seller commission rates by tier and category"
-        breadcrumbs={[{ label: "Finance" }, { label: "Commission Rules" }]}
+        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Commission Rules" }]}
         actions={
           <div className="flex items-center gap-2">
             <button

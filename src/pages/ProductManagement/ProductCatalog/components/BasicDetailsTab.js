@@ -357,18 +357,20 @@ export default function BasicDetailsTab({
                 />
               </div>
             )}
-            <div>
-              <FilterSelect
-                label="Legal Organization"
-                name="organizationId"
-                value={organizationList.find((opt) => String(opt.value) === String(formData.organizationId || '')) || null}
-                onChange={(e) => handleSelectChange(e, 'ORGANIZATION_ID')}
-                options={organizationList || []}
-                error={errors?.organizationId}
-                placeholder="Select Organization"
-                required
-              />
-            </div>
+            {!SELLER_PANEL_ROLES.has(userData?.role) && (
+              <div>
+                <FilterSelect
+                  label="Legal Organization"
+                  name="organizationId"
+                  value={organizationList.find((opt) => String(opt.value) === String(formData.organizationId || '')) || null}
+                  onChange={(e) => handleSelectChange(e, 'ORGANIZATION_ID')}
+                  options={organizationList || []}
+                  error={errors?.organizationId}
+                  placeholder="Select Organization"
+                  required
+                />
+              </div>
+            )}
             <div className={`${userData?.roleId !== 9 ? "col-span-1" : "col-span-2"}`}>
               <Input
                 labelName="Product Name"

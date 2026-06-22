@@ -181,7 +181,7 @@ const WalletTransactions = () => {
           subtitle="Platform-wide wallet credits, debits, cashbacks, refunds, and adjustments"
           breadcrumbs={[
             { label: "Home", to: "/app/home" },
-            { label: "Orders Management" },
+            { label: "Payments & Finance" },
             { label: "Wallet Transactions" },
           ]}
           actions={

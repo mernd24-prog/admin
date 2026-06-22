@@ -132,15 +132,20 @@ export default function Header({
       .then((response) => {
         if (!active) return;
         const data = response?.data?.data || response?.normalized?.data || response?.data || {};
-        const list = data.organizations || data.items || data.list || [];
+        const list = (data.organizations || data.items || data.list || []).filter(
+          (item) =>
+            ["approved", "active"].includes(item.approvalStatus) &&
+            item.kycStatus === "verified" &&
+            item.bankVerificationStatus === "verified" &&
+            item.goLiveStatus === "live",
+        );
         setOrganizations(list);
         const stored = getSelectedSellerOrganizationId();
         const existing = list.some((item) => String(item.id || item.organizationId) === stored);
+        const fallback = list.find((item) => item.isDefault) || list[0];
         const nextId = existing
           ? stored
-          : list.length === 1
-            ? String(list[0].id || list[0].organizationId || "")
-            : "";
+          : String(fallback?.id || fallback?.organizationId || "");
         setSelectedOrganizationIdState(nextId);
         if (nextId !== stored) setSelectedSellerOrganizationId(nextId);
       })
@@ -256,7 +261,6 @@ export default function Header({
               onChange={handleOrganizationChange}
               title="Organization"
             >
-              {organizations.length > 1 && <option value="">All Organizations</option>}
               {organizations.map((organization) => (
                 <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
                   {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}

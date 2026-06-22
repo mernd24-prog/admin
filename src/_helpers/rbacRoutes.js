@@ -12,10 +12,14 @@ export const MODULE_TAB_ORDER = [
   "Catalog Management",
   "Inventory Management",
   "Orders Management",
-  "Delivery & Shipping",
+  "Payments & Finance",
+  "Shipping & Fulfilment",
+  "Returns & Cancellations",
+  "Invoices & Taxation",
+  "Seller Finance & Payouts",
+  "Commerce Settings",
   "Users & Access",
   "Marketing",
-  "Tax & Compliance",
   "Reports & Analytics",
   "Location Management",
   "Settings",
@@ -90,6 +94,12 @@ const MODULE_LABELS = {
   recommendations: "Recommendations",
   fraud: "Fraud Management",
   deals: "Deal Management",
+  "payments-finance": "Payments & Finance",
+  "shipping-fulfilment": "Shipping & Fulfilment",
+  "returns-cancellations": "Returns & Cancellations",
+  "invoices-taxation": "Invoices & Taxation",
+  "seller-finance-payouts": "Seller Finance & Payouts",
+  "commerce-settings-menu": "Commerce Settings",
   "deal-management": "Deal Management",
   cancellations: "Cancellation Management",
   "seller-onboarding": "Seller Onboarding",
@@ -113,6 +123,11 @@ const MODULE_LABELS = {
   chargebacks: "Chargeback Management",
   // Payouts
   "seller-payouts": "Seller Payout Management",
+  "payout-ops-queue": "Payout Ops Queue",
+  "negative-balances": "Negative Balance Recovery",
+  "platform-fee-config": "Platform Fee",
+  "commission-rules": "Commission Rules",
+  "delivery-agents": "Delivery Agents",
   // Deal sub-sections
   "deal-payouts": "Deal Payout Management",
   "deal-sponsorships": "Deal Sponsorship Management",
@@ -143,7 +158,7 @@ const MODULE_TABS = {
   "seller-bank": "Users & Access",
   "seller-management": "Users & Access",
   "seller-organizations": "Users & Access",
-  "sellers/commissions": "Orders Management",
+  "sellers/commissions": "Seller Finance & Payouts",
   products: "Catalog Management",
   categories: "Catalog Management",
   sub_categories: "Catalog Management",
@@ -161,20 +176,20 @@ const MODULE_TABS = {
   inventory: "Inventory Management",
   carts: "Orders Management",
   orders: "Orders Management",
-  returns: "Orders Management",
-  payments: "Orders Management",
-  "commerce-settings": "Orders Management",
-  wallets: "Orders Management",
+  returns: "Returns & Cancellations",
+  payments: "Payments & Finance",
+  "commerce-settings": "Commerce Settings",
+  wallets: "Payments & Finance",
   subscriptions: "Orders Management",
-  coupons: "Marketing",
-  pricing: "Marketing",
+  coupons: "Commerce Settings",
+  pricing: "Commerce Settings",
   banners: "Marketing",
   notifications: "Marketing",
   loyalty: "Marketing",
   referral: "Marketing",
   recommendations: "Marketing",
-  tax: "Tax & Compliance",
-  delivery: "Delivery & Shipping",
+  tax: "Invoices & Taxation",
+  delivery: "Shipping & Fulfilment",
   locations: "Location Management",
   countries: "Location Management",
   states: "Location Management",
@@ -186,10 +201,10 @@ const MODULE_TABS = {
   cms: "Settings",
   cms_pages: "Settings",
   "cms-pages": "Settings",
-  fraud: "Settings",
+  fraud: "Payments & Finance",
   deals: "Marketing",
   "deal-management": "Marketing",
-  cancellations: "Orders Management",
+  cancellations: "Returns & Cancellations",
   "seller-onboarding": "Users & Access",
   "seller-status": "Users & Access",
   "seller-sub-admins": "Users & Access",
@@ -198,19 +213,24 @@ const MODULE_TABS = {
   preferences: "Settings",
   collections: "Catalog Management",
   badges: "Marketing",
-  "wallet-management": "Orders Management",
+  "wallet-management": "Payments & Finance",
   "notification-templates": "Marketing",
-  "fraud-cases": "Settings",
+  "fraud-cases": "Payments & Finance",
   // Tax & Finance
-  "tax-invoices": "Tax & Compliance",
-  "credit-notes": "Tax & Compliance",
+  "tax-invoices": "Invoices & Taxation",
+  "credit-notes": "Invoices & Taxation",
   // Subscription plans
-  "subscription-plans": "Orders Management",
+  "subscription-plans": "Commerce Settings",
   // Payment config & chargebacks
-  "cod-config": "Orders Management",
-  chargebacks: "Orders Management",
+  "cod-config": "Commerce Settings",
+  chargebacks: "Payments & Finance",
   // Payouts
-  "seller-payouts": "Orders Management",
+  "seller-payouts": "Seller Finance & Payouts",
+  "payout-ops-queue": "Seller Finance & Payouts",
+  "negative-balances": "Seller Finance & Payouts",
+  "platform-fee-config": "Commerce Settings",
+  "commission-rules": "Commerce Settings",
+  "delivery-agents": "Shipping & Fulfilment",
   // Deal sub-sections
   "deal-payouts": "Marketing",
   "deal-sponsorships": "Marketing",
@@ -250,7 +270,7 @@ export const MODULE_DEFAULT_ROUTES = {
   option_masters:    "product-options",
   option_values:     "product-option-values",
   platform:          "categories",
-  warranty:          "warranty",
+
   // Inventory
   inventory:"inventory-overview",
   // Orders
@@ -261,13 +281,19 @@ export const MODULE_DEFAULT_ROUTES = {
   payments:     "payments",
   wallets:      "wallet-transactions",
   subscriptions:"subscription-orders",
+  "payments-finance": "payments",
+  "shipping-fulfilment": "shipment-tracking",
+  "returns-cancellations": "returns",
+  "invoices-taxation": "tax-invoices",
+  "seller-finance-payouts": "seller-finance",
+  "commerce-settings-menu": "commerce-settings",
   // Users
   users:              "users",
   sellers:            "seller",
-  seller_kyc:         "seller-kyc",
-  "seller-kyc":       "seller-kyc",
-  seller_bank:        "seller-bank",
-  "seller-bank":      "seller-bank",
+  seller_kyc:         "seller",
+  "seller-kyc":       "seller",
+  seller_bank:        "seller",
+  "seller-bank":      "seller",
   "seller-management":"seller-users",
   "sellers/commissions":"seller-finance",
   commission:           "commission-rules",
@@ -284,9 +310,8 @@ export const MODULE_DEFAULT_ROUTES = {
   pricing:         "discount-coupons",
   referral:        "referral-commerce",
   notifications:   "messages",
-  subscriptions:   "subscription-orders",
   reports:         "reports-sales",
-  // Tax & Compliance
+  // Invoices & Taxation
   tax:       "tax",
   locations: "country",
   countries: "country",
@@ -300,8 +325,9 @@ export const MODULE_DEFAULT_ROUTES = {
   deals: "deal-management",
   "deal-management": "deal-management",
   cancellations: "cancellations",
-  "seller-onboarding": "seller-onboarding",
-  "seller-status": "seller-status",
+  "seller-onboarding": "seller",
+  "seller-status": "seller",
+  "category-attributes": "categories",
   "seller-sub-admins": "seller-sub-admins",
   "content-pages": "content-pages",
   "users-addresses": "users-addresses",
@@ -321,6 +347,10 @@ export const MODULE_DEFAULT_ROUTES = {
   chargebacks: "chargebacks",
   // Payouts
   "seller-payouts": "seller-payouts",
+  "payout-ops-queue": "payout-ops-queue",
+  "negative-balances": "negative-balances",
+  "platform-fee-config": "platform-fee-config",
+  "delivery-agents": "delivery-agents",
   // Deal sub-sections
   "deal-payouts": "deal-payouts",
   "deal-sponsorships": "deal-sponsorships",
@@ -373,7 +403,6 @@ const ROUTE_MODULES = [
   [["/permission-templates"], ["rbac"]],
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
-  [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller"], ["sellers"]],
   [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
   [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
@@ -425,13 +454,40 @@ const ROUTE_MODULES = [
     ["orders"],
   ],
   [["/carts"], ["carts"]],
+  [["/product-reviews"], ["reviews", "orders"]],
+  [["/subscription-orders"], ["subscriptions", "orders"]],
+
+  // Payments & Finance
   [["/payments"], ["payments", "wallets", "orders"]],
+  [["/chargebacks"], ["payments", "orders"]],
+  [["/fraud-cases", "/fraud"], ["fraud", "payments"]],
+  [["/wallet-management", "/wallet-transactions"], ["wallets"]],
+
+  // Shipping & Fulfilment
+  [
+    [
+      "/shipping-company-users", "/shipment-tracking",
+      "/delivery-staff",
+      "/delivery-agents",
+      "/shipping-duration",
+    ],
+    ["delivery"],
+  ],
+
+  // Returns & Cancellations
+  [["/returns"], ["returns", "orders"]],
+  [["/cancellations"], ["orders", "cancellations"]],
+
+  // Seller Finance & Payouts
+  [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
+  [["/seller-payouts"], ["sellers/commissions", "payments"]],
+
+  // Commerce Settings
+  [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
-  [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
-  [["/product-reviews"], ["reviews", "orders"]],
-  [["/returns"], ["returns", "orders"]],
-  [["/subscription-orders"], ["subscriptions", "orders"]],
+  [["/cod-config"], ["payments", "commerce-settings", "admin"]],
+  [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
 
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
@@ -444,11 +500,11 @@ const ROUTE_MODULES = [
   [["/referral-commerce"], ["referral"]],
   [["/promotions-banners", "/content-management/promotion-banner"], ["banners", "cms_pages", "cms", "pricing"]],
 
-  // Tax & Compliance
+  // Invoices & Taxation
   [
     [
       "/tax", "/subTax", "/tax-rule", "/hsn-code",
-      "/tax-documents",
+      "/tax-documents", "/tax-invoices", "/credit-notes",
     ],
     ["tax"],
   ],
@@ -457,15 +513,6 @@ const ROUTE_MODULES = [
   [["/city"], ["cities", "locations"]],
   [["/zip-codes", "/zipcode"], ["zip_codes", "locations"]],
   [["/warranty"], ["warranty", "products"]],
-  [
-    [
-      "/shipping-company-users", "/shipping-packages", "/shipment-tracking",
-      "/pickup-addresses", "/delivery-staff",
-      "/delivery-agents",
-      "/shipping-duration",
-    ],
-    ["delivery"],
-  ],
 
   // Analytics
   [["/analytics"], ["analytics", "reports"]],
@@ -514,17 +561,8 @@ const ROUTE_MODULES = [
   // Deals
   [["/deal-management", "/deals"], ["deals"]],
 
-  // Fraud
-  [["/fraud-cases", "/fraud"], ["fraud"]],
-
-  // Wallet
-  [["/wallet-management", "/wallet-transactions"], ["wallets"]],
-
   // Notification templates
   [["/notification-templates"], ["notifications"]],
-
-  // Cancellations
-  [["/cancellations"], ["orders", "cancellations"]],
 
   // Collections & Badges
   [["/collections"], ["platform", "products"]],
@@ -532,20 +570,6 @@ const ROUTE_MODULES = [
 
   // Preferences
   [["/preferences"], ["admin"]],
-
-  // Tax & Finance — invoices / credit notes
-  [["/tax-invoices"], ["tax", "payments", "orders"]],
-  [["/credit-notes"], ["tax", "returns", "payments"]],
-
-  // Subscription plans
-  [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
-
-  // Payment config & chargebacks
-  [["/cod-config"], ["payments", "commerce-settings", "admin"]],
-  [["/chargebacks"], ["payments", "orders"]],
-
-  // Seller payouts
-  [["/seller-payouts"], ["sellers/commissions", "payments"]],
 
   // Deal sub-sections
   [["/deal-payouts"], ["deals"]],

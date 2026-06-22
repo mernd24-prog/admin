@@ -6,7 +6,11 @@ import {
   MdCheckCircle,
   MdClose,
   MdEdit,
+  MdBusiness,
   MdRefresh,
+  MdVerifiedUser,
+  MdAccountBalance,
+  MdRocketLaunch,
   MdSearch,
 } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../components/Shared";
@@ -14,11 +18,28 @@ import { apiRequest } from "../../_helpers/apiConfig";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+const AADHAAR_REGEX = /^[0-9]{12}$/;
+const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9]{10,15}$/;
+
 const APPROVAL_STATUSES = ["draft", "pending_review", "resubmitted", "approved", "rejected", "suspended", "blocked", "active"];
 const KYC_STATUSES = ["not_submitted", "submitted", "under_review", "verified", "rejected"];
 const BANK_STATUSES = ["not_submitted", "submitted", "verified", "rejected"];
+const GO_LIVE_STATUSES = ["pending", "ready", "live", "blocked", "rejected"];
 const BUSINESS_TYPES = ["individual", "proprietorship", "partnership", "private_limited", "llp", "public_limited"];
 const PAYOUT_SCHEDULES = ["daily", "weekly", "biweekly", "monthly"];
+const ORGANIZATION_DOCUMENTS = [
+  ["panDocumentUrl", "PAN"],
+  ["gstCertificateUrl", "GST Certificate"],
+  ["aadhaarFrontUrl", "Aadhaar Front"],
+  ["aadhaarBackUrl", "Aadhaar Back"],
+  ["bankProofUrl", "Bank Proof"],
+  ["addressProofUrl", "Address Proof"],
+];
 
 const emptyAddress = {
   line1: "",
@@ -42,17 +63,28 @@ const createEmptyForm = (sellerId = "") => ({
   legalBusinessName: "",
   storeDisplayName: "",
   businessType: "proprietorship",
+  description: "",
+  supportEmail: "",
+  supportPhone: "",
+  registrationNumber: "",
   gstin: "",
   pan: "",
+  aadhaarNumber: "",
+  dateOfBirth: "",
+  businessWebsite: "",
+  primaryContactName: "",
+  documents: {},
   kycStatus: "submitted",
   bankVerificationStatus: "submitted",
   approvalStatus: "pending_review",
+  goLiveStatus: "pending",
   rejectionReason: "",
   requiredChanges: [],
   isDefault: false,
   bankDetails: { ...emptyBankDetails },
   billingAddress: { ...emptyAddress },
   pickupAddress: { ...emptyAddress },
+  returnAddress: { ...emptyAddress },
   taxSettings: {},
   invoiceSettings: {},
   payoutSettings: {},
@@ -102,6 +134,39 @@ const formatAddress = (address = {}) =>
 const organizationLabel = (organization = {}) =>
   organization.storeDisplayName || organization.legalBusinessName || shortId(organization.id || organization.organizationId);
 
+const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
+
+const detectDocumentMimeType = (bytes) => {
+  if (!bytes?.length) return "";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "application/pdf";
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+  return "";
+};
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return window.btoa(binary);
+};
+
+const readDocument = async (file) => {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const mimeType = detectDocumentMimeType(bytes) || String(file.type || "").toLowerCase();
+  const base64 = arrayBufferToBase64(buffer);
+  return {
+    dataUri: `data:${mimeType};base64,${base64}`,
+    fileName: file.name,
+    mimeType,
+  };
+};
+
 const normalizeForEdit = (organization = {}) => {
   const invoiceSettings = organization.invoiceSettings || {};
   const taxSettings = organization.taxSettings || {};
@@ -112,17 +177,28 @@ const normalizeForEdit = (organization = {}) => {
     legalBusinessName: organization.legalBusinessName || "",
     storeDisplayName: organization.storeDisplayName || "",
     businessType: organization.businessType || "proprietorship",
+    description: organization.description || "",
+    supportEmail: organization.supportEmail || "",
+    supportPhone: organization.supportPhone || "",
+    registrationNumber: organization.registrationNumber || "",
     gstin: organization.gstin || "",
     pan: organization.pan || "",
-  kycStatus: organization.kycStatus || "submitted",
-  bankVerificationStatus: organization.bankVerificationStatus || "submitted",
-  approvalStatus: organization.approvalStatus || "pending_review",
-  rejectionReason: organization.rejectionReason || organization.metadata?.lastVerificationEvent?.rejectionReason || "",
-  requiredChanges: organization.requiredChanges || [],
-  isDefault: Boolean(organization.isDefault),
+    aadhaarNumber: organization.aadhaarNumber || "",
+    dateOfBirth: organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : "",
+    businessWebsite: organization.businessWebsite || "",
+    primaryContactName: organization.primaryContactName || "",
+    documents: { ...(organization.documents || organization.kycDocuments || {}) },
+    kycStatus: organization.kycStatus || "submitted",
+    bankVerificationStatus: organization.bankVerificationStatus || "submitted",
+    approvalStatus: organization.approvalStatus || "pending_review",
+    goLiveStatus: organization.goLiveStatus || "pending",
+    rejectionReason: organization.rejectionReason || organization.metadata?.lastVerificationEvent?.rejectionReason || "",
+    requiredChanges: organization.requiredChanges || [],
+    isDefault: Boolean(organization.isDefault),
     bankDetails: { ...emptyBankDetails, ...(organization.bankDetails || {}) },
     billingAddress: { ...emptyAddress, ...(organization.billingAddress || {}) },
     pickupAddress: { ...emptyAddress, ...(organization.pickupAddress || {}) },
+    returnAddress: { ...emptyAddress, ...(organization.returnAddress || {}) },
     taxSettings,
     invoiceSettings,
     payoutSettings,
@@ -147,11 +223,21 @@ const buildPayload = (form = {}) => {
     legalBusinessName: cleanString(form.legalBusinessName),
     storeDisplayName: cleanString(form.storeDisplayName),
     businessType: cleanString(form.businessType) || null,
+    description: cleanString(form.description) || null,
+    supportEmail: cleanString(form.supportEmail),
+    supportPhone: cleanString(form.supportPhone),
+    registrationNumber: cleanString(form.registrationNumber) || null,
     gstin: cleanString(form.gstin) || null,
     pan: cleanString(form.pan),
+    aadhaarNumber: cleanString(form.aadhaarNumber),
+    dateOfBirth: form.dateOfBirth || null,
+    businessWebsite: cleanString(form.businessWebsite) || null,
+    primaryContactName: cleanString(form.primaryContactName),
+    documents: form.documents || {},
     kycStatus: form.kycStatus,
     bankVerificationStatus: form.bankVerificationStatus,
     approvalStatus: form.approvalStatus,
+    goLiveStatus: form.goLiveStatus,
     rejectionReason: cleanString(form.rejectionReason) || null,
     requiredChanges: Array.isArray(form.requiredChanges) ? form.requiredChanges : [],
     isDefault: Boolean(form.isDefault),
@@ -183,6 +269,16 @@ const buildPayload = (form = {}) => {
       postalCode: cleanString(form.pickupAddress?.postalCode),
       country: cleanString(form.pickupAddress?.country) || "India",
     },
+    returnAddress: {
+      ...emptyAddress,
+      ...(form.returnAddress || {}),
+      line1: cleanString(form.returnAddress?.line1),
+      line2: cleanString(form.returnAddress?.line2),
+      city: cleanString(form.returnAddress?.city),
+      state: cleanString(form.returnAddress?.state),
+      postalCode: cleanString(form.returnAddress?.postalCode),
+      country: cleanString(form.returnAddress?.country) || "India",
+    },
     taxSettings: {
       ...(form.taxSettings || {}),
       state: taxState,
@@ -203,18 +299,61 @@ const buildPayload = (form = {}) => {
 };
 
 const validateForm = (form = {}) => {
-  const required = [
-    [form.sellerId, "Seller is required"],
-    [form.legalBusinessName, "Legal business name is required"],
-    [form.storeDisplayName, "Store/display name is required"],
-    [form.pan, "PAN is required"],
-    [form.bankDetails?.accountNumber, "Bank account number is required"],
-    [form.bankDetails?.ifscCode, "IFSC code is required"],
-    [form.billingAddress?.state, "Billing state is required"],
-    [form.pickupAddress?.state, "Pickup state is required"],
-  ];
-  const missing = required.find(([value]) => !cleanString(value));
-  return missing?.[1] || "";
+  if (!cleanString(form.sellerId)) return "Seller is required";
+  if (!cleanString(form.legalBusinessName)) return "Legal business name is required";
+  if (!cleanString(form.storeDisplayName)) return "Store/display name is required";
+  if (!cleanString(form.businessType)) return "Business type is required";
+  if (!cleanString(form.primaryContactName)) return "Primary contact is required";
+
+  const email = cleanString(form.supportEmail);
+  if (!email) return "Support email is required";
+  if (!EMAIL_REGEX.test(email)) return "Support email is invalid (e.g. seller@company.com)";
+
+  const phone = cleanString(form.supportPhone);
+  if (!phone) return "Support phone is required";
+  if (!PHONE_REGEX.test(phone)) return "Support phone must be 10–15 digits";
+
+  const gstin = cleanString(form.gstin);
+  if (!gstin) return "GSTIN is required";
+  if (!GST_REGEX.test(gstin)) return "GSTIN format invalid (e.g. 27ABCDE1234F1Z5)";
+
+  const pan = cleanString(form.pan);
+  if (!pan) return "PAN is required";
+  if (!PAN_REGEX.test(pan)) return "PAN format invalid (e.g. ABCDE1234F)";
+
+  const aadhaar = cleanString(form.aadhaarNumber);
+  if (!aadhaar) return "Aadhaar number is required";
+  if (!AADHAAR_REGEX.test(aadhaar)) return "Aadhaar must be exactly 12 digits";
+
+  if (!cleanString(form.dateOfBirth)) return "Date of birth is required";
+
+  const accountNumber = cleanString(form.bankDetails?.accountNumber);
+  if (!cleanString(form.bankDetails?.accountHolderName)) return "Account holder name is required";
+  if (!accountNumber) return "Bank account number is required";
+  if (!BANK_ACCOUNT_REGEX.test(accountNumber)) return "Bank account number must be 9–18 digits";
+
+  const ifsc = cleanString(form.bankDetails?.ifscCode);
+  if (!ifsc) return "IFSC code is required";
+  if (!IFSC_REGEX.test(ifsc)) return "IFSC format invalid (e.g. ABCD0123456)";
+
+  if (!cleanString(form.bankDetails?.bankName)) return "Bank name is required";
+
+  if (!cleanString(form.billingAddress?.line1)) return "Billing address line 1 is required";
+  if (!cleanString(form.billingAddress?.city)) return "Billing city is required";
+  if (!cleanString(form.billingAddress?.state)) return "Billing state is required";
+  const billingPin = cleanString(form.billingAddress?.postalCode);
+  if (!billingPin) return "Billing pincode is required";
+  if (billingPin.length < 5 || billingPin.length > 10) return "Billing pincode must be 5–10 characters";
+
+  if (!cleanString(form.pickupAddress?.line1)) return "Pickup address line 1 is required";
+  if (!cleanString(form.pickupAddress?.city)) return "Pickup city is required";
+  if (!cleanString(form.pickupAddress?.state)) return "Pickup state is required";
+  const pickupPin = cleanString(form.pickupAddress?.postalCode);
+  if (!pickupPin) return "Pickup pincode is required";
+  if (pickupPin.length < 5 || pickupPin.length > 10) return "Pickup pincode must be 5–10 characters";
+
+  const missingDocument = ORGANIZATION_DOCUMENTS.find(([key]) => !form.documents?.[key]);
+  return missingDocument ? `${missingDocument[1]} document is required` : "";
 };
 
 const FieldRow = ({ label, children }) => (
@@ -273,6 +412,7 @@ const OrganizationModal = ({
   onSubmit,
   onChange,
   onNestedChange,
+  onDocumentChange,
 }) => {
   if (!open) return null;
   const isEdit = mode === "edit";
@@ -326,20 +466,41 @@ const OrganizationModal = ({
             <FieldRow label="PAN">
               <input className={inputCls} value={form.pan} onChange={(event) => onChange("pan", event.target.value.toUpperCase())} />
             </FieldRow>
+            <FieldRow label="Primary Contact">
+              <input className={inputCls} value={form.primaryContactName} onChange={(event) => onChange("primaryContactName", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Support Email">
+              <input type="email" className={inputCls} value={form.supportEmail} onChange={(event) => onChange("supportEmail", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Support Phone">
+              <input className={inputCls} value={form.supportPhone} onChange={(event) => onChange("supportPhone", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Registration Number">
+              <input className={inputCls} value={form.registrationNumber} onChange={(event) => onChange("registrationNumber", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Aadhaar Number">
+              <input className={inputCls} value={form.aadhaarNumber} maxLength={12} onChange={(event) => onChange("aadhaarNumber", event.target.value.replace(/\D/g, ""))} />
+            </FieldRow>
+            <FieldRow label="Date of Birth">
+              <input type="date" className={inputCls} value={form.dateOfBirth} onChange={(event) => onChange("dateOfBirth", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Business Website">
+              <input type="url" className={inputCls} value={form.businessWebsite} onChange={(event) => onChange("businessWebsite", event.target.value)} />
+            </FieldRow>
+            <FieldRow label="Description">
+              <textarea className={`${inputCls} min-h-[70px] py-2`} value={form.description} onChange={(event) => onChange("description", event.target.value)} />
+            </FieldRow>
             <FieldRow label="Approval Status">
-              <select className={inputCls} value={form.approvalStatus} onChange={(event) => onChange("approvalStatus", event.target.value)}>
-                {APPROVAL_STATUSES.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
-              </select>
+              <input className={inputCls} value={labelize(form.approvalStatus)} disabled />
             </FieldRow>
             <FieldRow label="KYC Status">
-              <select className={inputCls} value={form.kycStatus} onChange={(event) => onChange("kycStatus", event.target.value)}>
-                {KYC_STATUSES.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
-              </select>
+              <input className={inputCls} value={labelize(form.kycStatus)} disabled />
             </FieldRow>
             <FieldRow label="Bank Status">
-              <select className={inputCls} value={form.bankVerificationStatus} onChange={(event) => onChange("bankVerificationStatus", event.target.value)}>
-                {BANK_STATUSES.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
-              </select>
+              <input className={inputCls} value={labelize(form.bankVerificationStatus)} disabled />
+            </FieldRow>
+            <FieldRow label="Go Live Status">
+              <input className={inputCls} value={labelize(form.goLiveStatus)} disabled />
             </FieldRow>
             <FieldRow label="Default Organization">
               <label className="flex min-h-[38px] items-center gap-2 rounded-md border border-[#E6E6E6] px-3 text-sm text-[#202337]">
@@ -348,6 +509,33 @@ const OrganizationModal = ({
               </label>
             </FieldRow>
           </div>
+
+          <section className="mt-5 rounded-lg border border-[#E6E6E6] p-4">
+            <h4 className="mb-3 text-sm font-semibold text-[#202337]">Compliance Documents</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {ORGANIZATION_DOCUMENTS.map(([key, label]) => {
+                const document = form.documents?.[key];
+                const existingUrl = typeof document === "string" ? document : "";
+                return (
+                  <FieldRow key={key} label={label}>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp"
+                      className={`${inputCls} py-1.5`}
+                      onChange={(event) => onDocumentChange(key, event.target.files?.[0])}
+                    />
+                    {document ? (
+                      existingUrl ? (
+                        <a className="text-xs text-[#2f6fed] hover:underline" href={existingUrl} target="_blank" rel="noreferrer">View document</a>
+                      ) : (
+                        <span className="text-xs text-[#65718b]">{document.fileName || "Selected"}</span>
+                      )
+                    ) : null}
+                  </FieldRow>
+                );
+              })}
+            </div>
+          </section>
 
           <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
             <section className="rounded-lg border border-[#E6E6E6] p-4">
@@ -418,6 +606,24 @@ const OrganizationModal = ({
               </select>
             </FieldRow>
           </div>
+
+          <section className="mt-5 rounded-lg border border-[#E6E6E6] p-4">
+            <h4 className="mb-3 text-sm font-semibold text-[#202337]">Return Address</h4>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <FieldRow label="Line 1">
+                <input className={inputCls} value={form.returnAddress.line1} onChange={(event) => onNestedChange("returnAddress", "line1", event.target.value)} />
+              </FieldRow>
+              <FieldRow label="City">
+                <input className={inputCls} value={form.returnAddress.city} onChange={(event) => onNestedChange("returnAddress", "city", event.target.value)} />
+              </FieldRow>
+              <FieldRow label="State">
+                <input className={inputCls} value={form.returnAddress.state} onChange={(event) => onNestedChange("returnAddress", "state", event.target.value)} />
+              </FieldRow>
+              <FieldRow label="Pincode">
+                <input className={inputCls} value={form.returnAddress.postalCode} onChange={(event) => onNestedChange("returnAddress", "postalCode", event.target.value)} />
+              </FieldRow>
+            </div>
+          </section>
         </div>
 
         <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
@@ -442,6 +648,7 @@ const SellerOrganizations = () => {
     approvalStatus: "",
     kycStatus: "",
     bankVerificationStatus: "",
+    goLiveStatus: "",
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -523,6 +730,19 @@ const SellerOrganizations = () => {
     }));
   };
 
+  const handleDocumentChange = async (key, file) => {
+    if (!file) return;
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      toast.error("Document must be 5 MB or smaller");
+      return;
+    }
+    try {
+      updateNestedForm("documents", key, await readDocument(file));
+    } catch (error) {
+      toast.error(error?.message || "Unable to read document");
+    }
+  };
+
   const handleSubmit = async () => {
     const error = validateForm(form);
     if (error) {
@@ -538,6 +758,7 @@ const SellerOrganizations = () => {
         if (payload.approvalStatus === organization.approvalStatus) delete payload.approvalStatus;
         if (payload.kycStatus === organization.kycStatus) delete payload.kycStatus;
         if (payload.bankVerificationStatus === organization.bankVerificationStatus) delete payload.bankVerificationStatus;
+        if (payload.goLiveStatus === organization.goLiveStatus) delete payload.goLiveStatus;
         if ((payload.rejectionReason || "") === (organization.rejectionReason || "")) delete payload.rejectionReason;
         if (JSON.stringify(payload.requiredChanges || []) === JSON.stringify(organization.requiredChanges || [])) {
           delete payload.requiredChanges;
@@ -552,7 +773,7 @@ const SellerOrganizations = () => {
         await apiRequest("POST", ENDPOINTS.sellerOrganizations.create(form.sellerId), payload);
         toast.success("Seller organization created");
       }
-      closeModal();
+      setModal({ open: false, mode: "create", organization: null });
       await loadOrganizations();
     } catch (error) {
       toast.error(error?.message || "Unable to save seller organization");
@@ -579,16 +800,47 @@ const SellerOrganizations = () => {
     }
   };
 
+  const approveKyc = (organization) => {
+    applyStatus(
+      organization,
+      {
+        kycStatus: "verified",
+        notes: "KYC approved from organization management",
+      },
+      "Organization KYC approved",
+    );
+  };
+
+  const approveBank = (organization) => {
+    applyStatus(
+      organization,
+      {
+        bankVerificationStatus: "verified",
+        notes: "Bank approved from organization management",
+      },
+      "Organization bank account verified",
+    );
+  };
+
   const approveOrganization = (organization) => {
     applyStatus(
       organization,
       {
         approvalStatus: "approved",
-        kycStatus: "verified",
-        bankVerificationStatus: "verified",
-        notes: "Approved from seller organization admin table",
+        notes: "Organization approved after KYC and bank verification",
       },
       "Organization approved",
+    );
+  };
+
+  const approveGoLive = (organization) => {
+    applyStatus(
+      organization,
+      {
+        goLiveStatus: "live",
+        notes: "Go-live approved from organization management",
+      },
+      "Organization is now live",
     );
   };
 
@@ -623,7 +875,6 @@ const SellerOrganizations = () => {
       {
         approvalStatus: "rejected",
         kycStatus: "rejected",
-        bankVerificationStatus: organization.bankVerificationStatus || "submitted",
         rejectionReason: reason.trim(),
       },
       "Organization rejected",
@@ -636,6 +887,7 @@ const SellerOrganizations = () => {
       organization,
       {
         approvalStatus: "blocked",
+        goLiveStatus: "blocked",
         notes: "Blocked from seller organization admin table",
       },
       "Organization blocked",
@@ -662,7 +914,7 @@ const SellerOrganizations = () => {
       />
 
       <section className="rounded-lg border border-[#E6E6E6] bg-white p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-7">
           <FieldRow label="Seller">
             <select className={inputCls} value={filters.sellerId} onChange={(event) => updateFilter("sellerId", event.target.value)}>
               <option value="">All sellers</option>
@@ -710,6 +962,12 @@ const SellerOrganizations = () => {
             <select className={inputCls} value={filters.bankVerificationStatus} onChange={(event) => updateFilter("bankVerificationStatus", event.target.value)}>
               <option value="">All</option>
               {BANK_STATUSES.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
+            </select>
+          </FieldRow>
+          <FieldRow label="Go Live">
+            <select className={inputCls} value={filters.goLiveStatus} onChange={(event) => updateFilter("goLiveStatus", event.target.value)}>
+              <option value="">All</option>
+              {GO_LIVE_STATUSES.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
             </select>
           </FieldRow>
         </div>
@@ -770,6 +1028,24 @@ const SellerOrganizations = () => {
                       <StatusBadge status={organization.approvalStatus || "draft"} dot size="sm" />
                       <StatusBadge status={organization.kycStatus || "not_submitted"} label={`KYC ${labelize(organization.kycStatus || "not_submitted")}`} size="xs" />
                       <StatusBadge status={organization.bankVerificationStatus || "not_submitted"} label={`Bank ${labelize(organization.bankVerificationStatus || "not_submitted")}`} size="xs" />
+                      <StatusBadge status={organization.goLiveStatus || "pending"} label={`Go Live ${labelize(organization.goLiveStatus || "pending")}`} size="xs" />
+                      {organization.documents && (
+                        <div className="flex max-w-[220px] flex-wrap gap-x-2 gap-y-1">
+                          {ORGANIZATION_DOCUMENTS.map(([key, label]) =>
+                            organization.documents?.[key] ? (
+                              <a
+                                key={key}
+                                href={organization.documents[key]}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[11px] text-[#2f6fed] hover:underline"
+                              >
+                                {label}
+                              </a>
+                            ) : null,
+                          )}
+                        </div>
+                      )}
                       {organization.rejectionReason ? (
                         <div className="max-w-[220px] text-xs text-[#d92d20]">{organization.rejectionReason}</div>
                       ) : null}
@@ -781,9 +1057,47 @@ const SellerOrganizations = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+                    <div className="flex max-w-[160px] flex-wrap items-center gap-1">
                       <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
-                      <IconButton title="Approve" icon={<MdCheckCircle size={18} />} tone="green" onClick={() => approveOrganization(organization)} disabled={submitting} />
+                      <IconButton
+                        title="Approve KYC"
+                        icon={<MdVerifiedUser size={18} />}
+                        tone="green"
+                        onClick={() => approveKyc(organization)}
+                        disabled={submitting || organization.kycStatus === "verified"}
+                      />
+                      <IconButton
+                        title="Verify Bank"
+                        icon={<MdAccountBalance size={18} />}
+                        tone="green"
+                        onClick={() => approveBank(organization)}
+                        disabled={submitting || organization.kycStatus !== "verified" || organization.bankVerificationStatus === "verified"}
+                      />
+                      <IconButton
+                        title="Approve Organization"
+                        icon={<MdBusiness size={18} />}
+                        tone="blue"
+                        onClick={() => approveOrganization(organization)}
+                        disabled={
+                          submitting ||
+                          organization.kycStatus !== "verified" ||
+                          organization.bankVerificationStatus !== "verified" ||
+                          ["approved", "active"].includes(organization.approvalStatus)
+                        }
+                      />
+                      <IconButton
+                        title="Approve Go Live"
+                        icon={<MdRocketLaunch size={18} />}
+                        tone="blue"
+                        onClick={() => approveGoLive(organization)}
+                        disabled={
+                          submitting ||
+                          organization.kycStatus !== "verified" ||
+                          organization.bankVerificationStatus !== "verified" ||
+                          !["approved", "active"].includes(organization.approvalStatus) ||
+                          organization.goLiveStatus === "live"
+                        }
+                      />
                       <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => requestResubmission(organization)} disabled={submitting} />
                       <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => rejectOrganization(organization)} disabled={submitting} />
                       <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => blockOrganization(organization)} disabled={submitting} />
@@ -810,6 +1124,7 @@ const SellerOrganizations = () => {
         onSubmit={handleSubmit}
         onChange={updateForm}
         onNestedChange={updateNestedForm}
+        onDocumentChange={handleDocumentChange}
       />
     </div>
   );

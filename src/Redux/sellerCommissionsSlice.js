@@ -58,7 +58,7 @@ export const getSellerSettlements = createApiThunkPrivate(
   ENDPOINTS.payouts.settlements,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "organizationId", "status", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: withSelectedOrganization(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerFinanceSummary = createApiThunkPrivate(
@@ -66,7 +66,7 @@ export const getSellerFinanceSummary = createApiThunkPrivate(
   ENDPOINTS.payouts.summary,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "organizationId", "fromDate", "toDate"]) }
+  { transformParams: withSelectedOrganization(["sellerId", "fromDate", "toDate"]) }
 );
 
 export const getAdminSellerCommissions = createApiThunkPrivate(
