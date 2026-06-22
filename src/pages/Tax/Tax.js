@@ -227,7 +227,7 @@ const Tax = () => {
       <PageHeader
         title="Tax Management"
         subtitle="Configure tax rules by country"
-        breadcrumbs={[{ label: "Tax & Compliance" }, { label: "Taxes" }]}
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Taxes" }]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button

@@ -326,9 +326,9 @@ const ShippingCompanyUsers = () => {
   return (
     <div className="max-w-7xl mx-auto mt-8">
       <PageHeader
-        title="Delivery Partners"
+        title="Delivery Agents"
         subtitle="Manage seller delivery agents, verification, vehicle details, and active assignment eligibility"
-        breadcrumbs={[{ label: "Delivery & Shipping" }, { label: "Delivery Partners" }]}
+        breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Delivery Agents" }]}
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" className="admin-btn-secondary" onClick={fetchAgents}>

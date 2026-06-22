@@ -24,6 +24,7 @@ const REF_TYPES = ["return", "cancellation", "adjustment", "discount", "other"];
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
+  { key: "organizationId", type: "text", label: "Organization ID", width: "w-52" },
   { key: "buyerId", type: "asyncDropdown", label: "Buyer", load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }) },
   { key: "referenceType", type: "select", label: "Ref Type", options: REF_TYPES.map((v) => ({ value: v, label: v })) },
   { key: "fromDate", type: "date", label: "From" },
@@ -41,6 +42,10 @@ const unwrapList = (payload = {}) => {
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+const shortId = (value = "") => {
+  const text = String(value || "");
+  return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
+};
 
 const EMPTY_FORM = {
   orderId: "",
@@ -129,6 +134,11 @@ const CreditNotes = () => {
       render: (v) => <span className="capitalize text-sm">{v || "—"}</span>,
     },
     {
+      key: "organizationId",
+      label: "Organization",
+      render: (v, row) => <span className="font-mono text-xs text-gray-500">{shortId(v || row.organization_id)}</span>,
+    },
+    {
       key: "creditAmount",
       label: "Credit Amt",
       sortable: true,
@@ -171,6 +181,7 @@ const CreditNotes = () => {
       <PageHeader
         title="Credit Notes"
         subtitle="Tax credit notes for returns and cancellations"
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Credit Notes" }]}
         actions={
           <div className="flex gap-2">
             <button onClick={fetchNotes} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -214,6 +225,7 @@ const CreditNotes = () => {
               <div><p className="text-gray-500">Credit Note #</p><p className="font-mono">{detail.creditNoteNumber || "—"}</p></div>
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status || "issued"} color={detail.status === "cancelled" ? "red" : "green"} /></div>
               <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
+              <div><p className="text-gray-500">Organization ID</p><p className="font-mono text-xs">{detail.organizationId || detail.organization_id || "—"}</p></div>
               <div><p className="text-gray-500">Ref Type</p><p className="capitalize">{detail.referenceType || "—"}</p></div>
               <div><p className="text-gray-500">Reference ID</p><p className="font-mono text-xs">{detail.referenceId || "—"}</p></div>
               <div><p className="text-gray-500">Buyer ID</p><p className="font-mono text-xs">{detail.buyerId || "—"}</p></div>

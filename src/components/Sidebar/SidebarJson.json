@@ -27,7 +27,6 @@
         "key": "catalog-masters",
         "subItems": [
           { "label": "Categories", "icon": "MdAccountTree", "key": "categories", "route": "categories" },
-          { "label": "Category Attributes", "icon": "MdTune", "key": "category-attributes", "route": "category-attributes" },
           { "label": "Brands", "icon": "MdBrandingWatermark", "key": "brands", "route": "brands" },
           { "label": "Product Families", "icon": "MdFamilyRestroom", "key": "product-families", "route": "product-families" },
           { "label": "Product Options", "icon": "MdSettings", "key": "product-options", "route": "product-options" },
@@ -60,34 +59,82 @@
     "module": "orders",
     "subItems": [
       { "label": "Orders", "icon": "MdReceipt", "key": "orders", "route": "orders" },
-      { "label": "Carts", "icon": "MdShoppingBag", "key": "carts", "route": "carts" },
-      { "label": "Checkout Quote", "icon": "MdCalculate", "key": "checkout-quote", "route": "checkout-quote" },
-      { "label": "Payments", "icon": "MdPayment", "key": "payments", "route": "payments" },
-      { "label": "Seller Finance", "icon": "MdAccountBalanceWallet", "key": "seller-finance", "route": "seller-finance" },
-      { "label": "Return Requests", "icon": "MdAssignmentReturn", "key": "returns", "route": "returns" },
-      { "label": "Subscription Orders", "icon": "MdSubscriptions", "key": "subscription-orders", "route": "subscription-orders" },
-      { "label": "Commerce Settings", "icon": "MdSettings", "key": "commerce-settings", "route": "commerce-settings" },
-      { "label": "Cancellations", "icon": "MdCancel", "key": "cancellations", "route": "cancellations" },
-      { "label": "Tax Invoices", "icon": "MdReceiptLong", "key": "tax-invoices", "route": "tax-invoices" },
-      { "label": "Credit Notes", "icon": "MdCreditScore", "key": "credit-notes", "route": "credit-notes" },
-      { "label": "Subscription Plans", "icon": "MdSubscriptions", "key": "subscription-plans", "route": "subscription-plans" },
-      { "label": "COD Config", "icon": "MdLocalAtm", "key": "cod-config", "route": "cod-config" },
-      { "label": "Chargebacks", "icon": "MdSecurityUpdate", "key": "chargebacks", "route": "chargebacks" },
-      { "label": "Fraud Cases", "icon": "MdGppBad", "key": "fraud-cases", "route": "fraud-cases" },
-      { "label": "Seller Payouts", "icon": "MdPayments", "key": "seller-payouts", "route": "seller-payouts" },
-      { "label": "Wallet Management", "icon": "MdAccountBalanceWallet", "key": "wallet-management", "route": "wallet-management" }
+      { "label": "Checkout Quotes", "icon": "MdCalculate", "key": "checkout-quote", "route": "checkout-quote" },
+      { "label": "Abandoned Carts", "icon": "MdShoppingBag", "key": "carts", "route": "carts" },
+      { "label": "Subscription Orders", "icon": "MdSubscriptions", "key": "subscription-orders", "route": "subscription-orders" }
     ]
   },
   {
-    "label": "Delivery & Shipping",
+    "label": "Payments & Finance",
+    "icon": "MdPayment",
+    "key": "payments-finance",
+    "module": "payments",
+    "subItems": [
+      { "label": "Payments", "icon": "MdPayment", "key": "payments", "route": "payments" },
+      { "label": "Chargebacks", "icon": "MdSecurityUpdate", "key": "chargebacks", "route": "chargebacks" },
+      { "label": "Fraud Cases", "icon": "MdGppBad", "key": "fraud-cases", "route": "fraud-cases" },
+      { "label": "Admin Wallet", "icon": "MdAccountBalanceWallet", "key": "wallet-management", "route": "wallet-management" }
+    ]
+  },
+  {
+    "label": "Shipping & Fulfilment",
     "icon": "MdLocalShipping",
-    "key": "delivery-shipping",
+    "key": "shipping-fulfilment",
     "module": "delivery",
     "subItems": [
-      { "label": "Shipment Tracking", "icon": "MdLocalShipping", "key": "shipment-tracking", "route": "shipment-tracking" },
-      { "label": "Shipping Packages", "icon": "MdInventory2", "key": "shipping-packages", "route": "shipping-packages" },
-      { "label": "Pickup Addresses", "icon": "MdLocationOn", "key": "pickup-addresses", "route": "pickup-addresses" },
-      { "label": "Delivery Partners", "icon": "MdPeople", "key": "shipping-company-users", "route": "shipping-company-users" }
+      { "label": "Shipments", "icon": "MdLocalShipping", "key": "shipment-tracking", "route": "shipment-tracking" },
+      { "label": "Delivery Agents", "icon": "MdPeople", "key": "delivery-agents", "route": "delivery-agents" }
+    ]
+  },
+  {
+    "label": "Returns & Cancellations",
+    "icon": "MdAssignmentReturn",
+    "key": "returns-cancellations",
+    "module": "returns",
+    "subItems": [
+      { "label": "Return Requests", "icon": "MdAssignmentReturn", "key": "returns", "route": "returns" },
+      { "label": "Cancellations", "icon": "MdCancel", "key": "cancellations", "route": "cancellations" }
+    ]
+  },
+  {
+    "label": "Invoices & Taxation",
+    "icon": "MdReceiptLong",
+    "key": "invoices-taxation",
+    "module": "tax",
+    "subItems": [
+      { "label": "Tax Invoices", "icon": "MdReceiptLong", "key": "tax-invoices", "route": "tax-invoices" },
+      { "label": "Credit Notes", "icon": "MdCreditScore", "key": "credit-notes", "route": "credit-notes" },
+      { "label": "HSN Codes", "icon": "MdQrCode", "key": "hsn-code", "route": "hsn-code" },
+      { "label": "Taxes", "icon": "MdReceiptLong", "key": "tax", "route": "tax" },
+      { "label": "Sub Taxes", "icon": "MdReceiptLong", "key": "subTax", "route": "subTax" },
+      { "label": "Tax Rules", "icon": "MdRule", "key": "tax-rule", "route": "tax-rule" },
+      { "label": "Tax Documents", "icon": "MdDescription", "key": "tax-documents", "route": "tax-documents" }
+    ]
+  },
+  {
+    "label": "Seller Finance & Payouts",
+    "icon": "MdAccountBalanceWallet",
+    "key": "seller-finance-payouts",
+    "module": "sellers/commissions",
+    "subItems": [
+      { "label": "Seller Finance", "icon": "MdAccountBalanceWallet", "key": "seller-finance", "route": "seller-finance" },
+      { "label": "Seller Payouts", "icon": "MdPayments", "key": "seller-payouts", "route": "seller-payouts" },
+      { "label": "Payout Ops Queue", "icon": "MdOutbox", "key": "payout-ops-queue", "route": "payout-ops-queue" },
+      { "label": "Negative Balances", "icon": "MdMoneyOff", "key": "negative-balances", "route": "negative-balances" }
+    ]
+  },
+  {
+    "label": "Commerce Settings",
+    "icon": "MdSettings",
+    "key": "commerce-settings-menu",
+    "module": "commerce-settings",
+    "subItems": [
+      { "label": "Commerce Settings", "icon": "MdSettings", "key": "commerce-settings", "route": "commerce-settings" },
+      { "label": "Coupons & Discounts", "icon": "MdConfirmationNumber", "key": "discount-coupons", "route": "discount-coupons" },
+      { "label": "Platform Fee", "icon": "MdAccountBalanceWallet", "key": "platform-fee-config", "route": "platform-fee-config" },
+      { "label": "Commission Rules", "icon": "MdRule", "key": "commission-rules", "route": "commission-rules" },
+      { "label": "COD Settings", "icon": "MdLocalAtm", "key": "cod-config", "route": "cod-config" },
+      { "label": "Subscription Plans", "icon": "MdSubscriptions", "key": "subscription-plans", "route": "subscription-plans" }
     ]
   },
   {
@@ -100,15 +147,12 @@
       { "label": "Sellers", "icon": "MdStorefront", "key": "seller", "route": "seller" },
       { "label": "Admin Users", "icon": "MdAdminPanelSettings", "key": "admin-users", "route": "admin-users" },
       { "label": "Seller Users", "icon": "MdGroup", "key": "seller-users", "route": "seller-users" },
-      { "label": "Seller KYC", "icon": "MdFactCheck", "key": "seller-kyc", "route": "seller-kyc" },
-      { "label": "Seller Bank", "icon": "MdAccountBalance", "key": "seller-bank", "route": "seller-bank" },
+      { "label": "Seller Organizations", "icon": "MdBusiness", "key": "seller-organizations", "route": "seller-organizations" },
       { "label": "Roles & Permissions", "icon": "MdSecurity", "key": "roles-permissions", "route": "roles-permissions" },
       { "label": "Module Management", "icon": "MdViewModule", "key": "module-management", "route": "module-management" },
       { "label": "Activity Logs", "icon": "MdHistory", "key": "activity-logs", "route": "activity-logs" },
       { "label": "RBAC Audit Log", "icon": "MdManageSearch", "key": "rbac-audit-log", "route": "rbac-audit-log" },
       { "label": "Permission Templates", "icon": "MdDashboardCustomize", "key": "permission-templates", "route": "permission-templates" },
-      { "label": "Seller Onboarding", "icon": "MdPersonAddAlt", "key": "seller-onboarding", "route": "seller-onboarding" },
-      { "label": "Seller Status", "icon": "MdVerifiedUser", "key": "seller-status", "route": "seller-status" },
       { "label": "Seller Sub-Admins", "icon": "MdSupervisorAccount", "key": "seller-sub-admins", "route": "seller-sub-admins" },
       { "label": "User Addresses", "icon": "MdLocationOn", "key": "users-addresses", "route": "users-addresses" }
     ]
@@ -119,24 +163,10 @@
     "key": "marketing",
     "module": "pricing",
     "subItems": [
-      { "label": "Coupons", "icon": "MdConfirmationNumber", "key": "discount-coupons", "route": "discount-coupons" },
       { "label": "Promotion Banners", "icon": "MdWeb", "key": "promotions-banners", "route": "content-management/promotion-banner" },
       { "label": "Referral Programs", "icon": "MdShare", "key": "referral-commerce", "route": "referral-commerce" },
       { "label": "Influencer Management", "icon": "MdStarBorder", "key": "influencer-management", "route": "influencer-management" },
       { "label": "Notifications", "icon": "MdNotifications", "key": "messages", "route": "messages" }
-    ]
-  },
-  {
-    "label": "Tax & Compliance",
-    "icon": "MdAccountBalance",
-    "key": "tax-compliance",
-    "module": "tax",
-    "subItems": [
-      { "label": "HSN Codes", "icon": "MdQrCode", "key": "hsn-code", "route": "hsn-code" },
-      { "label": "Taxes", "icon": "MdReceiptLong", "key": "tax", "route": "tax" },
-      { "label": "Sub Taxes", "icon": "MdReceiptLong", "key": "subTax", "route": "subTax" },
-      { "label": "Tax Rules", "icon": "MdRule", "key": "tax-rule", "route": "tax-rule" },
-      { "label": "Tax Documents", "icon": "MdDescription", "key": "tax-documents", "route": "tax-documents" }
     ]
   },
   {

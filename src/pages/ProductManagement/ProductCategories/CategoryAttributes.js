@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { MdArrowBack, MdAdd, MdDelete, MdEdit } from 'react-icons/md';
@@ -260,10 +260,30 @@ const CategoryRow = ({ option, attrCount, onEdit, loadingKey }) => {
 };
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
-const CategoryAttributes = () => {
+const CategoryAttributesPanel = ({ embedded = false, initialCategory = null, onClose }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.product);
+  const initialCategoryKey = initialCategory
+    ? String(initialCategory.categoryKey || initialCategory._id || '')
+    : '';
+  const initialCategoryLabel =
+    initialCategory?.name ||
+    initialCategory?.title ||
+    initialCategory?.categoryName ||
+    initialCategory?.categoryKey ||
+    '';
+  const initialCategoryOption = useMemo(
+    () =>
+      initialCategoryKey
+        ? {
+            value: initialCategoryKey,
+            label: initialCategoryLabel,
+            category: initialCategory,
+          }
+        : null,
+    [initialCategory, initialCategoryKey, initialCategoryLabel],
+  );
 
   const categories = useMemo(() => {
     const payload = selector?.getListData?.data?.data || {};
@@ -274,8 +294,8 @@ const CategoryAttributes = () => {
   const categoryOptions = useMemo(() => toCategoryOptions(categories), [categories]);
 
   // view: 'list' | 'edit'
-  const [view, setView] = useState('list');
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [view, setView] = useState(initialCategoryOption ? 'edit' : 'list');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategoryOption);
   const [attributes, setAttributes] = useState([]);
   const [loadingKey, setLoadingKey] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -300,7 +320,9 @@ const CategoryAttributes = () => {
     [platformOptions],
   );
 
-  const loadOptionValues = (optionId) => {
+  const loadedInitialCategoryRef = useRef('');
+
+  const loadOptionValues = useCallback((optionId) => {
     if (!optionId || optionValues[optionId]) return;
     dispatch(getPlatformOptionValues({ optionId, limit: 100, active: true }))
       .unwrap()
@@ -312,9 +334,9 @@ const CategoryAttributes = () => {
         }));
       })
       .catch(() => {});
-  };
+  }, [dispatch, optionValues]);
 
-  const openEditor = (option) => {
+  const openEditor = useCallback((option) => {
     setLoadingKey(option.value);
     dispatch(getCategoryAttributes({ categoryKey: option.value }))
       .unwrap()
@@ -340,9 +362,29 @@ const CategoryAttributes = () => {
         setView('edit');
       })
       .finally(() => setLoadingKey(null));
-  };
+  }, [dispatch, loadOptionValues]);
+
+  useEffect(() => {
+    loadedInitialCategoryRef.current = '';
+  }, [initialCategoryKey]);
+
+  useEffect(() => {
+    if (!initialCategoryKey) return;
+    const matchedOption =
+      categoryOptions.find((option) => String(option.value) === initialCategoryKey) ||
+      initialCategoryOption;
+    if (!matchedOption?.value || loadedInitialCategoryRef.current === matchedOption.value) {
+      return;
+    }
+    loadedInitialCategoryRef.current = matchedOption.value;
+    openEditor(matchedOption);
+  }, [categoryOptions, initialCategoryKey, initialCategoryOption, openEditor]);
 
   const handleBack = () => {
+    if (embedded && initialCategoryKey) {
+      onClose?.();
+      return;
+    }
     setView('list');
     setSelectedCategory(null);
     setAttributes([]);
@@ -400,10 +442,10 @@ const CategoryAttributes = () => {
     }
 
     const invalidSelect = payload.filter(
-      (item) => (item.type === 'select' || item.type === 'multi_select') && (!item.platformOptionId || !item.options.length),
+      (item) => (item.type === 'select' || item.type === 'multi_select') && !item.platformOptionId && !item.options.length,
     );
     if (invalidSelect.length) {
-      toast.error('Select / multi-select attributes must use an option master and at least one value.');
+      toast.error('Select / multi-select attributes must have at least one value (use an option master or add custom values).');
       return;
     }
 
@@ -425,7 +467,7 @@ const CategoryAttributes = () => {
   /* ── LIST VIEW ────────────────────────────────────────────────────────── */
   if (view === 'list') {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className={`${embedded ? 'h-full overflow-y-auto p-5' : 'max-w-5xl mx-auto p-6'}`}>
         <Loader loading={selector.loading} />
         <div className="mb-5 flex items-center justify-between">
           <div>
@@ -434,13 +476,23 @@ const CategoryAttributes = () => {
               Configure which attributes appear in Product Catalog per category
             </p>
           </div>
-          <button
-            type="button"
-            className="text-xs text-[var(--admin-blue)] border border-[var(--admin-blue)] px-3 py-1.5 rounded hover:bg-[var(--admin-blue)] hover:text-white transition-colors"
-            onClick={() => navigate('/app/product-catalog')}
-          >
-            Open Product Catalog
-          </button>
+          {embedded ? (
+            <button
+              type="button"
+              className="text-xs text-gray-600 border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50 transition-colors"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="text-xs text-[var(--admin-blue)] border border-[var(--admin-blue)] px-3 py-1.5 rounded hover:bg-[var(--admin-blue)] hover:text-white transition-colors"
+              onClick={() => navigate('/app/product-catalog')}
+            >
+              Open Product Catalog
+            </button>
+          )}
         </div>
 
         <div className="bg-white border border-[#E6E6E6] rounded-lg overflow-hidden">
@@ -486,7 +538,7 @@ const CategoryAttributes = () => {
   const categoryPath = selectedCategory?.label?.split(' > ').slice(0, -1).join(' > ');
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className={`${embedded ? 'h-full overflow-y-auto p-5' : 'max-w-5xl mx-auto p-6'}`}>
       <Loader loading={selector.loading || saving} />
 
       {/* Header */}
@@ -496,7 +548,7 @@ const CategoryAttributes = () => {
           onClick={handleBack}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-3 transition-colors"
         >
-          <MdArrowBack size={16} /> Back to Categories
+          <MdArrowBack size={16} /> {embedded ? 'Close Attributes' : 'Back to Categories'}
         </button>
         <div className="flex items-start justify-between">
           <div>
@@ -595,4 +647,7 @@ const CategoryAttributes = () => {
   );
 };
 
+const CategoryAttributes = () => <CategoryAttributesPanel />;
+
+export { CategoryAttributesPanel };
 export default CategoryAttributes;

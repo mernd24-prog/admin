@@ -28,7 +28,7 @@ import {
   getShipments,
   updateSellerEwayBillStatus,
 } from "../../../Redux/deliverySlice";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
@@ -144,6 +144,7 @@ const FILTER_FIELDS = [
 
 const ShipmentTracking = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
   const agentPayload = unwrapList(selector.agentsData);
@@ -173,6 +174,20 @@ const ShipmentTracking = () => {
   const [ewayForm, setEwayForm] = useState(EMPTY_EWAY);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
+  const filterFields = useMemo(
+    () => (isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS),
+    [isSeller],
+  );
+  const renderDeliveryAction = useCallback(
+    (action, children) => isSeller
+      ? children
+      : (
+        <PermissionGuard module="delivery" action={action} hide>
+          {children}
+        </PermissionGuard>
+      ),
+    [isSeller],
+  );
 
   const fetchAssignableAgents = useCallback(async (sellerId) => {
     if (!sellerId) return;
@@ -468,7 +483,8 @@ const ShipmentTracking = () => {
     }
   }, [dispatch, ewayForm]);
 
-  const columns = useMemo(() => [
+  const columns = useMemo(() => {
+    const baseColumns = [
     {
       key: "shipment",
       label: "Shipment",
@@ -541,7 +557,7 @@ const ShipmentTracking = () => {
           >
             View
           </button>
-          <PermissionGuard module="delivery" action={ACTIONS.STATUS_CHANGE} hide>
+          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
             <button
               type="button"
               className="admin-btn-secondary !px-2 !py-1"
@@ -549,9 +565,9 @@ const ShipmentTracking = () => {
               disabled={row.direction === "reverse" || row.shipment_type === "return"}
             >
               <MdTimeline size={15} /> Track
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="delivery" action={ACTIONS.ASSIGN} hide>
+            </button>,
+          )}
+          {renderDeliveryAction(ACTIONS.ASSIGN,
             <button
               type="button"
               className="admin-btn-secondary !px-2 !py-1"
@@ -559,9 +575,9 @@ const ShipmentTracking = () => {
               disabled={row.direction === "reverse" || row.shipment_type === "return"}
             >
               <MdPersonAdd size={15} /> Agent
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="delivery" action={ACTIONS.STATUS_CHANGE} hide>
+            </button>,
+          )}
+          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
             <button
               type="button"
               className="admin-btn-secondary !px-2 !py-1"
@@ -570,9 +586,9 @@ const ShipmentTracking = () => {
               hidden={row.direction === "reverse" || row.shipment_type === "return"}
             >
               OTP
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="delivery" action={ACTIONS.STATUS_CHANGE} hide>
+            </button>,
+          )}
+          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
             <button
               type="button"
               className="admin-btn-secondary !px-2 !py-1"
@@ -581,9 +597,9 @@ const ShipmentTracking = () => {
               hidden={row.direction === "reverse" || row.shipment_type === "return"}
             >
               <MdVerified size={15} /> Verify
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="delivery" action={ACTIONS.STATUS_CHANGE} hide>
+            </button>,
+          )}
+          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
             <button
               type="button"
               className="admin-btn-secondary !px-2 !py-1"
@@ -591,12 +607,14 @@ const ShipmentTracking = () => {
               disabled={row.direction === "reverse" || row.shipment_type === "return"}
             >
               <MdDescription size={15} /> E-way
-            </button>
-          </PermissionGuard>
+            </button>,
+          )}
         </div>
       ),
     },
-  ], [openAssignment, openDetail, openEwayBill, openTracking, openVerification, sendDeliveryOtp]);
+    ];
+    return isSeller ? baseColumns.filter((column) => column.key !== "seller_id") : baseColumns;
+  }, [isSeller, openAssignment, openDetail, openEwayBill, openTracking, openVerification, renderDeliveryAction, sellerOptions, sendDeliveryOtp]);
 
   const updatePackageField = (field, value) => {
     setShipmentForm((prev) => ({
@@ -609,21 +627,23 @@ const ShipmentTracking = () => {
     <div className="max-w-7xl mx-auto mt-8">
       <Loader loading={loading} />
       <PageHeader
-        title="Shipment Tracking"
-        subtitle="Create manual shipments, update tracking, and generate manifests"
-        breadcrumbs={[{ label: "Delivery & Shipping" }, { label: "Shipment Tracking" }]}
+        title="Shipments"
+        subtitle="Shipment creation, tracking, delivery OTP, and proof verification"
+        breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipments" }]}
         actions={
           <div className="flex gap-2">
-            <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
+            {renderDeliveryAction(ACTIONS.CREATE,
               <button type="button" className="admin-btn-primary" onClick={() => setShipmentModal(true)}>
                 <MdAdd size={16} /> Create Shipment
-              </button>
-            </PermissionGuard>
-            <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
-              <button type="button" className="admin-btn-secondary" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
-                <MdFileDownload size={16} /> Manifest
-              </button>
-            </PermissionGuard>
+              </button>,
+            )}
+            {!isSeller && (
+              <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
+                <button type="button" className="admin-btn-secondary" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
+                  <MdFileDownload size={16} /> Manifest
+                </button>
+              </PermissionGuard>
+            )}
           </div>
         }
       />
@@ -646,7 +666,7 @@ const ShipmentTracking = () => {
         error={error}
         filterBar={(
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={filterFields}
             values={list.filters}
             onChange={list.setFilter}
             onClear={list.clearFilters}
@@ -654,7 +674,7 @@ const ShipmentTracking = () => {
             activeCount={list.activeFilterCount}
           />
         )}
-        selectable
+        selectable={!isSeller}
         selectedKeys={selectedRows}
         onSelectionChange={setSelectedRows}
         rowKey="id"
@@ -665,17 +685,19 @@ const ShipmentTracking = () => {
       <DefaultModal isOpen={shipmentModal} onClose={() => setShipmentModal(false)} title="Create Shipment" onSubmit={submitShipment}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Input labelName="Order ID" name="orderId" value={shipmentForm.orderId} onChange={(event) => setShipmentForm((prev) => ({ ...prev, orderId: event.target.value }))} required />
-          <label className="block text-sm text-gray-700">
-            <span className="block mb-1 font-medium">Seller</span>
-            <select
-              className="admin-input w-full"
-              value={shipmentForm.sellerId}
-              onChange={(event) => setShipmentForm((prev) => ({ ...prev, sellerId: event.target.value }))}
-            >
-              <option value="">— Select seller —</option>
-              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </label>
+          {!isSeller && (
+            <label className="block text-sm text-gray-700">
+              <span className="block mb-1 font-medium">Seller</span>
+              <select
+                className="admin-input w-full"
+                value={shipmentForm.sellerId}
+                onChange={(event) => setShipmentForm((prev) => ({ ...prev, sellerId: event.target.value }))}
+              >
+                <option value="">— Select seller —</option>
+                {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </label>
+          )}
           <Input labelName="Courier" name="courierName" value={shipmentForm.courierName} onChange={(event) => setShipmentForm((prev) => ({ ...prev, courierName: event.target.value }))} />
           <Input labelName="AWB Number" name="awbNumber" value={shipmentForm.awbNumber} onChange={(event) => setShipmentForm((prev) => ({ ...prev, awbNumber: event.target.value }))} />
           <Input labelName="Tracking Number" name="trackingNumber" value={shipmentForm.trackingNumber} onChange={(event) => setShipmentForm((prev) => ({ ...prev, trackingNumber: event.target.value }))} />

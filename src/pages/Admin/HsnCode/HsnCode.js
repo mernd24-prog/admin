@@ -253,7 +253,7 @@ const HsnCode = () => {
       <PageHeader
         title="HSN Codes"
         subtitle="Manage Harmonized System Nomenclature codes and tax rates"
-        breadcrumbs={[{ label: "Tax & Compliance" }, { label: "HSN Codes" }]}
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "HSN Codes" }]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button

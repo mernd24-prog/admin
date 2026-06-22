@@ -434,8 +434,7 @@ const PayoutOpsQueue = () => {
         title="Payout Operations Queue"
         subtitle="Approve, hold, release, retry, complete, or fail seller payout operations"
         breadcrumbs={[
-          { label: "Orders Management" },
-          { label: "Seller Finance" },
+          { label: "Seller Finance & Payouts" },
           { label: "Payout Ops Queue" },
         ]}
         actions={

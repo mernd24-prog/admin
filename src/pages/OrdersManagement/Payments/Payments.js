@@ -294,7 +294,7 @@ const Payments = () => {
       <PageHeader
         title="Payments"
         subtitle="Reconcile online, COD, and manual payments"
-        breadcrumbs={[{ label: "Orders Management" }, { label: "Payments" }]}
+        breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
         actions={
           <button type="button" className="admin-btn-secondary" onClick={fetchPayments}>
             <MdRefresh size={17} /> Refresh

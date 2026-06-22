@@ -11,6 +11,7 @@ import {
   isTokenExpiring,
   shouldForceLogoutForResponse,
 } from './authSession';
+import { getSelectedSellerOrganizationId } from './sellerOrganizationContext';
 
 const apiClient = axios.create({
   baseURL: apiUrl,
@@ -27,6 +28,11 @@ const getSessionToken = () => {
   }
 };
 
+const getOrganizationHeader = () => {
+  const organizationId = getSelectedSellerOrganizationId();
+  return organizationId ? { 'X-Organization-Id': organizationId } : {};
+};
+
 export const setHeaders = () => {
   const user = localStorage.getItem('accessToken') || getSessionToken();
   const safeToken = String(user || "").length > MAX_SAFE_AUTH_HEADER_TOKEN_LENGTH ? null : user;
@@ -35,6 +41,7 @@ export const setHeaders = () => {
     headers: {
       'Content-Type': 'application/json',
       ...(safeToken ? { Authorization: `Bearer ${safeToken}` } : {}),
+      ...getOrganizationHeader(),
     },
   };
 };
@@ -92,6 +99,7 @@ export const apiRequest = async (method, endpoint, data, contentType = "json", t
       headers: {
         'Content-Type': contentType === "json" ? 'application/json' : "multipart/form-data",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getOrganizationHeader(),
       },
     };
 
@@ -137,6 +145,7 @@ export const apiRequestImage = async (method, endpoint, data) => {
       headers: {
         'Content-Type': 'multipart/form-data',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getOrganizationHeader(),
       },
     };
   };

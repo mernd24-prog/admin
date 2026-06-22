@@ -381,7 +381,7 @@ const ShippingPackages = () => {
         title="Shipping Rules"
         subtitle="Manage parcel dimensions used for shipping calculations"
         breadcrumbs={[
-          { label: "Tax & Compliance" },
+          { label: "Shipping & Fulfilment" },
           { label: "Shipping Rules" },
         ]}
         actions={

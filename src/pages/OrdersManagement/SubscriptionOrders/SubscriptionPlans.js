@@ -197,6 +197,7 @@ const SubscriptionPlans = () => {
       <PageHeader
         title="Subscription Plans"
         subtitle="Manage platform subscription plans"
+        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Subscription Plans" }]}
         actions={
           <div className="flex gap-2">
             <button onClick={fetchPlans} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">

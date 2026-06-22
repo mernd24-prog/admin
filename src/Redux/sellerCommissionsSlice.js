@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { createApiThunkPrivate, createExtraReducersForThunk } from "../_helpers/ApiThunk";
 import { ENDPOINTS } from "../_helpers/endpoints";
+import { getSelectedSellerOrganizationId } from "../_helpers/sellerOrganizationContext";
 
 const initialState = {
   myCommissionsData: {},
@@ -30,18 +31,26 @@ const pickQuery = (keys = []) => (payload = {}) =>
     return acc;
   }, {});
 
+const withSelectedOrganization = (keys = []) => (payload = {}) => {
+  const base = pickQuery(keys)(payload);
+  const organizationId = payload.organizationId || getSelectedSellerOrganizationId();
+  return organizationId ? { ...base, organizationId } : base;
+};
+
 export const getSellerCommissions = createApiThunkPrivate(
   "sellerCommissions/getSellerCommissions",
   ENDPOINTS.payouts.myCommissions,
   "GET",
-  true
+  true,
+  { transformParams: withSelectedOrganization(["status", "orderId", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerPayouts = createApiThunkPrivate(
   "sellerCommissions/getSellerPayouts",
   ENDPOINTS.payouts.myPayouts,
   "GET",
-  true
+  true,
+  { transformParams: withSelectedOrganization(["status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerSettlements = createApiThunkPrivate(
@@ -49,7 +58,7 @@ export const getSellerSettlements = createApiThunkPrivate(
   ENDPOINTS.payouts.settlements,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: withSelectedOrganization(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerFinanceSummary = createApiThunkPrivate(
@@ -57,7 +66,7 @@ export const getSellerFinanceSummary = createApiThunkPrivate(
   ENDPOINTS.payouts.summary,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "fromDate", "toDate"]) }
+  { transformParams: withSelectedOrganization(["sellerId", "fromDate", "toDate"]) }
 );
 
 export const getAdminSellerCommissions = createApiThunkPrivate(
@@ -65,7 +74,7 @@ export const getAdminSellerCommissions = createApiThunkPrivate(
   ENDPOINTS.payouts.commissions,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "status", "orderId", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "status", "orderId", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getAdminSellerPayouts = createApiThunkPrivate(
@@ -73,7 +82,7 @@ export const getAdminSellerPayouts = createApiThunkPrivate(
   ENDPOINTS.payouts.sellerPayouts,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getSellerWalletSummary = createApiThunkPrivate(
@@ -81,7 +90,7 @@ export const getSellerWalletSummary = createApiThunkPrivate(
   (payload) => ENDPOINTS.payouts.sellerWallet(payload?.sellerId || payload?.id),
   "GET",
   true,
-  { transformParams: pickQuery(["fromDate", "toDate"]) }
+  { transformParams: pickQuery(["organizationId", "fromDate", "toDate"]) }
 );
 
 export const getPayoutOperationsQueue = createApiThunkPrivate(
@@ -89,7 +98,7 @@ export const getPayoutOperationsQueue = createApiThunkPrivate(
   ENDPOINTS.payouts.operationsQueue,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "status", "queue", "search", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "status", "queue", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getNegativeBalances = createApiThunkPrivate(
@@ -97,7 +106,7 @@ export const getNegativeBalances = createApiThunkPrivate(
   ENDPOINTS.payouts.negativeBalances,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "status", "search", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "status", "search", "limit", "offset"]) }
 );
 
 export const calculateSellerCommission = createApiThunkPrivate(
@@ -105,7 +114,7 @@ export const calculateSellerCommission = createApiThunkPrivate(
   (payload) => ENDPOINTS.payouts.calculate(payload?.orderId || payload?.id),
   "POST",
   false,
-  { transformBody: () => undefined }
+  { transformBody: (payload = {}) => pickQuery(["organizationId"])(payload) }
 );
 
 export const processSellerPayouts = createApiThunkPrivate(

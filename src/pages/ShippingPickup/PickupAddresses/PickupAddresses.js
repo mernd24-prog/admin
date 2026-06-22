@@ -532,7 +532,7 @@ const PickupAddresses = () => {
         title="Pickup Addresses"
         subtitle="Manage fulfilment pickup locations with live location dependencies"
         breadcrumbs={[
-          { label: "Tax & Compliance" },
+          { label: "Shipping & Fulfilment" },
           { label: "Pickup Addresses" },
         ]}
         actions={

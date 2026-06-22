@@ -266,7 +266,7 @@ const PlatformFeeConfig = () => {
       <PageHeader
         title="Platform Fee Configuration"
         subtitle="Configure platform fees charged on seller orders"
-        breadcrumbs={[{ label: "Finance" }, { label: "Platform Fee Config" }]}
+        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Platform Fee Config" }]}
         actions={
           <div className="flex items-center gap-2">
             <button

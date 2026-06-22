@@ -11,6 +11,14 @@ import { FcNext } from "react-icons/fc";
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from "../../Redux/userSlice";
 import { Link, useLocation } from "react-router-dom";
+import { apiRequest } from "../../_helpers/apiConfig";
+import { ENDPOINTS } from "../../_helpers/endpoints";
+import {
+  getSelectedSellerOrganizationId,
+  setSelectedSellerOrganizationId,
+} from "../../_helpers/sellerOrganizationContext";
+
+const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
 const getDisplayName = (user = {}) => {
   const profile = user.profile || {};
@@ -89,6 +97,8 @@ export default function Header({
   const currentPath = location.pathname;
   const [headerTitle, setHeaderTitle] = useState("");
   const [userData, setUserData] = useState({});
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = getAvatarUrl(userData);
 
@@ -111,9 +121,51 @@ export default function Header({
     setAvatarFailed(false);
   }, [avatarUrl]);
 
+  useEffect(() => {
+    if (!SELLER_ROLES.has(userData?.role)) {
+      setOrganizations([]);
+      return;
+    }
+
+    let active = true;
+    apiRequest("GET", ENDPOINTS.sellers.myOrganizations, { limit: 100 })
+      .then((response) => {
+        if (!active) return;
+        const data = response?.data?.data || response?.normalized?.data || response?.data || {};
+        const list = (data.organizations || data.items || data.list || []).filter(
+          (item) =>
+            ["approved", "active"].includes(item.approvalStatus) &&
+            item.kycStatus === "verified" &&
+            item.bankVerificationStatus === "verified" &&
+            item.goLiveStatus === "live",
+        );
+        setOrganizations(list);
+        const stored = getSelectedSellerOrganizationId();
+        const existing = list.some((item) => String(item.id || item.organizationId) === stored);
+        const fallback = list.find((item) => item.isDefault) || list[0];
+        const nextId = existing
+          ? stored
+          : String(fallback?.id || fallback?.organizationId || "");
+        setSelectedOrganizationIdState(nextId);
+        if (nextId !== stored) setSelectedSellerOrganizationId(nextId);
+      })
+      .catch(() => {
+        if (active) setOrganizations([]);
+      });
+
+    return () => { active = false; };
+  }, [userData?.role]);
+
   const handleLogout = () => {
     logoutFunction();
     dispatch(logout());
+  };
+
+  const handleOrganizationChange = (event) => {
+    const value = event.target.value;
+    setSelectedOrganizationIdState(value);
+    setSelectedSellerOrganizationId(value);
+    window.setTimeout(() => window.location.reload(), 0);
   };
 
   const toggleLogoutModal = () => {
@@ -202,6 +254,20 @@ export default function Header({
             <MdOutlineNotificationsNone size={18} />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
           </button>
+          {SELLER_ROLES.has(userData?.role) && organizations.length > 0 && (
+            <select
+              className="hidden min-h-[36px] max-w-[220px] rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-medium text-[var(--admin-ink)] outline-none focus:border-[var(--admin-blue)] md:block"
+              value={selectedOrganizationId}
+              onChange={handleOrganizationChange}
+              title="Organization"
+            >
+              {organizations.map((organization) => (
+                <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
+                  {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="relative">
             <div className="flex items-center gap-2.5">
               <div className="hidden md:block text-right leading-tight">

@@ -503,7 +503,7 @@ const Returns = () => {
       <PageHeader
         title="Returns & Refunds"
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle"
-        breadcrumbs={[{ label: "Orders Management" }, { label: "Returns & Refunds" }]}
+        breadcrumbs={[{ label: "Returns & Cancellations" }, { label: "Returns & Refunds" }]}
         actions={
           <button type="button" className="admin-btn-secondary" onClick={fetchReturns}>
             <MdRefresh size={17} /> Refresh

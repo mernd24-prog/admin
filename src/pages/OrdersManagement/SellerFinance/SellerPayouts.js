@@ -174,6 +174,7 @@ const SellerPayouts = () => {
       <PageHeader
         title="Seller Payouts"
         subtitle="Manage seller commission payouts"
+        breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Seller Payouts" }]}
         actions={
           <div className="flex gap-2">
             <button onClick={fetchPayouts} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">

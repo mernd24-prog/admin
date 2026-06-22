@@ -343,7 +343,7 @@ const TaxRule = () => {
         title="Tax Rules"
         subtitle="Map tax structures to product categories"
         breadcrumbs={[
-          { label: "Tax & Compliance" },
+          { label: "Invoices & Taxation" },
           { label: "Taxes", href: "/app/tax" },
           { label: "Tax Rules" },
         ]}

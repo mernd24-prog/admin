@@ -235,7 +235,7 @@ const SubTax = () => {
         title={parentTaxName ? `${parentTaxName} — Sub-Taxes` : "Sub-Taxes"}
         subtitle="Manage sub-tax rates and percentages"
         breadcrumbs={[
-          { label: "Tax & Compliance" },
+          { label: "Invoices & Taxation" },
           { label: "Taxes", href: "/app/tax" },
           { label: parentTaxName || "Sub-Taxes" },
         ]}

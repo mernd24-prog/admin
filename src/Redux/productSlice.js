@@ -16,6 +16,9 @@ const toProductListParams = (params = {}) => ({
     ...(params.category ? { category: params.category } : {}),
     ...(params.status ? { status: params.status } : {}),
     ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+    ...(params.organizationId ? { organizationId: params.organizationId } : {}),
+    ...(params.storeId ? { storeId: params.storeId } : {}),
+    ...(params.warehouseId ? { warehouseId: params.warehouseId } : {}),
     ...(params.hsnCode || params.hsn_code ? { hsnCode: params.hsnCode || params.hsn_code } : {}),
     ...(params.color ? { color: params.color } : {}),
     ...(params.country ? { country: params.country } : {}),
@@ -63,6 +66,9 @@ const toProductBody = (payload = {}) => {
 
     return {
         ...(payload.sellerId ? { sellerId: payload.sellerId } : {}),
+        ...(payload.organizationId ? { organizationId: payload.organizationId } : {}),
+        ...(payload.storeId ? { storeId: payload.storeId } : {}),
+        ...(payload.warehouseId ? { warehouseId: payload.warehouseId } : {}),
         title,
         ...(payload.shortDescription ? { shortDescription: payload.shortDescription } : {}),
         description: payload.description || "",
@@ -118,6 +124,9 @@ const toProductPatchBody = (payload = {}) => {
     const category = source.category || source.categoryKey || source.category_key || categoryId;
 
     if (source.sellerId !== undefined) body.sellerId = source.sellerId;
+    if (source.organizationId !== undefined) body.organizationId = source.organizationId;
+    if (source.storeId !== undefined) body.storeId = source.storeId;
+    if (source.warehouseId !== undefined) body.warehouseId = source.warehouseId;
     if (source.title !== undefined || source.name !== undefined) body.title = source.title || source.name || "";
     if (source.shortDescription !== undefined) body.shortDescription = source.shortDescription || "";
     if (source.description !== undefined) body.description = source.description || "";
@@ -605,19 +614,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, create, 'createData')
         createExtraReducersForThunk(builder, update, 'updateData')
 
-        // Finish  =====>>>>>>>>>>>
-        createExtraReducersForThunk(builder, FinishGetList, 'FinishGetListData')
-        createExtraReducersForThunk(builder, CreateFinish, 'CreateFinishData')
-        createExtraReducersForThunk(builder, softDeleteFinish, 'softDeleteFinishData')
-        createExtraReducersForThunk(builder, enableDisableFinish, 'enableDisableFinishData')
-        createExtraReducersForThunk(builder, updateFinish, 'updateFinishData')
-        // Dimensions =========>>>>>>>
-        createExtraReducersForThunk(builder, getListDimension, 'getListDimensionData')
-        createExtraReducersForThunk(builder, createDimension, 'createDimensionData')
-        createExtraReducersForThunk(builder, enableDisableDimension, 'enableDisableDimensionData')
-        createExtraReducersForThunk(builder, softDeleteDimension, 'softDeleteDimensionData')
-        createExtraReducersForThunk(builder, updateDimension, 'updateDimensionData')
-
         /// Brands Functions===========>>>>>>>>>>
 
         createExtraReducersForThunk(builder, getBrandList, 'getBrandListData')
@@ -625,12 +621,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, updateBrand, 'updateBrandData')
         createExtraReducersForThunk(builder, deleteBrand, 'deleteBrandData')
         createExtraReducersForThunk(builder, enableDisableBrand, 'enableDisableBrandData')
-        /// Product Warranty
-        createExtraReducersForThunk(builder, getWarrantyList, 'getWarrantyListData')
-        createExtraReducersForThunk(builder, enableDisableWarranty, 'enableDisableWarrantyData')
-        createExtraReducersForThunk(builder, softDeleteWarranty, 'softDeleteWarrantyData')
-        createExtraReducersForThunk(builder, createWarranty, 'createWarrantyData')
-        createExtraReducersForThunk(builder, updateWarranty, 'updateWarrantyData')
         //Product Options
         createExtraReducersForThunk(builder, getListProduct, 'getListProductData')
         createExtraReducersForThunk(builder, enableDisableProduct, 'enableDisableProductData')
@@ -657,7 +647,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, duplicateProduct, 'duplicateProductData')
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
         createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')
-        createExtraReducersForThunk(builder, getAllWarrantyList, 'getAllWarrantyListData')
         createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
         createExtraReducersForThunk(builder, getProductModerationQueue, 'productModerationQueueData')
         createExtraReducersForThunk(builder, getProductRevisions, 'getProductRevisionsData')

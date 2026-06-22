@@ -116,11 +116,11 @@ const MODULE_TABS = {
   reviews: 'Catalog Management',
   carts: 'Orders Management',
   orders: 'Orders Management',
-  returns: 'Orders Management',
-  delivery: 'Delivery & Shipping',
-  payments: 'Orders Management',
-  wallets: 'Orders Management',
-  tax: 'Tax & Compliance',
+  returns: 'Returns & Cancellations',
+  delivery: 'Shipping & Fulfilment',
+  payments: 'Payments & Finance',
+  wallets: 'Payments & Finance',
+  tax: 'Invoices & Taxation',
   locations: 'Location Management',
   countries: 'Location Management',
   states: 'Location Management',
@@ -137,7 +137,7 @@ const MODULE_TABS = {
   notifications: 'Marketing',
   analytics: 'Reports & Analytics',
   reports: 'Reports & Analytics',
-  fraud: 'Settings',
+  fraud: 'Payments & Finance',
 };
 
 const TAB_ORDER = [
@@ -145,10 +145,14 @@ const TAB_ORDER = [
   'Catalog Management',
   'Inventory Management',
   'Orders Management',
-  'Delivery & Shipping',
+  'Payments & Finance',
+  'Shipping & Fulfilment',
+  'Returns & Cancellations',
+  'Invoices & Taxation',
+  'Seller Finance & Payouts',
+  'Commerce Settings',
   'Users & Access',
   'Marketing',
-  'Tax & Compliance',
   'Reports & Analytics',
   'Location Management',
   'Settings',
@@ -193,6 +197,7 @@ const moduleHasAccess = (module = {}) =>
 
 const STATUS_COLORS = {
   active:              'bg-green-100 text-green-700',
+  approved:            'bg-green-100 text-green-700',
   live:                'bg-green-100 text-green-700',
   verified:            'bg-green-100 text-green-700',
   ready_for_go_live:   'bg-emerald-100 text-emerald-700',
@@ -208,7 +213,8 @@ const STATUS_COLORS = {
 };
 
 const StatusBadge = ({ value }) => {
-  const colorClass = STATUS_COLORS[String(value || '').toLowerCase()] || 'bg-gray-100 text-gray-600';
+  const lookupValue = String(value || '').toLowerCase().replace(/^(kyc|bank)\s+/, '');
+  const colorClass = STATUS_COLORS[lookupValue] || 'bg-gray-100 text-gray-600';
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${colorClass}`}>
       {value || 'N/A'}
@@ -223,6 +229,16 @@ const hasCompleteBankDetails = (bankDetails = {}) =>
       bankDetails?.ifscCode &&
       bankDetails?.bankName
   );
+
+const formatAddress = (address = {}) =>
+  [
+    address.line1,
+    address.line2,
+    address.city,
+    address.state,
+    address.postalCode || address.pincode,
+    address.country,
+  ].filter(Boolean).join(', ');
 
 const firstValue = (...values) =>
   values.find((value) => String(value || '').trim().length > 0) || '';
@@ -306,6 +322,8 @@ const UserDetails = () => {
   const [bankModal, setBankModal] = useState({ open: false, defaultDecision: 'verified' });
   const [accessModules, setAccessModules] = useState([]);
   const [accessModulesLoading, setAccessModulesLoading] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [organizationsLoading, setOrganizationsLoading] = useState(false);
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
@@ -413,6 +431,25 @@ const UserDetails = () => {
     }
   }, [dispatch, id, isSellerRoute]);
 
+  const loadSellerOrganizations = useCallback(async () => {
+    if (!id || !isSeller) return;
+    setOrganizationsLoading(true);
+    try {
+      const response = await apiRequest('GET', ENDPOINTS.sellers.organizations(id), { limit: 100 });
+      const payload = getPayload(response);
+      setOrganizations(payload.organizations || payload.items || payload.list || []);
+    } catch (error) {
+      setOrganizations([]);
+      toast.error(error?.message || 'Failed to load seller organizations');
+    } finally {
+      setOrganizationsLoading(false);
+    }
+  }, [id, isSeller]);
+
+  useEffect(() => {
+    loadSellerOrganizations();
+  }, [loadSellerOrganizations]);
+
   useEffect(() => {
     if (!shouldShowAdminAccess || !ownerAdminId) {
       setOwnerAdmin(null);
@@ -508,6 +545,38 @@ const UserDetails = () => {
           ? `Not ready for go-live: ${missing.join(', ')}`
           : (error?.message || 'Failed to activate seller'),
       );
+    }
+  };
+
+  const handleOrganizationReview = async (organization, payload) => {
+    const organizationId = organization?.id || organization?.organizationId;
+    if (!organizationId) return;
+    const nextStatus = payload.approvalStatus || payload.status;
+    let nextPayload = payload;
+    if (nextStatus === 'rejected') {
+      const reason = window.prompt('Rejection reason / required changes');
+      if (reason === null) return;
+      if (!reason.trim()) {
+        toast.error('Rejection reason is required');
+        return;
+      }
+      nextPayload = {
+        ...payload,
+        rejectionReason: reason.trim(),
+        requiredChanges: [reason.trim()],
+      };
+    }
+    try {
+      const response = await apiRequest(
+        'PATCH',
+        ENDPOINTS.sellers.organizationStatus(id, organizationId),
+        nextPayload,
+      );
+      toast.success(response?.message || 'Organization updated');
+      await loadSellerOrganizations();
+      refresh();
+    } catch (error) {
+      toast.error(error?.message || 'Failed to update organization');
     }
   };
 
@@ -773,6 +842,162 @@ const UserDetails = () => {
               loading={kycLoading}
               onLoad={handleLoadKyc}
             />
+
+            <section className="bg-white border border-gray-200 rounded-lg p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-800">Seller Organizations</h2>
+                  <p className="mt-1 text-xs text-gray-500">Legal entities used for GST, invoices, products, orders, and payouts.</p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                  onClick={loadSellerOrganizations}
+                  disabled={organizationsLoading}
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {organizationsLoading && <p className="py-4 text-center text-sm text-gray-400">Loading organizations…</p>}
+              {!organizationsLoading && !organizations.length && (
+                <p className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">
+                  No organization is available for this seller yet.
+                </p>
+              )}
+              {!organizationsLoading && organizations.map((organization) => {
+                const organizationId = organization.id || organization.organizationId;
+                const bank = organization.bankDetails || {};
+                const documents = organization.documents || {};
+                return (
+                  <div key={organizationId} className="mb-4 rounded-md border border-gray-200 p-4 last:mb-0">
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-semibold text-gray-900">{organization.storeDisplayName || organization.legalBusinessName || organizationId}</h3>
+                          {organization.isDefault && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Default</span>}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">{organization.legalBusinessName || '—'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge value={organization.approvalStatus} />
+                        <StatusBadge value={`KYC ${organization.kycStatus || 'not_submitted'}`} />
+                        <StatusBadge value={`Bank ${organization.bankVerificationStatus || 'not_submitted'}`} />
+                        <StatusBadge value={`Go Live ${organization.goLiveStatus || 'pending'}`} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                      <Row label="GSTIN" value={organization.gstin} />
+                      <Row label="PAN" value={organization.pan} />
+                      <Row label="Business Type" value={organization.businessType} />
+                      <Row label="Bank Account" value={bank.accountNumber} />
+                      <Row label="IFSC" value={bank.ifscCode} />
+                      <Row label="Billing State" value={organization.billingAddress?.state} />
+                      <Row label="Billing Address" value={formatAddress(organization.billingAddress)} />
+                      <Row label="Pickup Address" value={formatAddress(organization.pickupAddress)} />
+                      <Row label="Invoice Prefix" value={organization.invoiceSettings?.invoicePrefix || organization.invoiceSettings?.invoiceSeries} />
+                    </div>
+
+                    <div className="mt-3 border-t border-gray-100 pt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">KYC Documents</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(documents).length ? Object.entries(documents).map(([key, value]) => (
+                          value ? (
+                            <a key={key} href={value} target="_blank" rel="noopener noreferrer" className="rounded-md border border-gray-200 px-2 py-1 text-xs text-[var(--admin-blue)] hover:bg-gray-50">
+                              {key.replace(/([A-Z])/g, ' $1')}
+                            </a>
+                          ) : null
+                        )) : <span className="text-xs text-gray-400">No documents uploaded</span>}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100"
+                        onClick={() => handleOrganizationReview(organization, {
+                          kycStatus: 'verified',
+                        })}
+                        disabled={organization.kycStatus === 'verified'}
+                      >
+                        Approve KYC
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
+                          bankVerificationStatus: 'verified',
+                        })}
+                        disabled={organization.kycStatus !== 'verified' || organization.bankVerificationStatus === 'verified'}
+                      >
+                        Verify Bank
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
+                          approvalStatus: 'approved',
+                        })}
+                        disabled={
+                          organization.kycStatus !== 'verified' ||
+                          organization.bankVerificationStatus !== 'verified' ||
+                          ['approved', 'active'].includes(organization.approvalStatus)
+                        }
+                      >
+                        Approve Organization
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
+                        onClick={() => handleOrganizationReview(organization, {
+                          goLiveStatus: 'live',
+                        })}
+                        disabled={
+                          organization.kycStatus !== 'verified' ||
+                          organization.bankVerificationStatus !== 'verified' ||
+                          !['approved', 'active'].includes(organization.approvalStatus) ||
+                          organization.goLiveStatus === 'live'
+                        }
+                      >
+                        Approve Go Live
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs text-yellow-700 hover:bg-yellow-100"
+                        onClick={() => handleOrganizationReview(organization, {
+                          approvalStatus: 'pending_review',
+                          kycStatus: 'under_review',
+                          bankVerificationStatus: organization.bankVerificationStatus || 'submitted',
+                        })}
+                      >
+                        Mark Under Review
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100"
+                        onClick={() => handleOrganizationReview(organization, {
+                          approvalStatus: 'rejected',
+                          kycStatus: 'rejected',
+                        })}
+                      >
+                        Reject Organization
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                        onClick={() => handleOrganizationReview(organization, {
+                          approvalStatus: 'blocked',
+                          goLiveStatus: 'blocked',
+                        })}
+                      >
+                        Block
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
 
             {/* Seller Profile Info */}
             <section className="bg-white border border-gray-200 rounded-lg p-5">

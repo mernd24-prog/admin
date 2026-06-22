@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { MdSearch, MdRefresh, MdUnfoldMore, MdInbox } from "react-icons/md";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { MdSearch, MdRefresh, MdUnfoldMore, MdInbox, MdMoreVert } from "react-icons/md";
 import Pagination from "../Pagination/Pagination";
 import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
 import { ExportButton, ImportButton } from "./TableTools";
@@ -13,6 +14,110 @@ const SkeletonRow = ({ cols }) => (
     ))}
   </tr>
 );
+
+const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
+  const visibleActions = Array.isArray(actions)
+    ? actions.filter((action) => action && action.hidden !== true)
+    : [];
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const width = 190;
+    const estimatedHeight = Math.min(visibleActions.length * 38 + 16, 320);
+    const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.right - width));
+    const belowTop = rect.bottom + 6;
+    const top = belowTop + estimatedHeight > window.innerHeight
+      ? Math.max(8, rect.top - estimatedHeight - 6)
+      : belowTop;
+    setPosition({ top, left });
+  }, [visibleActions.length]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+
+    const closeOutside = (event) => {
+      if (
+        !buttonRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    const closeOnViewportChange = () => setOpen(false);
+
+    document.addEventListener("mousedown", closeOutside);
+    window.addEventListener("resize", closeOnViewportChange);
+    window.addEventListener("scroll", closeOnViewportChange, true);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      window.removeEventListener("resize", closeOnViewportChange);
+      window.removeEventListener("scroll", closeOnViewportChange, true);
+    };
+  }, [open, updatePosition]);
+
+  if (!visibleActions.length) return null;
+
+  return (
+    <div className="inline-flex" onClick={(event) => event.stopPropagation()}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+        aria-label={`Actions for ${rowLabel}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Actions"
+        onClick={(event) => {
+          event.stopPropagation();
+          if (!open) updatePosition();
+          setOpen((value) => !value);
+        }}
+      >
+        <MdMoreVert size={19} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white p-1.5 shadow-xl"
+          style={{ top: position.top, left: position.left }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {visibleActions.map((action, index) => (
+            <button
+              key={`${action.label || "action"}-${index}`}
+              type="button"
+              role="menuitem"
+              disabled={action.disabled}
+              className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                action.danger
+                  ? "text-red-600 hover:bg-red-50"
+                  : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+              }`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                action.onClick?.();
+              }}
+            >
+              {action.icon ? <span className="flex-shrink-0">{action.icon}</span> : null}
+              <span>{action.label || "Action"}</span>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+};
 
 /**
  * DataTable
@@ -50,6 +155,7 @@ const SkeletonRow = ({ cols }) => (
  *   requiredModule   {string}
  *   onRowClick       {(row) => void}
  *   rowClassName     {string | (row) => string}
+ *   rowActions       {(row) => Array<{label, icon?, onClick, danger?, disabled?, hidden?}>}
  */
 const DataTable = ({
   columns = [],
@@ -84,6 +190,7 @@ const DataTable = ({
   requiredModule,
   onRowClick,
   rowClassName = "",
+  rowActions,
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -133,7 +240,7 @@ const DataTable = ({
     );
   };
 
-  const colCount = columns.length + (selectable ? 1 : 0);
+  const colCount = columns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
 
   const tools = (
     <>
@@ -209,9 +316,9 @@ const DataTable = ({
                   />
                 </th>
               )}
-              {columns.map((col) => (
+              {columns.map((col, columnIndex) => (
                 <th
-                  key={col.key}
+                  key={`${col.key}-${columnIndex}`}
                 className={`px-4 py-3 text-left text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap ${
                     col.sortable
                       ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
@@ -234,6 +341,11 @@ const DataTable = ({
                   </span>
                 </th>
               ))}
+              {rowActions && (
+                <th className="w-16 px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
 
@@ -290,13 +402,21 @@ const DataTable = ({
                       />
                     </td>
                   )}
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-[var(--admin-ink)]">
+                  {columns.map((col, columnIndex) => (
+                    <td key={`${col.key}-${columnIndex}`} className="px-4 py-3 text-[var(--admin-ink)]">
                       {col.render
                         ? col.render(row[col.key], row)
                         : (row[col.key] ?? "—")}
                     </td>
                   ))}
+                  {rowActions && (
+                    <td className="px-4 py-3 text-right">
+                      <RowActionsMenu
+                        actions={rowActions(row)}
+                        rowLabel={row.full_name || row.name || row.title || getKey(row, index)}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))
             )}

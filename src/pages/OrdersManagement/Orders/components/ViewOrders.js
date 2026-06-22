@@ -33,8 +33,8 @@ const ALLOWED_TRANSITIONS = {
   partially_returned:["return_requested", "fulfilled"],
 };
 
-// Transitions a seller is allowed to trigger (backend: packed/shipped/fulfilled only)
-const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "delivered", "fulfilled", "return_requested", "partially_returned", "returned"]);
+// Seller order actions stop at shipment handoff. Delivery progress is managed in Shipments.
+const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "fulfilled"]);
 
 const ALL_STATUSES = [
   "pending_payment", "payment_failed", "confirmed", "packed",
@@ -101,12 +101,23 @@ const getOrderTaxRates = (taxBreakup = {}, items = []) => {
 const groupItemsBySeller = (items = []) =>
   items.reduce((groups, item) => {
     const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
+    const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
     const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
+    const organizationSnapshot = normalizeJson(firstDefined(item.organization_snapshot, item.organizationSnapshot), {});
     const sellerName = firstDefined(sellerSnapshot.name, sellerSnapshot.sellerName, sellerId);
-    if (!groups[sellerId]) {
-      groups[sellerId] = { sellerId, sellerName, items: [] };
+    const organizationName = firstDefined(
+      organizationSnapshot.legalName,
+      organizationSnapshot.legal_name,
+      organizationSnapshot.storeDisplayName,
+      organizationSnapshot.store_name,
+      item.organizationName,
+      organizationId !== "default" ? organizationId : ""
+    );
+    const groupKey = `${sellerId}:${organizationId}`;
+    if (!groups[groupKey]) {
+      groups[groupKey] = { sellerId, sellerName, organizationId, organizationName, items: [] };
     }
-    groups[sellerId].items.push(item);
+    groups[groupKey].items.push(item);
     return groups;
   }, {});
 
@@ -462,11 +473,13 @@ const OrderSummary = () => {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Panel title="Items By Seller" className="lg:col-span-2">
             {sellerGroups.length ? sellerGroups.map((group) => (
-              <div key={group.sellerId} className="mb-4 overflow-hidden rounded-lg border border-[#eadfbd] bg-white last:mb-0">
+              <div key={`${group.sellerId}-${group.organizationId}`} className="mb-4 overflow-hidden rounded-lg border border-[#eadfbd] bg-white last:mb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 bg-[#fff9ea] px-4 py-3">
                   <div>
-                    <div className="text-sm font-semibold text-[#202337]">{group.sellerName}</div>
-                    <div className="text-xs text-[#65718b]">{group.sellerId}</div>
+                    <div className="text-sm font-semibold text-[#202337]">{group.organizationName || group.sellerName}</div>
+                    <div className="text-xs text-[#65718b]">
+                      Seller: {group.sellerName} · Organization: {group.organizationName || group.organizationId || "N/A"}
+                    </div>
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#202337] ring-1 ring-[#eadfbd]">
                     {group.items.length} item{group.items.length === 1 ? "" : "s"}
@@ -602,6 +615,15 @@ const OrderSummary = () => {
               <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/returns?orderId=${encodeURIComponent(orderId)}`)}>
                 Returns
               </button>
+              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/cancellations?orderId=${encodeURIComponent(orderId)}`)}>
+                Cancellations
+              </button>
+              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/tax-invoices?orderId=${encodeURIComponent(orderId)}`)}>
+                Tax Invoices
+              </button>
+              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/credit-notes?orderId=${encodeURIComponent(orderId)}`)}>
+                Credit Notes
+              </button>
             </div>
           )}
         >
@@ -677,6 +699,15 @@ const OrderSummary = () => {
                         { label: "Created", value: formatDate(firstDefined(shipment.created_at, shipment.createdAt)) },
                         { label: "Events", value: Array.isArray(shipment.trackingEvents) ? shipment.trackingEvents.length : 0 },
                       ]}
+                      action={(
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-[#2f6fed]"
+                          onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&shipmentId=${encodeURIComponent(firstDefined(shipment.id, shipment._id, ""))}`)}
+                        >
+                          Manage tracking, agent, OTP, E-way
+                        </button>
+                      )}
                     />
                   ))}
                 </div>
@@ -759,7 +790,7 @@ const OrderSummary = () => {
           {sellerSettlements.length ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {sellerSettlements.map((seller) => (
-                <div key={seller.sellerId} className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
+                <div key={`${seller.sellerId}-${seller.organizationId || "default"}`} className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
                   <div className="flex justify-between gap-2 mb-3">
                     <div>
                       <div className="font-semibold text-[#202337]">{seller.sellerName}</div>

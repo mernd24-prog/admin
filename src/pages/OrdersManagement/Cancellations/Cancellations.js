@@ -226,6 +226,7 @@ const Cancellations = () => {
       <PageHeader
         title="Cancellations"
         subtitle="Manage order cancellations and refunds"
+        breadcrumbs={[{ label: "Returns & Cancellations" }, { label: "Cancellations" }]}
         actions={
           <button
             onClick={fetchCancellations}
