@@ -64,6 +64,18 @@ const DEFAULT_SELLER = {
     mode: "none",
     chargeAmount: 0,
     freeDeliveryMinOrderAmount: "",
+    serviceabilityMode: "all_pincodes",
+    allowPincodes: [],
+    blockPincodes: [],
+    regions: [],
+    productRules: [],
+    orderRules: [],
+    regionRules: [],
+    estimatedDaysMin: "",
+    estimatedDaysMax: "",
+    shippingPartner: "",
+    shippingMethod: "standard",
+    handlingCharge: 0,
     notes: "",
   },
   metadata: {},
@@ -79,7 +91,21 @@ const splitPins = (value) =>
     .filter(Boolean);
 
 const nullableNumber = (value) => (value === "" || value === null || value === undefined ? null : Number(value));
+const formatRules = (value) => JSON.stringify(Array.isArray(value) ? value : [], null, 2);
+const parseRules = (value, label) => {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    if (!Array.isArray(parsed)) throw new Error("Expected an array");
+    return parsed;
+  } catch (error) {
+    throw new Error(label + " must be a valid JSON array");
+  }
+};
 const money = (value) => `INR ${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const shortId = (value = "") => {
+  const text = String(value || "");
+  return text.length > 12 ? `${text.slice(0, 8)}…${text.slice(-4)}` : text;
+};
 
 const Field = ({ label, children }) => (
   <label className="block space-y-1">
@@ -120,9 +146,16 @@ const CommerceSettings = () => {
   const [sellerSearch, setSellerSearch] = useState("");
   const [sellerId, setSellerId] = useState("");
   const [sellerSettings, setSellerSettings] = useState(DEFAULT_SELLER);
+  const [deliveryRuleText, setDeliveryRuleText] = useState({
+    productRules: "[]",
+    orderRules: "[]",
+    regionRules: "[]",
+  });
   const [sellerLoading, setSellerLoading] = useState(false);
   const [sellerSaving, setSellerSaving] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
+  const [organizationId, setOrganizationId] = useState("");
+  const [organizationOptions, setOrganizationOptions] = useState([]);
   React.useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => {}); }, []);
 
   const patchSettings = (section, patch) => {
@@ -207,22 +240,60 @@ const CommerceSettings = () => {
     }
   };
 
-  const loadSeller = async (id = sellerId) => {
+  const loadOrganizations = useCallback(async (targetSellerId) => {
+    const value = String(targetSellerId || "").trim();
+    if (!value) {
+      setOrganizationOptions([]);
+      setOrganizationId("");
+      return [];
+    }
+    try {
+      const response = await axiosProvider.get(ENDPOINTS.sellerOrganizations.bySeller(value), {
+        params: { limit: 200 },
+      });
+      const raw = response?.data?.data;
+      const items = raw?.items || raw?.list || raw?.data || raw || [];
+      const options = (Array.isArray(items) ? items : []).map((item) => ({
+        value: item.id || item.organizationId,
+        label: item.storeDisplayName || item.legalBusinessName || item.id || item.organizationId,
+      })).filter((item) => item.value);
+      setOrganizationOptions(options);
+      return options;
+    } catch {
+      setOrganizationOptions([]);
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrganizations(sellerId);
+  }, [sellerId, loadOrganizations]);
+
+  const loadSeller = async (id = sellerId, orgId = organizationId) => {
     const targetSellerId = String(id || "").trim();
+    const targetOrganizationId = String(orgId || "").trim();
     if (!targetSellerId) {
       toast.error("Seller ID is required");
       return;
     }
     setSellerLoading(true);
     try {
-      const response = await axiosProvider.get(ENDPOINTS.commerceSettings.sellerChargeSetting(targetSellerId));
+      const response = await axiosProvider.get(ENDPOINTS.commerceSettings.sellerChargeSetting(targetSellerId), {
+        params: targetOrganizationId ? { organizationId: targetOrganizationId } : undefined,
+      });
       const data = response?.data?.data || {};
       setSellerId(data.sellerId || targetSellerId);
+      setOrganizationId(data.organizationId || targetOrganizationId || "");
       setSellerSettings({
         ...DEFAULT_SELLER,
         ...data,
         cod: { ...DEFAULT_SELLER.cod, ...(data.cod || {}) },
         delivery: { ...DEFAULT_SELLER.delivery, ...(data.delivery || {}) },
+      });
+      setDeliveryRuleText({
+        productRules: formatRules(data.delivery?.productRules),
+        orderRules: formatRules(data.delivery?.orderRules),
+        regionRules: formatRules(data.delivery?.regionRules),
       });
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load seller settings");
@@ -233,13 +304,18 @@ const CommerceSettings = () => {
 
   const saveSeller = async () => {
     const targetSellerId = String(sellerId || sellerSettings.sellerId || "").trim();
+    const targetOrganizationId = String(organizationId || sellerSettings.organizationId || "").trim();
     if (!targetSellerId) {
       toast.error("Seller ID is required");
       return;
     }
     setSellerSaving(true);
     try {
+      const productRules = parseRules(deliveryRuleText.productRules, "Product rules");
+      const orderRules = parseRules(deliveryRuleText.orderRules, "Order rules");
+      const regionRules = parseRules(deliveryRuleText.regionRules, "Region rules");
       const payload = {
+        ...(targetOrganizationId ? { organizationId: targetOrganizationId } : {}),
         cod: {
           ...sellerSettings.cod,
           chargeAmount: Number(sellerSettings.cod.chargeAmount || 0),
@@ -252,20 +328,37 @@ const CommerceSettings = () => {
           ...sellerSettings.delivery,
           chargeAmount: Number(sellerSettings.delivery.chargeAmount || 0),
           freeDeliveryMinOrderAmount: nullableNumber(sellerSettings.delivery.freeDeliveryMinOrderAmount),
+          allowPincodes: splitPins(joinPins(sellerSettings.delivery.allowPincodes)),
+          blockPincodes: splitPins(joinPins(sellerSettings.delivery.blockPincodes)),
+          regions: splitPins(joinPins(sellerSettings.delivery.regions)),
+          productRules,
+          orderRules,
+          regionRules,
+          estimatedDaysMin: nullableNumber(sellerSettings.delivery.estimatedDaysMin),
+          estimatedDaysMax: nullableNumber(sellerSettings.delivery.estimatedDaysMax),
+          handlingCharge: Number(sellerSettings.delivery.handlingCharge || 0),
         },
       };
-      const response = await axiosProvider.put(ENDPOINTS.commerceSettings.sellerChargeSetting(targetSellerId), payload);
+      const response = await axiosProvider.put(ENDPOINTS.commerceSettings.sellerChargeSetting(targetSellerId), payload, {
+        params: targetOrganizationId ? { organizationId: targetOrganizationId } : undefined,
+      });
       setSellerSettings({
         ...DEFAULT_SELLER,
         ...(response?.data?.data || {}),
         cod: { ...DEFAULT_SELLER.cod, ...(response?.data?.data?.cod || {}) },
         delivery: { ...DEFAULT_SELLER.delivery, ...(response?.data?.data?.delivery || {}) },
       });
+      setDeliveryRuleText({
+        productRules: formatRules(response?.data?.data?.delivery?.productRules),
+        orderRules: formatRules(response?.data?.data?.delivery?.orderRules),
+        regionRules: formatRules(response?.data?.data?.delivery?.regionRules),
+      });
       setSellerId(targetSellerId);
+      setOrganizationId(response?.data?.data?.organizationId || targetOrganizationId || "");
       toast.success("Seller charge settings saved");
       fetchSellerRows();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to save seller settings");
+      toast.error(error?.response?.data?.message || error?.message || "Failed to save seller settings");
     } finally {
       setSellerSaving(false);
     }
@@ -522,12 +615,14 @@ const CommerceSettings = () => {
                   key={row.sellerId}
                   type="button"
                   className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-gray-50"
-                  onClick={() => loadSeller(row.sellerId)}
+                  onClick={() => loadSeller(row.sellerId, row.organizationId)}
                 >
                   <span className="truncate font-medium text-gray-700">
                     {sellerOptions.find((o) => o.value === row.sellerId)?.label || row.sellerId}
                   </span>
-                  <span className="text-xs text-gray-400">{money(row.delivery?.chargeAmount)}</span>
+                  <span className="text-right text-xs text-gray-400">
+                    {row.organizationId ? shortId(row.organizationId) : "Seller default"} · {money(row.delivery?.chargeAmount)}
+                  </span>
                 </button>
               )) : (
                 <p className="px-3 py-4 text-sm text-gray-500">No seller settings saved yet.</p>
@@ -536,6 +631,25 @@ const CommerceSettings = () => {
           </div>
 
           <div className="grid gap-5 xl:grid-cols-2">
+            <div className="rounded border border-gray-200 p-4 xl:col-span-2">
+              <h3 className="mb-4 text-sm font-semibold">Scope</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <SelectField
+                  label="Organization Override"
+                  value={organizationId}
+                  onChange={setOrganizationId}
+                  options={[
+                    option("", "Seller-wide default"),
+                    ...organizationOptions,
+                  ]}
+                />
+                <div className="rounded border border-gray-200 px-3 py-2 text-xs text-gray-500">
+                  <p className="font-medium text-gray-700">{organizationId ? "Organization scope" : "Seller default scope"}</p>
+                  <p className="mt-1 font-mono">{organizationId ? shortId(organizationId) : shortId(sellerId)}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded border border-gray-200 p-4">
               <h3 className="mb-4 text-sm font-semibold">Seller COD</h3>
               <div className="grid gap-4 md:grid-cols-2">
@@ -571,12 +685,83 @@ const CommerceSettings = () => {
                   label="Delivery Mode"
                   value={sellerSettings.delivery.mode}
                   onChange={(value) => patchSeller("delivery", { mode: value })}
-                  options={[option("none", "None"), option("flat", "Flat"), option("free_over_amount", "Free over amount")]}
+                  options={[
+                    option("none", "None"),
+                    option("flat", "Flat"),
+                    option("free_over_amount", "Free over amount"),
+                    option("product", "Product rules"),
+                    option("order", "Order rules"),
+                    option("region", "Region rules"),
+                    option("rule_based", "Rule based priority"),
+                  ]}
+                />
+                <SelectField
+                  label="Serviceability"
+                  value={sellerSettings.delivery.serviceabilityMode}
+                  onChange={(value) => patchSeller("delivery", { serviceabilityMode: value })}
+                  options={[
+                    option("all_pincodes", "All pincodes"),
+                    option("allowlist", "Allowlist"),
+                    option("blocklist", "Blocklist"),
+                    option("regions", "Regions"),
+                    option("disabled", "Disabled"),
+                  ]}
                 />
                 <InputField label="Delivery Charge" type="number" min="0" value={sellerSettings.delivery.chargeAmount} onChange={(value) => patchSeller("delivery", { chargeAmount: value })} />
                 <InputField label="Free Delivery Above" type="number" min="0" value={sellerSettings.delivery.freeDeliveryMinOrderAmount || ""} onChange={(value) => patchSeller("delivery", { freeDeliveryMinOrderAmount: value })} />
+                <InputField label="Handling Charge" type="number" min="0" value={sellerSettings.delivery.handlingCharge || 0} onChange={(value) => patchSeller("delivery", { handlingCharge: value })} />
+                <InputField label="Shipping Partner" value={sellerSettings.delivery.shippingPartner || ""} onChange={(value) => patchSeller("delivery", { shippingPartner: value })} />
+                <InputField label="Shipping Method" value={sellerSettings.delivery.shippingMethod || "standard"} onChange={(value) => patchSeller("delivery", { shippingMethod: value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <InputField label="ETA Min Days" type="number" min="0" value={sellerSettings.delivery.estimatedDaysMin || ""} onChange={(value) => patchSeller("delivery", { estimatedDaysMin: value })} />
+                  <InputField label="ETA Max Days" type="number" min="0" value={sellerSettings.delivery.estimatedDaysMax || ""} onChange={(value) => patchSeller("delivery", { estimatedDaysMax: value })} />
+                </div>
+                <Field label="Delivery Allow Pincodes">
+                  <textarea className="admin-input min-h-[74px]" value={joinPins(sellerSettings.delivery.allowPincodes)} onChange={(event) => patchSeller("delivery", { allowPincodes: splitPins(event.target.value) })} />
+                </Field>
+                <Field label="Delivery Block Pincodes">
+                  <textarea className="admin-input min-h-[74px]" value={joinPins(sellerSettings.delivery.blockPincodes)} onChange={(event) => patchSeller("delivery", { blockPincodes: splitPins(event.target.value) })} />
+                </Field>
+                <Field label="Regions / States / Cities">
+                  <textarea className="admin-input min-h-[74px]" value={joinPins(sellerSettings.delivery.regions)} onChange={(event) => patchSeller("delivery", { regions: splitPins(event.target.value) })} />
+                </Field>
                 <Field label="Notes">
                   <textarea className="admin-input min-h-[74px]" value={sellerSettings.delivery.notes || ""} onChange={(event) => patchSeller("delivery", { notes: event.target.value })} />
+                </Field>
+              </div>
+            </div>
+
+            <div className="rounded border border-gray-200 p-4 xl:col-span-2">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Advanced Shipping Rules</h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  JSON arrays. Product rules override region/order rules when delivery mode is rule based.
+                </p>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-3">
+                <Field label="Product Rules JSON">
+                  <textarea
+                    className="admin-input min-h-[180px] font-mono text-xs"
+                    value={deliveryRuleText.productRules}
+                    onChange={(event) => setDeliveryRuleText((current) => ({ ...current, productRules: event.target.value }))}
+                    placeholder={'[{"productId":"...","chargeAmount":60,"serviceablePincodes":["560001"],"estimatedDaysMin":2,"estimatedDaysMax":5}]'}
+                  />
+                </Field>
+                <Field label="Order Rules JSON">
+                  <textarea
+                    className="admin-input min-h-[180px] font-mono text-xs"
+                    value={deliveryRuleText.orderRules}
+                    onChange={(event) => setDeliveryRuleText((current) => ({ ...current, orderRules: event.target.value }))}
+                    placeholder={'[{"minOrderAmount":0,"maxOrderAmount":999,"chargeAmount":80}]'}
+                  />
+                </Field>
+                <Field label="Region Rules JSON">
+                  <textarea
+                    className="admin-input min-h-[180px] font-mono text-xs"
+                    value={deliveryRuleText.regionRules}
+                    onChange={(event) => setDeliveryRuleText((current) => ({ ...current, regionRules: event.target.value }))}
+                    placeholder={'[{"states":["Karnataka"],"chargeAmount":40,"codAvailable":true}]'}
+                  />
                 </Field>
               </div>
             </div>

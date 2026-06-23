@@ -311,6 +311,9 @@ const OrderSummary = () => {
   const summary = order.summary || {};
   const taxIncludedAmount = money(firstDefined(summary.taxIncludedAmount, taxBreakup.taxIncludedAmount));
   const taxPayableAmount = money(firstDefined(summary.taxPayableAmount, taxBreakup.taxPayableAmount));
+  const sellerPlatformFeeAmount = money(firstDefined(summary.sellerPlatformFeeAmount, summary.platformFeeAmount, order.platform_fee_amount, order.platformFeeAmount));
+  const customerPlatformFeeAmount = money(firstDefined(summary.customerPlatformFeeAmount, 0));
+  const customerPlatformFeeTaxAmount = money(firstDefined(summary.customerPlatformFeeTaxAmount, 0));
   const customerTotalAmount = money(firstDefined(summary.customerTotalAmount, order.total_amount, order.totalAmount));
   const customerPayableAmount = money(firstDefined(summary.customerPayableAmount, order.payable_amount, order.payableAmount, order.total_amount));
   const items = Array.isArray(order.items) ? order.items : [];
@@ -535,7 +538,9 @@ const OrderSummary = () => {
               <InfoRow label="Discount" value={<span className="text-[#2ea84a]">-{formatMoney(firstDefined(order.discount_amount, order.discountAmount))}</span>} />
               <InfoRow label="GST Payable" value={formatMoney(taxPayableAmount)} />
               <InfoRow label="GST Included" value={formatMoney(taxIncludedAmount)} />
-              <InfoRow label="Platform Fees" value={formatMoney(firstDefined(order.platform_fee_amount, order.platformFeeAmount))} />
+              <InfoRow label="Seller Commission/Fee" value={formatMoney(sellerPlatformFeeAmount)} />
+              {customerPlatformFeeAmount > 0 && <InfoRow label="Customer Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
+              {customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
               <InfoRow label="COD Charge" value={formatMoney(firstDefined(order.cod_charge_amount, order.codChargeAmount))} />
               <InfoRow label="Wallet" value={`-${formatMoney(firstDefined(order.wallet_discount_amount, order.walletDiscountAmount))}`} />
               <div className="mt-2 border-t border-[#efe6cd] pt-2">

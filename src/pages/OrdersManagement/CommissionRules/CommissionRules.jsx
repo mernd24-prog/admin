@@ -7,6 +7,7 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "react-toastify";
 import { useListPage } from "../../../hooks/useListPage";
+import PlatformFeeConfig from "../PlatformFeeConfig/PlatformFeeConfig";
 
 const TIER_OPTIONS = [
   { value: "all", label: "All Tiers" },
@@ -16,6 +17,26 @@ const TIER_OPTIONS = [
   { value: "platinum", label: "Platinum" },
 ];
 
+const SCOPE_OPTIONS = [
+  { value: "global", label: "Global default" },
+  { value: "category", label: "Category" },
+  { value: "product", label: "Product" },
+  { value: "seller", label: "Seller" },
+  { value: "organization", label: "Organization" },
+];
+
+const COMMISSION_TYPE_OPTIONS = [
+  { value: "percentage", label: "Percentage" },
+  { value: "fixed", label: "Fixed" },
+  { value: "mixed", label: "Mixed" },
+];
+
+const APPLY_ON_OPTIONS = [
+  { value: "product_amount", label: "Product amount" },
+  { value: "order_subtotal", label: "Order subtotal" },
+  { value: "final_paid_amount", label: "Final paid amount" },
+];
+
 const FILTER_FIELDS = [
   {
     key: "sellerTier",
@@ -23,6 +44,13 @@ const FILTER_FIELDS = [
     label: "Seller Tier",
     width: "w-44",
     options: TIER_OPTIONS,
+  },
+  {
+    key: "ruleScope",
+    type: "select",
+    label: "Scope",
+    width: "w-44",
+    options: SCOPE_OPTIONS,
   },
   {
     key: "isActive",
@@ -39,6 +67,20 @@ const FILTER_FIELDS = [
 const COLUMNS = [
   { key: "name", label: "Rule Name", sortable: true },
   {
+    key: "ruleScope",
+    label: "Scope",
+    render: (v) => (
+      <span className="capitalize px-2 py-0.5 bg-[#EEF3FF] text-[#1f4fc9] text-xs rounded-full font-medium">
+        {String(v || "global").replace(/_/g, " ")}
+      </span>
+    ),
+  },
+  {
+    key: "commissionType",
+    label: "Type",
+    render: (v) => <span className="capitalize">{String(v || "percentage").replace(/_/g, " ")}</span>,
+  },
+  {
     key: "sellerTier",
     label: "Seller Tier",
     render: (v) => (
@@ -47,16 +89,32 @@ const COLUMNS = [
       </span>
     ),
   },
-  { key: "categoryName", label: "Category Override", render: (v) => v || <span className="text-gray-400">—</span> },
+  {
+    key: "categoryName",
+    label: "Target",
+    render: (v, row) => row.productSku || row.productId || v || row.sellerId || row.organizationId || <span className="text-gray-400">Global</span>,
+  },
   {
     key: "rate",
-    label: "Rate",
+    label: "Percentage",
     sortable: true,
-    render: (v) => (
+    render: (v, row) => (
       <span className="font-mono font-semibold text-[var(--admin-navy)]">
-        {v !== undefined ? `${(v * 100).toFixed(1)}%` : "—"}
+        {row.percentage !== undefined && row.percentage !== null
+          ? String(Number(row.percentage).toFixed(2)) + "%"
+          : v !== undefined ? String((v * 100).toFixed(1)) + "%" : "—"}
       </span>
     ),
+  },
+  {
+    key: "fixedFeeAmount",
+    label: "Fixed Fee",
+    render: (v) => Number(v || 0) > 0 ? <span className="font-mono">₹{Number(v).toFixed(2)}</span> : <span className="text-gray-400">—</span>,
+  },
+  {
+    key: "applyOn",
+    label: "Apply On",
+    render: (v) => <span className="capitalize text-gray-600">{String(v || "product_amount").replace(/_/g, " ")}</span>,
   },
   {
     key: "taxRate",
@@ -66,6 +124,11 @@ const COLUMNS = [
         {v !== undefined ? `${(v * 100).toFixed(0)}%` : "18%"}
       </span>
     ),
+  },
+  {
+    key: "taxHandling",
+    label: "Tax Handling",
+    render: (v) => <span className="capitalize text-gray-600">{v || "exclusive"}</span>,
   },
   { key: "priority", label: "Priority", render: (v) => <span className="font-mono">{v ?? 0}</span> },
   {
@@ -78,19 +141,33 @@ const COLUMNS = [
 
 const EMPTY_FORM = {
   name: "",
+  ruleScope: "global",
+  commissionType: "percentage",
   sellerTier: "all",
   categoryId: "",
   categoryName: "",
+  productId: "",
+  productSku: "",
+  sellerId: "",
+  organizationId: "",
   rate: "",
+  fixedFeeAmount: "",
   taxRate: "0.18",
+  applyOn: "product_amount",
+  taxHandling: "exclusive",
+  effectiveFrom: "",
+  effectiveTo: "",
   priority: "0",
   isActive: true,
   notes: "",
 };
 
+const toDateInput = (value) => (value ? String(value).slice(0, 10) : "");
+
 const CommissionRules = () => {
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "priority" });
   const { toQueryParams } = list;
+  const [activeRuleType, setActiveRuleType] = useState("commission");
   const [rules, setRules] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -111,7 +188,9 @@ const CommissionRules = () => {
           page: params.page,
           limit: params.limit,
           sellerTier: params.sellerTier || undefined,
+          ruleScope: params.ruleScope || undefined,
           isActive: params.isActive || undefined,
+          search: params.search || undefined,
         },
       });
       const data = res?.data?.data;
@@ -142,11 +221,24 @@ const CommissionRules = () => {
     setEditingRule(rule);
     setForm({
       name: rule.name || "",
+      ruleScope: rule.ruleScope || "global",
+      commissionType: rule.commissionType || "percentage",
       sellerTier: rule.sellerTier || "all",
       categoryId: rule.categoryId || "",
       categoryName: rule.categoryName || "",
-      rate: rule.rate !== undefined ? (rule.rate * 100).toString() : "",
+      productId: rule.productId || "",
+      productSku: rule.productSku || "",
+      sellerId: rule.sellerId || "",
+      organizationId: rule.organizationId || "",
+      rate: rule.percentage !== undefined && rule.percentage !== null
+        ? String(rule.percentage)
+        : rule.rate !== undefined ? (rule.rate * 100).toString() : "",
+      fixedFeeAmount: rule.fixedFeeAmount?.toString() || "",
       taxRate: rule.taxRate !== undefined ? rule.taxRate.toString() : "0.18",
+      applyOn: rule.applyOn || "product_amount",
+      taxHandling: rule.taxHandling || "exclusive",
+      effectiveFrom: toDateInput(rule.effectiveFrom),
+      effectiveTo: toDateInput(rule.effectiveTo),
       priority: rule.priority?.toString() || "0",
       isActive: rule.isActive !== false,
       notes: rule.notes || "",
@@ -156,19 +248,37 @@ const CommissionRules = () => {
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error("Rule name is required");
-    if (!form.rate || isNaN(Number(form.rate))) return toast.error("Valid rate is required");
+    if (["percentage", "mixed"].includes(form.commissionType) && (form.rate === "" || isNaN(Number(form.rate)))) {
+      return toast.error("Valid commission percentage is required");
+    }
+    if (["fixed", "mixed"].includes(form.commissionType) && (form.fixedFeeAmount === "" || isNaN(Number(form.fixedFeeAmount)))) {
+      return toast.error("Valid fixed fee is required");
+    }
 
     setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
+        ruleScope: form.ruleScope,
+        commissionType: form.commissionType,
         sellerTier: form.sellerTier,
         categoryId: form.categoryId || null,
         categoryName: form.categoryName.trim(),
-        rate: Number(form.rate) / 100,
+        productId: form.productId.trim(),
+        productSku: form.productSku.trim(),
+        sellerId: form.sellerId.trim(),
+        organizationId: form.organizationId.trim(),
+        percentage: ["percentage", "mixed"].includes(form.commissionType) ? Number(form.rate) : 0,
+        rate: ["percentage", "mixed"].includes(form.commissionType) ? Number(form.rate) / 100 : 0,
+        fixedFeeAmount: ["fixed", "mixed"].includes(form.commissionType) ? Number(form.fixedFeeAmount) : 0,
         taxRate: Number(form.taxRate) || 0.18,
+        applyOn: form.applyOn,
+        taxHandling: form.taxHandling,
+        effectiveFrom: form.effectiveFrom || null,
+        effectiveTo: form.effectiveTo || null,
         priority: Number(form.priority) || 0,
         isActive: form.isActive,
+        status: form.isActive ? "active" : "inactive",
         notes: form.notes.trim(),
       };
 
@@ -231,12 +341,44 @@ const CommissionRules = () => {
     },
   ];
 
+  const ruleTabs = (
+    <div className="mb-4 inline-flex overflow-hidden rounded-lg border border-gray-200 bg-white p-1">
+      {[
+        { value: "commission", label: "Seller Commission" },
+        { value: "platform_fee", label: "Platform Fee" },
+      ].map((tab) => (
+        <button
+          key={tab.value}
+          type="button"
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            activeRuleType === tab.value
+              ? "bg-[var(--admin-blue)] text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+          onClick={() => setActiveRuleType(tab.value)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (activeRuleType === "platform_fee") {
+    return (
+      <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+        {ruleTabs}
+        <PlatformFeeConfig embedded />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      {ruleTabs}
       <PageHeader
-        title="Commission Rules"
-        subtitle="Configure seller commission rates by tier and category"
-        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Commission Rules" }]}
+        title="Commission & Fee Rules"
+        subtitle="Configure global, category, product, seller, and organization commission rules"
+        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Commission & Fee Rules" }]}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -261,8 +403,8 @@ const CommissionRules = () => {
       <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 flex items-start gap-3">
         <MdPercent size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-blue-700">
-          <strong>Default fallback rates:</strong> Bronze 15% · Silver 12% · Gold 10% · Platinum 8% · Commission Tax 18%.
-          Rules defined here override these defaults. Higher priority number wins when multiple rules match.
+          <strong>Rule priority:</strong> Product → Category → Seller → Organization → Global default.
+          Higher priority numbers break ties within the same scope.
         </div>
       </div>
 
@@ -318,6 +460,132 @@ const CommissionRules = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rule Scope</label>
+                  <select
+                    value={form.ruleScope}
+                    onChange={(e) => setForm((f) => ({ ...f, ruleScope: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  >
+                    {SCOPE_OPTIONS.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Commission Type</label>
+                  <select
+                    value={form.commissionType}
+                    onChange={(e) => setForm((f) => ({ ...f, commissionType: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  >
+                    {COMMISSION_TYPE_OPTIONS.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Apply On</label>
+                  <select
+                    value={form.applyOn}
+                    onChange={(e) => setForm((f) => ({ ...f, applyOn: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  >
+                    {APPLY_ON_OPTIONS.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax Handling</label>
+                  <select
+                    value={form.taxHandling}
+                    onChange={(e) => setForm((f) => ({ ...f, taxHandling: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  >
+                    <option value="exclusive">Exclusive</option>
+                    <option value="inclusive">Inclusive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Effective From</label>
+                  <input
+                    type="date"
+                    value={form.effectiveFrom}
+                    onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Effective To</label>
+                  <input
+                    type="date"
+                    value={form.effectiveTo}
+                    onChange={(e) => setForm((f) => ({ ...f, effectiveTo: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  />
+                </div>
+              </div>
+
+              {form.ruleScope === "product" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
+                    <input
+                      type="text"
+                      value={form.productId}
+                      onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                      placeholder="Mongo product id"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Product SKU</label>
+                    <input
+                      type="text"
+                      value={form.productSku}
+                      onChange={(e) => setForm((f) => ({ ...f, productSku: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                      placeholder="Optional SKU"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {form.ruleScope === "seller" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Seller ID</label>
+                  <input
+                    type="text"
+                    value={form.sellerId}
+                    onChange={(e) => setForm((f) => ({ ...f, sellerId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                    placeholder="Seller user id"
+                  />
+                </div>
+              )}
+
+              {form.ruleScope === "organization" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Organization ID</label>
+                  <input
+                    type="text"
+                    value={form.organizationId}
+                    onChange={(e) => setForm((f) => ({ ...f, organizationId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                    placeholder="Seller organization id"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Seller Tier</label>
                   <select
                     value={form.sellerTier}
@@ -343,20 +611,23 @@ const CommissionRules = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category Override (optional)</label>
-                <input
-                  type="text"
-                  value={form.categoryName}
-                  onChange={(e) => setForm((f) => ({ ...f, categoryName: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  placeholder="Category name (leave blank to apply to all categories)"
-                />
-              </div>
+              {form.ruleScope === "category" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+                  <input
+                    type="text"
+                    value={form.categoryName}
+                    onChange={(e) => setForm((f) => ({ ...f, categoryName: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                    placeholder="Category name"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
+                {["percentage", "mixed"].includes(form.commissionType) && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commission Rate (%) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Percentage Commission (%) *</label>
                   <div className="relative">
                     <input
                       type="number"
@@ -371,6 +642,25 @@ const CommissionRules = () => {
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
                   </div>
                 </div>
+                )}
+
+                {["fixed", "mixed"].includes(form.commissionType) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fixed Fee Per Unit (₹) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                    <input
+                      type="number"
+                      value={form.fixedFeeAmount}
+                      onChange={(e) => setForm((f) => ({ ...f, fixedFeeAmount: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                      placeholder="10"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tax on Commission</label>

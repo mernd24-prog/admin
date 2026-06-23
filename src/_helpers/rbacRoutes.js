@@ -125,8 +125,8 @@ const MODULE_LABELS = {
   "seller-payouts": "Seller Payout Management",
   "payout-ops-queue": "Payout Ops Queue",
   "negative-balances": "Negative Balance Recovery",
-  "platform-fee-config": "Platform Fee",
-  "commission-rules": "Commission Rules",
+  "platform-fee-config": "Fixed Fee Rules",
+  "commission-rules": "Commission & Fee Rules",
   "delivery-agents": "Delivery Agents",
   // Deal sub-sections
   "deal-payouts": "Deal Payout Management",

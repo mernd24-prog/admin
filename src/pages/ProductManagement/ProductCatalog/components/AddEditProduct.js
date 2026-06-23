@@ -56,6 +56,9 @@ const toOptionalNumber = (value) => {
   return Number.isFinite(number) ? number : undefined;
 };
 
+const joinList = (value) => Array.isArray(value) ? value.join(', ') : String(value || '');
+const splitList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+
 const inferWarrantyDuration = (template = {}) => {
   const metadata = template?.metadata || {};
   const directValue = template?.durationValue ?? metadata.durationValue;
@@ -197,6 +200,7 @@ export default function ProductManagementUI() {
     'basic-details': useRef(null),
     'product-type': useRef(null),
     'variants-options': useRef(null),
+    'shipping': useRef(null),
     'media': useRef(null),
     'seo': useRef(null),
     'tags': useRef(null),
@@ -231,6 +235,7 @@ export default function ProductManagementUI() {
             gstRate: productData?.gstRate ?? 18,
             gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
+            shipping: productData?.shipping || {},
             options: productData?.options || [{
               "sku": "",
               "type": null,
@@ -1031,6 +1036,17 @@ export default function ProductManagementUI() {
         days: toOptionalNumber(updatedFormData.warrantyReturnDays || updatedFormData.warranty?.returnPolicy?.days),
       },
     });
+    const shipping = compactObject({
+      ...(updatedFormData.shipping || {}),
+      freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
+      freeShippingMinOrder: toOptionalNumber(updatedFormData.shipping?.freeShippingMinOrder),
+      additionalCost: toOptionalNumber(updatedFormData.shipping?.additionalCost),
+      shippingCharge: toOptionalNumber(updatedFormData.shipping?.shippingCharge),
+      handlingCharge: toOptionalNumber(updatedFormData.shipping?.handlingCharge),
+      processingDays: toOptionalNumber(updatedFormData.shipping?.processingDays),
+      estimatedDaysMin: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMin),
+      estimatedDaysMax: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMax),
+    });
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
@@ -1065,6 +1081,7 @@ export default function ProductManagementUI() {
       origin,
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
+      ...(Object.keys(shipping).length ? { shipping } : {}),
       stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
       images: normalizeImageList(images),
       documents: catalogsUrlsArray,
@@ -1151,6 +1168,16 @@ export default function ProductManagementUI() {
           : { ...(prev[group] || {}), [subKey]: value },
       }));
     }
+  }, []);
+
+  const patchShipping = useCallback((patch) => {
+    setFormData((prev) => ({
+      ...prev,
+      shipping: {
+        ...(prev.shipping || {}),
+        ...patch,
+      },
+    }));
   }, []);
 
   const tabs = useMemo(() => [
@@ -1290,6 +1317,149 @@ export default function ProductManagementUI() {
       ) : <></>
     },
     {
+      id: 'shipping',
+      title: 'Shipping',
+      description: 'Product delivery and serviceability.',
+      icon: <BsMenuApp />,
+      component: (
+        <div className="space-y-5">
+          <div className="pb-4 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex min-h-[42px] items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
+              <span className="text-sm font-medium text-gray-700">Free Shipping</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--admin-blue)]"
+                checked={Boolean(formData?.shipping?.freeShipping)}
+                onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Serviceability</span>
+              <select
+                className="admin-input"
+                value={formData?.shipping?.serviceabilityMode || 'inherit'}
+                onChange={(e) => patchShipping({ serviceabilityMode: e.target.value })}
+              >
+                <option value="inherit">Inherit</option>
+                <option value="all_pincodes">All pincodes</option>
+                <option value="allowlist">Allowlist</option>
+                <option value="blocklist">Blocklist</option>
+                <option value="regions">Regions</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Shipping Charge</span>
+              <input
+                className="admin-input"
+                type="number"
+                min="0"
+                value={formData?.shipping?.shippingCharge ?? formData?.shipping?.additionalCost ?? ''}
+                onChange={(e) => patchShipping({ shippingCharge: e.target.value, additionalCost: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Free Above</span>
+              <input
+                className="admin-input"
+                type="number"
+                min="0"
+                value={formData?.shipping?.freeShippingMinOrder ?? ''}
+                onChange={(e) => patchShipping({ freeShippingMinOrder: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Handling Charge</span>
+              <input
+                className="admin-input"
+                type="number"
+                min="0"
+                value={formData?.shipping?.handlingCharge ?? ''}
+                onChange={(e) => patchShipping({ handlingCharge: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">COD</span>
+              <select
+                className="admin-input"
+                value={formData?.shipping?.codAvailable === false ? 'false' : formData?.shipping?.codAvailable === true ? 'true' : ''}
+                onChange={(e) => patchShipping({ codAvailable: e.target.value === '' ? undefined : e.target.value === 'true' })}
+              >
+                <option value="">Inherit</option>
+                <option value="true">Available</option>
+                <option value="false">Unavailable</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Allow Pincodes</span>
+              <textarea
+                className="admin-input min-h-[76px]"
+                value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
+                onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Block Pincodes</span>
+              <textarea
+                className="admin-input min-h-[76px]"
+                value={joinList(formData?.shipping?.blockPincodes)}
+                onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Regions / States / Cities</span>
+              <textarea
+                className="admin-input min-h-[76px]"
+                value={joinList(formData?.shipping?.regions)}
+                onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1">
+                <span className="admin-label">ETA Min</span>
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  value={formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays ?? ''}
+                  onChange={(e) => patchShipping({ estimatedDaysMin: e.target.value, processingDays: e.target.value })}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="admin-label">ETA Max</span>
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  value={formData?.shipping?.estimatedDaysMax ?? ''}
+                  onChange={(e) => patchShipping({ estimatedDaysMax: e.target.value })}
+                />
+              </label>
+            </div>
+            <label className="space-y-1">
+              <span className="admin-label">Partner</span>
+              <input
+                className="admin-input"
+                value={formData?.shipping?.shippingPartner || ''}
+                onChange={(e) => patchShipping({ shippingPartner: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="admin-label">Method</span>
+              <input
+                className="admin-input"
+                value={formData?.shipping?.shippingMethod || 'standard'}
+                onChange={(e) => patchShipping({ shippingMethod: e.target.value })}
+              />
+            </label>
+          </div>
+        </div>
+      )
+    },
+    {
       id: 'media',
       title: 'Media',
       description: 'Manage your product\'s image gallery.',
@@ -1365,7 +1535,7 @@ export default function ProductManagementUI() {
     },
   ], [
     formData, productType, formattedData, createSelectOptions,
-    handleChange, handleSelectChange, handleNestedChange,
+    handleChange, handleSelectChange, handleNestedChange, patchShipping,
     selector, options, variantsData, variantAxes, categoryAttributeSchema, error, images,
   ]);
 
