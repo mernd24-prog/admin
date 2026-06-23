@@ -4,8 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import Layout from "./Layout/Layout";
 import NetworkDetector from "../components/Hoc/NetworkDetector";
 import Login from "../pages/login/Login";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import VerifyOtpPage from "../pages/auth/VerifyOtpPage";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
@@ -231,7 +229,6 @@ const App = () => {
         />
       </Routes>
 
-      <ToastContainer />
     </>
   );
 };

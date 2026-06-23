@@ -1,4 +1,5 @@
-import { toast } from "sonner";
+import { toast } from "../utils/toast";
+import { formatDate as _formatDate, formatDateTime as _formatDateTime } from "../utils/formatters";
 import { apiRequestImage } from "./apiConfig";
 import { useState } from "react";
 import { saveAs } from 'file-saver';
@@ -285,10 +286,9 @@ export const roles = {
   5: "User",
   3: "Seller"
 }
-export const formatDateForDisplay = (timestamp) => {
-  if (!timestamp) return "N/A";
-  const date = new Date(timestamp);
-  return date.toLocaleDateString();
+/** @deprecated Use formatDate / formatDateTime from utils/formatters instead */
+export const formatDateForDisplay = (timestamp, includeTime = false) => {
+  return includeTime ? _formatDateTime(timestamp) : _formatDate(timestamp);
 };
 
 export const generateCSV = (data, options) => {

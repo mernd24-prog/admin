@@ -8,7 +8,7 @@ import {
   MdToggleOn,
   MdWarehouse,
 } from "react-icons/md";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../components/Atoms/Input/Input";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";

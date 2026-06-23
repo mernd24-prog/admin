@@ -6,7 +6,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { toast } from "react-toastify";
+import { toast } from "../../../utils/toast";
 
 const DEFAULT_SETTINGS = {
   productWorkflow: {

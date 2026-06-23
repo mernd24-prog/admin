@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader, DataTable, StatusBadge, FilterBar } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";

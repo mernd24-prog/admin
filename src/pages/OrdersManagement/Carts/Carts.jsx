@@ -12,7 +12,7 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
-import { toast } from "react-toastify";
+import { toast } from "../../../utils/toast";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const FILTER_FIELDS = [

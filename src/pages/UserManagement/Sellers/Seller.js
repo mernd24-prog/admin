@@ -34,17 +34,25 @@ const EMPTY_FORM = {
 };
 
 const getGoLiveStatus = (user = {}) => {
-  if (
-    user?.accountStatus === "active" ||
-    user?.sellerProfile?.goLiveStatus === "live"
-  ) {
-    return "live";
+  if (user?.organizationSummary?.goLiveStatus) {
+    return user.organizationSummary.goLiveStatus;
   }
+  const organizationGoLiveStatus =
+    user?.organization?.goLiveStatus ||
+    user?.sellerProfile?.organizationGoLiveStatus ||
+    user?.onboarding?.organizationGoLiveStatus;
+  if (organizationGoLiveStatus) return organizationGoLiveStatus;
   return (
     user?.onboarding?.goLiveStatus ||
     user?.sellerProfile?.goLiveStatus ||
+    (user?.accountStatus === "active" ? "live" : null) ||
     "pending"
   );
+};
+
+const getGoLiveLabel = (user = {}) => {
+  const label = user?.organizationSummary?.goLiveLabel || getGoLiveStatus(user);
+  return label === "approval_pending" ? "Approval pending" : label;
 };
 
 const Sellers = () => {
@@ -280,7 +288,7 @@ const Sellers = () => {
     {
       key: "_golive",
       label: "Go Live",
-      render: (_, row) => <StatusBadge status={getGoLiveStatus(row)} size="sm" />,
+      render: (_, row) => <StatusBadge status={getGoLiveStatus(row)} label={getGoLiveLabel(row)} size="sm" />,
     },
     {
       key: "isDisable",

@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import moment from "moment";
-import { toast } from "sonner";
+import { toast } from "../../../utils/toast";
+import { formatDateTime, formatCurrency } from "../../../utils/formatters";
+import {
+  ORDER_STATUS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
+  DELIVERY_STATUS_OPTIONS,
+} from "../../../constants/statusConstants";
 import { useDispatch, useSelector } from "react-redux";
 import {
   PageHeader,
@@ -16,76 +21,27 @@ import { useListPage } from "../../../hooks/useListPage";
 import { MdShoppingCart, MdVisibility } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
-const ORDER_STATUSES = [
-  "pending_payment",
-  "payment_failed",
-  "confirmed",
-  "packed",
-  "shipped",
-  "delivered",
-  "fulfilled",
-  "return_requested",
-  "partially_returned",
-  "returned",
-  "cancelled",
-];
-
-const PAYMENT_STATUSES = [
-  "initiated",
-  "authorized",
-  "captured",
-  "failed",
-  "partially_refunded",
-  "refunded",
-  "cancelled",
-];
-
-const DELIVERY_STATUSES = [
-  "initiated",
-  "manifested",
-  "picked_up",
-  "in_transit",
-  "out_for_delivery",
-  "partially_delivered",
-  "delivered",
-  "delivered_verified",
-  "failed",
-  "cancelled",
-  "rto",
-  "lost",
-  "damaged",
-];
-
 const FILTER_FIELDS = [
   {
     key: "status",
     type: "select",
     label: "Order Status",
     width: "w-44",
-    options: ORDER_STATUSES.map((s) => ({
-      value: s,
-      label: s.replace(/_/g, " "),
-    })),
+    options: ORDER_STATUS_OPTIONS,
   },
   {
     key: "paymentStatus",
     type: "select",
     label: "Payment Status",
     width: "w-44",
-    options: PAYMENT_STATUSES.map((s) => ({
-      value: s,
-      label: s.replace(/_/g, " "),
-    })),
+    options: PAYMENT_STATUS_OPTIONS,
   },
   {
     key: "deliveryStatus",
     type: "select",
     label: "Delivery Status",
     width: "w-44",
-    options: DELIVERY_STATUSES.map((s) => ({
-      value: s,
-      label: s.replace(/_/g, " "),
-    })),
+    options: DELIVERY_STATUS_OPTIONS,
   },
   {
     key: "buyerId",
@@ -121,8 +77,7 @@ const firstDefined = (...values) =>
 const orderIdOf = (order = {}) =>
   firstDefined(order._id, order.id, order.orderId, order.order_no);
 
-const formatMoney = (value) =>
-  `₹ ${Number(value || 0).toFixed(2)}`;
+const formatMoney = (value) => formatCurrency(value, "—");
 
 const COLUMNS = [
   {
@@ -143,7 +98,7 @@ const COLUMNS = [
       const date = firstDefined(v, row.created_at);
       return (
         <span className="text-gray-500 text-sm">
-          {date ? moment(date).format("DD MMM YYYY HH:mm") : "N/A"}
+          {formatDateTime(date)}
         </span>
       );
     },

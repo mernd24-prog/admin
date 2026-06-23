@@ -6,7 +6,6 @@ import { BrowserRouter } from "react-router-dom";
 
 import { store } from "./Redux/Store";
 import { Provider } from "react-redux";
-import "react-toastify/dist/ReactToastify.css";
 import { LoaderProvider } from "./context/LoaderContext";
 import { Toaster } from "sonner";
 import { KYCProvider } from "./context/KycContext";

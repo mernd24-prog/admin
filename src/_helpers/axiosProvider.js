@@ -12,7 +12,7 @@ import {
     persistAuthTokens,
     shouldForceLogoutForResponse,
 } from './authSession';
-import { getSelectedSellerOrganizationId } from './sellerOrganizationContext';
+import { getSelectedSellerOrganizationHeader } from './sellerOrganizationContext';
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
@@ -100,6 +100,7 @@ export const refreshAccessToken = async () => {
 };
 
 const authRequestInterceptor = (config) => {
+    config.headers = config.headers || {};
     const authData = sessionStorageGetItem();
     const token = getStoredAccessToken() || authData?.token;
     const suppliedAuthorization = config.headers?.Authorization;
@@ -110,10 +111,7 @@ const authRequestInterceptor = (config) => {
     if (!suppliedAuthorization) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-    const organizationId = getSelectedSellerOrganizationId();
-    if (organizationId) {
-        config.headers['X-Organization-Id'] = organizationId;
-    }
+    Object.assign(config.headers, getSelectedSellerOrganizationHeader(config.url));
     return config;
 };
 
@@ -180,10 +178,8 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
 };
 
 const refreshBeforeRequestInterceptor = async (config) => {
-    const organizationId = getSelectedSellerOrganizationId();
-    if (organizationId) {
-        config.headers['X-Organization-Id'] = organizationId;
-    }
+    config.headers = config.headers || {};
+    Object.assign(config.headers, getSelectedSellerOrganizationHeader(config.url));
     if (config.headers?.Authorization) {
         return authRequestInterceptor(config);
     }

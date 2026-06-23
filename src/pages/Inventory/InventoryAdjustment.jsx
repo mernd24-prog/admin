@@ -15,7 +15,7 @@ import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGu
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 import ConfirmModal from "../../components/Shared/ConfirmModal";
 import {

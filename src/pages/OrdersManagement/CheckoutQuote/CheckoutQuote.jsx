@@ -5,7 +5,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { toast } from "react-toastify";
+import { toast } from "../../../utils/toast";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const BuyerSearchField = ({ value, onChange }) => {

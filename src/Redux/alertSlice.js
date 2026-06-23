@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { toast } from "react-toastify";
+import { toast } from "../utils/toast";
 
 const alertSlice = createSlice({
   name: "alert",
@@ -15,7 +15,7 @@ const alertSlice = createSlice({
       toast.info(action.payload);
     },
     showWarning: (_, action) => {
-      toast.warn(action.payload);
+      toast.warning(action.payload);
     },
   },
 });

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast } from "../../../utils/toast";
 import { MdArrowForward, MdRefresh } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import { PageHeader, StatusBadge } from "../../../components/Shared";

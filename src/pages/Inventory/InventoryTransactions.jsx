@@ -12,7 +12,7 @@ import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGu
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { ACTIONS } from "../../_helpers/usePermission";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast";
 import { useListPage } from "../../hooks/useListPage";
 
 const TYPE_OPTIONS = [
@@ -139,7 +139,7 @@ const InventoryTransactions = () => {
         `Released ${result.released || 0} expired reservation${Number(result.released || 0) === 1 ? "" : "s"}.`,
       );
       if (result.failed) {
-        toast.warn(`${result.failed} reservation cleanup attempt${result.failed === 1 ? "" : "s"} failed. Check server logs and audit data.`);
+        toast.warning(`${result.failed} reservation cleanup attempt${result.failed === 1 ? "" : "s"} failed. Check server logs and audit data.`);
       }
       setCleanupOpen(false);
       fetchTransactions();

@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
-import { toast } from "sonner";
+import { toast } from "../../../utils/toast";
+import { formatLabel, formatDateTime, formatCurrency } from "../../../utils/formatters";
+import {
+  RETURN_STATUS_OPTIONS,
+  RETURN_REASON_OPTIONS,
+  REFUND_STATUS_OPTIONS,
+} from "../../../constants/statusConstants";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
@@ -41,40 +46,6 @@ import {
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 
-const STATUSES = [
-  "requested",
-  "approved",
-  "reverse_pickup_scheduled",
-  "pickup_failed",
-  "manual_ship_back",
-  "shipped_back",
-  "in_reverse_transit",
-  "received",
-  "qc_passed",
-  "qc_failed",
-  "qc_completed",
-  "refund_pending",
-  "refund_failed",
-  "partially_refunded",
-  "refunded",
-  "replacement_pending",
-  "replaced",
-  "rejected",
-  "closed",
-];
-
-const REASONS = [
-  "defective",
-  "damaged_in_transit",
-  "wrong_item",
-  "missing_parts",
-  "size_issue",
-  "quality_issue",
-  "not_as_described",
-  "changed_mind",
-  "other",
-];
-
 const ACTION_TITLES = {
   approve: "Approve Return",
   reject: "Reject Return",
@@ -105,10 +76,10 @@ const FILTER_FIELDS = [
     width: "w-52",
     load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
   },
-  { key: "status", type: "select", label: "Status", options: STATUSES.map((value) => ({ value, label: value.replace(/_/g, " ") })) },
-  { key: "refundStatus", type: "select", label: "Refund", options: ["not_started", "pending", "provider_pending", "completed", "failed", "manual_review"].map((value) => ({ value, label: value.replace(/_/g, " ") })) },
-  { key: "shipmentStatus", type: "text", label: "Reverse shipment", width: "w-44" },
-  { key: "reason", type: "select", label: "Reason", options: REASONS.map((value) => ({ value, label: value.replace(/_/g, " ") })) },
+  { key: "status", type: "select", label: "Status", options: RETURN_STATUS_OPTIONS },
+  { key: "refundStatus", type: "select", label: "Refund Status", options: REFUND_STATUS_OPTIONS },
+  { key: "shipmentStatus", type: "text", label: "Reverse Shipment", width: "w-44" },
+  { key: "reason", type: "select", label: "Reason", options: RETURN_REASON_OPTIONS },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
 ];
@@ -149,8 +120,8 @@ const unwrapList = (payload = {}) => {
 };
 
 const unwrapResult = (payload = {}) => payload?.data?.data || payload?.data || payload || {};
-const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
-const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
+const display = (value) => formatLabel(value);
+const money = (value) => formatCurrency(value, "—");
 const returnId = (row) => row?._id || row?.id || row?.returnId;
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
 
@@ -409,7 +380,7 @@ const Returns = () => {
       key: "createdAt",
       label: "Requested",
       sortable: true,
-      render: (value) => value ? moment(value).format("DD-MM-YYYY HH:mm") : "N/A",
+      render: (value) => formatDateTime(value),
     },
     {
       key: "actions",
@@ -545,30 +516,30 @@ const Returns = () => {
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div><strong>Return:</strong> {returnId(detailReturn)}</div>
-            <div><strong>RMA:</strong> {detailReturn?.returnNumber || "N/A"}</div>
-            <div><strong>Order:</strong> {detailReturn?.orderId}</div>
+            <div><strong>RMA:</strong> {detailReturn?.returnNumber || "Not assigned"}</div>
+            <div><strong>Order:</strong> {detailReturn?.orderId || "—"}</div>
             <div><strong>Buyer:</strong> {
               detailReturn?.buyerName || detailReturn?.buyer?.name || detailReturn?.buyerSnapshot?.name ||
               detailReturn?.buyerEmail || detailReturn?.buyer?.email ||
-              detailReturn?.buyerId || "N/A"
+              detailReturn?.buyerId || "Not assigned"
             }</div>
             <div><strong>Status:</strong> {display(detailReturn?.status)}</div>
             <div><strong>Reason:</strong> {display(detailReturn?.reason)}</div>
             <div><strong>Refund:</strong> {money(detailReturn?.refundAmount || detailReturn?.refundBreakup?.totalRefundAmount)}</div>
-            <div><strong>Reference:</strong> {detailReturn?.refundReferenceId || "N/A"}</div>
+            <div><strong>Reference:</strong> {detailReturn?.refundReferenceId || "Not available"}</div>
             <div><strong>Method:</strong> {display(detailReturn?.refundMethod)}</div>
             <div><strong>Refund status:</strong> {display(detailReturn?.refund?.status)}</div>
-            <div><strong>Provider refund:</strong> {detailReturn?.refund?.providerRefundId || detailReturn?.providerRefundId || "N/A"}</div>
+            <div><strong>Provider refund:</strong> {detailReturn?.refund?.providerRefundId || detailReturn?.providerRefundId || "Not available"}</div>
           </div>
           <div className="rounded border border-gray-100 p-3">
-            <div className="font-semibold text-gray-700 mb-2">Eligibility & reverse shipping</div>
+            <div className="font-semibold text-gray-700 mb-2">Eligibility &amp; Reverse Shipping</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
-              <div>Window: {detailReturn?.policySnapshot?.returnWindowDays || "N/A"} days</div>
-              <div>Eligible until: {detailReturn?.policySnapshot?.eligibleUntil ? moment(detailReturn.policySnapshot.eligibleUntil).format("DD-MM-YYYY HH:mm") : "N/A"}</div>
-              <div>Shipment: {detailReturn?.reverseShipment?.shipmentId || "N/A"}</div>
-              <div>Courier: {detailReturn?.reverseShipment?.courierName || detailReturn?.reverseShipment?.provider || "N/A"}</div>
-              <div>Tracking: {detailReturn?.reverseShipment?.trackingNumber || detailReturn?.trackingNumber || "N/A"}</div>
-              <div>Shipment status: {display(detailReturn?.reverseShipment?.status)}</div>
+              <div>Window: {detailReturn?.policySnapshot?.returnWindowDays ? `${detailReturn.policySnapshot.returnWindowDays} days` : "Not available"}</div>
+              <div>Eligible Until: {formatDateTime(detailReturn?.policySnapshot?.eligibleUntil)}</div>
+              <div>Shipment ID: {detailReturn?.reverseShipment?.shipmentId || "Not assigned"}</div>
+              <div>Courier: {detailReturn?.reverseShipment?.courierName || detailReturn?.reverseShipment?.provider || "Not assigned"}</div>
+              <div>Tracking: {detailReturn?.reverseShipment?.trackingNumber || detailReturn?.trackingNumber || "Not available"}</div>
+              <div>Shipment Status: {display(detailReturn?.reverseShipment?.status)}</div>
             </div>
           </div>
           <div>
@@ -584,7 +555,7 @@ const Returns = () => {
                       <div className="font-mono text-xs text-gray-400">{item.productId}</div>
                     )}
                     <div className="text-xs text-gray-500">
-                      Seller: {sellerLabel || item.sellerId || "N/A"} · SKU: {item.variantSku || "N/A"}
+                      Seller: {sellerLabel || item.sellerId || "Not assigned"} · SKU: {item.variantSku || "Not available"}
                     </div>
                     <div className="text-xs text-gray-500">Requested {item.requestedQuantity || item.quantity} · Approved {item.approvedQuantity || 0} · Received {item.receivedQuantity || 0}</div>
                     <div className="text-xs text-gray-500">Refund {money(item.refundAmount)} · QC {display(item.qcResult)} · Restocked {item.restockedQuantity || 0} · Damaged {item.damagedQuantity || 0}</div>
@@ -614,7 +585,7 @@ const Returns = () => {
               {(detailReturn?.timeline || []).map((item, index) => (
                 <div key={`${item.status}-${index}`} className="rounded border border-gray-100 p-3">
                   <div className="font-medium capitalize">{display(item.status)}</div>
-                  <div className="text-xs text-gray-500">{item.at ? moment(item.at).format("DD-MM-YYYY HH:mm") : "N/A"} · {display(item.actorRole)}</div>
+                  <div className="text-xs text-gray-500">{formatDateTime(item.at)} · {display(item.actorRole)}</div>
                   {item.reason && <div className="text-xs text-gray-600 mt-1">Reason: {item.reason}</div>}
                   {item.note && <div className="text-xs text-gray-600 mt-1">{item.note}</div>}
                 </div>

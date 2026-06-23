@@ -1,12 +1,7 @@
 import { axiosImage, axiosPrivate, axiosPublic } from './axiosProvider';
 import { normalizeApiError } from './normalizeApiError';
 import { isAuthEndpoint } from './authSession';
-import { getSelectedSellerOrganizationId } from './sellerOrganizationContext';
-
-const getOrganizationHeader = () => {
-  const organizationId = getSelectedSellerOrganizationId();
-  return organizationId ? { 'X-Organization-Id': organizationId } : {};
-};
+import { getSelectedSellerOrganizationHeader } from './sellerOrganizationContext';
 
 export const apiRequest = async (method, endpoint, data, contentType = "json", tokenOverride = null) => {
   const lowerMethod = String(method || "GET").toLowerCase();
@@ -22,7 +17,7 @@ export const apiRequest = async (method, endpoint, data, contentType = "json", t
     headers: {
       'Content-Type': isMultipart ? 'multipart/form-data' : 'application/json',
       ...(tokenOverride ? { Authorization: `Bearer ${tokenOverride}` } : {}),
-      ...getOrganizationHeader(),
+      ...getSelectedSellerOrganizationHeader(endpoint),
     },
   };
 

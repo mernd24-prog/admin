@@ -200,6 +200,11 @@ const STATUS_COLORS = {
   approved:            'bg-green-100 text-green-700',
   live:                'bg-green-100 text-green-700',
   verified:            'bg-green-100 text-green-700',
+  ready:               'bg-emerald-100 text-emerald-700',
+  partially_live:      'bg-cyan-100 text-cyan-700',
+  partially_verified:  'bg-cyan-100 text-cyan-700',
+  partially_approved:  'bg-cyan-100 text-cyan-700',
+  approval_pending:    'bg-yellow-100 text-yellow-700',
   ready_for_go_live:   'bg-emerald-100 text-emerald-700',
   under_review:        'bg-yellow-100 text-yellow-700',
   in_progress:         'bg-blue-100 text-blue-700',
@@ -208,12 +213,13 @@ const STATUS_COLORS = {
   suspended:           'bg-red-100 text-red-700',
   pending:             'bg-gray-100 text-gray-600',
   initiated:           'bg-gray-100 text-gray-600',
+  not_created:         'bg-gray-100 text-gray-400',
   not_submitted:       'bg-gray-100 text-gray-400',
   pending_approval:    'bg-yellow-100 text-yellow-700',
 };
 
-const StatusBadge = ({ value }) => {
-  const lookupValue = String(value || '').toLowerCase().replace(/^(kyc|bank)\s+/, '');
+const StatusBadge = ({ value, status }) => {
+  const lookupValue = String(status || value || '').toLowerCase().replace(/^(kyc|bank|go live)\s+/, '').replace(/[\s-]+/g, '_');
   const colorClass = STATUS_COLORS[lookupValue] || 'bg-gray-100 text-gray-600';
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${colorClass}`}>
@@ -264,6 +270,141 @@ const normalizeBankDetails = (bankDetails = {}) => ({
 const hasAnyBankDetails = (bankDetails = {}) =>
   Object.values(bankDetails).some((value) => String(value || '').trim().length > 0);
 
+const getPrimaryOrganization = (organizations = []) =>
+  organizations.find((organization) => organization?.isDefault) || organizations[0] || null;
+
+const countBy = (items = [], predicate) => items.filter(predicate).length;
+const isOrganizationApprovedForSelling = (organization = {}) =>
+  ['approved', 'active'].includes(String(organization.approvalStatus || '').toLowerCase());
+
+const isOrganizationLiveForSelling = (organization = {}) =>
+  isOrganizationApprovedForSelling(organization) &&
+  organization.kycStatus === 'verified' &&
+  organization.bankVerificationStatus === 'verified' &&
+  organization.goLiveStatus === 'live';
+
+const getOrganizationGoLiveStatus = (organization = {}) => {
+  if (isOrganizationLiveForSelling(organization)) return 'live';
+  if (organization.goLiveStatus === 'blocked' || organization.approvalStatus === 'blocked') return 'blocked';
+  if (
+    organization.goLiveStatus === 'rejected' ||
+    organization.approvalStatus === 'rejected' ||
+    organization.kycStatus === 'rejected' ||
+    organization.bankVerificationStatus === 'rejected'
+  ) {
+    return 'rejected';
+  }
+  if (organization.goLiveStatus === 'live' && !isOrganizationApprovedForSelling(organization)) {
+    return 'approval_pending';
+  }
+  if (
+    organization.goLiveStatus === 'ready' ||
+    isOrganizationApprovedForSelling(organization) ||
+    (organization.kycStatus === 'verified' && organization.bankVerificationStatus === 'verified')
+  ) {
+    return 'ready';
+  }
+  return organization.goLiveStatus || 'pending';
+};
+
+const getOrganizationGoLiveLabel = (organization = {}) => {
+  const status = getOrganizationGoLiveStatus(organization);
+  if (status === 'approval_pending') return 'Approval pending';
+  return organization.goLiveStatus || status;
+};
+
+const getCountStatus = (total, count, completeStatus, partialStatus, emptyStatus = 'pending') => {
+  if (!total) return 'not_created';
+  if (count === total) return completeStatus;
+  if (count > 0) return partialStatus;
+  return emptyStatus;
+};
+
+const summarizeOrganizations = (organizations = [], fallback = {}, primaryOrganization = null) => {
+  const hasLoadedOrganizations = Array.isArray(organizations) && organizations.length > 0;
+  if (!hasLoadedOrganizations && fallback?.total !== undefined) {
+    return {
+      total: Number(fallback.total || 0),
+      approvedCount: Number(fallback.approvedCount || 0),
+      kycVerifiedCount: Number(fallback.kycVerifiedCount || 0),
+      bankVerifiedCount: Number(fallback.bankVerifiedCount || 0),
+      liveCount: Number(fallback.liveCount || 0),
+      rawGoLiveCount: Number(fallback.rawGoLiveCount || fallback.liveCount || 0),
+      approvalPendingCount: Number(fallback.approvalPendingCount || 0),
+      goLiveStatus: fallback.goLiveStatus || 'not_created',
+      goLiveLabel:
+        fallback.goLiveLabel ||
+        (fallback.goLiveStatus === 'approval_pending' ? 'Approval pending' : fallback.goLiveStatus) ||
+        'not_created',
+      kycStatus: fallback.kycStatus || getCountStatus(Number(fallback.total || 0), Number(fallback.kycVerifiedCount || 0), 'verified', 'partially_verified'),
+      kycLabel: fallback.kycLabel || 'not_submitted',
+      bankStatus: fallback.bankStatus || getCountStatus(Number(fallback.total || 0), Number(fallback.bankVerifiedCount || 0), 'verified', 'partially_verified'),
+      bankLabel: fallback.bankLabel || 'not_submitted',
+      approvalStatus: fallback.approvalStatus || getCountStatus(Number(fallback.total || 0), Number(fallback.approvedCount || 0), 'approved', 'partially_approved'),
+      approvedLabel: fallback.approvedLabel || 'not_created',
+      requiresPerOrganizationReview: Boolean(fallback.requiresPerOrganizationReview),
+    };
+  }
+
+  const items = hasLoadedOrganizations
+    ? organizations.filter(Boolean)
+    : primaryOrganization?.id || primaryOrganization?.organizationId
+      ? [primaryOrganization]
+      : [];
+
+  const total = items.length;
+  const approvedCount = countBy(items, (organization) => ['approved', 'active'].includes(organization.approvalStatus));
+  const kycVerifiedCount = countBy(items, (organization) => organization.kycStatus === 'verified');
+  const bankVerifiedCount = countBy(items, (organization) => organization.bankVerificationStatus === 'verified');
+  const liveCount = countBy(items, isOrganizationLiveForSelling);
+  const rawGoLiveCount = countBy(items, (organization) => organization.goLiveStatus === 'live');
+  const approvalPendingCount = countBy(items, (organization) => getOrganizationGoLiveStatus(organization) === 'approval_pending');
+  const readyCount = countBy(items, (organization) => organization.goLiveStatus === 'ready');
+  const blockedCount = countBy(items, (organization) => organization.goLiveStatus === 'blocked' || organization.approvalStatus === 'blocked');
+  const rejectedCount = countBy(items, (organization) =>
+    organization.goLiveStatus === 'rejected' ||
+    organization.approvalStatus === 'rejected' ||
+    organization.kycStatus === 'rejected' ||
+    organization.bankVerificationStatus === 'rejected',
+  );
+  const goLiveStatus =
+    total === 0
+      ? 'not_created'
+      : liveCount === total
+        ? 'live'
+        : liveCount > 0
+          ? 'partially_live'
+            : blockedCount === total
+              ? 'blocked'
+              : rejectedCount === total
+                ? 'rejected'
+                : approvalPendingCount > 0
+                  ? 'approval_pending'
+                : readyCount > 0 || approvedCount > 0
+                  ? 'ready'
+                  : 'pending';
+
+  return {
+    total,
+    approvedCount,
+    kycVerifiedCount,
+    bankVerifiedCount,
+    liveCount,
+    rawGoLiveCount,
+    approvalPendingCount,
+    goLiveStatus,
+    goLiveLabel: total > 1 ? `${liveCount}/${total} live` : getOrganizationGoLiveLabel(items[0] || {}),
+    kycStatus: getCountStatus(total, kycVerifiedCount, 'verified', 'partially_verified', 'submitted'),
+    kycLabel: total > 1 ? `${kycVerifiedCount}/${total} verified` : (items[0]?.kycStatus || 'not_submitted'),
+    bankStatus: getCountStatus(total, bankVerifiedCount, 'verified', 'partially_verified', 'submitted'),
+    bankLabel: total > 1 ? `${bankVerifiedCount}/${total} verified` : (items[0]?.bankVerificationStatus || 'not_submitted'),
+    approvalStatus: getCountStatus(total, approvedCount, 'approved', 'partially_approved', 'pending'),
+    approvedLabel: total > 1 ? `${approvedCount}/${total} approved` : (items[0]?.approvalStatus || 'not_created'),
+    requiresPerOrganizationReview: total > 1,
+    primaryOrganization: getPrimaryOrganization(items),
+  };
+};
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 const UserDetails = () => {
@@ -306,10 +447,6 @@ const UserDetails = () => {
         : hasCompleteBankDetails(bankDetails)
           ? 'submitted'
           : 'not_submitted');
-  const goLiveStatus =
-    user.accountStatus === 'active' || sellerProfile.goLiveStatus === 'live'
-      ? 'live'
-      : onboarding.goLiveStatus || sellerProfile.goLiveStatus || 'pending';
   const accountStatus = user.accountStatus || (user.isDisable ? 'suspended' : user._id || user.id ? 'active' : '');
 
   // KYC lazy-load state
@@ -324,6 +461,22 @@ const UserDetails = () => {
   const [accessModulesLoading, setAccessModulesLoading] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
+  const organizationSummary = useMemo(
+    () => summarizeOrganizations(
+      organizations,
+      user.organizationSummary || onboarding.organizationSummary,
+      user.organization,
+    ),
+    [organizations, user.organizationSummary, onboarding.organizationSummary, user.organization],
+  );
+  const goLiveStatus =
+    organizationSummary.goLiveStatus ||
+    onboarding.goLiveStatus ||
+    sellerProfile.goLiveStatus ||
+    (user.accountStatus === 'active' ? 'live' : 'pending');
+  const goLiveLabel = organizationSummary.goLiveLabel || goLiveStatus;
+  const showSellerGoLiveAction = organizationSummary.total <= 1;
+  const showSellerBankActions = organizationSummary.total <= 1;
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
@@ -763,13 +916,21 @@ const UserDetails = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
                 {[
                   { label: 'Onboarding',  value: onboarding.status || sellerProfile.onboardingStatus },
-                  { label: 'KYC',         value: kycStatus },
-                  { label: 'Bank',        value: bankStatus },
-                  { label: 'Go Live',     value: goLiveStatus },
-                ].map(({ label, value }) => (
+                  {
+                    label: organizationSummary.total > 1 ? 'Org KYC' : 'KYC',
+                    value: organizationSummary.total > 1 ? organizationSummary.kycLabel : kycStatus,
+                    status: organizationSummary.total > 1 ? organizationSummary.kycStatus : kycStatus,
+                  },
+                  {
+                    label: organizationSummary.total > 1 ? 'Org Bank' : 'Bank',
+                    value: organizationSummary.total > 1 ? organizationSummary.bankLabel : bankStatus,
+                    status: organizationSummary.total > 1 ? organizationSummary.bankStatus : bankStatus,
+                  },
+                  { label: 'Go Live', value: goLiveLabel, status: goLiveStatus },
+                ].map(({ label, value, status }) => (
                   <div key={label} className="flex flex-col items-center bg-gray-50 rounded-lg p-3 gap-1">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-                    <StatusBadge value={value} />
+                    <StatusBadge value={value} status={status} />
                   </div>
                 ))}
               </div>
@@ -794,26 +955,35 @@ const UserDetails = () => {
                 >
                   Mark KYC Under Review
                 </button>
-                <div className="w-px bg-gray-200 mx-1 self-stretch" />
-                <button
-                  className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                  onClick={() => setBankModal({ open: true, defaultDecision: 'verified' })}
-                >
-                  Verify Bank
-                </button>
-                <button
-                  className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
-                  onClick={() => setBankModal({ open: true, defaultDecision: 'rejected' })}
-                >
-                  Reject Bank
-                </button>
-                <div className="w-px bg-gray-200 mx-1 self-stretch" />
-                <button
-                  className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700"
-                  onClick={handleGoLive}
-                >
-                  Approve Go Live
-                </button>
+                {showSellerBankActions && (
+                  <>
+                    <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                    <button
+                      className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                      onClick={() => setBankModal({ open: true, defaultDecision: 'verified' })}
+                    >
+                      Verify Bank
+                    </button>
+                    <button
+                      className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
+                      onClick={() => setBankModal({ open: true, defaultDecision: 'rejected' })}
+                    >
+                      Reject Bank
+                    </button>
+                  </>
+                )}
+                {showSellerGoLiveAction && (
+                  <>
+                    <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                    <button
+                      className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={handleGoLive}
+                      disabled={goLiveStatus === 'live'}
+                    >
+                      Approve Go Live
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* KYC rejection reason alert (live on profile) */}
@@ -883,7 +1053,10 @@ const UserDetails = () => {
                         <StatusBadge value={organization.approvalStatus} />
                         <StatusBadge value={`KYC ${organization.kycStatus || 'not_submitted'}`} />
                         <StatusBadge value={`Bank ${organization.bankVerificationStatus || 'not_submitted'}`} />
-                        <StatusBadge value={`Go Live ${organization.goLiveStatus || 'pending'}`} />
+                        <StatusBadge
+                          value={`Go Live ${getOrganizationGoLiveLabel(organization)}`}
+                          status={getOrganizationGoLiveStatus(organization)}
+                        />
                       </div>
                     </div>
 
@@ -891,13 +1064,37 @@ const UserDetails = () => {
                       <Row label="GSTIN" value={organization.gstin} />
                       <Row label="PAN" value={organization.pan} />
                       <Row label="Business Type" value={organization.businessType} />
+                      <Row label="Support Email" value={organization.supportEmail} />
+                      <Row label="Support Phone" value={organization.supportPhone} />
+                      <Row label="Primary Contact" value={organization.primaryContactName} />
+                      <Row label="Registration No." value={organization.registrationNumber} />
+                      <Row label="Aadhaar Number" value={organization.aadhaarNumber} />
+                      <Row label="Date of Birth" value={formatDateTime(organization.dateOfBirth)} />
+                      <Row label="Website" value={organization.businessWebsite} />
                       <Row label="Bank Account" value={bank.accountNumber} />
+                      <Row label="Account Holder" value={bank.accountHolderName} />
+                      <Row label="Bank Name" value={bank.bankName} />
                       <Row label="IFSC" value={bank.ifscCode} />
+                      <Row label="Branch Name" value={bank.branchName} />
                       <Row label="Billing State" value={organization.billingAddress?.state} />
                       <Row label="Billing Address" value={formatAddress(organization.billingAddress)} />
                       <Row label="Pickup Address" value={formatAddress(organization.pickupAddress)} />
+                      <Row label="Return Address" value={formatAddress(organization.returnAddress)} />
                       <Row label="Invoice Prefix" value={organization.invoiceSettings?.invoicePrefix || organization.invoiceSettings?.invoiceSeries} />
+                      <Row label="Invoice State" value={organization.invoiceSettings?.state} />
+                      <Row label="Tax State" value={organization.taxSettings?.state} />
+                      <Row label="Payout Schedule" value={organization.payoutSettings?.payoutSchedule} />
+                      <Row label="Approved At" value={formatDateTime(organization.approvedAt)} />
+                      <Row label="Go Live Approved At" value={formatDateTime(organization.goLiveApprovedAt)} />
                     </div>
+
+                    {(organization.description || organization.rejectionReason || organization.requiredChanges?.length) && (
+                      <div className="mt-3 grid grid-cols-1 gap-x-6 border-t border-gray-100 pt-3 md:grid-cols-3">
+                        <Row label="Description" value={organization.description} />
+                        <Row label="Rejection Reason" value={organization.rejectionReason} />
+                        <Row label="Required Changes" value={(organization.requiredChanges || []).join(', ')} />
+                      </div>
+                    )}
 
                     <div className="mt-3 border-t border-gray-100 pt-3">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">KYC Documents</p>
@@ -1006,12 +1203,22 @@ const UserDetails = () => {
                 <Row label="Display Name"    value={sellerProfile.displayName} />
                 <Row label="Legal Business"  value={sellerProfile.legalBusinessName} />
                 <Row label="Business Type"   value={sellerProfile.businessType} />
+                <Row label="Business Name"   value={sellerProfile.businessName} />
+                <Row label="Primary Contact" value={sellerProfile.primaryContactName} />
+                <Row label="Registration No." value={sellerProfile.registrationNumber} />
                 <Row label="GST Number"      value={sellerProfile.gstNumber || sellerKyc.gstNumber} />
                 <Row label="PAN Number"      value={sellerProfile.panNumber || sellerKyc.panNumber} />
                 <Row label="Aadhaar Number"  value={sellerProfile.aadhaarNumber || sellerKyc.aadhaarNumber} />
+                <Row label="Date of Birth"   value={formatDateTime(sellerProfile.dateOfBirth)} />
                 <Row label="Support Email"   value={sellerProfile.supportEmail} />
                 <Row label="Support Phone"   value={sellerProfile.supportPhone} />
                 <Row label="Website"         value={sellerProfile.businessWebsite} />
+                <Row label="Organization ID" value={sellerProfile.organizationId} />
+                <Row label="Organization Approval" value={sellerProfile.organizationApprovalStatus} />
+                <Row label="Organization Go Live" value={sellerProfile.organizationGoLiveStatus} />
+                <Row label="Verified At" value={formatDateTime(sellerProfile.verifiedAt)} />
+                <Row label="Go Live Approved At" value={formatDateTime(sellerProfile.goLiveApprovedAt)} />
+                <Row label="Description" value={sellerProfile.description} />
               </div>
 
               {/* Bank Details */}
@@ -1043,12 +1250,12 @@ const UserDetails = () => {
               )}
 
               {/* Addresses */}
-              {(sellerProfile.businessAddress || sellerProfile.pickupAddress) && (
-                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(sellerProfile.businessAddress || sellerProfile.pickupAddress || sellerProfile.returnAddress) && (
+                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
                   {sellerProfile.businessAddress && (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Business Address</p>
-                      {['line1','line2','city','state','pincode','country'].map((f) => (
+                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
                         sellerProfile.businessAddress[f]
                           ? <Row key={f} label={f} value={sellerProfile.businessAddress[f]} />
                           : null
@@ -1058,9 +1265,19 @@ const UserDetails = () => {
                   {sellerProfile.pickupAddress && (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pickup Address</p>
-                      {['line1','line2','city','state','pincode','country'].map((f) => (
+                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
                         sellerProfile.pickupAddress[f]
                           ? <Row key={f} label={f} value={sellerProfile.pickupAddress[f]} />
+                          : null
+                      ))}
+                    </div>
+                  )}
+                  {sellerProfile.returnAddress && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Return Address</p>
+                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
+                        sellerProfile.returnAddress[f]
+                          ? <Row key={f} label={f} value={sellerProfile.returnAddress[f]} />
                           : null
                       ))}
                     </div>
