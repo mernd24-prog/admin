@@ -2,12 +2,18 @@
 import Button from "../../../../components/Atoms/buttons/button";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 
-export default function ProductSettingsPanel({ handleSaveSubmit, formData, handleToggleProductSetting }) {
+export default function ProductSettingsPanel({ handleSaveSubmit, formData, handleToggleProductSetting, saving = false }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Save */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">
-        <Button className="w-full !font-semibold" onClick={handleSaveSubmit}>Save Product</Button>
+        <Button
+          className="w-full !font-semibold"
+          onClick={handleSaveSubmit}
+          disabled={saving}
+        >
+          {saving ? 'Saving…' : 'Save Product'}
+        </Button>
       </div>
 
       {/* Status toggles */}

@@ -2,8 +2,8 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { uploadFileMulti } from '../../_helpers/globalFunctions';
 import { toast } from 'sonner';
 import useDropdownOptions from '../../hooks/useDropdownOptions';
-import { FaImage, FaInfoCircle } from 'react-icons/fa';
 import { MdDragIndicator, MdAdd } from 'react-icons/md';
+import { FaInfoCircle } from 'react-icons/fa';
 
 const MAX_VARIANT_IMAGES = 5;
 
@@ -21,19 +21,26 @@ const DEFAULT_VARIANT = {
   attributes: {}, images: [],
 };
 
-/**
- * Props:
- *  variants        - array of variant objects
- *  options         - array of option objects
- *  basePrice       - number
- *  baseMrp         - number
- *  platformOptions - array
- *  platformValues  - map { optionId -> [{name, valueCode, colorHex, imageUrl}] }
- *  onChange        - (variants) => void
- *  onOptionsChange - (options) => void
- *  onOptionSearch  - (query) => void
- *  onValueSearch   - (optionId, query) => void
- */
+const FieldLabel = ({ children }) => (
+  <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{children}</span>
+);
+
+const SmallInput = ({ className = '', ...props }) => (
+  <input
+    className={`w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20 ${className}`}
+    {...props}
+  />
+);
+
+const SmallSelect = ({ className = '', children, ...props }) => (
+  <select
+    className={`w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 focus:border-[var(--admin-blue)] focus:outline-none ${className}`}
+    {...props}
+  >
+    {children}
+  </select>
+);
+
 const VariantBuilder = ({
   variants = [],
   options = [],
@@ -44,7 +51,6 @@ const VariantBuilder = ({
   onChange,
   onOptionsChange,
   onOptionSearch,
-  onValueSearch,
 }) => {
   const productStatuses = useDropdownOptions('product-statuses');
   const [optionSearch, setOptionSearch] = useState('');
@@ -52,18 +58,18 @@ const VariantBuilder = ({
   const [activeOptionIdx, setActiveOptionIdx] = useState(null);
   const [expandedVariants, setExpandedVariants] = useState(new Set());
   const [uploadingVariants, setUploadingVariants] = useState(new Set());
+  const [bulkValues, setBulkValues] = useState({});
   const optionSearchRef = useRef(null);
   const dragOptionIdx = useRef(null);
   const dragVariantIdx = useRef(null);
+
   useEffect(() => { onOptionSearch?.(optionSearch); }, [optionSearch, onOptionSearch]);
 
-  // ── Step progress ───────────────────────────────────────────────────────────
   const step = options.length === 0 ? 1
     : options.some((o) => !(o.values || []).length) ? 2
     : variants.length === 0 ? 3
     : 4;
 
-  // ── Option filtering ────────────────────────────────────────────────────────
   const existingNames = options.map((o) => o.name.toLowerCase());
   const filteredPlatformOptions = platformOptions.filter(
     (po) =>
@@ -71,7 +77,6 @@ const VariantBuilder = ({
       (!optionSearch || (po.name || '').toLowerCase().includes(optionSearch.toLowerCase())),
   );
 
-  // ── Add / remove / update options ───────────────────────────────────────────
   const addOptionFromPlatform = (po) => {
     onOptionsChange([...options, {
       name: po.name, platformOptionId: po._id || po.id,
@@ -105,7 +110,6 @@ const VariantBuilder = ({
     return platformValues[opt.platformOptionId] || [];
   };
 
-  // ── Option drag ─────────────────────────────────────────────────────────────
   const handleOptionDragStart = (idx) => { dragOptionIdx.current = idx; };
   const handleOptionDragOver = (e, idx) => {
     e.preventDefault();
@@ -117,7 +121,6 @@ const VariantBuilder = ({
     onOptionsChange(next.map((o, i) => ({ ...o, sortOrder: i })));
   };
 
-  // ── Combination generation ──────────────────────────────────────────────────
   const generateCombinations = useCallback(() => {
     if (!options.length || options.some((o) => !(o.values || []).length)) return;
     const cartesian = (axes) => {
@@ -134,7 +137,6 @@ const VariantBuilder = ({
     }));
   }, [options, variants, basePrice, baseMrp, onChange]);
 
-  // ── Variant editing ─────────────────────────────────────────────────────────
   const updateVariant = (idx, field, value) =>
     onChange(variants.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
   const removeVariant = (idx) => {
@@ -147,10 +149,9 @@ const VariantBuilder = ({
     onChange(next);
   };
   const setDefaultVariant = (idx) => onChange(variants.map((v, i) => ({ ...v, isDefault: i === idx })));
-  const toggleExpandVariant = (idx) =>
+  const toggleExpand = (idx) =>
     setExpandedVariants((prev) => { const n = new Set(prev); if (n.has(idx)) n.delete(idx); else n.add(idx); return n; });
 
-  // ── Variant image upload (multi) ────────────────────────────────────────────
   const uploadVariantImages = async (idx, files) => {
     if (!files || !files.length) return;
     const current = variants[idx]?.images || [];
@@ -168,10 +169,8 @@ const VariantBuilder = ({
       setUploadingVariants((prev) => { const n = new Set(prev); n.delete(idx); return n; });
     }
   };
-
   const removeVariantImage = (vIdx, imgIdx) =>
     updateVariant(vIdx, 'images', variants[vIdx].images.filter((_, i) => i !== imgIdx));
-
   const addVariantImageUrl = (idx, url) => {
     if (!url.trim()) return;
     const current = variants[idx]?.images || [];
@@ -179,7 +178,6 @@ const VariantBuilder = ({
     updateVariant(idx, 'images', [...current, url.trim()]);
   };
 
-  // ── Variant drag ─────────────────────────────────────────────────────────────
   const handleVariantDragStart = (idx) => { dragVariantIdx.current = idx; };
   const handleVariantDragOver = (e, idx) => {
     e.preventDefault();
@@ -191,216 +189,258 @@ const VariantBuilder = ({
     onChange(next.map((v, i) => ({ ...v, sortOrder: i })));
   };
 
-  // ── Bulk actions ─────────────────────────────────────────────────────────────
-  const applyToAll = (field, value) => onChange(variants.map((v) => ({ ...v, [field]: value })));
+  const applyToAll = (field, value) => {
+    if (value === '' || value === undefined) return;
+    onChange(variants.map((v) => ({ ...v, [field]: Number(value) })));
+    toast.success(`Applied to all ${variants.length} variants`);
+  };
 
   const totalCombinations = options.every((o) => (o.values || []).length > 0) && options.length
     ? options.reduce((acc, o) => acc * (o.values || []).length, 1)
     : 0;
 
-  // ── Step guide labels ─────────────────────────────────────────────────────────
   const STEPS = [
     { n: 1, label: 'Add Options' },
-    { n: 2, label: 'Select Values' },
-    { n: 3, label: 'Generate Variants' },
-    { n: 4, label: 'Prices & Images' },
+    { n: 2, label: 'Pick Values' },
+    { n: 3, label: 'Generate' },
+    { n: 4, label: 'Edit Prices' },
   ];
 
   return (
     <div className="space-y-6">
 
-      {/* ── Step guide ─────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-0 mb-2">
+      {/* ── Step Guide ──────────────────────────────────────────────── */}
+      <div className="flex items-center">
         {STEPS.map((s, i) => (
           <React.Fragment key={s.n}>
-            <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ minWidth: 64 }}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0
-                ${step > s.n ? 'bg-[var(--admin-success)] text-white' : step === s.n ? 'bg-[var(--admin-navy)] text-white' : 'bg-[var(--admin-canvas)] text-[var(--admin-muted)] border border-[var(--admin-line)]'}`}>
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors
+                ${step > s.n
+                  ? 'bg-emerald-500 text-white'
+                  : step === s.n
+                    ? 'bg-[var(--admin-blue)] text-white ring-4 ring-[var(--admin-blue)]/20'
+                    : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>
                 {step > s.n ? '✓' : s.n}
               </div>
-              <span className={`text-[10px] text-center leading-tight font-${step >= s.n ? '600' : '400'}
-                ${step > s.n ? 'text-[var(--admin-success)]' : step === s.n ? 'text-[var(--admin-navy)]' : 'text-[var(--admin-muted)]'}`}>
+              <span className={`text-[10px] font-medium text-center whitespace-nowrap
+                ${step > s.n ? 'text-emerald-600' : step === s.n ? 'text-[var(--admin-blue)]' : 'text-gray-400'}`}>
                 {s.label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mt-3 ${step > s.n ? 'bg-[var(--admin-success)]' : 'bg-[var(--admin-line)]'}`} />
+              <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${step > s.n ? 'bg-emerald-400' : 'bg-gray-200'}`} />
             )}
           </React.Fragment>
         ))}
       </div>
 
-      {/* ── Option Axes ─────────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-[var(--admin-ink)]">Variant Options</h4>
-          <p className="text-xs text-[var(--admin-muted)]">Search from option masters · drag to reorder</p>
+      {/* ── Option Axes ──────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-800">Variant Options</p>
+          <p className="text-xs text-gray-400">Drag to reorder</p>
         </div>
 
-        <div className="space-y-2">
-          {options.map((option, optIdx) => {
-            const pValues = getPlatformValuesForOption(optIdx);
-            const selectedValues = new Set(option.values || []);
-            return (
-              <div key={optIdx} draggable
-                onDragStart={() => handleOptionDragStart(optIdx)}
-                onDragOver={(e) => handleOptionDragOver(e, optIdx)}
-                onDragEnd={() => { dragOptionIdx.current = null; }}
-                className="border border-[var(--admin-line)] rounded-lg p-3 bg-[var(--admin-surface-soft)] cursor-grab active:cursor-grabbing select-none"
-              >
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <MdDragIndicator className="text-[var(--admin-muted)] text-base flex-shrink-0" />
-                  <span className="text-sm font-semibold text-[var(--admin-ink)] flex-1 min-w-0">{option.name}</span>
-                  <select
-                    className="text-xs border border-[var(--admin-line)] rounded px-1.5 py-1 bg-white focus:outline-none focus:border-[var(--admin-blue)]"
-                    value={option.displayType || 'button'}
-                    onChange={(e) => updateOption(optIdx, 'displayType', e.target.value)}
-                  >
-                    {DISPLAY_TYPES.map((dt) => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
-                  </select>
-                  <label className="flex items-center gap-1 text-xs text-[var(--admin-muted)] cursor-pointer select-none whitespace-nowrap">
-                    <input type="checkbox" className="w-3 h-3 accent-[var(--admin-navy)]" checked={Boolean(option.required)} onChange={(e) => updateOption(optIdx, 'required', e.target.checked)} />
-                    Required
-                  </label>
-                  <button type="button" onClick={() => setActiveOptionIdx(activeOptionIdx === optIdx ? null : optIdx)} className="text-xs text-[var(--admin-blue)] hover:underline whitespace-nowrap">
-                    {activeOptionIdx === optIdx ? 'Done' : '+ Values'}
-                  </button>
-                  <button type="button" onClick={() => removeOption(optIdx)} className="text-xs text-[var(--admin-danger)] hover:opacity-80">Remove</button>
-                </div>
+        {options.length === 0 && (
+          <div className="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center">
+            <p className="text-sm font-medium text-gray-500">No options added yet</p>
+            <p className="text-xs text-gray-400 mt-1">Search and add an option below (Color, Size, RAM…)</p>
+          </div>
+        )}
 
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {(option.values || []).map((val) => {
-                    const hex = option.valueCodes?.[val];
-                    const pv = pValues.find((p) => p.name === val);
-                    const displayHex = hex || pv?.colorHex || '';
-                    return (
-                      <span key={val} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white border border-[var(--admin-line)] text-[var(--admin-ink)] text-xs rounded-full">
-                        {option.displayType === 'color_swatch' && displayHex && (
-                          <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: displayHex }} />
-                        )}
-                        {option.displayType === 'thumbnail' && (pv?.imageUrl || option.valueCodes?.[val]) && (
-                          <img src={pv?.imageUrl || option.valueCodes?.[val]} alt={val} className="w-4 h-4 rounded object-cover flex-shrink-0" />
-                        )}
-                        {val}
-                        <button type="button" onClick={() => removeValueFromOption(optIdx, val)} className="hover:text-[var(--admin-danger)] leading-none text-[var(--admin-muted)]">×</button>
-                      </span>
-                    );
-                  })}
-                  {!(option.values || []).length && <span className="text-xs text-[var(--admin-muted)] italic">No values selected — click "+ Values" to add</span>}
-                </div>
+        {options.map((option, optIdx) => {
+          const pValues = getPlatformValuesForOption(optIdx);
+          const selectedValues = new Set(option.values || []);
+          const isOpen = activeOptionIdx === optIdx;
+          return (
+            <div key={optIdx}
+              draggable
+              onDragStart={() => handleOptionDragStart(optIdx)}
+              onDragOver={(e) => handleOptionDragOver(e, optIdx)}
+              onDragEnd={() => { dragOptionIdx.current = null; }}
+              className="rounded-xl border border-gray-200 bg-white overflow-hidden"
+            >
+              {/* Option header */}
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100">
+                <MdDragIndicator className="text-gray-300 text-lg flex-shrink-0 cursor-grab" />
+                <span className="text-sm font-semibold text-gray-800 flex-1 min-w-0">{option.name}</span>
+                <select
+                  className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-[var(--admin-blue)]"
+                  value={option.displayType || 'button'}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => updateOption(optIdx, 'displayType', e.target.value)}
+                >
+                  {DISPLAY_TYPES.map((dt) => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
+                </select>
+                <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer whitespace-nowrap">
+                  <input type="checkbox" className="w-3 h-3 accent-[var(--admin-blue)]"
+                    checked={Boolean(option.required)}
+                    onChange={(e) => updateOption(optIdx, 'required', e.target.checked)} />
+                  Required
+                </label>
+                <button type="button"
+                  onClick={() => setActiveOptionIdx(isOpen ? null : optIdx)}
+                  className="text-xs font-medium text-[var(--admin-blue)] hover:underline whitespace-nowrap px-1">
+                  {isOpen ? 'Done' : '+ Values'}
+                </button>
+                <button type="button" onClick={() => removeOption(optIdx)}
+                  className="text-xs text-red-400 hover:text-red-600 font-medium px-1">
+                  Remove
+                </button>
+              </div>
 
-                {activeOptionIdx === optIdx && (
-                  <div className="border-t border-[var(--admin-line)] pt-3 mt-1 space-y-3">
-                    {pValues.length > 0 && (
-                      <div>
-                        <p className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide mb-1.5">Available values — click to toggle</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {pValues.map((pv) => {
-                            const isSelected = selectedValues.has(pv.name);
-                            return (
-                              <button key={pv.name} type="button"
-                                onClick={() => { if (isSelected) removeValueFromOption(optIdx, pv.name); else addValueToOption(optIdx, pv.name, pv.colorHex || ''); }}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border transition-colors ${isSelected ? 'bg-[var(--admin-gold)] text-[var(--admin-navy)] border-[var(--admin-gold)]' : 'bg-white text-[var(--admin-ink)] border-[var(--admin-line)] hover:border-[var(--admin-gold)]'}`}
-                              >
-                                {option.displayType === 'color_swatch' && pv.colorHex && (
-                                  <span className="w-3 h-3 rounded-full border border-white/50 flex-shrink-0" style={{ backgroundColor: pv.colorHex }} />
-                                )}
-                                {option.displayType === 'thumbnail' && pv.imageUrl && (
-                                  <img src={pv.imageUrl} alt={pv.name} className="w-4 h-4 rounded object-cover flex-shrink-0" />
-                                )}
-                                {pv.name}
-                                {isSelected && <span className="leading-none font-bold">✓</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {!pValues.length && (
-                      <p className="text-xs text-[var(--admin-warning)] bg-[var(--admin-amber-soft)] border border-[var(--admin-warning)]/20 rounded px-3 py-2">
-                        No active values found for this option master. Add values in Product Option Values first.
-                      </p>
-                    )}
-                  </div>
+              {/* Selected values */}
+              <div className="px-3 py-2.5 flex flex-wrap gap-1.5 min-h-[40px]">
+                {(option.values || []).map((val) => {
+                  const hex = option.valueCodes?.[val];
+                  const pv = pValues.find((p) => p.name === val);
+                  const displayHex = hex || pv?.colorHex || '';
+                  return (
+                    <span key={val}
+                      className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-gray-100 border border-gray-200 text-gray-700 text-xs rounded-full">
+                      {option.displayType === 'color_swatch' && displayHex && (
+                        <span className="w-3 h-3 rounded-full border border-white/50 flex-shrink-0" style={{ backgroundColor: displayHex }} />
+                      )}
+                      {val}
+                      <button type="button" onClick={() => removeValueFromOption(optIdx, val)}
+                        className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-500 text-gray-400 transition-colors">
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+                {!(option.values || []).length && (
+                  <span className="text-xs text-gray-400 italic">No values selected — click &quot;+ Values&quot;</span>
                 )}
               </div>
-            );
-          })}
-        </div>
 
-        {/* Search + add option */}
-        <div className="relative mt-3" ref={optionSearchRef}>
-          <input
-            type="text"
-            className="w-full border border-[var(--admin-line)] rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 focus:border-[var(--admin-blue)] bg-[var(--admin-field)]"
-            placeholder="Search option master (Color, Size, RAM…)"
-            value={optionSearch}
-            onChange={(e) => { setOptionSearch(e.target.value); setShowOptionDropdown(true); }}
-            onFocus={() => setShowOptionDropdown(true)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (filteredPlatformOptions.length === 1) addOptionFromPlatform(filteredPlatformOptions[0]); } }}
-          />
+              {/* Value picker panel */}
+              {isOpen && (
+                <div className="border-t border-gray-100 px-3 py-3 bg-blue-50/50 space-y-3">
+                  {pValues.length > 0 ? (
+                    <>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Click values to toggle</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {pValues.map((pv) => {
+                          const isSelected = selectedValues.has(pv.name);
+                          return (
+                            <button key={pv.name} type="button"
+                              onClick={() => { if (isSelected) removeValueFromOption(optIdx, pv.name); else addValueToOption(optIdx, pv.name, pv.colorHex || ''); }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border font-medium transition-all
+                                ${isSelected
+                                  ? 'bg-[var(--admin-blue)] text-white border-[var(--admin-blue)] shadow-sm'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)]'}`}>
+                              {option.displayType === 'color_swatch' && pv.colorHex && (
+                                <span className="w-3 h-3 rounded-full border border-white/40 flex-shrink-0" style={{ backgroundColor: pv.colorHex }} />
+                              )}
+                              {pv.name}
+                              {isSelected && <span className="text-[10px]">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      No values found for this option. Add values in Product Option Values first.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Search & add option */}
+        <div className="relative" ref={optionSearchRef}>
+          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 focus-within:border-[var(--admin-blue)] focus-within:ring-2 focus-within:ring-[var(--admin-blue)]/10 transition-all">
+            <MdAdd className="text-gray-400 flex-shrink-0" size={18} />
+            <input
+              type="text"
+              className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+              placeholder="Search option master (Color, Size, RAM…)"
+              value={optionSearch}
+              onChange={(e) => { setOptionSearch(e.target.value); setShowOptionDropdown(true); }}
+              onFocus={() => setShowOptionDropdown(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (filteredPlatformOptions.length === 1) addOptionFromPlatform(filteredPlatformOptions[0]); } }}
+            />
+          </div>
           {showOptionDropdown && (filteredPlatformOptions.length > 0 || optionSearch.trim()) && (
-            <div className="absolute z-30 w-full mt-1 bg-white border border-[var(--admin-line)] rounded-lg shadow-lg max-h-52 overflow-y-auto">
+            <div className="absolute z-30 w-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
               {filteredPlatformOptions.map((po) => (
                 <button key={po._id || po.id} type="button" onClick={() => addOptionFromPlatform(po)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-[var(--admin-surface-soft)] border-b border-[var(--admin-line)] last:border-0">
-                  <span className="font-medium text-[var(--admin-ink)]">{po.name}</span>
-                  <span className="text-xs text-[var(--admin-muted)] capitalize">{(po.displayType || 'button').replace('_', ' ')}</span>
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors">
+                  <span className="font-medium text-gray-800">{po.name}</span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full capitalize">{(po.displayType || 'button').replace('_', ' ')}</span>
                 </button>
               ))}
               {optionSearch.trim() && !filteredPlatformOptions.length && (
-                <div className="px-3 py-2 text-sm text-[var(--admin-muted)]">No active option master found.</div>
+                <div className="px-4 py-3 text-sm text-gray-400 text-center">No matching option found</div>
               )}
             </div>
           )}
           {showOptionDropdown && <div className="fixed inset-0 z-20" onClick={() => setShowOptionDropdown(false)} />}
         </div>
 
-        {/* Generate button */}
+        {/* Generate CTA */}
         {totalCombinations > 0 && (
-          <div className="mt-4 rounded-xl p-4 flex items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, var(--admin-navy), #2f2882)' }}>
+          <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2f2882)' }}>
             <div>
-              <p className="text-white text-sm font-bold">✨ Generate {totalCombinations} Variant Combination{totalCombinations !== 1 ? 's' : ''}</p>
+              <p className="text-white text-sm font-bold">Generate {totalCombinations} Variant Combination{totalCombinations !== 1 ? 's' : ''}</p>
               <p className="text-white/60 text-xs mt-0.5">
                 {options.map((o) => `${o.name} (${(o.values || []).length})`).join(' × ')}
               </p>
             </div>
             <button type="button" onClick={generateCombinations}
-              className="flex-shrink-0 px-4 py-2 bg-[var(--admin-gold)] text-[var(--admin-navy)] text-sm font-bold rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors">
-              Generate Now →
+              className="flex-shrink-0 px-5 py-2 bg-yellow-400 text-blue-900 text-sm font-bold rounded-lg hover:bg-yellow-300 transition-colors whitespace-nowrap">
+              Generate →
             </button>
           </div>
         )}
       </div>
 
-      {/* ── Bulk Actions ─────────────────────────────────────────────────── */}
+      {/* ── Bulk Actions ──────────────────────────────────────────────── */}
       {variants.length > 0 && (
-        <div className="flex flex-wrap gap-3 items-center p-3 bg-[var(--admin-surface-soft)] rounded-lg border border-[var(--admin-line)]">
-          <span className="text-xs font-semibold text-[var(--admin-ink)]">Apply to all:</span>
-          {[
-            { field: 'price', label: 'Price ₹' },
-            { field: 'mrp', label: 'MRP ₹' },
-            { field: 'salePrice', label: 'Sale ₹' },
-            { field: 'stock', label: 'Stock' },
-            { field: 'gstRate', label: 'GST %' },
-          ].map(({ field, label }) => (
-            <div key={field} className="flex items-center gap-1">
-              <input type="number" min={0} className="w-20 border border-[var(--admin-line)] rounded-md px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--admin-blue)]" placeholder={label} onChange={(e) => applyToAll(field, Number(e.target.value))} />
-              <span className="text-xs text-[var(--admin-muted)]">{label}</span>
-            </div>
-          ))}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Apply to All Variants</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[
+              { field: 'price', label: 'Price (₹)', placeholder: '0' },
+              { field: 'mrp', label: 'MRP (₹)', placeholder: '0' },
+              { field: 'salePrice', label: 'Sale Price (₹)', placeholder: '0' },
+              { field: 'stock', label: 'Stock', placeholder: '0' },
+              { field: 'gstRate', label: 'GST (%)', placeholder: '18' },
+            ].map(({ field, label, placeholder }) => (
+              <div key={field} className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+                <div className="flex gap-1">
+                  <SmallInput
+                    type="number"
+                    min={0}
+                    placeholder={placeholder}
+                    value={bulkValues[field] ?? ''}
+                    onChange={(e) => setBulkValues((prev) => ({ ...prev, [field]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { applyToAll(field, bulkValues[field]); setBulkValues((prev) => ({ ...prev, [field]: '' })); } }}
+                  />
+                  <button type="button"
+                    onClick={() => { applyToAll(field, bulkValues[field]); setBulkValues((prev) => ({ ...prev, [field]: '' })); }}
+                    className="flex-shrink-0 rounded-md border border-gray-200 bg-white px-2 text-xs text-[var(--admin-blue)] hover:bg-[var(--admin-blue)] hover:text-white transition-colors">
+                    Set
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">Type a value and click Set or press Enter to apply to all variants.</p>
         </div>
       )}
 
-      {/* ── Variants Table ───────────────────────────────────────────────── */}
+      {/* ── Variant Cards ──────────────────────────────────────────────── */}
       {variants.length > 0 && (
-        <div className="space-y-1.5 overflow-x-auto">
-          <div className="hidden sm:grid gap-1 px-2 py-1 text-[10px] font-semibold text-[var(--admin-muted)] uppercase tracking-wide"
-            style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto', minWidth: '640px' }}>
-            <span /><span />
-            <span>SKU</span><span>Variant</span>
-            <span>Price ₹</span><span>MRP ₹</span><span>Sale ₹</span>
-            <span>Stock</span><span>GST %</span><span>Status</span><span />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-800">{variants.length} Variant{variants.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400">Drag to reorder · click row to expand</p>
           </div>
 
           {variants.map((variant, idx) => {
@@ -408,107 +448,191 @@ const VariantBuilder = ({
             const hasImages = imageCount > 0;
             const isExpanded = expandedVariants.has(idx);
             const isUploading = uploadingVariants.has(idx);
+            const variantLabel = variant.attributes && Object.keys(variant.attributes).length
+              ? Object.values(variant.attributes).join(' / ')
+              : variant.title || `Variant ${idx + 1}`;
 
             return (
-              <div key={idx} draggable
+              <div key={idx}
+                draggable
                 onDragStart={() => handleVariantDragStart(idx)}
                 onDragOver={(e) => handleVariantDragOver(e, idx)}
                 onDragEnd={() => { dragVariantIdx.current = null; }}
-                className={`rounded-lg border transition-colors ${variant.isDefault ? 'border-[var(--admin-navy)] bg-[var(--admin-blue-soft)]' : !hasImages ? 'border-[var(--admin-warning)]/50 bg-[var(--admin-amber-soft)]/40' : 'border-[var(--admin-line)] bg-white hover:border-[var(--admin-line-strong)]'}`}
+                className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm
+                  ${variant.isDefault ? 'border-[var(--admin-blue)] bg-blue-50/30' : 'border-gray-200 bg-white'}`}
               >
-                {/* Main row */}
-                <div className="grid gap-1 items-center px-2 py-1.5"
-                  style={{ gridTemplateColumns: '1.25rem 1rem 1fr 1.2fr 5.5rem 5.5rem 5.5rem 4.5rem 4rem 5rem auto', minWidth: '640px' }}>
-                  <MdDragIndicator className="text-[var(--admin-muted)] text-sm cursor-grab" />
-                  <button type="button" title="Set as default" onClick={() => setDefaultVariant(idx)}
-                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${variant.isDefault ? 'bg-[var(--admin-navy)] border-[var(--admin-navy)]' : 'border-[var(--admin-line)] hover:border-[var(--admin-navy)]'}`}
+                {/* Collapsed row */}
+                <div
+                  className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+                  onClick={() => toggleExpand(idx)}
+                >
+                  <MdDragIndicator className="text-gray-300 flex-shrink-0 cursor-grab text-base" onClick={(e) => e.stopPropagation()} />
+
+                  {/* Default radio */}
+                  <button type="button" title="Set as default"
+                    onClick={(e) => { e.stopPropagation(); setDefaultVariant(idx); }}
+                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors
+                      ${variant.isDefault ? 'bg-[var(--admin-blue)] border-[var(--admin-blue)]' : 'border-gray-300 hover:border-[var(--admin-blue)]'}`}
                   />
-                  <input type="text" className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)] bg-white" value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} placeholder="SKU" />
-                  <span className="text-xs text-[var(--admin-ink)] truncate px-1">
-                    {variant.attributes && Object.keys(variant.attributes).length ? Object.values(variant.attributes).join(' / ') : variant.title || '—'}
-                  </span>
-                  <input type="number" min={0} className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)] bg-white" value={variant.price ?? ''} onChange={(e) => updateVariant(idx, 'price', Number(e.target.value))} placeholder="0" />
-                  <input type="number" min={0} className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full bg-white" value={variant.mrp ?? ''} onChange={(e) => updateVariant(idx, 'mrp', Number(e.target.value))} placeholder="0" />
-                  <input type="number" min={0} className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full bg-white" value={variant.salePrice ?? ''} onChange={(e) => updateVariant(idx, 'salePrice', Number(e.target.value))} placeholder="0" />
-                  <input type="number" min={0} className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full bg-white" value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
-                  <input type="number" min={0} max={100} className="border border-[var(--admin-line)] rounded px-1.5 py-1 text-xs w-full bg-white" value={variant.gstRate ?? 18} onChange={(e) => updateVariant(idx, 'gstRate', Number(e.target.value))} />
-                  <select className="border border-[var(--admin-line)] rounded px-1 py-1 text-xs w-full bg-white" value={variant.status || 'active'} onChange={(e) => updateVariant(idx, 'status', e.target.value)}>
-                    {productStatuses.options.filter((o) => ['active', 'inactive'].includes(o.value)).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Image button — gold if has images, amber warning if none */}
-                    <button type="button" title={hasImages ? `${imageCount} image${imageCount > 1 ? 's' : ''}` : 'No images — click to add'} onClick={() => toggleExpandVariant(idx)}
-                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors font-semibold ${isExpanded
-                        ? 'bg-[var(--admin-navy)] text-white border-[var(--admin-navy)]'
-                        : hasImages
-                          ? 'bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] border-[var(--admin-gold)]/40'
-                          : 'bg-[var(--admin-amber-soft)] text-[var(--admin-warning)] border-[var(--admin-warning)]/40'}`}>
-                      {hasImages ? `🖼 ${imageCount}` : '🖼 !'}
+
+                  {/* Variant label */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{variantLabel}</p>
+                    {variant.sku && <p className="text-xs text-gray-400 truncate">SKU: {variant.sku}</p>}
+                  </div>
+
+                  {/* Quick stats */}
+                  <div className="hidden sm:flex items-center gap-4 flex-shrink-0">
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Price</p>
+                      <p className="text-xs font-semibold text-gray-700">₹{variant.price ?? '—'}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Stock</p>
+                      <p className="text-xs font-semibold text-gray-700">{variant.stock ?? '—'}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Status</p>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
+                        ${variant.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {variant.status || 'active'}
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Images</p>
+                      <p className={`text-xs font-semibold ${hasImages ? 'text-[var(--admin-blue)]' : 'text-amber-500'}`}>
+                        {hasImages ? `${imageCount}/${MAX_VARIANT_IMAGES}` : 'None'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" title="Duplicate"
+                      onClick={() => duplicateVariant(idx)}
+                      className="rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors">
+                      ⧉
                     </button>
-                    <button type="button" title="Duplicate" onClick={() => duplicateVariant(idx)} className="text-xs px-1.5 py-0.5 rounded border border-[var(--admin-line)] text-[var(--admin-muted)] hover:border-[var(--admin-navy)] hover:text-[var(--admin-navy)]">⧉</button>
-                    <button type="button" onClick={() => removeVariant(idx)} className="text-[var(--admin-danger)] hover:opacity-70 text-sm leading-none">✕</button>
+                    <button type="button"
+                      onClick={() => removeVariant(idx)}
+                      className="rounded border border-transparent px-1 py-0.5 text-sm text-red-400 hover:text-red-600 transition-colors">
+                      ✕
+                    </button>
+                    <span className={`text-gray-300 text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▾</span>
                   </div>
                 </div>
 
                 {/* Expanded panel */}
                 {isExpanded && (
-                  <div className="border-t border-[var(--admin-line)] px-3 py-3 space-y-4 bg-[var(--admin-surface-soft)] rounded-b-lg">
-                    {/* Image section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide font-semibold flex items-center gap-1.5">
-                          <FaImage size={10} /> Variant Images ({imageCount}/{MAX_VARIANT_IMAGES})
-                        </span>
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 space-y-5">
+                    {/* Core fields grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <FieldLabel>SKU</FieldLabel>
+                        <SmallInput value={variant.sku || ''} onChange={(e) => updateVariant(idx, 'sku', e.target.value)} placeholder="SKU" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Price (₹)</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.price ?? ''} onChange={(e) => updateVariant(idx, 'price', Number(e.target.value))} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>MRP (₹)</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.mrp ?? ''} onChange={(e) => updateVariant(idx, 'mrp', Number(e.target.value))} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Sale Price (₹)</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.salePrice ?? ''} onChange={(e) => updateVariant(idx, 'salePrice', Number(e.target.value))} placeholder="0" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Stock</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>GST (%)</FieldLabel>
+                        <SmallInput type="number" min={0} max={100} value={variant.gstRate ?? 18} onChange={(e) => updateVariant(idx, 'gstRate', Number(e.target.value))} />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Status</FieldLabel>
+                        <SmallSelect value={variant.status || 'active'} onChange={(e) => updateVariant(idx, 'status', e.target.value)}>
+                          {productStatuses.options.filter((o) => ['active', 'inactive'].includes(o.value)).map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </SmallSelect>
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Barcode (EAN/UPC)</FieldLabel>
+                        <SmallInput value={variant.barcode || ''} onChange={(e) => updateVariant(idx, 'barcode', e.target.value)} placeholder="Optional" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Weight (kg)</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.weight || ''} onChange={(e) => updateVariant(idx, 'weight', Number(e.target.value))} />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Title Override</FieldLabel>
+                        <SmallInput value={variant.title || ''} onChange={(e) => updateVariant(idx, 'title', e.target.value)} placeholder="Auto from attributes" />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Sort Order</FieldLabel>
+                        <SmallInput type="number" min={0} value={variant.sortOrder ?? idx} onChange={(e) => updateVariant(idx, 'sortOrder', Number(e.target.value))} />
+                      </div>
+                    </div>
+
+                    {/* Images section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-gray-700">Variant Images</p>
+                        <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">{imageCount}/{MAX_VARIANT_IMAGES}</span>
                         {!hasImages && (
-                          <span className="text-[10px] text-[var(--admin-warning)] bg-[var(--admin-amber-soft)] px-2 py-0.5 rounded-full border border-[var(--admin-warning)]/30 font-semibold">No images yet</span>
+                          <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-semibold">No images</span>
                         )}
                       </div>
 
-                      <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-[var(--admin-blue-soft)] border border-[var(--admin-blue)]/20 mb-3">
-                        <FaInfoCircle className="text-[var(--admin-blue)] mt-0.5 flex-shrink-0" size={11} />
-                        <p className="text-xs text-[var(--admin-ink)]/75 leading-relaxed">
-                          These images replace the product gallery when a customer selects the <strong>{variant.attributes ? Object.values(variant.attributes).join(' / ') : variant.title || 'this variant'}</strong>.
-                        </p>
-                      </div>
+                      {hasImages && (
+                        <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+                          <FaInfoCircle className="text-blue-400 flex-shrink-0" size={11} />
+                          <p className="text-xs text-blue-700">
+                            These images replace the product gallery for <strong>{variantLabel}</strong>.
+                          </p>
+                        </div>
+                      )}
 
-                      <div className="flex flex-wrap gap-2 items-start">
+                      <div className="flex flex-wrap gap-2">
                         {(variant.images || []).map((img, imgIdx) => (
-                          <div key={imgIdx} className="relative w-16 h-16 rounded border border-[var(--admin-line)] overflow-hidden group flex-shrink-0 bg-[var(--admin-surface-soft)]">
-                            <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIxIDMuMUgzQzIgMy4xIDEgNC4xIDEgNS4xdjEzLjhDMSAxOS45IDIgMjAuOSAzIDIwLjloMThDMjIgMjAuOSAyMyAxOS45IDIzIDE4LjlWNS4xQzIzIDQuMSAyMiAzLjEgMjEgMy4xem0tMSAxNS44SDR2LTJsMy0zIDMuNSAzLjUgNC41LTUuNSA1IDcuNXptMC05LjZjMCAuOC0uNyAxLjUtMS41IDEuNVM1LjQgMTAuMSA1LjQgOS4zcy43LTEuNSAxLjUtMS41IDEuNS43IDEuNSAxLjV6Ii8+PC9zdmc+'; }}
+                          <div key={imgIdx} className="relative w-16 h-16 rounded-lg border border-gray-200 overflow-hidden group flex-shrink-0 bg-gray-100">
+                            <img src={img} alt="" className="w-full h-full object-cover"
+                              onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIxIDNIM0MyIDMgMSA0IDEgNXYxNGMwIDEgMSAyIDIgMmgxOGMxIDAgMi0xIDItMlY1YzAtMS0xLTItMi0yem0tMSAxNUg0di0ybDMtMyAzLjUgMy41IDQuNS01LjUgNSA3LjV6bTAtOS42YzAgLjgtLjcgMS41LTEuNSAxLjVTNS40IDkuMiA1LjQgOC40IDYuMSA2LjkgNi45IDYuOXMxLjUuNyAxLjUgMS41eiIvPjwvc3ZnPg=='; }}
                             />
                             {imgIdx === 0 && (
                               <div className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-[8px] font-bold px-1 rounded">Cover</div>
                             )}
                             <button type="button" onClick={() => removeVariantImage(idx, imgIdx)}
-                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[var(--admin-danger)] text-white text-[9px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              ✕
+                            </button>
                           </div>
                         ))}
 
-                        {/* Upload slots */}
                         {imageCount < MAX_VARIANT_IMAGES && (
-                          <label className={`w-16 h-16 rounded border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors flex-shrink-0 ${isUploading ? 'border-[var(--admin-line)] opacity-50 pointer-events-none' : 'border-[var(--admin-line)] hover:border-[var(--admin-gold)] text-[var(--admin-muted)] hover:text-[var(--admin-gold)]'}`}>
-                            {isUploading ? <span className="text-[10px] text-[var(--admin-muted)]">⏳</span> : <><MdAdd size={20} /><span className="text-[9px] mt-0.5">Upload</span></>}
+                          <label className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-0.5 cursor-pointer flex-shrink-0 transition-colors
+                            ${isUploading ? 'border-gray-200 opacity-50 pointer-events-none' : 'border-gray-200 hover:border-[var(--admin-blue)] text-gray-300 hover:text-[var(--admin-blue)]'}`}>
+                            {isUploading
+                              ? <span className="text-[10px] text-gray-400">⏳</span>
+                              : <><MdAdd size={20} /><span className="text-[9px]">Upload</span></>}
                             <input type="file" accept="image/*" multiple className="hidden"
                               onChange={(e) => uploadVariantImages(idx, e.target.files)} />
                           </label>
                         )}
                       </div>
 
-                      {/* URL paste */}
                       {imageCount < MAX_VARIANT_IMAGES && (
-                        <div className="flex gap-2 mt-2">
-                          <input type="text" className="flex-1 border border-[var(--admin-line)] rounded px-2 py-1 text-xs focus:outline-none focus:border-[var(--admin-blue)] bg-white" placeholder="Or paste image URL and press Enter…"
-                            onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); addVariantImageUrl(idx, e.target.value); e.target.value = ''; } }} />
+                        <div className="flex gap-2">
+                          <SmallInput
+                            type="text"
+                            placeholder="Or paste image URL and press Enter…"
+                            onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); addVariantImageUrl(idx, e.target.value); e.target.value = ''; } }}
+                          />
                         </div>
                       )}
-                    </div>
-
-                    {/* Extra fields */}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <label className="flex flex-col gap-1"><span className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide">Barcode</span><input type="text" className="border border-[var(--admin-line)] rounded px-2 py-1 text-xs bg-white" value={variant.barcode || ''} onChange={(e) => updateVariant(idx, 'barcode', e.target.value)} placeholder="EAN/UPC" /></label>
-                      <label className="flex flex-col gap-1"><span className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide">Weight (kg)</span><input type="number" min={0} className="border border-[var(--admin-line)] rounded px-2 py-1 text-xs bg-white" value={variant.weight || ''} onChange={(e) => updateVariant(idx, 'weight', Number(e.target.value))} /></label>
-                      <label className="flex flex-col gap-1"><span className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide">Title Override</span><input type="text" className="border border-[var(--admin-line)] rounded px-2 py-1 text-xs bg-white" value={variant.title || ''} onChange={(e) => updateVariant(idx, 'title', e.target.value)} /></label>
-                      <label className="flex flex-col gap-1"><span className="text-[10px] text-[var(--admin-muted)] uppercase tracking-wide">Sort Order</span><input type="number" min={0} className="border border-[var(--admin-line)] rounded px-2 py-1 text-xs bg-white" value={variant.sortOrder ?? idx} onChange={(e) => updateVariant(idx, 'sortOrder', Number(e.target.value))} /></label>
                     </div>
                   </div>
                 )}
@@ -519,14 +643,15 @@ const VariantBuilder = ({
       )}
 
       {/* Add manually */}
-      <button type="button" onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}`, price: basePrice, mrp: baseMrp }])}
-        className="w-full py-2.5 border-2 border-dashed border-[var(--admin-line)] rounded-lg text-sm text-[var(--admin-muted)] hover:border-[var(--admin-navy)] hover:text-[var(--admin-navy)] transition-colors">
+      <button type="button"
+        onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}`, price: basePrice, mrp: baseMrp }])}
+        className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] transition-colors font-medium">
         + Add Variant Manually
       </button>
 
       {variants.length > 0 && (
-        <p className="text-xs text-[var(--admin-muted)]">
-          ● = default &nbsp;·&nbsp; ⠿ drag to reorder &nbsp;·&nbsp; 🖼 ! = no images uploaded &nbsp;·&nbsp; ⧉ duplicate &nbsp;·&nbsp; ✕ remove
+        <p className="text-[11px] text-gray-400 text-center">
+          ● = default &nbsp;·&nbsp; ⠿ drag to reorder &nbsp;·&nbsp; ⧉ duplicate &nbsp;·&nbsp; ✕ remove
         </p>
       )}
     </div>

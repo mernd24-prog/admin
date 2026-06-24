@@ -405,6 +405,64 @@ const summarizeOrganizations = (organizations = [], fallback = {}, primaryOrgani
   };
 };
 
+const ORG_ACTION_CLS = {
+  green:  'border-green-200 bg-green-50 text-green-700 hover:bg-green-100',
+  blue:   'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100',
+  yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
+  red:    'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
+  orange: 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100',
+  gray:   'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+};
+
+const getOrgContextActions = (organization) => {
+  const { kycStatus, bankVerificationStatus, approvalStatus, goLiveStatus } = organization;
+  const kycOk     = kycStatus === 'verified';
+  const bankOk    = bankVerificationStatus === 'verified';
+  const approved  = ['approved', 'active'].includes(approvalStatus);
+  const blocked   = approvalStatus === 'blocked';
+  const rejected  = approvalStatus === 'rejected';
+  const live      = goLiveStatus === 'live';
+  const acts      = [];
+
+  if (!kycOk) {
+    acts.push({ id: 'kyc_approve', label: 'Approve KYC', cls: 'green', payload: { kycStatus: 'verified' } });
+    if (kycStatus !== 'under_review') {
+      acts.push({ id: 'kyc_review', label: 'Mark KYC Under Review', cls: 'yellow', payload: { kycStatus: 'under_review', approvalStatus: 'pending_review' } });
+    }
+  } else {
+    acts.push({ id: 'kyc_reject', label: 'Reject KYC', cls: 'red', payload: { kycStatus: 'rejected' }, needsReason: true });
+  }
+
+  if (kycOk && !bankOk) {
+    acts.push({ id: 'bank_verify', label: 'Verify Bank', cls: 'green', payload: { bankVerificationStatus: 'verified' } });
+  }
+  if (kycOk && bankOk) {
+    acts.push({ id: 'bank_reject', label: 'Reject Bank', cls: 'red', payload: { bankVerificationStatus: 'rejected' }, needsReason: true });
+  }
+
+  if (kycOk && bankOk && !approved && !blocked) {
+    acts.push({ id: 'org_approve', label: 'Approve Organization', cls: 'blue', payload: { approvalStatus: 'approved' } });
+  }
+  if (approved && !live) {
+    acts.push({ id: 'golive_approve', label: 'Approve Go Live', cls: 'blue', payload: { goLiveStatus: 'live' } });
+  }
+  if (live) {
+    acts.push({ id: 'golive_revoke', label: 'Revoke Go Live', cls: 'orange', payload: { goLiveStatus: 'rejected' }, needsReason: true });
+  }
+
+  if (blocked || rejected) {
+    acts.push({ id: 'reopen', label: 'Reopen for Review', cls: 'yellow', payload: { approvalStatus: 'pending_review' } });
+  } else {
+    acts.push({ id: 'pending_review', label: 'Mark Under Review', cls: 'yellow', payload: { approvalStatus: 'pending_review' } });
+    acts.push({ id: 'org_reject', label: 'Reject Organization', cls: 'red', payload: { approvalStatus: 'rejected' }, needsReason: true });
+  }
+  if (!blocked) {
+    acts.push({ id: 'org_block', label: 'Block Organization', cls: 'gray', payload: { approvalStatus: 'blocked', goLiveStatus: 'blocked' } });
+  }
+
+  return acts;
+};
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 const UserDetails = () => {
@@ -461,6 +519,7 @@ const UserDetails = () => {
   const [accessModulesLoading, setAccessModulesLoading] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
+  const [reviewingOrgId, setReviewingOrgId] = useState(null);
   const organizationSummary = useMemo(
     () => summarizeOrganizations(
       organizations,
@@ -701,35 +760,36 @@ const UserDetails = () => {
     }
   };
 
-  const handleOrganizationReview = async (organization, payload) => {
+  const handleOrganizationAction = async (organization, action) => {
     const organizationId = organization?.id || organization?.organizationId;
     if (!organizationId) return;
-    const nextStatus = payload.approvalStatus || payload.status;
-    let nextPayload = payload;
-    if (nextStatus === 'rejected') {
-      const reason = window.prompt('Rejection reason / required changes');
+
+    let payload = { ...action.payload };
+
+    if (action.needsReason) {
+      const reason = window.prompt('Enter rejection / change reason (required):');
       if (reason === null) return;
       if (!reason.trim()) {
         toast.error('Rejection reason is required');
         return;
       }
-      nextPayload = {
-        ...payload,
-        rejectionReason: reason.trim(),
-        requiredChanges: [reason.trim()],
-      };
+      payload.rejectionReason = reason.trim();
+      if (!payload.requiredChanges) payload.requiredChanges = [reason.trim()];
     }
+
+    setReviewingOrgId(organizationId);
     try {
       const response = await apiRequest(
         'PATCH',
         ENDPOINTS.sellers.organizationStatus(id, organizationId),
-        nextPayload,
+        payload,
       );
       toast.success(response?.message || 'Organization updated');
       await loadSellerOrganizations();
-      refresh();
     } catch (error) {
       toast.error(error?.message || 'Failed to update organization');
+    } finally {
+      setReviewingOrgId(null);
     }
   };
 
@@ -935,7 +995,8 @@ const UserDetails = () => {
                 ))}
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons — shown only for legacy sellers without organizations */}
+              {organizationSummary.total === 0 && (
               <div className="flex flex-wrap gap-2">
                 <button
                   className="px-3 py-1.5 text-xs rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
@@ -955,36 +1016,33 @@ const UserDetails = () => {
                 >
                   Mark KYC Under Review
                 </button>
-                {showSellerBankActions && (
-                  <>
-                    <div className="w-px bg-gray-200 mx-1 self-stretch" />
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                      onClick={() => setBankModal({ open: true, defaultDecision: 'verified' })}
-                    >
-                      Verify Bank
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
-                      onClick={() => setBankModal({ open: true, defaultDecision: 'rejected' })}
-                    >
-                      Reject Bank
-                    </button>
-                  </>
-                )}
-                {showSellerGoLiveAction && (
-                  <>
-                    <div className="w-px bg-gray-200 mx-1 self-stretch" />
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={handleGoLive}
-                      disabled={goLiveStatus === 'live'}
-                    >
-                      Approve Go Live
-                    </button>
-                  </>
-                )}
+                <>
+                  <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                  <button
+                    className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                    onClick={() => setBankModal({ open: true, defaultDecision: 'verified' })}
+                  >
+                    Verify Bank
+                  </button>
+                  <button
+                    className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
+                    onClick={() => setBankModal({ open: true, defaultDecision: 'rejected' })}
+                  >
+                    Reject Bank
+                  </button>
+                </>
+                <>
+                  <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                  <button
+                    className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={handleGoLive}
+                    disabled={goLiveStatus === 'live'}
+                  >
+                    Approve Go Live
+                  </button>
+                </>
               </div>
+              )}
 
               {/* KYC rejection reason alert (live on profile) */}
               {onboarding.kycRejectionReason && (
@@ -1088,7 +1146,7 @@ const UserDetails = () => {
                       <Row label="Go Live Approved At" value={formatDateTime(organization.goLiveApprovedAt)} />
                     </div>
 
-                    {(organization.description || organization.rejectionReason || organization.requiredChanges?.length) && (
+                    {Boolean(organization.description || organization.rejectionReason || organization.requiredChanges?.length) && (
                       <div className="mt-3 grid grid-cols-1 gap-x-6 border-t border-gray-100 pt-3 md:grid-cols-3">
                         <Row label="Description" value={organization.description} />
                         <Row label="Rejection Reason" value={organization.rejectionReason} />
@@ -1109,88 +1167,26 @@ const UserDetails = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100"
-                        onClick={() => handleOrganizationReview(organization, {
-                          kycStatus: 'verified',
-                        })}
-                        disabled={organization.kycStatus === 'verified'}
-                      >
-                        Approve KYC
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 disabled:opacity-40"
-                        onClick={() => handleOrganizationReview(organization, {
-                          bankVerificationStatus: 'verified',
-                        })}
-                        disabled={organization.kycStatus !== 'verified' || organization.bankVerificationStatus === 'verified'}
-                      >
-                        Verify Bank
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
-                        onClick={() => handleOrganizationReview(organization, {
-                          approvalStatus: 'approved',
-                        })}
-                        disabled={
-                          organization.kycStatus !== 'verified' ||
-                          organization.bankVerificationStatus !== 'verified' ||
-                          ['approved', 'active'].includes(organization.approvalStatus)
-                        }
-                      >
-                        Approve Organization
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-40"
-                        onClick={() => handleOrganizationReview(organization, {
-                          goLiveStatus: 'live',
-                        })}
-                        disabled={
-                          organization.kycStatus !== 'verified' ||
-                          organization.bankVerificationStatus !== 'verified' ||
-                          !['approved', 'active'].includes(organization.approvalStatus) ||
-                          organization.goLiveStatus === 'live'
-                        }
-                      >
-                        Approve Go Live
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs text-yellow-700 hover:bg-yellow-100"
-                        onClick={() => handleOrganizationReview(organization, {
-                          approvalStatus: 'pending_review',
-                          kycStatus: 'under_review',
-                          bankVerificationStatus: organization.bankVerificationStatus || 'submitted',
-                        })}
-                      >
-                        Mark Under Review
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100"
-                        onClick={() => handleOrganizationReview(organization, {
-                          approvalStatus: 'rejected',
-                          kycStatus: 'rejected',
-                        })}
-                      >
-                        Reject Organization
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                        onClick={() => handleOrganizationReview(organization, {
-                          approvalStatus: 'blocked',
-                          goLiveStatus: 'blocked',
-                        })}
-                      >
-                        Block
-                      </button>
-                    </div>
+                    {(() => {
+                      const orgId = organization.id || organization.organizationId;
+                      const isReviewing = reviewingOrgId === orgId;
+                      const anyReviewing = reviewingOrgId !== null;
+                      return (
+                        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                          {getOrgContextActions(organization).map((action) => (
+                            <button
+                              key={action.id}
+                              type="button"
+                              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${ORG_ACTION_CLS[action.cls] || ORG_ACTION_CLS.gray}`}
+                              onClick={() => handleOrganizationAction(organization, action)}
+                              disabled={anyReviewing}
+                            >
+                              {isReviewing ? '…' : action.label}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

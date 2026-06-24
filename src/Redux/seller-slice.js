@@ -35,7 +35,10 @@ export const submitSellerKyc = createAsyncThunk(
   async (payload, { rejectWithValue, getState }) => {
     try {
       const token =
-        payload?.onboardingToken || getState()?.seller?.onboardingToken || localStorage.getItem(ONBOARDING_TOKEN_KEY);
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
       const response = await apiRequest(
         "POST",
         ENDPOINTS.sellers.onboardingKyc,
@@ -55,7 +58,10 @@ export const updateSellerOnboardingProfile = createAsyncThunk(
   async (payload, { rejectWithValue, getState }) => {
     try {
       const token =
-        payload?.onboardingToken || getState()?.seller?.onboardingToken || localStorage.getItem(ONBOARDING_TOKEN_KEY);
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
       const response = await apiRequest(
         "PATCH",
         ENDPOINTS.sellers.onboardingProfile,

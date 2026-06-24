@@ -1,5 +1,5 @@
 import 'react-quill/dist/quill.snow.css';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 
@@ -58,6 +58,7 @@ export default function BasicDetailsTab({
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
   const warrantyUnits = useDropdownOptions('warranty-units');
+  const warrantyTemplatesFromMaster = useDropdownOptions('warranty-templates');
 
  
   const modifiedSellerList = sellerList.length
@@ -83,8 +84,82 @@ export default function BasicDetailsTab({
     );
   }, [hsnCodeList, formData.hsn_code, formData.hsnCode]);
 
+  // ── HSN auto-suggestion ─────────────────────────────────────────────────
 
+  const [hsnSuggestion, setHsnSuggestion] = useState(null);
+  const userChangedCategoryRef = useRef(false);
 
+  // Flatten nested / flat allCategories into a single array for ancestor lookup
+  const flatCategories = useMemo(() => {
+    const result = [];
+    const flatten = (cats) => {
+      if (!Array.isArray(cats)) return;
+      cats.forEach((c) => {
+        result.push(c);
+        flatten(c.subcategories || c.subCategories || []);
+      });
+    };
+    flatten(Array.isArray(allCategories) ? allCategories : []);
+    return result;
+  }, [allCategories]);
+
+  // Map: categoryKey → parentKey for ancestor traversal
+  const categoryParentMap = useMemo(() => {
+    const map = new Map();
+    flatCategories.forEach((c) => {
+      const key = String(c.categoryKey || c._id || '');
+      if (key && c.parentKey) map.set(key, String(c.parentKey));
+    });
+    return map;
+  }, [flatCategories]);
+
+  const getCategoryAncestors = useCallback((key) => {
+    const chain = [];
+    let cur = key;
+    const seen = new Set();
+    while (cur && !seen.has(cur)) {
+      chain.push(cur);
+      seen.add(cur);
+      cur = categoryParentMap.get(cur) || null;
+    }
+    return chain;
+  }, [categoryParentMap]);
+
+  // Intercept category selection so we know it was a user action (not initial load)
+  const handleCategoryChange = useCallback((option) => {
+    userChangedCategoryRef.current = true;
+    setHsnSuggestion(null);
+    handleSelectChange(option, 'CATEGORY_ID');
+  }, [handleSelectChange]);
+
+  // When category changes (user-triggered), compute HSN suggestion
+  useEffect(() => {
+    if (!userChangedCategoryRef.current) return;
+    const categoryKey = String(formData?.category_id || formData?.categoryId || formData?.category || formData?.category_key || '');
+    if (!categoryKey || !Array.isArray(hsnCodeList) || !hsnCodeList.length) return;
+
+    const ancestors = getCategoryAncestors(categoryKey);
+    const match = ancestors.reduce((found, ancestor) =>
+      found || hsnCodeList.find((o) => o.hsnCategory === ancestor) || null, null);
+
+    if (!match) {
+      setHsnSuggestion({ type: 'none' });
+      return;
+    }
+
+    const isEditMode = Boolean(formData?._id || formData?.id);
+    const currentHsn = formData?.hsn_code || formData?.hsnCode;
+
+    if (isEditMode && currentHsn) {
+      setHsnSuggestion({ type: 'suggest', option: match });
+    } else {
+      handleSelectChange(match, 'hsn_code');
+      setHsnSuggestion({ type: 'applied', option: match });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData?.category_id, formData?.categoryId, formData?.category, formData?.category_key]);
+
+  // ───────────────────────────────────────────────────────────────────────
 
   const [isCategoryModal, setIsCategoryModal] = useState(false);
   const [isHsnAddModal, setIsHsnAddModal] = useState(false)
@@ -105,10 +180,14 @@ export default function BasicDetailsTab({
     );
   }, [formattedColorList, formData.color]);
 
+  const warrantyOptions = warrantyTemplatesFromMaster.options.length > 0
+    ? warrantyTemplatesFromMaster.options
+    : (formattedWarrantyList || []);
+
   const selectedWarrantyOption = useMemo(() => {
     const currentValue = `${String(formData.warranty?.period ?? '')}:${String(formData.warranty?.periodUnit || '')}`;
-    return (formattedWarrantyList || []).find((opt) => String(opt.value) === currentValue) || null;
-  }, [formattedWarrantyList, formData.warranty?.period, formData.warranty?.periodUnit]);
+    return warrantyOptions.find((opt) => String(opt.value) === currentValue) || null;
+  }, [warrantyOptions, formData.warranty?.period, formData.warranty?.periodUnit]);
   const hasUnmatchedWarranty = Boolean(
     (formData.warranty?.period || formData.warranty?.periodUnit) &&
     !selectedWarrantyOption
@@ -116,8 +195,8 @@ export default function BasicDetailsTab({
   const showCustomWarranty = isCustomWarranty || hasUnmatchedWarranty;
 
   const handleWarrantyTemplateChange = (option) => {
-    const durationValue = option?.durationValue ?? String(option?.value || '').split(':')[0] ?? '';
-    const durationUnit = option?.durationUnit ?? String(option?.value || '').split(':')[1] ?? '';
+    const durationValue = option?.durationValue ?? option?.meta?.durationValue ?? String(option?.value || '').split(':')[0] ?? '';
+    const durationUnit = option?.durationUnit ?? option?.meta?.durationUnit ?? String(option?.value || '').split(':')[1] ?? '';
 
     setIsCustomWarranty(false);
     handleChange({ target: { name: 'warranty.period', value: durationValue } });
@@ -398,13 +477,13 @@ export default function BasicDetailsTab({
             </div>
 
             <div>
-              <div className="flex items-end gap-2">
+              <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <FilterSelect
                     label="Category"
                     name="category_id"
                     value={selectedCategoryOption}
-                    onChange={(e) => handleSelectChange(e, 'CATEGORY_ID')}
+                    onChange={handleCategoryChange}
                     options={formattedCategoryList || []}
                     error={errors?.category_id}
                     placeholder="Select Category"
@@ -415,38 +494,90 @@ export default function BasicDetailsTab({
                 <PermissionGuard module="categories" action="create" hide>
                   <button
                     type="button"
-                    className="mb-1 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
                     onClick={() => setIsCategoryModal(true)}
                   >
-                    Add
+                    + Add
                   </button>
                 </PermissionGuard>
               </div>
             </div>
 
             <div>
-              <div className="flex items-end gap-2">
+              <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <FilterSelect
                     label="HSN Code"
                     name="hsn_code"
                     value={selectedHsnOption}
-                    onChange={(e) => handleSelectChange(e, 'hsn_code')}
+                    onChange={(e) => { setHsnSuggestion(null); handleSelectChange(e, 'hsn_code'); }}
                     options={hsnCodeList || []}
                     error={errors?.hsn_code}
-                    placeholder="Select HSN Code"
+                    placeholder="Search by code or description…"
                   />
                 </div>
                 <PermissionGuard module="tax" action="create" hide>
                   <button
                     type="button"
-                    className="mb-1 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
                     onClick={() => setIsHsnAddModal(true)}
                   >
-                    Add
+                    + Add
                   </button>
                 </PermissionGuard>
               </div>
+
+              {/* Suggestion: auto-applied (new product) */}
+              {hsnSuggestion?.type === 'applied' && (
+                <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <span className="text-emerald-600 text-xs font-bold flex-shrink-0">✓</span>
+                  <p className="text-xs text-emerald-700 flex-1 min-w-0">
+                    HSN auto-filled: <strong>{hsnSuggestion.option.code}</strong>
+                    {hsnSuggestion.option.description ? ` — ${hsnSuggestion.option.description}` : ''}
+                  </p>
+                  <button type="button" onClick={() => setHsnSuggestion(null)}
+                    className="text-emerald-400 hover:text-emerald-700 text-base leading-none flex-shrink-0">×</button>
+                </div>
+              )}
+
+              {/* Suggestion: category changed on edit, existing HSN kept */}
+              {hsnSuggestion?.type === 'suggest' && (
+                <div className="mt-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500 text-xs mt-0.5 flex-shrink-0">ℹ</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-blue-800">HSN suggestion for this category</p>
+                      <p className="text-xs text-blue-700 mt-0.5 truncate">
+                        {hsnSuggestion.option.code}
+                        {hsnSuggestion.option.description ? ` — ${hsnSuggestion.option.description}` : ''}
+                        {` (${hsnSuggestion.option.gstRate}% GST)`}
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0 mt-0.5">
+                      <button type="button"
+                        onClick={() => { handleSelectChange(hsnSuggestion.option, 'hsn_code'); setHsnSuggestion(null); }}
+                        className="rounded-md bg-[var(--admin-blue)] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90 transition-opacity">
+                        Apply
+                      </button>
+                      <button type="button"
+                        onClick={() => setHsnSuggestion(null)}
+                        className="rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-100 transition-colors">
+                        Keep current
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No HSN mapping for selected category */}
+              {hsnSuggestion?.type === 'none' && (
+                <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                  <span className="text-amber-500 text-xs flex-shrink-0">⚠</span>
+                  <p className="text-xs text-amber-700 flex-1">No HSN mapping found for this category. Please select manually.</p>
+                  <button type="button" onClick={() => setHsnSuggestion(null)}
+                    className="text-amber-400 hover:text-amber-700 text-base leading-none flex-shrink-0">×</button>
+                </div>
+              )}
             </div>
 
 
@@ -511,14 +642,29 @@ export default function BasicDetailsTab({
             />
            
             {!showCustomWarranty && (
-              <FilterSelect
-                label="Warranty Template"
-                value={selectedWarrantyOption}
-                onChange={handleWarrantyTemplateChange}
-                options={formattedWarrantyList || []}
-                placeholder="Select warranty template"
-                isClearable
-              />
+              <div className="space-y-1">
+                <FilterSelect
+                  label="Warranty Template"
+                  value={selectedWarrantyOption}
+                  onChange={handleWarrantyTemplateChange}
+                  options={warrantyOptions}
+                  placeholder={
+                    warrantyTemplatesFromMaster.loading
+                      ? 'Loading warranty templates…'
+                      : warrantyOptions.length === 0
+                        ? 'No warranty templates available'
+                        : 'Select warranty template'
+                  }
+                  isLoading={warrantyTemplatesFromMaster.loading}
+                  isClearable
+                  isDisabled={warrantyTemplatesFromMaster.loading}
+                />
+                {!warrantyTemplatesFromMaster.loading && warrantyOptions.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    No warranty templates available. Add warranty options in Option Master.
+                  </p>
+                )}
+              </div>
             )}
             <Input
               labelName="Custom warranty"

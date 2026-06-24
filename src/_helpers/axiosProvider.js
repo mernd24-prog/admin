@@ -150,6 +150,11 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
     }
 
     if (!error.response) {
+        // Pre-send rejections (e.g. missing auth token) carry a plain Error.message but no config.url.
+        // Distinguish them from real network failures so the message is accurate.
+        if (error?.config == null && error?.message) {
+            return Promise.reject({ message: error.message });
+        }
         const baseURL = trimTrailingSlash(error?.config?.baseURL || apiUrl);
         const requestPath = trimLeadingSlash(error?.config?.url || "");
         const requestUrl = requestPath ? `${baseURL}/${requestPath}` : baseURL;

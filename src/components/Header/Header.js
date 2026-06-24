@@ -5,12 +5,13 @@ import {
   MdOutlineMenu,
   MdSearch,
   MdOutlineNotificationsNone,
+  MdInfoOutline,
 } from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
 import { FcNext } from "react-icons/fc";
 import { useDispatch } from "react-redux";
 import { getProfile, logout } from "../../Redux/userSlice";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import {
@@ -94,10 +95,14 @@ export default function Header({
   const dispatch = useDispatch();
   const dropDownRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const [headerTitle, setHeaderTitle] = useState("");
   const [userData, setUserData] = useState({});
   const [organizations, setOrganizations] = useState([]);
+  const [incompleteOrgs, setIncompleteOrgs] = useState([]);
+  const [showIncompletePopup, setShowIncompletePopup] = useState(false);
+  const [pendingIncompleteOrg, setPendingIncompleteOrg] = useState(null);
   const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = getAvatarUrl(userData);
@@ -124,6 +129,7 @@ export default function Header({
   useEffect(() => {
     if (!SELLER_ROLES.has(userData?.role)) {
       setOrganizations([]);
+      setIncompleteOrgs([]);
       return;
     }
 
@@ -132,17 +138,32 @@ export default function Header({
       .then((response) => {
         if (!active) return;
         const data = response?.data?.data || response?.normalized?.data || response?.data || {};
-        const list = (data.organizations || data.items || data.list || []).filter(
-          (item) =>
+        const allOrgs = data.organizations || data.items || data.list || [];
+        const isApprovedOrg = (item) =>
+          item.canSell === true ||
+          (
             ["approved", "active"].includes(item.approvalStatus) &&
             item.kycStatus === "verified" &&
             item.bankVerificationStatus === "verified" &&
-            item.goLiveStatus === "live",
-        );
-        setOrganizations(list);
+            !["blocked", "rejected"].includes(String(item.goLiveStatus || ""))
+          );
+        const approvedOrgs = allOrgs.filter(isApprovedOrg);
+        const incomplete = allOrgs.filter((item) => !isApprovedOrg(item));
+        setOrganizations(approvedOrgs);
+        setIncompleteOrgs(incomplete);
+
+        // Redirect to onboarding only when no organization is approved.
+        if (approvedOrgs.length === 0 && incomplete.length > 0) {
+          if (!currentPath.startsWith("/seller/")) {
+            const targetId = incomplete[0]?.id || incomplete[0]?.organizationId || "";
+            navigate(`/seller/onboarding${targetId ? `?organizationId=${targetId}` : ""}`, { replace: true });
+          }
+          return;
+        }
+
         const stored = getSelectedSellerOrganizationId();
-        const existing = list.some((item) => String(item.id || item.organizationId) === stored);
-        const fallback = list.find((item) => item.isDefault) || list[0];
+        const existing = approvedOrgs.some((item) => String(item.id || item.organizationId) === stored);
+        const fallback = approvedOrgs.find((item) => item.isDefault) || approvedOrgs[0];
         const nextId = existing
           ? stored
           : String(fallback?.id || fallback?.organizationId || "");
@@ -150,11 +171,14 @@ export default function Header({
         if (nextId !== stored) setSelectedSellerOrganizationId(nextId);
       })
       .catch(() => {
-        if (active) setOrganizations([]);
+        if (active) {
+          setOrganizations([]);
+          setIncompleteOrgs([]);
+        }
       });
 
     return () => { active = false; };
-  }, [userData?.role]);
+  }, [userData?.role, currentPath, navigate]);
 
   const handleLogout = () => {
     forceLogout("Logged out");
@@ -163,6 +187,16 @@ export default function Header({
 
   const handleOrganizationChange = (event) => {
     const value = event.target.value;
+    const incompleteOrg = incompleteOrgs.find(
+      (o) => String(o.id || o.organizationId) === value,
+    );
+    if (incompleteOrg) {
+      // Reset the select to the current approved org and show the incomplete popup.
+      event.target.value = selectedOrganizationId;
+      setPendingIncompleteOrg(incompleteOrg);
+      setShowIncompletePopup(true);
+      return;
+    }
     setSelectedOrganizationIdState(value);
     setSelectedSellerOrganizationId(value);
     window.setTimeout(() => window.location.reload(), 0);
@@ -201,6 +235,7 @@ export default function Header({
   }, [fetchUserData]);
 
   return (
+    <>
     <div
       className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] text-[var(--admin-ink)]`}
     >
@@ -254,7 +289,7 @@ export default function Header({
             <MdOutlineNotificationsNone size={18} />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
           </button>
-          {SELLER_ROLES.has(userData?.role) && organizations.length > 0 && (
+          {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
             <select
               className="hidden min-h-[36px] max-w-[220px] rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-medium text-[var(--admin-ink)] outline-none focus:border-[var(--admin-blue)] md:block"
               value={selectedOrganizationId}
@@ -266,6 +301,15 @@ export default function Header({
                   {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}
                 </option>
               ))}
+              {incompleteOrgs.length > 0 && (
+                <optgroup label="── Incomplete Setup ──">
+                  {incompleteOrgs.map((organization) => (
+                    <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
+                      {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId} [Setup Pending]
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           )}
           <div className="relative">
@@ -360,5 +404,50 @@ export default function Header({
         </div>
       </div>
     </div>
+
+    {/* Incomplete org setup popup */}
+    {showIncompletePopup && pendingIncompleteOrg && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        onClick={() => setShowIncompletePopup(false)}
+      >
+        <div
+          className="w-[360px] max-w-[90vw] rounded-xl bg-white p-6 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-1 flex items-center gap-2 text-amber-500">
+            <MdInfoOutline className="text-xl" />
+            <h3 className="text-sm font-bold text-[var(--admin-ink)]">Setup Incomplete</h3>
+          </div>
+          <p className="mt-2 text-xs text-[var(--admin-muted)]">
+            <strong className="font-semibold text-[var(--admin-ink)]">
+              {pendingIncompleteOrg.storeDisplayName || pendingIncompleteOrg.legalBusinessName || "This organization"}
+            </strong>{" "}
+            has pending setup. Complete the onboarding to activate this organization.
+          </p>
+          <div className="mt-5 flex gap-3">
+            <button
+              type="button"
+              className="flex-1 rounded-md bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--admin-navy)] focus:outline-none"
+              onClick={() => {
+                setShowIncompletePopup(false);
+                const organizationId = pendingIncompleteOrg.id || pendingIncompleteOrg.organizationId || "";
+                navigate(`/seller/onboarding${organizationId ? `?organizationId=${organizationId}` : ""}`);
+              }}
+            >
+              Complete Setup
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-md border border-[var(--admin-line)] px-4 py-2 text-xs font-semibold text-[var(--admin-ink)] hover:bg-[var(--admin-shell)] focus:outline-none"
+              onClick={() => setShowIncompletePopup(false)}
+            >
+              Not Now
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

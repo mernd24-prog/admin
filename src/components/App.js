@@ -31,7 +31,6 @@ import { forceLogout } from "../_helpers/authSession";
 import { isSellerPanel } from "../_helpers/panelConfig";
 import { clearSellerOnboarding } from "../Redux/seller-slice";
 import {
-  getSellerStatusRoute,
   isSellerFlowPath,
 } from "./Seller/sellerVerificationStatus";
 const App = () => {
@@ -245,19 +244,16 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
     return <Navigate to="/login" />;
   }
 
-  // Block seller panel dashboard access unless KYC, bank, and account are all fully approved
+  // Seller account login is separate from organization approval. The dashboard is
+  // allowed when at least one organization is approved for business operations.
   if (isSellerPanel() && isAuthenticated && flowState) {
-    const kycStatus = flowState.kycStatus;
-    const bankStatus =
-      flowState.bankStatus ||
-      flowState.bankVerificationStatus ||
-      flowState.sellerProfile?.bankVerificationStatus;
-    const kycApproved = kycStatus === "approved" || kycStatus === "verified";
-    const bankApproved = bankStatus === "approved" || bankStatus === "verified";
-    const accountActive = flowState.accountStatus === "active";
+    const hasApprovedOrganization =
+      flowState.hasApprovedOrganization === true ||
+      flowState.organizationSummary?.hasApprovedOrganization === true ||
+      flowState.onboarding?.organizationSummary?.hasApprovedOrganization === true;
 
-    if (!(kycApproved && bankApproved && accountActive)) {
-      return <Navigate to={getSellerStatusRoute(flowState)} replace />;
+    if (flowState.requiresOnboarding && !hasApprovedOrganization) {
+      return <Navigate to={AUTH_ROUTES.ONBOARDING} replace />;
     }
   }
 

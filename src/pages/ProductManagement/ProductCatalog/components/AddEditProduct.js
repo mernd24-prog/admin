@@ -154,6 +154,8 @@ export default function ProductManagementUI() {
   const [platformValues, setPlatformValues] = useState({});
   const fetchedOptionIds = useRef(new Set());
   const productVisibilities = useDropdownOptions('product-visibilities');
+  const shippingMethods = useDropdownOptions('shipping-methods');
+  const [saving, setSaving] = useState(false);
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -543,11 +545,19 @@ export default function ProductManagementUI() {
       .filter((value, index, arr) => arr.indexOf(value) === index)
       .map((code) => ({ value: code, label: code })),
     taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
-    hsnCodeList: prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).map((item) => ({
-      value: item.code || item._id || item.id,
-      code: item.code,
-      label: `${item.code || item._id || item.id} | GST: ${Number(item.gstRate || item.IGST || 0)}%`,
-    })),
+    hsnCodeList: prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).map((item) => {
+      const code = item.code || item._id || item.id;
+      const desc = item.description || '';
+      const gst = Number(item.gstRate || item.IGST || 0);
+      return {
+        value: code,
+        code: item.code,
+        description: desc,
+        hsnCategory: item.category || '',
+        gstRate: gst,
+        label: [code, desc ? ` - ${desc}` : '', ` (${gst}% GST)`].join(''),
+      };
+    }),
     countryList: transformArray(prefillList('countries')),
     sellerList: transformArray(prefillList('sellers')),
     organizationList: prefillList('organizations').map((item) => ({
@@ -990,6 +1000,7 @@ export default function ProductManagementUI() {
   const productType = formData?.productType || 'simple';
 
   const handleSaveSubmit = useCallback(async () => {
+    setSaving(true);
     const catalogsUrlsArray = (Array.isArray(formData.catalogsUrls)
       ? formData.catalogsUrls
       : [formData.catalogsUrls]).filter(Boolean);
@@ -1143,6 +1154,8 @@ export default function ProductManagementUI() {
       }
     } catch (err) {
       toast.error(err || "Failed to save product.");
+    } finally {
+      setSaving(false);
     }
   }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, userData, id, navigate, productType, variantAxes, variantsData]);
 
@@ -1322,139 +1335,215 @@ export default function ProductManagementUI() {
       description: 'Product delivery and serviceability.',
       icon: <BsMenuApp />,
       component: (
-        <div className="space-y-5">
+        <div className="space-y-6">
+          {/* Header */}
           <div className="pb-4 border-b border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Configure delivery charges, serviceability, and estimated delivery time.</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex min-h-[42px] items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
-              <span className="text-sm font-medium text-gray-700">Free Shipping</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--admin-blue)]"
-                checked={Boolean(formData?.shipping?.freeShipping)}
-                onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Serviceability</span>
-              <select
-                className="admin-input"
-                value={formData?.shipping?.serviceabilityMode || 'inherit'}
-                onChange={(e) => patchShipping({ serviceabilityMode: e.target.value })}
-              >
-                <option value="inherit">Inherit</option>
-                <option value="all_pincodes">All pincodes</option>
-                <option value="allowlist">Allowlist</option>
-                <option value="blocklist">Blocklist</option>
-                <option value="regions">Regions</option>
-                <option value="disabled">Disabled</option>
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Shipping Charge</span>
-              <input
-                className="admin-input"
-                type="number"
-                min="0"
-                value={formData?.shipping?.shippingCharge ?? formData?.shipping?.additionalCost ?? ''}
-                onChange={(e) => patchShipping({ shippingCharge: e.target.value, additionalCost: e.target.value })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Free Above</span>
-              <input
-                className="admin-input"
-                type="number"
-                min="0"
-                value={formData?.shipping?.freeShippingMinOrder ?? ''}
-                onChange={(e) => patchShipping({ freeShippingMinOrder: e.target.value })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Handling Charge</span>
-              <input
-                className="admin-input"
-                type="number"
-                min="0"
-                value={formData?.shipping?.handlingCharge ?? ''}
-                onChange={(e) => patchShipping({ handlingCharge: e.target.value })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">COD</span>
-              <select
-                className="admin-input"
-                value={formData?.shipping?.codAvailable === false ? 'false' : formData?.shipping?.codAvailable === true ? 'true' : ''}
-                onChange={(e) => patchShipping({ codAvailable: e.target.value === '' ? undefined : e.target.value === 'true' })}
-              >
-                <option value="">Inherit</option>
-                <option value="true">Available</option>
-                <option value="false">Unavailable</option>
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Allow Pincodes</span>
-              <textarea
-                className="admin-input min-h-[76px]"
-                value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
-                onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Block Pincodes</span>
-              <textarea
-                className="admin-input min-h-[76px]"
-                value={joinList(formData?.shipping?.blockPincodes)}
-                onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Regions / States / Cities</span>
-              <textarea
-                className="admin-input min-h-[76px]"
-                value={joinList(formData?.shipping?.regions)}
-                onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
-              />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="space-y-1">
-                <span className="admin-label">ETA Min</span>
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  value={formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays ?? ''}
-                  onChange={(e) => patchShipping({ estimatedDaysMin: e.target.value, processingDays: e.target.value })}
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="admin-label">ETA Max</span>
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  value={formData?.shipping?.estimatedDaysMax ?? ''}
-                  onChange={(e) => patchShipping({ estimatedDaysMax: e.target.value })}
-                />
-              </label>
+
+          {/* Free Shipping toggle row */}
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Free Shipping</p>
+              <p className="text-xs text-gray-500 mt-0.5">Enable free shipping for this product regardless of order value.</p>
             </div>
-            <label className="space-y-1">
-              <span className="admin-label">Partner</span>
-              <input
-                className="admin-input"
-                value={formData?.shipping?.shippingPartner || ''}
-                onChange={(e) => patchShipping({ shippingPartner: e.target.value })}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="admin-label">Method</span>
-              <input
-                className="admin-input"
-                value={formData?.shipping?.shippingMethod || 'standard'}
-                onChange={(e) => patchShipping({ shippingMethod: e.target.value })}
-              />
-            </label>
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--admin-blue)] flex-shrink-0"
+              checked={Boolean(formData?.shipping?.freeShipping)}
+              onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
+            />
+          </label>
+
+          {/* Charges & Availability */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Charges &amp; Availability</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="admin-label">Shipping Charge (₹)</label>
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData?.shipping?.shippingCharge ?? formData?.shipping?.additionalCost ?? ''}
+                  onChange={(e) => patchShipping({ shippingCharge: e.target.value, additionalCost: e.target.value })}
+                />
+                <p className="text-xs text-gray-400">Charged to customer at checkout</p>
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Free Shipping Above (₹)</label>
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 499"
+                  value={formData?.shipping?.freeShippingMinOrder ?? ''}
+                  onChange={(e) => patchShipping({ freeShippingMinOrder: e.target.value })}
+                />
+                <p className="text-xs text-gray-400">Waive shipping if cart exceeds this amount</p>
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Handling Charge (₹)</label>
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData?.shipping?.handlingCharge ?? ''}
+                  onChange={(e) => patchShipping({ handlingCharge: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Cash on Delivery (COD)</label>
+                <select
+                  className="admin-input"
+                  value={formData?.shipping?.codAvailable === false ? 'false' : formData?.shipping?.codAvailable === true ? 'true' : ''}
+                  onChange={(e) => patchShipping({ codAvailable: e.target.value === '' ? undefined : e.target.value === 'true' })}
+                >
+                  <option value="">Inherit from seller / org</option>
+                  <option value="true">Available</option>
+                  <option value="false">Not Available</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Serviceability */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Serviceability</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1 sm:col-span-2">
+                <label className="admin-label">Serviceability Mode</label>
+                <select
+                  className="admin-input"
+                  value={formData?.shipping?.serviceabilityMode || 'inherit'}
+                  onChange={(e) => patchShipping({ serviceabilityMode: e.target.value })}
+                >
+                  <option value="inherit">Inherit (use seller / org settings)</option>
+                  <option value="all_pincodes">All Pincodes</option>
+                  <option value="allowlist">Allowlist — only listed pincodes</option>
+                  <option value="blocklist">Blocklist — block listed pincodes</option>
+                  <option value="regions">Regions / States / Cities</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Allow Pincodes</label>
+                <textarea
+                  className="admin-input min-h-[80px] resize-none"
+                  placeholder="400001, 411001, 560001…"
+                  value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
+                  onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
+                />
+                <p className="text-xs text-gray-400">Comma-separated pincode list</p>
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Block Pincodes</label>
+                <textarea
+                  className="admin-input min-h-[80px] resize-none"
+                  placeholder="110001, 122001…"
+                  value={joinList(formData?.shipping?.blockPincodes)}
+                  onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
+                />
+                <p className="text-xs text-gray-400">Comma-separated pincode list</p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="admin-label">Regions / States / Cities</label>
+                <textarea
+                  className="admin-input min-h-[64px] resize-none"
+                  placeholder="Maharashtra, Delhi, Bangalore…"
+                  value={joinList(formData?.shipping?.regions)}
+                  onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ETA */}
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Estimated Delivery Time (ETA)</p>
+              <p className="text-xs text-blue-700 mt-0.5">Customer will see: <strong>Estimated Delivery: {formData?.shipping?.estimatedDaysMin || '?'} – {formData?.shipping?.estimatedDaysMax || '?'} Days</strong></p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-blue-900">Min Days</label>
+                <input
+                  className={`admin-input bg-white ${error?.etaMin ? 'border-red-400' : ''}`}
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 2"
+                  value={formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    patchShipping({ estimatedDaysMin: val, processingDays: val });
+                    const max = formData?.shipping?.estimatedDaysMax;
+                    if (val !== '' && max !== undefined && max !== '' && Number(val) > Number(max)) {
+                      setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
+                    } else {
+                      setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
+                    }
+                  }}
+                />
+                {error?.etaMin && <p className="text-xs text-red-500">{error.etaMin}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-blue-900">Max Days</label>
+                <input
+                  className={`admin-input bg-white ${error?.etaMax ? 'border-red-400' : ''}`}
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 5"
+                  value={formData?.shipping?.estimatedDaysMax ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    patchShipping({ estimatedDaysMax: val });
+                    const min = formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays;
+                    if (val !== '' && min !== undefined && min !== '' && Number(min) > Number(val)) {
+                      setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
+                    } else {
+                      setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Carrier */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Carrier &amp; Method</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="admin-label">Shipping Partner</label>
+                <input
+                  className="admin-input"
+                  placeholder="e.g. Delhivery, BlueDart"
+                  value={formData?.shipping?.shippingPartner || ''}
+                  onChange={(e) => patchShipping({ shippingPartner: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Shipping Method</label>
+                <select
+                  className="admin-input"
+                  value={formData?.shipping?.shippingMethod || 'standard'}
+                  onChange={(e) => patchShipping({ shippingMethod: e.target.value })}
+                >
+                  {(shippingMethods.options.length > 0 ? shippingMethods.options : [
+                    { value: 'standard', label: 'Standard Delivery' },
+                    { value: 'express', label: 'Express Delivery' },
+                    { value: 'same_day', label: 'Same Day Delivery' },
+                    { value: 'store_pickup', label: 'Store Pickup' },
+                    { value: 'hyperlocal', label: 'Hyperlocal' },
+                  ]).map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       )
@@ -1666,7 +1755,7 @@ export default function ProductManagementUI() {
           </main>
         </div>
         <div className="lg:w-64 xl:w-72 flex-shrink-0 lg:sticky lg:top-24 h-fit">
-          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting} />
+          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting} saving={saving} />
         </div>
       </div>
     </div>

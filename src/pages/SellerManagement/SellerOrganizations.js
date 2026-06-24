@@ -6,7 +6,6 @@ import {
   MdCheckCircle,
   MdClose,
   MdEdit,
-  MdBusiness,
   MdRefresh,
   MdVerifiedUser,
   MdAccountBalance,
@@ -650,6 +649,7 @@ const SellerOrganizations = () => {
     bankVerificationStatus: "",
     goLiveStatus: "",
   });
+  const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", organization: null });
@@ -660,6 +660,14 @@ const SellerOrganizations = () => {
       .then(setSellerOptions)
       .catch(() => setSellerOptions([]));
   }, []);
+
+  useEffect(() => {
+    const delay = searchInput ? 400 : 0;
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, q: searchInput }));
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const loadOrganizations = useCallback(async () => {
     try {
@@ -826,10 +834,13 @@ const SellerOrganizations = () => {
     applyStatus(
       organization,
       {
+        kycStatus: "verified",
+        bankVerificationStatus: "verified",
         approvalStatus: "approved",
-        notes: "Organization approved after KYC and bank verification",
+        goLiveStatus: "live",
+        notes: "Organization approved for selling from organization management",
       },
-      "Organization approved",
+      "Organization approved for selling",
     );
   };
 
@@ -940,8 +951,8 @@ const SellerOrganizations = () => {
               <MdSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a93a5]" size={18} />
               <input
                 className={`${inputCls} w-full pl-9`}
-                value={filters.q}
-                onChange={(event) => updateFilter("q", event.target.value)}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Name, GSTIN, PAN, seller ID"
               />
             </div>
@@ -1057,7 +1068,15 @@ const SellerOrganizations = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex max-w-[160px] flex-wrap items-center gap-1">
+                    <div className="flex max-w-[190px] flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="w-full rounded-md bg-[#208a3c] px-2.5 py-1.5 text-left text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => approveOrganization(organization)}
+                        disabled={submitting || ["approved", "active"].includes(organization.approvalStatus)}
+                      >
+                        Approve for selling
+                      </button>
                       <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
                       <IconButton
                         title="Approve KYC"
@@ -1072,18 +1091,6 @@ const SellerOrganizations = () => {
                         tone="green"
                         onClick={() => approveBank(organization)}
                         disabled={submitting || organization.kycStatus !== "verified" || organization.bankVerificationStatus === "verified"}
-                      />
-                      <IconButton
-                        title="Approve Organization"
-                        icon={<MdBusiness size={18} />}
-                        tone="blue"
-                        onClick={() => approveOrganization(organization)}
-                        disabled={
-                          submitting ||
-                          organization.kycStatus !== "verified" ||
-                          organization.bankVerificationStatus !== "verified" ||
-                          ["approved", "active"].includes(organization.approvalStatus)
-                        }
                       />
                       <IconButton
                         title="Approve Go Live"
