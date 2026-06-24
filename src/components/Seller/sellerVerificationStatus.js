@@ -20,6 +20,40 @@ export const VERIFICATION_APPROVED_CASES = [
 export const getVerificationCase = (flowState) => {
   if (!flowState) return null;
 
+  const approvedOrganizations = Array.isArray(flowState.approvedOrganizations)
+    ? flowState.approvedOrganizations
+    : [];
+  if (
+    flowState.hasApprovedOrganization === true ||
+    approvedOrganizations.length > 0
+  ) {
+    return flowState.approvalModalSeen ||
+      localStorage.getItem("sellerApprovalModalSeen") === "true"
+      ? "already_approved"
+      : "both_approved";
+  }
+
+  const organizations = Array.isArray(flowState.organizations)
+    ? flowState.organizations
+    : [];
+  const selectedOrganization =
+    organizations.find(
+      (organization) =>
+        String(organization.id || organization.organizationId) ===
+        String(flowState.selectedOrganizationId || ""),
+    ) ||
+    flowState.organization ||
+    organizations.find((organization) => organization.isDefault) ||
+    organizations[0];
+  if (selectedOrganization) {
+    const organizationRejected =
+      selectedOrganization.approvalStatus === "rejected" ||
+      selectedOrganization.kycStatus === "rejected" ||
+      selectedOrganization.bankVerificationStatus === "rejected" ||
+      selectedOrganization.goLiveStatus === "rejected";
+    if (organizationRejected) return "kyc_rejected";
+  }
+
   const kycStatus = flowState.kycStatus || "not_started";
   const bankStatus =
     flowState.bankStatus ||

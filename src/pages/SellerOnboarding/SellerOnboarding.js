@@ -19,6 +19,7 @@ import useDropdownOptions, {
   withSelectedOption,
 } from "../../hooks/useDropdownOptions";
 import { AUTH_ROUTES } from "../auth/authRoutes";
+import MyOrganizations from "../SellerManagement/MyOrganizations";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
@@ -705,6 +706,16 @@ const SellerOnboarding = () => {
     () => !!onboardingToken || !!accessToken,
     [accessToken, onboardingToken],
   );
+  const hasEditableOrganization = useMemo(
+    () =>
+      Array.isArray(flowState?.organizations) &&
+      flowState.organizations.some((organization) =>
+        ["draft", "rejected", "blocked"].includes(
+          organization.approvalStatus,
+        ),
+      ),
+    [flowState?.organizations],
+  );
   const draftKey = useMemo(
     () => getSellerOnboardingDraftKey(onboardingToken || accessToken),
     [accessToken, onboardingToken],
@@ -1244,6 +1255,10 @@ const SellerOnboarding = () => {
   }, [editSection, flowState, requiresKycRefresh, setStep]);
 
   if (!canAccess) return <Navigate to="/login" />;
+
+  if (hasEditableOrganization) {
+    return <MyOrganizations onboardingMode />;
+  }
 
   const setBackendFieldErrors = (details, setErrors) => {
     const nextErrors = {};

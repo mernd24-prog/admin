@@ -1,6 +1,10 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { apiRequest } from "../_helpers/apiConfig";
 import { ENDPOINTS } from "../_helpers/endpoints";
+import {
+  getSelectedSellerOrganizationId,
+  setSelectedSellerOrganizationId,
+} from "../_helpers/sellerOrganizationContext";
 
 const ONBOARDING_TOKEN_KEY = "sellerOnboardingToken";
 const ONBOARDING_USER_KEY = "sellerOnboardingUser";
@@ -260,6 +264,22 @@ const sellerSlice = createSlice({
         state.authMode = requiresOnboarding ? "onboarding" : "authenticated";
         localStorage.setItem(AUTH_MODE_KEY, state.authMode);
         localStorage.setItem(AUTH_FLOW_STATE_KEY, JSON.stringify(action.payload));
+        const approvedOrganizations = Array.isArray(action.payload?.approvedOrganizations)
+          ? action.payload.approvedOrganizations
+          : [];
+        const storedOrganizationId = getSelectedSellerOrganizationId();
+        const storedIsApproved = approvedOrganizations.some(
+          (organization) =>
+            String(organization.id || organization.organizationId) ===
+            String(storedOrganizationId),
+        );
+        const selectedOrganizationId = storedIsApproved
+          ? storedOrganizationId
+          : action.payload?.selectedOrganizationId ||
+            approvedOrganizations[0]?.id ||
+            approvedOrganizations[0]?.organizationId ||
+            "";
+        setSelectedSellerOrganizationId(selectedOrganizationId);
         if (!requiresOnboarding) {
           state.onboardingToken = null;
           state.onboardingUser = null;

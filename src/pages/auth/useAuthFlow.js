@@ -28,6 +28,7 @@ import {
   useAuthLayout,
 } from "../../context/AuthLayoutContext";
 import { AUTH_ROUTES } from "./authRoutes";
+import { setSelectedSellerOrganizationId } from "../../_helpers/sellerOrganizationContext";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 const AUTH_FLOW_DRAFT_KEY = "authFlowDraft";
@@ -438,6 +439,15 @@ export const useAuthFlow = ({
       window.dispatchEvent(new Event("auth:changed"));
 
       if (sellerPanel) {
+        const approvedOrganizations = Array.isArray(auth.flowState?.approvedOrganizations)
+          ? auth.flowState.approvedOrganizations
+          : [];
+        setSelectedSellerOrganizationId(
+          auth.flowState?.selectedOrganizationId ||
+            approvedOrganizations[0]?.id ||
+            approvedOrganizations[0]?.organizationId ||
+            "",
+        );
         dispatch(
           startAuthenticatedSession({
             accessToken: auth.accessToken,

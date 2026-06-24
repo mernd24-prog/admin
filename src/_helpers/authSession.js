@@ -92,6 +92,9 @@ export const isAuthEndpoint = (url = "") => {
     "/auth/reset-password",
     "/auth/change-password",
     "/auth/refresh",
+    // Public lookup endpoints — no auth token required
+    "/meta/dropdowns",
+    "/meta/routes", 
   ].some((path) => normalized.includes(path));
 };
 

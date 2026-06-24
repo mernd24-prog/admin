@@ -423,6 +423,20 @@ export default function Dashboard() {
           <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
             Merchant Insights
           </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <GoldDropdown
+              icon={<MdCalendarToday className="h-3.5 w-3.5" />}
+              options={RANGE_OPTIONS}
+              value={range}
+              onChange={handleRangeChange}
+            />
+            <GoldDropdown
+              options={CHART_OPTIONS}
+              value={chartView}
+              onChange={setChartView}
+              className="sm:w-[170px]"
+            />
+          </div>
         </div>
 
         {isLoading && !dashboardState?.normalized?.data && (
@@ -450,28 +464,14 @@ export default function Dashboard() {
                   Performance Overview
                 </h2>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <GoldDropdown
-                  icon={<MdCalendarToday className="h-3.5 w-3.5" />}
-                  options={RANGE_OPTIONS}
-                  value={range}
-                  onChange={handleRangeChange}
-                />
-                <GoldDropdown
-                  options={CHART_OPTIONS}
-                  value={chartView}
-                  onChange={setChartView}
-                  className="sm:w-[170px]"
-                />
-              </div>
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-5 text-[11px] font-medium text-[var(--admin-muted)]">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
                 {chartView === "performance" ? "Order" : "Units / Orders"}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
                 Revenue
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -494,8 +494,8 @@ export default function Dashboard() {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="5%" stopColor="#D6A323" stopOpacity={0.38} />
-                        <stop offset="95%" stopColor="#D6A323" stopOpacity={0.08} />
+                        <stop offset="5%" stopColor="#37B446" stopOpacity={0.38} />
+                        <stop offset="95%" stopColor="#37B446" stopOpacity={0.08} />
                       </linearGradient>
                       <linearGradient
                         id="revenuePerformanceFill"
@@ -504,8 +504,8 @@ export default function Dashboard() {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="5%" stopColor="#37B446" stopOpacity={0.34} />
-                        <stop offset="95%" stopColor="#37B446" stopOpacity={0.07} />
+                        <stop offset="5%" stopColor="#D6A323" stopOpacity={0.34} />
+                        <stop offset="95%" stopColor="#D6A323" stopOpacity={0.07} />
                       </linearGradient>
                       <linearGradient
                         id="aovPerformanceFill"
@@ -542,7 +542,7 @@ export default function Dashboard() {
                       type="monotone"
                       dataKey="value"
                       name="Orders"
-                      stroke="#D6A323"
+                      stroke="#37B446"
                       strokeWidth={2}
                       fill="url(#ordersPerformanceFill)"
                     />
@@ -550,7 +550,7 @@ export default function Dashboard() {
                       type="monotone"
                       dataKey="revenue"
                       name="Revenue"
-                      stroke="#37B446"
+                      stroke="#D6A323"
                       strokeWidth={2}
                       fill="url(#revenuePerformanceFill)"
                     />
@@ -589,13 +589,13 @@ export default function Dashboard() {
                     <Bar
                       dataKey="orders"
                       name={chartView === "top_products" ? "Units Sold" : "Orders"}
-                      fill="#D6A323"
+                      fill="#37B446"
                       radius={[4, 4, 0, 0]}
                     />
                     <Bar
                       dataKey="revenue"
                       name="Revenue"
-                      fill="#37B446"
+                      fill="#D6A323"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>

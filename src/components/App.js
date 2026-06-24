@@ -245,18 +245,15 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
     return <Navigate to="/login" />;
   }
 
-  // Block seller panel dashboard access unless KYC, bank, and account are all fully approved
+  // Seller login and organization selling approval are separate. Panel access is
+  // allowed when at least one organization is approved, verified, and live.
   if (isSellerPanel() && isAuthenticated && flowState) {
-    const kycStatus = flowState.kycStatus;
-    const bankStatus =
-      flowState.bankStatus ||
-      flowState.bankVerificationStatus ||
-      flowState.sellerProfile?.bankVerificationStatus;
-    const kycApproved = kycStatus === "approved" || kycStatus === "verified";
-    const bankApproved = bankStatus === "approved" || bankStatus === "verified";
-    const accountActive = flowState.accountStatus === "active";
+    const hasApprovedOrganization =
+      flowState.hasApprovedOrganization === true ||
+      (Array.isArray(flowState.approvedOrganizations) &&
+        flowState.approvedOrganizations.length > 0);
 
-    if (!(kycApproved && bankApproved && accountActive)) {
+    if (!hasApprovedOrganization) {
       return <Navigate to={getSellerStatusRoute(flowState)} replace />;
     }
   }

@@ -120,6 +120,38 @@ const labelize = (value = "") =>
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const statusKey = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+const getOrganizationStage = (organization = {}) => {
+  const kycStatus = statusKey(organization.kycStatus);
+  const bankStatus = statusKey(organization.bankVerificationStatus);
+  const approvalStatus = statusKey(organization.approvalStatus);
+  const goLiveStatus = statusKey(organization.goLiveStatus);
+  const kycVerified = kycStatus === "verified";
+  const bankVerified = bankStatus === "verified";
+  const orgApproved = ["approved", "active"].includes(approvalStatus);
+  const live = goLiveStatus === "live";
+
+  return {
+    kycStatus,
+    bankStatus,
+    approvalStatus,
+    goLiveStatus,
+    kycVerified,
+    bankVerified,
+    orgApproved,
+    live,
+    canApproveKyc: !kycVerified,
+    canApproveBank: kycVerified && !bankVerified,
+    canApproveOrganization: kycVerified && bankVerified && !orgApproved,
+    canApproveGoLive: kycVerified && bankVerified && orgApproved && !live,
+  };
+};
+
 const getSellerLabel = (sellerId, sellers = []) =>
   sellers.find((seller) => String(seller.value) === String(sellerId))?.label || shortId(sellerId);
 
@@ -159,13 +191,31 @@ const readDocument = async (file) => {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const mimeType = detectDocumentMimeType(bytes) || String(file.type || "").toLowerCase();
-  const base64 = arrayBufferToBase64(buffer);
+  const contentBase64 = arrayBufferToBase64(buffer);
   return {
-    dataUri: `data:${mimeType};base64,${base64}`,
+    contentBase64,
     fileName: file.name,
     mimeType,
   };
 };
+
+const normalizeDocumentValue = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const { contentBase64, mimeType, fileName } = value;
+    if (!contentBase64 || !mimeType) return null;
+    return { contentBase64, mimeType, fileName };
+  }
+  return null;
+};
+
+const normalizeDocuments = (documents = {}) =>
+  Object.entries(documents).reduce((normalized, [key, value]) => {
+    const next = normalizeDocumentValue(value);
+    if (next !== null) normalized[key] = next;
+    return normalized;
+  }, {});
 
 const normalizeForEdit = (organization = {}) => {
   const invoiceSettings = organization.invoiceSettings || {};
@@ -233,7 +283,7 @@ const buildPayload = (form = {}) => {
     dateOfBirth: form.dateOfBirth || null,
     businessWebsite: cleanString(form.businessWebsite) || null,
     primaryContactName: cleanString(form.primaryContactName),
-    documents: form.documents || {},
+    documents: normalizeDocuments(form.documents || {}),
     kycStatus: form.kycStatus,
     bankVerificationStatus: form.bankVerificationStatus,
     approvalStatus: form.approvalStatus,
@@ -382,6 +432,22 @@ const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) =
     >
       {icon}
     </button>
+  );
+};
+
+const ActionDoneChip = ({ icon, label, tone = "green" }) => {
+  const tones = {
+    green: "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]",
+    blue: "border-[#bfdbfe] bg-[#eff6ff] text-[#1e40af]",
+  };
+  return (
+    <span
+      className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold ${tones[tone] || tones.green}`}
+      title={label}
+    >
+      {icon}
+      {label}
+    </span>
   );
 };
 
@@ -992,7 +1058,9 @@ const SellerOrganizations = () => {
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">Loading organizations...</td>
                 </tr>
-              ) : organizations.length ? organizations.map((organization) => (
+              ) : organizations.length ? organizations.map((organization) => {
+                const stage = getOrganizationStage(organization);
+                return (
                 <tr key={organization.id || organization.organizationId} className="align-top hover:bg-[#fbfcff]">
                   <td className="px-4 py-3">
                     <div className="font-medium">{organizationLabel(organization)}</div>
@@ -1057,54 +1125,60 @@ const SellerOrganizations = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex max-w-[160px] flex-wrap items-center gap-1">
+                    <div className="flex max-w-[240px] flex-wrap items-center gap-1.5">
                       <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
-                      <IconButton
-                        title="Approve KYC"
-                        icon={<MdVerifiedUser size={18} />}
-                        tone="green"
-                        onClick={() => approveKyc(organization)}
-                        disabled={submitting || organization.kycStatus === "verified"}
-                      />
-                      <IconButton
-                        title="Verify Bank"
-                        icon={<MdAccountBalance size={18} />}
-                        tone="green"
-                        onClick={() => approveBank(organization)}
-                        disabled={submitting || organization.kycStatus !== "verified" || organization.bankVerificationStatus === "verified"}
-                      />
-                      <IconButton
-                        title="Approve Organization"
-                        icon={<MdBusiness size={18} />}
-                        tone="blue"
-                        onClick={() => approveOrganization(organization)}
-                        disabled={
-                          submitting ||
-                          organization.kycStatus !== "verified" ||
-                          organization.bankVerificationStatus !== "verified" ||
-                          ["approved", "active"].includes(organization.approvalStatus)
-                        }
-                      />
-                      <IconButton
-                        title="Approve Go Live"
-                        icon={<MdRocketLaunch size={18} />}
-                        tone="blue"
-                        onClick={() => approveGoLive(organization)}
-                        disabled={
-                          submitting ||
-                          organization.kycStatus !== "verified" ||
-                          organization.bankVerificationStatus !== "verified" ||
-                          !["approved", "active"].includes(organization.approvalStatus) ||
-                          organization.goLiveStatus === "live"
-                        }
-                      />
+                      {stage.kycVerified ? (
+                        <ActionDoneChip icon={<MdVerifiedUser size={14} />} label="KYC" />
+                      ) : (
+                        <IconButton
+                          title="Approve KYC"
+                          icon={<MdVerifiedUser size={18} />}
+                          tone="green"
+                          onClick={() => approveKyc(organization)}
+                          disabled={submitting || !stage.canApproveKyc}
+                        />
+                      )}
+                      {stage.bankVerified ? (
+                        <ActionDoneChip icon={<MdAccountBalance size={14} />} label="Bank" />
+                      ) : (
+                        <IconButton
+                          title="Verify Bank"
+                          icon={<MdAccountBalance size={18} />}
+                          tone="green"
+                          onClick={() => approveBank(organization)}
+                          disabled={submitting || !stage.canApproveBank}
+                        />
+                      )}
+                      {stage.orgApproved ? (
+                        <ActionDoneChip icon={<MdBusiness size={14} />} label={stage.approvalStatus === "active" ? "Active" : "Approved"} tone="blue" />
+                      ) : (
+                        <IconButton
+                          title="Approve Organization"
+                          icon={<MdBusiness size={18} />}
+                          tone="blue"
+                          onClick={() => approveOrganization(organization)}
+                          disabled={submitting || !stage.canApproveOrganization}
+                        />
+                      )}
+                      {stage.live ? (
+                        <ActionDoneChip icon={<MdRocketLaunch size={14} />} label="Live" tone="blue" />
+                      ) : (
+                        <IconButton
+                          title="Approve Go Live"
+                          icon={<MdRocketLaunch size={18} />}
+                          tone="blue"
+                          onClick={() => approveGoLive(organization)}
+                          disabled={submitting || !stage.canApproveGoLive}
+                        />
+                      )}
                       <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => requestResubmission(organization)} disabled={submitting} />
                       <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => rejectOrganization(organization)} disabled={submitting} />
                       <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => blockOrganization(organization)} disabled={submitting} />
                     </div>
                   </td>
                 </tr>
-              )) : (
+              );
+              }) : (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">No seller organizations found</td>
                 </tr>

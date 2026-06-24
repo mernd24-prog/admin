@@ -1,5 +1,7 @@
 const SELLER_ORGANIZATION_KEY = "sellerSelectedOrganizationId";
 const ORGANIZATION_HEADER_EXCLUDED_PREFIXES = [
+  "/auth/status",
+  "/auth/change-password",
   "/sellers/me/status",
   "/sellers/me/profile",
   "/sellers/me/organizations",

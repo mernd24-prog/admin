@@ -4,6 +4,7 @@ import {
   MdAdd,
   MdCheckCircle,
   MdClose,
+  MdDeleteOutline,
   MdEdit,
   MdRefresh,
   MdOutlineSwapHoriz,
@@ -26,15 +27,11 @@ const BUSINESS_TYPES = [
   "llp",
   "public_limited",
 ];
-const PAYOUT_SCHEDULES = ["daily", "weekly", "biweekly", "monthly"];
-const TAX_REGISTRATION_TYPES = ["regular", "composition", "unregistered"];
 const ORGANIZATION_DOCUMENTS = [
   ["panDocumentUrl", "PAN Document"],
   ["gstCertificateUrl", "GST Certificate"],
   ["aadhaarFrontUrl", "Aadhaar Front"],
   ["aadhaarBackUrl", "Aadhaar Back"],
-  ["bankProofUrl", "Cancelled Cheque / Bank Proof"],
-  ["addressProofUrl", "Business Address Proof"],
 ];
 
 const emptyAddress = {
@@ -80,8 +77,10 @@ const createEmptyForm = () => ({
   payoutSchedule: "weekly",
 });
 
-const inputCls =
-  "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed] disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
+const onboardingInputCls =
+  "admin-input h-[46px] text-[14px] font-medium text-[#111827] placeholder:font-normal placeholder:text-[#9a96a6]";
+const onboardingLabelCls =
+  "mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]";
 
 const cleanString = (value) => String(value || "").trim();
 
@@ -100,22 +99,230 @@ const orgLabel = (org = {}) =>
 
 const orgId = (org = {}) => org.id || org.organizationId || "";
 
+const detectDocumentMimeType = (bytes) => {
+  if (!bytes?.length) return "";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  ) {
+    return "application/pdf";
+  }
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return "";
+};
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return window.btoa(binary);
+};
+
 const readDocument = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () =>
+  new Promise(async (resolve, reject) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const mimeType = detectDocumentMimeType(bytes) || String(file.type || "").toLowerCase();
+      const contentBase64 = arrayBufferToBase64(buffer);
+      
       resolve({
-        dataUri: reader.result,
+        contentBase64,
         fileName: file.name,
-        mimeType: file.type,
+        mimeType,
       });
-    reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
-    reader.readAsDataURL(file);
+    } catch (error) {
+      reject(new Error(`Unable to read ${file.name}: ${error.message}`));
+    }
   });
 
+const normalizeDocumentValue = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const { contentBase64, mimeType, fileName } = value;
+    if (!contentBase64 || !mimeType) return null;
+    return { contentBase64, mimeType, fileName };
+  }
+  return null;
+};
+
+const normalizeDocuments = (documents = {}) =>
+  Object.entries(documents).reduce((normalized, [key, value]) => {
+    const next = normalizeDocumentValue(value);
+    if (next !== null) normalized[key] = next;
+    return normalized;
+  }, {});
+
+const isOrganizationLive = (org = {}) =>
+  ["approved", "active"].includes(org.approvalStatus) &&
+  org.kycStatus === "verified" &&
+  org.bankVerificationStatus === "verified" &&
+  org.goLiveStatus === "live";
+
+const firstValue = (...values) =>
+  values.find((value) => cleanString(value)) || "";
+
+const pickAddress = (...addresses) =>
+  addresses.find((address) =>
+    address &&
+    ["line1", "city", "state", "postalCode", "pincode"].some((key) =>
+      cleanString(address[key]),
+    ),
+  ) || {};
+
+const mergeAddress = (primary = {}, fallback = {}) => ({
+  ...emptyAddress,
+  ...(fallback || {}),
+  ...(primary || {}),
+  line1: firstValue(primary?.line1, fallback?.line1),
+  line2: firstValue(primary?.line2, fallback?.line2),
+  city: firstValue(primary?.city, fallback?.city),
+  state: firstValue(primary?.state, fallback?.state),
+  country: firstValue(primary?.country, fallback?.country, "India"),
+  postalCode: firstValue(primary?.postalCode, primary?.pincode, fallback?.postalCode, fallback?.pincode),
+});
+
+const extractSellerDefaults = (raw = {}) => {
+  const root = raw?.data?.data || raw?.data || raw || {};
+  const flowState = root.flowState || root.onboardingState || {};
+  const user = root.user || root.seller || root.onboardingUser || flowState.user || root;
+  const sellerProfile =
+    root.sellerProfile ||
+    flowState.sellerProfile ||
+    user.sellerProfile ||
+    {};
+  const onboarding = root.onboarding || flowState.onboarding || user.onboarding || {};
+  const kyc = root.kyc || flowState.kyc || user.kyc || {};
+  const registration =
+    root.registration ||
+    root.onboardingUser ||
+    flowState.onboardingUser ||
+    user.registration ||
+    {};
+  const profile = user.profile || {};
+  const fullName = firstValue(
+    user.fullName,
+    user.full_name,
+    registration.fullName,
+    [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+    kyc.legalName,
+    sellerProfile.primaryContactName,
+  );
+  const email = firstValue(
+    user.email,
+    registration.email,
+    onboarding.email,
+    sellerProfile.supportEmail,
+  );
+  const phone = firstValue(
+    user.phone,
+    user.mobileNumber,
+    registration.mobileNumber,
+    onboarding.mobileNumber,
+    sellerProfile.supportPhone,
+  );
+  const businessAddress = pickAddress(
+    sellerProfile.businessAddress,
+    sellerProfile.billingAddress,
+  );
+  const pickupAddress = pickAddress(sellerProfile.pickupAddress, businessAddress);
+
+  return {
+    legalBusinessName: firstValue(
+      sellerProfile.legalBusinessName,
+      sellerProfile.businessName,
+      kyc.legalName,
+      fullName,
+    ),
+    storeDisplayName: firstValue(
+      sellerProfile.displayName,
+      sellerProfile.businessName,
+      sellerProfile.legalBusinessName,
+    ),
+    businessType: firstValue(sellerProfile.businessType, kyc.businessType),
+    supportEmail: email,
+    supportPhone: phone,
+    primaryContactName: firstValue(sellerProfile.primaryContactName, fullName),
+    gstin: firstValue(sellerProfile.gstNumber, sellerProfile.gstin, kyc.gstNumber),
+    pan: firstValue(sellerProfile.panNumber, sellerProfile.pan, kyc.panNumber),
+    aadhaarNumber: firstValue(
+      sellerProfile.aadhaarNumber,
+      kyc.aadhaarNumber,
+    ),
+    dateOfBirth: firstValue(sellerProfile.dateOfBirth, kyc.dateOfBirth)
+      ? String(firstValue(sellerProfile.dateOfBirth, kyc.dateOfBirth)).slice(0, 10)
+      : "",
+    businessWebsite: firstValue(sellerProfile.businessWebsite),
+    registrationNumber: firstValue(sellerProfile.registrationNumber),
+    description: firstValue(sellerProfile.description),
+    documents: {
+      ...(kyc.documents || {}),
+      ...(sellerProfile.documents || sellerProfile.kycDocuments || {}),
+    },
+    bankDetails: sellerProfile.bankDetails || {},
+    billingAddress: businessAddress,
+    pickupAddress,
+    returnAddress: pickAddress(sellerProfile.returnAddress, pickupAddress),
+  };
+};
+
+const applyDefaultsToForm = (defaults = {}) => ({
+  ...createEmptyForm(),
+  legalBusinessName: defaults.legalBusinessName || "",
+  storeDisplayName: defaults.storeDisplayName || "",
+  businessType: defaults.businessType || "proprietorship",
+  description: defaults.description || "",
+  supportEmail: defaults.supportEmail || "",
+  supportPhone: defaults.supportPhone || "",
+  registrationNumber: defaults.registrationNumber || "",
+  gstin: defaults.gstin || "",
+  pan: defaults.pan || "",
+  aadhaarNumber: defaults.aadhaarNumber || "",
+  dateOfBirth: defaults.dateOfBirth || "",
+  businessWebsite: defaults.businessWebsite || "",
+  primaryContactName: defaults.primaryContactName || "",
+  documents: { ...(defaults.documents || {}) },
+  bankDetails: { ...emptyBankDetails, ...(defaults.bankDetails || {}) },
+  billingAddress: mergeAddress(defaults.billingAddress, defaults.pickupAddress),
+  pickupAddress: mergeAddress(defaults.pickupAddress, defaults.billingAddress),
+  returnAddress: mergeAddress(defaults.returnAddress, defaults.pickupAddress || defaults.billingAddress),
+  taxState: defaults.billingAddress?.state || defaults.pickupAddress?.state || "",
+});
+
 const buildPayload = (form = {}) => {
-  const billingState = cleanString(form.billingAddress?.state);
-  const pickupState = cleanString(form.pickupAddress?.state);
+  const billingAddress = mergeAddress(form.billingAddress, form.pickupAddress);
+  const pickupAddress = mergeAddress(form.pickupAddress, billingAddress);
+  const billingState = cleanString(billingAddress?.state);
+  const pickupState = cleanString(pickupAddress?.state);
   const taxState = cleanString(form.taxState) || billingState || pickupState;
 
   return {
@@ -132,7 +339,7 @@ const buildPayload = (form = {}) => {
     dateOfBirth: form.dateOfBirth || null,
     businessWebsite: cleanString(form.businessWebsite) || null,
     primaryContactName: cleanString(form.primaryContactName),
-    documents: form.documents || {},
+    documents: normalizeDocuments(form.documents || {}),
     bankDetails: {
       accountHolderName: cleanString(form.bankDetails?.accountHolderName),
       accountNumber: cleanString(form.bankDetails?.accountNumber),
@@ -142,33 +349,43 @@ const buildPayload = (form = {}) => {
     },
     billingAddress: {
       ...emptyAddress,
-      ...(form.billingAddress || {}),
-      line1: cleanString(form.billingAddress?.line1),
-      line2: cleanString(form.billingAddress?.line2),
-      city: cleanString(form.billingAddress?.city),
+      ...billingAddress,
+      line1: cleanString(billingAddress?.line1),
+      line2: cleanString(billingAddress?.line2),
+      city: cleanString(billingAddress?.city),
       state: billingState,
-      postalCode: cleanString(form.billingAddress?.postalCode),
-      country: cleanString(form.billingAddress?.country) || "India",
+      postalCode: cleanString(billingAddress?.postalCode),
+      country: cleanString(billingAddress?.country) || "India",
+    },
+    businessAddress: {
+      ...emptyAddress,
+      ...billingAddress,
+      line1: cleanString(billingAddress?.line1),
+      line2: cleanString(billingAddress?.line2),
+      city: cleanString(billingAddress?.city),
+      state: billingState,
+      postalCode: cleanString(billingAddress?.postalCode),
+      country: cleanString(billingAddress?.country) || "India",
     },
     pickupAddress: {
       ...emptyAddress,
-      ...(form.pickupAddress || {}),
-      line1: cleanString(form.pickupAddress?.line1),
-      line2: cleanString(form.pickupAddress?.line2),
-      city: cleanString(form.pickupAddress?.city),
+      ...pickupAddress,
+      line1: cleanString(pickupAddress?.line1),
+      line2: cleanString(pickupAddress?.line2),
+      city: cleanString(pickupAddress?.city),
       state: pickupState,
-      postalCode: cleanString(form.pickupAddress?.postalCode),
-      country: cleanString(form.pickupAddress?.country) || "India",
+      postalCode: cleanString(pickupAddress?.postalCode),
+      country: cleanString(pickupAddress?.country) || "India",
     },
     returnAddress: {
       ...emptyAddress,
-      ...(form.returnAddress || {}),
-      line1: cleanString(form.returnAddress?.line1),
-      line2: cleanString(form.returnAddress?.line2),
-      city: cleanString(form.returnAddress?.city),
-      state: cleanString(form.returnAddress?.state),
-      postalCode: cleanString(form.returnAddress?.postalCode),
-      country: cleanString(form.returnAddress?.country) || "India",
+      ...(form.returnAddress || form.pickupAddress || {}),
+      line1: cleanString(form.returnAddress?.line1 || form.pickupAddress?.line1),
+      line2: cleanString(form.returnAddress?.line2 || form.pickupAddress?.line2),
+      city: cleanString(form.returnAddress?.city || form.pickupAddress?.city),
+      state: cleanString(form.returnAddress?.state || form.pickupAddress?.state),
+      postalCode: cleanString(form.returnAddress?.postalCode || form.pickupAddress?.postalCode),
+      country: cleanString(form.returnAddress?.country || form.pickupAddress?.country) || "India",
     },
     taxSettings: {
       state: taxState,
@@ -193,6 +410,8 @@ const buildPayload = (form = {}) => {
 };
 
 const validateForm = (form = {}) => {
+  const billingAddress = mergeAddress(form.billingAddress, form.pickupAddress);
+  const pickupAddress = mergeAddress(form.pickupAddress, billingAddress);
   const required = [
     [form.legalBusinessName, "Legal business name is required"],
     [form.storeDisplayName, "Store / display name is required"],
@@ -208,17 +427,38 @@ const validateForm = (form = {}) => {
     [form.bankDetails?.accountNumber, "Bank account number is required"],
     [form.bankDetails?.ifscCode, "IFSC code is required"],
     [form.bankDetails?.bankName, "Bank name is required"],
-    [form.billingAddress?.line1, "Billing address line 1 is required"],
-    [form.billingAddress?.city, "Billing city is required"],
-    [form.billingAddress?.state, "Billing state is required"],
-    [form.billingAddress?.postalCode, "Billing pincode is required"],
-    [form.pickupAddress?.line1, "Pickup address line 1 is required"],
-    [form.pickupAddress?.city, "Pickup city is required"],
-    [form.pickupAddress?.state, "Pickup state is required"],
-    [form.pickupAddress?.postalCode, "Pickup pincode is required"],
+    [billingAddress?.line1, "Business / billing address line 1 is required"],
+    [billingAddress?.city, "Business / billing city is required"],
+    [billingAddress?.state, "Business / billing state is required"],
+    [billingAddress?.postalCode, "Business / billing pincode is required"],
+    [pickupAddress?.line1, "Pickup address line 1 is required"],
+    [pickupAddress?.city, "Pickup city is required"],
+    [pickupAddress?.state, "Pickup state is required"],
+    [pickupAddress?.postalCode, "Pickup pincode is required"],
   ];
   const missing = required.find(([val]) => !cleanString(val));
   if (missing) return missing[1];
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(form.supportEmail))) {
+    return "Enter a valid support email";
+  }
+  if (!/^\d{10,15}$/.test(cleanString(form.supportPhone))) {
+    return "Support phone must be 10 to 15 digits";
+  }
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanString(form.pan))) {
+    return "Enter a valid PAN";
+  }
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/.test(cleanString(form.gstin))) {
+    return "Enter a valid GSTIN";
+  }
+  if (!/^[0-9]{12}$/.test(cleanString(form.aadhaarNumber))) {
+    return "Aadhaar number must be 12 digits";
+  }
+  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanString(form.bankDetails?.ifscCode))) {
+    return "Enter a valid IFSC code";
+  }
+  if (!/^[0-9]{9,18}$/.test(cleanString(form.bankDetails?.accountNumber))) {
+    return "Bank account number must be 9 to 18 digits";
+  }
   const missingDocument = ORGANIZATION_DOCUMENTS.find(
     ([key]) => !form.documents?.[key],
   );
@@ -229,26 +469,37 @@ const normalizeForEdit = (org = {}) => {
   const invoiceSettings = org.invoiceSettings || {};
   const taxSettings = org.taxSettings || {};
   const payoutSettings = org.payoutSettings || {};
+  const businessAddress = pickAddress(
+    org.billingAddress,
+    org.businessAddress,
+    org.address,
+  );
+  const pickupAddress = pickAddress(org.pickupAddress, businessAddress);
+  const documents = {
+    ...(org.documents || {}),
+    ...(org.kycDocuments || {}),
+    ...(org.kyc?.documents || {}),
+  };
   return {
-    legalBusinessName: org.legalBusinessName || "",
-    storeDisplayName: org.storeDisplayName || "",
+    legalBusinessName: firstValue(org.legalBusinessName, org.legalName, org.businessName),
+    storeDisplayName: firstValue(org.storeDisplayName, org.displayName, org.storeName, org.businessName),
     businessType: org.businessType || "proprietorship",
     description: org.description || "",
-    supportEmail: org.supportEmail || "",
-    supportPhone: org.supportPhone || "",
+    supportEmail: firstValue(org.supportEmail, org.email),
+    supportPhone: firstValue(org.supportPhone, org.phone, org.mobileNumber),
     registrationNumber: org.registrationNumber || "",
-    gstin: org.gstin || "",
-    pan: org.pan || "",
-    aadhaarNumber: org.aadhaarNumber || "",
+    gstin: firstValue(org.gstin, org.gstNumber),
+    pan: firstValue(org.pan, org.panNumber),
+    aadhaarNumber: firstValue(org.aadhaarNumber, org.kyc?.aadhaarNumber),
     dateOfBirth: org.dateOfBirth ? String(org.dateOfBirth).slice(0, 10) : "",
     businessWebsite: org.businessWebsite || "",
-    primaryContactName: org.primaryContactName || "",
-    documents: { ...(org.documents || org.kycDocuments || {}) },
+    primaryContactName: firstValue(org.primaryContactName, org.contactName, org.legalName),
+    documents,
     bankDetails: { ...emptyBankDetails, ...(org.bankDetails || {}) },
-    billingAddress: { ...emptyAddress, ...(org.billingAddress || {}) },
-    pickupAddress: { ...emptyAddress, ...(org.pickupAddress || {}) },
-    returnAddress: { ...emptyAddress, ...(org.returnAddress || {}) },
-    taxState: taxSettings.state || org.billingAddress?.state || "",
+    billingAddress: mergeAddress(businessAddress, pickupAddress),
+    pickupAddress: mergeAddress(pickupAddress, businessAddress),
+    returnAddress: mergeAddress(pickAddress(org.returnAddress, pickupAddress), pickupAddress),
+    taxState: taxSettings.state || businessAddress?.state || pickupAddress?.state || "",
     taxRegistrationType:
       org.complianceSettings?.taxRegistrationType ||
       taxSettings.registrationType ||
@@ -271,7 +522,7 @@ const unwrapList = (response = {}) => {
 
 const FieldRow = ({ label, required, children }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-xs font-medium text-[#65718b]">
+    <label className={onboardingLabelCls}>
       {label}
       {required && <span className="ml-0.5 text-red-500">*</span>}
     </label>
@@ -378,6 +629,78 @@ const ApprovalBanner = ({ org }) => {
   );
 };
 
+const ApprovalRequiredModal = ({ org, onClose, onEdit }) => {
+  if (!org) return null;
+  const status = org.approvalStatus || "draft";
+  const canEdit = ["draft", "rejected", "blocked"].includes(status);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-lg border border-[#E6E6E6] bg-white p-5 shadow-xl">
+        <div className="mb-3 flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff7ed] text-[#c2410c]">
+            <MdInfoOutline size={22} />
+          </span>
+          <div>
+            <h3 className="text-base font-semibold text-[#202337]">
+              Admin approval required
+            </h3>
+            <p className="mt-1 text-sm text-[#65718b]">
+              {orgLabel(org)} is currently <span className="font-semibold">{labelize(status)}</span>.
+              You can switch only after admin approves KYC, bank verification, and go-live.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-md bg-[#f8faff] px-3 py-2 text-xs text-[#65718b]">
+          Current checks: KYC {labelize(org.kycStatus || "not submitted")}, Bank{" "}
+          {labelize(org.bankVerificationStatus || "not submitted")}, Go Live{" "}
+          {labelize(org.goLiveStatus || "pending")}.
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <PrimaryButton variant="ghost" onClick={onClose}>
+            Close
+          </PrimaryButton>
+          {canEdit && (
+            <PrimaryButton
+              onClick={() => {
+                onClose();
+                onEdit(org);
+              }}
+              icon={<MdEdit size={16} />}
+            >
+              Correct Details
+            </PrimaryButton>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FormStepPill = ({ number, label }) => (
+  <span className="inline-flex items-center gap-2 rounded-full border border-[#dbeafe] bg-white px-3 py-1.5 text-xs font-semibold text-[#1e40af]">
+    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2f6fed] text-[10px] text-white">
+      {number}
+    </span>
+    {label}
+  </span>
+);
+
+const FormSectionCard = ({ number, title, subtitle, children }) => (
+  <section className="rounded-2xl border border-[#e5eaf5] bg-white p-5 shadow-sm">
+    <div className="mb-4 flex items-start gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2a900] text-xs font-bold text-white">
+        {number}
+      </span>
+      <div>
+        <h4 className="text-sm font-bold text-[#202337]">{title}</h4>
+        {subtitle && <p className="mt-1 text-xs text-[#65718b]">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </section>
+);
+
 // ─── Organization Form Modal ──────────────────────────────────────────────────
 
 const OrgFormModal = ({
@@ -387,6 +710,7 @@ const OrgFormModal = ({
   submitting,
   onClose,
   onSubmit,
+  onSaveDraft,
   onChange,
   onNestedChange,
   onDocumentChange,
@@ -395,24 +719,31 @@ const OrgFormModal = ({
   const isEdit = mode === "edit";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col rounded-lg border border-[#E6E6E6] bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#E6E6E6] bg-[#f8faff] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#E6E6E6] px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-[#dbeafe] bg-gradient-to-r from-[#eff6ff] via-white to-[#fff7e8] px-6 py-5">
           <div>
-            <h3 className="text-sm font-semibold text-[#202337]">
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#2f6fed]">
+              Seller Organization Onboarding
+            </p>
+            <h3 className="text-lg font-bold text-[#202337]">
               {isEdit ? "Edit Organization" : "Add New Organization"}
             </h3>
-            {!isEdit && (
-              <p className="mt-0.5 text-xs text-[#65718b]">
-                After saving, your organization will be submitted for admin review.
-              </p>
-            )}
+            <p className="mt-1 max-w-2xl text-sm text-[#65718b]">
+              Add the legal, bank, document, and address details for this organization. Seller can use it only after admin approval and go-live.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <FormStepPill number="1" label="Details" />
+              <FormStepPill number="2" label="Bank" />
+              <FormStepPill number="3" label="Documents" />
+              <FormStepPill number="4" label="Address" />
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]"
+            className="rounded-full bg-white p-2 text-[#65718b] shadow-sm hover:bg-[#f3f6ff]"
             aria-label="Close"
             disabled={submitting}
           >
@@ -421,16 +752,17 @@ const OrgFormModal = ({
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto px-5 py-4 space-y-5">
+        <div className="space-y-5 overflow-y-auto px-6 py-5">
           {/* Business identity */}
-          <section>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#65718b]">
-              Business Identity
-            </h4>
+          <FormSectionCard
+            number="1"
+            title="Business Identity"
+            subtitle="These details are shown to admin during organization approval."
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FieldRow label="Legal Business Name" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.legalBusinessName}
                   onChange={(e) => onChange("legalBusinessName", e.target.value)}
                   placeholder="As on PAN / GST certificate"
@@ -438,7 +770,7 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Store / Display Name" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.storeDisplayName}
                   onChange={(e) => onChange("storeDisplayName", e.target.value)}
                   placeholder="Visible to customers"
@@ -446,7 +778,7 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Business Type">
                 <select
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.businessType}
                   onChange={(e) => onChange("businessType", e.target.value)}
                 >
@@ -457,7 +789,7 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Primary Contact Name" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.primaryContactName}
                   onChange={(e) => onChange("primaryContactName", e.target.value)}
                 />
@@ -465,14 +797,14 @@ const OrgFormModal = ({
               <FieldRow label="Support Email" required>
                 <input
                   type="email"
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.supportEmail}
                   onChange={(e) => onChange("supportEmail", e.target.value)}
                 />
               </FieldRow>
               <FieldRow label="Support Phone" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.supportPhone}
                   onChange={(e) => onChange("supportPhone", e.target.value)}
                   maxLength={15}
@@ -480,14 +812,14 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Registration Number">
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.registrationNumber}
                   onChange={(e) => onChange("registrationNumber", e.target.value)}
                 />
               </FieldRow>
               <FieldRow label="GSTIN" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.gstin}
                   onChange={(e) => onChange("gstin", e.target.value.toUpperCase())}
                   placeholder="22AAAAA0000A1Z5"
@@ -496,7 +828,7 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="PAN" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.pan}
                   onChange={(e) => onChange("pan", e.target.value.toUpperCase())}
                   placeholder="AAAAA0000A"
@@ -505,7 +837,7 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Aadhaar Number" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.aadhaarNumber}
                   onChange={(e) => onChange("aadhaarNumber", e.target.value.replace(/\D/g, ""))}
                   maxLength={12}
@@ -514,7 +846,7 @@ const OrgFormModal = ({
               <FieldRow label="Date of Birth" required>
                 <input
                   type="date"
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.dateOfBirth}
                   onChange={(e) => onChange("dateOfBirth", e.target.value)}
                 />
@@ -522,7 +854,7 @@ const OrgFormModal = ({
               <FieldRow label="Business Website">
                 <input
                   type="url"
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.businessWebsite}
                   onChange={(e) => onChange("businessWebsite", e.target.value)}
                   placeholder="https://example.com"
@@ -530,36 +862,39 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Business Description">
                 <textarea
-                  className={`${inputCls} min-h-[76px] py-2 md:col-span-2`}
+                  className={`${onboardingInputCls} min-h-[76px] py-2 md:col-span-2`}
                   value={form.description}
                   onChange={(e) => onChange("description", e.target.value)}
                   rows={3}
                 />
               </FieldRow>
             </div>
-          </section>
+          </FormSectionCard>
 
           {/* Bank details */}
-          <section className="rounded-lg border border-[#E6E6E6] p-4">
-            <h4 className="mb-3 text-sm font-semibold text-[#202337]">Bank Details</h4>
+          <FormSectionCard
+            number="2"
+            title="Bank Details"
+            subtitle="Payouts for this organization will use this bank account after verification."
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FieldRow label="Account Holder Name" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.bankDetails.accountHolderName}
                   onChange={(e) => onNestedChange("bankDetails", "accountHolderName", e.target.value)}
                 />
               </FieldRow>
               <FieldRow label="Account Number" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.bankDetails.accountNumber}
                   onChange={(e) => onNestedChange("bankDetails", "accountNumber", e.target.value)}
                 />
               </FieldRow>
               <FieldRow label="IFSC Code" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.bankDetails.ifscCode}
                   onChange={(e) => onNestedChange("bankDetails", "ifscCode", e.target.value.toUpperCase())}
                   maxLength={11}
@@ -567,28 +902,26 @@ const OrgFormModal = ({
               </FieldRow>
               <FieldRow label="Bank Name" required>
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.bankDetails.bankName}
                   onChange={(e) => onNestedChange("bankDetails", "bankName", e.target.value)}
                 />
               </FieldRow>
               <FieldRow label="Branch Name">
                 <input
-                  className={inputCls}
+                  className={onboardingInputCls}
                   value={form.bankDetails.branchName}
                   onChange={(e) => onNestedChange("bankDetails", "branchName", e.target.value)}
                 />
               </FieldRow>
             </div>
-          </section>
+          </FormSectionCard>
 
-          <section className="rounded-lg border border-[#E6E6E6] p-4">
-            <h4 className="mb-1 text-sm font-semibold text-[#202337]">
-              KYC &amp; Compliance Documents
-            </h4>
-            <p className="mb-3 text-xs text-[#65718b]">
-              Upload PDF, JPG, PNG, or WebP files. Every organization is verified independently.
-            </p>
+          <FormSectionCard
+            number="3"
+            title="KYC & Compliance Documents"
+            subtitle="Upload PDF, JPG, PNG, or WebP files. Every organization is verified independently."
+          >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {ORGANIZATION_DOCUMENTS.map(([key, label]) => {
                 const document = form.documents?.[key];
@@ -598,7 +931,7 @@ const OrgFormModal = ({
                     <input
                       type="file"
                       accept="application/pdf,image/jpeg,image/png,image/webp"
-                      className={`${inputCls} py-1.5`}
+                      className={`${onboardingInputCls} py-2`}
                       onChange={(event) => onDocumentChange(key, event.target.files?.[0])}
                     />
                     {document && (
@@ -616,56 +949,56 @@ const OrgFormModal = ({
                 );
               })}
             </div>
-          </section>
+          </FormSectionCard>
 
           {/* Addresses */}
+          <FormSectionCard
+            number="4"
+            title="Business & Pickup Address"
+            subtitle="Business address is used for verification. Pickup address is used for shipment collection."
+          >
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-lg border border-[#E6E6E6] p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Billing Address</h4>
+            <div className="rounded-xl border border-[#E6E6E6] bg-[#fcfdff] p-4">
+              <div className="mb-3">
+                <h4 className="text-sm font-semibold text-[#202337]">
+                  Business / Billing Address
+                </h4>
+                <p className="mt-1 text-xs text-[#65718b]">
+                  This is the main business address admin will verify for approval.
+                </p>
+              </div>
               <div className="grid gap-3">
                 <FieldRow label="Line 1" required>
-                  <input className={inputCls} value={form.billingAddress.line1} onChange={(e) => onNestedChange("billingAddress", "line1", e.target.value)} />
+                  <input className={onboardingInputCls} value={form.billingAddress.line1} onChange={(e) => onNestedChange("billingAddress", "line1", e.target.value)} />
                 </FieldRow>
                 <FieldRow label="Line 2">
-                  <input className={inputCls} value={form.billingAddress.line2} onChange={(e) => onNestedChange("billingAddress", "line2", e.target.value)} />
+                  <input className={onboardingInputCls} value={form.billingAddress.line2} onChange={(e) => onNestedChange("billingAddress", "line2", e.target.value)} />
                 </FieldRow>
                 <div className="grid grid-cols-2 gap-3">
                   <FieldRow label="City" required>
-                    <input className={inputCls} value={form.billingAddress.city} onChange={(e) => onNestedChange("billingAddress", "city", e.target.value)} />
+                    <input className={onboardingInputCls} value={form.billingAddress.city} onChange={(e) => onNestedChange("billingAddress", "city", e.target.value)} />
                   </FieldRow>
                   <FieldRow label="State" required>
-                    <input className={inputCls} value={form.billingAddress.state} onChange={(e) => onNestedChange("billingAddress", "state", e.target.value)} />
+                    <input className={onboardingInputCls} value={form.billingAddress.state} onChange={(e) => onNestedChange("billingAddress", "state", e.target.value)} />
                   </FieldRow>
                 </div>
                 <FieldRow label="Pincode" required>
-                  <input className={inputCls} value={form.billingAddress.postalCode} onChange={(e) => onNestedChange("billingAddress", "postalCode", e.target.value)} maxLength={6} />
+                  <input className={onboardingInputCls} value={form.billingAddress.postalCode} onChange={(e) => onNestedChange("billingAddress", "postalCode", e.target.value)} maxLength={6} />
                 </FieldRow>
               </div>
-            </section>
+            </div>
 
-            <section className="rounded-lg border border-[#E6E6E6] p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Pickup Address</h4>
-              <div className="grid gap-3">
-                <FieldRow label="Line 1" required>
-                  <input className={inputCls} value={form.pickupAddress.line1} onChange={(e) => onNestedChange("pickupAddress", "line1", e.target.value)} />
-                </FieldRow>
-                <FieldRow label="Line 2">
-                  <input className={inputCls} value={form.pickupAddress.line2} onChange={(e) => onNestedChange("pickupAddress", "line2", e.target.value)} />
-                </FieldRow>
-                <div className="grid grid-cols-2 gap-3">
-                  <FieldRow label="City">
-                    <input className={inputCls} value={form.pickupAddress.city} onChange={(e) => onNestedChange("pickupAddress", "city", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow label="State" required>
-                    <input className={inputCls} value={form.pickupAddress.state} onChange={(e) => onNestedChange("pickupAddress", "state", e.target.value)} />
-                  </FieldRow>
+            <div className="rounded-xl border border-[#E6E6E6] bg-[#fcfdff] p-4">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#202337]">Pickup Address</h4>
+                  <p className="mt-1 text-xs text-[#65718b]">
+                    Used for shipment pickup. You can copy from business address.
+                  </p>
                 </div>
-                <FieldRow label="Pincode">
-                  <input className={inputCls} value={form.pickupAddress.postalCode} onChange={(e) => onNestedChange("pickupAddress", "postalCode", e.target.value)} maxLength={6} />
-                </FieldRow>
                 <button
                   type="button"
-                  className="mt-1 text-xs text-[#2f6fed] hover:underline text-left"
+                  className="shrink-0 rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1.5 text-xs font-medium text-[#1e40af] hover:bg-[#dbeafe]"
                   onClick={() => {
                     onNestedChange("pickupAddress", "line1", form.billingAddress.line1);
                     onNestedChange("pickupAddress", "line2", form.billingAddress.line2);
@@ -675,101 +1008,47 @@ const OrgFormModal = ({
                     onNestedChange("pickupAddress", "country", form.billingAddress.country);
                   }}
                 >
-                  Same as billing address
+                  Same as business
                 </button>
               </div>
-            </section>
+              <div className="grid gap-3">
+                <FieldRow label="Line 1" required>
+                  <input className={onboardingInputCls} value={form.pickupAddress.line1} onChange={(e) => onNestedChange("pickupAddress", "line1", e.target.value)} />
+                </FieldRow>
+                <FieldRow label="Line 2">
+                  <input className={onboardingInputCls} value={form.pickupAddress.line2} onChange={(e) => onNestedChange("pickupAddress", "line2", e.target.value)} />
+                </FieldRow>
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldRow label="City" required>
+                    <input className={onboardingInputCls} value={form.pickupAddress.city} onChange={(e) => onNestedChange("pickupAddress", "city", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="State" required>
+                    <input className={onboardingInputCls} value={form.pickupAddress.state} onChange={(e) => onNestedChange("pickupAddress", "state", e.target.value)} />
+                  </FieldRow>
+                </div>
+                <FieldRow label="Pincode" required>
+                  <input className={onboardingInputCls} value={form.pickupAddress.postalCode} onChange={(e) => onNestedChange("pickupAddress", "postalCode", e.target.value)} maxLength={6} />
+                </FieldRow>
+              </div>
+            </div>
           </div>
+          </FormSectionCard>
 
-          <section className="rounded-lg border border-[#E6E6E6] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="text-sm font-semibold text-[#202337]">Return Address</h4>
-              <button
-                type="button"
-                className="text-xs text-[#2f6fed] hover:underline"
-                onClick={() =>
-                  Object.entries(form.pickupAddress).forEach(([key, value]) =>
-                    onNestedChange("returnAddress", key, value),
-                  )
-                }
-              >
-                Same as pickup address
-              </button>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <FieldRow label="Line 1">
-                <input className={inputCls} value={form.returnAddress.line1} onChange={(e) => onNestedChange("returnAddress", "line1", e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Line 2">
-                <input className={inputCls} value={form.returnAddress.line2} onChange={(e) => onNestedChange("returnAddress", "line2", e.target.value)} />
-              </FieldRow>
-              <FieldRow label="City">
-                <input className={inputCls} value={form.returnAddress.city} onChange={(e) => onNestedChange("returnAddress", "city", e.target.value)} />
-              </FieldRow>
-              <FieldRow label="State">
-                <input className={inputCls} value={form.returnAddress.state} onChange={(e) => onNestedChange("returnAddress", "state", e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Pincode">
-                <input className={inputCls} value={form.returnAddress.postalCode} onChange={(e) => onNestedChange("returnAddress", "postalCode", e.target.value)} maxLength={6} />
-              </FieldRow>
-            </div>
-          </section>
-
-          {/* Invoice & payout settings */}
-          <section>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#65718b]">
-              Invoice &amp; Payout Settings
-            </h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <FieldRow label="Tax State">
-                <input
-                  className={inputCls}
-                  value={form.taxState}
-                  onChange={(e) => onChange("taxState", e.target.value)}
-                  placeholder="Auto-filled from billing state"
-                />
-              </FieldRow>
-              <FieldRow label="Tax Registration">
-                <select
-                  className={inputCls}
-                  value={form.taxRegistrationType}
-                  onChange={(e) => onChange("taxRegistrationType", e.target.value)}
-                >
-                  {TAX_REGISTRATION_TYPES.map((type) => (
-                    <option key={type} value={type}>{labelize(type)}</option>
-                  ))}
-                </select>
-              </FieldRow>
-              <FieldRow label="Invoice Prefix">
-                <input
-                  className={inputCls}
-                  value={form.invoicePrefix}
-                  onChange={(e) => onChange("invoicePrefix", e.target.value.toUpperCase())}
-                  maxLength={6}
-                />
-              </FieldRow>
-              <FieldRow label="Payout Schedule">
-                <select
-                  className={inputCls}
-                  value={form.payoutSchedule}
-                  onChange={(e) => onChange("payoutSchedule", e.target.value)}
-                >
-                  {PAYOUT_SCHEDULES.map((s) => (
-                    <option key={s} value={s}>{labelize(s)}</option>
-                  ))}
-                </select>
-              </FieldRow>
-            </div>
-          </section>
+          <p className="rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-4 py-3 text-xs text-[#1e40af]">
+            Return address, invoice prefix, payout schedule, and tax settings will use safe defaults from your business/pickup details. You can manage extra settings after admin approval.
+          </p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
+        <div className="flex flex-col gap-2 border-t border-[#E6E6E6] bg-white px-6 py-4 sm:flex-row sm:justify-end">
           <PrimaryButton variant="ghost" onClick={onClose} disabled={submitting}>
             Cancel
           </PrimaryButton>
+          <PrimaryButton variant="ghost" onClick={onSaveDraft} disabled={submitting}>
+            {submitting ? "Saving..." : "Save Draft"}
+          </PrimaryButton>
           <PrimaryButton onClick={onSubmit} disabled={submitting} icon={<MdCheckCircle size={18} />}>
-            {submitting ? "Saving..." : isEdit ? "Save Changes" : "Submit for Review"}
+            {submitting ? "Submitting..." : isEdit ? "Save & Submit" : "Submit for Review"}
           </PrimaryButton>
         </div>
       </div>
@@ -779,11 +1058,10 @@ const OrgFormModal = ({
 
 // ─── Organization Card ────────────────────────────────────────────────────────
 
-const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
+const OrgCard = ({ org, isActive, onEdit, onDelete, onSetDefault, onSwitch, submitting }) => {
   const id = orgId(org);
   const status = org.approvalStatus || "draft";
-  const isApproved =
-    (status === "approved" || status === "active") && org.goLiveStatus === "live";
+  const isApproved = isOrganizationLive(org);
 
   return (
     <div
@@ -920,6 +1198,30 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
             Set as Default
           </button>
         )}
+        {status === "draft" && (
+          <button
+            type="button"
+            onClick={() => onDelete(org)}
+            disabled={submitting}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#fecaca] bg-[#fff1f0] px-3 py-1.5 text-xs font-medium text-[#b42318] transition hover:bg-[#fee2e2] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <MdDeleteOutline size={14} />
+            Delete Draft
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onSwitch(org)}
+          disabled={submitting || (isApproved && isActive)}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            isApproved
+              ? "border border-[#2f6fed] bg-[#eff6ff] text-[#1e40af] hover:bg-[#dbeafe]"
+              : "border border-[#fed7aa] bg-[#fff7ed] text-[#c2410c] hover:bg-[#ffedd5]"
+          }`}
+        >
+          <MdOutlineSwapHoriz size={14} />
+          {isApproved ? (isActive ? "Active Organization" : "Switch to this org") : "Waiting for approval"}
+        </button>
       </div>
     </div>
   );
@@ -927,33 +1229,111 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const MyOrganizations = () => {
+const MyOrganizations = ({ onboardingMode = false }) => {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", org: null });
+  const [approvalPopupOrg, setApprovalPopupOrg] = useState(null);
+  const [activeOrgId, setActiveOrgId] = useState(getSelectedSellerOrganizationId());
+  const [sellerDefaults, setSellerDefaults] = useState({});
   const [form, setForm] = useState(createEmptyForm());
-  const activeOrgId = getSelectedSellerOrganizationId();
+  const onboardingToken = onboardingMode
+    ? localStorage.getItem("sellerOnboardingToken")
+    : null;
+  const organizationsEndpoint = onboardingMode
+    ? ENDPOINTS.sellers.onboardingOrganizations
+    : ENDPOINTS.sellers.myOrganizations;
+  const organizationEndpoint = (id) =>
+    onboardingMode
+      ? ENDPOINTS.sellers.onboardingOrganization(id)
+      : ENDPOINTS.sellers.myOrganization(id);
 
   const loadOrganizations = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiRequest("GET", ENDPOINTS.sellers.myOrganizations, { limit: 50 });
-      setOrganizations(unwrapList(response));
+      const response = await apiRequest(
+        "GET",
+        organizationsEndpoint,
+        { limit: 50 },
+        "json",
+        onboardingToken,
+      );
+      const list = unwrapList(response);
+      setOrganizations(list);
+      const stored = getSelectedSellerOrganizationId();
+      const storedOrganization = list.find((organization) => String(orgId(organization)) === String(stored));
+      if (stored && storedOrganization && !isOrganizationLive(storedOrganization)) {
+        const fallback = list.find((organization) => organization.isDefault && isOrganizationLive(organization)) ||
+          list.find(isOrganizationLive);
+        const nextId = fallback ? orgId(fallback) : "";
+        setSelectedSellerOrganizationId(nextId);
+        setActiveOrgId(nextId);
+      } else {
+        setActiveOrgId(stored);
+      }
     } catch (error) {
       toast.error(error?.message || "Failed to load your organizations");
       setOrganizations([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onboardingToken, organizationsEndpoint]);
 
   useEffect(() => {
     loadOrganizations();
   }, [loadOrganizations]);
 
+  useEffect(() => {
+    let active = true;
+    const loadSellerDefaults = async () => {
+      try {
+        const response = await apiRequest(
+          "GET",
+          onboardingMode ? ENDPOINTS.auth.status : ENDPOINTS.auth.me,
+          {},
+          "json",
+          onboardingToken,
+        );
+        if (active) setSellerDefaults(extractSellerDefaults(response));
+      } catch {
+        if (active) setSellerDefaults({});
+      }
+    };
+    loadSellerDefaults();
+    return () => {
+      active = false;
+    };
+  }, [onboardingMode, onboardingToken]);
+
+  useEffect(() => {
+    if (!modal.open || modal.mode !== "create") return;
+    const hasAnyValue = [
+      form.legalBusinessName,
+      form.storeDisplayName,
+      form.supportEmail,
+      form.supportPhone,
+      form.primaryContactName,
+      form.billingAddress?.line1,
+      form.pickupAddress?.line1,
+    ].some((value) => cleanString(value));
+    if (!hasAnyValue && Object.keys(sellerDefaults || {}).length > 0) {
+      setForm(applyDefaultsToForm(sellerDefaults));
+    }
+  }, [form, modal.mode, modal.open, sellerDefaults]);
+
+  useEffect(() => {
+    const handleOrganizationChanged = (event) => {
+      setActiveOrgId(event.detail?.organizationId || getSelectedSellerOrganizationId());
+    };
+    window.addEventListener("seller:organizationChanged", handleOrganizationChanged);
+    return () => {
+      window.removeEventListener("seller:organizationChanged", handleOrganizationChanged);
+    };
+  }, []);
+
   const openCreate = () => {
-    setForm(createEmptyForm());
+    setForm(applyDefaultsToForm(sellerDefaults));
     setModal({ open: true, mode: "create", org: null });
   };
 
@@ -986,23 +1366,47 @@ const MyOrganizations = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    const error = validateForm(form);
-    if (error) {
-      toast.error(error);
-      return;
+  const saveOrganization = async (submissionAction) => {
+    if (submissionAction === "submit") {
+      const error = validateForm(form);
+      if (error) {
+        toast.error(error);
+        return;
+      }
     }
-
     try {
       setSubmitting(true);
-      const payload = buildPayload(form);
+      const payload = {
+        ...buildPayload(form),
+        submissionAction,
+      };
       if (modal.mode === "edit") {
         const id = orgId(modal.org);
-        await apiRequest("PATCH", ENDPOINTS.sellers.myOrganization(id), payload);
-        toast.success("Organization updated successfully");
+        await apiRequest(
+          "PATCH",
+          organizationEndpoint(id),
+          payload,
+          "json",
+          onboardingToken,
+        );
+        toast.success(
+          submissionAction === "draft"
+            ? "Organization draft saved"
+            : "Organization submitted for review",
+        );
       } else {
-        await apiRequest("POST", ENDPOINTS.sellers.myOrganizations, payload);
-        toast.success("Organization submitted for review");
+        await apiRequest(
+          "POST",
+          organizationsEndpoint,
+          payload,
+          "json",
+          onboardingToken,
+        );
+        toast.success(
+          submissionAction === "draft"
+            ? "Organization draft saved"
+            : "Organization submitted for review",
+        );
       }
       setModal({ open: false, mode: "create", org: null });
       await loadOrganizations();
@@ -1012,6 +1416,9 @@ const MyOrganizations = () => {
       setSubmitting(false);
     }
   };
+
+  const handleSubmit = () => saveOrganization("submit");
+  const handleSaveDraft = () => saveOrganization("draft");
 
   const handleSetDefault = async (id) => {
     try {
@@ -1027,10 +1434,51 @@ const MyOrganizations = () => {
     }
   };
 
+  const handleDeleteDraft = async (org) => {
+    if ((org.approvalStatus || "draft") !== "draft") {
+      toast.error("Only draft organizations can be deleted");
+      return;
+    }
+    const name = orgLabel(org);
+    if (!window.confirm(`Delete draft organization "${name}"? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await apiRequest(
+        "DELETE",
+        organizationEndpoint(orgId(org)),
+        {},
+        "json",
+        onboardingToken,
+      );
+      if (String(activeOrgId) === String(orgId(org))) {
+        setSelectedSellerOrganizationId("");
+        setActiveOrgId("");
+      }
+      toast.success("Draft organization deleted");
+      await loadOrganizations();
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete draft organization");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSwitchOrganization = (org) => {
+    if (!isOrganizationLive(org)) {
+      setApprovalPopupOrg(org);
+      return;
+    }
+    const id = orgId(org);
+    setSelectedSellerOrganizationId(id);
+    setActiveOrgId(id);
+    toast.success(`${orgLabel(org)} is now active`);
+    window.setTimeout(() => window.location.reload(), 0);
+  };
+
   const approvedCount = organizations.filter(
-    (o) =>
-      (o.approvalStatus === "approved" || o.approvalStatus === "active") &&
-      o.goLiveStatus === "live",
+    isOrganizationLive,
   ).length;
   const pendingCount = organizations.filter(
     (o) => o.approvalStatus === "pending_review" || o.approvalStatus === "resubmitted",
@@ -1092,8 +1540,9 @@ const MyOrganizations = () => {
         <div>
           <p className="font-semibold text-[#1e40af]">Organization Switcher</p>
           <p className="mt-0.5 text-[#3b82f6]">
-            Use the dropdown in the top header to switch between organizations. All product
-            listings, orders, commissions, and reports will filter to the selected organization.
+            {onboardingMode
+              ? "Complete or correct an organization below. Dashboard access starts when at least one organization is approved and live."
+              : "Use the dropdown in the top header to switch between organizations. All product listings, orders, commissions, and reports will filter to the selected organization."}
           </p>
         </div>
       </div>
@@ -1128,7 +1577,9 @@ const MyOrganizations = () => {
               org={org}
               isActive={orgId(org) === activeOrgId}
               onEdit={openEdit}
+              onDelete={handleDeleteDraft}
               onSetDefault={handleSetDefault}
+              onSwitch={handleSwitchOrganization}
               submitting={submitting}
             />
           ))}
@@ -1142,9 +1593,15 @@ const MyOrganizations = () => {
         submitting={submitting}
         onClose={closeModal}
         onSubmit={handleSubmit}
+        onSaveDraft={handleSaveDraft}
         onChange={updateForm}
         onNestedChange={updateNestedForm}
         onDocumentChange={handleDocumentChange}
+      />
+      <ApprovalRequiredModal
+        org={approvalPopupOrg}
+        onClose={() => setApprovalPopupOrg(null)}
+        onEdit={openEdit}
       />
     </div>
   );
