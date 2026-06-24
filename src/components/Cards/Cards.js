@@ -10,10 +10,20 @@ export default function Cards({
   iconBg = "#dde6d9",
   iconColor,
   trendNegative = false,
+  onClick,
 }) {
   const trendColor = trendNegative ? "text-red-500" : "text-emerald-500";
+  const Component = onClick ? "button" : "div";
   return (
-    <div className="relative flex h-full min-h-[92px] w-full min-w-0 overflow-hidden rounded-[10px] border border-[#f0c86f] bg-white px-4 py-3 shadow-none">
+    <Component
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`relative flex h-full min-h-[92px] w-full min-w-0 overflow-hidden rounded-[10px] border border-[#f0c86f] bg-white px-4 py-3 text-left shadow-none ${
+        onClick
+          ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] focus:ring-offset-2"
+          : ""
+      }`}
+    >
       {icon && (
         <span
           className="absolute right-0 top-0 flex h-9 w-10 items-center justify-center rounded-bl-[10px]"
@@ -70,6 +80,6 @@ export default function Cards({
           </p>
         )}
       </div>
-    </div>
+    </Component>
   );
 }

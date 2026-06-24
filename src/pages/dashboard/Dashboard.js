@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   Cell,
   CartesianGrid,
   Pie,
@@ -18,13 +20,26 @@ import { getDashboardOverview } from "../../Redux/adminCoreSlice";
 import Cards from "../../components/Cards/Cards";
 
 const EMPTY_PERFORMANCE = [
-  { label: "Mon", value: 0 },
-  { label: "Tue", value: 0 },
-  { label: "Wed", value: 0 },
-  { label: "Thu", value: 0 },
-  { label: "Fri", value: 0 },
-  { label: "Sat", value: 0 },
-  { label: "Sun", value: 0 },
+  { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Tue", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Wed", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Thu", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Fri", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Sat", value: 0, revenue: 0, averageOrderValue: 0 },
+  { label: "Sun", value: 0, revenue: 0, averageOrderValue: 0 },
+];
+
+const RANGE_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "Last Week", value: "last_week" },
+  { label: "Last Month", value: "last_month" },
+  { label: "This Year", value: "year" },
+];
+
+const CHART_OPTIONS = [
+  { label: "Performance", value: "performance" },
+  { label: "Top Products", value: "top_products" },
+  { label: "Recent Orders", value: "recent_orders" },
 ];
 
 const integerFormatter = new Intl.NumberFormat("en-IN");
@@ -37,6 +52,39 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 const asNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+};
+
+const toInputDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getRangeDates = (range) => {
+  const today = new Date();
+  const end = new Date(today);
+  const start = new Date(today);
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  if (range === "last_week") {
+    start.setDate(today.getDate() + mondayOffset - 7);
+    end.setTime(start.getTime());
+    end.setDate(start.getDate() + 6);
+  } else if (range === "last_month") {
+    start.setMonth(today.getMonth() - 1, 1);
+    end.setMonth(today.getMonth(), 0);
+  } else if (range === "year") {
+    start.setMonth(0, 1);
+  } else if (range === "today") {
+    start.setTime(today.getTime());
+  }
+
+  return {
+    fromDate: toInputDate(start),
+    toDate: toInputDate(end),
+  };
 };
 
 const formatNumber = (value) => integerFormatter.format(asNumber(value));
@@ -92,9 +140,57 @@ function EmptyTableRow({ colSpan, children }) {
   );
 }
 
+function GoldDropdown({ icon, options, value, onChange, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value) || options[0];
+
+  return (
+    <div className={`relative w-full sm:w-[170px] ${className}`}>
+      <button
+        type="button"
+        className="flex min-h-8 w-full items-center justify-between gap-2 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {icon}
+          <span className="truncate">{selected?.label}</span>
+        </span>
+        <span className="text-[10px] leading-none">▾</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-2 w-full overflow-hidden rounded-md border border-[var(--admin-gold)] bg-white py-1 shadow-lg">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`block w-full px-3 py-2 text-left text-xs font-semibold transition ${
+                  isSelected
+                    ? "bg-[var(--admin-gold)] text-white"
+                    : "text-[var(--admin-ink)] hover:bg-[#fff3cc] hover:text-[var(--admin-gold-dark)]"
+                }`}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [range, setRange] = useState("year");
+  const [dateFilters, setDateFilters] = useState(() => getRangeDates("year"));
+  const [chartView, setChartView] = useState("performance");
   const dashboardState = useSelector(
     (state) => state.adminCore?.dashboardOverviewData,
   );
@@ -105,8 +201,13 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
-    dispatch(getDashboardOverview());
-  }, [dispatch]);
+    dispatch(getDashboardOverview(dateFilters));
+  }, [dateFilters, dispatch]);
+
+  const handleRangeChange = (nextRange) => {
+    setRange(nextRange);
+    setDateFilters(getRangeDates(nextRange));
+  };
 
   const metrics = useMemo(() => {
     const sellerMetrics = overview?.metrics || {};
@@ -120,6 +221,7 @@ export default function Dashboard() {
         iconBg: "#04258633",
         iconColor: "#0f4bb3",
         label: "Total Orders",
+        route: "/app/orders",
         value: formatNumber(sellerMetrics.totalOrders ?? commerce.totalOrders),
         helper: "vs last month",
         trend: formatTrend(trends.totalOrders),
@@ -130,6 +232,7 @@ export default function Dashboard() {
         iconBg: "#cce8c9",
         iconColor: "#1d9b50",
         label: "Total Revenue ( GMV )",
+        route: "/app/payments",
         value: formatCurrency(sellerMetrics.gmv ?? commerce.gmv),
         helper: "vs last month",
         trend: formatTrend(trends.gmv),
@@ -140,6 +243,7 @@ export default function Dashboard() {
         iconBg: "#e3d4ff",
         iconColor: "#8d5cf6",
         label: "Orders Today",
+        route: "/app/orders",
         value: formatNumber(
           sellerMetrics.ordersToday ??
             commerce.ordersToday ??
@@ -152,6 +256,7 @@ export default function Dashboard() {
         iconBg: "#ffe5b5",
         iconColor: "#f5a300",
         label: "Units Sold",
+        route: "/app/inventory-overview",
         value: formatNumber(
           sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold,
         ),
@@ -162,6 +267,7 @@ export default function Dashboard() {
         iconBg: "#ffd4d2",
         iconColor: "#ff4b55",
         label: "Pending Payouts",
+        route: "/app/seller-payouts",
         value: formatCurrency(
           sellerMetrics.pendingPayouts ??
             payouts.pendingAmount ??
@@ -175,6 +281,7 @@ export default function Dashboard() {
         iconBg: "#bfeee8",
         iconColor: "#16b8af",
         label: "Returned Orders",
+        route: "/app/returns",
         value: formatNumber(
           sellerMetrics.returnedOrders ??
             commerce.returnedOrders ??
@@ -220,10 +327,19 @@ export default function Dashboard() {
       value: asNumber(
         item.value ?? item.orders ?? item.totalOrders ?? item.total,
       ),
+      revenue: asNumber(item.revenue ?? item.gmv ?? item.totalRevenue),
+      averageOrderValue: asNumber(
+        item.averageOrderValue ??
+          item.aov ??
+          (asNumber(item.revenue ?? item.gmv ?? item.totalRevenue) /
+            Math.max(
+              asNumber(item.value ?? item.orders ?? item.totalOrders ?? item.total),
+              1,
+            )),
+      ),
     }));
   }, [overview, recentOrders]);
 
-  const hasPerformanceSeries = performanceData.some((item) => item.value > 0);
   const topProducts = useMemo(
     () =>
       Array.isArray(overview?.topProducts)
@@ -232,6 +348,40 @@ export default function Dashboard() {
           )
         : [],
     [overview],
+  );
+  const topProductChartData = useMemo(
+    () =>
+      topProducts.slice(0, 8).map((product) => ({
+        label: String(product.name || product.title || "Product").slice(0, 18),
+        orders: asNumber(product.units_sold ?? product.unitsSold),
+        revenue: asNumber(product.revenue),
+      })),
+    [topProducts],
+  );
+  const recentOrderChartData = useMemo(
+    () =>
+      recentOrders.slice(0, 8).map((order, index) => ({
+        label:
+          order.orderNumber ||
+          order.order_number ||
+          `#${String(order.id || order._id || index + 1).slice(0, 6)}`,
+        revenue: asNumber(
+          order.seller_order_total ??
+            order.payable_amount ??
+            order.totalAmount ??
+            order.total,
+        ),
+        orders: 1,
+      })),
+    [recentOrders],
+  );
+  const activeChartData = useMemo(() => {
+    if (chartView === "top_products") return topProductChartData;
+    if (chartView === "recent_orders") return recentOrderChartData;
+    return performanceData;
+  }, [chartView, performanceData, recentOrderChartData, topProductChartData]);
+  const hasActiveChartData = activeChartData.some(
+    (item) => item.value > 0 || item.orders > 0 || item.revenue > 0 || item.averageOrderValue > 0,
   );
   const statusRows = useMemo(() => {
     const source = overview?.orderStatus || overview?.statusBreakdown;
@@ -273,7 +423,6 @@ export default function Dashboard() {
           <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
             Merchant Insights
           </h1>
-          
         </div>
 
         {isLoading && !dashboardState?.normalized?.data && (
@@ -285,7 +434,11 @@ export default function Dashboard() {
         {/* Cards UI */}
         <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           {metrics.map((metric) => (
-            <Cards key={metric.label} {...metric} />
+            <Cards
+              key={metric.label}
+              {...metric}
+              onClick={() => navigate(metric.route)}
+            />
           ))}
         </div>
 
@@ -297,15 +450,25 @@ export default function Dashboard() {
                   Performance Overview
                 </h2>
               </div>
-              <button type="button" className="admin-btn-secondary !min-h-8 !px-3 !text-xs">
-                <MdCalendarToday className="h-3.5 w-3.5" />
-                This Year
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <GoldDropdown
+                  icon={<MdCalendarToday className="h-3.5 w-3.5" />}
+                  options={RANGE_OPTIONS}
+                  value={range}
+                  onChange={handleRangeChange}
+                />
+                <GoldDropdown
+                  options={CHART_OPTIONS}
+                  value={chartView}
+                  onChange={setChartView}
+                  className="sm:w-[170px]"
+                />
+              </div>
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-5 text-[11px] font-medium text-[var(--admin-muted)]">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
-                Order
+                {chartView === "performance" ? "Order" : "Units / Orders"}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
@@ -318,50 +481,130 @@ export default function Dashboard() {
             </div>
             <div className="h-[270px] w-full text-xs">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={performanceData}
-                  margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="ordersPerformanceFill"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#D6A323" stopOpacity={0.18} />
-                      <stop offset="95%" stopColor="#D6A323" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="#EADFCE" />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <Tooltip
-                    formatter={(value) => [formatNumber(value), "Orders"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#D6A323"
-                    strokeWidth={2}
-                    fill="url(#ordersPerformanceFill)"
-                  />
-                </AreaChart>
+                {chartView === "performance" ? (
+                  <AreaChart
+                    data={activeChartData}
+                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="ordersPerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="5%" stopColor="#D6A323" stopOpacity={0.38} />
+                        <stop offset="95%" stopColor="#D6A323" stopOpacity={0.08} />
+                      </linearGradient>
+                      <linearGradient
+                        id="revenuePerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="5%" stopColor="#37B446" stopOpacity={0.34} />
+                        <stop offset="95%" stopColor="#37B446" stopOpacity={0.07} />
+                      </linearGradient>
+                      <linearGradient
+                        id="aovPerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="5%" stopColor="#1F1B5F" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#1F1B5F" stopOpacity={0.06} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#EADFCE" />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        name === "Revenue" || name === "Average Order Value"
+                          ? formatCurrency(value)
+                          : formatNumber(value),
+                        name,
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      name="Orders"
+                      stroke="#D6A323"
+                      strokeWidth={2}
+                      fill="url(#ordersPerformanceFill)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Revenue"
+                      stroke="#37B446"
+                      strokeWidth={2}
+                      fill="url(#revenuePerformanceFill)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="averageOrderValue"
+                      name="Average Order Value"
+                      stroke="#1F1B5F"
+                      strokeWidth={2}
+                      fill="url(#aovPerformanceFill)"
+                    />
+                  </AreaChart>
+                ) : (
+                  <BarChart
+                    data={activeChartData}
+                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
+                  >
+                    <CartesianGrid vertical={false} stroke="#EADFCE" />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        name === "Revenue" ? formatCurrency(value) : formatNumber(value),
+                        name,
+                      ]}
+                    />
+                    <Bar
+                      dataKey="orders"
+                      name={chartView === "top_products" ? "Units Sold" : "Orders"}
+                      fill="#D6A323"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      name="Revenue"
+                      fill="#37B446"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
-            {!hasPerformanceSeries && (
+            {!hasActiveChartData && (
               <p className="-mt-4 text-center text-[11px] text-slate-400">
-                Performance trend data is not available yet.
+                Chart data is not available yet.
               </p>
             )}
           </section>
@@ -414,9 +657,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <button type="button" className="mt-4 text-xs font-semibold text-[var(--admin-gold-dark)] hover:text-[var(--admin-navy)]">
-              View Detailed Report
-            </button>
+          
           </section>
         </div>
 
