@@ -395,7 +395,9 @@ const toContentPageBody = (payload = {}) => ({
 export const getDashboardOverview = createApiThunkPrivate(
   "adminCore/getDashboardOverview",
   ENDPOINTS.dashboard.overview,
-  "GET"
+  "GET",
+  true,
+  { transformParams: pickQuery(["fromDate", "toDate", "limit"]) }
 );
 
 export const getAccessModules = createApiThunkPrivate(
