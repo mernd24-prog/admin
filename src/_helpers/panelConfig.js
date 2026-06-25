@@ -36,7 +36,7 @@ const detectModeFromRuntime = () => {
 const configuredMode =
   // resolvePanelMode(process.env.REACT_APP_PANEL_MODE) ||
   // detectModeFromRuntime() ||
-  PANEL_MODES.SELLER;
+  PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 

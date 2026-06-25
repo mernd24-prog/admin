@@ -280,6 +280,14 @@ export const ENDPOINTS = {
     orderEwayBill: (orderId) => `/delivery/orders/${orderId}/eway-bill`,
     ewayBillStatus: (ewayBillId) => `/delivery/eway-bills/${ewayBillId}/status`,
   },
+  shippingProfiles: {
+    list: "/shipping-profiles",
+    create: "/shipping-profiles",
+    detail: (profileId) => `/shipping-profiles/${profileId}`,
+    update: (profileId) => `/shipping-profiles/${profileId}`,
+    delete: (profileId) => `/shipping-profiles/${profileId}`,
+    setDefault: (profileId) => `/shipping-profiles/${profileId}/set-default`,
+  },
   returns: {
     list: "/returns",
     detail: (returnId) => `/returns/${returnId}`,
@@ -343,7 +351,7 @@ export const ENDPOINTS = {
   rbac: {
     permissionManagementModules: "/rbac/permission-management/modules",
     modules: "/rbac/modules",
-    sidebarModules: "/rbac/modules/sidebar",
+    sidebarModules: byPanel("/rbac/modules/sidebar", "/sellers/me/sidebar/modules"),
     module: (moduleId) => `/rbac/modules/${moduleId}`,
     moduleStatus: (moduleId) => `/rbac/modules/${moduleId}/status`,
     reorderModules: "/rbac/modules/reorder",

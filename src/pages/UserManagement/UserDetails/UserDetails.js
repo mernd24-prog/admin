@@ -541,8 +541,6 @@ const UserDetails = () => {
   const [editSeller, setEditSeller] = useState({
     displayName: '',
     legalBusinessName: '',
-    supportEmail: '',
-    supportPhone: '',
     businessType: '',
     avatarUrl: '',
   });
@@ -628,13 +626,11 @@ const UserDetails = () => {
     setEditSeller({
       displayName:       sellerProfile.displayName       || '',
       legalBusinessName: sellerProfile.legalBusinessName || '',
-      supportEmail:      sellerProfile.supportEmail      || user.email || '',
-      supportPhone:      sellerProfile.supportPhone      || user.phone || '',
       businessType:      sellerProfile.businessType      || '',
       avatarUrl:         profile.avatarUrl || user.user_image || '',
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sellerProfile.displayName, sellerProfile.legalBusinessName, user.email, user.phone, profile.avatarUrl]);
+  }, [sellerProfile.displayName, sellerProfile.legalBusinessName, sellerProfile.businessType, profile.avatarUrl]);
 
   const refresh = useCallback(() => {
     dispatch(getAdminUserDetails({ _id: id }));
@@ -832,8 +828,6 @@ const UserDetails = () => {
           sellerProfile: {
             displayName: editSeller.displayName,
             legalBusinessName: editSeller.legalBusinessName,
-            supportEmail: editSeller.supportEmail,
-            supportPhone: editSeller.supportPhone,
             businessType: editSeller.businessType,
           },
         }),
@@ -1097,82 +1091,168 @@ const UserDetails = () => {
                 const organizationId = organization.id || organization.organizationId;
                 const bank = organization.bankDetails || {};
                 const documents = organization.documents || {};
+                const isReviewing = reviewingOrgId === organizationId;
+                const anyReviewing = reviewingOrgId !== null;
+                const hasAddresses = organization.billingAddress || organization.pickupAddress || organization.returnAddress;
                 return (
-                  <div key={organizationId} className="mb-4 rounded-md border border-gray-200 p-4 last:mb-0">
-                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                  <div key={organizationId} className="mb-4 rounded-lg border border-gray-200 last:mb-0 overflow-hidden">
+
+                    {/* ── Header ─────────────────────────────────────────── */}
+                    <div className="flex flex-wrap items-start justify-between gap-3 bg-gray-50 px-4 py-3 border-b border-gray-200">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-sm font-semibold text-gray-900">{organization.storeDisplayName || organization.legalBusinessName || organizationId}</h3>
                           {organization.isDefault && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Default</span>}
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">{organization.legalBusinessName || '—'}</p>
+                        {organization.storeDisplayName && organization.legalBusinessName && organization.storeDisplayName !== organization.legalBusinessName && (
+                          <p className="mt-0.5 text-xs text-gray-500">Legal: {organization.legalBusinessName}</p>
+                        )}
+                        <p className="mt-0.5 text-[11px] text-gray-400">{organizationId}</p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         <StatusBadge value={organization.approvalStatus} />
-                        <StatusBadge value={`KYC ${organization.kycStatus || 'not_submitted'}`} />
-                        <StatusBadge value={`Bank ${organization.bankVerificationStatus || 'not_submitted'}`} />
-                        <StatusBadge
-                          value={`Go Live ${getOrganizationGoLiveLabel(organization)}`}
-                          status={getOrganizationGoLiveStatus(organization)}
-                        />
+                        <StatusBadge value={`KYC ${organization.kycStatus || 'not_submitted'}`} status={organization.kycStatus} />
+                        <StatusBadge value={`Bank ${organization.bankVerificationStatus || 'not_submitted'}`} status={organization.bankVerificationStatus} />
+                        <StatusBadge value={`Go Live ${getOrganizationGoLiveLabel(organization)}`} status={getOrganizationGoLiveStatus(organization)} />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
-                      <Row label="GSTIN" value={organization.gstin} />
-                      <Row label="PAN" value={organization.pan} />
-                      <Row label="Business Type" value={organization.businessType} />
-                      <Row label="Support Email" value={organization.supportEmail} />
-                      <Row label="Support Phone" value={organization.supportPhone} />
-                      <Row label="Primary Contact" value={organization.primaryContactName} />
-                      <Row label="Registration No." value={organization.registrationNumber} />
-                      <Row label="Aadhaar Number" value={organization.aadhaarNumber} />
-                      <Row label="Date of Birth" value={formatDateTime(organization.dateOfBirth)} />
-                      <Row label="Website" value={organization.businessWebsite} />
-                      <Row label="Bank Account" value={bank.accountNumber} />
-                      <Row label="Account Holder" value={bank.accountHolderName} />
-                      <Row label="Bank Name" value={bank.bankName} />
-                      <Row label="IFSC" value={bank.ifscCode} />
-                      <Row label="Branch Name" value={bank.branchName} />
-                      <Row label="Billing State" value={organization.billingAddress?.state} />
-                      <Row label="Billing Address" value={formatAddress(organization.billingAddress)} />
-                      <Row label="Pickup Address" value={formatAddress(organization.pickupAddress)} />
-                      <Row label="Return Address" value={formatAddress(organization.returnAddress)} />
-                      <Row label="Invoice Prefix" value={organization.invoiceSettings?.invoicePrefix || organization.invoiceSettings?.invoiceSeries} />
-                      <Row label="Invoice State" value={organization.invoiceSettings?.state} />
-                      <Row label="Tax State" value={organization.taxSettings?.state} />
-                      <Row label="Payout Schedule" value={organization.payoutSettings?.payoutSchedule} />
-                      <Row label="Approved At" value={formatDateTime(organization.approvedAt)} />
-                      <Row label="Go Live Approved At" value={formatDateTime(organization.goLiveApprovedAt)} />
-                    </div>
+                    <div className="divide-y divide-gray-100 px-4">
 
-                    {Boolean(organization.description || organization.rejectionReason || organization.requiredChanges?.length) && (
-                      <div className="mt-3 grid grid-cols-1 gap-x-6 border-t border-gray-100 pt-3 md:grid-cols-3">
-                        <Row label="Description" value={organization.description} />
-                        <Row label="Rejection Reason" value={organization.rejectionReason} />
-                        <Row label="Required Changes" value={(organization.requiredChanges || []).join(', ')} />
+                      {/* ── Business Identity ──────────────────────────── */}
+                      <div className="py-4">
+                        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Business Identity</p>
+                        <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                          <Row label="GSTIN"           value={organization.gstin} />
+                          <Row label="PAN"             value={organization.pan} />
+                          <Row label="Business Type"   value={organization.businessType} />
+                          <Row label="Primary Contact" value={organization.primaryContactName} />
+                          {organization.registrationNumber && <Row label="Registration No." value={organization.registrationNumber} />}
+                          {organization.businessWebsite && <Row label="Website" value={organization.businessWebsite} />}
+                          {organization.aadhaarNumber && <Row label="Aadhaar" value={organization.aadhaarNumber} />}
+                          {organization.dateOfBirth && <Row label="Date of Birth" value={formatDateTime(organization.dateOfBirth)} />}
+                        </div>
                       </div>
-                    )}
 
-                    <div className="mt-3 border-t border-gray-100 pt-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">KYC Documents</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(documents).length ? Object.entries(documents).map(([key, value]) => (
-                          value ? (
-                            <a key={key} href={value} target="_blank" rel="noopener noreferrer" className="rounded-md border border-gray-200 px-2 py-1 text-xs text-[var(--admin-blue)] hover:bg-gray-50">
-                              {key.replace(/([A-Z])/g, ' $1')}
-                            </a>
-                          ) : null
-                        )) : <span className="text-xs text-gray-400">No documents uploaded</span>}
+                      {/* ── Contact (clearly separated from login email) ── */}
+                      <div className="py-4">
+                        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Contact</p>
+                        <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                          <div className="border-b border-gray-100 py-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400">Seller Account Email</p>
+                            <p className="text-sm text-gray-900 break-words">{user.email || '—'}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">Login email — not org-specific</p>
+                          </div>
+                          <Row label="Organization Official Email" value={organization.supportEmail} />
+                          <Row label="Organization Phone" value={organization.supportPhone} />
+                        </div>
                       </div>
-                    </div>
 
-                    {(() => {
-                      const orgId = organization.id || organization.organizationId;
-                      const isReviewing = reviewingOrgId === orgId;
-                      const anyReviewing = reviewingOrgId !== null;
-                      return (
-                        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                      {/* ── Bank Details ───────────────────────────────── */}
+                      <div className="py-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Bank Details</p>
+                          <StatusBadge value={organization.bankVerificationStatus || 'not_submitted'} status={organization.bankVerificationStatus} />
+                        </div>
+                        {hasCompleteBankDetails(bank) ? (
+                          <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                            <Row label="Account Holder" value={bank.accountHolderName} />
+                            <Row label="Account Number" value={bank.accountNumber} />
+                            <Row label="Bank Name"      value={bank.bankName} />
+                            <Row label="IFSC Code"      value={bank.ifscCode} />
+                            {bank.branchName && <Row label="Branch" value={bank.branchName} />}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">Bank details not submitted.</p>
+                        )}
+                      </div>
+
+                      {/* ── Addresses ──────────────────────────────────── */}
+                      {hasAddresses && (
+                        <div className="py-4">
+                          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Addresses</p>
+                          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                            {organization.billingAddress && (
+                              <div>
+                                <p className="mb-1.5 text-xs font-medium text-gray-500">Billing / Business</p>
+                                <p className="text-sm text-gray-800 leading-relaxed">{formatAddress(organization.billingAddress) || '—'}</p>
+                              </div>
+                            )}
+                            {organization.pickupAddress && (
+                              <div>
+                                <p className="mb-1.5 text-xs font-medium text-gray-500">Pickup</p>
+                                <p className="text-sm text-gray-800 leading-relaxed">{formatAddress(organization.pickupAddress) || '—'}</p>
+                              </div>
+                            )}
+                            {organization.returnAddress && (
+                              <div>
+                                <p className="mb-1.5 text-xs font-medium text-gray-500">Return</p>
+                                <p className="text-sm text-gray-800 leading-relaxed">{formatAddress(organization.returnAddress) || '—'}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Tax / Invoice / Payout ─────────────────────── */}
+                      <div className="py-4">
+                        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Tax, Invoice & Payout</p>
+                        <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                          <Row label="Tax State"        value={organization.taxSettings?.state} />
+                          <Row label="Invoice Prefix"   value={organization.invoiceSettings?.invoicePrefix} />
+                          <Row label="Invoice State"    value={organization.invoiceSettings?.state} />
+                          <Row label="Payout Schedule"  value={organization.payoutSettings?.payoutSchedule} />
+                          <Row label="Approved At"      value={formatDateTime(organization.approvedAt)} />
+                          <Row label="Go Live At"       value={formatDateTime(organization.goLiveApprovedAt)} />
+                        </div>
+                      </div>
+
+                      {/* ── Notes / Rejection ──────────────────────────── */}
+                      {Boolean(organization.description || organization.rejectionReason || organization.requiredChanges?.length) && (
+                        <div className="py-4">
+                          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Notes</p>
+                          <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                            {organization.description && <Row label="Description" value={organization.description} />}
+                            {organization.rejectionReason && (
+                              <div className="border-b border-gray-100 py-3">
+                                <p className="text-xs uppercase tracking-wide text-gray-400">Rejection Reason</p>
+                                <p className="mt-0.5 text-sm text-red-600 break-words">{organization.rejectionReason}</p>
+                              </div>
+                            )}
+                            {organization.requiredChanges?.length > 0 && (
+                              <div className="border-b border-gray-100 py-3">
+                                <p className="text-xs uppercase tracking-wide text-gray-400">Required Changes</p>
+                                <ul className="mt-0.5 list-disc list-inside space-y-0.5">
+                                  {organization.requiredChanges.map((change, i) => (
+                                    <li key={i} className="text-sm text-orange-700">{change}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── KYC Documents ──────────────────────────────── */}
+                      <div className="py-4">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">KYC Documents</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(documents).filter(([, v]) => v).length ? (
+                            Object.entries(documents).filter(([, v]) => v).map(([key, value]) => (
+                              <a key={key} href={value} target="_blank" rel="noopener noreferrer"
+                                className="rounded-md border border-gray-200 px-2.5 py-1 text-xs text-[var(--admin-blue)] hover:bg-gray-50">
+                                {key.replace(/Url$/, '').replace(/([A-Z])/g, ' $1').trim()}
+                              </a>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">No documents uploaded</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── Admin Actions ──────────────────────────────── */}
+                      <div className="py-4">
+                        <div className="flex flex-wrap gap-2">
                           {getOrgContextActions(organization).map((action) => (
                             <button
                               key={action.id}
@@ -1185,105 +1265,48 @@ const UserDetails = () => {
                             </button>
                           ))}
                         </div>
-                      );
-                    })()}
+                      </div>
+
+                    </div>
                   </div>
                 );
               })}
             </section>
 
-            {/* Seller Profile Info */}
+            {/* Seller Account & Profile Edit */}
             <section className="bg-white border border-gray-200 rounded-lg p-5">
-              <h2 className="text-base font-semibold text-gray-800 mb-3">Business Profile</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                <Row label="Display Name"    value={sellerProfile.displayName} />
-                <Row label="Legal Business"  value={sellerProfile.legalBusinessName} />
-                <Row label="Business Type"   value={sellerProfile.businessType} />
-                <Row label="Business Name"   value={sellerProfile.businessName} />
-                <Row label="Primary Contact" value={sellerProfile.primaryContactName} />
-                <Row label="Registration No." value={sellerProfile.registrationNumber} />
-                <Row label="GST Number"      value={sellerProfile.gstNumber || sellerKyc.gstNumber} />
-                <Row label="PAN Number"      value={sellerProfile.panNumber || sellerKyc.panNumber} />
-                <Row label="Aadhaar Number"  value={sellerProfile.aadhaarNumber || sellerKyc.aadhaarNumber} />
-                <Row label="Date of Birth"   value={formatDateTime(sellerProfile.dateOfBirth)} />
-                <Row label="Support Email"   value={sellerProfile.supportEmail} />
-                <Row label="Support Phone"   value={sellerProfile.supportPhone} />
-                <Row label="Website"         value={sellerProfile.businessWebsite} />
-                <Row label="Organization ID" value={sellerProfile.organizationId} />
-                <Row label="Organization Approval" value={sellerProfile.organizationApprovalStatus} />
-                <Row label="Organization Go Live" value={sellerProfile.organizationGoLiveStatus} />
-                <Row label="Verified At" value={formatDateTime(sellerProfile.verifiedAt)} />
-                <Row label="Go Live Approved At" value={formatDateTime(sellerProfile.goLiveApprovedAt)} />
-                <Row label="Description" value={sellerProfile.description} />
+              <div className="mb-4">
+                <h2 className="text-base font-semibold text-gray-800">Seller Account Profile</h2>
+                <p className="mt-0.5 text-xs text-gray-400">These are seller-level identity fields. Organization-specific data (bank, addresses, GSTIN, official email) is managed per-organization above.</p>
               </div>
 
-              {/* Bank Details */}
-              {hasAnyBankDetails(bankDetails) && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="mb-2 flex items-center gap-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bank Details</p>
-                    <StatusBadge value={bankStatus} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                    <Row label="Account Holder" value={bankDetails.accountHolderName} />
-                    <Row label="Account Number" value={bankDetails.accountNumber} />
-                    <Row label="IFSC Code"       value={bankDetails.ifscCode} />
-                    <Row label="Bank Name"        value={bankDetails.bankName} />
-                    <Row label="Branch Name"      value={bankDetails.branchName} />
-                  </div>
+              {/* Seller Account Identity (read-only) */}
+              <div className="mb-4 rounded-md border border-gray-100 bg-gray-50 px-4 py-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Seller Account (Login Identity)</p>
+                <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                  <Row label="Seller Login Email" value={user.email} />
+                  <Row label="Seller Phone"       value={user.phone} />
+                  <Row label="Onboarding Status"  value={onboarding.status || sellerProfile.onboardingStatus} />
+                  <Row label="KYC Verified At"    value={formatDateTime(sellerProfile.verifiedAt)} />
                 </div>
-              )}
-              {!hasAnyBankDetails(bankDetails) && (
-                <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Bank Details</p>
-                    <StatusBadge value={bankStatus} />
-                  </div>
-                  <p className="mt-1 text-sm text-yellow-700">
-                    Bank details are not submitted by seller yet. Seller must complete the Bank Details step before admin can verify bank.
-                  </p>
-                </div>
-              )}
+              </div>
 
-              {/* Addresses */}
-              {(sellerProfile.businessAddress || sellerProfile.pickupAddress || sellerProfile.returnAddress) && (
-                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {sellerProfile.businessAddress && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Business Address</p>
-                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
-                        sellerProfile.businessAddress[f]
-                          ? <Row key={f} label={f} value={sellerProfile.businessAddress[f]} />
-                          : null
-                      ))}
-                    </div>
-                  )}
-                  {sellerProfile.pickupAddress && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pickup Address</p>
-                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
-                        sellerProfile.pickupAddress[f]
-                          ? <Row key={f} label={f} value={sellerProfile.pickupAddress[f]} />
-                          : null
-                      ))}
-                    </div>
-                  )}
-                  {sellerProfile.returnAddress && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Return Address</p>
-                      {['line1','line2','city','state','postalCode','pincode','country'].map((f) => (
-                        sellerProfile.returnAddress[f]
-                          ? <Row key={f} label={f} value={sellerProfile.returnAddress[f]} />
-                          : null
-                      ))}
-                    </div>
-                  )}
+              {/* Display / branding fields */}
+              <div className="mb-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Display & Branding</p>
+                <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                  <Row label="Display Name"      value={sellerProfile.displayName} />
+                  <Row label="Legal Business"    value={sellerProfile.legalBusinessName} />
+                  <Row label="Business Type"     value={sellerProfile.businessType} />
+                  {sellerProfile.description && <Row label="Description" value={sellerProfile.description} />}
                 </div>
-              )}
+              </div>
 
               {/* Editable Fields */}
-              <form className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveSellerProfile}>
-                <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-2">Edit Core Fields</p>
+              <form className="border-t border-gray-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveSellerProfile}>
+                <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-2">Edit Profile</p>
+
+                {/* Seller image */}
                 <div className="md:col-span-2 flex items-center gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
                   <img
                     src={editSeller.avatarUrl || '/Img/user.png'}
@@ -1293,24 +1316,28 @@ const UserDetails = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
                       Upload Seller Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleSellerAvatarUpload}
-                      />
+                      <input type="file" accept="image/*" className="hidden" onChange={handleSellerAvatarUpload} />
                     </label>
                     {editSeller.avatarUrl && (
-                      <button
-                        type="button"
-                        className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-white"
-                        onClick={() => setEditSeller((prev) => ({ ...prev, avatarUrl: '' }))}
-                      >
+                      <button type="button" className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-white"
+                        onClick={() => setEditSeller((prev) => ({ ...prev, avatarUrl: '' }))}>
                         Remove
                       </button>
                     )}
                   </div>
                 </div>
+
+                {/* Read-only login email shown for clarity */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-gray-500">Seller Login Email</label>
+                  <input
+                    readOnly
+                    value={user.email || ''}
+                    className="min-h-[38px] rounded-md border border-gray-200 bg-gray-50 px-3 text-sm text-gray-400 outline-none cursor-not-allowed"
+                  />
+                  <p className="text-[11px] text-gray-400">Login email — cannot be changed here</p>
+                </div>
+
                 <FormInput
                   label="Display Name"
                   name="displayName"
@@ -1324,26 +1351,19 @@ const UserDetails = () => {
                   onChange={(e) => setEditSeller((p) => ({ ...p, legalBusinessName: e.target.value }))}
                 />
                 <FormInput
-                  label="Support Email"
-                  name="supportEmail"
-                  value={editSeller.supportEmail}
-                  onChange={(e) => setEditSeller((p) => ({ ...p, supportEmail: e.target.value }))}
-                />
-                <FormInput
-                  label="Support Phone"
-                  name="supportPhone"
-                  value={editSeller.supportPhone}
-                  onChange={(e) => setEditSeller((p) => ({ ...p, supportPhone: e.target.value }))}
-                />
-                <FormInput
                   label="Business Type"
                   name="businessType"
                   value={editSeller.businessType}
                   onChange={(e) => setEditSeller((p) => ({ ...p, businessType: e.target.value }))}
                 />
+
+                <div className="md:col-span-2 rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                  Organization-level fields (official email, phone, bank details, addresses, GSTIN, PAN) are managed in the <strong>Seller Organizations</strong> section above.
+                </div>
+
                 <div className="md:col-span-2 flex justify-end">
                   <button type="submit" className="px-4 py-2 rounded-md bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2e3074]">
-                    Save Seller Details
+                    Save Profile
                   </button>
                 </div>
               </form>

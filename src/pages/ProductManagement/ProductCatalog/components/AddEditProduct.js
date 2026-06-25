@@ -33,6 +33,7 @@ import BundleBuilder from '../../../../components/Product/BundleBuilder';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { normalizeImageList } from '../../../../_helpers/productMedia';
 import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
+import { getShippingProfiles } from '../../../../Redux/deliverySlice';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -156,6 +157,7 @@ export default function ProductManagementUI() {
   const productVisibilities = useDropdownOptions('product-visibilities');
   const shippingMethods = useDropdownOptions('shipping-methods');
   const [saving, setSaving] = useState(false);
+  const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -479,6 +481,18 @@ export default function ProductManagementUI() {
         .catch(() => { fetchedOptionIds.current.delete(optId); });
     });
   }, [dispatch, variantAxes, prefillData.optionValuesByOptionId]);
+
+  // Load shipping profiles whenever the seller / org context changes
+  useEffect(() => {
+    const sid = formData?.sellerId || userData?.ownerSellerId || userData?._id || userData?.id;
+    if (!sid) return;
+    const params = { sellerId: sid, active: true, limit: 100 };
+    if (formData?.organizationId) params.organizationId = formData.organizationId;
+    dispatch(getShippingProfiles(params)).unwrap().then((res) => {
+      const list = res?.data?.profiles || res?.data?.data?.profiles || res?.normalized?.data?.profiles || res?.profiles || [];
+      setShippingProfileOptions(list.map((p) => ({ value: p.id, label: p.name, profile: p })));
+    }).catch(() => {});
+  }, [dispatch, formData?.sellerId, formData?.organizationId, userData]);
 
   const handleOptionSearch = useCallback((query) => {
     dispatch(getPlatformOptions({ limit: 100, active: true, q: query || undefined }))
@@ -1057,6 +1071,7 @@ export default function ProductManagementUI() {
       processingDays: toOptionalNumber(updatedFormData.shipping?.processingDays),
       estimatedDaysMin: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMin),
       estimatedDaysMax: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMax),
+      shippingProfileId: updatedFormData.shipping?.shippingProfileId || null,
     });
 
     const productPayload = {
@@ -1339,8 +1354,72 @@ export default function ProductManagementUI() {
           {/* Header */}
           <div className="pb-4 border-b border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Configure delivery charges, serviceability, and estimated delivery time.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Select a shipping profile or configure delivery settings manually.</p>
           </div>
+
+          {/* Shipping Profile selector */}
+          <div className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/5' : 'border-gray-200 bg-gray-50'}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Shipping Profile</p>
+                <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile overrides the manual settings below for serviceability, charges, and ETA.</p>
+              </div>
+              {formData?.shipping?.shippingProfileId && (
+                <button type="button" className="text-xs text-red-500 hover:underline whitespace-nowrap" onClick={() => patchShipping({ shippingProfileId: null })}>
+                  Remove profile
+                </button>
+              )}
+            </div>
+            <select
+              className="admin-input"
+              value={formData?.shipping?.shippingProfileId || ''}
+              onChange={(e) => patchShipping({ shippingProfileId: e.target.value || null })}
+            >
+              <option value="">— No profile (use manual settings below) —</option>
+              {shippingProfileOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}{opt.profile?.isDefault ? ' (Default)' : ''}</option>
+              ))}
+            </select>
+            {shippingProfileOptions.length === 0 && !formData?.sellerId && (
+              <p className="text-xs text-amber-600">Select a seller first to load their shipping profiles.</p>
+            )}
+            {shippingProfileOptions.length === 0 && formData?.sellerId && (
+              <p className="text-xs text-gray-400">No active shipping profiles found. <a href="/app/shipping-profiles" className="text-[var(--admin-blue)] hover:underline" target="_blank" rel="noopener noreferrer">Create one →</a></p>
+            )}
+            {formData?.shipping?.shippingProfileId && (() => {
+              const selected = shippingProfileOptions.find((o) => o.value === formData.shipping.shippingProfileId);
+              const p = selected?.profile;
+              if (!p) return null;
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {[
+                    { label: 'Method', value: p.shippingMethod },
+                    { label: 'Mode', value: p.serviceabilityMode?.replace(/_/g, ' ') },
+                    { label: 'Charge', value: p.shippingCharge === 0 ? 'Free' : `₹${Number(p.shippingCharge).toFixed(0)}` },
+                    { label: 'COD', value: p.codAvailable ? 'Available' : 'Not available' },
+                    ...(p.etaMin || p.etaMax ? [{ label: 'ETA', value: [p.etaMin, p.etaMax].filter(Boolean).join('–') + ' days' }] : []),
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+                      <p className="text-xs font-semibold text-gray-700 mt-0.5">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Manual Override</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+          {formData?.shipping?.shippingProfileId && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              A shipping profile is active. The fields below are saved but the profile's rules take precedence for serviceability, charges, and ETA.
+            </p>
+          )}
 
           {/* Free Shipping toggle row */}
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">

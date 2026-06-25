@@ -70,6 +70,21 @@ export const dropdownApi = {
     id: item._id || item.id,
     meta: { status: item.status || item.accountStatus || "" },
   })),
+  getSellerOrganizations: (sellerId, params) => loadProtected(
+    `seller-organizations:${sellerId || "all"}`,
+    ENDPOINTS.sellerOrganizations.list,
+    { limit: 100, sellerId, ...params },
+    (item) => ({
+      label: item.storeDisplayName || item.legalBusinessName || item.gstin || item.id || item.organizationId,
+      value: item.id || item.organizationId,
+      id: item.id || item.organizationId,
+      meta: {
+        sellerId: item.sellerId,
+        approvalStatus: item.approvalStatus,
+        canOperate: item.canOperate,
+      },
+    }),
+  ),
   getRoles: (params) => loadProtected("roles", ENDPOINTS.rbac.roles, params, (item) => ({
     label: item.name || item.roleName || item.slug,
     value: item._id || item.id,

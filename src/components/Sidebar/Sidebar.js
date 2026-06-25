@@ -16,7 +16,7 @@ import {
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
-import { getRbacSidebarModules } from "../../Redux/adminCoreSlice";
+import { getAccessModules, getRbacSidebarModules } from "../../Redux/adminCoreSlice";
 import {
   getAccessToken,
   getStoredRole,
@@ -26,85 +26,12 @@ import {
 } from "../../_helpers/authStorage";
 import { RxCross2 } from "react-icons/rx";
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import {
+  MODULE_TAB_ORDER,
+  getAccessModuleRouteEntries,
+} from "../../_helpers/rbacRoutes";
 import BrandLogo from "../BrandLogo/BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
-
-// ─── Seller panel sections ────────────────────────────────────────────────────
-const SELLER_SIDEBAR_SECTIONS = [
-  { module: "analytics", tab: "Dashboard", label: "Dashboard", route: "home" },
-  {
-    module: "products",
-    tab: "Catalog Management",
-    label: "Products",
-    route: "product-catalog",
-  },
-  {
-    module: "inventory",
-    tab: "Inventory Management",
-    label: "Inventory",
-    route: "inventory-overview",
-  },
-  {
-    module: "orders",
-    tab: "Orders Management",
-    label: "Orders",
-    route: "orders",
-  },
-  {
-    module: "pricing",
-    tab: "Marketing",
-    label: "Coupons",
-    route: "discount-coupons",
-  },
-  {
-    module: "delivery",
-    tab: "Orders Management",
-    label: "Shipments",
-    route: "shipment-tracking",
-  },
-  {
-    module: "returns",
-    tab: "Orders Management",
-    label: "Returns",
-    route: "returns",
-  },
-  {
-    module: "sellers",
-    tab: "Users & Access",
-    label: "Profile",
-    route: "profile",
-  },
-  {
-    module: "seller-management",
-    tab: "Users & Access",
-    label: "Access Management",
-    route: "seller-users",
-  },
-  {
-    module: "sellers",
-    tab: "Users & Access",
-    label: "Organizations",
-    route: "my-organizations",
-  },
-  {
-    module: "sellers/commissions",
-    tab: "Orders Management",
-    label: "Commissions",
-    route: "transactions",
-  },
-  {
-    module: "notifications",
-    tab: "Marketing",
-    label: "Notifications",
-    route: "messages",
-  },
-  {
-    module: "reports",
-    tab: "Reports & Analytics",
-    label: "Reports",
-    route: "reports-sales",
-  },
-];
 
 // ─── Section icon map ─────────────────────────────────────────────────────────
 const SECTION_ICONS = {
@@ -230,6 +157,78 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
     })
     .filter((item) => item.subItems.length > 0);
 
+const hasAssignedView = (module = {}) =>
+  module.assigned === true ||
+  (Array.isArray(module.permissions) &&
+    module.permissions.some(
+      (permission) =>
+        String(permission.action || "").toLowerCase() === "view" &&
+        permission.assigned === true,
+    ));
+
+const tabOrderIndex = (tab) => {
+  const index = MODULE_TAB_ORDER.indexOf(tab);
+  return index === -1 ? MODULE_TAB_ORDER.length : index;
+};
+
+const buildAccessModuleSidebarData = (modules = [], options = {}) => {
+  const seenRoutes = new Set();
+  const entries = (Array.isArray(modules) ? modules : [])
+    .filter((module) => {
+      const slug = normalizeModuleCode(
+        module.slug ||
+          module.moduleKey ||
+          module.moduleSlug ||
+          module.metadata?.requiredModule,
+      );
+      return (
+        options.superAdmin ||
+        hasAssignedView(module) ||
+        options.allowedModules?.has(slug) ||
+        hasModuleAccess(slug)
+      );
+    })
+    .flatMap((module) => getAccessModuleRouteEntries(module, options))
+    .filter((entry) => {
+      if (!entry.route || HIDDEN_SIDEBAR_ROUTE_CODES.has(entry.route)) {
+        return false;
+      }
+      if (seenRoutes.has(entry.route)) return false;
+      seenRoutes.add(entry.route);
+      return true;
+    });
+
+  const grouped = entries.reduce((acc, entry) => {
+    const tab = entry.tab || "Settings";
+    if (!acc[tab]) acc[tab] = [];
+    acc[tab].push({
+      name: entry.label,
+      label: entry.label,
+      module_code: entry.route,
+      module: entry.module,
+      order: entry.order,
+    });
+    return acc;
+  }, {});
+
+  return Object.entries(grouped)
+    .sort(([left], [right]) => tabOrderIndex(left) - tabOrderIndex(right) || left.localeCompare(right))
+    .map(([tab, subItems]) => {
+      const sortedItems = subItems.sort(
+        (left, right) =>
+          Number(left.order || 0) - Number(right.order || 0) ||
+          String(left.label).localeCompare(String(right.label)),
+      );
+      return {
+        label: tab,
+        icon: getIconForTab(tab),
+        subItems: sortedItems,
+        isSingleItem: tab.toLowerCase() === "dashboard" && sortedItems.length === 1,
+      };
+    })
+    .filter((item) => item.subItems.length > 0);
+};
+
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -291,6 +290,16 @@ const Sidebar = ({
       sd?.data,
     );
   }, [adminCoreSelector?.rbacSidebarModulesData]);
+  const accessModules = useMemo(() => {
+    const sd = adminCoreSelector?.accessModulesData;
+    const payload =
+      sd?.data?.data ||
+      sd?.normalized?.data ||
+      sd?.data?.normalized?.data ||
+      sd?.data ||
+      {};
+    return firstArray(payload?.modules, payload?.list, payload?.items, payload);
+  }, [adminCoreSelector?.accessModulesData]);
   const sellerPanel = isSellerPanel();
 
   const [activeTab, setActiveTab] = useState(null);
@@ -335,35 +344,27 @@ const Sidebar = ({
 
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
-    if (sellerPanel) {
-      const items = SELLER_SIDEBAR_SECTIONS.filter((e) =>
-        hasModuleAccess(e.module),
-      );
-      const grouped = items.reduce((acc, curr) => {
-        if (!acc[curr.tab]) acc[curr.tab] = [];
-        acc[curr.tab].push({
-          name: curr.label,
-          label: curr.label,
-          module_code: curr.route,
-        });
-        return acc;
-      }, {});
-      return Object.entries(grouped).map(([tab, mods]) => ({
-        label: tab,
-        icon: getIconForTab(tab),
-        subItems: mods,
-        isSingleItem: tab.toLowerCase() === "dashboard" && mods.length === 1,
-      }));
+    if (Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length) {
+      const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
+        superAdmin: isSuperAdmin,
+        allowedModules: assignedSidebarModules,
+      });
+      if (sidebarTree.length) return sidebarTree;
     }
 
-    return Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length
-      ? buildDynamicSidebarData(dynamicSidebarModules, {
-          superAdmin: isSuperAdmin,
-          allowedModules: assignedSidebarModules,
-        })
-      : [];
+    if (Array.isArray(accessModules) && accessModules.length) {
+      const accessSidebar = buildAccessModuleSidebarData(accessModules, {
+        sellerPanel,
+        superAdmin: isSuperAdmin,
+        allowedModules: assignedSidebarModules,
+      });
+      if (accessSidebar.length) return accessSidebar;
+    }
+
+    return [];
   }, [
     sellerPanel,
+    accessModules,
     dynamicSidebarModules,
     isSuperAdmin,
     assignedSidebarModules,
@@ -387,7 +388,20 @@ const Sidebar = ({
         getMyModulePermission({ _id: userData.userId, role: userData.role }),
       );
     }
-    if (!sellerPanel && getAccessToken()) {
+    if (getAccessToken() && (userData?.role || getStoredRole())) {
+      const role = userData?.role || getStoredRole();
+      const userId = userData?.userId;
+      dispatch(
+        getAccessModules({
+          role,
+          includePermissions: true,
+          ...(!["seller", "admin", "super-admin"].includes(normalizeRole(role)) && userId
+            ? { userId }
+            : {}),
+        }),
+      );
+    }
+    if (getAccessToken()) {
       dispatch(getRbacSidebarModules());
     }
   }, [userData, dispatch, isRefreshConfig, sellerPanel]);

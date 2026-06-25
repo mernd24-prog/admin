@@ -89,6 +89,15 @@ const labelize      = (v = "") => String(v || "-").replace(/[_-]+/g, " ").replac
 const formatAddress = (a = {}) => [a.line1, a.city, a.state, a.postalCode].filter(Boolean).join(", ") || "—";
 const orgLabel      = (o = {}) => o.storeDisplayName || o.legalBusinessName || o.id || o.organizationId || "Unnamed";
 const orgId         = (o = {}) => o.id || o.organizationId || "";
+const canOperateOrganization = (org = {}) =>
+  org.canOperate === true ||
+  org.canSell === true ||
+  (
+    ["approved", "active"].includes(org.approvalStatus) &&
+    org.kycStatus === "verified" &&
+    org.bankVerificationStatus === "verified" &&
+    !["blocked", "rejected"].includes(String(org.goLiveStatus || ""))
+  );
 
 const readDocument = (file) =>
   new Promise((resolve, reject) => {
@@ -373,7 +382,7 @@ const DocField = ({ docKey, label, value, error, onChange }) => {
 
 // ─── Organization Form Modal ──────────────────────────────────────────────────
 
-const OrgFormModal = ({ open, mode, form, errors, submitting, onClose, onSubmit, onChange, onNestedChange, onDocumentChange }) => {
+const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, onClose, onSubmit, onChange, onNestedChange, onDocumentChange }) => {
   const bodyRef = useRef(null);
   if (!open) return null;
   const isEdit    = mode === "edit";
@@ -431,9 +440,21 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, onClose, onSubmit,
                 <input className={ic(errors.primaryContactName)} value={form.primaryContactName}
                   onChange={(e) => onChange("primaryContactName", e.target.value)} placeholder="Owner / authorized signatory" />
               </FieldRow>
-              <FieldRow label="Support Email" required error={errors.supportEmail}>
+              {sellerLoginEmail && (
+                <FieldRow label="Seller Account Email (Login Email)" hint="Your login email — cannot be changed here">
+                  <input
+                    type="email"
+                    className="min-h-[38px] rounded-md border border-[#E6E6E6] bg-[#f8faff] px-3 text-sm text-[#65718b] outline-none cursor-not-allowed"
+                    value={sellerLoginEmail}
+                    readOnly
+                    disabled
+                  />
+                </FieldRow>
+              )}
+              <FieldRow label="Organization Official Email" required error={errors.supportEmail}
+                hint="Used for org support, invoices, and business communication. Login still uses your seller account email.">
                 <input type="email" className={ic(errors.supportEmail)} value={form.supportEmail}
-                  onChange={(e) => onChange("supportEmail", e.target.value)} placeholder="seller@example.com" />
+                  onChange={(e) => onChange("supportEmail", e.target.value)} placeholder="org-support@example.com" />
               </FieldRow>
               <FieldRow label="Support Phone" required error={errors.supportPhone} hint="10–15 digits only">
                 <input className={ic(errors.supportPhone)} value={form.supportPhone}
@@ -651,12 +672,9 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, onClose, onSubmit,
 const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
   const id        = orgId(org);
   const status    = org.approvalStatus || "draft";
-  const kycOk     = org.kycStatus === "verified";
-  const bankOk    = org.bankVerificationStatus === "verified";
   const approved  = status === "approved" || status === "active";
-  const live      = org.goLiveStatus === "live";
-  const fullyLive = approved && kycOk && bankOk && live;
-  const canEdit   = !fullyLive;
+  const canOperate = canOperateOrganization(org);
+  const canEdit   = !approved;
 
   return (
     <div className={`flex flex-col rounded-lg border bg-white transition ${
@@ -692,7 +710,7 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
       </div>
 
       {/* Approval banner */}
-      {!fullyLive && (
+      {!canOperate && (
         <div className="px-4 pb-3">
           <ApprovalBanner org={org} />
         </div>
@@ -750,7 +768,7 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
             Legal details locked after approval
           </span>
         )}
-        {!org.isDefault && fullyLive && (
+        {!org.isDefault && canOperate && (
           <button
             type="button"
             onClick={() => onSetDefault(id)}
@@ -775,7 +793,17 @@ const MyOrganizations = () => {
   const [modal,  setModal]  = useState({ open: false, mode: "create", org: null });
   const [form,   setForm]   = useState(createEmptyForm());
   const [errors, setErrors] = useState({});
+  const [sellerLoginEmail, setSellerLoginEmail] = useState("");
   const activeOrgId = getSelectedSellerOrganizationId();
+
+  useEffect(() => {
+    apiRequest("GET", ENDPOINTS.auth.me)
+      .then((response) => {
+        const email = response?.data?.email || response?.email || "";
+        if (email) setSellerLoginEmail(email);
+      })
+      .catch(() => {});
+  }, []);
 
   const loadOrganizations = useCallback(async () => {
     try {
@@ -885,7 +913,7 @@ const MyOrganizations = () => {
     }
   };
 
-  const liveCount     = organizations.filter((o) => ["approved", "active"].includes(o.approvalStatus) && o.kycStatus === "verified" && o.bankVerificationStatus === "verified" && o.goLiveStatus === "live").length;
+  const approvedCount = organizations.filter(canOperateOrganization).length;
   const pendingCount  = organizations.filter((o) => ["pending_review", "resubmitted"].includes(o.approvalStatus)).length;
   const rejectedCount = organizations.filter((o) => ["rejected", "blocked"].includes(o.approvalStatus)).length;
 
@@ -913,8 +941,8 @@ const MyOrganizations = () => {
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2 rounded-md border border-[#E6E6E6] bg-white px-3 py-2 text-xs">
             <span className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="font-semibold text-[#202337]">{liveCount}</span>
-            <span className="text-[#65718b]">Live & Approved</span>
+            <span className="font-semibold text-[#202337]">{approvedCount}</span>
+            <span className="text-[#65718b]">Approved & Usable</span>
           </div>
           {pendingCount > 0 && (
             <div className="flex items-center gap-2 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-xs">
@@ -990,6 +1018,7 @@ const MyOrganizations = () => {
         form={form}
         errors={errors}
         submitting={submitting}
+        sellerLoginEmail={sellerLoginEmail}
         onClose={closeModal}
         onSubmit={handleSubmit}
         onChange={updateForm}

@@ -12,7 +12,6 @@ import {
 } from '../../Redux/sellerSubAdminsSlice';
 import { getMyModulePermission } from '../../Redux/userManagementSlice';
 import {
-  DEFAULT_SELLER_MODULES,
   buildAccessModuleActionMaps,
   buildModulePermissions,
   normalizePermissionActions,
@@ -38,7 +37,7 @@ const emptyForm = {
   phone: '',
   password: '',
   confirmPassword: '',
-  allowedModules: ['products', 'orders'],
+  allowedModules: [],
 };
 
 const getPayload = (sliceData = {}) =>
@@ -351,14 +350,14 @@ const ModuleActionsSelector = ({
   );
 };
 
-const buildHierarchy = (users = [], rootUser = {}) => {
+const buildHierarchy = (users = [], rootUser = {}, rootModules = []) => {
   const rootId = getId(rootUser) || 'seller-root';
   const root = {
     id: rootId,
     name: getUserName(rootUser),
     email: rootUser.email || '',
     role: 'Seller Owner',
-    modules: DEFAULT_SELLER_MODULES,
+    modules: rootModules,
     children: [],
     level: 0,
   };
@@ -425,28 +424,39 @@ const SellerSubAdminManagement = () => {
   const [viewProducts, setViewProducts] = useState([]);
   const [viewDashboard, setViewDashboard] = useState({});
   const [viewLoading, setViewLoading] = useState(false);
+  const [accessModules, setAccessModules] = useState([]);
   const [moduleActionsMap, setModuleActionsMap] = useState({});
   const [showModuleActions, setShowModuleActions] = useState(false);
 
   const subAdmins = extractList(sellerSelector?.listSubAdminsData);
   const hierarchyItems = extractList(sellerSelector?.hierarchyData);
   const moduleOptions = useMemo(() => {
+    const fromAccessModules = (Array.isArray(accessModules) ? accessModules : [])
+      .filter((module) => module?.assignable !== false)
+      .filter((module) => module?.assigned !== false || hasModuleAccess(module.slug || module.moduleKey))
+      .map((module) => module.slug || module.moduleKey || module.moduleSlug)
+      .filter(Boolean);
+    if (fromAccessModules.length) {
+      return Array.from(new Set(fromAccessModules.filter((slug) => hasModuleAccess(slug))));
+    }
+
     const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
     const fromPermissions = (Array.isArray(sidebarModules) ? sidebarModules : [])
       .filter((module) => module?.assigned || (module.permissions || []).some((permission) => permission?.assigned))
       .map((module) => module.slug || module.module || module.module_code?.module_code || module.module_code)
       .filter(Boolean);
-    const source = fromPermissions.length ? fromPermissions : DEFAULT_SELLER_MODULES;
-    return Array.from(new Set(source.filter((slug) => hasModuleAccess(slug))));
-  }, [userSelector?.getMyModulePermissionData]);
+    return Array.from(new Set(fromPermissions.filter((slug) => hasModuleAccess(slug))));
+  }, [accessModules, userSelector?.getMyModulePermissionData]);
   const moduleActionMaps = useMemo(() => {
-    const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
+    const sidebarModules = accessModules.length
+      ? accessModules
+      : userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
     return buildAccessModuleActionMaps(
       (Array.isArray(sidebarModules) ? sidebarModules : []).filter((module) =>
         hasModuleAccess(module.slug || module.module || module.module_code?.module_code || module.module_code),
       ),
     );
-  }, [userSelector?.getMyModulePermissionData]);
+  }, [accessModules, userSelector?.getMyModulePermissionData]);
   const moduleActionOptions = moduleActionMaps.assignable;
   const moduleAssignedActions = moduleActionMaps.assigned;
 
@@ -467,8 +477,8 @@ const SellerSubAdminManagement = () => {
   }, [page, visibleSubAdmins]);
 
   const hierarchy = useMemo(
-    () => buildHierarchy(hierarchyItems.length ? hierarchyItems : subAdmins, storedUser),
-    [hierarchyItems, subAdmins, storedUser],
+    () => buildHierarchy(hierarchyItems.length ? hierarchyItems : subAdmins, storedUser, moduleOptions),
+    [hierarchyItems, moduleOptions, subAdmins, storedUser],
   );
 
   useEffect(() => {
@@ -478,6 +488,15 @@ const SellerSubAdminManagement = () => {
     if (currentUserId) {
       dispatch(getMyModulePermission({ _id: currentUserId, role: storedRole }));
     }
+    apiRequest('GET', ENDPOINTS.adminAccess.modules, {
+      role: 'seller-sub-admin',
+      includePermissions: true,
+    })
+      .then((response) => {
+        const payload = getPayload(response);
+        setAccessModules(Array.isArray(payload?.modules) ? payload.modules : []);
+      })
+      .catch(() => setAccessModules([]));
   }, [dispatch, storedRole, storedUser?._id, storedUser?.id, storedUser?.userId]);
 
   useEffect(() => {

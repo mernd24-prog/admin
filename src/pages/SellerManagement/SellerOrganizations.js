@@ -133,6 +133,49 @@ const formatAddress = (address = {}) =>
 const organizationLabel = (organization = {}) =>
   organization.storeDisplayName || organization.legalBusinessName || shortId(organization.id || organization.organizationId);
 
+const canOperateOrganization = (organization = {}) =>
+  organization.canOperate === true ||
+  organization.canSell === true ||
+  (
+    ["approved", "active"].includes(organization.approvalStatus) &&
+    organization.kycStatus === "verified" &&
+    organization.bankVerificationStatus === "verified" &&
+    !["blocked", "rejected"].includes(String(organization.goLiveStatus || ""))
+  );
+
+const REQUIRED_FIELD_CHECKS = [
+  ["legalBusinessName", (organization) => organization.legalBusinessName],
+  ["storeDisplayName", (organization) => organization.storeDisplayName],
+  ["businessType", (organization) => organization.businessType],
+  ["supportEmail", (organization) => organization.supportEmail],
+  ["supportPhone", (organization) => organization.supportPhone],
+  ["primaryContactName", (organization) => organization.primaryContactName],
+  ["gstin", (organization) => organization.gstin],
+  ["pan", (organization) => organization.pan],
+  ["aadhaarNumber", (organization) => organization.aadhaarNumber],
+  ["dateOfBirth", (organization) => organization.dateOfBirth],
+  ["billingAddress.line1", (organization) => organization.billingAddress?.line1],
+  ["billingAddress.city", (organization) => organization.billingAddress?.city],
+  ["billingAddress.state", (organization) => organization.billingAddress?.state],
+  ["billingAddress.postalCode", (organization) => organization.billingAddress?.postalCode],
+  ["pickupAddress.line1", (organization) => organization.pickupAddress?.line1],
+  ["pickupAddress.city", (organization) => organization.pickupAddress?.city],
+  ["pickupAddress.state", (organization) => organization.pickupAddress?.state],
+  ["pickupAddress.postalCode", (organization) => organization.pickupAddress?.postalCode],
+  ["bankDetails.accountHolderName", (organization) => organization.bankDetails?.accountHolderName],
+  ["bankDetails.accountNumber", (organization) => organization.bankDetails?.accountNumber],
+  ["bankDetails.ifscCode", (organization) => organization.bankDetails?.ifscCode],
+  ["bankDetails.bankName", (organization) => organization.bankDetails?.bankName],
+  ...ORGANIZATION_DOCUMENTS.map(([key]) => [`documents.${key}`, (organization) => organization.documents?.[key]]),
+];
+
+const getMissingRequiredFields = (organization = {}) => {
+  if (Array.isArray(organization.missingRequiredFields)) return organization.missingRequiredFields;
+  return REQUIRED_FIELD_CHECKS
+    .filter(([, getter]) => !cleanString(getter(organization)))
+    .map(([field]) => field);
+};
+
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 
 const detectDocumentMimeType = (bytes) => {
@@ -355,10 +398,11 @@ const validateForm = (form = {}) => {
   return missingDocument ? `${missingDocument[1]} document is required` : "";
 };
 
-const FieldRow = ({ label, children }) => (
+const FieldRow = ({ label, hint, children }) => (
   <div className="flex flex-col gap-1">
     <label className="text-xs font-medium text-[#65718b]">{label}</label>
     {children}
+    {hint ? <p className="text-[11px] text-[#8a93a5]">{hint}</p> : null}
   </div>
 );
 
@@ -404,6 +448,7 @@ const PrimaryButton = ({ children, icon, onClick, disabled = false, variant = "p
 const OrganizationModal = ({
   open,
   mode,
+  organization,
   form,
   sellerOptions,
   submitting,
@@ -415,6 +460,7 @@ const OrganizationModal = ({
 }) => {
   if (!open) return null;
   const isEdit = mode === "edit";
+  const sellerLoginEmail = organization?.seller?.email || null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
@@ -468,7 +514,18 @@ const OrganizationModal = ({
             <FieldRow label="Primary Contact">
               <input className={inputCls} value={form.primaryContactName} onChange={(event) => onChange("primaryContactName", event.target.value)} />
             </FieldRow>
-            <FieldRow label="Support Email">
+            {isEdit && sellerLoginEmail && (
+              <FieldRow label="Seller Account Email" hint="Login email — read only, not editable here">
+                <input
+                  type="email"
+                  className={`${inputCls} bg-[#f8faff] text-[#65718b] cursor-not-allowed`}
+                  value={sellerLoginEmail}
+                  readOnly
+                  disabled
+                />
+              </FieldRow>
+            )}
+            <FieldRow label="Organization Official Email" hint="Used for org support, invoices, and business communication">
               <input type="email" className={inputCls} value={form.supportEmail} onChange={(event) => onChange("supportEmail", event.target.value)} />
             </FieldRow>
             <FieldRow label="Support Phone">
@@ -1003,17 +1060,38 @@ const SellerOrganizations = () => {
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">Loading organizations...</td>
                 </tr>
-              ) : organizations.length ? organizations.map((organization) => (
+              ) : organizations.length ? organizations.map((organization) => {
+                const canOperate = canOperateOrganization(organization);
+                const missingFields = getMissingRequiredFields(organization);
+                const businessStatus = organization.businessStatus || (canOperate ? "approved" : "not_approved");
+                return (
                 <tr key={organization.id || organization.organizationId} className="align-top hover:bg-[#fbfcff]">
                   <td className="px-4 py-3">
                     <div className="font-medium">{organizationLabel(organization)}</div>
                     <div className="mt-1 text-xs text-[#65718b]">{organization.legalBusinessName || "-"}</div>
+                    {organization.businessType ? (
+                      <div className="mt-1 text-xs text-[#65718b]">{labelize(organization.businessType)}</div>
+                    ) : null}
+                    {organization.primaryContactName ? (
+                      <div className="mt-1 text-xs text-[#65718b]">Contact: {organization.primaryContactName}</div>
+                    ) : null}
                     <div className="mt-1 text-[11px] text-[#8a93a5]">{shortId(organization.id || organization.organizationId)}</div>
                     {organization.isDefault ? <div className="mt-2"><StatusBadge status="active" label="Default" size="xs" /></div> : null}
                   </td>
                   <td className="px-4 py-3">
-                    <div>{getOrganizationSellerLabel(organization, sellerOptions)}</div>
-                    {organization.seller?.email ? <div className="mt-1 text-xs text-[#65718b]">{organization.seller.email}</div> : null}
+                    <div className="font-medium">{getOrganizationSellerLabel(organization, sellerOptions)}</div>
+                    {organization.seller?.email ? (
+                      <div className="mt-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8a93a5]">Login Email</span>
+                        <div className="text-xs text-[#65718b]">{organization.seller.email}</div>
+                      </div>
+                    ) : null}
+                    {organization.supportEmail && organization.supportEmail !== organization.seller?.email ? (
+                      <div className="mt-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8a93a5]">Org Email</span>
+                        <div className="text-xs text-[#65718b]">{organization.supportEmail}</div>
+                      </div>
+                    ) : null}
                     {organization.seller?.phone ? <div className="mt-1 text-xs text-[#65718b]">{organization.seller.phone}</div> : null}
                     <div className="mt-1 text-xs text-[#8a93a5]">{shortId(organization.sellerId)}</div>
                   </td>
@@ -1022,6 +1100,10 @@ const SellerOrganizations = () => {
                     <div className="font-medium">{organization.gstin || "-"}</div>
                     <div className="mt-2 text-xs text-[#65718b]">PAN</div>
                     <div className="font-medium">{organization.pan || "-"}</div>
+                    <div className="mt-2 text-xs text-[#65718b]">Aadhaar</div>
+                    <div className="font-medium">{organization.aadhaarNumber || "-"}</div>
+                    <div className="mt-2 text-xs text-[#65718b]">DOB</div>
+                    <div className="font-medium">{organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : "-"}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div>{organization.bankDetails?.bankName || "-"}</div>
@@ -1036,10 +1118,26 @@ const SellerOrganizations = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-start gap-2">
+                      <StatusBadge
+                        status={canOperate ? "approved" : "draft"}
+                        label={canOperate ? "Can sell" : labelize(businessStatus)}
+                        dot
+                        size="sm"
+                      />
                       <StatusBadge status={organization.approvalStatus || "draft"} dot size="sm" />
                       <StatusBadge status={organization.kycStatus || "not_submitted"} label={`KYC ${labelize(organization.kycStatus || "not_submitted")}`} size="xs" />
                       <StatusBadge status={organization.bankVerificationStatus || "not_submitted"} label={`Bank ${labelize(organization.bankVerificationStatus || "not_submitted")}`} size="xs" />
                       <StatusBadge status={organization.goLiveStatus || "pending"} label={`Go Live ${labelize(organization.goLiveStatus || "pending")}`} size="xs" />
+                      {!canOperate && organization.operationDisabledReason ? (
+                        <div className="max-w-[240px] text-xs text-[#a56300]">{organization.operationDisabledReason}</div>
+                      ) : null}
+                      {missingFields.length ? (
+                        <div className="max-w-[240px] rounded-md border border-[#fde68a] bg-[#fffbeb] px-2 py-1.5 text-[11px] text-[#92400e]">
+                          <span className="font-semibold">Missing: </span>
+                          {missingFields.slice(0, 5).join(", ")}
+                          {missingFields.length > 5 ? ` +${missingFields.length - 5} more` : ""}
+                        </div>
+                      ) : null}
                       {organization.documents && (
                         <div className="flex max-w-[220px] flex-wrap gap-x-2 gap-y-1">
                           {ORGANIZATION_DOCUMENTS.map(([key, label]) =>
@@ -1073,7 +1171,7 @@ const SellerOrganizations = () => {
                         type="button"
                         className="w-full rounded-md bg-[#208a3c] px-2.5 py-1.5 text-left text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => approveOrganization(organization)}
-                        disabled={submitting || ["approved", "active"].includes(organization.approvalStatus)}
+                        disabled={submitting || canOperate}
                       >
                         Approve for selling
                       </button>
@@ -1111,7 +1209,8 @@ const SellerOrganizations = () => {
                     </div>
                   </td>
                 </tr>
-              )) : (
+                );
+              }) : (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">No seller organizations found</td>
                 </tr>
@@ -1124,6 +1223,7 @@ const SellerOrganizations = () => {
       <OrganizationModal
         open={modal.open}
         mode={modal.mode}
+        organization={modal.organization}
         form={form}
         sellerOptions={sellerOptions}
         submitting={submitting}

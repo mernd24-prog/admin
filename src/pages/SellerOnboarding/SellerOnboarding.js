@@ -1036,12 +1036,10 @@ const SellerOnboarding = () => {
           supportEmail:
             prev.supportEmail ||
             sellerProfile?.supportEmail ||
-            user?.email ||
             "",
           supportPhone:
             prev.supportPhone ||
             sellerProfile?.supportPhone ||
-            user?.phone ||
             "",
           description: prev.description || sellerProfile?.description || "",
           businessWebsite:
@@ -2347,17 +2345,32 @@ const SellerOnboarding = () => {
                 />
               </div>
 
+              {registeredContact.emailAddress && (
+                <div>
+                  <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                    Seller Account Email
+                  </label>
+                  <input
+                    readOnly
+                    value={registeredContact.emailAddress}
+                    className="min-h-[38px] w-full rounded-md border border-[#E6E6E6] bg-[#f8faff] px-3 text-sm text-[#65718b] outline-none cursor-not-allowed"
+                  />
+                  <p className="mt-1 text-[11px] text-[#8a93a5]">This is your seller login email. It cannot be changed here.</p>
+                </div>
+              )}
+
               <div>
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Support Email {STEP_ONE_REQUIRED}
+                  Organization Official Email {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="supportEmail"
-                  placeholder="Support Email"
+                  placeholder="Official email for this organization"
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.supportEmail}
                   onChange={onProfileChange}
                 />
+                <p className="mt-1 text-[11px] text-[#8a93a5]">Used for organization support, invoices, and business communication. Login still uses your seller account email.</p>
                 {profileErrors.supportEmail && (
                   <p className={ERROR_CLASS}>{profileErrors.supportEmail}</p>
                 )}

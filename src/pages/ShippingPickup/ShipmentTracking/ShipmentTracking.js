@@ -47,6 +47,21 @@ const STATUS_OPTIONS = [
   "damaged",
 ];
 const TRACKING_STATUS_OPTIONS = STATUS_OPTIONS.filter((status) => status !== "delivered_verified");
+const TRACKING_TRANSITIONS = {
+  initiated: ["manifested", "picked_up", "in_transit", "cancelled", "failed"],
+  manifested: ["picked_up", "in_transit", "cancelled", "failed"],
+  picked_up: ["in_transit", "failed", "rto", "lost", "damaged"],
+  in_transit: ["out_for_delivery", "failed", "rto", "lost", "damaged"],
+  out_for_delivery: ["delivered", "failed", "rto", "lost", "damaged"],
+  failed: ["in_transit", "out_for_delivery", "rto", "cancelled"],
+  delivered: [],
+  delivered_verified: [],
+  cancelled: [],
+  rto: [],
+  lost: [],
+  damaged: [],
+};
+const REASON_REQUIRED_TRACKING_STATUSES = new Set(["failed", "cancelled", "rto", "lost", "damaged"]);
 
 const EMPTY_SHIPMENT = {
   orderId: "",
@@ -122,6 +137,78 @@ const getInitialQuery = (key) => new URLSearchParams(window.location.search).get
 const agentIdOf = (row = {}) => row.id || row._id || row.deliveryAgentId;
 const agentNameOf = (agent = {}) =>
   agent.name || agent.fullName || agent.deliveryAgentSnapshot?.name || agent.phone || agentIdOf(agent);
+const TERMINAL_SHIPMENT_STATUSES = new Set(["delivered", "delivered_verified", "cancelled", "rto", "lost", "damaged"]);
+const ASSIGNABLE_SHIPMENT_STATUSES = new Set(["initiated", "manifested", "picked_up", "in_transit", "out_for_delivery"]);
+
+const shipmentStatusOf = (row = {}) => String(row.status || "").toLowerCase();
+const isReverseShipment = (row = {}) =>
+  String(row.direction || "").toLowerCase() === "reverse" ||
+  String(row.shipment_type || "").toLowerCase() === "return";
+const isForwardShipment = (row = {}) => !isReverseShipment(row);
+const isTerminalShipment = (row = {}) => TERMINAL_SHIPMENT_STATUSES.has(shipmentStatusOf(row));
+
+const getTrackingDisabledReason = (row = {}) => {
+  if (isReverseShipment(row)) return "Reverse shipment tracking is managed from Returns";
+  if (isTerminalShipment(row)) return `Tracking is closed after ${displayStatus(row.status)}`;
+  return "";
+};
+
+const getAgentDisabledReason = (row = {}) => {
+  if (isReverseShipment(row)) return "Reverse shipments are managed from Returns";
+  if (!row.seller_id) return "Shipment seller is required before assigning an agent";
+  if (!ASSIGNABLE_SHIPMENT_STATUSES.has(shipmentStatusOf(row))) {
+    return `Agent assignment is not allowed when shipment is ${displayStatus(row.status)}`;
+  }
+  return "";
+};
+
+const getOtpDisabledReason = (row = {}) => {
+  if (isReverseShipment(row)) return "Reverse shipments do not use this delivery OTP flow";
+  if (shipmentStatusOf(row) !== "out_for_delivery") {
+    return "Move shipment to Out for Delivery before generating OTP";
+  }
+  return "";
+};
+
+const getVerificationDisabledReason = (row = {}) => {
+  if (isReverseShipment(row)) return "Reverse shipment verification is managed from Returns";
+  if (shipmentStatusOf(row) === "delivered_verified") return "Delivery is already verified";
+  if (!["out_for_delivery", "delivered"].includes(shipmentStatusOf(row))) {
+    return "Delivery can be verified only after Out for Delivery";
+  }
+  return "";
+};
+
+const getEwayDisabledReason = (row = {}) => {
+  if (isReverseShipment(row)) return "E-way bill is only for forward shipments";
+  if (!row.order_id) return "Order ID is required for e-way bill";
+  return "";
+};
+
+const getTrackingStatusOptions = (row = {}) => {
+  const allowed = TRACKING_TRANSITIONS[shipmentStatusOf(row)] || [];
+  return allowed.filter((status) => {
+    if (status === "delivered_verified") return false;
+    if (status === "delivered" && row.verification_required) return false;
+    return true;
+  });
+};
+
+const ActionButton = ({ children, onClick, disabledReason = "", disabled = false, title = "" }) => {
+  const isDisabled = disabled || Boolean(disabledReason);
+  return (
+    <button
+      type="button"
+      className="admin-btn-secondary !px-2 !py-1"
+      onClick={onClick}
+      disabled={isDisabled}
+      title={disabledReason || title}
+      aria-disabled={isDisabled}
+    >
+      {children}
+    </button>
+  );
+};
 
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
@@ -169,6 +256,7 @@ const ShipmentTracking = () => {
   const [manifestConfirm, setManifestConfirm] = useState(false);
   const [shipmentForm, setShipmentForm] = useState(EMPTY_SHIPMENT);
   const [trackingForm, setTrackingForm] = useState(EMPTY_TRACKING);
+  const [trackingStatusOptions, setTrackingStatusOptions] = useState(TRACKING_STATUS_OPTIONS);
   const [assignmentForm, setAssignmentForm] = useState(EMPTY_ASSIGNMENT);
   const [verificationForm, setVerificationForm] = useState(EMPTY_VERIFICATION);
   const [ewayForm, setEwayForm] = useState(EMPTY_EWAY);
@@ -260,6 +348,17 @@ const ShipmentTracking = () => {
       toast.error("Shipment and status are required");
       return;
     }
+    if (!trackingStatusOptions.includes(trackingForm.status)) {
+      toast.error("Selected tracking status is not allowed from the current shipment state");
+      return;
+    }
+    if (
+      REASON_REQUIRED_TRACKING_STATUSES.has(trackingForm.status) &&
+      !String(trackingForm.note || trackingForm.deliveryException || "").trim()
+    ) {
+      toast.error("Add a note or exception reason for this tracking status");
+      return;
+    }
     try {
       setLoading(true);
       await dispatch(addShipmentTracking(trackingForm)).unwrap();
@@ -272,7 +371,7 @@ const ShipmentTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, fetchShipments, trackingForm]);
+  }, [dispatch, fetchShipments, trackingForm, trackingStatusOptions]);
 
   const submitAssignment = useCallback(async () => {
     if (!assignmentForm.shipmentId || !assignmentForm.deliveryAgentId) {
@@ -380,7 +479,13 @@ const ShipmentTracking = () => {
   }, [dispatch, fetchShipments, selectedRows]);
 
   const openTracking = useCallback((row) => {
-    setTrackingForm({ ...EMPTY_TRACKING, shipmentId: row.id });
+    const options = getTrackingStatusOptions(row);
+    if (!options.length) {
+      toast.error("No manual tracking transition is available for this shipment");
+      return;
+    }
+    setTrackingStatusOptions(options);
+    setTrackingForm({ ...EMPTY_TRACKING, shipmentId: row.id, status: options[0] });
     setTrackingModal(true);
   }, []);
 
@@ -403,10 +508,10 @@ const ShipmentTracking = () => {
     setVerificationForm({
       ...EMPTY_VERIFICATION,
       shipmentId: row.id,
-      method: methods[0] || "otp",
+      method: methods[0] || (shipmentStatusOf(row) === "delivered" && !isSeller ? "manual_override" : "otp"),
     });
     setVerificationModal(true);
-  }, []);
+  }, [isSeller]);
 
   const openDetail = useCallback(async (row) => {
     setSelectedShipment(row);
@@ -548,69 +653,66 @@ const ShipmentTracking = () => {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="admin-btn-secondary !px-2 !py-1"
-            onClick={() => openDetail(row)}
-          >
-            View
-          </button>
-          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => openTracking(row)}
-              disabled={row.direction === "reverse" || row.shipment_type === "return"}
-            >
-              <MdTimeline size={15} /> Track
-            </button>,
-          )}
-          {renderDeliveryAction(ACTIONS.ASSIGN,
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => openAssignment(row)}
-              disabled={row.direction === "reverse" || row.shipment_type === "return"}
-            >
-              <MdPersonAdd size={15} /> Agent
-            </button>,
-          )}
-          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => sendDeliveryOtp(row)}
-              disabled={row.status !== "out_for_delivery"}
-              hidden={row.direction === "reverse" || row.shipment_type === "return"}
-            >
-              OTP
-            </button>,
-          )}
-          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => openVerification(row)}
-              disabled={!["out_for_delivery", "delivered"].includes(row.status)}
-              hidden={row.direction === "reverse" || row.shipment_type === "return"}
-            >
-              <MdVerified size={15} /> Verify
-            </button>,
-          )}
-          {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => openEwayBill(row)}
-              disabled={row.direction === "reverse" || row.shipment_type === "return"}
-            >
-              <MdDescription size={15} /> E-way
-            </button>,
-          )}
-        </div>
-      ),
+      render: (_, row) => {
+        const trackingDisabledReason = getTrackingDisabledReason(row);
+        const agentDisabledReason = getAgentDisabledReason(row);
+        const otpDisabledReason = getOtpDisabledReason(row);
+        const verificationDisabledReason = getVerificationDisabledReason(row);
+        const ewayDisabledReason = getEwayDisabledReason(row);
+
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            <ActionButton onClick={() => openDetail(row)} title="View shipment details">
+              View
+            </ActionButton>
+            {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+              <ActionButton
+                onClick={() => openTracking(row)}
+                disabledReason={trackingDisabledReason}
+                title="Update shipment tracking"
+              >
+                <MdTimeline size={15} /> Track
+              </ActionButton>,
+            )}
+            {renderDeliveryAction(ACTIONS.ASSIGN,
+              <ActionButton
+                onClick={() => openAssignment(row)}
+                disabledReason={agentDisabledReason}
+                title="Assign delivery agent"
+              >
+                <MdPersonAdd size={15} /> Agent
+              </ActionButton>,
+            )}
+            {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+              <ActionButton
+                onClick={() => sendDeliveryOtp(row)}
+                disabledReason={otpDisabledReason}
+                title="Generate customer delivery OTP"
+              >
+                OTP
+              </ActionButton>,
+            )}
+            {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+              <ActionButton
+                onClick={() => openVerification(row)}
+                disabledReason={verificationDisabledReason}
+                title="Verify delivery proof"
+              >
+                <MdVerified size={15} /> Verify
+              </ActionButton>,
+            )}
+            {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+              <ActionButton
+                onClick={() => openEwayBill(row)}
+                disabledReason={ewayDisabledReason}
+                title="Create or update e-way bill"
+              >
+                <MdDescription size={15} /> E-way
+              </ActionButton>,
+            )}
+          </div>
+        );
+      },
     },
     ];
     return isSeller ? baseColumns.filter((column) => column.key !== "seller_id") : baseColumns;
@@ -746,7 +848,7 @@ const ShipmentTracking = () => {
       <DefaultModal isOpen={trackingModal} onClose={() => setTrackingModal(false)} title="Update Tracking" onSubmit={submitTracking}>
         <div className="space-y-3">
           <select className="admin-input" value={trackingForm.status} onChange={(event) => setTrackingForm((prev) => ({ ...prev, status: event.target.value }))}>
-            {TRACKING_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{displayStatus(status)}</option>)}
+            {trackingStatusOptions.map((status) => <option key={status} value={status}>{displayStatus(status)}</option>)}
           </select>
           <Input labelName="Location" value={trackingForm.location} onChange={(event) => setTrackingForm((prev) => ({ ...prev, location: event.target.value }))} />
           <Input labelName="Exception" value={trackingForm.deliveryException} onChange={(event) => setTrackingForm((prev) => ({ ...prev, deliveryException: event.target.value }))} />

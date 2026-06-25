@@ -17,7 +17,9 @@ import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
 import {
   getRouteModuleCandidates,
   isSelfServiceRoute,
+  routeCodeFromPath,
 } from "../../_helpers/rbacRoutes";
+import { isSellerPanel } from "../../_helpers/panelConfig";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
 
 import Tax from "../../pages/Tax/Tax";
@@ -132,6 +134,9 @@ const ShipmentTracking = React.lazy(
 );
 const DeliveryAgents = React.lazy(
   () => import("../../pages/ShippingPickup/DeliveryAgents/DeliveryAgents"),
+);
+const ShippingProfiles = React.lazy(
+  () => import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles"),
 );
 
 const AddEditProductPopup = React.lazy(
@@ -370,6 +375,52 @@ const getStoredSidebarState = () => {
   }
 };
 
+const normalizeRoutePattern = (routePath = "") => {
+  const code = routeCodeFromPath(routePath);
+  return code ? `/${code}` : "";
+};
+
+const collectBackendRoutePatterns = (items = []) => {
+  const routes = new Set();
+
+  const visit = (nodes = []) => {
+    nodes.forEach((item = {}) => {
+      [
+        item.routePath,
+        ...(Array.isArray(item.metadata?.supportedRoutes)
+          ? item.metadata.supportedRoutes
+          : []),
+      ]
+        .map(normalizeRoutePattern)
+        .filter(Boolean)
+        .forEach((route) => routes.add(route));
+      visit(item.children || []);
+    });
+  };
+
+  visit(items);
+  return routes;
+};
+
+const getSidebarModulePayload = (sliceData = {}) => {
+  const payload =
+    sliceData?.data?.normalized?.data ||
+    sliceData?.normalized?.normalized?.data ||
+    sliceData?.normalized?.data ||
+    sliceData?.data?.data?.list ||
+    sliceData?.data?.list ||
+    sliceData?.data?.data ||
+    sliceData?.data ||
+    [];
+  return Array.isArray(payload) ? payload : [];
+};
+
+const flattenSidebarModules = (items = []) =>
+  (Array.isArray(items) ? items : []).flatMap((item = {}) => [
+    item,
+    ...flattenSidebarModules(item.children || []),
+  ]);
+
 function Layout() {
   useSessionHeartbeat();
 
@@ -381,6 +432,7 @@ function Layout() {
   const [socket, setSocket] = useState(null);
   const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
+  const adminCoreSelector = useSelector((state) => state.adminCore);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
   const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
     if (typeof window === "undefined") return getStoredSidebarState();
@@ -477,6 +529,197 @@ function Layout() {
     return permMap;
   }, [permissions]);
 
+  const accessModules = useMemo(() => {
+    const sd = adminCoreSelector?.accessModulesData;
+    const payload =
+      sd?.data?.data ||
+      sd?.normalized?.data ||
+      sd?.data?.normalized?.data ||
+      sd?.data ||
+      {};
+    const modules =
+      payload?.modules ||
+      payload?.list ||
+      payload?.items ||
+      (Array.isArray(payload) ? payload : []);
+    return Array.isArray(modules) ? modules : [];
+  }, [adminCoreSelector?.accessModulesData]);
+
+  const sidebarModules = useMemo(
+    () => getSidebarModulePayload(adminCoreSelector?.rbacSidebarModulesData),
+    [adminCoreSelector?.rbacSidebarModulesData],
+  );
+
+  const backendRoutePatterns = useMemo(
+    () => collectBackendRoutePatterns(sidebarModules),
+    [sidebarModules],
+  );
+
+  const routePermissionModules = useMemo(
+    () => [...accessModules, ...flattenSidebarModules(sidebarModules)],
+    [accessModules, sidebarModules],
+  );
+
+  const routeRegistry = useMemo(
+    () => [
+      { path: "/home", render: () => <Dashboard /> },
+      { path: "/admin-users", render: () => <AdminUsers /> },
+      {
+        path: "/admin-users/view/:id",
+        render: () => <UserPermissions setModuleName={setModuleName} />,
+      },
+      { path: "/seller-management", render: () => <SellerUsers /> },
+      { path: "/seller-users", render: () => <SellerUsers /> },
+      { path: "/seller-organizations", render: () => <SellerOrganizations /> },
+      { path: "/my-organizations", render: () => <MyOrganizations /> },
+      { path: "/users", render: () => <Users /> },
+      { path: "/users/view/:id", render: () => <UserDetails /> },
+      { path: "/seller/view/:id", render: () => <UserDetails /> },
+      { path: "/transactions", render: () => <UsersTransactions /> },
+      { path: "/transactions/view/:id", render: () => <ViewTransaction /> },
+      { path: "/product-catalog", render: () => <ProductCatalog /> },
+      { path: "/seller-Product-Inventory", render: () => <SellerProductInventories /> },
+      { path: "/seller-product-inventory", render: () => <SellerProductInventories /> },
+      { path: "/store", render: () => <Store /> },
+      { path: "/brands", render: () => <Brands /> },
+      { path: "/product-options", render: () => <ProductOptions /> },
+      { path: "/threshold-products", render: () => <ThresholdProducts /> },
+      { path: "/inventory-audit", render: () => <InventoryAudit /> },
+      { path: "/orders", render: () => <Orders /> },
+      { path: "/carts", render: () => <Carts /> },
+      { path: "/checkout-quote", render: () => <CheckoutQuote /> },
+      { path: "/payments", render: () => <Payments /> },
+      { path: "/seller-finance", render: () => <SellerFinance /> },
+      { path: "/commission-rules", render: () => <CommissionRules /> },
+      { path: "/platform-fee-config", render: () => <PlatformFeeConfig /> },
+      { path: "/commerce-settings", render: () => <CommerceSettings /> },
+      { path: "/returns", render: () => <Returns /> },
+      { path: "/product-reviews", render: () => <ProductReviews /> },
+      { path: "/discount-coupons", render: () => <DiscountCoupons /> },
+      { path: "/referral-commerce", render: () => <ReferralCommerce /> },
+      { path: "/shipping-company-users", redirectTo: "/app/delivery-agents" },
+      { path: "/shipping-packages", redirectTo: "/app/shipment-tracking" },
+      { path: "/pickup-addresses", redirectTo: "/app/shipment-tracking" },
+      { path: "/shipment-tracking", render: () => <ShipmentTracking /> },
+      { path: "/delivery-agents", render: () => <DeliveryAgents /> },
+      { path: "/delivery-staff", render: () => <DeliveryAgents /> },
+      { path: "/shipping-profiles", render: () => <ShippingProfiles /> },
+      { path: "/categories", render: () => <ProductCategories /> },
+      { path: "/category-attributes", redirectTo: "/app/categories" },
+      { path: "/subscription-orders", render: () => <SubscriptionOrders /> },
+      { path: "/content-management", render: () => <ContentManagement /> },
+      { path: "/content-management/:type", render: () => <ContentManagement /> },
+      { path: "/view-orders", render: () => <OrderSummary /> },
+      { path: "/product-catalog/form/:id?", render: () => <AddEditProductPopup /> },
+      { path: "/product-catalog/view/:id", render: () => <ProductAdminDetails /> },
+      { path: "/profile", render: () => <Profile />, always: true },
+      { path: "/changePassword", render: () => <ChangePassword />, always: true },
+      { path: "/state", render: () => <ManageState /> },
+      { path: "/city", render: () => <ManageCity /> },
+      { path: "/country", render: () => <ManageCountry /> },
+      { path: "/zip-codes", render: () => <ManageZipCode /> },
+      { path: "/product-variants", render: () => <ProductVariants /> },
+      { path: "/product-families", render: () => <ProductFamilies /> },
+      {
+        path: "/user-permissions/:id",
+        render: () => <UserPermissions setModuleName={setModuleName} />,
+      },
+      { path: "/seller", render: () => <Sellers /> },
+      { path: "/seller-kyc", redirectTo: "/app/seller" },
+      { path: "/seller-bank", redirectTo: "/app/seller" },
+      { path: "/seller-kyc-detail/:id", render: () => <UserDetails /> },
+      { path: "/seller-bank-detail/:id", render: () => <UserDetails /> },
+      {
+        path: "/product-option-value/:id",
+        permissionPath: "/product-options",
+        render: () => <ProductOptionValue setModuleName={setModuleName} />,
+      },
+      { path: "/tax", render: () => <Tax /> },
+      { path: "/tax-documents", render: () => <TaxCompliance /> },
+      {
+        path: "/subTax",
+        render: () => <SubTax setModuleName={setModuleName} />,
+      },
+      {
+        path: "/subTax/:id",
+        permissionPath: "/subTax",
+        render: () => <SubTax setModuleName={setModuleName} />,
+      },
+      {
+        path: "/tax-rule",
+        render: () => <TaxRule setModuleName={setModuleName} />,
+      },
+      { path: "/bar-code", render: () => <BarcodePage /> },
+      { path: "/hsn-code", render: () => <HsnCode /> },
+      { path: "/orders/view/:id", render: () => <OrderSummary /> },
+      {
+        path: "/product-option-values",
+        render: () => <ProductOptionValue setModuleName={setModuleName} />,
+      },
+      { path: "/inventory-overview", render: () => <InventoryOverview /> },
+      { path: "/variant-inventory", render: () => <VariantInventory /> },
+      { path: "/inventory-adjustment", render: () => <InventoryAdjustment /> },
+      { path: "/inventory-transactions", render: () => <InventoryTransactions /> },
+      { path: "/warehouse", render: () => <WarehouseManagement /> },
+      { path: "/low-stock-alerts", render: () => <LowStockAlerts /> },
+      { path: "/seller-staff", permissionPath: "/seller-users", render: () => <SellerUsers /> },
+      { path: "/roles-permissions", render: () => <RolesPermissions /> },
+      { path: "/module-management", render: () => <ModuleManagement /> },
+      { path: "/activity-logs", render: () => <ActivityLogs /> },
+      { path: "/rbac-audit-log", render: () => <RbacAuditLog /> },
+      { path: "/permission-templates", render: () => <PermissionTemplates /> },
+      { path: "/seller-onboarding", redirectTo: "/app/seller" },
+      { path: "/seller-status", redirectTo: "/app/seller" },
+      { path: "/seller-sub-admins", render: () => <SellerSubAdminManagement /> },
+      { path: "/content-pages", render: () => <ContentPages /> },
+      { path: "/users-addresses", render: () => <Users /> },
+      { path: "/preferences", render: () => <Preferences /> },
+      { path: "/deal-management", render: () => <DealManagement /> },
+      { path: "/fraud-cases", render: () => <FraudCases /> },
+      { path: "/wallet-management", render: () => <WalletTransactions /> },
+      { path: "/wallet-transactions", render: () => <WalletTransactions /> },
+      { path: "/notification-templates", render: () => <NotificationTemplates /> },
+      { path: "/cancellations", render: () => <Cancellations /> },
+      { path: "/collections", render: () => <CollectionsPage /> },
+      { path: "/badges", render: () => <BadgesPage /> },
+      { path: "/tax-invoices", render: () => <TaxInvoices /> },
+      { path: "/credit-notes", render: () => <CreditNotes /> },
+      { path: "/subscription-plans", render: () => <SubscriptionPlans /> },
+      { path: "/cod-config", render: () => <CodConfig /> },
+      { path: "/chargebacks", render: () => <Chargebacks /> },
+      { path: "/seller-payouts", render: () => <SellerPayouts /> },
+      { path: "/payout-ops-queue", render: () => <PayoutOpsQueue /> },
+      { path: "/negative-balances", render: () => <NegativeBalances /> },
+      { path: "/deal-payouts", render: () => <DealPayouts /> },
+      { path: "/deal-sponsorships", render: () => <DealSponsorships /> },
+      { path: "/influencer-management", render: () => <InfluencerManagement /> },
+      { path: "/analytics-events", render: () => <AnalyticsEvents /> },
+      { path: "/api-keys", render: () => <ApiKeys /> },
+      { path: "/feature-flags", render: () => <FeatureFlags /> },
+      { path: "/webhooks", render: () => <Webhooks /> },
+      { path: "/system-health", render: () => <SystemHealth /> },
+      { path: "/queue-management", render: () => <QueueManagement /> },
+      { path: "/dead-letter-queue", render: () => <DeadLetterQueue /> },
+      { path: "/product-moderation-queue", render: () => <ProductModerationQueue /> },
+      { path: "/analytics", render: () => <AnalyticsDashboard /> },
+      { path: "/reports-sales", render: () => <SalesReport /> },
+      { path: "/reports-products", render: () => <ProductAnalytics /> },
+      { path: "/reports-inventory", render: () => <InventoryAnalytics /> },
+      { path: "/reports-sellers", render: () => <SellerAnalytics /> },
+      { path: "/messages", render: () => <UserMessages /> },
+      { path: "/notifications", render: () => <UserMessages /> },
+    ],
+    [setModuleName],
+  );
+
+  const dynamicRoutes = useMemo(() => {
+    const hasBackendRoutes = backendRoutePatterns.size > 0;
+    return routeRegistry.filter((route) => {
+      if (route.always || !hasBackendRoutes) return true;
+      return backendRoutePatterns.has(normalizeRoutePattern(route.path));
+    });
+  }, [backendRoutePatterns, routeRegistry]);
+
   useEffect(() => {
     socket?.on("refreshed-configurations", (data) => {
       setIsPermissionShow(true);
@@ -491,7 +734,9 @@ function Layout() {
   const hasPermission = (path) => {
     if (isSelfServiceRoute(path)) return true;
 
-    const moduleCandidates = getRouteModuleCandidates(path);
+    const moduleCandidates = getRouteModuleCandidates(path, routePermissionModules, {
+      sellerPanel: isSellerPanel(),
+    });
     if (!moduleCandidates.length) return true;
 
     return moduleCandidates.some((moduleCode) => {
@@ -514,10 +759,6 @@ function Layout() {
  
 
     return element;
-  };
-
-  const renderSupportedRoute = (path, element) => {
-    return renderRoute(path, element);
   };
 
   const handleSidebarToggle = useCallback(() => {
@@ -572,706 +813,26 @@ function Layout() {
                 transition={{ duration: 0.16, ease: "easeOut" }}
               >
                 <Routes location={location}>
-                  <Route
-                    path="/home"
-                    element={renderRoute("/home", <Dashboard />)}
-                  />
-                  <Route
-                    path="/admin-users"
-                    element={renderRoute("/admin-users", <AdminUsers />)}
-                  />
-                  <Route
-                    path="/admin-users/view/:id"
-                    element={renderRoute(
-                      "/admin-users",
-                      <UserPermissions setModuleName={setModuleName} />,
-                    )}
-                  />
-                  <Route
-                    path="/seller-management"
-                    element={renderRoute("/seller-users", <SellerUsers />)}
-                  />
-                  <Route
-                    path="/seller-users"
-                    element={renderRoute("/seller-users", <SellerUsers />)}
-                  />
-                  <Route
-                    path="/seller-organizations"
-                    element={renderRoute(
-                      "/seller-organizations",
-                      <SellerOrganizations />,
-                    )}
-                  />
-                  <Route
-                    path="/my-organizations"
-                    element={renderRoute(
-                      "/my-organizations",
-                      <MyOrganizations />,
-                    )}
-                  />
-                  <Route
-                    path="/users"
-                    element={renderRoute("/users", <Users />)}
-                  />
-                  <Route
-                    path="/users/view/:id"
-                    element={renderRoute("/users", <UserDetails />)}
-                  />
-                  <Route
-                    path="/seller/view/:id"
-                    element={renderRoute("/seller", <UserDetails />)}
-                  />
-                  <Route
-                    path="/transactions"
-                    element={renderRoute(
-                      "/transactions",
-                      <UsersTransactions />,
-                    )}
-                  />
-                  <Route
-                    path="/transactions/view/:id"
-                    element={renderRoute("/transactions", <ViewTransaction />)}
-                  />
+                  {dynamicRoutes.map((route) => {
+                    const routeElement = route.redirectTo ? (
+                      <Navigate to={route.redirectTo} replace />
+                    ) : (
+                      route.render()
+                    );
+                    const permissionPath = route.permissionPath || route.path;
 
-                  <Route
-                    path="/product-catalog"
-                    element={renderRoute(
-                      "/product-catalog",
-                      <ProductCatalog />,
-                    )}
-                  />
-                  <Route
-                    path="/seller-Product-Inventory"
-                    element={renderRoute(
-                      "/seller-Product-Inventory",
-                      <SellerProductInventories />,
-                    )}
-                  />
-                  <Route
-                    path="/seller-product-inventory"
-                    element={renderRoute(
-                      "/seller-product-inventory",
-                      <SellerProductInventories />,
-                    )}
-                  />
-                  <Route
-                    path="/store"
-                    element={renderRoute("/store", <Store />)}
-                  />
-                  <Route
-                    path="/brands"
-                    element={renderRoute("/brands", <Brands />)}
-                  />
-                  <Route
-                    path="/product-options"
-                    element={renderRoute(
-                      "/product-options",
-                      <ProductOptions />,
-                    )}
-                  />
-                  <Route
-                    path="/threshold-products"
-                    element={renderRoute(
-                      "/threshold-products",
-                      <ThresholdProducts />,
-                    )}
-                  />
-                  <Route
-                    path="/inventory-audit"
-                    element={renderRoute(
-                      "/inventory-audit",
-                      <InventoryAudit />,
-                    )}
-                  />
-                  <Route
-                    path="/orders"
-                    element={renderRoute("/orders", <Orders />)}
-                  />
-                  <Route
-                    path="/carts"
-                    element={renderRoute("/carts", <Carts />)}
-                  />
-                  <Route
-                    path="/checkout-quote"
-                    element={renderRoute("/checkout-quote", <CheckoutQuote />)}
-                  />
-                  <Route
-                    path="/payments"
-                    element={renderRoute("/payments", <Payments />)}
-                  />
-                  <Route
-                    path="/seller-finance"
-                    element={renderRoute("/seller-finance", <SellerFinance />)}
-                  />
-                  <Route
-                    path="/commission-rules"
-                    element={renderRoute("/commission-rules", <CommissionRules />)}
-                  />
-                  <Route
-                    path="/platform-fee-config"
-                    element={renderRoute("/platform-fee-config", <PlatformFeeConfig />)}
-                  />
-                  <Route
-                    path="/commerce-settings"
-                    element={renderRoute("/commerce-settings", <CommerceSettings />)}
-                  />
-                  <Route
-                    path="/returns"
-                    element={renderRoute("/returns", <Returns />)}
-                  />
-                  <Route
-                    path="/product-reviews"
-                    element={renderRoute(
-                      "/product-reviews",
-                      <ProductReviews />,
-                    )}
-                  />
-                  <Route
-                    path="/discount-coupons"
-                    element={renderRoute(
-                      "/discount-coupons",
-                      <DiscountCoupons />,
-                    )}
-                  />
-                  <Route
-                    path="/referral-commerce"
-                    element={renderRoute(
-                      "/referral-commerce",
-                      <ReferralCommerce />,
-                    )}
-                  />
-
-                  <Route
-                    path="/shipping-company-users"
-                    element={<Navigate to="/app/delivery-agents" replace />}
-                  />
-                  <Route
-                    path="/shipping-packages"
-                    element={<Navigate to="/app/shipment-tracking" replace />}
-                  />
-                  <Route
-                    path="/pickup-addresses"
-                    element={<Navigate to="/app/shipment-tracking" replace />}
-                  />
-                  <Route
-                    path="/shipment-tracking"
-                    element={renderRoute(
-                      "/shipment-tracking",
-                      <ShipmentTracking />,
-                    )}
-                  />
-                  <Route
-                    path="/delivery-agents"
-                    element={renderRoute(
-                      "/delivery-agents",
-                      <DeliveryAgents />,
-                    )}
-                  />
-                  <Route
-                    path="/delivery-staff"
-                    element={renderRoute(
-                      "/delivery-staff",
-                      <DeliveryAgents />,
-                    )}
-                  />
-
-                  <Route
-                    path="/categories"
-                    element={renderRoute("/categories", <ProductCategories />)}
-                  />
-                  <Route
-                    path="/category-attributes"
-                    element={<Navigate to="/app/categories" replace />}
-                  />
-                  <Route
-                    path="/subscription-orders"
-                    element={renderRoute(
-                      "/subscription-orders",
-                      <SubscriptionOrders />,
-                    )}
-                  />
-                  <Route
-                    path="/content-management"
-                    element={renderRoute(
-                      "/content-management",
-                      <ContentManagement />,
-                    )}
-                  />
-                  <Route
-                    path="/content-management/:type"
-                    element={renderRoute(
-                      "/content-management",
-                      <ContentManagement />,
-                    )}
-                  />
-                  <Route
-                    path="/view-orders"
-                    element={renderRoute("/view-orders", <OrderSummary />)}
-                  />
-                  <Route
-                    path="/product-catalog/form/:id?"
-                    element={renderRoute(
-                      "/product-catalog/form",
-                      <AddEditProductPopup />,
-                    )}
-                  />
-                  <Route
-                    path="/product-catalog/view/:id"
-                    element={renderRoute(
-                      "/product-catalog",
-                      <ProductAdminDetails />,
-                    )}
-                  />
-                  <Route
-                    path="/profile"
-                    element={renderRoute("/profile", <Profile />)}
-                  />
-                  <Route
-                    path="/changePassword"
-                    element={renderRoute("/changePassword", <ChangePassword />)}
-                  />
-                  <Route
-                    path="/state"
-                    element={renderRoute("/state", <ManageState />)}
-                  />
-                  <Route
-                    path="/city"
-                    element={renderRoute("/city", <ManageCity />)}
-                  />
-                  <Route
-                    path="/country"
-                    element={renderRoute("/country", <ManageCountry />)}
-                  />
-                  <Route
-                    path="/zip-codes"
-                    element={renderRoute("/zip-codes", <ManageZipCode />)}
-                  />
-
-                  <Route
-                    path="/product-variants"
-                    element={renderRoute(
-                      "/product-variants",
-                      <ProductVariants />,
-                    )}
-                  />
-                  <Route
-                    path="/product-families"
-                    element={renderRoute(
-                      "/product-families",
-                      <ProductFamilies />,
-                    )}
-                  />
-                  <Route
-                    path="/user-permissions/:id"
-                    element={renderSupportedRoute(
-                      "/user-permissions",
-                      <UserPermissions setModuleName={setModuleName} />,
-                    )}
-                  />
-                  <Route
-                    path="/seller"
-                    element={renderRoute("/seller", <Sellers />)}
-                  />
-                  <Route
-                    path="/seller-kyc"
-                    element={<Navigate to="/app/seller" replace />}
-                  />
-                  <Route
-                    path="/seller-bank"
-                    element={<Navigate to="/app/seller" replace />}
-                  />
-                  <Route
-                    path="/seller-kyc-detail/:id"
-                    element={renderRoute("/seller-kyc-detail", <UserDetails />)}
-                  />
-                  <Route
-                    path="/seller-bank-detail/:id"
-                    element={renderRoute(
-                      "/seller-bank-detail",
-                      <UserDetails />,
-                    )}
-                  />
-
-                  <Route
-                    path="/product-option-value/:id"
-                    element={renderSupportedRoute(
-                      "/product-options",
-                      <ProductOptionValue setModuleName={setModuleName} />,
-                    )}
-                  />
-
-                  <Route path="/tax" element={renderRoute("/tax", <Tax />)} />
-                  <Route
-                    path="/tax-documents"
-                    element={renderRoute("/tax-documents", <TaxCompliance />)}
-                  />
-                  <Route
-                    path="/subTax"
-                    element={renderSupportedRoute(
-                      "/subTax",
-                      <SubTax setModuleName={setModuleName} />,
-                    )}
-                  />
-                  <Route
-                    path="/subTax/:id"
-                    element={renderSupportedRoute(
-                      "/subTax",
-                      <SubTax setModuleName={setModuleName} />,
-                    )}
-                  />
-                  <Route
-                    path="/tax-rule"
-                    element={renderSupportedRoute(
-                      "/tax-rule",
-                      <TaxRule setModuleName={setModuleName} />,
-                    )}
-                  />
-                  <Route
-                    path="/discount-coupons"
-                    element={renderRoute(
-                      "/discount-coupons",
-                      <DiscountCoupons />,
-                    )}
-                  />
-
-                  <Route
-                    path="/bar-code"
-                    element={renderRoute("/barcode", <BarcodePage />)}
-                  />
-                  <Route
-                    path="/hsn-code"
-                    element={renderRoute("/hsn-code", <HsnCode />)}
-                  />
-                  <Route
-                    path="/orders/view/:id"
-                    element={renderRoute("/orders/view", <OrderSummary />)}
-                  />
-
-                  <Route
-                    path="/product-option-values"
-                    element={renderRoute(
-                      "/product-option-values",
-                      <ProductOptionValue setModuleName={setModuleName} />,
-                    )}
-                  />
-
-                  {/* ── Inventory Management ────────────────────────────────── */}
-                  <Route
-                    path="/inventory-overview"
-                    element={renderRoute(
-                      "/inventory-overview",
-                      <InventoryOverview />,
-                    )}
-                  />
-                  <Route
-                    path="/variant-inventory"
-                    element={renderRoute(
-                      "/variant-inventory",
-                      <VariantInventory />,
-                    )}
-                  />
-                  <Route
-                    path="/inventory-adjustment"
-                    element={renderRoute(
-                      "/inventory-adjustment",
-                      <InventoryAdjustment />,
-                    )}
-                  />
-                  <Route
-                    path="/inventory-transactions"
-                    element={renderRoute(
-                      "/inventory-transactions",
-                      <InventoryTransactions />,
-                    )}
-                  />
-                  <Route
-                    path="/warehouse"
-                    element={renderRoute("/warehouse", <WarehouseManagement />)}
-                  />
-                  <Route
-                    path="/low-stock-alerts"
-                    element={renderRoute(
-                      "/low-stock-alerts",
-                      <LowStockAlerts />,
-                    )}
-                  />
-
-                  {/* ── Users & Access — new routes ─────────────────────────── */}
-                  <Route
-                    path="/seller-staff"
-                    element={renderRoute("/seller-users", <SellerUsers />)}
-                  />
-                  <Route
-                    path="/roles-permissions"
-                    element={renderRoute(
-                      "/roles-permissions",
-                      <RolesPermissions />,
-                    )}
-                  />
-                  <Route
-                    path="/module-management"
-                    element={renderRoute(
-                      "/module-management",
-                      <ModuleManagement />,
-                    )}
-                  />
-                  <Route
-                    path="/activity-logs"
-                    element={renderRoute("/activity-logs", <ActivityLogs />)}
-                  />
-                  <Route
-                    path="/rbac-audit-log"
-                    element={renderRoute("/rbac-audit-log", <RbacAuditLog />)}
-                  />
-                  <Route
-                    path="/permission-templates"
-                    element={renderRoute(
-                      "/permission-templates",
-                      <PermissionTemplates />,
-                    )}
-                  />
-
-                  {/* ── Marketing — new routes ──────────────────────────────── */}
-
-                  {/* ── Seller Management — additional pages ────────────────── */}
-                  <Route
-                    path="/seller-onboarding"
-                    element={<Navigate to="/app/seller" replace />}
-                  />
-                  <Route
-                    path="/seller-status"
-                    element={<Navigate to="/app/seller" replace />}
-                  />
-                  <Route
-                    path="/seller-sub-admins"
-                    element={renderRoute(
-                      "/seller-sub-admins",
-                      <SellerSubAdminManagement />,
-                    )}
-                  />
-
-                  {/* ── CMS & Content ───────────────────────────────────────── */}
-                  <Route
-                    path="/content-pages"
-                    element={renderRoute("/content-pages", <ContentPages />)}
-                  />
-
-                  {/* ── Users & Access — additional ─────────────────────────── */}
-                  <Route
-                    path="/users-addresses"
-                    element={renderRoute("/users-addresses", <Users />)}
-                  />
-                  <Route
-                    path="/preferences"
-                    element={renderSupportedRoute("/preferences", <Preferences />)}
-                  />
-
-                  {/* ── Deals Management ────────────────────────────────────── */}
-                  <Route
-                    path="/deal-management"
-                    element={renderRoute("/deal-management", <DealManagement />)}
-                  />
-
-                  {/* ── Fraud Management ────────────────────────────────────── */}
-                  <Route
-                    path="/fraud-cases"
-                    element={renderRoute("/fraud-cases", <FraudCases />)}
-                  />
-
-                  {/* ── Wallet Management ───────────────────────────────────── */}
-                  <Route
-                    path="/wallet-management"
-                    element={renderRoute(
-                      "/wallet-management",
-                      <WalletTransactions />,
-                    )}
-                  />
-                  <Route
-                    path="/wallet-transactions"
-                    element={renderRoute(
-                      "/wallet-transactions",
-                      <WalletTransactions />,
-                    )}
-                  />
-
-                  {/* ── Notification Templates ──────────────────────────────── */}
-                  <Route
-                    path="/notification-templates"
-                    element={renderRoute(
-                      "/notification-templates",
-                      <NotificationTemplates />,
-                    )}
-                  />
-
-                  {/* ── Cancellations ───────────────────────────────────────── */}
-                  <Route
-                    path="/cancellations"
-                    element={renderRoute("/cancellations", <Cancellations />)}
-                  />
-
-                  {/* ── Platform Catalog — collections / badges ─────────────── */}
-                  <Route
-                    path="/collections"
-                    element={renderRoute("/collections", <CollectionsPage />)}
-                  />
-                  <Route
-                    path="/badges"
-                    element={renderRoute("/badges", <BadgesPage />)}
-                  />
-
-                  {/* ── Tax & Finance — invoices / credit notes ──────────────── */}
-                  <Route
-                    path="/tax-invoices"
-                    element={renderRoute("/tax-invoices", <TaxInvoices />)}
-                  />
-                  <Route
-                    path="/credit-notes"
-                    element={renderRoute("/credit-notes", <CreditNotes />)}
-                  />
-
-                  {/* ── Subscription Plans Management ────────────────────────── */}
-                  <Route
-                    path="/subscription-plans"
-                    element={renderRoute(
-                      "/subscription-plans",
-                      <SubscriptionPlans />,
-                    )}
-                  />
-
-                  {/* ── Payment Config & Chargebacks ─────────────────────────── */}
-                  <Route
-                    path="/cod-config"
-                    element={renderRoute("/cod-config", <CodConfig />)}
-                  />
-                  <Route
-                    path="/chargebacks"
-                    element={renderRoute("/chargebacks", <Chargebacks />)}
-                  />
-
-                  {/* ── Seller Payouts ───────────────────────────────────────── */}
-                  <Route
-                    path="/seller-payouts"
-                    element={renderRoute("/seller-payouts", <SellerPayouts />)}
-                  />
-                  <Route
-                    path="/payout-ops-queue"
-                    element={renderRoute("/payout-ops-queue", <PayoutOpsQueue />)}
-                  />
-                  <Route
-                    path="/negative-balances"
-                    element={renderRoute("/negative-balances", <NegativeBalances />)}
-                  />
-
-                  {/* ── Deal Sub-sections ────────────────────────────────────── */}
-                  <Route
-                    path="/deal-payouts"
-                    element={renderRoute("/deal-payouts", <DealPayouts />)}
-                  />
-                  <Route
-                    path="/deal-sponsorships"
-                    element={renderRoute(
-                      "/deal-sponsorships",
-                      <DealSponsorships />,
-                    )}
-                  />
-
-                  {/* ── Referral — Influencers ───────────────────────────────── */}
-                  <Route
-                    path="/influencer-management"
-                    element={renderRoute(
-                      "/influencer-management",
-                      <InfluencerManagement />,
-                    )}
-                  />
-
-                  {/* ── Analytics Events ─────────────────────────────────────── */}
-                  <Route
-                    path="/analytics-events"
-                    element={renderRoute(
-                      "/analytics-events",
-                      <AnalyticsEvents />,
-                    )}
-                  />
-
-                  {/* ── Platform Settings ────────────────────────────────────── */}
-                  <Route
-                    path="/api-keys"
-                    element={renderRoute("/api-keys", <ApiKeys />)}
-                  />
-                  <Route
-                    path="/feature-flags"
-                    element={renderRoute("/feature-flags", <FeatureFlags />)}
-                  />
-                  <Route
-                    path="/webhooks"
-                    element={renderRoute("/webhooks", <Webhooks />)}
-                  />
-
-                  {/* ── System Management ────────────────────────────────────── */}
-                  <Route
-                    path="/system-health"
-                    element={renderRoute("/system-health", <SystemHealth />)}
-                  />
-                  <Route
-                    path="/queue-management"
-                    element={renderRoute(
-                      "/queue-management",
-                      <QueueManagement />,
-                    )}
-                  />
-                  <Route
-                    path="/dead-letter-queue"
-                    element={renderRoute(
-                      "/dead-letter-queue",
-                      <DeadLetterQueue />,
-                    )}
-                  />
-
-                  {/* ── Product Moderation ───────────────────────────────────── */}
-                  <Route
-                    path="/product-moderation-queue"
-                    element={renderRoute(
-                      "/product-moderation-queue",
-                      <ProductModerationQueue />,
-                    )}
-                  />
-
-                  {/* ── Analytics ───────────────────────────────────────────── */}
-                  <Route
-                    path="/analytics"
-                    element={renderRoute("/analytics", <AnalyticsDashboard />)}
-                  />
-
-                  {/* ── Reports & Analytics ─────────────────────────────────── */}
-                  <Route
-                    path="/reports-sales"
-                    element={renderRoute("/reports-sales", <SalesReport />)}
-                  />
-                  <Route
-                    path="/reports-products"
-                    element={renderRoute(
-                      "/reports-products",
-                      <ProductAnalytics />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-inventory"
-                    element={renderRoute(
-                      "/reports-inventory",
-                      <InventoryAnalytics />,
-                    )}
-                  />
-                  <Route
-                    path="/reports-sellers"
-                    element={renderRoute(
-                      "/reports-sellers",
-                      <SellerAnalytics />,
-                    )}
-                  />
-                  <Route
-                    path="/messages"
-                    element={renderRoute("/messages", <UserMessages />)}
-                  />
+                    return (
+                      <Route
+                        key={route.path}
+                        path={route.path}
+                        element={
+                          route.redirectTo
+                            ? routeElement
+                            : renderRoute(permissionPath, routeElement)
+                        }
+                      />
+                    );
+                  })}
                   <Route path="*" element={<Navigate to="/app/home" replace />} />
                 </Routes>
               </motion.div>

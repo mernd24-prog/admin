@@ -5,7 +5,6 @@ import { apiRequest } from '../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../_helpers/endpoints';
 import { getStoredRole, normalizeRole } from '../../_helpers/authStorage';
 import {
-  DEFAULT_SELLER_MODULES,
   buildAccessModuleActionMaps,
   buildModulePermissions,
   normalizePermissionActions,
@@ -32,7 +31,7 @@ const emptyStaffForm = {
   password: '',
   confirmPassword: '',
   parentSellerId: '',
-  allowedModules: ['products', 'orders'],
+  allowedModules: [],
   role: 'seller-admin',
 };
 
@@ -295,7 +294,7 @@ const SellerUsers = () => {
   const [staffForm, setStaffForm] = useState(emptyStaffForm);
   const [errors, setErrors] = useState({});
   const [editTarget, setEditTarget] = useState(null);
-  const [moduleOptions, setModuleOptions] = useState(DEFAULT_SELLER_MODULES);
+  const [moduleOptions, setModuleOptions] = useState([]);
   const [moduleActionOptions, setModuleActionOptions] = useState({});
   const [moduleAssignedActions, setModuleAssignedActions] = useState({});
   const [moduleActionsMap, setModuleActionsMap] = useState({});
@@ -324,9 +323,9 @@ const SellerUsers = () => {
         return;
       }
     } catch (error) {
-      // fallback handled below
+      // Keep module options empty when the backend access catalog is unavailable.
     }
-    setModuleOptions(DEFAULT_SELLER_MODULES);
+    setModuleOptions([]);
     setModuleActionOptions({});
     setModuleAssignedActions({});
   }, []);

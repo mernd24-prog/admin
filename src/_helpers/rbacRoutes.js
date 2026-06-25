@@ -5,6 +5,20 @@ const trimRoute = (value = "") =>
     .replace(/\/+$/, "")
     .replace(/^\/+/, "")}`.replace(/\/$/, "") || "/";
 
+export const normalizeModuleCode = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-");
+
+export const routeCodeFromPath = (routePath = "") =>
+  String(routePath || "")
+    .replace(/^\/app\/?/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")
+    .replace(/\/:\w+\??/g, "");
+
 export const SELF_SERVICE_ROUTES = ["/profile", "/changePassword"];
 
 export const MODULE_TAB_ORDER = [
@@ -607,15 +621,100 @@ export const getModuleRoute = (moduleSlug) =>
   getModuleMeta(moduleSlug).route ||
   String(moduleSlug || "").trim();
 
+const getAccessModuleSlug = (module = {}) =>
+  normalizeModuleCode(
+    typeof module === "string"
+      ? module
+      : module?.slug ||
+          module?.moduleKey ||
+          module?.moduleSlug ||
+          module?.module ||
+          module?.module_code?.module_code ||
+          module?.module_code ||
+          module?.metadata?.requiredModule,
+  );
+
+const moduleRouteEntry = (module, route, overrides = {}) => {
+  const slug = getAccessModuleSlug(module);
+  const meta = getModuleMeta(slug);
+  const label =
+    overrides.label ||
+    (typeof module === "object" ? module.name || module.moduleName : "") ||
+    meta.label;
+  const tab =
+    overrides.tab ||
+    (typeof module === "object" ? module.tab || module.metadata?.tab : "") ||
+    meta.tab;
+  const routeCode = routeCodeFromPath(route || overrides.route || meta.route || slug);
+
+  if (!routeCode) return null;
+
+  return {
+    module: slug,
+    slug,
+    label,
+    name: label,
+    tab,
+    route: routeCode,
+    module_code: routeCode,
+    order: overrides.order ?? meta.order,
+    source: typeof module === "object" ? module.source : undefined,
+  };
+};
+
+export const getAccessModuleRouteEntries = (
+  module,
+  _options = {},
+) => {
+  const slug = getAccessModuleSlug(module);
+  if (!slug) return [];
+
+  const metadata = typeof module === "object" ? module.metadata || {} : {};
+  const explicitRoutes = [
+    metadata.routeKey,
+    metadata.frontendRoute,
+    metadata.route,
+    typeof module === "object" ? module.routePath : "",
+  ]
+    .map(routeCodeFromPath)
+    .filter(Boolean);
+  const route = explicitRoutes[0] || getModuleRoute(slug);
+  const entry = moduleRouteEntry(module, route);
+  return entry ? [entry] : [];
+};
+
 export const isSelfServiceRoute = (path) => {
   const route = trimRoute(path);
   return SELF_SERVICE_ROUTES.some((r) => route === r);
 };
 
-export const getRouteModuleCandidates = (path) => {
+const getDynamicRouteModuleCandidates = (path, modules = [], options = {}) => {
   const route = trimRoute(path);
+  return (Array.isArray(modules) ? modules : [])
+    .flatMap((module) =>
+      getAccessModuleRouteEntries(module, options)
+        .filter((entry) => {
+          const entryRoute = trimRoute(entry.route);
+          return route === entryRoute || route.startsWith(`${entryRoute}/`);
+        })
+        .flatMap((entry) => [
+          entry.module,
+          module?.metadata?.requiredModule,
+          module?.requiredModule,
+          module?.moduleKey,
+          module?.moduleSlug,
+          module?.slug,
+        ]),
+    )
+    .map(normalizeModuleCode)
+    .filter(Boolean);
+};
+
+export const getRouteModuleCandidates = (path, modules = [], options = {}) => {
+  const route = trimRoute(path);
+  const dynamicCandidates = getDynamicRouteModuleCandidates(path, modules, options);
   const matched = ROUTE_MODULES.find(([prefixes]) =>
     prefixes.some((p) => route === p || route.startsWith(`${p}/`))
   );
-  return matched ? matched[1] : [];
+  return Array.from(new Set([...(matched ? matched[1] : []), ...dynamicCandidates]));
 };

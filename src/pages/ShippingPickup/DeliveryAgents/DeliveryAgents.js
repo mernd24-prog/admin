@@ -11,7 +11,7 @@ import {
   MdToggleOff,
   MdToggleOn,
 } from "react-icons/md";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import {
   ConfirmModal,
@@ -429,9 +429,9 @@ const DeliveryAgents = () => {
         }}
         title={form.id ? "Edit Delivery Agent" : "Create Delivery Agent"}
         onSubmit={submitForm}
-        submitButtonText={form.id ? "Save" : "Create"}
+        submitButtonText={form.id ? "Save Changes" : "Create Agent"}
+        closeButtonText="Cancel"
         loading={loading}
-        width="620px"
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="block text-sm text-gray-700 md:col-span-2">

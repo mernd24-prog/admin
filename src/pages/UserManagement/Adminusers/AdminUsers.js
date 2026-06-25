@@ -32,7 +32,6 @@ import {
   getStoredUser,
   normalizeRole,
 } from "../../../_helpers/authStorage";
-import { DEFAULT_PLATFORM_MODULES } from "../../../_helpers/adminApi";
 import {
   getModuleLabel,
   getModuleMeta,
@@ -265,7 +264,7 @@ const hasAssignedModuleAccess = (module = {}) => {
   return (module.permissions || []).some((permission) => permission?.assigned);
 };
 
-const groupModuleOptions = (modules = DEFAULT_PLATFORM_MODULES) => {
+const groupModuleOptions = (modules = []) => {
   const groups = modules
     .map(toModuleOption)
     .filter((module) => module.slug)
@@ -286,7 +285,7 @@ const getSelectedModuleOptions = (modules = [], selected = []) => {
 const ModuleSelector = ({
   selected,
   onChange,
-  modules = DEFAULT_PLATFORM_MODULES,
+  modules = [],
   disabled = false,
 }) => {
   const groupedModules = groupModuleOptions(modules)
@@ -803,11 +802,9 @@ const AdminUsers = () => {
       .filter((module) => module?.assignable !== false)
       .map(toModuleOption)
       .filter((module) => module.slug);
-    const fallback = DEFAULT_PLATFORM_MODULES.map(toModuleOption).filter(
-      (module) =>
-        !sidebarModuleSlugs.size || sidebarModuleSlugs.has(module.slug),
-    );
-    const options = fromApi.length ? fromApi : fallback;
+    const options = fromApi.length
+      ? fromApi
+      : Array.from(sidebarModuleSlugs).map(toModuleOption);
     return Array.from(
       new Map(options.map((module) => [module.slug, module])).values(),
     );
@@ -835,7 +832,7 @@ const AdminUsers = () => {
   }, [moduleOptionSlugs]);
   const defaultAdminModules = useMemo(
     () =>
-      moduleOptionSlugs.length ? moduleOptionSlugs : DEFAULT_PLATFORM_MODULES,
+      moduleOptionSlugs,
     [moduleOptionSlugs],
   );
   const filteredSubAdmins = useMemo(

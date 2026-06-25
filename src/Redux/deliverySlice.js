@@ -20,6 +20,13 @@ const initialState = {
   getOrderEwayBillData: {},
   createOrderEwayBillData: {},
   updateEwayBillStatusData: {},
+  // Shipping Profiles
+  shippingProfilesData: {},
+  shippingProfileData: {},
+  createShippingProfileData: {},
+  updateShippingProfileData: {},
+  deleteShippingProfileData: {},
+  setDefaultShippingProfileData: {},
 };
 
 const pickQuery = (keys = []) => (params = {}) =>
@@ -160,6 +167,48 @@ export const updateSellerEwayBillStatus = createApiThunkPrivate(
   { transformBody: (payload = {}) => omitPayload(payload, ["ewayBillId", "id"]) }
 );
 
+// ── Shipping Profiles ──────────────────────────────────────────────────────
+
+export const getShippingProfiles = createApiThunkPrivate(
+  "delivery/getShippingProfiles",
+  ENDPOINTS.shippingProfiles.list,
+  "GET",
+  true,
+  { transformParams: pickQuery(["sellerId", "organizationId", "active", "search", "limit", "offset"]) }
+);
+
+export const createShippingProfile = createApiThunkPrivate(
+  "delivery/createShippingProfile",
+  ENDPOINTS.shippingProfiles.create,
+  "POST"
+);
+
+export const getShippingProfile = createApiThunkPrivate(
+  "delivery/getShippingProfile",
+  (payload) => ENDPOINTS.shippingProfiles.detail(payload?.profileId || payload?.id),
+  "GET"
+);
+
+export const updateShippingProfile = createApiThunkPrivate(
+  "delivery/updateShippingProfile",
+  (payload) => ENDPOINTS.shippingProfiles.update(payload?.profileId || payload?.id),
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["profileId", "id"]) }
+);
+
+export const deleteShippingProfile = createApiThunkPrivate(
+  "delivery/deleteShippingProfile",
+  (payload) => ENDPOINTS.shippingProfiles.delete(payload?.profileId || payload?.id),
+  "DELETE"
+);
+
+export const setDefaultShippingProfile = createApiThunkPrivate(
+  "delivery/setDefaultShippingProfile",
+  (payload) => ENDPOINTS.shippingProfiles.setDefault(payload?.profileId || payload?.id),
+  "POST"
+);
+
 const deliverySlice = createSlice({
   name: "delivery",
   initialState,
@@ -181,6 +230,12 @@ const deliverySlice = createSlice({
     createExtraReducersForThunk(builder, getSellerOrderEwayBill, "getOrderEwayBillData");
     createExtraReducersForThunk(builder, createSellerOrderEwayBill, "createOrderEwayBillData");
     createExtraReducersForThunk(builder, updateSellerEwayBillStatus, "updateEwayBillStatusData");
+    createExtraReducersForThunk(builder, getShippingProfiles, "shippingProfilesData");
+    createExtraReducersForThunk(builder, createShippingProfile, "createShippingProfileData");
+    createExtraReducersForThunk(builder, getShippingProfile, "shippingProfileData");
+    createExtraReducersForThunk(builder, updateShippingProfile, "updateShippingProfileData");
+    createExtraReducersForThunk(builder, deleteShippingProfile, "deleteShippingProfileData");
+    createExtraReducersForThunk(builder, setDefaultShippingProfile, "setDefaultShippingProfileData");
   },
 });
 

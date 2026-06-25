@@ -51,18 +51,23 @@ const App = () => {
         const result = await dispatch(fetchAuthStatus());
         if (fetchAuthStatus.rejected.match(result)) {
           const hasAccessToken = !!localStorage.getItem("accessToken");
-          if (hasAccessToken) {
-            // Regular session expired or invalidated — force logout with message
+          const errorCode = result.payload?.code;
+          // Only force logout for definitive auth rejections (not network errors).
+          // Network errors have no code; token/session errors always carry a code.
+          const isAuthRejection = Boolean(errorCode);
+          if (hasAccessToken && isAuthRejection) {
             forceLogout(
-              result.payload?.code || "SESSION_INVALID",
+              errorCode || "SESSION_INVALID",
               result.payload?.message ||
                 "Your session is no longer valid. Please login again.",
             );
-          } else {
+          } else if (!hasAccessToken) {
             // Onboarding token expired/invalid — clear silently and let user re-login
             dispatch(clearSellerOnboarding());
           }
-          return;
+          // Network error with a stored access token: proceed to dashboard and let
+          // the per-request interceptors handle token refresh/expiry normally.
+          if (isAuthRejection) return;
         }
 
         // After a successful status fetch, redirect sellers who still need onboarding
