@@ -166,6 +166,29 @@ const buildSellerSettlements = (items = []) =>
     };
   });
 
+const normalizeSellerSettlement = (seller = {}) => ({
+  sellerId: firstDefined(seller.sellerId, seller.seller_id, ""),
+  sellerName: firstDefined(seller.sellerName, seller.seller_name, seller.sellerId, seller.seller_id, "Seller"),
+  organizationId: firstDefined(seller.organizationId, seller.organization_id, ""),
+  organizationName: firstDefined(seller.organizationName, seller.organization_name, seller.organizationSnapshot?.legalBusinessName, seller.organizationSnapshot?.storeDisplayName, ""),
+  grossSales: money(firstDefined(seller.grossSalesAmount, seller.gross_sales_amount, 0)),
+  taxableSales: money(firstDefined(seller.taxableAmount, seller.taxableSales, seller.taxable_sales, 0)),
+  taxCollected: money(firstDefined(seller.taxAmount, seller.taxCollected, seller.tax_amount, 0)),
+  sellerPayoutBase: money(firstDefined(seller.sellerPayoutBaseAmount, seller.seller_payout_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
+  commissionFee: money(firstDefined(seller.platformFeeAmount, seller.commissionAmount, seller.commissionFee, seller.platform_fee_amount, 0)),
+  platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
+  fixedFee: money(firstDefined(seller.fixedFee, seller.fixed_fee, 0)),
+  closingFee: money(firstDefined(seller.closingFee, seller.closing_fee, 0)),
+  shippingReimbursement: money(firstDefined(seller.shippingReimbursementAmount, seller.shipping_reimbursement_amount, 0)),
+  shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
+  refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
+  sellerPayout: money(firstDefined(seller.sellerPayoutAmount, seller.sellerPayout, seller.seller_payout_amount, 0)),
+  commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
+  payoutStatus: firstDefined(seller.payoutStatus, seller.payout_status, ""),
+  payoutId: firstDefined(seller.payoutId, seller.payout_id, ""),
+  commissionRates: Array.isArray(seller.commissionRates) ? seller.commissionRates : [],
+});
+
 const Panel = ({ title, children, actions, className = "" }) => (
   <section className={`rounded-lg border border-[#eadfbd] bg-[#fffdf8] shadow-[0_1px_3px_rgba(31,41,55,0.06)] ${className}`}>
     {(title || actions) && (
@@ -326,7 +349,12 @@ const OrderSummary = () => {
   const eWayBill = relations.eWayBill || relations.ewayBill || null;
   const returns = Array.isArray(state.returns) ? state.returns : [];
   const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items)), [items]);
-  const sellerSettlements = useMemo(() => buildSellerSettlements(items), [items]);
+  const sellerSettlements = useMemo(() => {
+    const savedSettlements = Array.isArray(relations.sellerSettlements) ? relations.sellerSettlements : [];
+    return savedSettlements.length
+      ? savedSettlements.map(normalizeSellerSettlement)
+      : buildSellerSettlements(items).map(normalizeSellerSettlement);
+  }, [items, relations.sellerSettlements]);
   const orderTaxRates = useMemo(() => getOrderTaxRates(taxBreakup, items), [taxBreakup, items]);
   const timeline = Array.isArray(order.timeline) ? order.timeline : [];
   const notes = Array.isArray(order.notes) ? order.notes : [];
@@ -807,16 +835,29 @@ const OrderSummary = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
+                    <div className="flex justify-between"><span>Gross product sales</span><span>{formatMoney(seller.grossSales)}</span></div>
+                    <div className="flex justify-between"><span>Seller payout base</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
                     <div className="flex justify-between"><span>Taxable product sales</span><span>{formatMoney(seller.taxableSales)}</span></div>
                     <div className="flex justify-between"><span>Tax to maintain</span><span>{formatMoney(seller.taxCollected)}</span></div>
                     <div className="flex justify-between">
-                      <span>Platform commission</span>
+                      <span>Platform commission / fee</span>
                       <span>
                         -{formatMoney(seller.commissionFee)}
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
+                    <div className="flex justify-between"><span>Platform fee GST</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
                     <div className="flex justify-between"><span>Fixed/closing fees</span><span>-{formatMoney(seller.fixedFee + seller.closingFee)}</span></div>
+                    <div className="flex justify-between"><span>Shipping reimbursement</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
+                    <div className="flex justify-between"><span>Shipping deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
+                    <div className="flex justify-between"><span>Refund adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>
+                    {(seller.commissionStatus || seller.payoutStatus || seller.payoutId) && (
+                      <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
+                        {seller.commissionStatus && <span>Commission: {displayStatus(seller.commissionStatus)}</span>}
+                        {seller.payoutStatus && <span className="ml-2">Payout: {displayStatus(seller.payoutStatus)}</span>}
+                        {seller.payoutId && <span className="ml-2">ID: {seller.payoutId}</span>}
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-[#efe6cd] pt-2 font-medium"><span>Net seller payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
                   </div>
                 </div>
