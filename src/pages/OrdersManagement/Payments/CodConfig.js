@@ -94,7 +94,7 @@ const CodConfig = () => {
         subtitle="Configure Cash on Delivery payment option"
         breadcrumbs={[{ label: "Commerce Settings" }, { label: "COD Settings" }]}
         actions={
-          <PermissionGuard module="payments" action={ACTIONS.UPDATE} hide>
+          <PermissionGuard module="cod-config" action={ACTIONS.UPDATE} hide>
             <button
               onClick={handleSave}
               disabled={saving}

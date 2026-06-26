@@ -12,7 +12,6 @@ import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
 import { socketConnection } from "../../_helpers/socket";
-import { hasModuleAccess } from "../../_helpers/authStorage";
 import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
 import {
   getRouteModuleCandidates,
@@ -734,10 +733,16 @@ function Layout() {
   const hasPermission = (path) => {
     if (isSelfServiceRoute(path)) return true;
 
+    const normalizedRoute = normalizeRoutePattern(path);
+    if (backendRoutePatterns.has(normalizedRoute)) return true;
+
     const moduleCandidates = getRouteModuleCandidates(path, routePermissionModules, {
       sellerPanel: isSellerPanel(),
     });
     if (!moduleCandidates.length) return true;
+    if (!backendRoutePatterns.size && !Object.keys(modulePermissions).length) {
+      return true;
+    }
 
     return moduleCandidates.some((moduleCode) => {
       const normalizedModuleCode = String(moduleCode || "")
@@ -746,8 +751,7 @@ function Layout() {
         .replace(/\s+/g, "-")
         .replace(/_/g, "-");
       if (modulePermissions[normalizedModuleCode] === true) return true;
-      if (modulePermissions[normalizedModuleCode] === false) return false;
-      return hasModuleAccess(moduleCode);
+      return false;
     });
   };
 

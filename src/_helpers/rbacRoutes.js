@@ -500,7 +500,7 @@ const ROUTE_MODULES = [
   [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
-  [["/cod-config"], ["payments", "commerce-settings", "admin"]],
+  [["/cod-config"], ["cod-config"]],
   [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
 
   // Marketing

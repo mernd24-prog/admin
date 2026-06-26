@@ -7,6 +7,7 @@ const ONBOARDING_USER_KEY = "sellerOnboardingUser";
 const AUTH_FLOW_STATE_KEY = "authFlowState";
 const AUTH_MODE_KEY = "authMode";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const SELLER_ORGANIZATION_KEY = "sellerSelectedOrganizationId";
 
 const getStoredJson = (key) => {
   try {
@@ -14,6 +15,27 @@ const getStoredJson = (key) => {
     return value ? JSON.parse(value) : null;
   } catch (error) {
     return null;
+  }
+};
+
+const getFlowStateSelectedOrganizationId = (flowState = {}) =>
+  flowState?.selectedOrganizationId ||
+  flowState?.organizationSummary?.selectedOrganizationId ||
+  flowState?.organization?.id ||
+  flowState?.organization?.organizationId ||
+  "";
+
+const syncSelectedOrganizationFromFlowState = (flowState = {}) => {
+  const organizationId = String(getFlowStateSelectedOrganizationId(flowState) || "");
+  if (organizationId) {
+    localStorage.setItem(SELLER_ORGANIZATION_KEY, organizationId);
+  } else {
+    localStorage.removeItem(SELLER_ORGANIZATION_KEY);
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("seller:organizationChanged", {
+      detail: { organizationId },
+    }));
   }
 };
 
@@ -190,6 +212,7 @@ const sellerSlice = createSlice({
       if (accessToken) localStorage.setItem("accessToken", accessToken);
       if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       if (flowState) localStorage.setItem(AUTH_FLOW_STATE_KEY, JSON.stringify(flowState));
+      syncSelectedOrganizationFromFlowState(flowState);
       localStorage.setItem(AUTH_MODE_KEY, "authenticated");
       localStorage.removeItem(ONBOARDING_TOKEN_KEY);
       localStorage.removeItem(ONBOARDING_USER_KEY);

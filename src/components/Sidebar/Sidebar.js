@@ -21,7 +21,6 @@ import {
   getAccessToken,
   getStoredRole,
   getStoredUser,
-  hasModuleAccess,
   normalizeRole,
 } from "../../_helpers/authStorage";
 import { RxCross2 } from "react-icons/rx";
@@ -66,7 +65,6 @@ const toRouteCode = (routePath = "") =>
 
 const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
   "warehouse",
-  "low-stock-alerts",
   "threshold-products",
   "category-attributes",
   "seller-kyc",
@@ -109,8 +107,10 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
 const firstArray = (...values) =>
   values.find((value) => Array.isArray(value)) || [];
 
-const filterSidebarTreeByAccess = (items = [], options = {}) =>
-  items
+const filterSidebarTreeByAccess = (items = [], options = {}) => {
+  if (options.trustBackend) return items;
+
+  return items
     .map((item) => {
       const requiredModule = normalizeModuleCode(
         item.metadata?.requiredModule ||
@@ -125,14 +125,12 @@ const filterSidebarTreeByAccess = (items = [], options = {}) =>
         allowedModules.has(requiredModule) ||
         allowedModules.has(normalizeModuleCode(item.moduleKey)) ||
         allowedModules.has(normalizeModuleCode(item.slug)) ||
-        !requiredModule ||
-        hasModuleAccess(requiredModule) ||
-        hasModuleAccess(item.moduleKey) ||
-        hasModuleAccess(item.slug);
+        !requiredModule;
       if (!selfAllowed && !children.length) return null;
       return { ...item, children };
     })
     .filter(Boolean);
+};
 
 const buildDynamicSidebarData = (modules = [], options = {}) =>
   filterSidebarTreeByAccess(modules, options)
@@ -184,8 +182,7 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
       return (
         options.superAdmin ||
         hasAssignedView(module) ||
-        options.allowedModules?.has(slug) ||
-        hasModuleAccess(slug)
+        options.allowedModules?.has(slug)
       );
     })
     .flatMap((module) => getAccessModuleRouteEntries(module, options))
@@ -348,6 +345,7 @@ const Sidebar = ({
       const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
         superAdmin: isSuperAdmin,
         allowedModules: assignedSidebarModules,
+        trustBackend: true,
       });
       if (sidebarTree.length) return sidebarTree;
     }

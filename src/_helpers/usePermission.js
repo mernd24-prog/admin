@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { getStoredRole, getStoredUser, hasModuleAccess } from './authStorage';
+import { getStoredRole, getStoredUser } from './authStorage';
 import { getRouteModuleCandidates, isSelfServiceRoute } from './rbacRoutes';
 
 /**
@@ -209,18 +209,18 @@ export function usePermission() {
    */
   const can = (moduleSlug, action) => {
     const normalizedModule = normalizeModuleCode(moduleSlug);
-    // Super-admin and admin bypass permission matrix checks.
-    // Only sub-admin (and seller-sub-admin on the seller panel) is RBAC-restricted.
-    if (role === ROLES.SUPER_ADMIN || role === ROLES.ADMIN) return true;
+    // Super-admin bypasses permission matrix checks. Admin, sub-admin, and
+    // seller delegated users are permission-driven.
+    if (role === ROLES.SUPER_ADMIN) return true;
 
     const mod = permMap[normalizedModule] || permMap[moduleSlug];
     const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
 
-    // Module/page access is view access. During bootstrap, fall back to stored
-    // auth data so routes don't flicker before the permission matrix arrives.
+    // Module/page access is view access. Route bootstrap is handled by Layout;
+    // component guards should only trust the backend permission matrix.
     if (!action || normalizedAction === ACTIONS.VIEW) {
       if (mod) return mod.view === true || mod._assigned === true;
-      return hasModuleAccess(normalizedModule || moduleSlug);
+      return false;
     }
 
     if (!mod || !mod._assigned) return false;

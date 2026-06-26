@@ -17,7 +17,7 @@ import {
   normalizePermissionActions,
 } from '../../_helpers/adminApi';
 import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../_helpers/rbacRoutes';
-import { getStoredRole, getStoredUser, hasModuleAccess, normalizeRole } from '../../_helpers/authStorage';
+import { getStoredRole, getStoredUser, normalizeRole } from '../../_helpers/authStorage';
 import { apiRequest } from '../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../_helpers/endpoints';
 import TableData from '../../components/Atoms/TableData/TableData';
@@ -403,6 +403,13 @@ const buildHierarchy = (users = [], rootUser = {}, rootModules = []) => {
   return flatten(root);
 };
 
+const hasAssignedModuleAccess = (module = {}) => {
+  const hasAssignedPermission = (module.permissions || []).some((permission) => permission?.assigned);
+  if (hasAssignedPermission) return true;
+  if (module.assigned === false) return false;
+  return module.assigned === true || module.assigned === undefined;
+};
+
 const SellerSubAdminManagement = () => {
   const dispatch = useDispatch();
   const sellerSelector = useSelector((state) => state.sellerSubAdmins);
@@ -433,11 +440,11 @@ const SellerSubAdminManagement = () => {
   const moduleOptions = useMemo(() => {
     const fromAccessModules = (Array.isArray(accessModules) ? accessModules : [])
       .filter((module) => module?.assignable !== false)
-      .filter((module) => module?.assigned !== false || hasModuleAccess(module.slug || module.moduleKey))
+      .filter(hasAssignedModuleAccess)
       .map((module) => module.slug || module.moduleKey || module.moduleSlug)
       .filter(Boolean);
     if (fromAccessModules.length) {
-      return Array.from(new Set(fromAccessModules.filter((slug) => hasModuleAccess(slug))));
+      return Array.from(new Set(fromAccessModules));
     }
 
     const sidebarModules = userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
@@ -445,16 +452,14 @@ const SellerSubAdminManagement = () => {
       .filter((module) => module?.assigned || (module.permissions || []).some((permission) => permission?.assigned))
       .map((module) => module.slug || module.module || module.module_code?.module_code || module.module_code)
       .filter(Boolean);
-    return Array.from(new Set(fromPermissions.filter((slug) => hasModuleAccess(slug))));
+    return Array.from(new Set(fromPermissions));
   }, [accessModules, userSelector?.getMyModulePermissionData]);
   const moduleActionMaps = useMemo(() => {
     const sidebarModules = accessModules.length
       ? accessModules
       : userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
     return buildAccessModuleActionMaps(
-      (Array.isArray(sidebarModules) ? sidebarModules : []).filter((module) =>
-        hasModuleAccess(module.slug || module.module || module.module_code?.module_code || module.module_code),
-      ),
+      (Array.isArray(sidebarModules) ? sidebarModules : []).filter(hasAssignedModuleAccess),
     );
   }, [accessModules, userSelector?.getMyModulePermissionData]);
   const moduleActionOptions = moduleActionMaps.assignable;
