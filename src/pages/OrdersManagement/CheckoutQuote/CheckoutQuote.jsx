@@ -280,6 +280,8 @@ const CheckoutQuote = () => {
                 <div className="flex justify-between"><span>Tax Payable</span><span>{money(summary.taxPayableAmount)}</span></div>
                 <div className="flex justify-between"><span>Tax Included</span><span>{money(summary.taxIncludedAmount)}</span></div>
                 <div className="flex justify-between"><span>Delivery</span><span>{money(summary.deliveryChargeAmount ?? summary.shippingFeeAmount)}</span></div>
+                <div className="flex justify-between"><span>Customer Platform Fee</span><span>{money(summary.customerPlatformFeeAmount)}</span></div>
+                <div className="flex justify-between"><span>Platform Fee GST</span><span>{money(summary.customerPlatformFeeTaxAmount)}</span></div>
                 <div className="flex justify-between"><span>COD Charge</span><span>{money(summary.codChargeAmount)}</span></div>
                 <div className="flex justify-between"><span>Wallet</span><span>-{money(summary.walletDiscountAmount)}</span></div>
                 <div className="border-t pt-2 flex justify-between text-base font-semibold"><span>Payable</span><span>{money(summary.customerPayableAmount)}</span></div>
@@ -292,8 +294,11 @@ const CheckoutQuote = () => {
                     <div key={seller.sellerId} className="rounded border p-2 text-xs">
                       <p className="font-semibold">{seller.sellerId}</p>
                       <p>Gross: {money(seller.grossSalesAmount)}</p>
-                      <p>Fee: {money(seller.platformFeeAmount)}</p>
+                      <p>Seller fee: {money(seller.platformFeeAmount)}</p>
+                      <p>Fee GST: {money(seller.platformFeeTaxAmount)}</p>
                       <p>Delivery: {money(seller.sellerDeliveryChargeAmount)}</p>
+                      <p>Shipping reimbursement: {money(seller.shippingReimbursementAmount)}</p>
+                      <p>Shipping deduction: {money(seller.shippingDeductionAmount)}</p>
                       <p>Payout: {money(seller.sellerPayoutAmount)}</p>
                     </div>
                   )) : <p className="text-xs text-gray-500">No settlement rows.</p>}

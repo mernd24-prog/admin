@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
@@ -34,6 +34,7 @@ const RANGE_OPTIONS = [
   { label: "Last Week", value: "last_week" },
   { label: "Last Month", value: "last_month" },
   { label: "This Year", value: "year" },
+  { label: "Custom Range", value: "custom" },
 ];
 
 const CHART_OPTIONS = [
@@ -48,6 +49,11 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   currency: "INR",
   maximumFractionDigits: 0,
 });
+const monthFormatter = new Intl.DateTimeFormat("en-IN", {
+  month: "long",
+  year: "numeric",
+});
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const asNumber = (value) => {
   const number = Number(value);
@@ -86,6 +92,39 @@ const getRangeDates = (range) => {
     toDate: toInputDate(end),
   };
 };
+
+const parseInputDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const addMonths = (date, amount) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + amount, 1);
+  return next;
+};
+
+const buildCalendarDays = (viewDate) => {
+  const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return {
+      date,
+      value: toInputDate(date),
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === viewDate.getMonth(),
+    };
+  });
+};
+
+const isBetweenDates = (value, start, end) =>
+  Boolean(start && end && value >= start && value <= end);
 
 const formatNumber = (value) => integerFormatter.format(asNumber(value));
 const formatCurrency = (value) => currencyFormatter.format(asNumber(value));
@@ -142,10 +181,22 @@ function EmptyTableRow({ colSpan, children }) {
 
 function GoldDropdown({ icon, options, value, onChange, className = "" }) {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const selected = options.find((option) => option.value === value) || options[0];
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleClickOutside = (event) => {
+      if (!dropdownRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
   return (
-    <div className={`relative w-full sm:w-[170px] ${className}`}>
+    <div ref={dropdownRef} className={`relative w-full sm:w-[170px] ${className}`}>
       <button
         type="button"
         className="flex min-h-8 w-full items-center justify-between gap-2 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
@@ -185,11 +236,123 @@ function GoldDropdown({ icon, options, value, onChange, className = "" }) {
   );
 }
 
+function GoldDateRangeCalendar({
+  dates,
+  viewDate,
+  onViewDateChange,
+  onSelectDate,
+  onApply,
+  onCancel,
+  loading,
+}) {
+  const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
+  const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
+
+  return (
+    <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[320px] rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl sm:w-[340px]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, -1))}
+          disabled={loading}
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <div className="text-center">
+          <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+            {monthFormatter.format(viewDate)}
+          </h2>
+          <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+            Select start and end date
+          </p>
+        </div>
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, 1))}
+          disabled={loading}
+          aria-label="Next month"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
+        {WEEKDAY_LABELS.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day) => {
+          const isStart = day.value === dates.fromDate;
+          const isEnd = day.value === dates.toDate;
+          const isSelected = isStart || isEnd;
+          const isInRange = isBetweenDates(day.value, dates.fromDate, dates.toDate);
+          return (
+            <button
+              key={day.value}
+              type="button"
+              className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
+                isSelected
+                  ? "bg-[var(--admin-gold)] text-white shadow-sm"
+                  : isInRange
+                    ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
+                    : day.isCurrentMonth
+                      ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
+                      : "text-slate-300 hover:bg-slate-50"
+              }`}
+              onClick={() => onSelectDate(day.value)}
+              disabled={loading}
+            >
+              {day.day}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 rounded border border-[#f1dfad] bg-[#fffaf0] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
+        {dates.fromDate || "Start date"} - {dates.toDate || "End date"}
+      </div>
+
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={!hasCompleteRange || loading}
+          onClick={onApply}
+        >
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--admin-gold)] border-t-transparent" />
+              Loading
+            </span>
+          ) : "Apply"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [range, setRange] = useState("year");
   const [dateFilters, setDateFilters] = useState(() => getRangeDates("year"));
+  const [customDates, setCustomDates] = useState(() => getRangeDates("year"));
+  const [customPickerOpen, setCustomPickerOpen] = useState(false);
+  const [customApplying, setCustomApplying] = useState(false);
+  const closeCustomPickerAfterLoadRef = useRef(false);
   const [chartView, setChartView] = useState("performance");
   const dashboardState = useSelector(
     (state) => state.adminCore?.dashboardOverviewData,
@@ -201,12 +364,72 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
-    dispatch(getDashboardOverview(dateFilters));
+    let active = true;
+    dispatch(getDashboardOverview(dateFilters)).finally(() => {
+      if (active && closeCustomPickerAfterLoadRef.current) {
+        closeCustomPickerAfterLoadRef.current = false;
+        setCustomApplying(false);
+        setCustomPickerOpen(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [dateFilters, dispatch]);
 
   const handleRangeChange = (nextRange) => {
+    if (nextRange === "custom") {
+      setCustomDates(dateFilters);
+      setCustomPickerOpen(true);
+      return;
+    }
+
+    const nextDates = getRangeDates(nextRange);
     setRange(nextRange);
-    setDateFilters(getRangeDates(nextRange));
+    setDateFilters(nextDates);
+    setCustomDates(nextDates);
+  };
+
+  const handleCustomDateChange = (field, value) => {
+    const nextDates = { ...customDates, [field]: value };
+    setCustomDates(nextDates);
+  };
+
+  const applyCustomDateRange = () => {
+    if (!customDates.fromDate || !customDates.toDate) return;
+    const fromTime = new Date(customDates.fromDate).getTime();
+    const toTime = new Date(customDates.toDate).getTime();
+    if (Number.isNaN(fromTime) || Number.isNaN(toTime)) return;
+
+    const nextDates = fromTime <= toTime
+      ? customDates
+      : { fromDate: customDates.toDate, toDate: customDates.fromDate };
+    setCustomDates(nextDates);
+    setRange("custom");
+    setCustomApplying(true);
+    closeCustomPickerAfterLoadRef.current = true;
+
+    if (
+      nextDates.fromDate === dateFilters.fromDate &&
+      nextDates.toDate === dateFilters.toDate
+    ) {
+      dispatch(getDashboardOverview(nextDates)).finally(() => {
+        closeCustomPickerAfterLoadRef.current = false;
+        setCustomApplying(false);
+        setCustomPickerOpen(false);
+      });
+      return;
+    }
+
+    setDateFilters(nextDates);
+  };
+
+  const closeCustomPicker = () => {
+    if (customApplying) return;
+    setCustomPickerOpen(false);
+    if (range !== "custom") {
+      setCustomDates(dateFilters);
+    }
   };
 
   const metrics = useMemo(() => {
@@ -423,7 +646,92 @@ export default function Dashboard() {
           <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
             Merchant Insights
           </h1>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <GoldDropdown
+              icon={<MdCalendarToday className="h-3.5 w-3.5" />}
+              options={RANGE_OPTIONS}
+              value={range}
+              onChange={handleRangeChange}
+            />
+            <GoldDropdown
+              options={CHART_OPTIONS}
+              value={chartView}
+              onChange={setChartView}
+              className="sm:w-[170px]"
+            />
+          </div>
         </div>
+
+        {customPickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+            <div className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+                    Select Date Range
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    Dashboard data will update after apply.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+                  onClick={closeCustomPicker}
+                  disabled={customApplying}
+                  aria-label="Close custom date picker"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="grid gap-3">
+                <label className="grid gap-1.5 text-xs font-semibold text-[var(--admin-ink)]">
+                  Start Date
+                  <input
+                    type="date"
+                    value={customDates.fromDate}
+                    onChange={(event) => handleCustomDateChange("fromDate", event.target.value)}
+                    className="min-h-9 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] outline-none transition hover:bg-[#fff3cc] focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-xs font-semibold text-[var(--admin-ink)]">
+                  End Date
+                  <input
+                    type="date"
+                    value={customDates.toDate}
+                    onChange={(event) => handleCustomDateChange("toDate", event.target.value)}
+                    className="min-h-9 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] outline-none transition hover:bg-[#fff3cc] focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                  onClick={closeCustomPicker}
+                  disabled={customApplying}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-8 min-w-[78px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={!customDates.fromDate || !customDates.toDate || customApplying}
+                  onClick={applyCustomDateRange}
+                >
+                  {customApplying ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--admin-gold)] border-t-transparent" />
+                      Loading
+                    </span>
+                  ) : "Apply"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isLoading && !dashboardState?.normalized?.data && (
           <p className="mb-4 text-xs text-slate-400">
@@ -450,28 +758,14 @@ export default function Dashboard() {
                   Performance Overview
                 </h2>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <GoldDropdown
-                  icon={<MdCalendarToday className="h-3.5 w-3.5" />}
-                  options={RANGE_OPTIONS}
-                  value={range}
-                  onChange={handleRangeChange}
-                />
-                <GoldDropdown
-                  options={CHART_OPTIONS}
-                  value={chartView}
-                  onChange={setChartView}
-                  className="sm:w-[170px]"
-                />
-              </div>
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-5 text-[11px] font-medium text-[var(--admin-muted)]">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
                 {chartView === "performance" ? "Order" : "Units / Orders"}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
                 Revenue
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -494,8 +788,8 @@ export default function Dashboard() {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="5%" stopColor="#D6A323" stopOpacity={0.38} />
-                        <stop offset="95%" stopColor="#D6A323" stopOpacity={0.08} />
+                        <stop offset="5%" stopColor="#37B446" stopOpacity={0.34} />
+                        <stop offset="95%" stopColor="#37B446" stopOpacity={0.07} />
                       </linearGradient>
                       <linearGradient
                         id="revenuePerformanceFill"
@@ -504,8 +798,8 @@ export default function Dashboard() {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="5%" stopColor="#37B446" stopOpacity={0.34} />
-                        <stop offset="95%" stopColor="#37B446" stopOpacity={0.07} />
+                        <stop offset="5%" stopColor="#D6A323" stopOpacity={0.38} />
+                        <stop offset="95%" stopColor="#D6A323" stopOpacity={0.08} />
                       </linearGradient>
                       <linearGradient
                         id="aovPerformanceFill"
@@ -542,7 +836,7 @@ export default function Dashboard() {
                       type="monotone"
                       dataKey="value"
                       name="Orders"
-                      stroke="#D6A323"
+                      stroke="#37B446"
                       strokeWidth={2}
                       fill="url(#ordersPerformanceFill)"
                     />
@@ -550,7 +844,7 @@ export default function Dashboard() {
                       type="monotone"
                       dataKey="revenue"
                       name="Revenue"
-                      stroke="#37B446"
+                      stroke="#D6A323"
                       strokeWidth={2}
                       fill="url(#revenuePerformanceFill)"
                     />
@@ -589,13 +883,13 @@ export default function Dashboard() {
                     <Bar
                       dataKey="orders"
                       name={chartView === "top_products" ? "Units Sold" : "Orders"}
-                      fill="#D6A323"
+                      fill="#37B446"
                       radius={[4, 4, 0, 0]}
                     />
                     <Bar
                       dataKey="revenue"
                       name="Revenue"
-                      fill="#37B446"
+                      fill="#D6A323"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>
@@ -671,7 +965,7 @@ export default function Dashboard() {
                 </h2>
                 <button
                   type="button"
-                  className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]"
+                  className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   onClick={() => navigate("/app/product-catalog")}
                 >
                   See All
@@ -714,7 +1008,7 @@ export default function Dashboard() {
               </h2>
               <button
                 type="button"
-                className="admin-btn-secondary !min-h-7 !px-3 !text-[11px]"
+                className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                 onClick={() => navigate("/app/orders")}
               >
                 See All
