@@ -21,14 +21,14 @@ import {
 
 // ─── Validation constants ─────────────────────────────────────────────────────
 
-const PAN_REGEX       = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const GST_REGEX       = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
-const AADHAAR_REGEX   = /^[0-9]{12}$/;
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+const AADHAAR_REGEX = /^[0-9]{12}$/;
 const BANK_ACCT_REGEX = /^[0-9]{9,18}$/;
-const IFSC_REGEX      = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-const EMAIL_REGEX     = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX     = /^[0-9]{10,15}$/;
-const MAX_DOC_BYTES   = 5 * 1024 * 1024;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9]{10,15}$/;
+const MAX_DOC_BYTES = 5 * 1024 * 1024;
 
 const BUSINESS_TYPES = [
   "individual", "proprietorship", "partnership",
@@ -37,17 +37,17 @@ const BUSINESS_TYPES = [
 const PAYOUT_SCHEDULES = ["daily", "weekly", "biweekly", "monthly"];
 const TAX_REGISTRATION_TYPES = ["regular", "composition", "unregistered"];
 const ORGANIZATION_DOCUMENTS = [
-  ["panDocumentUrl",    "PAN Document"],
+  ["panDocumentUrl", "PAN Document"],
   ["gstCertificateUrl", "GST Certificate"],
-  ["aadhaarFrontUrl",   "Aadhaar Front"],
-  ["aadhaarBackUrl",    "Aadhaar Back"],
-  ["bankProofUrl",      "Cancelled Cheque / Bank Proof"],
-  ["addressProofUrl",   "Business Address Proof"],
+  ["aadhaarFrontUrl", "Aadhaar Front"],
+  ["aadhaarBackUrl", "Aadhaar Back"],
+  ["bankProofUrl", "Cancelled Cheque / Bank Proof"],
+  ["addressProofUrl", "Business Address Proof"],
 ];
 
 // ─── Form defaults ────────────────────────────────────────────────────────────
 
-const emptyAddress     = { line1: "", line2: "", city: "", state: "", country: "India", postalCode: "" };
+const emptyAddress = { line1: "", line2: "", city: "", state: "", country: "India", postalCode: "" };
 const emptyBankDetails = { accountHolderName: "", accountNumber: "", ifscCode: "", bankName: "", branchName: "" };
 
 const createEmptyForm = () => ({
@@ -78,17 +78,17 @@ const createEmptyForm = () => ({
 
 // ─── Theme tokens (matching existing admin theme) ─────────────────────────────
 
-const inputCls    = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none transition focus:border-[#2f6fed] disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
+const inputCls = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none transition focus:border-[#2f6fed] disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
 const inputErrCls = "min-h-[38px] rounded-md border border-red-400 bg-red-50/30 px-3 text-sm outline-none transition focus:border-red-500 disabled:bg-[#f8faff]";
 const ic = (err) => (err ? inputErrCls : inputCls);
 
 // ─── Utilities ─────────────────────────────────────────────────────────────
 
-const cleanString   = (v) => String(v || "").trim();
-const labelize      = (v = "") => String(v || "-").replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const cleanString = (v) => String(v || "").trim();
+const labelize = (v = "") => String(v || "-").replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const formatAddress = (a = {}) => [a.line1, a.city, a.state, a.postalCode].filter(Boolean).join(", ") || "—";
-const orgLabel      = (o = {}) => o.storeDisplayName || o.legalBusinessName || o.id || o.organizationId || "Unnamed";
-const orgId         = (o = {}) => o.id || o.organizationId || "";
+const orgLabel = (o = {}) => o.storeDisplayName || o.legalBusinessName || o.id || o.organizationId || "Unnamed";
+const orgId = (o = {}) => o.id || o.organizationId || "";
 const canOperateOrganization = (org = {}) =>
   org.canOperate === true ||
   org.canSell === true ||
@@ -111,32 +111,32 @@ const readDocument = (file) =>
 
 const validateForm = (form = {}) => {
   const errs = {};
-  const set  = (k, m) => { if (!errs[k]) errs[k] = m; };
-  const v    = (val) => cleanString(val);
+  const set = (k, m) => { if (!errs[k]) errs[k] = m; };
+  const v = (val) => cleanString(val);
 
-  if (!v(form.legalBusinessName))  set("legalBusinessName",  "Legal business name is required");
-  if (!v(form.storeDisplayName))   set("storeDisplayName",   "Store / display name is required");
-  if (!v(form.businessType))       set("businessType",       "Business type is required");
+  if (!v(form.legalBusinessName)) set("legalBusinessName", "Legal business name is required");
+  if (!v(form.storeDisplayName)) set("storeDisplayName", "Store / display name is required");
+  if (!v(form.businessType)) set("businessType", "Business type is required");
   if (!v(form.primaryContactName)) set("primaryContactName", "Primary contact name is required");
 
   const email = v(form.supportEmail);
-  if (!email)                        set("supportEmail", "Support email is required");
+  if (!email) set("supportEmail", "Support email is required");
   else if (!EMAIL_REGEX.test(email)) set("supportEmail", "Enter a valid email (e.g. seller@example.com)");
 
   const phone = v(form.supportPhone);
-  if (!phone)                        set("supportPhone", "Support phone is required");
+  if (!phone) set("supportPhone", "Support phone is required");
   else if (!PHONE_REGEX.test(phone)) set("supportPhone", "Phone must be 10–15 digits");
 
   const gstin = v(form.gstin);
-  if (!gstin)                      set("gstin", "GSTIN is required");
+  if (!gstin) set("gstin", "GSTIN is required");
   else if (!GST_REGEX.test(gstin)) set("gstin", "Invalid GSTIN (e.g. 22AAAAA0000A1Z5)");
 
   const pan = v(form.pan);
-  if (!pan)                    set("pan", "PAN is required");
+  if (!pan) set("pan", "PAN is required");
   else if (!PAN_REGEX.test(pan)) set("pan", "Invalid PAN (e.g. AAAAA0000A)");
 
   const aadhaar = v(form.aadhaarNumber);
-  if (!aadhaar)                          set("aadhaarNumber", "Aadhaar number is required");
+  if (!aadhaar) set("aadhaarNumber", "Aadhaar number is required");
   else if (!AADHAAR_REGEX.test(aadhaar)) set("aadhaarNumber", "Aadhaar must be exactly 12 digits");
 
   if (!form.dateOfBirth) set("dateOfBirth", "Date of birth is required");
@@ -144,27 +144,27 @@ const validateForm = (form = {}) => {
   if (!v(form.bankDetails?.accountHolderName)) set("bank.accountHolderName", "Account holder name is required");
 
   const acct = v(form.bankDetails?.accountNumber);
-  if (!acct)                            set("bank.accountNumber", "Bank account number is required");
+  if (!acct) set("bank.accountNumber", "Bank account number is required");
   else if (!BANK_ACCT_REGEX.test(acct)) set("bank.accountNumber", "Account number must be 9–18 digits");
 
   const ifsc = v(form.bankDetails?.ifscCode);
-  if (!ifsc)                      set("bank.ifscCode", "IFSC code is required");
+  if (!ifsc) set("bank.ifscCode", "IFSC code is required");
   else if (!IFSC_REGEX.test(ifsc)) set("bank.ifscCode", "Invalid IFSC (e.g. SBIN0001234)");
 
   if (!v(form.bankDetails?.bankName)) set("bank.bankName", "Bank name is required");
 
-  if (!v(form.billingAddress?.line1))     set("billing.line1",      "Billing address line 1 is required");
-  if (!v(form.billingAddress?.city))      set("billing.city",       "Billing city is required");
-  if (!v(form.billingAddress?.state))     set("billing.state",      "Billing state is required");
+  if (!v(form.billingAddress?.line1)) set("billing.line1", "Billing address line 1 is required");
+  if (!v(form.billingAddress?.city)) set("billing.city", "Billing city is required");
+  if (!v(form.billingAddress?.state)) set("billing.state", "Billing state is required");
   const bPin = v(form.billingAddress?.postalCode);
-  if (!bPin)                              set("billing.postalCode", "Billing pincode is required");
+  if (!bPin) set("billing.postalCode", "Billing pincode is required");
   else if (bPin.length < 4 || bPin.length > 10) set("billing.postalCode", "Pincode must be 4–10 digits");
 
-  if (!v(form.pickupAddress?.line1))      set("pickup.line1",       "Pickup address line 1 is required");
-  if (!v(form.pickupAddress?.city))       set("pickup.city",        "Pickup city is required");
-  if (!v(form.pickupAddress?.state))      set("pickup.state",       "Pickup state is required");
+  if (!v(form.pickupAddress?.line1)) set("pickup.line1", "Pickup address line 1 is required");
+  if (!v(form.pickupAddress?.city)) set("pickup.city", "Pickup city is required");
+  if (!v(form.pickupAddress?.state)) set("pickup.state", "Pickup state is required");
   const pPin = v(form.pickupAddress?.postalCode);
-  if (!pPin)                              set("pickup.postalCode",  "Pickup pincode is required");
+  if (!pPin) set("pickup.postalCode", "Pickup pincode is required");
   else if (pPin.length < 4 || pPin.length > 10) set("pickup.postalCode", "Pincode must be 4–10 digits");
 
   ORGANIZATION_DOCUMENTS.forEach(([key, label]) => {
@@ -178,33 +178,33 @@ const validateForm = (form = {}) => {
 
 const buildPayload = (form = {}) => {
   const billingState = cleanString(form.billingAddress?.state);
-  const pickupState  = cleanString(form.pickupAddress?.state);
-  const taxState     = cleanString(form.taxState) || billingState || pickupState;
+  const pickupState = cleanString(form.pickupAddress?.state);
+  const taxState = cleanString(form.taxState) || billingState || pickupState;
   return {
-    legalBusinessName:  cleanString(form.legalBusinessName),
-    storeDisplayName:   cleanString(form.storeDisplayName),
-    businessType:       cleanString(form.businessType) || null,
-    description:        cleanString(form.description) || null,
-    supportEmail:       cleanString(form.supportEmail),
-    supportPhone:       cleanString(form.supportPhone),
+    legalBusinessName: cleanString(form.legalBusinessName),
+    storeDisplayName: cleanString(form.storeDisplayName),
+    businessType: cleanString(form.businessType) || null,
+    description: cleanString(form.description) || null,
+    supportEmail: cleanString(form.supportEmail),
+    supportPhone: cleanString(form.supportPhone),
     registrationNumber: cleanString(form.registrationNumber) || null,
-    gstin:              cleanString(form.gstin) || null,
-    pan:                cleanString(form.pan),
-    aadhaarNumber:      cleanString(form.aadhaarNumber),
-    dateOfBirth:        form.dateOfBirth || null,
-    businessWebsite:    cleanString(form.businessWebsite) || null,
+    gstin: cleanString(form.gstin) || null,
+    pan: cleanString(form.pan),
+    aadhaarNumber: cleanString(form.aadhaarNumber),
+    dateOfBirth: form.dateOfBirth || null,
+    businessWebsite: cleanString(form.businessWebsite) || null,
     primaryContactName: cleanString(form.primaryContactName),
-    documents:          form.documents || {},
+    documents: form.documents || {},
     bankDetails: {
       accountHolderName: cleanString(form.bankDetails?.accountHolderName),
-      accountNumber:     cleanString(form.bankDetails?.accountNumber),
-      ifscCode:          cleanString(form.bankDetails?.ifscCode).toUpperCase(),
-      bankName:          cleanString(form.bankDetails?.bankName),
-      branchName:        cleanString(form.bankDetails?.branchName),
+      accountNumber: cleanString(form.bankDetails?.accountNumber),
+      ifscCode: cleanString(form.bankDetails?.ifscCode).toUpperCase(),
+      bankName: cleanString(form.bankDetails?.bankName),
+      branchName: cleanString(form.bankDetails?.branchName),
     },
     billingAddress: { ...emptyAddress, ...(form.billingAddress || {}), state: billingState, country: cleanString(form.billingAddress?.country) || "India" },
-    pickupAddress:  { ...emptyAddress, ...(form.pickupAddress  || {}), state: pickupState,  country: cleanString(form.pickupAddress?.country)  || "India" },
-    returnAddress:  { ...emptyAddress, ...(form.returnAddress  || {}), state: cleanString(form.returnAddress?.state), country: cleanString(form.returnAddress?.country) || "India" },
+    pickupAddress: { ...emptyAddress, ...(form.pickupAddress || {}), state: pickupState, country: cleanString(form.pickupAddress?.country) || "India" },
+    returnAddress: { ...emptyAddress, ...(form.returnAddress || {}), state: cleanString(form.returnAddress?.state), country: cleanString(form.returnAddress?.country) || "India" },
     taxSettings: {
       state: taxState, gstin: cleanString(form.gstin) || null, pan: cleanString(form.pan),
       registrationType: cleanString(form.taxRegistrationType) || "regular",
@@ -214,11 +214,11 @@ const buildPayload = (form = {}) => {
       invoiceSeries: cleanString(form.invoiceSeries),
       state: taxState,
     },
-    payoutSettings:     { payoutSchedule: cleanString(form.payoutSchedule) || "weekly" },
+    payoutSettings: { payoutSchedule: cleanString(form.payoutSchedule) || "weekly" },
     complianceSettings: {
-      gstRegistered:       cleanString(form.taxRegistrationType) !== "unregistered",
+      gstRegistered: cleanString(form.taxRegistrationType) !== "unregistered",
       taxRegistrationType: cleanString(form.taxRegistrationType) || "regular",
-      taxRegion:           taxState,
+      taxRegion: taxState,
     },
   };
 };
@@ -227,40 +227,40 @@ const buildPayload = (form = {}) => {
 
 const normalizeForEdit = (org = {}) => {
   const inv = org.invoiceSettings || {};
-  const tax = org.taxSettings     || {};
-  const pay = org.payoutSettings  || {};
+  const tax = org.taxSettings || {};
+  const pay = org.payoutSettings || {};
   return {
     ...createEmptyForm(),
-    legalBusinessName:   org.legalBusinessName   || "",
-    storeDisplayName:    org.storeDisplayName    || "",
-    businessType:        org.businessType        || "proprietorship",
-    description:         org.description         || "",
-    supportEmail:        org.supportEmail        || "",
-    supportPhone:        org.supportPhone        || "",
-    registrationNumber:  org.registrationNumber  || "",
-    gstin:               org.gstin               || "",
-    pan:                 org.pan                 || "",
-    aadhaarNumber:       org.aadhaarNumber       || "",
-    dateOfBirth:         org.dateOfBirth ? String(org.dateOfBirth).slice(0, 10) : "",
-    businessWebsite:     org.businessWebsite     || "",
-    primaryContactName:  org.primaryContactName  || "",
-    documents:           { ...(org.documents || org.kycDocuments || {}) },
-    bankDetails:         { ...emptyBankDetails, ...(org.bankDetails || {}) },
-    billingAddress:      { ...emptyAddress,     ...(org.billingAddress || {}) },
-    pickupAddress:       { ...emptyAddress,     ...(org.pickupAddress  || {}) },
-    returnAddress:       { ...emptyAddress,     ...(org.returnAddress  || {}) },
-    taxState:            tax.state || org.billingAddress?.state || "",
+    legalBusinessName: org.legalBusinessName || "",
+    storeDisplayName: org.storeDisplayName || "",
+    businessType: org.businessType || "proprietorship",
+    description: org.description || "",
+    supportEmail: org.supportEmail || "",
+    supportPhone: org.supportPhone || "",
+    registrationNumber: org.registrationNumber || "",
+    gstin: org.gstin || "",
+    pan: org.pan || "",
+    aadhaarNumber: org.aadhaarNumber || "",
+    dateOfBirth: org.dateOfBirth ? String(org.dateOfBirth).slice(0, 10) : "",
+    businessWebsite: org.businessWebsite || "",
+    primaryContactName: org.primaryContactName || "",
+    documents: { ...(org.documents || org.kycDocuments || {}) },
+    bankDetails: { ...emptyBankDetails, ...(org.bankDetails || {}) },
+    billingAddress: { ...emptyAddress, ...(org.billingAddress || {}) },
+    pickupAddress: { ...emptyAddress, ...(org.pickupAddress || {}) },
+    returnAddress: { ...emptyAddress, ...(org.returnAddress || {}) },
+    taxState: tax.state || org.billingAddress?.state || "",
     taxRegistrationType: org.complianceSettings?.taxRegistrationType || tax.registrationType || "regular",
-    invoicePrefix:       inv.invoicePrefix || "INV",
-    invoiceSeries:       inv.invoiceSeries  || "",
-    payoutSchedule:      pay.payoutSchedule || "weekly",
+    invoicePrefix: inv.invoicePrefix || "INV",
+    invoiceSeries: inv.invoiceSeries || "",
+    payoutSchedule: pay.payoutSchedule || "weekly",
   };
 };
 
 const unwrapList = (response = {}) => {
-  const data  = response?.data;
+  const data = response?.data;
   if (Array.isArray(data)) return data;
-  const root  = data?.data || data || response || {};
+  const root = data?.data || data || response || {};
   const items = root.organizations || root.items || root.list || root.rows || [];
   return Array.isArray(items) ? items : [];
 };
@@ -289,7 +289,7 @@ const FieldRow = ({ label, required, error, hint, children }) => (
       {required && <span className="ml-0.5 text-red-500">*</span>}
     </label>
     {children}
-    {error  && <p className="text-[11px] font-medium text-red-500">{error}</p>}
+    {error && <p className="text-[11px] font-medium text-red-500">{error}</p>}
     {!error && hint && <p className="text-[11px] text-[#8a93a5]">{hint}</p>}
   </div>
 );
@@ -315,17 +315,17 @@ const PrimaryButton = ({ children, icon, onClick, disabled = false, variant = "p
 // ─── Rejection / approval banner ───────────────────────────────────────────────
 
 const STATUS_BANNERS = {
-  draft:          { cls: "border-[#d0d5dd] bg-[#f8f9fb]",  icon: "text-[#65718b]",  title: "Draft — Not Yet Submitted",  body: "This organization has not been submitted for review. Edit and save to submit." },
-  pending_review: { cls: "border-[#fde68a] bg-[#fffbeb]",  icon: "text-[#b45309]",  title: "Under Review",               body: "Your details are being reviewed. This typically takes 1–2 business days." },
-  resubmitted:    { cls: "border-[#a5f3fc] bg-[#ecfeff]",  icon: "text-[#0e7490]",  title: "Resubmitted — Under Review", body: "Your corrected details have been resubmitted for admin review." },
-  rejected:       { cls: "border-red-200 bg-red-50",       icon: "text-red-500",     title: "Rejected",                   body: "This organization was rejected. Please correct your details and resubmit." },
-  suspended:      { cls: "border-orange-200 bg-orange-50", icon: "text-orange-500",  title: "Suspended",                  body: "This organization is suspended. Contact support to resolve the issue." },
-  blocked:        { cls: "border-red-200 bg-red-50",       icon: "text-red-600",     title: "Blocked",                    body: "This organization is blocked. Contact support to resolve the issue." },
+  draft: { cls: "border-[#d0d5dd] bg-[#f8f9fb]", icon: "text-[#65718b]", title: "Draft — Not Yet Submitted", body: "This organization has not been submitted for review. Edit and save to submit." },
+  pending_review: { cls: "border-[#fde68a] bg-[#fffbeb]", icon: "text-[#b45309]", title: "Under Review", body: "Your details are being reviewed. This typically takes 1–2 business days." },
+  resubmitted: { cls: "border-[#a5f3fc] bg-[#ecfeff]", icon: "text-[#0e7490]", title: "Resubmitted — Under Review", body: "Your corrected details have been resubmitted for admin review." },
+  rejected: { cls: "border-red-200 bg-red-50", icon: "text-red-500", title: "Rejected", body: "This organization was rejected. Please correct your details and resubmit." },
+  suspended: { cls: "border-orange-200 bg-orange-50", icon: "text-orange-500", title: "Suspended", body: "This organization is suspended. Contact support to resolve the issue." },
+  blocked: { cls: "border-red-200 bg-red-50", icon: "text-red-600", title: "Blocked", body: "This organization is blocked. Contact support to resolve the issue." },
 };
 
 const ApprovalBanner = ({ org }) => {
   const status = org.approvalStatus || "draft";
-  const meta   = STATUS_BANNERS[status];
+  const meta = STATUS_BANNERS[status];
   if (!meta) return null;
   const reason = org.rejectionReason || org.metadata?.rejectionReason || org.metadata?.lastVerificationEvent?.rejectionReason;
   return (
@@ -369,7 +369,7 @@ const ErrorSummary = ({ errors }) => {
 // ─── Document field ───────────────────────────────────────────────────────────
 
 const DocField = ({ docKey, label, value, error, onChange }) => {
-  const isUrl  = typeof value === "string" && value.length > 0;
+  const isUrl = typeof value === "string" && value.length > 0;
   const isFile = value && typeof value === "object" && value.fileName;
   return (
     <FieldRow label={label} required error={error}>
@@ -400,7 +400,7 @@ const DocField = ({ docKey, label, value, error, onChange }) => {
 const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, onClose, onSubmit, onChange, onNestedChange, onDocumentChange }) => {
   const bodyRef = useRef(null);
   if (!open) return null;
-  const isEdit    = mode === "edit";
+  const isEdit = mode === "edit";
   const hasErrors = Object.keys(errors).length > 0;
 
   const copyBillingToPickup = () =>
@@ -685,16 +685,15 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
 // ─── Organization Card ────────────────────────────────────────────────────────
 
 const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
-  const id        = orgId(org);
-  const status    = org.approvalStatus || "draft";
-  const approved  = status === "approved" || status === "active";
+  const id = orgId(org);
+  const status = org.approvalStatus || "draft";
+  const approved = status === "approved" || status === "active";
   const canOperate = canOperateOrganization(org);
-  const canEdit   = !approved;
+  const canEdit = !approved;
 
   return (
-    <div className={`flex flex-col rounded-lg border bg-white transition ${
-      isActive ? "border-[#2f6fed] shadow-[0_0_0_2px_rgba(47,111,237,0.12)]" : "border-[#E6E6E6] hover:border-[#c7d4f0]"
-    }`}>
+    <div className={`flex flex-col rounded-lg border bg-white transition ${isActive ? "border-[#2f6fed] shadow-[0_0_0_2px_rgba(47,111,237,0.12)]" : "border-[#E6E6E6] hover:border-[#c7d4f0]"
+      }`}>
       {/* Header */}
       <div className="flex items-start gap-3 p-4 pb-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#f3f6ff]">
@@ -803,10 +802,10 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
 
 const MyOrganizations = () => {
   const [organizations, setOrganizations] = useState([]);
-  const [loading,    setLoading]    = useState(false);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [modal,  setModal]  = useState({ open: false, mode: "create", org: null });
-  const [form,   setForm]   = useState(createEmptyForm());
+  const [modal, setModal] = useState({ open: false, mode: "create", org: null });
+  const [form, setForm] = useState(createEmptyForm());
   const [errors, setErrors] = useState({});
   const [sellerLoginEmail, setSellerLoginEmail] = useState("");
   const activeOrgId = getSelectedSellerOrganizationId();
@@ -817,7 +816,7 @@ const MyOrganizations = () => {
         const email = response?.data?.email || response?.email || "";
         if (email) setSellerLoginEmail(email);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const loadOrganizations = useCallback(async () => {
@@ -931,11 +930,11 @@ const MyOrganizations = () => {
   };
 
   const approvedCount = organizations.filter(canOperateOrganization).length;
-  const pendingCount  = organizations.filter((o) => ["pending_review", "resubmitted"].includes(o.approvalStatus)).length;
+  const pendingCount = organizations.filter((o) => ["pending_review", "resubmitted"].includes(o.approvalStatus)).length;
   const rejectedCount = organizations.filter((o) => ["rejected", "blocked"].includes(o.approvalStatus)).length;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-[1600px] space-y-5 p-4 sm:p-5 lg:p-6">
       <PageHeader
         title="My Organizations"
         subtitle="Each organization has its own GST registration, bank account, and independent admin approval."

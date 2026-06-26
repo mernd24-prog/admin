@@ -127,6 +127,19 @@ export default function Header({
   }, [avatarUrl]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleOrganizationChanged = (event) => {
+      setSelectedOrganizationIdState(
+        event?.detail?.organizationId || getSelectedSellerOrganizationId(),
+      );
+    };
+    window.addEventListener("seller:organizationChanged", handleOrganizationChanged);
+    return () => {
+      window.removeEventListener("seller:organizationChanged", handleOrganizationChanged);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!SELLER_ROLES.has(userData?.role)) {
       setOrganizations([]);
       setIncompleteOrgs([]);

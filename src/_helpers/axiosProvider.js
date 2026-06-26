@@ -12,7 +12,11 @@ import {
     persistAuthTokens,
     shouldForceLogoutForResponse,
 } from './authSession';
-import { getSelectedSellerOrganizationHeader } from './sellerOrganizationContext';
+import {
+    getSelectedSellerOrganizationHeader,
+    getSelectedSellerOrganizationId,
+    setSelectedSellerOrganizationId,
+} from './sellerOrganizationContext';
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const trimLeadingSlash = (value = "") => value.replace(/^\/+/, "");
@@ -119,6 +123,17 @@ const shouldForceLogout = (error) => {
     return shouldForceLogoutForResponse(error);
 };
 
+const syncSelectedSellerOrganization = (response) => {
+    const selectedOrganizationId = response?.headers?.["x-selected-organization-id"];
+    if (
+        selectedOrganizationId &&
+        selectedOrganizationId !== getSelectedSellerOrganizationId()
+    ) {
+        setSelectedSellerOrganizationId(selectedOrganizationId);
+    }
+    return response;
+};
+
 const createErrorResponseInterceptor = (instance) => async (error) => {
     const originalRequest = error?.config || {};
     const status = error?.response?.status || error?.status;
@@ -220,7 +235,7 @@ const refreshBeforeRequestInterceptor = async (config) => {
                 forceLogout("SESSION_INVALID", "Session expired. Please login again.");
                 return Promise.reject({ message: "Session expired" });
             }
-            return response;
+            return syncSelectedSellerOrganization(response);
         },
         createErrorResponseInterceptor(instance)
     );

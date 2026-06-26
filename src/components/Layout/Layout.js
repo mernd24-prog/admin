@@ -800,8 +800,7 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
           isSidebarExpanded={isExpanded}
         />
-
-        <main className="flex-1  overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar">
+        <main className={`flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}>
           <Suspense fallback={<PageSkeletonLoader />}>
             <AnimatePresence mode="wait">
               <motion.div
