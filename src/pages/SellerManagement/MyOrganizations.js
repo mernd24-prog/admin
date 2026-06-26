@@ -265,6 +265,21 @@ const unwrapList = (response = {}) => {
   return Array.isArray(items) ? items : [];
 };
 
+const getBackendFieldErrors = (error = {}) => {
+  const details = [
+    error?.details,
+    error?.error?.details?.fields,
+    error?.error?.details,
+    error?.fields,
+  ].find(Array.isArray) || [];
+  return details.reduce((result, detail) => {
+    const path = Array.isArray(detail?.path) ? detail.path : [];
+    const field = detail?.field || path[path.length - 1];
+    if (field && detail?.message) result[field] = detail.message;
+    return result;
+  }, {});
+};
+
 // ─── Shared sub-components (matching admin theme) ─────────────────────────────
 
 const FieldRow = ({ label, required, error, hint, children }) => (
@@ -893,6 +908,8 @@ const MyOrganizations = () => {
       setModal({ open: false, mode: "create", org: null });
       await loadOrganizations();
     } catch (error) {
+      const backendErrors = getBackendFieldErrors(error);
+      if (Object.keys(backendErrors).length) setErrors(backendErrors);
       toast.error(error?.message || "Failed to save organization");
     } finally {
       setSubmitting(false);

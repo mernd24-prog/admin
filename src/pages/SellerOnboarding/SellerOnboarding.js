@@ -244,10 +244,27 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
 const parseApiError = (error, fallbackMessage) => {
   if (!error) return { message: fallbackMessage, details: [] };
   if (typeof error === "string") return { message: error, details: [] };
+  const details = [
+    error?.details,
+    error?.error?.details?.fields,
+    error?.error?.details,
+    error?.fields,
+  ].find(Array.isArray) || [];
   return {
     message: error.message || fallbackMessage,
-    details: Array.isArray(error.details) ? error.details : [],
+    details,
   };
+};
+
+const getBackendDetailField = (detail = {}) => {
+  const path = Array.isArray(detail.path) ? detail.path : [];
+  const rawField = detail.field || path[path.length - 1] || "";
+  const field = rawField.replace(/^body\./, "");
+  return {
+    gstin: "gstNumber",
+    gstNumber: "gstNumber",
+    pan: "panNumber",
+  }[field] || field;
 };
 
 const toDateInputValue = (value) => {
@@ -387,6 +404,8 @@ const stripFileFieldsFromDraft = (draft = {}) => ({
         panDocumentFile: null,
         aadhaarFrontFile: null,
         aadhaarBackFile: null,
+        addressProofFile: null,
+        bankProofFile: null,
       }
     : undefined,
   profileForm: draft.profileForm
@@ -451,7 +470,16 @@ const arrayBufferToBase64 = (buffer) => {
 };
 
 const readFileAsUploadPayload = async (file) => {
-  const buffer = await file.arrayBuffer();
+  const buffer = await (
+    typeof file.arrayBuffer === "function"
+      ? file.arrayBuffer()
+      : new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error("Failed to read file"));
+          reader.readAsArrayBuffer(file);
+        })
+  );
   const bytes = new Uint8Array(buffer);
   const mimeType =
     detectDocumentMimeType(bytes) || String(file.type || "").toLowerCase();
@@ -610,6 +638,7 @@ const SellerOnboarding = () => {
   const [profileErrors, setProfileErrors] = useState({});
   const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
+  const gstNumberRef = useRef(null);
   const editSection = useMemo(
     () => new URLSearchParams(location.search).get("edit"),
     [location.search],
@@ -780,7 +809,10 @@ const SellerOnboarding = () => {
     setProfileForm((prev) => ({
       ...prev,
       businessType: prev.businessType || organization.businessType || "",
-      businessName: prev.businessName || organization.legalBusinessName || organization.storeDisplayName || "",
+      businessName:
+        clearAutoFilledBusinessName(prev.businessName, registeredContact) ||
+        clearAutoFilledBusinessName(organization.legalBusinessName, registeredContact) ||
+        "",
       gstNumber: prev.gstNumber || organization.gstin || "",
       displayName: prev.displayName || organization.storeDisplayName || "",
       legalBusinessName: prev.legalBusinessName || organization.legalBusinessName || "",
@@ -1019,11 +1051,8 @@ const SellerOnboarding = () => {
                 ? prev.businessType
                 : "",
           businessName:
-            storedBusinessName ||
-            clearAutoFilledBusinessName(
-              prev.businessName,
-              registrationContact,
-            ) ||
+            clearAutoFilledBusinessName(storedBusinessName, registrationContact) ||
+            clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
             "",
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
@@ -1222,7 +1251,7 @@ const SellerOnboarding = () => {
             ? prev.businessType
             : "",
       businessName:
-        storedBusinessName ||
+        clearAutoFilledBusinessName(storedBusinessName, registrationContact) ||
         clearAutoFilledBusinessName(prev.businessName, registrationContact) ||
         "",
       gstNumber:
@@ -1375,8 +1404,7 @@ const SellerOnboarding = () => {
   const setBackendFieldErrors = (details, setErrors) => {
     const nextErrors = {};
     details.forEach((detail) => {
-      const path = detail?.path || [];
-      const field = path[path.length - 1];
+      const field = getBackendDetailField(detail);
       if (field) nextErrors[field] = detail.message;
     });
     setErrors(nextErrors);
@@ -1590,7 +1618,9 @@ const SellerOnboarding = () => {
   };
 
   const getDocumentUploadValue = async (file, existingUrl) =>
-    file ? readFileAsUploadPayload(file) : existingUrl || null;
+    file instanceof File || file instanceof Blob
+      ? readFileAsUploadPayload(file)
+      : existingUrl || null;
 
   const buildKycPayload = async ({
     includeGstCertificate = false,
@@ -1917,16 +1947,15 @@ const SellerOnboarding = () => {
       setStep(3);
     } catch (error) {
       const parsed = parseApiError(error, "Unable to save business details");
-      const detailKeys = (parsed.details || []).map(
-        (detail) => detail?.path?.[detail?.path?.length - 1],
+      const kycDetails = (parsed.details || []).filter((detail) =>
+        ["panNumber", "aadhaarNumber", "legalName"].includes(getBackendDetailField(detail)),
       );
-      const isKycError = detailKeys.some((key) =>
-        ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key),
+      const profileDetails = (parsed.details || []).filter((detail) =>
+        !["panNumber", "aadhaarNumber", "legalName"].includes(getBackendDetailField(detail)),
       );
-      setBackendFieldErrors(
-        parsed.details,
-        isKycError ? setKycErrors : setProfileErrors,
-      );
+      if (kycDetails.length) setBackendFieldErrors(kycDetails, setKycErrors);
+      if (profileDetails.length) setBackendFieldErrors(profileDetails, setProfileErrors);
+      setStep(profileDetails.length ? 2 : 1);
       toast.error(parsed.message);
     }
   };
@@ -1968,6 +1997,26 @@ const SellerOnboarding = () => {
     } catch (error) {
       const parsed = parseApiError(error, "Unable to save bank details");
       setBackendFieldErrors(parsed.details, setProfileErrors);
+
+      const hasGstFieldError = (parsed.details || []).some(
+        (d) => getBackendDetailField(d) === "gstNumber",
+      );
+      const isGstinConflictMessage =
+        !parsed.details?.length &&
+        /gstin|gst/i.test(parsed.message) &&
+        /linked|already|duplicate/i.test(parsed.message);
+
+      if (hasGstFieldError || isGstinConflictMessage) {
+        if (isGstinConflictMessage) {
+          setProfileErrors((prev) => ({ ...prev, gstNumber: parsed.message }));
+        }
+        setStep(2);
+        setTimeout(() => {
+          gstNumberRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          gstNumberRef.current?.focus();
+        }, 150);
+      }
+
       toast.error(parsed.message);
     }
   };
@@ -2009,16 +2058,38 @@ const SellerOnboarding = () => {
       navigate(AUTH_ROUTES.ONBOARDING_COMPLETE, { replace: true });
     } catch (error) {
       const parsed = parseApiError(error, "Unable to submit business profile");
-      const detailKeys = (parsed.details || []).map(
-        (d) => d?.path?.[d?.path?.length - 1],
+      const kycDetails = (parsed.details || []).filter((detail) =>
+        ["panNumber", "aadhaarNumber", "legalName"].includes(getBackendDetailField(detail)),
       );
-      const isKycError = detailKeys.some((key) =>
-        ["panNumber", "gstNumber", "aadhaarNumber", "legalName"].includes(key),
+      const profileDetails = (parsed.details || []).filter((detail) =>
+        !["panNumber", "aadhaarNumber", "legalName"].includes(getBackendDetailField(detail)),
       );
-      setBackendFieldErrors(
-        parsed.details,
-        isKycError ? setKycErrors : setProfileErrors,
+      if (kycDetails.length) setBackendFieldErrors(kycDetails, setKycErrors);
+      if (profileDetails.length) setBackendFieldErrors(profileDetails, setProfileErrors);
+
+      const hasGstFieldError = profileDetails.some(
+        (d) => getBackendDetailField(d) === "gstNumber",
       );
+      const isGstinConflictMessage =
+        !parsed.details?.length &&
+        /gstin|gst/i.test(parsed.message) &&
+        /linked|already|duplicate|exist/i.test(parsed.message);
+
+      if (isGstinConflictMessage) {
+        setProfileErrors((prev) => ({ ...prev, gstNumber: parsed.message }));
+      }
+
+      const shouldGoToBusinessStep =
+        profileDetails.length > 0 || hasGstFieldError || isGstinConflictMessage;
+      setStep(shouldGoToBusinessStep ? 2 : 1);
+
+      if (hasGstFieldError || isGstinConflictMessage) {
+        setTimeout(() => {
+          gstNumberRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          gstNumberRef.current?.focus();
+        }, 150);
+      }
+
       toast.error(parsed.message);
     }
   };
@@ -2303,6 +2374,7 @@ const SellerOnboarding = () => {
                   GST Number {STEP_ONE_REQUIRED}
                 </label>
                 <input
+                  ref={gstNumberRef}
                   name="gstNumber"
                   placeholder="GST Number"
                   className={STEP_ONE_INPUT_CLASS}

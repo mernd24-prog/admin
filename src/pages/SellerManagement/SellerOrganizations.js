@@ -95,6 +95,9 @@ const createEmptyForm = (sellerId = "") => ({
 
 const inputCls =
   "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed] disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
+const inputErrCls =
+  "min-h-[38px] rounded-md border border-red-400 bg-red-50/30 px-3 text-sm outline-none focus:border-red-500 disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
+const inputClass = (error) => (error ? inputErrCls : inputCls);
 
 const unwrapList = (response = {}) => {
   const data = response?.data;
@@ -256,6 +259,21 @@ const cleanString = (value) => {
   return text || "";
 };
 
+const getBackendFieldErrors = (error = {}) => {
+  const details = [
+    error?.details,
+    error?.error?.details?.fields,
+    error?.error?.details,
+    error?.fields,
+  ].find(Array.isArray) || [];
+  return details.reduce((result, detail) => {
+    const path = Array.isArray(detail?.path) ? detail.path : [];
+    const field = detail?.field || path[path.length - 1];
+    if (field && detail?.message) result[field] = detail.message;
+    return result;
+  }, {});
+};
+
 const buildPayload = (form = {}) => {
   const billingState = cleanString(form.billingAddress?.state);
   const pickupState = cleanString(form.pickupAddress?.state);
@@ -398,11 +416,12 @@ const validateForm = (form = {}) => {
   return missingDocument ? `${missingDocument[1]} document is required` : "";
 };
 
-const FieldRow = ({ label, hint, children }) => (
+const FieldRow = ({ label, hint, error, children }) => (
   <div className="flex flex-col gap-1">
     <label className="text-xs font-medium text-[#65718b]">{label}</label>
     {children}
-    {hint ? <p className="text-[11px] text-[#8a93a5]">{hint}</p> : null}
+    {error ? <p className="text-[11px] font-medium text-red-500">{error}</p> : null}
+    {!error && hint ? <p className="text-[11px] text-[#8a93a5]">{hint}</p> : null}
   </div>
 );
 
@@ -450,6 +469,7 @@ const OrganizationModal = ({
   mode,
   organization,
   form,
+  errors = {},
   sellerOptions,
   submitting,
   onClose,
@@ -481,9 +501,9 @@ const OrganizationModal = ({
 
         <div className="overflow-y-auto px-5 py-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <FieldRow label="Seller">
+            <FieldRow label="Seller" error={errors.sellerId}>
               <select
-                className={inputCls}
+                className={inputClass(errors.sellerId)}
                 value={form.sellerId}
                 onChange={(event) => onChange("sellerId", event.target.value)}
                 disabled={isEdit}
@@ -505,11 +525,11 @@ const OrganizationModal = ({
             <FieldRow label="Store / Display Name">
               <input className={inputCls} value={form.storeDisplayName} onChange={(event) => onChange("storeDisplayName", event.target.value)} />
             </FieldRow>
-            <FieldRow label="GSTIN">
-              <input className={inputCls} value={form.gstin} onChange={(event) => onChange("gstin", event.target.value.toUpperCase())} />
+            <FieldRow label="GSTIN" error={errors.gstin}>
+              <input className={inputClass(errors.gstin)} value={form.gstin} onChange={(event) => onChange("gstin", event.target.value.toUpperCase())} />
             </FieldRow>
-            <FieldRow label="PAN">
-              <input className={inputCls} value={form.pan} onChange={(event) => onChange("pan", event.target.value.toUpperCase())} />
+            <FieldRow label="PAN" error={errors.pan}>
+              <input className={inputClass(errors.pan)} value={form.pan} onChange={(event) => onChange("pan", event.target.value.toUpperCase())} />
             </FieldRow>
             <FieldRow label="Primary Contact">
               <input className={inputCls} value={form.primaryContactName} onChange={(event) => onChange("primaryContactName", event.target.value)} />
@@ -531,11 +551,11 @@ const OrganizationModal = ({
             <FieldRow label="Support Phone">
               <input className={inputCls} value={form.supportPhone} onChange={(event) => onChange("supportPhone", event.target.value)} />
             </FieldRow>
-            <FieldRow label="Registration Number">
-              <input className={inputCls} value={form.registrationNumber} onChange={(event) => onChange("registrationNumber", event.target.value)} />
+            <FieldRow label="Registration Number" error={errors.registrationNumber}>
+              <input className={inputClass(errors.registrationNumber)} value={form.registrationNumber} onChange={(event) => onChange("registrationNumber", event.target.value)} />
             </FieldRow>
-            <FieldRow label="Aadhaar Number">
-              <input className={inputCls} value={form.aadhaarNumber} maxLength={12} onChange={(event) => onChange("aadhaarNumber", event.target.value.replace(/\D/g, ""))} />
+            <FieldRow label="Aadhaar Number" error={errors.aadhaarNumber}>
+              <input className={inputClass(errors.aadhaarNumber)} value={form.aadhaarNumber} maxLength={12} onChange={(event) => onChange("aadhaarNumber", event.target.value.replace(/\D/g, ""))} />
             </FieldRow>
             <FieldRow label="Date of Birth">
               <input type="date" className={inputCls} value={form.dateOfBirth} onChange={(event) => onChange("dateOfBirth", event.target.value)} />
@@ -711,6 +731,7 @@ const SellerOrganizations = () => {
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", organization: null });
   const [form, setForm] = useState(createEmptyForm());
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     dropdownApi.getSellers({ limit: 200 })
@@ -768,21 +789,30 @@ const SellerOrganizations = () => {
 
   const openCreate = () => {
     setForm(createEmptyForm(filters.sellerId));
+    setFormErrors({});
     setModal({ open: true, mode: "create", organization: null });
   };
 
   const openEdit = (organization) => {
     setForm(normalizeForEdit(organization));
+    setFormErrors({});
     setModal({ open: true, mode: "edit", organization });
   };
 
   const closeModal = () => {
     if (submitting) return;
+    setFormErrors({});
     setModal({ open: false, mode: "create", organization: null });
   };
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setFormErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   const updateNestedForm = (section, key, value) => {
@@ -841,6 +871,8 @@ const SellerOrganizations = () => {
       setModal({ open: false, mode: "create", organization: null });
       await loadOrganizations();
     } catch (error) {
+      const backendErrors = getBackendFieldErrors(error);
+      if (Object.keys(backendErrors).length) setFormErrors(backendErrors);
       toast.error(error?.message || "Unable to save seller organization");
     } finally {
       setSubmitting(false);
@@ -1225,6 +1257,7 @@ const SellerOrganizations = () => {
         mode={modal.mode}
         organization={modal.organization}
         form={form}
+        errors={formErrors}
         sellerOptions={sellerOptions}
         submitting={submitting}
         onClose={closeModal}

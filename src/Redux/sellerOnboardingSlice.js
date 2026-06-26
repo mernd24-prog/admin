@@ -30,7 +30,7 @@ export const submitSellerKycDetails = createAsyncThunk(
         getOnboardingToken(payload, getState())
       );
     } catch (error) {
-      return rejectWithValue(error?.message || error);
+      return rejectWithValue(error);
     }
   }
 );
@@ -47,7 +47,7 @@ export const updateSellerOnboardingDetails = createAsyncThunk(
         getOnboardingToken(payload, getState())
       );
     } catch (error) {
-      return rejectWithValue(error?.message || error);
+      return rejectWithValue(error);
     }
   }
 );

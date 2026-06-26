@@ -10,14 +10,22 @@ const firstValidationMessage = (details) => {
     .find(Boolean) || null;
 };
 
+const getFieldDetails = (data = {}) => {
+  const candidates = [
+    data?.error?.fields,
+    data?.fields,
+    data?.error?.details?.fields,
+    data?.details?.fields,
+    data?.error?.details,
+    data?.details,
+  ];
+  return candidates.find(Array.isArray) || [];
+};
+
 export const normalizeApiError = (error, fallback = "Something went wrong!") => {
   const responseData = error?.response?.data;
   const data = responseData || error?.data || error?.raw || error || {};
-  const details = Array.isArray(data?.error?.details)
-    ? data.error.details
-    : Array.isArray(data?.details)
-      ? data.details
-      : [];
+  const details = getFieldDetails(data);
 
   return {
     status: error?.response?.status || data?.status,
@@ -30,8 +38,7 @@ export const normalizeApiError = (error, fallback = "Something went wrong!") => 
     message:
       responseData?.error?.message ||
       responseData?.message ||
-      firstValidationMessage(responseData?.error?.details) ||
-      firstValidationMessage(responseData?.details) ||
+      firstValidationMessage(getFieldDetails(responseData)) ||
       data?.error?.message ||
       data?.message ||
       firstValidationMessage(details) ||
