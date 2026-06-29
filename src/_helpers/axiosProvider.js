@@ -155,6 +155,17 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
             };
             return instance(originalRequest);
         } catch (refreshError) {
+            // Another tab may have refreshed the token concurrently (cross-tab race).
+            // If localStorage now has a fresh, non-expiring access token, use it instead
+            // of forcing logout — the other tab's refresh already handled session rotation.
+            const freshToken = getStoredAccessToken();
+            if (freshToken && !isTokenExpiring(freshToken, 30 * 1000)) {
+                originalRequest.headers = {
+                    ...(originalRequest.headers || {}),
+                    Authorization: `Bearer ${freshToken}`,
+                };
+                return instance(originalRequest);
+            }
             forceLogout(getAuthErrorCode(refreshError) || "TOKEN_EXPIRED", getAuthErrorMessage(refreshError));
             return Promise.reject(refreshError);
         }
@@ -219,6 +230,12 @@ const refreshBeforeRequestInterceptor = async (config) => {
             config.headers.Authorization = `Bearer ${accessToken}`;
             return config;
         } catch (error) {
+            // Another tab may have refreshed successfully; check localStorage before logging out.
+            const freshToken = getStoredAccessToken();
+            if (freshToken && !isTokenExpiring(freshToken, 30 * 1000)) {
+                config.headers.Authorization = `Bearer ${freshToken}`;
+                return config;
+            }
             forceLogout(getAuthErrorCode(error) || "TOKEN_EXPIRED", getAuthErrorMessage(error));
             throw error;
         }

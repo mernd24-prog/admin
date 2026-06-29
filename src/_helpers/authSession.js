@@ -73,7 +73,7 @@ export const getJwtExpiryMs = (token) => {
   return decoded?.exp ? decoded.exp * 1000 : null;
 };
 
-export const isTokenExpiring = (token, skewMs = 60 * 1000) => {
+export const isTokenExpiring = (token, skewMs = 5 * 60 * 1000) => {
   const expiresAt = getJwtExpiryMs(token);
   return Boolean(expiresAt && expiresAt - Date.now() <= skewMs);
 };
