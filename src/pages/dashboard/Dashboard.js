@@ -244,12 +244,13 @@ function GoldDateRangeCalendar({
   onApply,
   onCancel,
   loading,
+  className = "",
 }) {
   const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
   const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
 
   return (
-    <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[320px] rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl sm:w-[340px]">
+    <div className={`w-full rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl ${className}`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
           type="button"
@@ -350,6 +351,7 @@ export default function Dashboard() {
   const [range, setRange] = useState("year");
   const [dateFilters, setDateFilters] = useState(() => getRangeDates("year"));
   const [customDates, setCustomDates] = useState(() => getRangeDates("year"));
+  const [customCalendarViewDate, setCustomCalendarViewDate] = useState(() => new Date());
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customApplying, setCustomApplying] = useState(false);
   const closeCustomPickerAfterLoadRef = useRef(false);
@@ -380,6 +382,7 @@ export default function Dashboard() {
   const handleRangeChange = (nextRange) => {
     if (nextRange === "custom") {
       setCustomDates(dateFilters);
+      setCustomCalendarViewDate(new Date());
       setCustomPickerOpen(true);
       return;
     }
@@ -388,11 +391,25 @@ export default function Dashboard() {
     setRange(nextRange);
     setDateFilters(nextDates);
     setCustomDates(nextDates);
+    setCustomCalendarViewDate(new Date());
   };
 
-  const handleCustomDateChange = (field, value) => {
-    const nextDates = { ...customDates, [field]: value };
-    setCustomDates(nextDates);
+  const handleCustomCalendarSelect = (value) => {
+    const selectedDate = parseInputDate(value);
+    if (!selectedDate) return;
+
+    setCustomCalendarViewDate(selectedDate);
+    setCustomDates((current) => {
+      if (!current.fromDate || current.toDate) {
+        return { fromDate: value, toDate: "" };
+      }
+
+      if (value < current.fromDate) {
+        return { fromDate: value, toDate: current.fromDate };
+      }
+
+      return { ...current, toDate: value };
+    });
   };
 
   const applyCustomDateRange = () => {
@@ -685,50 +702,16 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              <div className="grid gap-3">
-                <label className="grid gap-1.5 text-xs font-semibold text-[var(--admin-ink)]">
-                  Start Date
-                  <input
-                    type="date"
-                    value={customDates.fromDate}
-                    onChange={(event) => handleCustomDateChange("fromDate", event.target.value)}
-                    className="min-h-9 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] outline-none transition hover:bg-[#fff3cc] focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-xs font-semibold text-[var(--admin-ink)]">
-                  End Date
-                  <input
-                    type="date"
-                    value={customDates.toDate}
-                    onChange={(event) => handleCustomDateChange("toDate", event.target.value)}
-                    className="min-h-9 rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] outline-none transition hover:bg-[#fff3cc] focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                  onClick={closeCustomPicker}
-                  disabled={customApplying}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex min-h-8 min-w-[78px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
-                  disabled={!customDates.fromDate || !customDates.toDate || customApplying}
-                  onClick={applyCustomDateRange}
-                >
-                  {customApplying ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--admin-gold)] border-t-transparent" />
-                      Loading
-                    </span>
-                  ) : "Apply"}
-                </button>
-              </div>
+              <GoldDateRangeCalendar
+                dates={customDates}
+                viewDate={customCalendarViewDate}
+                onViewDateChange={setCustomCalendarViewDate}
+                onSelectDate={handleCustomCalendarSelect}
+                onApply={applyCustomDateRange}
+                onCancel={closeCustomPicker}
+                loading={customApplying}
+                className="shadow-none"
+              />
             </div>
           </div>
         )}

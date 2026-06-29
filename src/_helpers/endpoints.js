@@ -405,8 +405,10 @@ export const ENDPOINTS = {
     geographyDetail: (countryCode) => `/admin/platform/geography/${countryCode}`,
     contentPages: "/admin/cms",
     contentPage: (slug) => `/admin/cms/${slug}`,
-    productReviews: "/admin/platform/product-reviews",
+    productReviews: byPanel("/admin/platform/product-reviews", "/sellers/me/product-reviews"),
+    sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
+    productReviewsBulkAction: "/admin/platform/product-reviews/bulk-action",
   },
   common: {
     countries: "/admin/common/countries",

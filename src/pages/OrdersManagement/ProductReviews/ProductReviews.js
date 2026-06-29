@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply } from "react-icons/md";
+import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibilityOff } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
   StatusBadge,
   FilterBar,
   ConfirmModal,
+  BulkActionBar,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -15,9 +16,22 @@ import {
   deleteProductReview,
   getProductReviews,
   updateProductReview,
+  bulkUpdateProductReviews,
 } from "../../../Redux/adminCoreSlice";
 import EditProductReview from "./components/EditProductReview";
 import { useListPage } from "../../../hooks/useListPage";
+
+const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
+
+const getSessionUserData = () => {
+  const userDataString = sessionStorage.getItem("EcomAdmin");
+  if (!userDataString) return null;
+  try {
+    return JSON.parse(userDataString);
+  } catch {
+    return null;
+  }
+};
 
 const FILTER_FIELDS = [
   {
@@ -84,8 +98,15 @@ const ProductReviews = () => {
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState("");
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
+  const [bulkLoading, setBulkLoading]     = useState(false);
+  const [userData, setUserData]           = useState(() => getSessionUserData());
 
   const { list: items, total } = getReviewsPayload(reviewsData);
+  const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
+
+  useEffect(() => {
+    setUserData(getSessionUserData());
+  }, []);
 
   const fetchReviews = () => {
     const params = list.toQueryParams();
@@ -102,6 +123,7 @@ const ProductReviews = () => {
         buyerId:   params.buyerId || undefined,
         sortBy:    params.sortBy,
         sortOrder: params.sortDir,
+        sellerScope: isSellerPanelUser || undefined,
       }),
     )
       .unwrap()
@@ -119,6 +141,7 @@ const ProductReviews = () => {
   }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
 
   const handleToggleStatus = async (review) => {
+    if (isSellerPanelUser) return;
     const reviewId = review._id || review.id;
     const current = review.status || "pending";
     const newStatus = current === "published" ? "hidden" : "published";
@@ -131,6 +154,26 @@ const ProductReviews = () => {
       toast.error(err?.message || "Failed to update review status");
     } finally {
       setToggleLoadingId(null);
+    }
+  };
+
+  const handleBulkStatus = async (status) => {
+    if (isSellerPanelUser || !list.selectedKeys.length) return;
+    setBulkLoading(true);
+    try {
+      await dispatch(
+        bulkUpdateProductReviews({
+          reviewIds: list.selectedKeys,
+          status,
+        }),
+      ).unwrap();
+      toast.success("Selected reviews updated");
+      list.clearSelection();
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || "Failed to update selected reviews");
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -200,9 +243,9 @@ const ProductReviews = () => {
       render: (v, row) => (
         <button
           onClick={() => handleToggleStatus(row)}
-          disabled={toggleLoadingId === (row._id || row.id)}
+          disabled={isSellerPanelUser || toggleLoadingId === (row._id || row.id)}
           className="disabled:opacity-50"
-          title="Click to toggle published/hidden"
+          title={isSellerPanelUser ? "Review status" : "Click to toggle published/hidden"}
         >
           <StatusBadge status={v || "pending"} dot variant={STATUS_COLOR[v] || "default"} />
         </button>
@@ -228,7 +271,7 @@ const ProductReviews = () => {
     {
       key: "_actions",
       label: "",
-      render: (_, row) => (
+      render: (_, row) => isSellerPanelUser ? null : (
         <div className="flex items-center gap-1 justify-end">
           <PermissionGuard module="reviews" action={ACTIONS.EDIT} hide>
             <button
@@ -283,6 +326,10 @@ const ProductReviews = () => {
         emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
         requiredModule="reviews"
         exportConfig={{ filename: "product-reviews", columns }}
+        selectable={!isSellerPanelUser}
+        selectedKeys={list.selectedKeys}
+        onSelectionChange={list.setSelectedKeys}
+        rowKey="_id"
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
@@ -293,6 +340,39 @@ const ProductReviews = () => {
             activeCount={list.activeFilterCount}
           />
         }
+        bulkActionBar={!isSellerPanelUser ? (
+          <BulkActionBar
+            selectedCount={list.selectedCount}
+            totalCount={items.length}
+            onClear={list.clearSelection}
+            onSelectAll={() => list.setSelectedKeys(items.map((row) => row._id || row.id).filter(Boolean))}
+            module="reviews"
+            loading={loading || bulkLoading}
+            actions={[
+              {
+                label: "Approve Selected",
+                icon: <MdCheckCircle />,
+                action: ACTIONS.EDIT,
+                variant: "primary",
+                onClick: () => handleBulkStatus("published"),
+              },
+              {
+                label: "Reject Selected",
+                icon: <MdClose />,
+                action: ACTIONS.EDIT,
+                variant: "danger",
+                onClick: () => handleBulkStatus("rejected"),
+              },
+              {
+                label: "Hide Selected",
+                icon: <MdVisibilityOff />,
+                action: ACTIONS.EDIT,
+                variant: "warning",
+                onClick: () => handleBulkStatus("hidden"),
+              },
+            ]}
+          />
+        ) : null}
       />
 
       <EditProductReview
