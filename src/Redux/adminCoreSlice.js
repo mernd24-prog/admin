@@ -122,6 +122,7 @@ const initialState = {
   deletePlatformOptionValueData: {},
   productReviewsData: {},
   updateProductReviewData: {},
+  bulkUpdateProductReviewsData: {},
   deleteProductReviewData: {},
   rbacPermissionManagementModulesData: {},
   rbacModulesData: {},
@@ -643,8 +644,9 @@ export const createContentPage = createApiThunkPrivate("adminCore/createContentP
 export const updateContentPage = createApiThunkPrivate("adminCore/updateContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.id || payload.slug), "PATCH", false, { transformBody: (_, payload) => toContentPageBody(omitPayload(payload, ["id"])) });
 export const deleteContentPage = createApiThunkPrivate("adminCore/deleteContentPage", (payload) => ENDPOINTS.platform.contentPage(payload.slug || payload.id), "DELETE", false, { transformParams: noParams });
 
-export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status", "rating", "sortBy", "sortOrder"]) });
-export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status", "adminReply"]) });
+export const getProductReviews = createApiThunkPrivate("adminCore/getProductReviews", (payload = {}) => payload.sellerScope ? ENDPOINTS.platform.sellerProductReviews : ENDPOINTS.platform.productReviews, "GET", true, { transformParams: pickQuery(["page", "limit", "q", "keyWord", "search", "productId", "buyerId", "orderId", "status", "rating", "sortBy", "sortOrder"]) });
+export const updateProductReview = createApiThunkPrivate("adminCore/updateProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status", "rejectionReason", "adminReply"]) });
+export const bulkUpdateProductReviews = createApiThunkPrivate("adminCore/bulkUpdateProductReviews", ENDPOINTS.platform.productReviewsBulkAction, "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reviewIds", "action", "status", "rejectionReason", "reason"]) });
 export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "DELETE", false, { transformParams: noParams });
 
 // Platform attribute options (admin-managed: Color, Size, RAM, etc.)
@@ -823,6 +825,7 @@ const adminCoreSlice = createSlice({
       [deleteContentPage, "deleteContentPageData"],
       [getProductReviews, "productReviewsData"],
       [updateProductReview, "updateProductReviewData"],
+      [bulkUpdateProductReviews, "bulkUpdateProductReviewsData"],
       [deleteProductReview, "deleteProductReviewData"],
       [getPlatformOptions, "platformOptionsData"],
       [createPlatformOption, "createPlatformOptionData"],
