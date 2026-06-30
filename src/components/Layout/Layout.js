@@ -711,13 +711,11 @@ function Layout() {
     [setModuleName],
   );
 
-  const dynamicRoutes = useMemo(() => {
-    const hasBackendRoutes = backendRoutePatterns.size > 0;
-    return routeRegistry.filter((route) => {
-      if (route.always || !hasBackendRoutes) return true;
-      return backendRoutePatterns.has(normalizeRoutePattern(route.path));
-    });
-  }, [backendRoutePatterns, routeRegistry]);
+  // Keep every known client route registered. Sidebar metadata controls which
+  // navigation items are visible, while renderRoute performs the actual RBAC
+  // check. Removing detail/action routes here made valid seller links fall
+  // through to the wildcard route and redirect to /app/home.
+  const dynamicRoutes = routeRegistry;
 
   useEffect(() => {
     socket?.on("refreshed-configurations", (data) => {

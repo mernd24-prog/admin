@@ -1004,6 +1004,26 @@ export default function ProductManagementUI() {
     const fieldName = fieldMap[key];
 
     if (fieldName) {
+      if (key === 'COD') {
+        setFormData((prev) => {
+          const currentCod =
+            prev?.shipping?.codAvailable !== undefined
+              ? Boolean(prev.shipping.codAvailable)
+              : Boolean(prev?.cod);
+          const nextCod = !currentCod;
+
+          return {
+            ...prev,
+            cod: nextCod,
+            shipping: {
+              ...(prev.shipping || {}),
+              codAvailable: nextCod,
+            },
+          };
+        });
+        return;
+      }
+
       setFormData((prev) => ({
         ...prev,
         [fieldName]: !prev[fieldName],
@@ -1020,6 +1040,12 @@ export default function ProductManagementUI() {
       : [formData.catalogsUrls]).filter(Boolean);
 
     const updatedFormData = { ...formData };
+    const resolvedCodAvailable =
+      updatedFormData.shipping?.codAvailable !== undefined
+        ? Boolean(updatedFormData.shipping.codAvailable)
+        : updatedFormData.cod !== undefined
+          ? Boolean(updatedFormData.cod)
+          : undefined;
 
     const formattedOptions = options.map(option => ({
       sku: option.sku || '',
@@ -1068,6 +1094,7 @@ export default function ProductManagementUI() {
       additionalCost: toOptionalNumber(updatedFormData.shipping?.additionalCost),
       shippingCharge: toOptionalNumber(updatedFormData.shipping?.shippingCharge),
       handlingCharge: toOptionalNumber(updatedFormData.shipping?.handlingCharge),
+      ...(resolvedCodAvailable !== undefined ? { codAvailable: resolvedCodAvailable } : {}),
       processingDays: toOptionalNumber(updatedFormData.shipping?.processingDays),
       estimatedDaysMin: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMin),
       estimatedDaysMax: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMax),
@@ -1114,7 +1141,7 @@ export default function ProductManagementUI() {
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
       metadata: {
         featured: Boolean(updatedFormData.markAsFeatured),
-        codAvailable: Boolean(updatedFormData.cod),
+        codAvailable: resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
       },
       ...(updatedFormData.productType ? { productType: updatedFormData.productType } : {}),

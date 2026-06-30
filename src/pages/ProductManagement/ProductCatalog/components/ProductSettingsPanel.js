@@ -3,6 +3,11 @@ import Button from "../../../../components/Atoms/buttons/button";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 
 export default function ProductSettingsPanel({ handleSaveSubmit, formData, handleToggleProductSetting, saving = false }) {
+  const codEnabled =
+    formData?.shipping?.codAvailable !== undefined
+      ? Boolean(formData.shipping.codAvailable)
+      : Boolean(formData?.cod);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Save */}
@@ -56,11 +61,11 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-800">Cash on Delivery (COD)</p>
             <p className="text-xs text-gray-500 mt-0.5 leading-snug">
-              Allow COD and Pay at Store for this product. COD requires Shipping; Pay at Store requires Pickup.
+              Allow COD for this product. Checkout disables COD when this product-level setting is off.
             </p>
           </div>
           <div className="flex-shrink-0 mt-0.5">
-            <ToggleButton isToggle={formData?.cod} handleClick={() => handleToggleProductSetting('COD')} />
+            <ToggleButton isToggle={codEnabled} handleClick={() => handleToggleProductSetting('COD')} />
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ export const statusContent = {
     subtitleTitle: "You're One Step Closer to Selling",
     description:
       "Complete your KYC verification to activate your seller account and start listing products on the marketplace.",
-    nextStepLabel: "Next Step: KYC Verification",
+    nextStepLabel: "",
     buttonLabel: "Continue to KYC Verification",
     icon: "check",
   },

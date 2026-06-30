@@ -73,6 +73,7 @@ export const ActionButtons = ({
       {showEditButton && guard(editAction, (
         <Tooltip text="Edit" position="top">
           <button
+            type="button"
             onClick={onEdit}
             className="rounded p-1 text-green-600 transition-colors duration-200 hover:bg-green-50"
           >
@@ -85,6 +86,7 @@ export const ActionButtons = ({
          {viewButton && guard(viewAction, (
         <Tooltip text="View" position="top">
           <button
+            type="button"
             onClick={onViewClick}
             className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
           >
@@ -97,6 +99,7 @@ export const ActionButtons = ({
       {showAddButton && guard(addAction, (
         <Tooltip text="Add" position="top">
           <button
+            type="button"
             onClick={onAdd}
             className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
           >
@@ -106,6 +109,7 @@ export const ActionButtons = ({
       ))}
       {showOptionValues && guard(optionValueAction, (
         <button
+          type="button"
           onClick={onOptionValue}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -115,6 +119,7 @@ export const ActionButtons = ({
       {userPermissions && guard(permissionAction, <FaUserLock size={20} onClick={onPermissionClick} />)}
       {showWarningButton && guard(warningAction, (
         <button
+          type="button"
           onClick={onWarning}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -123,6 +128,7 @@ export const ActionButtons = ({
       ))}
       {showViewButton && guard(viewAction, (
         <button
+          type="button"
           onClick={onView}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -131,6 +137,7 @@ export const ActionButtons = ({
       ))}
       {showLinkButton && guard(linkAction, (
         <button
+          type="button"
           onClick={onLink}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -139,6 +146,7 @@ export const ActionButtons = ({
       ))}
       {showHistoryButton && guard(historyAction, (
         <button
+          type="button"
           onClick={onHistory}
           className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
         >
@@ -147,6 +155,7 @@ export const ActionButtons = ({
       ))}
       {showDeleteButton && guard(deleteAction, (
         <button
+          type="button"
           onClick={onDelete}
             className="rounded p-1 text-red-600 transition-colors duration-200 hover:bg-red-50"
         >
@@ -155,6 +164,7 @@ export const ActionButtons = ({
       ))}
       {showBannerButton && guard(bannerAction, (
         <button
+          type="button"
           onClick={onBanner}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -164,6 +174,7 @@ export const ActionButtons = ({
       {showPasswordButton && guard(passwordAction, (
         <Tooltip text="Change Password" position="top">
           <button
+            type="button"
             onClick={onPasswordChange}
             className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
           >
@@ -173,6 +184,7 @@ export const ActionButtons = ({
       ))}
       {showListing && guard(listingAction, (
         <button
+          type="button"
           onClick={onListing}
           className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
@@ -186,6 +198,7 @@ export const ActionButtons = ({
       ))}
       {showPrintIcon && guard(printAction, (
         <button
+          type="button"
           onClick={onPrint}
           className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
         >
