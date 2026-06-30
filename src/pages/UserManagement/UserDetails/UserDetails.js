@@ -520,6 +520,11 @@ const UserDetails = () => {
   const [organizations, setOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [reviewingOrgId, setReviewingOrgId] = useState(null);
+  const [orgDecisionModal, setOrgDecisionModal] = useState({
+    open: false,
+    organization: null,
+    action: null,
+  });
   const organizationSummary = useMemo(
     () => summarizeOrganizations(
       organizations,
@@ -756,21 +761,20 @@ const UserDetails = () => {
     }
   };
 
-  const handleOrganizationAction = async (organization, action) => {
+  const submitOrganizationAction = async (organization, action, rejectionReason = null) => {
     const organizationId = organization?.id || organization?.organizationId;
     if (!organizationId) return;
 
     let payload = { ...action.payload };
 
     if (action.needsReason) {
-      const reason = window.prompt('Enter rejection / change reason (required):');
-      if (reason === null) return;
-      if (!reason.trim()) {
+      const reason = String(rejectionReason || '').trim();
+      if (!reason) {
         toast.error('Rejection reason is required');
         return;
       }
-      payload.rejectionReason = reason.trim();
-      if (!payload.requiredChanges) payload.requiredChanges = [reason.trim()];
+      payload.rejectionReason = reason;
+      if (!payload.requiredChanges) payload.requiredChanges = [reason];
     }
 
     setReviewingOrgId(organizationId);
@@ -787,6 +791,19 @@ const UserDetails = () => {
     } finally {
       setReviewingOrgId(null);
     }
+  };
+
+  const handleOrganizationAction = (organization, action) => {
+    if (action.needsReason) {
+      setOrgDecisionModal({ open: true, organization, action });
+      return;
+    }
+    submitOrganizationAction(organization, action);
+  };
+
+  const handleOrganizationDecisionSubmit = async (_decision, rejectionReason) => {
+    const { organization, action } = orgDecisionModal;
+    await submitOrganizationAction(organization, action, rejectionReason);
   };
 
   // ── Profile save ──────────────────────────────────────────────────────────
@@ -872,6 +889,30 @@ const UserDetails = () => {
         rejectionValue="rejected"
         rejectionLabel="Bank Rejection Reason"
         submitText="Update Bank"
+      />
+
+      <VerificationDecisionModal
+        isOpen={orgDecisionModal.open}
+        onClose={() => setOrgDecisionModal((s) => ({ ...s, open: false }))}
+        onSubmit={handleOrganizationDecisionSubmit}
+        title={orgDecisionModal.action?.label || 'Review Organization'}
+        decisionLabel="Organization Decision"
+        options={[
+          {
+            value: 'rejected',
+            label: orgDecisionModal.action?.label || 'Reject',
+          },
+        ]}
+        defaultDecision="rejected"
+        rejectionValue="rejected"
+        rejectionLabel={
+          orgDecisionModal.action?.id === 'bank_reject'
+            ? 'Bank Rejection Reason'
+            : orgDecisionModal.action?.id === 'kyc_reject'
+              ? 'KYC Rejection Reason'
+              : 'Rejection Reason'
+        }
+        submitText={orgDecisionModal.action?.label || 'Submit'}
       />
 
       <div className="max-w-5xl mx-auto py-6 space-y-4">
