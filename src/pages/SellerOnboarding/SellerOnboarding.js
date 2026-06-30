@@ -1894,13 +1894,23 @@ const SellerOnboarding = () => {
       profileForm.pickupPostalCode.trim().length > 10
     )
       errors.pickupPostalCode = "Pickup postal code must be 5 to 10 characters";
-    if (
-      profileForm.businessAddressPostalCode.trim() &&
-      (profileForm.businessAddressPostalCode.trim().length < 5 ||
-        profileForm.businessAddressPostalCode.trim().length > 10)
-    )
+    if (!profileForm.businessAddressLine1.trim())
+      errors.businessAddressLine1 = "Business address line 1 is required";
+    if (!profileForm.businessAddressCountry.trim())
+      errors.businessAddressCountry = "Business country is required";
+    if (!profileForm.businessAddressState.trim())
+      errors.businessAddressState = "Business state is required";
+    if (!profileForm.businessAddressCity.trim())
+      errors.businessAddressCity = "Business city is required";
+    if (!profileForm.businessAddressPostalCode.trim()) {
+      errors.businessAddressPostalCode = "Business postal code is required";
+    } else if (
+      profileForm.businessAddressPostalCode.trim().length < 5 ||
+      profileForm.businessAddressPostalCode.trim().length > 10
+    ) {
       errors.businessAddressPostalCode =
         "Business postal code must be 5 to 10 characters";
+    }
     setProfileErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -2657,7 +2667,7 @@ const SellerOnboarding = () => {
 
               <div className="md:col-span-2">
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Address Line 1
+                  Business Address Line 1 {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="businessAddressLine1"
@@ -2666,6 +2676,11 @@ const SellerOnboarding = () => {
                   value={profileForm.businessAddressLine1}
                   onChange={onProfileChange}
                 />
+                {profileErrors.businessAddressLine1 && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.businessAddressLine1}
+                  </p>
+                )}
               </div>
 
               <div className="md:col-span-2">
@@ -2681,46 +2696,70 @@ const SellerOnboarding = () => {
                 />
               </div>
 
-              <OnboardingSelect
-                name="businessAddressCountry"
-                label="Business Country"
-                value={profileForm.businessAddressCountry}
-                options={countries.options}
-                onChange={onAddressSelectChange("businessAddressCountry", [
-                  "businessAddressState",
-                  "businessAddressCity",
-                  "businessAddressPostalCode",
-                ])}
-                loading={countries.loading}
-                error={countries.error}
-              />
+              <div>
+                <OnboardingSelect
+                  name="businessAddressCountry"
+                  label="Business Country"
+                  value={profileForm.businessAddressCountry}
+                  options={countries.options}
+                  onChange={onAddressSelectChange("businessAddressCountry", [
+                    "businessAddressState",
+                    "businessAddressCity",
+                    "businessAddressPostalCode",
+                  ])}
+                  loading={countries.loading}
+                  error={countries.error}
+                  required
+                />
+                {profileErrors.businessAddressCountry && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.businessAddressCountry}
+                  </p>
+                )}
+              </div>
 
-              <OnboardingSelect
-                name="businessAddressState"
-                label="Business State"
-                value={profileForm.businessAddressState}
-                options={businessStates.options}
-                onChange={onAddressSelectChange("businessAddressState", [
-                  "businessAddressCity",
-                  "businessAddressPostalCode",
-                ])}
-                loading={businessStates.loading}
-                error={businessStates.error}
-                disabled={!businessCountryId}
-              />
+              <div>
+                <OnboardingSelect
+                  name="businessAddressState"
+                  label="Business State"
+                  value={profileForm.businessAddressState}
+                  options={businessStates.options}
+                  onChange={onAddressSelectChange("businessAddressState", [
+                    "businessAddressCity",
+                    "businessAddressPostalCode",
+                  ])}
+                  loading={businessStates.loading}
+                  error={businessStates.error}
+                  disabled={!businessCountryId}
+                  required
+                />
+                {profileErrors.businessAddressState && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.businessAddressState}
+                  </p>
+                )}
+              </div>
 
-              <OnboardingSelect
-                name="businessAddressCity"
-                label="Business City"
-                value={profileForm.businessAddressCity}
-                options={businessCities.options}
-                onChange={onAddressSelectChange("businessAddressCity", [
-                  "businessAddressPostalCode",
-                ])}
-                loading={businessCities.loading}
-                error={businessCities.error}
-                disabled={!businessStateId}
-              />
+              <div>
+                <OnboardingSelect
+                  name="businessAddressCity"
+                  label="Business City"
+                  value={profileForm.businessAddressCity}
+                  options={businessCities.options}
+                  onChange={onAddressSelectChange("businessAddressCity", [
+                    "businessAddressPostalCode",
+                  ])}
+                  loading={businessCities.loading}
+                  error={businessCities.error}
+                  disabled={!businessStateId}
+                  required
+                />
+                {profileErrors.businessAddressCity && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.businessAddressCity}
+                  </p>
+                )}
+              </div>
 
               <div>
                 <OnboardingSelect
@@ -2732,6 +2771,7 @@ const SellerOnboarding = () => {
                   loading={businessPincodes.loading}
                   error={businessPincodes.error}
                   disabled={!businessCityId}
+                  required
                 />
                 {profileErrors.businessAddressPostalCode && (
                   <p className={ERROR_CLASS}>
