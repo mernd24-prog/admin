@@ -49,6 +49,7 @@ const Login = () => {
               value={auth.formFields.email}
               placeholder="e.g. John Doe"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.email}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -64,6 +65,7 @@ const Login = () => {
               value={auth.formFields.password}
               placeholder="••••••••"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.password}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}

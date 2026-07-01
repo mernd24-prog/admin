@@ -4,7 +4,7 @@ import Button from "../buttons/button";
 import SearchInput from "../SearchInput/SearchInput";
 import FilterSelect from "../FilterSelect/FilterSelect";
 import { IoIosArrowDown } from "react-icons/io";
-import { MdOutlineDeleteOutline } from "react-icons/md";
+import { MdFilterList, MdOutlineDeleteOutline } from "react-icons/md";
 // import FormInput from '../FormInput/FormInput';
 import Input from "../Input/Input";
 import selectJson from "../../../_helpers/SelectJson.json";
@@ -58,6 +58,10 @@ export default function SearchComponent({
   searchActions,
   defaultSearchOpen = false,
   exclusiveStatusFilters = false,
+  filterGridClassName = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  compactFilterBar = false,
+  hideFilterActions = false,
+  largeSearchInput = false,
 }) {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
@@ -81,6 +85,16 @@ export default function SearchComponent({
   );
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
+  const activeFilterCount = Object.entries(filters || {}).filter(([key, value]) => {
+    if (key === "search") return false;
+    const filterValue = value && typeof value === "object" ? value.value : value;
+    return (
+      filterValue !== undefined &&
+      filterValue !== null &&
+      filterValue !== "" &&
+      String(filterValue).toLowerCase() !== "all"
+    );
+  }).length;
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => {
@@ -164,7 +178,7 @@ export default function SearchComponent({
   return (
     <div className="w-full bg-white p-1">
       <div
-        className={`flex flex-col gap-3 mb-4 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
+        className={`flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start md:flex-1">
           <div className="w-full min-w-0">
@@ -177,6 +191,7 @@ export default function SearchComponent({
               handleRemove={handleSearchRemove}
               onSubmit={applyFilters}
               debounce={searchDebounce}
+              large={largeSearchInput}
             />
           </div>
           {isSelectNearSearch && (
@@ -270,15 +285,38 @@ export default function SearchComponent({
 
       {isSearchShow && hasAdvancedFilters && (
         <div
-          className={` transition-all duration-300 ease-in-out ${searchDown ? "opacity-100 mb-4 " : "opacity-0 max-h-0"}`}
+          className={`transition-all duration-300 ease-in-out ${
+            searchDown
+              ? compactFilterBar
+                ? "-mx-4 -mb-4 -mt-4 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3 opacity-100"
+                : "mb-4 opacity-100"
+              : "pointer-events-none max-h-0 overflow-hidden opacity-0"
+          }`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end text-xs">
+          <div className="flex items-end gap-3">
+            <div className="mb-3 flex shrink-0 items-center gap-1.5">
+              <div
+                className="flex items-center justify-center text-[var(--admin-muted)]"
+                title="Filters"
+                aria-label="Filters"
+              >
+                <MdFilterList size={16} />
+              </div>
+              <span
+                className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1 text-[9px] font-bold text-[var(--admin-navy)] ${activeFilterCount > 0 ? "visible" : "invisible"}`}
+                aria-hidden={activeFilterCount === 0}
+              >
+                {activeFilterCount || 0}
+              </span>
+            </div>
+            <div className={`grid min-w-0 flex-1 ${filterGridClassName} items-end gap-x-3 gap-y-4 text-xs`}>
             {isBrand && (
               <div className="w-full">
                 <FilterSelect
                   label={`Brand`}
                   value={filters.brand}
                   options={brandOption || []}
+                  isSearchable={false}
                   onChange={(option) => handleFilterChange("brand", option)}
                 />
               </div>
@@ -290,6 +328,7 @@ export default function SearchComponent({
                   label={productLabel ? productLabel : `Product`}
                   value={filters.product}
                   options={productOptions || []}
+                  isSearchable={false}
                   onChange={(option) => handleFilterChange("product", option)}
                 />
               </div>
@@ -301,6 +340,7 @@ export default function SearchComponent({
                   label={userLabel ? userLabel : "User"}
                   value={filters.sellerName}
                   options={userOptions}
+                  isSearchable={false}
                   onChange={(option) =>
                     handleFilterChange("sellerName", option)
                   }
@@ -313,6 +353,7 @@ export default function SearchComponent({
                   label={deleteLable ? deleteLable : "Delete Order"}
                   value={filters.sellerName}
                   options={selectJson?.deleteStatus}
+                  isSearchable={false}
                   onChange={(option) =>
                     handleFilterChange("sellerName", option)
                   }
@@ -326,6 +367,7 @@ export default function SearchComponent({
                   label={`Category`}
                   value={filters.category}
                   options={categoryOptions}
+                  isSearchable={false}
                   onChange={(option) => handleFilterChange("category", option)}
                 />
               </div>
@@ -339,6 +381,7 @@ export default function SearchComponent({
                   }
                   value={filters.activationStatus}
                   options={activationStatusOptions}
+                  isSearchable={false}
                   onChange={(option) =>
                     handleFilterChange("activationStatus", option)
                   }
@@ -352,6 +395,7 @@ export default function SearchComponent({
                   label={approvalStatus ? approvalStatus : "Approval Status"}
                   value={filters.approvalStatus}
                   options={approvalOptions}
+                  isSearchable={false}
                   onChange={(option) =>
                     handleFilterChange("approvalStatus", option)
                   }
@@ -365,6 +409,7 @@ export default function SearchComponent({
                   label={`Product type`}
                   value={filters.productType}
                   options={productTypeOptions}
+                  isSearchable={false}
                   onChange={(option) =>
                     handleFilterChange("productType", option)
                   }
@@ -425,7 +470,7 @@ export default function SearchComponent({
               />
             )}
 
-            <div className="flex items-end gap-2">
+            {!hideFilterActions && <div className="flex items-end gap-2 mb-2">
               <Button
                 onClick={applyFilters}
                 className="admin-btn-secondary"
@@ -436,7 +481,18 @@ export default function SearchComponent({
               <Button onClick={clearFilters} disabled={isFiltering}>
                 Clear
               </Button>
+            </div>}
             </div>
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={isFiltering || activeFilterCount === 0}
+              aria-hidden={activeFilterCount === 0}
+              tabIndex={activeFilterCount > 0 ? 0 : -1}
+              className={`mb-2 w-[76px] shrink-0 whitespace-nowrap text-left text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:cursor-not-allowed ${activeFilterCount > 0 ? "visible" : "invisible pointer-events-none"}`}
+            >
+              × Clear filters
+            </button>
           </div>
         </div>
       )}

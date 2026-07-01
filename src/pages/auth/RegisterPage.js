@@ -45,6 +45,7 @@ const RegisterPage = () => {
               value={auth.formFields.firstName}
               placeholder="e.g. John"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.firstName}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -56,6 +57,7 @@ const RegisterPage = () => {
               value={auth.formFields.lastName}
               placeholder="e.g. Doe"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.lastName}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -68,6 +70,7 @@ const RegisterPage = () => {
               value={auth.formFields.registerEmail}
               placeholder="john@example.com"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.registerEmail}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -84,6 +87,7 @@ const RegisterPage = () => {
               value={auth.formFields.phone}
               placeholder="Enter 10 digit number"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.phone}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -96,6 +100,7 @@ const RegisterPage = () => {
               value={auth.formFields.registerPassword}
               placeholder="••••••••"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.registerPassword}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
@@ -108,6 +113,7 @@ const RegisterPage = () => {
               value={auth.formFields.confirmRegisterPassword}
               placeholder="••••••••"
               onChange={auth.handleInputChange}
+              onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.confirmRegisterPassword}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
