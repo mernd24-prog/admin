@@ -1704,27 +1704,7 @@ export default function ProductManagementUI() {
             />
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-gray-800">Product Badges</p>
-            {[
-              { key: 'markAsFeatured', label: 'Featured', desc: 'Show on homepage / featured sections.', action: 'FEATURED' },
-              { key: 'cod', label: 'Cash on Delivery', desc: 'Allow COD payment for this product.', action: 'COD' },
-              { key: 'prescription_required', label: 'Prescription Required', desc: 'Customer must upload a prescription.', action: 'prescription_required' },
-            ].map(({ key, label, desc, action }) => (
-              <label key={key} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 w-4 h-4 accent-[var(--admin-blue)]"
-                  checked={!!formData?.[key]}
-                  onChange={() => handleToggleProductSetting(action)}
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">{label}</p>
-                  <p className="text-xs text-gray-400">{desc}</p>
-                </div>
-              </label>
-            ))}
-          </div>
+         
         </div>
       )
     },
