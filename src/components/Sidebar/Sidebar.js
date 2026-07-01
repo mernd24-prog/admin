@@ -491,7 +491,20 @@ const Sidebar = ({
             />
           </div>
         ) : (
-          <div className="h-full w-full" />
+          <button
+            type="button"
+            aria-label="Open sidebar"
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] lg:flex"
+            onClick={() => {
+              setNavbarOpen(true);
+              setIsExpanded(true);
+              setHasPermanentOpen(true);
+              sessionStorage.setItem("sidebarExpandedState", "true");
+              sessionStorage.setItem("sidebarPermanentState", "true");
+            }}
+          >
+            <MdChevronRight size={20} />
+          </button>
         )}
 
         {isExpanded && (

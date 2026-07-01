@@ -260,7 +260,7 @@ export default function Header({
           <button
             type="button"
             aria-label={isSidebarExpanded ? "Sidebar open" : "Sidebar closed"}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-white focus:outline-none"
+            className={`h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-white focus:outline-none ${isSidebarExpanded ? "flex" : "flex lg:hidden"}`}
             onClick={handleNavbar}
           >
             {isSidebarExpanded ? (
