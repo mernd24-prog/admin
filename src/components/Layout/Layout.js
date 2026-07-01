@@ -364,14 +364,9 @@ const PermissionTemplates = React.lazy(
     import("../../pages/UserManagement/PermissionTemplates/PermissionTemplates"),
 );
 
-const getStoredSidebarState = () => {
-  try {
-    const expandedState = sessionStorage.getItem("sidebarExpandedState");
-    const permanentState = sessionStorage.getItem("sidebarPermanentState");
-    return Boolean(JSON.parse(expandedState ?? permanentState ?? "false"));
-  } catch {
-    return false;
-  }
+const getInitialSidebarState = () => {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(min-width: 1024px)").matches;
 };
 
 const normalizeRoutePattern = (routePath = "") => {
@@ -424,9 +419,9 @@ function Layout() {
   useSessionHeartbeat();
 
   const location = useLocation();
-  const [navbarOpen, setNavbarOpen] = useState(getStoredSidebarState);
+  const [navbarOpen, setNavbarOpen] = useState(getInitialSidebarState);
   const [moduleName, setModuleName] = useState("");
-  const [isExpanded, setIsExpanded] = useState(getStoredSidebarState);
+  const [isExpanded, setIsExpanded] = useState(getInitialSidebarState);
   const [isRefreshConfig, setIsRefreshConfig] = useState(false);
   const [socket, setSocket] = useState(null);
   const [isPermissionShow, setIsPermissionShow] = useState(false);
@@ -434,10 +429,10 @@ function Layout() {
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
   const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
-    if (typeof window === "undefined") return getStoredSidebarState();
+    if (typeof window === "undefined") return getInitialSidebarState();
     return window.matchMedia("(min-width: 1024px)").matches
       ? true
-      : getStoredSidebarState();
+      : getInitialSidebarState();
   });
 
   useEffect(() => {
