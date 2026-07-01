@@ -549,7 +549,7 @@ const DocumentUploadField = ({
   }, [file]);
 
   return (
-    <div>
+    <div data-onboarding-field={id}>
       <label className="mb-[6px]   block text-[13px] font-medium leading-[17px] text-[#484555]">
         {label} {required && STEP_ONE_REQUIRED}
       </label>
@@ -1581,7 +1581,31 @@ const SellerOnboarding = () => {
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
   };
 
-  const validateKyc = () => {
+  const scrollToFirstValidationError = (errors) => {
+    const firstField = Object.keys(errors || {})[0];
+    if (!firstField || typeof document === "undefined") return;
+
+    // Wait for React to render the error message before measuring the field.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const field =
+          document.querySelector(`[data-onboarding-field="${firstField}"]`) ||
+          document.querySelector(`[name="${firstField}"]`) ||
+          document.getElementById(firstField);
+        if (!field) return;
+
+        field.scrollIntoView({ behavior: "smooth", block: "center" });
+        const focusTarget = field.matches?.("input, select, textarea")
+          ? field
+          : field.querySelector?.("input:not([type='hidden']), select, textarea");
+        if (focusTarget && focusTarget.type !== "file") {
+          focusTarget.focus({ preventScroll: true });
+        }
+      });
+    });
+  };
+
+  const validateKyc = (fieldName) => {
     const errors = {};
     const dateOfBirth = toDateInputValue(kycForm.dateOfBirth);
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
@@ -1613,7 +1637,17 @@ const SellerOnboarding = () => {
       errors.aadhaarFrontFile = "Aadhaar front image is required";
     if (!kycForm.aadhaarBackFile && !documentUrls.aadhaarBackUrl)
       errors.aadhaarBackFile = "Aadhaar back image is required";
+    if (fieldName) {
+      setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: errors[fieldName] || null,
+      }));
+      return !errors[fieldName];
+    }
     setKycErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstValidationError(errors);
+    }
     return Object.keys(errors).length === 0;
   };
 
@@ -1853,7 +1887,7 @@ const SellerOnboarding = () => {
     return organization;
   };
 
-  const validateProfile = () => {
+  const validateProfile = (fieldName) => {
     const errors = {};
     if (!profileForm.businessType.trim())
       errors.businessType = "Business type is required";
@@ -1911,7 +1945,17 @@ const SellerOnboarding = () => {
       errors.businessAddressPostalCode =
         "Business postal code must be 5 to 10 characters";
     }
+    if (fieldName) {
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: errors[fieldName] || null,
+      }));
+      return !errors[fieldName];
+    }
     setProfileErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstValidationError(errors);
+    }
     return Object.keys(errors).length === 0;
   };
 
@@ -1970,7 +2014,7 @@ const SellerOnboarding = () => {
     }
   };
 
-  const validateBankDetails = () => {
+  const validateBankDetails = (fieldName) => {
     const errors = {};
     if (!bankForm.accountHolderName.trim())
       errors.accountHolderName = "Account holder name is required";
@@ -1989,8 +2033,16 @@ const SellerOnboarding = () => {
       errors.branchName = "Branch name is required";
     if (!kycForm.bankProofFile && !documentUrls.bankProofUrl)
       errors.bankProofFile = "Bank proof document is required";
+    if (fieldName) {
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: errors[fieldName] || null,
+      }));
+      return !errors[fieldName];
+    }
     if (Object.keys(errors).length > 0) {
       setProfileErrors((prev) => ({ ...prev, ...errors }));
+      scrollToFirstValidationError(errors);
       return false;
     }
     return true;
@@ -2123,7 +2175,13 @@ const SellerOnboarding = () => {
       )}
 
       {step === 1 && (
-        <form onSubmit={submitKycStep} className={ONBOARDING_CARD_CLASS}>
+        <form
+          onSubmit={submitKycStep}
+          onBlurCapture={(event) => {
+            if (event.target.name) validateKyc(event.target.name);
+          }}
+          className={ONBOARDING_CARD_CLASS}
+        >
           <OnboardingSection number="01" title="Personal Information">
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-6   md:grid-cols-2">
               {/* Full Name */}
@@ -2344,7 +2402,13 @@ const SellerOnboarding = () => {
       )}
 
       {step === 2 && (
-        <form onSubmit={submitBusinessStep} className={ONBOARDING_CARD_CLASS}>
+        <form
+          onSubmit={submitBusinessStep}
+          onBlurCapture={(event) => {
+            if (event.target.name) validateProfile(event.target.name);
+          }}
+          className={ONBOARDING_CARD_CLASS}
+        >
           <OnboardingSection number="01" title="Business Information">
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
               <div>
@@ -2802,7 +2866,13 @@ const SellerOnboarding = () => {
       )}
 
       {step === 3 && (
-        <form onSubmit={submitBankStep} className={ONBOARDING_CARD_CLASS}>
+        <form
+          onSubmit={submitBankStep}
+          onBlurCapture={(event) => {
+            if (event.target.name) validateBankDetails(event.target.name);
+          }}
+          className={ONBOARDING_CARD_CLASS}
+        >
           <OnboardingSection number="01" title="Bank Information">
             {(flowState?.bankVerificationStatus === "rejected" ||
               flowState?.sellerProfile?.bankVerificationStatus ===

@@ -210,7 +210,7 @@ const InventoryOverview = () => {
             <button
               type="button"
               onClick={() => navigate("/app/inventory-adjustment")}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+              className="admin-btn-primary"
             >
               <MdAddCircleOutline size={16} /> Adjust Stock
             </button>

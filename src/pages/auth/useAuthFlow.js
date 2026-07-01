@@ -460,6 +460,70 @@ export const useAuthFlow = ({
     [updateFormFields],
   );
 
+  const handleInputBlur = useCallback(
+    (event) => {
+      const { name } = event.target;
+      const value = String(formFields[name] || "").trim();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      let error = null;
+
+      if (activeFormType === AUTH_FORM_TYPES.LOGIN) {
+        if (name === "email") {
+          error = !value
+            ? "Email is required."
+            : !emailRegex.test(value)
+              ? "Please enter a valid email address."
+              : null;
+        } else if (name === "password" && !value) {
+          error = "Password is required.";
+        }
+      } else if (activeFormType === AUTH_FORM_TYPES.REGISTER) {
+        if (name === "firstName") {
+          error = !value
+            ? "First name is required"
+            : value.length < 2
+              ? "First name must be at least 2 characters"
+              : null;
+        } else if (name === "lastName") {
+          error = !value
+            ? "Last name is required"
+            : value.length < 2
+              ? "Last name must be at least 2 characters"
+              : null;
+        } else if (name === "phone") {
+          error = !value
+            ? "Phone is required"
+            : !/^[6-9]\d{9}$/.test(value)
+              ? "Phone number must be 10 digits and start with 6, 7, 8, or 9"
+              : null;
+        } else if (name === "registerEmail") {
+          error = !value
+            ? "Email is required"
+            : !emailRegex.test(value)
+              ? "Invalid email"
+              : null;
+        } else if (name === "registerPassword") {
+          error = !value
+            ? "Password is required"
+            : value.length < 8
+              ? "Minimum 8 characters required"
+              : !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/.test(value)
+                ? "Password must contain at least one uppercase letter, one number & one special character"
+                : null;
+        } else if (name === "confirmRegisterPassword") {
+          error = !value
+            ? "Please confirm your password"
+            : value !== formFields.registerPassword
+              ? "Passwords do not match"
+              : null;
+        }
+      }
+
+      setFormErrors((prev) => ({ ...prev, [name]: error }));
+    },
+    [activeFormType, formFields],
+  );
+
   const handleCodeChange = useCallback(
     (index, value) => {
       if (!/^\d*$/.test(value)) return;
@@ -1021,6 +1085,7 @@ export const useAuthFlow = ({
     handleCodeKeyDown,
     handleCodePaste,
     handleForgotPasswordSubmit,
+    handleInputBlur,
     handleInputChange,
     handleLoginSubmit,
     handleRegisterOtpSubmit,

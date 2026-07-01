@@ -9,6 +9,7 @@ const SearchInput = ({
   onSubmit,
   debounce = 0,
   disabled = false,
+  large = false,
 }) => {
   const timerRef = useRef();
   useEffect(() => () => clearTimeout(timerRef.current), []);
@@ -38,7 +39,7 @@ const SearchInput = ({
   };
 
   return (
-    <div className="relative w-full  min-w-0 header-search-pill group relative p-1">
+    <div className={`relative w-full min-w-0 header-search-pill group p-1 ${large ? "header-search-pill-large" : ""}`}>
       <MdSearch
         size={14}
         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"

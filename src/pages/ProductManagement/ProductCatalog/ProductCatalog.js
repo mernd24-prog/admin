@@ -594,6 +594,19 @@ const ProductCatalog = () => {
     setAppliedFilters(filters);
     list.setPage(1);
   };
+
+  // Apply selections and dates immediately, while lightly debouncing text input.
+  useEffect(() => {
+    const delay = filters.search !== appliedFilters.search ? 300 : 0;
+    const timer = setTimeout(() => {
+      list.clearSelection();
+      setAppliedFilters(filters);
+      list.setPage(1);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+
   const clearFilters = () => {
     const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
@@ -846,7 +859,7 @@ const ProductCatalog = () => {
   );
 
   return (
-    <div className="p-6 mx-auto overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl">
+   <div className="mx-auto max-w-[1600px] p-6 overflow-x-auto overflow-y-auto">
       <Loader loading={loading} />
       <div className="flex md:flex-row flex-col items-center justify-between mb-4">
         <h1 className="text-xl font-bold ">Product Catalog</h1>
@@ -859,8 +872,8 @@ const ProductCatalog = () => {
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
-      <div className="bg-white">
-        <section className="p-2 border-b">
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        <section className="border-b border-[var(--admin-line)] p-4">
           <SearchComponent
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
@@ -885,9 +898,13 @@ const ProductCatalog = () => {
             isStatusAction={true}
             handleAction={handleBulkAction}
             requiredModule="products"
-            isSearchDown={true}
+            isSearchDown={false}
             defaultSearchOpen={true}
             exclusiveStatusFilters={true}
+            filterGridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
           />
         </section>
         <section>
