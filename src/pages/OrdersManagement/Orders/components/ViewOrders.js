@@ -26,7 +26,7 @@ const ALLOWED_TRANSITIONS = {
   payment_failed:  ["pending_payment", "cancelled"],
   confirmed:       ["packed", "cancelled"],
   packed:          ["shipped", "cancelled"],
-  shipped:         ["delivered"],
+  shipped:         [],
   delivered:       ["fulfilled", "return_requested"],
   fulfilled:       ["return_requested"],
   return_requested:["partially_returned", "returned"],
@@ -104,14 +104,14 @@ const groupItemsBySeller = (items = []) =>
     const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
     const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
     const organizationSnapshot = normalizeJson(firstDefined(item.organization_snapshot, item.organizationSnapshot), {});
-    const sellerName = firstDefined(sellerSnapshot.name, sellerSnapshot.sellerName, sellerId);
+    const sellerName = firstDefined(sellerSnapshot.displayName, sellerSnapshot.businessName, sellerSnapshot.name, sellerSnapshot.sellerName, "Seller");
     const organizationName = firstDefined(
       organizationSnapshot.legalName,
       organizationSnapshot.legal_name,
       organizationSnapshot.storeDisplayName,
       organizationSnapshot.store_name,
       item.organizationName,
-      organizationId !== "default" ? organizationId : ""
+      ""
     );
     const groupKey = `${sellerId}:${organizationId}`;
     if (!groups[groupKey]) {
@@ -176,9 +176,10 @@ const normalizeSellerSettlement = (seller = {}) => ({
   taxCollected: money(firstDefined(seller.taxAmount, seller.taxCollected, seller.tax_amount, 0)),
   sellerPayoutBase: money(firstDefined(seller.sellerPayoutBaseAmount, seller.seller_payout_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
   commissionFee: money(firstDefined(seller.platformFeeAmount, seller.commissionAmount, seller.commissionFee, seller.platform_fee_amount, 0)),
+  variableCommissionFee: money(firstDefined(seller.commissionFeeAmount, seller.commission_fee_amount, 0)),
   platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
-  fixedFee: money(firstDefined(seller.fixedFee, seller.fixed_fee, 0)),
-  closingFee: money(firstDefined(seller.closingFee, seller.closing_fee, 0)),
+  fixedFee: money(firstDefined(seller.fixedFeeAmount, seller.fixedFee, seller.fixed_fee_amount, seller.fixed_fee, 0)),
+  closingFee: money(firstDefined(seller.closingFeeAmount, seller.closingFee, seller.closing_fee_amount, seller.closing_fee, 0)),
   shippingReimbursement: money(firstDefined(seller.shippingReimbursementAmount, seller.shipping_reimbursement_amount, 0)),
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
   refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
@@ -186,6 +187,9 @@ const normalizeSellerSettlement = (seller = {}) => ({
   commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
   payoutStatus: firstDefined(seller.payoutStatus, seller.payout_status, ""),
   payoutId: firstDefined(seller.payoutId, seller.payout_id, ""),
+  payoutReference: firstDefined(seller.payoutReference, seller.payment_reference, ""),
+  payoutMethod: firstDefined(seller.payoutMethod, seller.payment_method, ""),
+  payoutProcessedAt: firstDefined(seller.payoutProcessedAt, seller.processed_at, ""),
   commissionRates: Array.isArray(seller.commissionRates) ? seller.commissionRates : [],
 });
 
@@ -341,6 +345,7 @@ const OrderSummary = () => {
   const customerPayableAmount = money(firstDefined(summary.customerPayableAmount, order.payable_amount, order.payableAmount, order.total_amount));
   const items = Array.isArray(order.items) ? order.items : [];
   const relations = order.relations || {};
+  const buyer = relations.buyer || order.buyer || order.buyerSnapshot || {};
   const payments = Array.isArray(relations.payments) ? relations.payments : [];
   const shipments = Array.isArray(relations.shipments) ? relations.shipments : [];
   const walletTransactions = Array.isArray(relations.walletTransactions) ? relations.walletTransactions : [];
@@ -451,7 +456,7 @@ const OrderSummary = () => {
       <div className="mx-auto max-w-7xl">
         <PageHeader
           title={`Order #${orderNumber}`}
-          subtitle={orderId}
+          subtitle="Customer, payment, shipment, tax, commission, and payout details"
           breadcrumbs={[
             { label: "Home", to: "/app/home" },
             { label: "Orders", to: "/app/orders" },
@@ -471,7 +476,7 @@ const OrderSummary = () => {
               </button>
             </PermissionGuard>
             {/* Sellers see the button based on role + available transitions; admins need status_change permission */}
-            {(isSeller && statusOptions.length > 0) ? (
+            {statusOptions.length > 0 && ((isSeller) ? (
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
@@ -489,7 +494,7 @@ const OrderSummary = () => {
                   <FaFile /> Status
                 </button>
               </PermissionGuard>
-            )}
+            ))}
             </>
           )}
         />
@@ -616,17 +621,11 @@ const OrderSummary = () => {
 
           <Panel title="Buyer & Shipping">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(220px,320px)_1fr]">
-              <InfoRow
-                label="Buyer"
-                value={
-                  firstDefined(
-                    order.buyerSnapshot?.name || order.buyer?.name || order.buyerName || order.buyer_name,
-                    order.buyerSnapshot?.email || order.buyer?.email || order.buyerEmail || order.buyer_email,
-                    order.buyer_id, order.buyerId,
-                    "N/A"
-                  )
-                }
-              />
+              <div>
+                <InfoRow label="Customer" value={firstDefined(buyer.displayName, buyer.fullName, buyer.name, order.buyerName, "Customer")} />
+                <InfoRow label="Email" value={firstDefined(buyer.email, order.buyerEmail, "Not available")} />
+                <InfoRow label="Phone" value={firstDefined(buyer.phone, shippingAddress.phone, "Not available")} />
+              </div>
               <div className="rounded-md bg-[#f8faff] p-3 text-sm leading-6 text-[#202337]">
                 {[shippingAddress.line1, shippingAddress.line2, shippingAddress.city, shippingAddress.state, shippingAddress.postalCode, shippingAddress.country].filter(Boolean).join(", ") || "N/A"}
               </div>
@@ -692,14 +691,14 @@ const OrderSummary = () => {
                   {payments.map((payment) => (
                     <RelatedCard
                       key={payment.id || payment._id || payment.transaction_reference}
-                      title={firstDefined(payment.transaction_reference, payment.provider_payment_id, payment.id)}
-                      subtitle={`Order ${firstDefined(payment.order_id, payment.orderId, orderId)}`}
+                      title={`${displayStatus(payment.provider || "payment")} payment`}
+                      subtitle={`Order #${orderNumber}`}
                       status={payment.status}
                       rows={[
                         { label: "Provider", value: displayStatus(payment.provider) },
                         { label: "Amount", value: `${payment.currency || order.currency || "INR"} ${money(payment.amount).toFixed(2)}` },
-                        { label: "Provider Order", value: firstDefined(payment.provider_order_id, payment.providerOrderId, "N/A") },
-                        { label: "Provider Payment", value: firstDefined(payment.provider_payment_id, payment.providerPaymentId, "N/A") },
+                        { label: "Payment status", value: displayStatus(payment.status) },
+                        { label: "Method", value: displayStatus(firstDefined(payment.method, payment.payment_method, payment.provider)) },
                         { label: "Created", value: formatDate(firstDefined(payment.created_at, payment.createdAt)) },
                       ]}
                     />
@@ -715,14 +714,13 @@ const OrderSummary = () => {
                   {shipments.map((shipment) => (
                     <RelatedCard
                       key={shipment.id || shipment._id || shipment.awb_number}
-                      title={firstDefined(shipment.awb_number, shipment.tracking_number, shipment.id)}
+                      title={firstDefined(shipment.awb_number, shipment.tracking_number, "Shipment")}
                       subtitle={(() => {
                         const sellerName = firstDefined(
                           shipment.sellerSnapshot?.name, shipment.sellerName,
-                          shipment.seller?.name, shipment.seller?.businessName
+                          shipment.seller?.displayName, shipment.seller?.name, shipment.seller?.businessName
                         );
-                        const sellerId = firstDefined(shipment.seller_id, shipment.sellerId);
-                        return sellerName || (sellerId ? `Seller ${sellerId}` : "N/A");
+                        return sellerName || "Seller";
                       })()}
                       status={shipment.status}
                       rows={[
@@ -752,11 +750,11 @@ const OrderSummary = () => {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
                 {invoice ? (
                   <RelatedCard
-                    title={firstDefined(invoice.invoice_number, invoice.invoiceNumber, invoice.id)}
+                    title={firstDefined(invoice.invoice_number, invoice.invoiceNumber, "Tax invoice")}
                     subtitle="Tax invoice"
                     status={firstDefined(invoice.status, "generated")}
                     rows={[
-                      { label: "Invoice ID", value: firstDefined(invoice.id, invoice._id, "N/A") },
+                      { label: "Invoice number", value: firstDefined(invoice.invoice_number, invoice.invoiceNumber, "Generated") },
                       { label: "Total", value: formatMoney(firstDefined(invoice.total_amount, invoice.totalAmount)) },
                       { label: "Created", value: formatDate(firstDefined(invoice.created_at, invoice.createdAt)) },
                     ]}
@@ -764,11 +762,11 @@ const OrderSummary = () => {
                 ) : <EmptyState>No invoice found</EmptyState>}
                 {eWayBill ? (
                   <RelatedCard
-                    title={firstDefined(eWayBill.eway_bill_number, eWayBill.ewayBillNumber, eWayBill.id)}
+                    title={firstDefined(eWayBill.eway_bill_number, eWayBill.ewayBillNumber, "E-way bill")}
                     subtitle="E-way bill"
                     status={firstDefined(eWayBill.status, "created")}
                     rows={[
-                      { label: "Document ID", value: firstDefined(eWayBill.id, eWayBill._id, "N/A") },
+                      { label: "Vehicle", value: firstDefined(eWayBill.vehicle_number, eWayBill.vehicleNumber, "Not added") },
                       { label: "Valid Till", value: formatDate(firstDefined(eWayBill.valid_till, eWayBill.validTill)) },
                       { label: "Created", value: formatDate(firstDefined(eWayBill.created_at, eWayBill.createdAt)) },
                     ]}
@@ -785,7 +783,7 @@ const OrderSummary = () => {
                     {returns.map((returnRequest) => (
                       <RelatedCard
                         key={returnRequest.id || returnRequest._id}
-                        title={firstDefined(returnRequest.id, returnRequest._id)}
+                        title="Return request"
                         subtitle={displayStatus(returnRequest.reason)}
                         status={returnRequest.status}
                         rows={[
@@ -802,12 +800,12 @@ const OrderSummary = () => {
                     {walletTransactions.map((walletTx) => (
                       <RelatedCard
                         key={walletTx.id || walletTx._id || walletTx.transaction_id}
-                        title={firstDefined(walletTx.transaction_id, walletTx.id, walletTx._id)}
+                        title={`${displayStatus(firstDefined(walletTx.type, walletTx.transaction_type, "wallet"))} wallet entry`}
                         subtitle={displayStatus(firstDefined(walletTx.type, walletTx.transaction_type, "wallet"))}
                         status={firstDefined(walletTx.status, "recorded")}
                         rows={[
                           { label: "Amount", value: formatMoney(firstDefined(walletTx.amount, walletTx.value)) },
-                          { label: "Reference", value: firstDefined(walletTx.reference_id, walletTx.referenceId, orderId) },
+                          { label: "Order", value: `#${orderNumber}` },
                           { label: "Created", value: formatDate(firstDefined(walletTx.created_at, walletTx.createdAt)) },
                         ]}
                       />
@@ -827,7 +825,7 @@ const OrderSummary = () => {
                   <div className="flex justify-between gap-2 mb-3">
                     <div>
                       <div className="font-semibold text-[#202337]">{seller.sellerName}</div>
-                      <div className="text-xs text-[#65718b]">{seller.sellerId}</div>
+                      {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-[#1f4fc9]">{formatMoney(seller.sellerPayout)}</div>
@@ -840,22 +838,26 @@ const OrderSummary = () => {
                     <div className="flex justify-between"><span>Taxable product sales</span><span>{formatMoney(seller.taxableSales)}</span></div>
                     <div className="flex justify-between"><span>Tax to maintain</span><span>{formatMoney(seller.taxCollected)}</span></div>
                     <div className="flex justify-between">
-                      <span>Platform commission / fee</span>
+                      <span>Total platform fee</span>
                       <span>
                         -{formatMoney(seller.commissionFee)}
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Percentage commission part</span><span>{formatMoney(seller.variableCommissionFee)}</span></div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Fixed fee part</span><span>{formatMoney(seller.fixedFee)}</span></div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Closing fee part</span><span>{formatMoney(seller.closingFee)}</span></div>
                     <div className="flex justify-between"><span>Platform fee GST</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
-                    <div className="flex justify-between"><span>Fixed/closing fees</span><span>-{formatMoney(seller.fixedFee + seller.closingFee)}</span></div>
                     <div className="flex justify-between"><span>Shipping reimbursement</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
                     <div className="flex justify-between"><span>Shipping deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
                     <div className="flex justify-between"><span>Refund adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>
-                    {(seller.commissionStatus || seller.payoutStatus || seller.payoutId) && (
+                    {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
                         {seller.commissionStatus && <span>Commission: {displayStatus(seller.commissionStatus)}</span>}
                         {seller.payoutStatus && <span className="ml-2">Payout: {displayStatus(seller.payoutStatus)}</span>}
-                        {seller.payoutId && <span className="ml-2">ID: {seller.payoutId}</span>}
+                        {seller.payoutMethod && <span className="ml-2">Method: {displayStatus(seller.payoutMethod)}</span>}
+                        {seller.payoutReference && <span className="ml-2">Bank ref: {seller.payoutReference}</span>}
+                        {seller.payoutProcessedAt && <span className="ml-2">Paid: {formatDate(seller.payoutProcessedAt)}</span>}
                       </div>
                     )}
                     <div className="flex justify-between border-t border-[#efe6cd] pt-2 font-medium"><span>Net seller payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>

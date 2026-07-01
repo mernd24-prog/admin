@@ -214,8 +214,8 @@ const Payments = () => {
       sortable: true,
       render: (_, row) => (
         <div>
-          <div className="font-semibold text-gray-800">{row.transaction_reference || row.transactionReference || row.id}</div>
-          <div className="text-xs text-gray-400">Order {row.order_id}</div>
+          <div className="font-semibold text-gray-800">{display(row.provider)} payment</div>
+          <div className="text-xs text-gray-400">Order #{row.orderNumber || "Order"}</div>
         </div>
       ),
     },
@@ -224,19 +224,14 @@ const Payments = () => {
       label: "Buyer",
       sortable: true,
       render: (value, row) => {
-        const name = row.buyerName || row.buyer?.name || row.buyerSnapshot?.name || row.buyer_name;
+        const name = row.buyerName || row.buyer?.displayName || row.buyer?.name || row.buyerSnapshot?.name || row.buyer_name;
         const email = row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email || row.buyer_email;
         return (
           <div>
             {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
             {email && !name && <div className="text-sm text-gray-700">{email}</div>}
             {email && name && <div className="text-xs text-gray-400">{email}</div>}
-            {!name && !email && value && (
-              <span className="font-mono text-xs text-gray-500">
-                {String(value).slice(0, 16)}{String(value).length > 16 ? "…" : ""}
-              </span>
-            )}
-            {!name && !email && !value && "—"}
+            {!name && !email && <span className="text-xs text-gray-500">Customer details unavailable</span>}
           </div>
         );
       },
@@ -366,19 +361,29 @@ const Payments = () => {
 
       <DefaultModal isOpen={Boolean(detailPayment)} onClose={() => setDetailPayment(null)} title="Payment Detail">
         <div className="space-y-3 text-sm" aria-busy={detailLoading}>
-          <div><strong>Payment:</strong> {detailPayment?.id}</div>
-          <div><strong>Order:</strong> {detailPayment?.order_id}</div>
-          <div><strong>Provider:</strong> {display(detailPayment?.provider)}</div>
-          <div><strong>Status:</strong> {display(detailPayment?.status)}</div>
-          <div><strong>Provider Order:</strong> {detailPayment?.provider_order_id || "N/A"}</div>
-          <div><strong>Provider Payment:</strong> {detailPayment?.provider_payment_id || "N/A"}</div>
-          <pre className="bg-gray-50 rounded p-3 text-xs overflow-auto">{JSON.stringify(detailPayment?.metadata || {}, null, 2)}</pre>
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-2">
+            <div><strong>Order:</strong> #{detailPayment?.orderNumber || "Order"}</div>
+            <div><strong>Customer:</strong> {detailPayment?.buyerName || detailPayment?.buyer?.displayName || "Customer"}</div>
+            <div><strong>Email:</strong> {detailPayment?.buyer?.email || "Not available"}</div>
+            <div><strong>Provider:</strong> {display(detailPayment?.provider)}</div>
+            <div><strong>Status:</strong> {display(detailPayment?.status)}</div>
+            <div><strong>Amount:</strong> {detailPayment?.currency || "INR"} {money(detailPayment?.amount)}</div>
+            <div><strong>Verification:</strong> {display(detailPayment?.verification_method || "not verified")}</div>
+            <div><strong>Created:</strong> {detailPayment?.created_at ? moment(detailPayment.created_at).format("DD-MM-YYYY HH:mm") : "N/A"}</div>
+          </div>
+          {(detailPayment?.provider_payment_id || detailPayment?.transaction_reference) && (
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-800">
+              <strong>Payment reference:</strong> {detailPayment.provider_payment_id || detailPayment.transaction_reference}
+            </div>
+          )}
+          {detailPayment?.failed_reason && <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-red-700"><strong>Failure reason:</strong> {detailPayment.failed_reason}</div>}
+          {detailPayment?.metadata?.approvalReason && <div><strong>Approval note:</strong> {detailPayment.metadata.approvalReason}</div>}
         </div>
       </DefaultModal>
 
       <DefaultModal isOpen={decision.open} onClose={() => setDecision({ open: false, type: "", payment: null, referenceId: "", reason: "" })} title={decision.type === "approve" ? "Approve Payment" : "Reject Payment"} onSubmit={submitDecision}>
         <div className="space-y-3">
-          <Input labelName="Reference ID" value={decision.referenceId} onChange={(event) => setDecision((prev) => ({ ...prev, referenceId: event.target.value }))} required={decision.type === "approve"} />
+          <Input labelName="Collection / bank reference" value={decision.referenceId} onChange={(event) => setDecision((prev) => ({ ...prev, referenceId: event.target.value }))} required={decision.type === "approve"} />
           <Input type="textarea" labelName="Reason" value={decision.reason} onChange={(event) => setDecision((prev) => ({ ...prev, reason: event.target.value }))} required={decision.type === "reject"} />
         </div>
       </DefaultModal>

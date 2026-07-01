@@ -505,12 +505,7 @@ const ROUTE_MODULES = [
 
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
-  [
-    [
-      "/badges", "/ribbons",
-    ],
-    ["pricing"],
-  ],
+  [["/badges", "/ribbons"], ["badges", "platform", "pricing"]],
   [["/referral-commerce"], ["referral"]],
   [["/promotions-banners", "/content-management/promotion-banner"], ["banners", "cms_pages", "cms", "pricing"]],
 
@@ -580,7 +575,6 @@ const ROUTE_MODULES = [
 
   // Collections & Badges
   [["/collections"], ["platform", "products"]],
-  [["/badges", "/ribbons"], ["platform", "pricing"]],
 
   // Preferences
   [["/preferences"], ["admin"]],

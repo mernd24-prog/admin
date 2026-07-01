@@ -21,7 +21,7 @@ import {
   StatusBadge,
 } from "../../../components/Shared";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { useListPage } from "../../../hooks/useListPage";
@@ -104,21 +104,21 @@ const normalizeFormFromAgent = (agent = {}) => ({
   note: agent.metadata?.verificationNote || "",
 });
 
-const toAgentPayload = (form) => ({
-  sellerId: form.sellerId,
+const toAgentPayload = (form, isSeller) => ({
+  ...(!isSeller ? { sellerId: form.sellerId, verificationStatus: form.verificationStatus } : {}),
   name: form.name.trim(),
   phone: form.phone.trim(),
   email: form.email.trim() || null,
   vehicleType: form.vehicleType.trim() || null,
   vehicleNumber: form.vehicleNumber.trim() || null,
   licenseNumber: form.licenseNumber.trim() || null,
-  verificationStatus: form.verificationStatus,
   active: form.active,
   metadata: form.note ? { verificationNote: form.note } : {},
 });
 
 const DeliveryAgents = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const selector = useSelector((state) => state.delivery);
   const payload = unwrapList(selector.agentsData);
   const list = useListPage({
@@ -133,6 +133,10 @@ const DeliveryAgents = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [confirm, setConfirm] = useState({ open: false });
+  const filterFields = useMemo(
+    () => isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS,
+    [isSeller],
+  );
 
   const fetchAgents = useCallback(async () => {
     try {
@@ -172,7 +176,7 @@ const DeliveryAgents = () => {
       toast.error("Agent name is required");
       return;
     }
-    if (!form.sellerId) {
+    if (!isSeller && !form.sellerId) {
       toast.error("Seller is required for delivery agent management");
       return;
     }
@@ -183,7 +187,7 @@ const DeliveryAgents = () => {
 
     try {
       setLoading(true);
-      const body = toAgentPayload(form);
+      const body = toAgentPayload(form, isSeller);
       if (form.id) {
         await dispatch(updateDeliveryAgent({ deliveryAgentId: form.id, ...body })).unwrap();
         toast.success("Delivery agent updated");
@@ -199,7 +203,7 @@ const DeliveryAgents = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, fetchAgents, form]);
+  }, [dispatch, fetchAgents, form, isSeller]);
 
   const runPatchAction = useCallback(async () => {
     const { row, patch, successMessage } = confirm;
@@ -304,7 +308,7 @@ const DeliveryAgents = () => {
                 <MdEdit size={15} /> Edit
               </button>
             </PermissionGuard>
-            {!verified && (
+            {!isSeller && !verified && (
               <PermissionGuard module="delivery" action={ACTIONS.UPDATE} hide>
                 <button
                   type="button"
@@ -322,7 +326,7 @@ const DeliveryAgents = () => {
                 </button>
               </PermissionGuard>
             )}
-            {!rejected && (
+            {!isSeller && !rejected && (
               <PermissionGuard module="delivery" action={ACTIONS.UPDATE} hide>
                 <button
                   type="button"
@@ -364,13 +368,20 @@ const DeliveryAgents = () => {
         );
       },
     },
-  ], []);
+  ], [isSeller]);
+
+  const visibleColumns = useMemo(
+    () => isSeller ? columns.filter((column) => column.key !== "seller_id") : columns,
+    [columns, isSeller],
+  );
 
   return (
     <div className="max-w-7xl mx-auto mt-8">
       <PageHeader
         title="Delivery Agents"
-        subtitle="Manage in-house delivery agents and seller-specific shipment assignees"
+        subtitle={isSeller
+          ? "Add your delivery staff. An admin must verify each agent before shipment assignment."
+          : "Review and manage seller-specific delivery agents before they can handle shipments."}
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Delivery Agents" }]}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -392,7 +403,7 @@ const DeliveryAgents = () => {
       />
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={payload.list}
         loading={loading}
         totalCount={payload.total || payload.list.length}
@@ -409,7 +420,7 @@ const DeliveryAgents = () => {
         error={error}
         filterBar={(
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={filterFields}
             values={list.filters}
             onChange={list.setFilter}
             onClear={list.clearFilters}
@@ -434,31 +445,39 @@ const DeliveryAgents = () => {
         loading={loading}
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="block text-sm text-gray-700 md:col-span-2">
-            <span className="mb-1 block font-medium">Seller *</span>
-            <FilterSellerSelect
-              value={form.sellerId}
-              onChange={(sellerId) => setForm((prev) => ({ ...prev, sellerId }))}
-            />
-          </label>
+          {!isSeller && (
+            <label className="block text-sm text-gray-700 md:col-span-2">
+              <span className="mb-1 block font-medium">Seller *</span>
+              <FilterSellerSelect
+                value={form.sellerId}
+                onChange={(sellerId) => setForm((prev) => ({ ...prev, sellerId }))}
+              />
+            </label>
+          )}
           <FormInput label="Name" value={form.name} required onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} />
           <FormInput label="Phone" value={form.phone} required onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))} />
           <FormInput label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} />
           <FormInput label="Vehicle Type" value={form.vehicleType} onChange={(value) => setForm((prev) => ({ ...prev, vehicleType: value }))} />
           <FormInput label="Vehicle Number" value={form.vehicleNumber} onChange={(value) => setForm((prev) => ({ ...prev, vehicleNumber: value }))} />
           <FormInput label="License Number" value={form.licenseNumber} onChange={(value) => setForm((prev) => ({ ...prev, licenseNumber: value }))} />
-          <label className="block text-sm text-gray-700">
-            <span className="mb-1 block font-medium">Verification</span>
-            <select
-              className="admin-input w-full"
-              value={form.verificationStatus}
-              onChange={(event) => setForm((prev) => ({ ...prev, verificationStatus: event.target.value }))}
-            >
-              <option value="pending">Pending</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </label>
+          {!isSeller ? (
+            <label className="block text-sm text-gray-700">
+              <span className="mb-1 block font-medium">Verification</span>
+              <select
+                className="admin-input w-full"
+                value={form.verificationStatus}
+                onChange={(event) => setForm((prev) => ({ ...prev, verificationStatus: event.target.value }))}
+              >
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+          ) : (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Verification is handled by an administrator. Pending agents cannot be assigned to shipments.
+            </div>
+          )}
           <label className="flex items-center gap-2 pt-7 text-sm text-gray-700">
             <input
               type="checkbox"

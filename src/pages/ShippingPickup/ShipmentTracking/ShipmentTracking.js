@@ -31,6 +31,7 @@ import {
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { uploadFile } from "../../../_helpers/globalFunctions";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -94,6 +95,7 @@ const EMPTY_TRACKING = {
 const EMPTY_ASSIGNMENT = {
   shipmentId: "",
   sellerId: "",
+  sellerName: "",
   deliveryAgentId: "",
 };
 
@@ -248,6 +250,12 @@ const ShipmentTracking = () => {
   const [shipmentModal, setShipmentModal] = useState(false);
   const [sellerOptions, setSellerOptions] = useState([]);
   useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => {}); }, []);
+  const [orderOptions, setOrderOptions] = useState([]);
+  useEffect(() => {
+    dropdownApi.getOrders({ limit: 100 })
+      .then(setOrderOptions)
+      .catch(() => setOrderOptions([]));
+  }, []);
   const [trackingModal, setTrackingModal] = useState(false);
   const [assignmentModal, setAssignmentModal] = useState(false);
   const [verificationModal, setVerificationModal] = useState(false);
@@ -259,6 +267,8 @@ const ShipmentTracking = () => {
   const [trackingStatusOptions, setTrackingStatusOptions] = useState(TRACKING_STATUS_OPTIONS);
   const [assignmentForm, setAssignmentForm] = useState(EMPTY_ASSIGNMENT);
   const [verificationForm, setVerificationForm] = useState(EMPTY_VERIFICATION);
+  const [verificationMethodOptions, setVerificationMethodOptions] = useState(["otp"]);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [ewayForm, setEwayForm] = useState(EMPTY_EWAY);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -401,12 +411,15 @@ const ShipmentTracking = () => {
       setLoading(true);
       const response = await dispatch(generateShipmentDeliveryOtp({
         shipmentId: row.id,
-        channels: ["in_app", "sms", "email"],
+        channels: ["in_app", "email"],
       })).unwrap();
       const result = unwrapResult(response);
-      toast.success(result?.otp
-        ? `Delivery OTP ${result.otp} generated and queued`
-        : "Delivery OTP generated and queued for customer notification");
+      const queuedChannels = (result.notificationDelivery || [])
+        .filter((item) => item.status === "queued")
+        .map((item) => item.channel.replace("in_app", "app"));
+      toast.success(queuedChannels.length
+        ? `Delivery OTP sent through ${queuedChannels.join(" and ")}`
+        : "Delivery OTP generated for the customer");
       await fetchShipments();
     } catch (error) {
       toast.error(error?.message || error || "Failed to generate delivery OTP");
@@ -422,6 +435,14 @@ const ShipmentTracking = () => {
     }
     if (verificationForm.method === "otp" && !verificationForm.otp.trim()) {
       toast.error("Delivery OTP is required");
+      return;
+    }
+    if (["signature", "photo"].includes(verificationForm.method) && !verificationForm.proofUrl) {
+      toast.error(`Upload the ${verificationForm.method === "signature" ? "customer signature" : "delivery photo"} first`);
+      return;
+    }
+    if (verificationForm.method === "manual_override" && !verificationForm.note.trim()) {
+      toast.error("Enter the reason for overriding verification");
       return;
     }
     try {
@@ -444,6 +465,20 @@ const ShipmentTracking = () => {
       setLoading(false);
     }
   }, [dispatch, fetchShipments, verificationForm]);
+
+  const handleProofUpload = useCallback(async (file) => {
+    if (!file) return;
+    try {
+      setUploadingProof(true);
+      const proofUrl = await uploadFile(file, "DELIVERY_PROOF");
+      setVerificationForm((prev) => ({ ...prev, proofUrl }));
+      toast.success("Delivery proof uploaded");
+    } catch (uploadError) {
+      toast.error(uploadError?.message || uploadError || "Failed to upload delivery proof");
+    } finally {
+      setUploadingProof(false);
+    }
+  }, []);
 
   const createManifest = useCallback(async () => {
     if (!selectedRows.length) {
@@ -497,6 +532,7 @@ const ShipmentTracking = () => {
     setAssignmentForm({
       shipmentId: row.id,
       sellerId: row.seller_id,
+      sellerName: row.sellerName || row.seller?.displayName || row.seller?.businessName || "Shipment seller",
       deliveryAgentId: row.delivery_agent_id || "",
     });
     setAssignmentModal(true);
@@ -505,10 +541,16 @@ const ShipmentTracking = () => {
 
   const openVerification = useCallback((row) => {
     const methods = Array.isArray(row.verification_methods) ? row.verification_methods : [];
+    const availableMethods = methods.length
+      ? methods
+      : ["otp", "signature", "photo", "qr", "courier_api"];
+    if (!isSeller) availableMethods.push("manual_override");
+    const uniqueMethods = Array.from(new Set(availableMethods));
+    setVerificationMethodOptions(uniqueMethods);
     setVerificationForm({
       ...EMPTY_VERIFICATION,
       shipmentId: row.id,
-      method: methods[0] || (shipmentStatusOf(row) === "delivered" && !isSeller ? "manual_override" : "otp"),
+      method: uniqueMethods[0] || "otp",
     });
     setVerificationModal(true);
   }, [isSeller]);
@@ -786,7 +828,23 @@ const ShipmentTracking = () => {
 
       <DefaultModal isOpen={shipmentModal} onClose={() => setShipmentModal(false)} title="Create Shipment" onSubmit={submitShipment}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Input labelName="Order ID" name="orderId" value={shipmentForm.orderId} onChange={(event) => setShipmentForm((prev) => ({ ...prev, orderId: event.target.value }))} required />
+          <label className="block text-sm text-gray-700">
+            <span className="mb-1 block font-medium">Order *</span>
+            <select
+              className="admin-input w-full"
+              value={shipmentForm.orderId}
+              onChange={(event) => setShipmentForm((prev) => ({ ...prev, orderId: event.target.value }))}
+              required
+            >
+              <option value="">Select an order</option>
+              {shipmentForm.orderId && !orderOptions.some((option) => option.value === shipmentForm.orderId) && (
+                <option value={shipmentForm.orderId}>Selected order</option>
+              )}
+              {orderOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
           {!isSeller && (
             <label className="block text-sm text-gray-700">
               <span className="block mb-1 font-medium">Seller</span>
@@ -813,10 +871,9 @@ const ShipmentTracking = () => {
           <Input type="number" labelName="Length" value={shipmentForm.packageSnapshot.length} onChange={(event) => updatePackageField("length", event.target.value)} />
           <Input type="number" labelName="Width" value={shipmentForm.packageSnapshot.width} onChange={(event) => updatePackageField("width", event.target.value)} />
           <Input type="number" labelName="Height" value={shipmentForm.packageSnapshot.height} onChange={(event) => updatePackageField("height", event.target.value)} />
-          <label className="flex items-center gap-2 text-sm text-gray-700 pt-7">
-            <input type="checkbox" checked={shipmentForm.cod} onChange={(event) => setShipmentForm((prev) => ({ ...prev, cod: event.target.checked }))} />
-            COD shipment
-          </label>
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+            COD is detected automatically from the order payment method.
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-700 pt-7">
             <input
               type="checkbox"
@@ -866,8 +923,8 @@ const ShipmentTracking = () => {
       >
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600">
-            <div><strong>Shipment:</strong> {assignmentForm.shipmentId || "N/A"}</div>
-            <div><strong>Seller:</strong> {assignmentForm.sellerId || "N/A"}</div>
+            <div><strong>Seller:</strong> {assignmentForm.sellerName || "Shipment seller"}</div>
+            <div className="mt-1">Only active, admin-verified agents are available.</div>
           </div>
           <label className="block text-sm text-gray-700">
             <span className="mb-1 block font-medium">Verified active agent</span>
@@ -895,47 +952,100 @@ const ShipmentTracking = () => {
 
       <DefaultModal isOpen={verificationModal} onClose={() => setVerificationModal(false)} title="Verify Delivery" onSubmit={submitVerification}>
         <div className="space-y-3">
-          <select
-            className="admin-input"
-            value={verificationForm.method}
-            onChange={(event) => setVerificationForm((prev) => ({ ...prev, method: event.target.value }))}
-          >
-            <option value="otp">OTP</option>
-            <option value="signature">Signature</option>
-            <option value="photo">Photo proof</option>
-            <option value="qr">QR code</option>
-            <option value="courier_api">Courier API</option>
-            <option value="manual_override">Manual override</option>
-          </select>
+          <label className="block text-sm text-gray-700">
+            <span className="mb-1 block font-medium">Verification method</span>
+            <select
+              className="admin-input w-full"
+              value={verificationForm.method}
+              onChange={(event) => setVerificationForm((prev) => ({ ...prev, method: event.target.value, otp: "", proofUrl: "", qrCode: "" }))}
+            >
+              {verificationMethodOptions.map((method) => (
+                <option key={method} value={method}>{displayStatus(method)}</option>
+              ))}
+            </select>
+          </label>
           {verificationForm.method === "otp" && (
-            <Input labelName="Customer OTP" value={verificationForm.otp} onChange={(event) => setVerificationForm((prev) => ({ ...prev, otp: event.target.value }))} required />
+            <div className="space-y-2">
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+                Ask the customer for the 6-digit OTP sent to their account. Never ask for a login or payment OTP.
+              </div>
+              <Input labelName="Customer delivery OTP" value={verificationForm.otp} onChange={(event) => setVerificationForm((prev) => ({ ...prev, otp: event.target.value.replace(/\D/g, "").slice(0, 6) }))} required />
+            </div>
           )}
-          {verificationForm.method !== "otp" && (
-            <>
-              <Input labelName="Verification reference" value={verificationForm.verificationReference} onChange={(event) => setVerificationForm((prev) => ({ ...prev, verificationReference: event.target.value }))} />
-              <Input labelName="Proof URL" value={verificationForm.proofUrl} onChange={(event) => setVerificationForm((prev) => ({ ...prev, proofUrl: event.target.value }))} />
-              {verificationForm.method === "qr" && (
-                <Input labelName="QR Code" value={verificationForm.qrCode} onChange={(event) => setVerificationForm((prev) => ({ ...prev, qrCode: event.target.value }))} />
-              )}
-            </>
+          {["signature", "photo"].includes(verificationForm.method) && (
+            <label className="block rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-700">
+              <span className="mb-2 block font-medium">
+                {verificationForm.method === "signature" ? "Upload customer signature" : "Upload delivery photo"} *
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploadingProof}
+                onChange={(event) => handleProofUpload(event.target.files?.[0])}
+              />
+              <div className="mt-2 text-xs text-gray-500">
+                {uploadingProof ? "Uploading…" : verificationForm.proofUrl ? "Proof uploaded and ready" : "Use a clear image that confirms handover."}
+              </div>
+            </label>
+          )}
+          {verificationForm.method === "qr" && (
+            <Input labelName="Scanned QR value" value={verificationForm.qrCode} onChange={(event) => setVerificationForm((prev) => ({ ...prev, qrCode: event.target.value }))} required />
+          )}
+          {verificationForm.method === "courier_api" && (
+            <Input labelName="Courier confirmation reference" value={verificationForm.verificationReference} onChange={(event) => setVerificationForm((prev) => ({ ...prev, verificationReference: event.target.value }))} required />
+          )}
+          {verificationForm.method === "manual_override" && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Admin override should be used only when normal proof cannot be collected. The reason is saved in the audit trail.
+            </div>
           )}
           <Input labelName="Location" value={verificationForm.location} onChange={(event) => setVerificationForm((prev) => ({ ...prev, location: event.target.value }))} />
-          <Input type="textarea" labelName="Note / override reason" value={verificationForm.note} onChange={(event) => setVerificationForm((prev) => ({ ...prev, note: event.target.value }))} />
+          <Input type="textarea" labelName={verificationForm.method === "manual_override" ? "Override reason *" : "Delivery note"} value={verificationForm.note} onChange={(event) => setVerificationForm((prev) => ({ ...prev, note: event.target.value }))} />
         </div>
       </DefaultModal>
 
       <DefaultModal isOpen={detailModal} onClose={() => setDetailModal(false)} title="Shipment Detail">
         <div className="space-y-3 text-sm">
-          <div><strong>Shipment:</strong> {selectedShipment?.id}</div>
-          <div><strong>Order:</strong> #{selectedShipment?.orderNumber || selectedShipment?.order_number || String(selectedShipment?.order_id || "").slice(-8)}</div>
-          <div><strong>Type:</strong> {displayStatus(selectedShipment?.shipment_type || selectedShipment?.direction || "forward")}</div>
-          <div><strong>Return:</strong> {selectedShipment?.return_id || "N/A"}</div>
-          <div><strong>AWB:</strong> {selectedShipment?.awb_number || "N/A"}</div>
-          <div><strong>Status:</strong> {displayStatus(selectedShipment?.status)}</div>
-          <div><strong>Verification:</strong> {selectedShipment?.verification_required ? `Required (${(selectedShipment?.verification_methods || []).join(", ") || "any"})` : "Not required"}</div>
-          <div><strong>Delivery Agent:</strong> {selectedShipment?.delivery_agent_snapshot?.name || selectedShipment?.delivery_agent_id || "Unassigned"}</div>
-          <div><strong>Verified At:</strong> {selectedShipment?.delivered_verified_at ? moment(selectedShipment.delivered_verified_at).format("DD-MM-YYYY HH:mm") : "N/A"}</div>
-          <div><strong>Label/Manifest:</strong> {selectedShipment?.manifest_id || "N/A"}</div>
+          <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 md:grid-cols-2">
+            <div><strong>Order:</strong> #{selectedShipment?.orderNumber || selectedShipment?.order_number || "Order"}</div>
+            <div><strong>Status:</strong> <StatusBadge status={selectedShipment?.status || "initiated"} dot /></div>
+            <div><strong>Seller:</strong> {selectedShipment?.sellerName || selectedShipment?.seller?.displayName || selectedShipment?.seller?.businessName || "Seller"}</div>
+            <div><strong>Customer:</strong> {selectedShipment?.buyerName || selectedShipment?.buyer?.displayName || selectedShipment?.buyer?.email || "Customer"}</div>
+            <div><strong>Courier:</strong> {selectedShipment?.courier_name || "Seller delivery"}</div>
+            <div><strong>Tracking number:</strong> {selectedShipment?.tracking_number || selectedShipment?.awb_number || "Not added"}</div>
+            <div><strong>Payment collection:</strong> {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}</div>
+            <div><strong>Shipment type:</strong> {displayStatus(selectedShipment?.shipment_type || selectedShipment?.direction || "forward")}</div>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-4">
+            <div className="font-semibold text-gray-800">Handover and verification</div>
+            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+              <div><strong>Delivery agent:</strong> {selectedShipment?.delivery_agent_snapshot?.name || "Unassigned"}</div>
+              <div><strong>Agent phone:</strong> {selectedShipment?.delivery_agent_snapshot?.phone || "Not available"}</div>
+              <div><strong>Verification:</strong> {selectedShipment?.verification_required ? `Required by ${displayStatus((selectedShipment?.verification_methods || []).join(" or ") || "proof")}` : "Not required"}</div>
+              <div><strong>Verified:</strong> {selectedShipment?.delivered_verified_at ? moment(selectedShipment.delivered_verified_at).format("DD-MM-YYYY HH:mm") : "Not yet"}</div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-4">
+            <div className="font-semibold text-gray-800">Delivery address</div>
+            <div className="mt-2 text-gray-600">
+              {[
+                selectedShipment?.ship_to_snapshot?.fullName,
+                selectedShipment?.ship_to_snapshot?.phone,
+                selectedShipment?.ship_to_snapshot?.line1,
+                selectedShipment?.ship_to_snapshot?.line2,
+                selectedShipment?.ship_to_snapshot?.city,
+                selectedShipment?.ship_to_snapshot?.state,
+                selectedShipment?.ship_to_snapshot?.postalCode,
+              ].filter(Boolean).join(", ") || "Address not available"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-4">
+            <div className="font-semibold text-gray-800">Package</div>
+            <div className="mt-2 text-gray-600">
+              {selectedShipment?.package_snapshot?.weightGrams ? `${selectedShipment.package_snapshot.weightGrams} g` : "Weight not entered"}
+              {selectedShipment?.package_snapshot?.length ? ` · ${selectedShipment.package_snapshot.length} × ${selectedShipment.package_snapshot.width || "-"} × ${selectedShipment.package_snapshot.height || "-"} ${selectedShipment.package_snapshot.unit || "cm"}` : ""}
+            </div>
+          </div>
           <div className="border-t pt-3">
             <strong>Tracking timeline</strong>
             <div className="mt-2 space-y-2">
@@ -960,17 +1070,13 @@ const ShipmentTracking = () => {
                   <div className="font-medium capitalize">{displayStatus(event.status)} · {displayStatus(event.method)}</div>
                   <div className="text-xs text-gray-500">
                     {event.created_at ? moment(event.created_at).format("DD-MM-YYYY HH:mm") : "N/A"}
-                    {event.actor_id ? ` · Actor #${String(event.actor_id).slice(-8)}` : ""}
+                    {event.actor?.displayName ? ` · ${event.actor.displayName}` : ""}
                   </div>
                   {event.failure_reason && <div className="text-xs text-red-600 mt-1">{event.failure_reason}</div>}
                 </div>
               ))}
               {!selectedShipment?.verificationEvents?.length && <div className="text-xs text-gray-500">No verification events found.</div>}
             </div>
-          </div>
-          <div className="border-t pt-3">
-            <strong>Raw References</strong>
-            <pre className="mt-2 bg-gray-50 p-3 rounded overflow-auto text-xs">{JSON.stringify(selectedShipment || {}, null, 2)}</pre>
           </div>
         </div>
       </DefaultModal>

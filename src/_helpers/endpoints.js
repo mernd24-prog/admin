@@ -388,6 +388,9 @@ export const ENDPOINTS = {
     productVariant: (variantId) => `/admin/platform/product-variants/${variantId}`,
     brands: "/admin/platform/brands",
     brand: (brandId) => `/admin/platform/brands/${brandId}`,
+    badges: "/admin/platform/badges",
+    badge: (badgeId) => `/admin/platform/badges/${badgeId}`,
+    badgesActive: "/admin/platform/badges/active",
     warrantyTemplates: "/admin/platform/warranty-templates",
     warrantyTemplate: (templateId) => `/admin/platform/warranty-templates/${templateId}`,
     

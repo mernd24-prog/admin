@@ -107,20 +107,15 @@ const COLUMNS = [
     key: "buyer_id",
     label: "Buyer",
     render: (v, row) => {
-      const name = row.buyerName || row.buyer?.name || row.buyerSnapshot?.name || row.buyer_name;
-      const email = row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email || row.buyer_email;
-      const rawId = firstDefined(v, row.buyerId, row.user_id);
+      const buyer = row.relations?.buyer || row.buyer || row.buyerSnapshot || {};
+      const name = row.buyerName || buyer.displayName || buyer.fullName || buyer.name || row.buyer_name;
+      const email = row.buyerEmail || buyer.email || row.buyer_email;
       return (
         <div>
           {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
           {email && !name && <div className="text-sm text-gray-700">{email}</div>}
           {email && name && <div className="text-xs text-gray-400">{email}</div>}
-          {!name && !email && rawId && (
-            <span className="font-mono text-xs text-gray-500">
-              {String(rawId).slice(0, 16)}{String(rawId).length > 16 ? "…" : ""}
-            </span>
-          )}
-          {!name && !email && !rawId && <span className="text-gray-400">—</span>}
+          {!name && !email && <span className="text-gray-400">Customer details unavailable</span>}
         </div>
       );
     },
@@ -131,6 +126,8 @@ const COLUMNS = [
     render: (_, row) => {
       const sellerName = firstDefined(
         row.sellerName,
+        row.relations?.sellers?.[0]?.displayName,
+        row.relations?.sellers?.[0]?.businessName,
         row.seller?.name,
         row.sellerSnapshot?.name,
         row.seller_snapshot?.name,
@@ -156,11 +153,7 @@ const COLUMNS = [
           {sellerName && organizationName && (
             <div className="text-xs text-gray-400">{sellerName}</div>
           )}
-          {!sellerName && sellerId && (
-            <div className="font-mono text-xs text-gray-400">
-              {String(sellerId).slice(0, 12)}
-            </div>
-          )}
+          {!sellerName && sellerId && <div className="text-xs text-gray-400">Seller details unavailable</div>}
         </div>
       );
     },

@@ -39,15 +39,10 @@ const money = (value) => {
   return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const shortId = (value = "") => {
-  const text = String(value || "");
-  return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "-";
-};
-
-const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || shortId(id);
+const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || "Seller details unavailable";
 const organizationName = (row = {}) => {
   const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
-  return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || shortId(row.organizationId || row.organization_id);
+  return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || "Default organization";
 };
 
 const dateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
@@ -152,15 +147,17 @@ const SellerFinance = () => {
   const [orderId, setOrderId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
+  const [orderOptions, setOrderOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const [processOrganizationOptions, setProcessOrganizationOptions] = useState([]);
 
   React.useEffect(() => {
     dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {});
+    dropdownApi.getOrders({ limit: 100 }).then(setOrderOptions).catch(() => {});
   }, []);
 
   // Process Payout modal
-  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
+  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
 
   // Complete Payout modal
   const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
@@ -293,13 +290,12 @@ const SellerFinance = () => {
         paymentMethod: processModal.paymentMethod,
         paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
-        autoProcess: processModal.autoProcess,
       };
       if (processModal.periodStart) payload.periodStart = processModal.periodStart;
       if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
       await dispatch(processSellerPayouts(payload)).unwrap();
-      toast.success(processModal.autoProcess ? "Payout processed successfully" : "Payout initiated for approval");
-      setProcessModal({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "", autoProcess: false });
+      toast.success("Payout created and sent to the approval queue");
+      setProcessModal({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to process payout");
@@ -421,7 +417,10 @@ const SellerFinance = () => {
             <MdCalculate size={18} /> Recalculate Order Commission
           </div>
           <div className="flex gap-2">
-            <input className={`${inputCls} min-w-0 flex-1`} placeholder="Order ID" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+            <select className={`${inputCls} min-w-0 flex-1`} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
+              <option value="">Select order</option>
+              {orderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
             <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
               Run
             </button>
@@ -453,7 +452,7 @@ const SellerFinance = () => {
           {commissions.length ? commissions.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -468,13 +467,12 @@ const SellerFinance = () => {
 
         <TableShell
           title="Seller Payouts"
-          headings={["Payout", "Seller", "Organization", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
+          headings={["Seller", "Organization", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
           emptyText="No payouts found"
         >
           {payouts.length ? payouts.map((row) => (
             <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
@@ -490,7 +488,7 @@ const SellerFinance = () => {
                       tone="green"
                       icon={<MdCheckCircle size={18} />}
                       onClick={() => openCompleteModal(row)}
-                      disabled={row.status === "completed" || row.status === "on_hold"}
+                      disabled={row.status !== "processing"}
                     />
                     <IconButton
                       title="Fail payout — release back to pending"
@@ -510,15 +508,13 @@ const SellerFinance = () => {
       <div className="mt-4">
         <TableShell
           title="Settlement Ledger"
-          headings={["Settlement", "Seller", "Organization", "Payout", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", ""]}
+          headings={["Seller", "Organization", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", "Statement"]}
           emptyText="No settlements found"
         >
           {settlements.length ? settlements.map((row) => (
             <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.id)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.name || row.seller?.companyName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{shortId(row.payout_id)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
@@ -585,14 +581,9 @@ const SellerFinance = () => {
           <FieldRow label="Payment Reference">
             <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
           </FieldRow>
-          <label className="flex items-center gap-2 text-sm font-medium text-[#65718b]">
-            <input
-              type="checkbox"
-              checked={processModal.autoProcess}
-              onChange={(e) => setProcessModal((prev) => ({ ...prev, autoProcess: e.target.checked }))}
-            />
-            Auto complete payout after creation
-          </label>
+          <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+            The amount is calculated from eligible delivered orders. Required approval cannot be skipped.
+          </div>
           <FieldRow label="Internal Note">
             <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
           </FieldRow>
@@ -609,7 +600,6 @@ const SellerFinance = () => {
       >
         {completeModal.payout && (
           <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
-            <div>Payout: <span className="font-mono">{shortId(completeModal.payout.id)}</span></div>
             <div>Seller: <span className="font-medium">{completeModal.payout.sellerName || completeModal.payout.seller?.name || sellerLabel(completeModal.payout.seller_id, sellerOptions)}</span></div>
             <div>Net Amount: <span className="font-semibold text-[#208a3c]">{money(completeModal.payout.net_amount)}</span></div>
           </div>
@@ -639,7 +629,7 @@ const SellerFinance = () => {
       >
         {failModal.payout && (
           <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
-            <div>Payout: <span className="font-mono">{shortId(failModal.payout.id)}</span></div>
+            <div>Seller: <span className="font-medium">{failModal.payout.sellerName || failModal.payout.seller?.displayName || sellerLabel(failModal.payout.seller_id, sellerOptions)}</span></div>
             <div>This will release the payout back to <strong>pending</strong> status so it can be retried.</div>
           </div>
         )}

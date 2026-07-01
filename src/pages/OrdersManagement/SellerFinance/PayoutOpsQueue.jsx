@@ -88,7 +88,6 @@ const EMPTY_ACTION = {
   reason: "",
   paymentMethod: "",
   paymentReference: "",
-  autoProcess: false,
   approve: true,
   notes: "",
 };
@@ -187,6 +186,8 @@ const PayoutOpsQueue = () => {
       return "Hold reason is required";
     if (action.type === "fail" && !action.reason.trim())
       return "Failure reason is required";
+    if (action.type === "complete" && !action.paymentReference.trim())
+      return "Payment reference is required before completion";
     return "";
   };
 
@@ -199,7 +200,7 @@ const PayoutOpsQueue = () => {
     setConfirmAction({
       open: true,
       title: `${ACTION_TITLES[action.type] || "Update Payout"}?`,
-      message: `This will update payout ${payoutId(action.payout)} to the next lifecycle state.`,
+      message: `This will move ${action.payout?.sellerName || action.payout?.seller?.displayName || "the seller"}'s payout to the next lifecycle state.`,
     });
   };
 
@@ -227,7 +228,6 @@ const PayoutOpsQueue = () => {
             ...base,
             paymentReference: action.paymentReference || undefined,
             paymentMethod: action.paymentMethod || undefined,
-            autoProcess: action.autoProcess,
           };
         case "complete":
           return {
@@ -271,29 +271,13 @@ const PayoutOpsQueue = () => {
   const columns = useMemo(
     () => [
       {
-        key: "payoutNumber",
-        label: "Payout",
-        sortable: true,
-        render: (_, row) => (
-          <div>
-            <div className="font-semibold text-gray-800">
-              {row.payoutNumber || payoutId(row)}
-            </div>
-            {row.payoutNumber && (
-              <div className="font-mono text-xs text-gray-400">
-                {payoutId(row)}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
         key: "sellerId",
         label: "Seller",
         sortable: true,
         render: (_, row) => {
           const name =
             row.sellerName ||
+            row.seller?.displayName ||
             row.seller?.name ||
             row.seller?.businessName;
           const email = row.sellerEmail || row.seller?.email;
@@ -308,13 +292,7 @@ const PayoutOpsQueue = () => {
               {email && (
                 <div className="text-xs text-gray-400">{email}</div>
               )}
-              {!name && !email && value && (
-                <span className="font-mono text-xs text-gray-500">
-                  {String(value).slice(0, 16)}
-                  {String(value).length > 16 ? "…" : ""}
-                </span>
-              )}
-              {!name && !email && !value && "—"}
+              {!name && !email && <span className="text-xs text-gray-500">Seller details unavailable</span>}
             </div>
           );
         },
@@ -458,7 +436,7 @@ const PayoutOpsQueue = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search payout ID, seller, or reference"
+        searchPlaceholder="Search seller or payment reference"
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -493,6 +471,13 @@ const PayoutOpsQueue = () => {
         loading={loading}
       >
         <div className="space-y-3">
+          {action.payout && (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700">
+              <div><strong>Seller:</strong> {action.payout.sellerName || action.payout.seller?.displayName || "Seller"}</div>
+              <div><strong>Net amount:</strong> {money(action.payout.net_amount || action.payout.amount)}</div>
+              <div><strong>Current status:</strong> {display(action.payout.status)}</div>
+            </div>
+          )}
           {/* Approve */}
           {action.type === "approve" && (
             <>
@@ -574,7 +559,7 @@ const PayoutOpsQueue = () => {
           {action.type === "retry" && (
             <>
               <Input
-                labelName="Payment Reference (optional)"
+                labelName="Payment Reference *"
                 value={action.paymentReference}
                 onChange={(e) =>
                   setAction((prev) => ({
@@ -603,21 +588,8 @@ const PayoutOpsQueue = () => {
                   ))}
                 </select>
               </label>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Auto-process after retry?
-                </label>
-                <input
-                  type="checkbox"
-                  checked={action.autoProcess}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      autoProcess: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                />
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+                Retrying creates a new payout request. Required approval still applies.
               </div>
             </>
           )}

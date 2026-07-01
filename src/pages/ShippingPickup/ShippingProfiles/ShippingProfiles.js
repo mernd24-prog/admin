@@ -7,14 +7,22 @@ import {
   MdDelete,
   MdEdit,
   MdLocalShipping,
-  MdRefresh,
   MdStar,
   MdStarBorder,
 } from "react-icons/md";
-import { FiPackage } from "react-icons/fi";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
-import { ConfirmModal, PageHeader } from "../../../components/Shared";
+import {
+  ConfirmModal,
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { getStoredUser } from "../../../_helpers/authStorage";
+import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
+import { usePermission } from "../../../_helpers/usePermission";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   createShippingProfile,
   deleteShippingProfile,
@@ -166,81 +174,6 @@ function StateMultiSelect({ value = [], onChange }) {
           {filtered.length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">No states found</div>}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Profile Card ─────────────────────────────────────────────────────────────
-
-function ProfileCard({ profile, onEdit, onDelete, onSetDefault }) {
-  const modeLabel = SERVICEABILITY_MODES.find((m) => m.value === profile.serviceabilityMode)?.label || profile.serviceabilityMode;
-  const methodLabel = SHIPPING_METHODS.find((m) => m.value === profile.shippingMethod)?.label || profile.shippingMethod;
-
-  return (
-    <div className={`relative rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${profile.isDefault ? "border-[var(--admin-blue)]" : "border-gray-200"}`}>
-      {profile.isDefault && (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue)] text-white text-[10px] font-semibold px-2 py-0.5">
-          <MdStar className="text-xs" /> Default
-        </span>
-      )}
-
-      <div className="flex items-start gap-3">
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${profile.active ? "bg-[var(--admin-blue)]/10" : "bg-gray-100"}`}>
-          <MdLocalShipping className={`text-xl ${profile.active ? "text-[var(--admin-blue)]" : "text-gray-400"}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className={`font-semibold text-sm truncate ${profile.active ? "text-gray-900" : "text-gray-400 line-through"}`}>{profile.name}</h3>
-            {!profile.active && <span className="text-[10px] rounded-full bg-gray-100 text-gray-400 px-1.5 py-0.5 font-medium">Inactive</span>}
-          </div>
-          {profile.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{profile.description}</p>}
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Chip label="Method" value={methodLabel} />
-        <Chip label="Mode" value={modeLabel} />
-        <Chip label="Charge" value={profile.shippingCharge === 0 ? "Free" : `₹${Number(profile.shippingCharge).toFixed(0)}`} highlight={profile.shippingCharge === 0} />
-        <Chip label="COD" value={profile.codAvailable ? "Available" : "Not Available"} highlight={profile.codAvailable} />
-        {(profile.etaMin || profile.etaMax) && (
-          <Chip label="ETA" value={[profile.etaMin, profile.etaMax].filter(Boolean).join("–") + " days"} />
-        )}
-        {profile.freeShippingThreshold != null && (
-          <Chip label="Free above" value={`₹${Number(profile.freeShippingThreshold).toFixed(0)}`} />
-        )}
-      </div>
-
-      {profile.serviceabilityMode !== "all_india" && (
-        <div className="mt-2 text-xs text-gray-500">
-          {profile.allowedStates?.length > 0 && <span>{profile.allowedStates.length} state(s) selected</span>}
-          {profile.allowedCities?.length > 0 && <span className="ml-2">{profile.allowedCities.length} city/cities</span>}
-          {profile.allowedPincodes?.length > 0 && <span className="ml-2">{profile.allowedPincodes.length} pincode(s)</span>}
-          {profile.blockedPincodes?.length > 0 && <span className="ml-2">{profile.blockedPincodes.length} blocked</span>}
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3">
-        <button onClick={() => onEdit(profile)} className="flex-1 admin-btn-sm text-center text-xs">
-          <MdEdit className="inline mr-1" /> Edit
-        </button>
-        {!profile.isDefault && (
-          <button onClick={() => onSetDefault(profile)} className="flex-1 admin-btn-sm text-center text-xs text-[var(--admin-blue)] border-[var(--admin-blue)]/30 hover:bg-[var(--admin-blue)]/5">
-            <MdStarBorder className="inline mr-1" /> Set Default
-          </button>
-        )}
-        <button onClick={() => onDelete(profile)} className="px-2 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors text-xs">
-          <MdDelete />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Chip({ label, value, highlight }) {
-  return (
-    <div className="rounded-lg bg-gray-50 px-2 py-1.5">
-      <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium leading-none">{label}</p>
-      <p className={`text-xs font-semibold mt-0.5 ${highlight ? "text-emerald-600" : "text-gray-700"}`}>{value}</p>
     </div>
   );
 }
@@ -400,68 +333,236 @@ function ProfileForm({ form, setForm }) {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
+const unwrapProfiles = (payload = {}) => {
+  const data = payload?.data?.data || payload?.data || payload || {};
+  const profiles = Array.isArray(data)
+    ? data
+    : data.profiles || data.items || data.list || [];
+  return {
+    list: Array.isArray(profiles) ? profiles : [],
+    total: Number(data.total || profiles.length || 0),
+  };
+};
+
+const getSellerIdFromUser = (user = {}) =>
+  String(user.ownerSellerId || user.sellerId || user._id || user.id || user.userId || "");
+
+const getSellerLabelFromUser = (user = {}) =>
+  user.sellerProfile?.displayName ||
+  user.sellerProfile?.businessName ||
+  user.profile?.firstName ||
+  user.email ||
+  getSellerIdFromUser(user) ||
+  "Current seller";
+
+const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
+const formatMoney = (value) => Number(value || 0) === 0 ? "Free" : `₹${Number(value || 0).toFixed(0)}`;
+const shortId = (value = "") => String(value || "").slice(0, 8) || "N/A";
+const profileId = (profile = {}) => profile.id || profile._id || profile.profileId;
+
+const modeLabel = (value) =>
+  SERVICEABILITY_MODES.find((mode) => mode.value === value)?.label || displayStatus(value);
+
+const methodLabel = (value) =>
+  SHIPPING_METHODS.find((method) => method.value === value)?.label || displayStatus(value);
+
+const etaLabel = (profile = {}) => {
+  const values = [profile.etaMin, profile.etaMax].filter((value) => value !== undefined && value !== null && value !== "");
+  return values.length ? `${values.join("-")} days` : "N/A";
+};
+
+const coverageLabel = (profile = {}) => {
+  if (profile.serviceabilityMode === "all_india") return "All India";
+  const parts = [
+    profile.allowedStates?.length ? `${profile.allowedStates.length} states` : "",
+    profile.allowedCities?.length ? `${profile.allowedCities.length} cities` : "",
+    profile.allowedPincodes?.length ? `${profile.allowedPincodes.length} pincodes` : "",
+    profile.blockedPincodes?.length ? `${profile.blockedPincodes.length} blocked` : "",
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : modeLabel(profile.serviceabilityMode);
+};
+
 export default function ShippingProfiles() {
   const dispatch = useDispatch();
-  const [sellerId, setSellerId] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
-  const [search, setSearch] = useState("");
-  const [filterActive, setFilterActive] = useState("");
+  const { isSeller } = usePermission();
+  const storedUser = useMemo(() => getStoredUser() || {}, []);
+  const sellerSessionId = useMemo(() => getSellerIdFromUser(storedUser), [storedUser]);
+  const sellerSessionLabel = useMemo(() => getSellerLabelFromUser(storedUser), [storedUser]);
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+  });
+  const {
+    page,
+    pageSize,
+    search,
+    sortKey,
+    sortDir,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    setSort,
+    setFilter,
+    clearFilters,
+    activeFilterCount,
+  } = list;
+
+  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [modal, setModal] = useState({ open: false, mode: "create", profile: null });
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sellerOptions, setSellerOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const { shippingProfilesData } = useSelector((s) => s.delivery);
-  const profiles = useMemo(() => shippingProfilesData?.data?.profiles || shippingProfilesData?.profiles || [], [shippingProfilesData]);
-
-  const load = useCallback(() => {
-    const params = {};
-    if (sellerId) params.sellerId = sellerId;
-    if (organizationId) params.organizationId = organizationId;
-    if (filterActive !== "") params.active = filterActive === "true";
-    if (search) params.search = search;
-    dispatch(getShippingProfiles(params));
-  }, [dispatch, sellerId, organizationId, filterActive, search]);
-
-  useEffect(() => { load(); }, [load]);
-
-  // Load seller dropdown
-  useEffect(() => {
-    dropdownApi.getSellers({ keyWord: "" }).then((opts) => setSellerOptions(opts || [])).catch(() => {});
-  }, []);
+  const { shippingProfilesData } = useSelector((state) => state.delivery);
+  const profilesPayload = useMemo(() => unwrapProfiles(shippingProfilesData), [shippingProfilesData]);
 
   useEffect(() => {
-    if (!sellerId) {
-      setOrganizationId("");
+    if (!isSeller) return undefined;
+    const handler = (event) => {
+      setSelectedOrganizationIdState(
+        event?.detail?.organizationId || getSelectedSellerOrganizationId(),
+      );
+    };
+    window.addEventListener("seller:organizationChanged", handler);
+    return () => window.removeEventListener("seller:organizationChanged", handler);
+  }, [isSeller]);
+
+  useEffect(() => {
+    if (isSeller) return;
+    dropdownApi.getSellers({ keyWord: "", limit: 200 })
+      .then((options) => setSellerOptions(options || []))
+      .catch(() => {});
+  }, [isSeller]);
+
+  const activeSellerId = isSeller ? sellerSessionId : filters.sellerId;
+  const activeOrganizationId = isSeller ? selectedOrganizationId : filters.organizationId;
+
+  useEffect(() => {
+    if (!activeSellerId) {
       setOrganizationOptions([]);
+      if (!isSeller && filters.organizationId) setFilter("organizationId", "");
       return;
     }
 
     let active = true;
-    dropdownApi.getSellerOrganizations(sellerId)
+    dropdownApi.getSellerOrganizations(activeSellerId)
       .then((options) => {
-        if (!active) return;
-        setOrganizationOptions(options || []);
+        if (active) setOrganizationOptions(options || []);
       })
       .catch(() => {
         if (active) setOrganizationOptions([]);
       });
     return () => { active = false; };
-  }, [sellerId]);
+  }, [activeSellerId, filters.organizationId, isSeller, setFilter]);
 
-  const handleSellerChange = (value) => {
-    setSellerId(value);
-    setOrganizationId("");
-  };
+  useEffect(() => {
+    if (!isSeller && !filters.sellerId && filters.organizationId) {
+      setFilter("organizationId", "");
+    }
+  }, [filters.organizationId, filters.sellerId, isSeller, setFilter]);
+
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const params = {
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      };
+      if (search) params.search = search;
+      if (activeSellerId) params.sellerId = activeSellerId;
+      if (activeOrganizationId) params.organizationId = activeOrganizationId;
+      if (filters.active !== undefined && filters.active !== "") {
+        params.active = filters.active === "true";
+      }
+      await dispatch(getShippingProfiles(params)).unwrap();
+    } catch (requestError) {
+      const message = requestError?.message || requestError || "Failed to load shipping profiles";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    activeOrganizationId,
+    activeSellerId,
+    dispatch,
+    filters.active,
+    page,
+    pageSize,
+    search,
+  ]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const filterFields = useMemo(() => {
+    const fields = [];
+    if (!isSeller) {
+      fields.push({
+        key: "sellerId",
+        type: "asyncDropdown",
+        label: "Seller",
+        width: "w-52",
+        load: (search) =>
+          dropdownApi.getSellers({
+            keyWord: search,
+            searchFields: "full_name,email,businessName",
+          }),
+      });
+      if (filters.sellerId) {
+        fields.push({
+          key: "organizationId",
+          type: "select",
+          label: "Organization",
+          width: "w-56",
+          placeholder: "All Organizations",
+          options: organizationOptions.map((option) => ({
+            value: option.value,
+            label: option.label,
+          })),
+        });
+      }
+    }
+    fields.push({
+      key: "active",
+      type: "select",
+      label: "Status",
+      options: [
+        { value: "true", label: "Active" },
+        { value: "false", label: "Inactive" },
+      ],
+    });
+    return fields;
+  }, [filters.sellerId, isSeller, organizationOptions]);
+
+  const sellerLabel = useCallback((sellerId) => {
+    if (isSeller) return sellerSessionLabel;
+    return sellerOptions.find((option) => String(option.value) === String(sellerId))?.label || shortId(sellerId);
+  }, [isSeller, sellerOptions, sellerSessionLabel]);
+
+  const organizationLabel = useCallback((organizationId) =>
+    organizationOptions.find((option) => String(option.value) === String(organizationId))?.label || shortId(organizationId),
+  [organizationOptions]);
 
   const openCreate = () => {
+    const sellerId = activeSellerId;
     if (!sellerId) {
-      toast.error("Select a seller before creating a shipping profile");
+      toast.error(isSeller ? "Seller session not found. Please sign in again." : "Select a seller before creating a shipping profile");
       return;
     }
-    setForm({ ...EMPTY_FORM, sellerId, organizationId: organizationId || "" });
+    setForm({
+      ...EMPTY_FORM,
+      sellerId,
+      organizationId: activeOrganizationId || "",
+    });
     setModal({ open: true, mode: "create", profile: null });
   };
 
@@ -482,7 +583,7 @@ export default function ShippingProfiles() {
       etaMax: profile.etaMax ?? "",
       isDefault: Boolean(profile.isDefault),
       active: profile.active !== false,
-      sellerId: profile.sellerId || sellerId,
+      sellerId: profile.sellerId || activeSellerId,
       organizationId: profile.organizationId || "",
     });
     setModal({ open: true, mode: "edit", profile });
@@ -492,8 +593,8 @@ export default function ShippingProfiles() {
 
   const buildPayload = () => ({
     ...form,
-    sellerId: sellerId || form.sellerId || undefined,
-    organizationId: organizationId || form.organizationId || null,
+    sellerId: form.sellerId || activeSellerId || undefined,
+    organizationId: form.organizationId || null,
     shippingCharge: form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
     freeShippingThreshold: form.freeShippingThreshold !== "" ? Number(form.freeShippingThreshold) : null,
     etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
@@ -505,18 +606,16 @@ export default function ShippingProfiles() {
     setSaving(true);
     try {
       if (modal.mode === "create") {
-        const res = await dispatch(createShippingProfile(buildPayload()));
-        if (res.error) throw new Error(res.payload?.message || "Failed to create profile");
+        await dispatch(createShippingProfile(buildPayload())).unwrap();
         toast.success("Shipping profile created");
       } else {
-        const res = await dispatch(updateShippingProfile({ profileId: modal.profile.id, ...buildPayload() }));
-        if (res.error) throw new Error(res.payload?.message || "Failed to update profile");
+        await dispatch(updateShippingProfile({ profileId: profileId(modal.profile), ...buildPayload() })).unwrap();
         toast.success("Shipping profile updated");
       }
       closeModal();
-      load();
+      fetchProfiles();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err?.message || err || "Failed to save shipping profile");
     } finally {
       setSaving(false);
     }
@@ -525,123 +624,184 @@ export default function ShippingProfiles() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await dispatch(deleteShippingProfile({ profileId: deleteTarget.id }));
-      if (res.error) throw new Error(res.payload?.message || "Failed to delete profile");
+      setSaving(true);
+      await dispatch(deleteShippingProfile({ profileId: profileId(deleteTarget) })).unwrap();
       toast.success("Profile deleted");
       setDeleteTarget(null);
-      load();
+      fetchProfiles();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err?.message || err || "Failed to delete profile");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleSetDefault = async (profile) => {
     try {
-      const res = await dispatch(setDefaultShippingProfile({ profileId: profile.id }));
-      if (res.error) throw new Error(res.payload?.message || "Failed");
+      setLoading(true);
+      await dispatch(setDefaultShippingProfile({ profileId: profileId(profile) })).unwrap();
       toast.success(`"${profile.name}" set as default`);
-      load();
+      fetchProfiles();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err?.message || err || "Failed to set default profile");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loading = shippingProfilesData?.loading;
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        key: "name",
+        label: "Profile",
+        sortable: true,
+        render: (value, row) => (
+          <div className="flex items-start gap-3">
+            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${row.active !== false ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "bg-gray-100 text-gray-400"}`}>
+              <MdLocalShipping size={18} />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-[var(--admin-ink)]">{value || "N/A"}</span>
+                {row.isDefault && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-blue)]">
+                    <MdStar size={12} /> Default
+                  </span>
+                )}
+              </div>
+              <div className="mt-0.5 max-w-md text-xs text-[var(--admin-muted)]">
+                {row.description || "Reusable product delivery rules"}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "sellerId",
+        label: "Seller",
+        render: (value, row) => (
+          <div>
+            <div className="text-sm font-medium text-[var(--admin-ink)]">{sellerLabel(value || row.seller_id)}</div>
+            {row.organizationId && (
+              <div className="text-xs text-[var(--admin-muted)]">{organizationLabel(row.organizationId)}</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "shippingMethod",
+        label: "Method",
+        render: (value) => <span className="capitalize">{methodLabel(value)}</span>,
+      },
+      {
+        key: "serviceabilityMode",
+        label: "Serviceability",
+        render: (value, row) => (
+          <div>
+            <div className="text-sm font-medium text-[var(--admin-ink)]">{modeLabel(value)}</div>
+            <div className="text-xs text-[var(--admin-muted)]">{coverageLabel(row)}</div>
+          </div>
+        ),
+      },
+      {
+        key: "shippingCharge",
+        label: "Charge",
+        render: (value, row) => (
+          <div>
+            <div className="font-medium text-[var(--admin-ink)]">{formatMoney(value)}</div>
+            {row.freeShippingThreshold != null && (
+              <div className="text-xs text-[var(--admin-muted)]">Free above ₹{Number(row.freeShippingThreshold).toFixed(0)}</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "codAvailable",
+        label: "COD",
+        render: (value) => (
+          <StatusBadge
+            status={value ? "yes" : "no"}
+            label={value ? "Available" : "Unavailable"}
+            dot
+          />
+        ),
+      },
+      {
+        key: "etaMin",
+        label: "ETA",
+        render: (_, row) => etaLabel(row),
+      },
+      {
+        key: "active",
+        label: "Status",
+        render: (value) => <StatusBadge status={value === false ? "inactive" : "active"} dot />,
+      },
+    ];
+
+    return isSeller ? baseColumns.filter((column) => column.key !== "sellerId") : baseColumns;
+  }, [isSeller, organizationLabel, sellerLabel]);
 
   return (
-    <div className="admin-page-container">
+    <div className="max-w-7xl mx-auto mt-8">
       <PageHeader
         title="Shipping Profiles"
-        subtitle="Create reusable delivery configurations. Products select a profile instead of configuring shipping individually."
-        rightContent={
-          <button className="admin-btn-primary flex items-center gap-2" onClick={openCreate}>
-            <MdAdd /> New Profile
+        subtitle={isSeller
+          ? "Manage reusable delivery rules for your products"
+          : "Manage reusable seller delivery configurations"}
+        breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
+        actions={
+          <button className="admin-btn-primary" onClick={openCreate}>
+            <MdAdd size={17} /> New Profile
           </button>
         }
       />
 
-      {/* Filters */}
-      <div className="admin-card mb-4">
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="w-52 space-y-1">
-            <label className="admin-label">Seller</label>
-            <select className="admin-input" value={sellerId} onChange={(e) => handleSellerChange(e.target.value)}>
-              <option value="">All Sellers</option>
-              {sellerOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
-          <div className="w-56 space-y-1">
-            <label className="admin-label">Organization</label>
-            <select
-              className="admin-input"
-              value={organizationId}
-              onChange={(e) => setOrganizationId(e.target.value)}
-              disabled={!sellerId}
-              title={!sellerId ? "Select a seller to filter by organization" : ""}
-            >
-              <option value="">{sellerId ? "All Organizations" : "Select seller first"}</option>
-              {organizationOptions.map((org) => (
-                <option key={org.value} value={org.value}>
-                  {org.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="w-44 space-y-1">
-            <label className="admin-label">Status</label>
-            <select className="admin-input" value={filterActive} onChange={(e) => setFilterActive(e.target.value)}>
-              <option value="">All</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[180px] space-y-1">
-            <label className="admin-label">Search</label>
-            <input className="admin-input" placeholder="Search by name…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <button className="admin-btn flex items-center gap-1" onClick={load}>
-            <MdRefresh className={loading ? "animate-spin" : ""} /> Refresh
-          </button>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        data={profilesPayload.list}
+        loading={loading || shippingProfilesData?.loading}
+        totalCount={profilesPayload.total || profilesPayload.list.length}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onSearch={setSearch}
+        onSort={setSort}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        searchPlaceholder="Search shipping profile name…"
+        emptyText="No shipping profiles found."
+        emptyIcon={<MdLocalShipping size={42} className="text-gray-200" />}
+        onRefresh={fetchProfiles}
+        error={error}
+        requiredModule="delivery"
+        rowKey={profileId}
+        filterBar={
+          <FilterBar
+            filters={filterFields}
+            values={filters}
+            onChange={setFilter}
+            onClear={clearFilters}
+            loading={loading}
+            activeCount={activeFilterCount}
+          />
+        }
+        rowActions={(row) => [
+          { label: "Edit", icon: <MdEdit size={16} />, onClick: () => openEdit(row) },
+          {
+            label: "Set Default",
+            icon: <MdStarBorder size={16} />,
+            hidden: row.isDefault,
+            onClick: () => handleSetDefault(row),
+          },
+          { label: "Delete", icon: <MdDelete size={16} />, danger: true, onClick: () => setDeleteTarget(row) },
+        ]}
+      />
 
-      {/* Grid of profile cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-gray-200 bg-white p-4 animate-pulse h-48" />
-          ))}
-        </div>
-      ) : profiles.length === 0 ? (
-        <div className="admin-card flex flex-col items-center justify-center py-16 text-center">
-          <FiPackage className="text-5xl text-gray-300 mb-4" />
-          <h3 className="text-base font-semibold text-gray-600">No shipping profiles yet</h3>
-          <p className="text-sm text-gray-400 mt-1 max-w-sm">
-            Create your first profile to define reusable delivery rules for your products.
-          </p>
-          <button className="admin-btn-primary mt-4 flex items-center gap-2" onClick={openCreate}>
-            <MdAdd /> Create First Profile
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {profiles.map((p) => (
-            <ProfileCard
-              key={p.id}
-              profile={p}
-              onEdit={openEdit}
-              onDelete={setDeleteTarget}
-              onSetDefault={handleSetDefault}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Create / Edit Modal */}
       <DefaultModal
         isOpen={modal.open}
         onClose={closeModal}
-        title={modal.mode === "create" ? "Create Shipping Profile" : `Edit — ${modal.profile?.name}`}
+        title={modal.mode === "create" ? "Create Shipping Profile" : `Edit - ${modal.profile?.name}`}
         onSubmit={handleSave}
         submitButtonText={modal.mode === "create" ? "Create Profile" : "Save Changes"}
         closeButtonText="Cancel"
@@ -650,7 +810,6 @@ export default function ShippingProfiles() {
         <ProfileForm form={form} setForm={setForm} />
       </DefaultModal>
 
-      {/* Delete Confirm */}
       <ConfirmModal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
@@ -659,6 +818,7 @@ export default function ShippingProfiles() {
         message={`Are you sure you want to delete "${deleteTarget?.name}"? Products using this profile will fall back to seller charge settings.`}
         confirmLabel="Delete"
         variant="danger"
+        loading={saving}
       />
     </div>
   );

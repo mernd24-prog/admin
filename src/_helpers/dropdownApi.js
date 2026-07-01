@@ -115,4 +115,14 @@ export const dropdownApi = {
     id: item._id || item.id,
     meta: { email: item.email || "" },
   })),
+  getOrders: (params) => loadProtected("orders", ENDPOINTS.orders.listForPanel, { limit: 100, ...params }, (item) => {
+    const buyer = item.relations?.buyer || item.buyer || {};
+    const buyerName = buyer.displayName || buyer.fullName || buyer.email || "Customer";
+    return {
+      label: `Order #${item.order_number || item.orderNumber || String(item.id || item._id || "").slice(-8)} · ${buyerName}`,
+      value: item.id || item._id || item.orderId,
+      id: item.id || item._id || item.orderId,
+      meta: { status: item.status || "", buyerName },
+    };
+  }),
 };
