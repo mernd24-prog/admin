@@ -385,22 +385,24 @@ const Returns = () => {
     {
       key: "actions",
       label: "Actions",
+      headerClassName: "min-w-[300px]",
+      cellClassName: "min-w-[300px]",
       render: (_, row) => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="admin-table-actions">
           <PermissionGuard module="returns" action={ACTIONS.VIEW} hide>
-            <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openDetail(row)}>
+            <button type="button" className="admin-table-action-btn" onClick={() => openDetail(row)}>
               <MdVisibility size={15} /> View
             </button>
           </PermissionGuard>
           {row.status === "requested" && (
             <>
               <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-                <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("approve", row)}>
+                <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
                   <MdCheckCircle size={15} /> Approve
                 </button>
               </PermissionGuard>
               <PermissionGuard module="returns" action={ACTIONS.REJECT} hide>
-                <button type="button" className="admin-btn-secondary !px-2 !py-1 text-red-600" onClick={() => openAction("reject", row)}>
+                <button type="button" className="admin-table-action-btn danger" onClick={() => openAction("reject", row)}>
                   <MdClose size={15} /> Reject
                 </button>
               </PermissionGuard>
@@ -408,59 +410,59 @@ const Returns = () => {
           )}
           {["approved", "pickup_failed"].includes(row.status) && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("schedule", row)}>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("schedule", row)}>
                 <MdLocalShipping size={15} /> Pickup
               </button>
             </PermissionGuard>
           )}
           {["reverse_pickup_scheduled", "pickup_failed", "in_reverse_transit"].includes(row.status) && row.reverseShipment?.shipmentId && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("tracking", row)}>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("tracking", row)}>
                 <MdLocalShipping size={15} /> Tracking
               </button>
             </PermissionGuard>
           )}
           {["approved", "reverse_pickup_scheduled", "manual_ship_back", "shipped_back", "in_reverse_transit"].includes(row.status) && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("receive", row)}>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("receive", row)}>
                 <MdAssignmentReturn size={15} /> Receive
               </button>
             </PermissionGuard>
           )}
           {row.status === "received" && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("qc", row)}>Record QC</button>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("qc", row)}>Record QC</button>
             </PermissionGuard>
           )}
           {["qc_passed", "qc_completed"].includes(row.status) && (
             <>
               <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-                <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("refund", row)}>
+                <button type="button" className="admin-table-action-btn" onClick={() => openAction("refund", row)}>
                   <MdReplay size={15} /> Refund
                 </button>
               </PermissionGuard>
               <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-                <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("replace", row)}>Replace</button>
+                <button type="button" className="admin-table-action-btn" onClick={() => openAction("replace", row)}>Replace</button>
               </PermissionGuard>
             </>
           )}
           {row.status === "refund_failed" && (
             <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("retry_refund", row)}>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("retry_refund", row)}>
                 <MdReplay size={15} /> Retry
               </button>
             </PermissionGuard>
           )}
           {["refund_pending", "refund_failed"].includes(row.status) && row.refund?.providerRefundId && (
             <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("sync_refund", row)}>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("sync_refund", row)}>
                 <MdRefresh size={15} /> Sync
               </button>
             </PermissionGuard>
           )}
           {!["closed", "refunded", "replaced"].includes(row.status) && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => openAction("close", row)}>Close</button>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("close", row)}>Close</button>
             </PermissionGuard>
           )}
         </div>

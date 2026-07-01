@@ -771,8 +771,10 @@ const ProductCatalog = () => {
       {
         key: "actions",
         label: "Action",
+        headerClassName: "min-w-[360px]",
+        cellClassName: "min-w-[360px]",
         render: (_, product) => (
-          <div className="flex min-w-[180px] flex-wrap gap-2">
+          <div className="admin-table-actions-nowrap">
             <ActionButtons
               onEdit={() => handleEditProduct(product?._id)}
               viewButton={true}
@@ -787,7 +789,7 @@ const ProductCatalog = () => {
             {product?.status === "archived" && (
               <PermissionGuard module="products" action="restore" hide>
                 <button
-                  className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                  className="admin-table-action-btn"
                   onClick={() => handleRestoreProduct(product)}
                 >
                   Restore
@@ -797,7 +799,7 @@ const ProductCatalog = () => {
             {product?.status !== "archived" && (
               <PermissionGuard module="products" action="delete" hide>
                 <button
-                  className="rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+                  className="admin-table-action-btn"
                   onClick={() => handleArchiveProduct(product)}
                   title="Archive product"
                 >
@@ -807,7 +809,7 @@ const ProductCatalog = () => {
             )}
             <PermissionGuard module="products" action="create" hide>
               <button
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                className="admin-table-action-btn"
                 onClick={() => handleDuplicateProduct(product)}
                 title="Duplicate product"
               >
@@ -817,7 +819,7 @@ const ProductCatalog = () => {
             {canReviewProduct(product) && (
               <PermissionGuard module="products" action="approve" hide>
                 <button
-                  className="rounded bg-[var(--admin-blue)] px-2 py-1 text-xs text-white hover:bg-[#2e3074]"
+                  className="admin-table-action-btn"
                   onClick={() => handleApproveToggle(product)}
                 >
                   {hasPendingRevision(product) ? "Review Revision" : "Review"}
@@ -846,11 +848,11 @@ const ProductCatalog = () => {
   );
 
   return (
-    <div className="p-6 mx-auto overflow-hidden overflow-x-auto overflow-y-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl overflow-hidden p-4 sm:p-6">
       <Loader loading={loading} />
-      <div className="flex md:flex-row flex-col items-center justify-between mb-4">
-        <h1 className="text-xl font-bold ">Product Catalog</h1>
-        <div className="flex justify-end gap-2">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-xl font-bold text-[var(--admin-navy)]">Product Catalog</h1>
+        <div className="flex flex-wrap justify-end gap-2">
           <ExportButton
             data={apiRes?.list || []}
             filename="products"
@@ -859,8 +861,8 @@ const ProductCatalog = () => {
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
         </div>
       </div>
-      <div className="bg-white">
-        <section className="p-2 border-b">
+      <div className="admin-card overflow-hidden">
+        <section>
           <SearchComponent
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
@@ -909,7 +911,8 @@ const ProductCatalog = () => {
             rowKey={(product) => product?._id || product?.id}
             emptyText="No products found."
             requiredModule="products"
-            tableContainerClassName="max-h-[calc(100vh-360px)] overflow-x-scroll overflow-y-auto pb-2"
+            cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+            tableContainerClassName="hide-scrollbar max-h-[calc(100vh-360px)] overflow-x-auto overflow-y-auto pb-2"
             tableClassName="min-w-[1680px]"
           />
         </section>

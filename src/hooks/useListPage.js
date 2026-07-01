@@ -53,21 +53,22 @@ function reducer(state, action) {
     case 'SET_PAGE':
       return { ...state, page: action.payload };
     case 'SET_PAGE_SIZE':
-      return { ...state, pageSize: action.payload, page: 1 };
+      return { ...state, pageSize: action.payload, page: 1, selectedKeys: [] };
     case 'SET_SEARCH':
-      return { ...state, search: action.payload, page: 1 };
+      return { ...state, search: action.payload, page: 1, selectedKeys: [] };
     case 'SET_SORT':
-      return { ...state, sortKey: action.payload.key, sortDir: action.payload.dir, page: 1 };
+      return { ...state, sortKey: action.payload.key, sortDir: action.payload.dir, page: 1, selectedKeys: [] };
     case 'SET_FILTER':
       return {
         ...state,
         filters: { ...state.filters, [action.payload.key]: action.payload.value },
         page: 1,
+        selectedKeys: [],
       };
     case 'SET_FILTERS':
-      return { ...state, filters: action.payload, page: 1 };
+      return { ...state, filters: action.payload, page: 1, selectedKeys: [] };
     case 'CLEAR_FILTERS':
-      return { ...state, filters: {}, page: 1 };
+      return { ...state, filters: {}, page: 1, selectedKeys: [] };
     case 'SET_SELECTED_KEYS':
       return { ...state, selectedKeys: action.payload };
     case 'CLEAR_SELECTION':

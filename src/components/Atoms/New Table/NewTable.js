@@ -4,6 +4,7 @@ import Button from "../buttons/button";
 import SearchInput from "../SearchInput/SearchInput";
 import FilterSelect from "../FilterSelect/FilterSelect";
 import { IoIosArrowDown } from "react-icons/io";
+import { IoFilterCircleOutline } from "react-icons/io5";
 import { MdOutlineDeleteOutline } from "react-icons/md";
 // import FormInput from '../FormInput/FormInput';
 import Input from "../Input/Input";
@@ -162,12 +163,12 @@ export default function SearchComponent({
   };
 
   return (
-    <div className="w-full bg-white p-1">
+    <div className="admin-legacy-filter-card w-full">
       <div
-        className={`flex flex-col gap-3 mb-4 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
+        className={`flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center ${mobailClassName}`}
       >
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start md:flex-1">
-          <div className="w-full min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center md:flex-[1_1_640px]">
+          <div className="w-full min-w-0 md:max-w-2xl">
             <SearchInput
               type="text"
               placeholder={placeholder ? placeholder : "Search"}
@@ -194,7 +195,7 @@ export default function SearchComponent({
           {isSearchDown && hasAdvancedFilters && (
             <Button
               onClick={handleSearchDown}
-              className="border-none bg-[var(--admin-blue-soft)] py-2.5 text-[var(--admin-blue)]"
+              className="admin-btn-secondary h-6 !min-h-6 !px-2"
               disabled={isFiltering}
             >
               <IoIosArrowDown
@@ -203,13 +204,15 @@ export default function SearchComponent({
             </Button>
           )}
 
-          <Button
-            onClick={applyFilters}
-            className={`button-primary h-10 shrink-0`}
-            disabled={isFiltering}
-          >
-            {isFiltering ? "Searching..." : "Search"}
-          </Button>
+          {!(isSearchShow && hasAdvancedFilters && searchDown) && (
+            <Button
+              onClick={applyFilters}
+              className={`button-primary h-9 shrink-0 !min-h-9`}
+              disabled={isFiltering}
+            >
+              {isFiltering ? "Searching..." : "Search"}
+            </Button>
+          )}
           {searchActions && (
             <div className="flex shrink-0 flex-wrap items-start gap-2">
               {searchActions}
@@ -217,7 +220,7 @@ export default function SearchComponent({
           )}
         </div>
         {isActionButton && (
-          <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             {isStatusAction && (
               <>
                 <Button
@@ -227,8 +230,8 @@ export default function SearchComponent({
                   requiredAction="status_change"
                   className={
                     selectedRow.length === 0
-                      ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                      : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+                      ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                      : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                   }
                 >
                   <PiToggleRightThin className="text-xl" />
@@ -241,8 +244,8 @@ export default function SearchComponent({
                   requiredAction="status_change"
                   className={
                     selectedRow.length === 0
-                      ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                      : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+                      ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                      : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                   }
                 >
                   <PiToggleLeftThin className="text-xl" /> Deactivate
@@ -257,8 +260,8 @@ export default function SearchComponent({
                 requiredAction="delete"
                 className={
                   selectedRow.length === 0
-                    ? "h-10 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                    : "h-10 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+                    ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+                    : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
                 }
               >
                 <MdOutlineDeleteOutline className="text-xl" /> Delete
@@ -270,9 +273,13 @@ export default function SearchComponent({
 
       {isSearchShow && hasAdvancedFilters && (
         <div
-          className={` transition-all duration-300 ease-in-out ${searchDown ? "opacity-100 mb-4 " : "opacity-0 max-h-0"}`}
+          className={`transition-all duration-300 ease-in-out ${searchDown ? "mt-4 opacity-100" : "max-h-0 overflow-hidden opacity-0"}`}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end text-xs">
+          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+            <IoFilterCircleOutline className="text-xl" />
+            Filters
+          </div>
+          <div className="grid grid-cols-1 items-end gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {isBrand && (
               <div className="w-full">
                 <FilterSelect
@@ -425,15 +432,19 @@ export default function SearchComponent({
               />
             )}
 
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 self-end sm:col-span-2 lg:col-span-3 xl:col-span-4">
               <Button
                 onClick={applyFilters}
-                className="admin-btn-secondary"
+                className="admin-btn-secondary h-9 !min-h-9 !px-4"
                 disabled={isFiltering}
               >
                 {isFiltering ? "Searching..." : "Search"}
               </Button>
-              <Button onClick={clearFilters} disabled={isFiltering}>
+              <Button
+                onClick={clearFilters}
+                disabled={isFiltering}
+                className="admin-btn-secondary h-9 !min-h-9 !px-4"
+              >
                 Clear
               </Button>
             </div>

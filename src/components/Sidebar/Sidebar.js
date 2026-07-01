@@ -430,7 +430,7 @@ const Sidebar = ({
   useEffect(() => {
     const next = {};
     sidebarData.forEach((item) => {
-      if (!item.isSingleItem) next[item.label] = item.subItems.length * 40;
+      if (!item.isSingleItem) next[item.label] = item.subItems.length * 64;
     });
     setHeights(next);
   }, [sidebarData]);
@@ -513,7 +513,7 @@ const Sidebar = ({
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto sidebar-scrollbar">
         <nav
-          className={`w-full bg-[var(--admin-shell)] ${isExpanded ? "px-4 pb-4" : "p-2"} overflow-hidden overflow-y-auto sidebar-scrollbar`}
+          className={`w-full bg-[var(--admin-shell)] ${isExpanded ? "px-3 pb-4" : "p-2"} overflow-visible`}
         >
           <ul>
             {sidebarData.map((item, index) => {
@@ -550,7 +550,7 @@ const Sidebar = ({
                         <Icon size={15} />
                       </span>
                       {isExpanded && (
-                        <span className="text-[12px] font-semibold">
+                        <span className="min-w-0 truncate text-[12px] font-semibold">
                           {item.label}
                         </span>
                       )}
@@ -577,7 +577,7 @@ const Sidebar = ({
                     </span>
                     {isExpanded && (
                       <>
-                        <span className="text-[12px] font-semibold">
+                        <span className="min-w-0 truncate text-[12px] font-semibold">
                           {item.label}
                         </span>
                         <MdChevronRight
@@ -600,7 +600,7 @@ const Sidebar = ({
                     }}
                   >
                     {isExpanded && (
-                      <ul className="mt-1 ml-8 space-y-1">
+                      <ul className="mt-1 ml-7 space-y-1.5 pr-1">
                         {item.subItems.map((sub, si) => {
                           const path = `/app/${sub.module_code}`;
                           const isSubActive =
@@ -611,7 +611,7 @@ const Sidebar = ({
                           return (
                             <li
                               key={si}
-                              className="flex items-center gap-3 mt-2"
+                              className="flex items-start gap-2"
                               style={{
                                 opacity: isVisible ? 1 : 0,
                                 transform: `translateY(${isVisible ? "0" : "-10px"})`,
@@ -619,14 +619,14 @@ const Sidebar = ({
                               }}
                             >
                               <Link
-                                className={`flex items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-sm transition-all duration-200 ease-in-out w-full ${isSubActive ? "font-semibold bg-white text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]" : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
+                                className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-sm leading-5 transition-all duration-200 ease-in-out ${isSubActive ? "font-semibold bg-white text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]" : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
                                 <span
-                                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`}
+                                  className={`mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`}
                                 />
-                                <span className="text-[12px] capitalize">
+                                <span className="min-w-0 whitespace-normal break-words text-[12px] capitalize leading-5">
                                   {sub.label}
                                 </span>
                               </Link>
