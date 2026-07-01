@@ -9,7 +9,7 @@ const SkeletonRow = ({ cols }) => (
   <tr className="animate-pulse">
     {Array.from({ length: cols }).map((_, i) => (
       <td key={i} className="px-4 py-3">
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
+        <div className="h-4 w-3/4 rounded bg-[var(--admin-surface-soft)]" />
       </td>
     ))}
   </tr>
@@ -161,7 +161,8 @@ const DataTable = ({
   columns = [],
   data = [],
   loading = false,
-  totalCount = 0,
+  totalCount,
+  total,
   page = 1,
   pageSize = 20,
   onPageChange,
@@ -170,12 +171,13 @@ const DataTable = ({
   rowKey = "_id",
   actions,
   emptyText = "No records found.",
+  emptyMessage,
   emptyIcon,
   filterBar,
   bulkActionBar,
   onSort,
   sortKey,
-  sortDir = "asc",
+  sortDir,
   selectable = false,
   selectedKeys = [],
   onSelectionChange,
@@ -183,8 +185,10 @@ const DataTable = ({
   error,
   pageSizeOptions = [10, 20, 50, 100],
   onPageSizeChange,
+  listPage,
   tableContainerClassName = "",
   tableClassName = "",
+  cardClassName = "admin-card overflow-hidden",
   exportConfig,
   importConfig,
   requiredModule,
@@ -193,7 +197,17 @@ const DataTable = ({
   rowActions,
 }) => {
   const [searchValue, setSearchValue] = useState("");
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const resolvedTotalCount = Number(totalCount ?? total ?? data.length ?? 0);
+  const resolvedPage = Number(listPage?.page ?? page ?? 1);
+  const resolvedPageSize = Number(listPage?.pageSize ?? pageSize ?? 20);
+  const resolvedOnPageChange = onPageChange || listPage?.setPage;
+  const resolvedOnPageSizeChange = onPageSizeChange || listPage?.setPageSize;
+  const resolvedOnSearch = onSearch || listPage?.setSearch;
+  const resolvedOnSort = onSort || listPage?.setSort;
+  const resolvedSortKey = sortKey ?? listPage?.sortKey;
+  const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
+  const resolvedEmptyText = emptyMessage || emptyText;
+  const totalPages = Math.max(1, Math.ceil(resolvedTotalCount / resolvedPageSize));
 
   const getKey = (row, index) =>
     typeof rowKey === "function"
@@ -208,20 +222,22 @@ const DataTable = ({
   );
 
   useEffect(() => {
-    if (page > totalPages && onPageChange) onPageChange(totalPages);
-  }, [onPageChange, page, totalPages]);
+    if (resolvedPage > totalPages && resolvedOnPageChange) {
+      resolvedOnPageChange(totalPages);
+    }
+  }, [resolvedOnPageChange, resolvedPage, totalPages]);
 
   const handleSearch = (e) => {
     const v = e.target.value;
     setSearchValue(v);
-    onSearch?.(v);
+    resolvedOnSearch?.(v);
   };
 
   const handleSort = (col) => {
-    if (col.sortable && onSort)
-      onSort(
+    if (col.sortable && resolvedOnSort)
+      resolvedOnSort(
         col.key,
-        sortKey === col.key && sortDir === "asc" ? "desc" : "asc",
+        resolvedSortKey === col.key && resolvedSortDir === "asc" ? "desc" : "asc",
       );
   };
 
@@ -271,25 +287,25 @@ const DataTable = ({
   );
 
   return (
-    <div className="admin-card overflow-hidden">
+    <div className={cardClassName}>
       {/* Search + toolbar */}
-      {(onSearch || actions || exportConfig || importConfig || onRefresh) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-[var(--admin-line)] bg-white">
-          {onSearch && (
-            <div className="relative w-full sm:w-72">
+      {(resolvedOnSearch || actions || exportConfig || importConfig || onRefresh) && (
+        <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          {resolvedOnSearch && (
+            <div className="relative w-full sm:max-w-sm sm:flex-1 lg:max-w-md">
               <MdSearch
                 size={16}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               />
               <input
                 value={searchValue}
                 onChange={handleSearch}
                 placeholder={searchPlaceholder}
-                className="admin-input w-full pl-8 pr-4"
+                className="admin-input w-full !pl-10 pr-4"
               />
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:flex-shrink-0">
             {tools}
           </div>
         </div>
@@ -304,8 +320,8 @@ const DataTable = ({
       )}
 
       {/* Table */}
-      <div className={tableContainerClassName || "overflow-x-auto"}>
-        <table className={`w-full text-sm ${tableClassName}`}>
+      <div className={tableContainerClassName || "hide-scrollbar overflow-x-auto overscroll-x-contain"}>
+        <table className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}>
           <thead className="admin-table-head">
             <tr>
               {selectable && (
@@ -319,11 +335,11 @@ const DataTable = ({
               {columns.map((col, columnIndex) => (
                 <th
                   key={`${col.key}-${columnIndex}`}
-                className={`px-4 py-3 text-left text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap ${
+                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] whitespace-nowrap ${
                     col.sortable
                       ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
                       : ""
-                  } ${col.width ? `w-${col.width}` : ""}`}
+                  } ${col.width ? `w-${col.width}` : ""} ${col.headerClassName || ""}`}
                   onClick={() => handleSort(col)}
                 >
                   <span className="flex items-center gap-1">
@@ -332,7 +348,7 @@ const DataTable = ({
                       <MdUnfoldMore
                         size={14}
                         className={
-                          sortKey === col.key
+                          resolvedSortKey === col.key
                             ? "text-[var(--admin-gold)]"
                             : "text-[var(--admin-muted)]"
                         }
@@ -349,7 +365,7 @@ const DataTable = ({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-[#f0e8dc]">
+          <tbody className="divide-y divide-[#f0e8dc] bg-white">
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <SkeletonRow key={i} cols={colCount} />
@@ -358,19 +374,31 @@ const DataTable = ({
               <tr>
                 <td
                   colSpan={colCount}
-                  className="px-4 py-12 text-center text-red-500 text-sm"
+                  className="px-4 py-12 text-center text-sm"
                 >
-                  {error}
+                  <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-5 text-red-600">
+                    <span className="text-sm font-semibold">Unable to load records</span>
+                    <span className="text-xs text-red-500">{error}</span>
+                    {onRefresh && (
+                      <button
+                        type="button"
+                        onClick={onRefresh}
+                        className="mt-1 rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
                 <td colSpan={colCount} className="px-4 py-12">
-                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                  <div className="mx-auto flex max-w-sm flex-col items-center gap-2 rounded-lg border border-dashed border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
                     {emptyIcon || (
                       <MdInbox size={36} className="text-gray-200" />
                     )}
-                    <span className="text-sm">{emptyText}</span>
+                    <span className="text-sm font-medium">{resolvedEmptyText}</span>
                   </div>
                 </td>
               </tr>
@@ -388,12 +416,12 @@ const DataTable = ({
                   }}
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? "button" : undefined}
-                  className={`hover:bg-[var(--admin-surface-soft)] transition-colors ${
+                  className={`align-top transition-colors hover:bg-[var(--admin-surface-soft)] ${
                     onRowClick ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none" : ""
                   } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName}`}
                 >
                   {selectable && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 align-middle">
                       <CustomCheckbox
                         checked={selectedKeys.includes(getKey(row, index))}
                         onChange={(event) =>
@@ -403,7 +431,10 @@ const DataTable = ({
                     </td>
                   )}
                   {columns.map((col, columnIndex) => (
-                    <td key={`${col.key}-${columnIndex}`} className="px-4 py-3 text-[var(--admin-ink)]">
+                    <td
+                      key={`${col.key}-${columnIndex}`}
+                      className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+                    >
                       {col.render
                         ? col.render(row[col.key], row)
                         : (row[col.key] ?? "—")}
@@ -425,22 +456,22 @@ const DataTable = ({
       </div>
 
       {/* Pagination */}
-      {(totalPages > 1 || onPageSizeChange) && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--admin-line)] bg-white text-sm text-[var(--admin-muted)]">
-          <span>
+      {(totalPages > 1 || resolvedOnPageSizeChange) && (
+        <div className="flex flex-col gap-3 border-t border-[var(--admin-line)] bg-white px-3 py-3 text-sm text-[var(--admin-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <span className="text-xs font-medium">
             Showing{" "}
-            {totalCount
-              ? Math.min((page - 1) * pageSize + 1, totalCount)
+            {resolvedTotalCount
+              ? Math.min((resolvedPage - 1) * resolvedPageSize + 1, resolvedTotalCount)
               : 0}
-            –{Math.min(page * pageSize, totalCount)} of {totalCount}
+            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of {resolvedTotalCount}
           </span>
           <Pagination
             totalPages={totalPages}
-            currentPage={page}
-            onPageChange={onPageChange}
-            pageSize={pageSize}
+            currentPage={resolvedPage}
+            onPageChange={resolvedOnPageChange}
+            pageSize={resolvedPageSize}
             pageSizeOptions={pageSizeOptions}
-            onPageSizeChange={onPageSizeChange}
+            onPageSizeChange={resolvedOnPageSizeChange}
             compact
           />
         </div>

@@ -95,6 +95,7 @@ const ProductReviews = () => {
 
   const [editTarget, setEditTarget]       = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState("");
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
@@ -190,6 +191,26 @@ const ProductReviews = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (isSellerPanelUser || !list.selectedKeys.length) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        list.selectedKeys.map((reviewId) =>
+          dispatch(deleteProductReview({ reviewId })).unwrap(),
+        ),
+      );
+      toast.success("Selected reviews deleted");
+      setBulkDeleteConfirm(false);
+      list.clearSelection();
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || "Failed to delete selected reviews");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const columns = [
     {
       key: "productId",
@@ -211,7 +232,26 @@ const ProductReviews = () => {
     {
       key: "buyerId",
       label: "Buyer",
-      render: (v) => <span className="text-xs font-mono text-gray-500 truncate max-w-[90px] block">{v || "—"}</span>,
+      render: (v, row) => {
+        const buyerImage = row.buyerImage || row.buyerAvatarUrl;
+        return (
+          <div className="flex items-center gap-2 min-w-0">
+            {buyerImage ? (
+              <img
+                src={buyerImage}
+                alt={row.buyerName || "Buyer"}
+                className="w-8 h-8 rounded-full object-cover border flex-shrink-0"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold grid place-items-center flex-shrink-0">
+                {(row.buyerName || "B").charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="text-xs font-mono text-gray-500 truncate max-w-[90px] block">{v || "—"}</span>
+          </div>
+        );
+      },
     },
     {
       key: "rating",
@@ -370,6 +410,13 @@ const ProductReviews = () => {
                 variant: "warning",
                 onClick: () => handleBulkStatus("hidden"),
               },
+              {
+                label: "Delete Selected",
+                icon: <MdDelete />,
+                action: ACTIONS.DELETE,
+                variant: "danger",
+                onClick: () => setBulkDeleteConfirm(true),
+              },
             ]}
           />
         ) : null}
@@ -389,6 +436,16 @@ const ProductReviews = () => {
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirm({ open: false, review: null })}
+      />
+
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm}
+        title="Delete Selected Reviews"
+        message={`Are you sure you want to delete ${list.selectedCount} selected review${list.selectedCount === 1 ? "" : "s"}? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete Selected"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
     </div>
   );

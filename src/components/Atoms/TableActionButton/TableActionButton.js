@@ -65,17 +65,20 @@ export const ActionButtons = ({
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
   const guardModule = inferredModule || requiredModule;
+  const iconButtonClass = "admin-icon-action";
+  const successIconButtonClass = "admin-icon-action success";
+  const dangerIconButtonClass = "admin-icon-action danger";
   const guard = (action, node) => guardModule ? (
     <PermissionGuard module={guardModule} action={action} hide>{node}</PermissionGuard>
   ) : node;
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {showEditButton && guard(editAction, (
         <Tooltip text="Edit" position="top">
           <button
             type="button"
             onClick={onEdit}
-            className="rounded p-1 text-green-600 transition-colors duration-200 hover:bg-green-50"
+            className={successIconButtonClass}
           >
             <FiEdit size={18} />
           </button>
@@ -88,7 +91,7 @@ export const ActionButtons = ({
           <button
             type="button"
             onClick={onViewClick}
-            className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
+            className={iconButtonClass}
           >
             <FiEye size={18} />
           </button>
@@ -101,7 +104,7 @@ export const ActionButtons = ({
           <button
             type="button"
             onClick={onAdd}
-            className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+            className={iconButtonClass}
           >
             <IoAddCircleOutline size={20} />
           </button>
@@ -111,7 +114,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onOptionValue}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <BsListTask size={20} />
         </button>
@@ -121,7 +124,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onWarning}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <IoWarningOutline size={20} />
         </button>
@@ -130,7 +133,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onView}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <FaEye size={20} />
         </button>
@@ -139,7 +142,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onLink}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <IoMdLink size={20} />
         </button>
@@ -148,7 +151,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onHistory}
-          className="p-1 text-gray-500 transition-colors duration-200 rounded hover:bg-gray-300"
+          className={iconButtonClass}
         >
           <RxCountdownTimer size={20} />
         </button>
@@ -157,7 +160,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onDelete}
-            className="rounded p-1 text-red-600 transition-colors duration-200 hover:bg-red-50"
+            className={dangerIconButtonClass}
         >
           <FiTrash2 size={18} />
         </button>
@@ -166,7 +169,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onBanner}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <MdListAlt size={18} />
         </button>
@@ -176,7 +179,7 @@ export const ActionButtons = ({
           <button
             type="button"
             onClick={onPasswordChange}
-            className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+            className={iconButtonClass}
           >
             <MdPassword size={20} />
           </button>
@@ -186,7 +189,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onListing}
-          className="rounded p-1 text-[var(--admin-ink)] duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <IoIosList size={20} />
         </button>
@@ -200,7 +203,7 @@ export const ActionButtons = ({
         <button
           type="button"
           onClick={onPrint}
-          className="rounded p-1 text-[var(--admin-muted)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className={iconButtonClass}
         >
           <MdLocalPrintshop size={18} />
         </button>

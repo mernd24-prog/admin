@@ -39,7 +39,7 @@ const SearchInput = ({
   };
 
   return (
-    <div className={`relative w-full min-w-0 header-search-pill group p-1 ${large ? "header-search-pill-large" : ""}`}>
+    <div className="header-search-pill group relative w-full min-w-0">
       <MdSearch
         size={14}
         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
@@ -52,7 +52,7 @@ const SearchInput = ({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         aria-label={placeholder || "Search"}
-        className="admin-input admin-header-search-input block pl-4 pr-10 p-1"
+        className="admin-input admin-header-search-input block w-full pl-9 pr-10"
       />
       {searchTerm && !disabled && (
         <button

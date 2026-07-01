@@ -188,18 +188,7 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
             <p className="text-xs text-gray-400 text-right">{form.reviewText.length}/2000</p>
           </div>
 
-          {/* Admin Reply */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Reply</label>
-            <textarea
-              rows={3}
-              value={form.adminReplyText}
-              onChange={set("adminReplyText")}
-              maxLength={1000}
-              placeholder="Optional reply visible to customer…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
-            />
-          </div>
+           
 
           {/* Media */}
           {reviewData?.media?.length > 0 && (
