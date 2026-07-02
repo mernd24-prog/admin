@@ -25,10 +25,15 @@ import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import {
   createShippingProfile,
+  createShippingProfileTemplate,
   deleteShippingProfile,
+  deleteShippingProfileTemplate,
+  cloneShippingProfileTemplate,
+  getShippingProfileTemplates,
   getShippingProfiles,
   setDefaultShippingProfile,
   updateShippingProfile,
+  updateShippingProfileTemplate,
 } from "../../../Redux/deliverySlice";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -72,6 +77,14 @@ const EMPTY_FORM = {
   freeShippingThreshold: "",
   etaMin: "",
   etaMax: "",
+  isDefault: false,
+  active: true,
+};
+
+const EMPTY_CLONE_FORM = {
+  templateId: "",
+  name: "",
+  description: "",
   isDefault: false,
   active: true,
 };
@@ -180,7 +193,7 @@ function StateMultiSelect({ value = [], onChange }) {
 
 // ── Profile Form (inside modal) ──────────────────────────────────────────────
 
-function ProfileForm({ form, setForm }) {
+function ProfileForm({ form, setForm, isTemplate = false }) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
   const mode = form.serviceabilityMode;
 
@@ -311,17 +324,19 @@ function ProfileForm({ form, setForm }) {
             </div>
             <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.codAvailable)} onChange={(e) => patch("codAvailable", e.target.checked)} />
           </label>
+          {!isTemplate && (
+            <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Set as Default Profile</p>
+                <p className="text-xs text-gray-500">Products with no profile assigned will use this</p>
+              </div>
+              <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.isDefault)} onChange={(e) => patch("isDefault", e.target.checked)} />
+            </label>
+          )}
           <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
             <div>
-              <p className="text-sm font-semibold text-gray-800">Set as Default Profile</p>
-              <p className="text-xs text-gray-500">Products with no profile assigned will use this</p>
-            </div>
-            <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.isDefault)} onChange={(e) => patch("isDefault", e.target.checked)} />
-          </label>
-          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Active</p>
-              <p className="text-xs text-gray-500">Inactive profiles cannot be assigned to products</p>
+              <p className="text-sm font-semibold text-gray-800">{isTemplate ? "Published / Active" : "Active"}</p>
+              <p className="text-xs text-gray-500">{isTemplate ? "Inactive templates cannot be cloned by sellers" : "Inactive profiles cannot be assigned to products"}</p>
             </div>
             <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.active)} onChange={(e) => patch("active", e.target.checked)} />
           </label>
@@ -341,6 +356,17 @@ const unwrapProfiles = (payload = {}) => {
   return {
     list: Array.isArray(profiles) ? profiles : [],
     total: Number(data.total || profiles.length || 0),
+  };
+};
+
+const unwrapTemplates = (payload = {}) => {
+  const data = payload?.data?.data || payload?.data || payload || {};
+  const templates = Array.isArray(data)
+    ? data
+    : data.templates || data.items || data.list || [];
+  return {
+    list: Array.isArray(templates) ? templates : [],
+    total: Number(data.total || templates.length || 0),
   };
 };
 
@@ -411,16 +437,21 @@ export default function ShippingProfiles() {
 
   const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [modal, setModal] = useState({ open: false, mode: "create", profile: null });
+  const [templateModal, setTemplateModal] = useState({ open: false, mode: "create", template: null });
+  const [cloneModal, setCloneModal] = useState({ open: false, template: null });
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [cloneForm, setCloneForm] = useState({ ...EMPTY_CLONE_FORM });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
   const [sellerOptions, setSellerOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { shippingProfilesData } = useSelector((state) => state.delivery);
+  const { shippingProfilesData, shippingProfileTemplatesData } = useSelector((state) => state.delivery);
   const profilesPayload = useMemo(() => unwrapProfiles(shippingProfilesData), [shippingProfilesData]);
+  const templatesPayload = useMemo(() => unwrapTemplates(shippingProfileTemplatesData), [shippingProfileTemplatesData]);
 
   useEffect(() => {
     if (!isSeller) return undefined;
@@ -503,6 +534,23 @@ export default function ShippingProfiles() {
     fetchProfiles();
   }, [fetchProfiles]);
 
+  const fetchTemplates = useCallback(async () => {
+    try {
+      await dispatch(getShippingProfileTemplates({
+        limit: 100,
+        offset: 0,
+        ...(isSeller ? {} : { status: "published" }),
+        active: true,
+      })).unwrap();
+    } catch {
+      // Template access is non-blocking for manual profile management.
+    }
+  }, [dispatch, isSeller]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
   const filterFields = useMemo(() => {
     const fields = [];
     if (!isSeller) {
@@ -566,6 +614,50 @@ export default function ShippingProfiles() {
     setModal({ open: true, mode: "create", profile: null });
   };
 
+  const openTemplateCreate = () => {
+    setForm({ ...EMPTY_FORM, active: true });
+    setTemplateModal({ open: true, mode: "create", template: null });
+  };
+
+  const openTemplateEdit = (template) => {
+    setForm({
+      name: template.name || "",
+      description: template.description || "",
+      shippingMethod: template.shippingMethod || "standard",
+      serviceabilityMode: template.serviceabilityMode || "all_india",
+      allowedStates: template.allowedStates || [],
+      allowedCities: template.allowedCities || [],
+      allowedPincodes: template.allowedPincodes || [],
+      blockedPincodes: template.blockedPincodes || [],
+      codAvailable: template.codAvailable !== false,
+      shippingCharge: template.shippingCharge ?? 0,
+      freeShippingThreshold: template.freeShippingThreshold ?? "",
+      etaMin: template.etaMin ?? "",
+      etaMax: template.etaMax ?? "",
+      isDefault: false,
+      active: template.active !== false,
+    });
+    setTemplateModal({ open: true, mode: "edit", template });
+  };
+
+  const openClone = (template = null) => {
+    const sellerId = activeSellerId;
+    if (!sellerId) {
+      toast.error(isSeller ? "Seller session not found. Please sign in again." : "Select a seller before cloning a template");
+      return;
+    }
+    const selectedTemplate = template || templatesPayload.list[0] || null;
+    setCloneForm({
+      ...EMPTY_CLONE_FORM,
+      templateId: profileId(selectedTemplate || {}) || "",
+      name: selectedTemplate?.name ? `${selectedTemplate.name} - Seller Copy` : "",
+      description: selectedTemplate?.description || "",
+      isDefault: profilesPayload.list.length === 0,
+      active: true,
+    });
+    setCloneModal({ open: true, template: selectedTemplate });
+  };
+
   const openEdit = (profile) => {
     setForm({
       name: profile.name || "",
@@ -590,6 +682,8 @@ export default function ShippingProfiles() {
   };
 
   const closeModal = () => setModal({ open: false, mode: "create", profile: null });
+  const closeTemplateModal = () => setTemplateModal({ open: false, mode: "create", template: null });
+  const closeCloneModal = () => setCloneModal({ open: false, template: null });
 
   const buildPayload = () => ({
     ...form,
@@ -600,6 +694,17 @@ export default function ShippingProfiles() {
     etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
     etaMax: form.etaMax !== "" ? Number(form.etaMax) : null,
   });
+
+  const buildTemplatePayload = () => {
+    const payload = buildPayload();
+    delete payload.sellerId;
+    delete payload.organizationId;
+    delete payload.isDefault;
+    return {
+      ...payload,
+      status: payload.active === false ? "draft" : "published",
+    };
+  };
 
   const handleSave = async () => {
     if (!form.name?.trim()) { toast.error("Profile name is required"); return; }
@@ -621,6 +726,52 @@ export default function ShippingProfiles() {
     }
   };
 
+  const handleTemplateSave = async () => {
+    if (!form.name?.trim()) { toast.error("Template name is required"); return; }
+    setSaving(true);
+    try {
+      if (templateModal.mode === "create") {
+        await dispatch(createShippingProfileTemplate(buildTemplatePayload())).unwrap();
+        toast.success("Admin shipping template created");
+      } else {
+        await dispatch(updateShippingProfileTemplate({
+          templateId: profileId(templateModal.template),
+          ...buildTemplatePayload(),
+        })).unwrap();
+        toast.success("Admin shipping template updated");
+      }
+      closeTemplateModal();
+      fetchTemplates();
+    } catch (err) {
+      toast.error(err?.message || err || "Failed to save shipping template");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCloneTemplate = async () => {
+    if (!cloneForm.templateId) { toast.error("Select an admin template to clone"); return; }
+    setSaving(true);
+    try {
+      await dispatch(cloneShippingProfileTemplate({
+        templateId: cloneForm.templateId,
+        sellerId: activeSellerId,
+        organizationId: activeOrganizationId || null,
+        name: cloneForm.name || undefined,
+        description: cloneForm.description || undefined,
+        isDefault: Boolean(cloneForm.isDefault),
+        active: cloneForm.active !== false,
+      })).unwrap();
+      toast.success("Template copied to seller shipping profiles");
+      closeCloneModal();
+      fetchProfiles();
+    } catch (err) {
+      toast.error(err?.message || err || "Failed to clone template");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -631,6 +782,21 @@ export default function ShippingProfiles() {
       fetchProfiles();
     } catch (err) {
       toast.error(err?.message || err || "Failed to delete profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!deleteTemplateTarget) return;
+    try {
+      setSaving(true);
+      await dispatch(deleteShippingProfileTemplate({ templateId: profileId(deleteTemplateTarget) })).unwrap();
+      toast.success("Template archived");
+      setDeleteTemplateTarget(null);
+      fetchTemplates();
+    } catch (err) {
+      toast.error(err?.message || err || "Failed to archive template");
     } finally {
       setSaving(false);
     }
@@ -666,6 +832,11 @@ export default function ShippingProfiles() {
                 {row.isDefault && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-blue)]">
                     <MdStar size={12} /> Default
+                  </span>
+                )}
+                {row.sourceTemplateId && (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    Template copy v{row.sourceTemplateVersion || 1}
                   </span>
                 )}
               </div>
@@ -750,11 +921,78 @@ export default function ShippingProfiles() {
           : "Manage reusable seller delivery configurations"}
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
         actions={
-          <button className="admin-btn-primary" onClick={openCreate}>
-            <MdAdd size={17} /> New Profile
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="admin-btn-secondary" onClick={() => openClone()}>
+              <MdLocalShipping size={17} /> Use Admin Template
+            </button>
+            {!isSeller && (
+              <button className="admin-btn-secondary" onClick={openTemplateCreate}>
+                <MdAdd size={17} /> New Template
+              </button>
+            )}
+            <button className="admin-btn-primary" onClick={openCreate}>
+              <MdAdd size={17} /> New Profile
+            </button>
+          </div>
         }
       />
+
+      <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--admin-ink)]">Admin Shipping Templates</h3>
+            <p className="text-xs text-[var(--admin-muted)]">
+              Sellers copy these templates into their own profile, then edit only their private copy. The admin template never changes.
+            </p>
+          </div>
+          <button type="button" className="admin-btn-secondary text-xs" onClick={fetchTemplates}>
+            Refresh Templates
+          </button>
+        </div>
+        {templatesPayload.list.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-[var(--admin-muted)]">
+            No published templates available yet.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {templatesPayload.list.slice(0, 6).map((template) => (
+              <div key={profileId(template)} className="rounded-xl border border-gray-200 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-[var(--admin-ink)]">{template.name}</div>
+                    <div className="mt-0.5 text-xs text-[var(--admin-muted)]">{template.description || "Reusable admin template"}</div>
+                  </div>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                    v{template.version || 1}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--admin-muted)]">
+                  <span>{methodLabel(template.shippingMethod)}</span>
+                  <span>•</span>
+                  <span>{modeLabel(template.serviceabilityMode)}</span>
+                  <span>•</span>
+                  <span>{formatMoney(template.shippingCharge)}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" className="admin-btn-secondary text-xs" onClick={() => openClone(template)}>
+                    Copy to Seller
+                  </button>
+                  {!isSeller && (
+                    <>
+                      <button type="button" className="admin-btn-secondary text-xs" onClick={() => openTemplateEdit(template)}>
+                        Edit Template
+                      </button>
+                      <button type="button" className="text-xs font-semibold text-red-500 hover:underline" onClick={() => setDeleteTemplateTarget(template)}>
+                        Archive
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <DataTable
         columns={columns}
@@ -810,6 +1048,87 @@ export default function ShippingProfiles() {
         <ProfileForm form={form} setForm={setForm} />
       </DefaultModal>
 
+      <DefaultModal
+        isOpen={templateModal.open}
+        onClose={closeTemplateModal}
+        title={templateModal.mode === "create" ? "Create Admin Shipping Template" : `Edit Template - ${templateModal.template?.name}`}
+        onSubmit={handleTemplateSave}
+        submitButtonText={templateModal.mode === "create" ? "Create Template" : "Save Template"}
+        closeButtonText="Cancel"
+        loading={saving}
+      >
+        <ProfileForm form={form} setForm={setForm} isTemplate />
+      </DefaultModal>
+
+      <DefaultModal
+        isOpen={cloneModal.open}
+        onClose={closeCloneModal}
+        title="Copy Admin Template"
+        onSubmit={handleCloneTemplate}
+        submitButtonText="Copy to Seller Profiles"
+        closeButtonText="Cancel"
+        loading={saving}
+      >
+        <div className="space-y-4 py-2">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            This creates a private seller profile. Editing pincodes, charge, ETA, COD, or status after copying will not change the admin template.
+          </div>
+          <div className="space-y-1">
+            <label className="admin-label">Admin Template</label>
+            <select
+              className="admin-input"
+              value={cloneForm.templateId}
+              onChange={(event) => {
+                const nextTemplate = templatesPayload.list.find((template) => profileId(template) === event.target.value);
+                setCloneForm((prev) => ({
+                  ...prev,
+                  templateId: event.target.value,
+                  name: nextTemplate?.name ? `${nextTemplate.name} - Seller Copy` : prev.name,
+                  description: nextTemplate?.description || prev.description,
+                }));
+              }}
+            >
+              <option value="">Select template…</option>
+              {templatesPayload.list.map((template) => (
+                <option key={profileId(template)} value={profileId(template)}>
+                  {template.name} · v{template.version || 1}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="admin-label">Seller Copy Name</label>
+            <input
+              className="admin-input"
+              value={cloneForm.name}
+              onChange={(event) => setCloneForm((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="e.g. Standard Shipping - Delhi NCR"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="admin-label">Copy Description</label>
+            <input
+              className="admin-input"
+              value={cloneForm.description}
+              onChange={(event) => setCloneForm((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Optional"
+            />
+          </div>
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Set as Default</p>
+              <p className="text-xs text-gray-500">Use for products without a specific profile in this seller/org.</p>
+            </div>
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--admin-blue)]"
+              checked={Boolean(cloneForm.isDefault)}
+              onChange={(event) => setCloneForm((prev) => ({ ...prev, isDefault: event.target.checked }))}
+            />
+          </label>
+        </div>
+      </DefaultModal>
+
       <ConfirmModal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
@@ -817,6 +1136,17 @@ export default function ShippingProfiles() {
         title="Delete Shipping Profile"
         message={`Are you sure you want to delete "${deleteTarget?.name}"? Products using this profile will fall back to seller charge settings.`}
         confirmLabel="Delete"
+        variant="danger"
+        loading={saving}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTemplateTarget)}
+        onClose={() => setDeleteTemplateTarget(null)}
+        onConfirm={handleDeleteTemplate}
+        title="Archive Shipping Template"
+        message={`Archive "${deleteTemplateTarget?.name}"? Existing seller copies will remain unchanged and editable.`}
+        confirmLabel="Archive"
         variant="danger"
         loading={saving}
       />

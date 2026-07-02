@@ -287,6 +287,9 @@ export const ENDPOINTS = {
     update: (profileId) => `/shipping-profiles/${profileId}`,
     delete: (profileId) => `/shipping-profiles/${profileId}`,
     setDefault: (profileId) => `/shipping-profiles/${profileId}/set-default`,
+    templates: "/shipping-profiles/templates",
+    template: (templateId) => `/shipping-profiles/templates/${templateId}`,
+    cloneTemplate: (templateId) => `/shipping-profiles/templates/${templateId}/clone`,
   },
   returns: {
     list: "/returns",

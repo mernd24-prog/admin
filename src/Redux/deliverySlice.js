@@ -27,6 +27,11 @@ const initialState = {
   updateShippingProfileData: {},
   deleteShippingProfileData: {},
   setDefaultShippingProfileData: {},
+  shippingProfileTemplatesData: {},
+  createShippingProfileTemplateData: {},
+  updateShippingProfileTemplateData: {},
+  deleteShippingProfileTemplateData: {},
+  cloneShippingProfileTemplateData: {},
 };
 
 const pickQuery = (keys = []) => (params = {}) =>
@@ -209,6 +214,42 @@ export const setDefaultShippingProfile = createApiThunkPrivate(
   "POST"
 );
 
+export const getShippingProfileTemplates = createApiThunkPrivate(
+  "delivery/getShippingProfileTemplates",
+  ENDPOINTS.shippingProfiles.templates,
+  "GET",
+  true,
+  { transformParams: pickQuery(["status", "active", "search", "limit", "offset"]) }
+);
+
+export const createShippingProfileTemplate = createApiThunkPrivate(
+  "delivery/createShippingProfileTemplate",
+  ENDPOINTS.shippingProfiles.templates,
+  "POST"
+);
+
+export const updateShippingProfileTemplate = createApiThunkPrivate(
+  "delivery/updateShippingProfileTemplate",
+  (payload) => ENDPOINTS.shippingProfiles.template(payload?.templateId || payload?.id),
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["templateId", "id"]) }
+);
+
+export const deleteShippingProfileTemplate = createApiThunkPrivate(
+  "delivery/deleteShippingProfileTemplate",
+  (payload) => ENDPOINTS.shippingProfiles.template(payload?.templateId || payload?.id),
+  "DELETE"
+);
+
+export const cloneShippingProfileTemplate = createApiThunkPrivate(
+  "delivery/cloneShippingProfileTemplate",
+  (payload) => ENDPOINTS.shippingProfiles.cloneTemplate(payload?.templateId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => omitPayload(payload, ["templateId", "id"]) }
+);
+
 const deliverySlice = createSlice({
   name: "delivery",
   initialState,
@@ -236,6 +277,11 @@ const deliverySlice = createSlice({
     createExtraReducersForThunk(builder, updateShippingProfile, "updateShippingProfileData");
     createExtraReducersForThunk(builder, deleteShippingProfile, "deleteShippingProfileData");
     createExtraReducersForThunk(builder, setDefaultShippingProfile, "setDefaultShippingProfileData");
+    createExtraReducersForThunk(builder, getShippingProfileTemplates, "shippingProfileTemplatesData");
+    createExtraReducersForThunk(builder, createShippingProfileTemplate, "createShippingProfileTemplateData");
+    createExtraReducersForThunk(builder, updateShippingProfileTemplate, "updateShippingProfileTemplateData");
+    createExtraReducersForThunk(builder, deleteShippingProfileTemplate, "deleteShippingProfileTemplateData");
+    createExtraReducersForThunk(builder, cloneShippingProfileTemplate, "cloneShippingProfileTemplateData");
   },
 });
 

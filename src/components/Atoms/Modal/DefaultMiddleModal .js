@@ -41,12 +41,12 @@ const DefaultMiddleModal = ({
 
             <div
                 className={`
-                    fixed left-1/2 top-1/2 transform 
+                    fixed left-1/2 top-1/2 transform
                     ${isOpen ? "-translate-y-1/2 opacity-100 scale-100" : "-translate-y-[200%] opacity-0 scale-95 pointer-events-none"}
-                    -translate-x-1/2 admin-card bg-white z-50 flex flex-col
-                    transition-all duration-500 ease-in-out 
+                    -translate-x-1/2 admin-card bg-white z-50 flex flex-col overflow-hidden
+                    transition-all duration-500 ease-in-out
                     w-[calc(100%-2rem)] md:w-[600px] lg:w-[700px]
-                    max-h-[calc(100vh-4rem)]  
+                    max-h-[calc(100vh-4rem)]
                 `}
                 style={{ willChange: "transform, opacity" }}
                 role="dialog"
@@ -65,7 +65,7 @@ const DefaultMiddleModal = ({
                     </button>
                 </div>
 
-                <div className="overflow-y-auto p-4 md:p-6 flex-1">{children}</div>
+                <div className="overflow-y-auto p-4 md:p-6 flex-1 min-h-0">{children}</div>
 
                 {isButtonView && (
                     <div className={`sticky bottom-0 left-0 right-0 bg-[var(--admin-surface-soft)] p-3 md:p-4 flex justify-between items-center border-t border-[var(--admin-line)] ${buttonsClassName}`}>

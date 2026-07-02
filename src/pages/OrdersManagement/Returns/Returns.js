@@ -124,6 +124,16 @@ const display = (value) => formatLabel(value);
 const money = (value) => formatCurrency(value, "—");
 const returnId = (row) => row?._id || row?.id || row?.returnId;
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
+const personName = (person = {}) => person?.displayName || person?.fullName || person?.name ||
+  [person?.firstName || person?.profile?.firstName, person?.lastName || person?.profile?.lastName]
+    .filter(Boolean)
+    .join(" ") || person?.businessName || person?.email || "";
+const buyerName = (row = {}) => row?.buyerName || personName(row?.buyer) || personName(row?.buyerSnapshot);
+const buyerContact = (row = {}) => row?.buyerEmail || row?.buyer?.email || row?.buyerSnapshot?.email ||
+  row?.buyerPhone || row?.buyer?.phone || row?.buyerSnapshot?.phone || "";
+const orderNumber = (row = {}) => row?.orderNumber || row?.order_number || row?.order?.orderNumber || row?.order?.order_number;
+const sellerName = (item = {}, row = {}) => item?.sellerName || personName(item?.seller) ||
+  row?.sellerName || personName(row?.seller);
 
 const Returns = () => {
   const dispatch = useDispatch();
@@ -341,7 +351,7 @@ const Returns = () => {
       label: "Buyer",
       sortable: true,
       render: (value, row) => {
-        const name = row.buyerName || row.buyer?.name || row.buyerSnapshot?.name;
+        const name = buyerName(row);
         const email = row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email;
         return (
           <div>
@@ -517,14 +527,15 @@ const Returns = () => {
       <DefaultModal isOpen={Boolean(detailReturn)} onClose={() => setDetailReturn(null)} title="Return Detail" isButtonView={false} width="640px">
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><strong>Return:</strong> {returnId(detailReturn)}</div>
-            <div><strong>RMA:</strong> {detailReturn?.returnNumber || "Not assigned"}</div>
-            <div><strong>Order:</strong> {detailReturn?.orderId || "—"}</div>
-            <div><strong>Buyer:</strong> {
-              detailReturn?.buyerName || detailReturn?.buyer?.name || detailReturn?.buyerSnapshot?.name ||
-              detailReturn?.buyerEmail || detailReturn?.buyer?.email ||
-              detailReturn?.buyerId || "Not assigned"
-            }</div>
+            <div><strong>Return number:</strong> {detailReturn?.returnNumber || "Not assigned"}</div>
+            <div><strong>Order:</strong> {orderNumber(detailReturn) || "Not available"}</div>
+            <div>
+              <strong>Buyer:</strong> {buyerName(detailReturn) || "Not assigned"}
+              {buyerContact(detailReturn) && (
+                <div className="mt-1 text-xs text-gray-500">{buyerContact(detailReturn)}</div>
+              )}
+            </div>
+            <div><strong>Resolution:</strong> {display(detailReturn?.resolution)}</div>
             <div><strong>Status:</strong> {display(detailReturn?.status)}</div>
             <div><strong>Reason:</strong> {display(detailReturn?.reason)}</div>
             <div><strong>Refund:</strong> {money(detailReturn?.refundAmount || detailReturn?.refundBreakup?.totalRefundAmount)}</div>
@@ -538,9 +549,9 @@ const Returns = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
               <div>Window: {detailReturn?.policySnapshot?.returnWindowDays ? `${detailReturn.policySnapshot.returnWindowDays} days` : "Not available"}</div>
               <div>Eligible Until: {formatDateTime(detailReturn?.policySnapshot?.eligibleUntil)}</div>
-              <div>Shipment ID: {detailReturn?.reverseShipment?.shipmentId || "Not assigned"}</div>
+              <div>AWB: {detailReturn?.reverseShipment?.awbNumber || detailReturn?.reverseShipment?.shipment?.awb_number || "Not assigned"}</div>
               <div>Courier: {detailReturn?.reverseShipment?.courierName || detailReturn?.reverseShipment?.provider || "Not assigned"}</div>
-              <div>Tracking: {detailReturn?.reverseShipment?.trackingNumber || detailReturn?.trackingNumber || "Not available"}</div>
+              <div>Tracking: {detailReturn?.reverseShipment?.trackingNumber || detailReturn?.reverseShipment?.shipment?.tracking_number || detailReturn?.trackingNumber || "Not available"}</div>
               <div>Shipment Status: {display(detailReturn?.reverseShipment?.status)}</div>
             </div>
           </div>
@@ -549,15 +560,12 @@ const Returns = () => {
             <div className="space-y-2">
               {(detailReturn?.items || []).map((item, index) => {
                 const productLabel = item.productTitle || item.productName || item.product?.title || item.product?.name;
-                const sellerLabel = item.sellerName || item.seller?.name || item.seller?.businessName;
+                const sellerLabel = sellerName(item, detailReturn);
                 return (
                   <div key={`${item.productId}-${index}`} className="rounded border border-gray-100 p-3">
-                    <div className="font-medium">{productLabel || item.productId}</div>
-                    {productLabel && item.productId && (
-                      <div className="font-mono text-xs text-gray-400">{item.productId}</div>
-                    )}
+                    <div className="font-medium">{productLabel || "Product details unavailable"}</div>
                     <div className="text-xs text-gray-500">
-                      Seller: {sellerLabel || item.sellerId || "Not assigned"} · SKU: {item.variantSku || "Not available"}
+                      Seller: {sellerLabel || "Not assigned"} · SKU: {item.variantSku || item.productSku || "Not available"}
                     </div>
                     <div className="text-xs text-gray-500">Requested {item.requestedQuantity || item.quantity} · Approved {item.approvedQuantity || 0} · Received {item.receivedQuantity || 0}</div>
                     <div className="text-xs text-gray-500">Refund {money(item.refundAmount)} · QC {display(item.qcResult)} · Restocked {item.restockedQuantity || 0} · Damaged {item.damagedQuantity || 0}</div>

@@ -41,11 +41,14 @@ const DefaultModal = ({
             />
             <div
                 className={`
-                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[${width}] h-full bg-white shadow-[var(--admin-shadow-strong)] z-50 text-sm
+                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[var(--modal-width)] bg-white shadow-[var(--admin-shadow-strong)] z-50 text-sm
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "translate-x-full"}
                 `}
-                style={isOpen ? {} : { pointerEvents: "none" }}
+                style={{
+                    "--modal-width": width,
+                    ...(!isOpen ? { pointerEvents: "none" } : {}),
+                }}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
