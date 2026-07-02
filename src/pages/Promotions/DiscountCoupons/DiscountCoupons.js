@@ -324,7 +324,7 @@ const DiscountCoupons = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Discount Coupons"
         subtitle="Create and manage promotional discount codes"

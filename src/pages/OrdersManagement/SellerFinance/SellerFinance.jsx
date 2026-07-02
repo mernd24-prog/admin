@@ -10,7 +10,10 @@ import {
   MdRefresh,
   MdSearch,
 } from "react-icons/md";
-import { PageHeader, StatusBadge } from "../../../components/Shared";
+import {
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -358,7 +361,7 @@ const SellerFinance = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] p-3 md:p-5">
+    <div className="min-h-screen bg-[#f4f6fb]">
       <PageHeader
         title="Seller Finance"
         subtitle="Commission, settlement, refund adjustment, and payout management"

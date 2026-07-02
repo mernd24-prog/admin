@@ -372,7 +372,7 @@ const Profile = () => {
   const nextSectionNumber = () => String(++currentSection).padStart(2, "0");
 
   return (
-    <div className="admin-page px-4 sm:px-8">
+    <div className="admin-page">
       <Loader loading={loading} />
       {showSuccess && (
         <div className="fixed right-4 top-20 z-50 flex items-center gap-2 rounded-md bg-emerald-600 px-5 py-3 text-sm text-white shadow-lg">
@@ -381,7 +381,7 @@ const Profile = () => {
         </div>
       )}
 
-      <div className="mb-7    mt-8 mx-auto max-w-[1400px]">
+      <div className="mb-7">
         <div className="mb-6">
           <p className="text-[10px] font-semibold text-[#e49e1c]">
             {isSeller ? "Seller profile > Edit" : "My profile > Edit"}

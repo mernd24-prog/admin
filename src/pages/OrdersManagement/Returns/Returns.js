@@ -481,7 +481,7 @@ const Returns = () => {
   ], [openDetail]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <Loader loading={loading} />
       <PageHeader
         title="Returns & Refunds"

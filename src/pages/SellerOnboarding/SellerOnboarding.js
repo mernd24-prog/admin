@@ -21,10 +21,11 @@ import useDropdownOptions, {
 import { AUTH_ROUTES } from "../auth/authRoutes";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[A-Z0-9]$/;
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const BANK_NAME_MIN_LENGTH = 2;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /^https?:\/\/.+/i;
 const KYC_DOCUMENT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
@@ -1913,8 +1914,11 @@ const SellerOnboarding = () => {
       !URL_REGEX.test(profileForm.businessWebsite.trim())
     )
       errors.businessWebsite = "Website must start with http:// or https://";
-    if (!profileForm.pickupLine1.trim())
+    if (!profileForm.pickupLine1.trim()) 
       errors.pickupLine1 = "Pickup address line 1 is required";
+    else if (profileForm.pickupLine1.trim().length < 5) 
+      errors.pickupLine1 = "Pickup address line 1 must be at least 5 characters";
+
     if (!profileForm.pickupCountry.trim())
       errors.pickupCountry = "Pickup country is required";
     if (!profileForm.pickupCity.trim())
@@ -1928,8 +1932,11 @@ const SellerOnboarding = () => {
       profileForm.pickupPostalCode.trim().length > 10
     )
       errors.pickupPostalCode = "Pickup postal code must be 5 to 10 characters";
-    if (!profileForm.businessAddressLine1.trim())
+    if (!profileForm.businessAddressLine1.trim()) 
       errors.businessAddressLine1 = "Business address line 1 is required";
+    else if (profileForm.businessAddressLine1.trim().length < 5) 
+      errors.businessAddressLine1 = "Business address line 1 must be at least 5 characters";
+    
     if (!profileForm.businessAddressCountry.trim())
       errors.businessAddressCountry = "Business country is required";
     if (!profileForm.businessAddressState.trim())
@@ -2028,7 +2035,11 @@ const SellerOnboarding = () => {
     } else if (!IFSC_REGEX.test(bankForm.ifscCode.trim())) {
       errors.ifscCode = "IFSC format should be like ABCD0123456";
     }
-    if (!bankForm.bankName.trim()) errors.bankName = "Bank name is required";
+    if (!bankForm.bankName.trim()) {
+      errors.bankName = "Bank name is required";
+    } else if (bankForm.bankName.trim().length < BANK_NAME_MIN_LENGTH) {
+      errors.bankName = `Bank name must be at least ${BANK_NAME_MIN_LENGTH} characters`;
+    }
     if (!bankForm.branchName.trim())
       errors.branchName = "Branch name is required";
     if (!kycForm.bankProofFile && !documentUrls.bankProofUrl)
@@ -2921,6 +2932,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={bankForm.bankName}
                   onChange={onBankChange}
+                  minLength={BANK_NAME_MIN_LENGTH}
                 />
                 {profileErrors.bankName && (
                   <p className={ERROR_CLASS}>{profileErrors.bankName}</p>

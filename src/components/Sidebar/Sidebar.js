@@ -494,7 +494,7 @@ const Sidebar = ({
           <button
             type="button"
             aria-label="Open sidebar"
-            className="hidden h-9 w-9 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] lg:flex"
+            className="hidden h-9 w-9 min-w-9 flex-none aspect-square items-center justify-center rounded-full border border-[#eadcc3] bg-white p-0 text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] lg:flex"
             onClick={() => {
               setNavbarOpen(true);
               setIsExpanded(true);

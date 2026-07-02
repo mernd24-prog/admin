@@ -959,7 +959,7 @@ export default function ShippingProfiles() {
   }, [isSeller, navigate, organizationLabel, sellerDetails]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Shipping Profiles"
         subtitle={isSeller

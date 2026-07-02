@@ -31,7 +31,10 @@ import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { DataTable, ExportButton } from "../../../components/Shared";
+import {
+  DataTable,
+  ExportButton,
+} from "../../../components/Shared";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
@@ -861,7 +864,7 @@ const ProductCatalog = () => {
   );
 
   return (
-   <div className="mx-auto max-w-[1500px] p-6 overflow-x-auto overflow-y-auto">
+    <div className="overflow-x-auto overflow-y-auto">
       <Loader loading={loading} />
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h1 className="text-xl font-bold text-[var(--admin-navy)]">Product Catalog</h1>
