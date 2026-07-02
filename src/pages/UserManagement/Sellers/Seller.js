@@ -60,7 +60,7 @@ const Sellers = () => {
   const navigate = useNavigate();
 
   const [pageNo, setPageNo] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
 
@@ -359,6 +359,10 @@ const Sellers = () => {
         page={pageNo}
         pageSize={pageSize}
         onPageChange={setPageNo}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPageNo(1);
+        }}
         onSearch={(val) => { setSearch(val); setPageNo(1); }}
         rowActions={rowActions}
         searchPlaceholder="Search by name, username or email…"

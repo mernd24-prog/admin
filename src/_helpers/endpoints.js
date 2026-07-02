@@ -286,6 +286,7 @@ export const ENDPOINTS = {
     detail: (profileId) => `/shipping-profiles/${profileId}`,
     update: (profileId) => `/shipping-profiles/${profileId}`,
     delete: (profileId) => `/shipping-profiles/${profileId}`,
+    bulkDelete: "/shipping-profiles/bulk-delete",
     setDefault: (profileId) => `/shipping-profiles/${profileId}/set-default`,
     templates: "/shipping-profiles/templates",
     template: (templateId) => `/shipping-profiles/templates/${templateId}`,
@@ -414,6 +415,7 @@ export const ENDPOINTS = {
     productReviews: byPanel("/admin/platform/product-reviews", "/sellers/me/product-reviews"),
     sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
+    createProductReview: "/admin/platform/product-reviews",
     productReviewsBulkAction: "/admin/platform/product-reviews/bulk-action",
   },
   common: {

@@ -62,21 +62,31 @@ body {
   scrollbar-width: none;
 }
 
-.admin-card .overflow-x-auto,
-.admin-card .overflow-y-auto,
-.admin-card .overflow-x-scroll,
-.admin-card .overflow-y-scroll,
 .admin-table-scroll {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-color: var(--admin-line-strong) transparent;
+  scrollbar-width: thin;
 }
 
-.admin-card .overflow-x-auto::-webkit-scrollbar,
-.admin-card .overflow-y-auto::-webkit-scrollbar,
-.admin-card .overflow-x-scroll::-webkit-scrollbar,
-.admin-card .overflow-y-scroll::-webkit-scrollbar,
 .admin-table-scroll::-webkit-scrollbar {
-  display: none;
+  display: block;
+  width: 10px;
+  height: 8px;
+}
+
+.admin-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--admin-line-strong);
+  background-clip: content-box;
+}
+
+.admin-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--admin-gold-dark);
+  background-clip: content-box;
 }
 /* Theme CSS Start */
 
@@ -610,6 +620,58 @@ select:active {
   line-height: 1.1;
 }
 
+.admin-icon-btn {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 0;
+  color: var(--admin-navy);
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.admin-icon-btn:hover:not(:disabled) {
+  border-color: var(--admin-gold);
+  background: var(--admin-gold-soft);
+  color: var(--admin-gold-dark);
+}
+
+.admin-icon-btn svg,
+.admin-icon-action svg,
+.admin-table-action-cell button svg,
+.admin-table-actions button svg,
+.admin-table-actions-nowrap button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.admin-icon-btn.text-red-600,
+.admin-table-action-cell button.text-red-600 {
+  color: #dc2626;
+}
+
+.admin-icon-btn.text-yellow-600,
+.admin-table-action-cell button.text-yellow-600 {
+  color: var(--admin-gold-dark);
+}
+
+.admin-icon-btn.text-green-600,
+.admin-table-action-cell button.text-green-600 {
+  color: #16a34a;
+}
+
 .admin-table-actions {
   display: flex;
   max-width: 282px;
@@ -673,6 +735,8 @@ select:active {
   display: inline-flex;
   width: 30px;
   height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -706,6 +770,44 @@ select:active {
 .admin-icon-action.danger:hover:not(:disabled) {
   border-color: rgba(220, 38, 38, 0.25);
   background: #fff1f2;
+}
+
+.brand-filter-inline > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 10px 16px;
+}
+
+.brand-filter-inline > div > div:first-child {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.brand-filter-inline > div > div:nth-child(2) {
+  display: flex;
+  flex: 1 1 240px;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-filter-inline > div > div:nth-child(2) > div {
+  width: auto;
+  min-width: 180px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-filter-inline label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.brand-filter-inline select.admin-input {
+  min-width: 144px;
 }
 
 .admin-legacy-filter-card {

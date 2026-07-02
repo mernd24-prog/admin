@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { MdOutlineClose, MdStar, MdStarBorder } from "react-icons/md";
 import { updateProductReview } from "../../../../Redux/adminCoreSlice";
+import MultiImageUpload from "../../../../components/Atoms/ImageGallery/MultiImageUpload";
 
 const STATUSES = [
   { value: "published", label: "Published" },
@@ -39,11 +40,11 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
     rating: 0,
     title: "",
     reviewText: "",
+    media: [],
     status: "pending",
     adminReplyText: "",
   });
   const [saving, setSaving] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     if (reviewData) {
@@ -51,6 +52,7 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
         rating:         reviewData.rating || 0,
         title:          reviewData.title || "",
         reviewText:     reviewData.reviewText || reviewData.comment || "",
+        media:          Array.isArray(reviewData.media) ? reviewData.media : [],
         status:         reviewData.status || "pending",
         adminReplyText: reviewData.adminReply?.text || "",
       });
@@ -67,6 +69,7 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
         rating:     form.rating,
         title:      form.title,
         reviewText: form.reviewText,
+        media:      form.media,
         status:     form.status,
       };
       if (form.adminReplyText.trim()) {
@@ -83,6 +86,12 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
   };
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setMedia = (updater) => {
+    setForm((current) => ({
+      ...current,
+      media: typeof updater === "function" ? updater(current.media || []) : updater,
+    }));
+  };
 
   const reviewDate = reviewData?.createdAt
     ? new Date(reviewData.createdAt).toLocaleDateString("en-GB", {
@@ -190,24 +199,14 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
 
            
 
-          {/* Media */}
-          {reviewData?.media?.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
-              <div className="flex flex-wrap gap-2">
-                {reviewData.media.map((src, idx) => (
-                  <img
-                    key={idx}
-                    src={src}
-                    alt={`review-${idx}`}
-                    onClick={() => setSelectedImage(src)}
-                    className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
-                    onError={(e) => { e.target.style.display = "none"; }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          <MultiImageUpload
+            label="Review Photos"
+            images={form.media}
+            setImages={setMedia}
+            maxFiles={5}
+            type="PRODUCT_REVIEWS"
+            isDisabled={saving}
+          />
         </div>
 
         {/* Footer */}
@@ -227,20 +226,6 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
           </button>
         </div>
       </div>
-
-      {/* Image lightbox */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 z-[60] bg-black bg-opacity-80 flex items-center justify-center p-4"
-          onClick={() => setSelectedImage(null)}
-        >
-          <img
-            src={selectedImage}
-            alt="Review media"
-            className="max-w-full max-h-[90vh] rounded-lg object-contain"
-          />
-        </div>
-      )}
     </>
   );
 };

@@ -11,6 +11,7 @@ import {
 } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
 import ImageViewer from "../../../components/ImageViewer/ImageViewer";
 import { useListPage } from "../../../hooks/useListPage";
@@ -97,18 +98,60 @@ const extractTotal = (payload, fallback = 0) => {
   );
 };
 
+const extractSellerOptions = (payload) => {
+  const root = getRootPayload(payload);
+  return (
+    payload?.meta?.sellers ||
+    payload?.data?.meta?.sellers ||
+    root?.meta?.sellers ||
+    root?.sellers ||
+    []
+  );
+};
+
+const mergeSellerLookup = (items = [], previous = {}) => {
+  const next = { ...previous };
+  items.forEach((item) => {
+    const id = String(item?.value || item?.id || item?._id || "").trim();
+    if (!id) return;
+    next[id] = {
+      name: item.label ||
+        item.name ||
+        item.displayName ||
+        item.businessName ||
+        item.full_name ||
+        item.sellerProfile?.displayName ||
+        item.sellerProfile?.businessName ||
+        item.sellerProfile?.legalBusinessName ||
+        [item.profile?.firstName, item.profile?.lastName].filter(Boolean).join(" ") ||
+        item.email ||
+        id,
+      email: item.meta?.email || item.email || "",
+      avatarUrl: item.meta?.avatarUrl || item.profile?.avatarUrl || item.avatarUrl || "",
+    };
+  });
+  return next;
+};
+
 const firstImage = (product) => {
   if (Array.isArray(product?.images) && product.images.length > 0) return product.images[0];
   if (Array.isArray(product?.thumbnails) && product.thumbnails.length > 0) return product.thumbnails[0];
   return "https://placehold.co/120x120?text=Product";
 };
 
-const sellerLabel = (product) => {
+const sellerLabel = (product, sellerLookup = {}) => {
   const seller = product?.sellerId || product?.seller || {};
   if (typeof seller === "object") {
-    return seller?.full_name || seller?.name || seller?.email || seller?.businessName || "N/A";
+    return seller?.full_name ||
+      seller?.name ||
+      seller?.displayName ||
+      seller?.email ||
+      seller?.businessName ||
+      seller?.sellerProfile?.displayName ||
+      "N/A";
   }
-  return String(seller || "N/A");
+  const sellerId = String(seller || product?.seller_id || "").trim();
+  return sellerLookup[sellerId]?.name || String(sellerId || "N/A");
 };
 
 const stockStatusFor = (row) => {
@@ -137,6 +180,21 @@ const SellerProductInventories = () => {
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [formData, setFormData] = useState(EMPTY_INVENTORY_FORM);
+  const [sellerLookup, setSellerLookup] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    dropdownApi.getSellers({
+      keyWord: "",
+      searchFields: "full_name,email,businessName,sellerProfile.displayName",
+      limit: 500,
+    })
+      .then((options) => {
+        if (active) setSellerLookup((previous) => mergeSellerLookup(options, previous));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
@@ -157,7 +215,11 @@ const SellerProductInventories = () => {
         }),
       ).unwrap();
       const rows = extractList(response);
+      const sellers = extractSellerOptions(response);
       setProducts(rows);
+      if (sellers.length) {
+        setSellerLookup((previous) => mergeSellerLookup(sellers, previous));
+      }
       setTotal(extractTotal(response, rows.length));
     } catch (loadError) {
       const message = loadError?.message || "Failed to load seller product inventory";
@@ -169,6 +231,8 @@ const SellerProductInventories = () => {
       setLoading(false);
     }
   }, [dispatch, toQueryParams]);
+
+  const resolveSellerName = useCallback((product) => sellerLabel(product, sellerLookup), [sellerLookup]);
 
   useEffect(() => {
     loadProducts();
@@ -214,7 +278,7 @@ const SellerProductInventories = () => {
     setSelectedItem(item);
     setFormData({
       ...EMPTY_INVENTORY_FORM,
-      user: sellerLabel(item),
+      user: resolveSellerName(item),
       title: item?.title || item?.name || "",
       urlKeyword: item?._id ? `/products/${item._id}` : "",
       costPrice: String(item?.costPrice ?? item?.mrp ?? ""),
@@ -285,12 +349,14 @@ const SellerProductInventories = () => {
             <img
               src={firstImage(row)}
               alt=""
-              className="w-12 h-12 object-cover rounded border cursor-pointer"
+              className="h-12 w-12 shrink-0 cursor-pointer rounded border object-cover"
               onClick={() => setSelectedImage(firstImage(row))}
             />
-            <div>
-              <div className="font-medium text-sm text-gray-800">{row?.title || row?.name || "-"}</div>
-              <div className="text-xs text-gray-500">{sellerLabel(row)}</div>
+            <div className="min-w-0">
+              <div className="max-w-[260px] truncate text-sm font-semibold text-gray-800">{row?.title || row?.name || "-"}</div>
+              <div className="max-w-[220px] truncate text-xs font-medium text-[var(--admin-muted)]">
+                {resolveSellerName(row)}
+              </div>
             </div>
           </div>
         ),
@@ -336,8 +402,9 @@ const SellerProductInventories = () => {
       {
         key: "actions",
         label: "Actions",
+        cellClassName: "admin-table-action-cell",
         render: (_, row) => (
-          <div className="flex items-center gap-2">
+          <div className="admin-table-actions-nowrap">
             <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
               <button
                 type="button"
@@ -345,7 +412,7 @@ const SellerProductInventories = () => {
                 title="Adjust inventory"
                 onClick={() => openInventoryModal(row)}
               >
-                <MdTune size={18} />
+                <MdTune size={16} />
               </button>
             </PermissionGuard>
             <PermissionGuard module="products" action={ACTIONS.VIEW} hide>
@@ -355,7 +422,7 @@ const SellerProductInventories = () => {
                 title="View missing information"
                 onClick={() => setMissingOpen(true)}
               >
-                <MdInfoOutline size={18} />
+                <MdInfoOutline size={16} />
               </button>
             </PermissionGuard>
             <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
@@ -365,7 +432,7 @@ const SellerProductInventories = () => {
                 title={row.status === "active" ? "Disable product" : "Enable product"}
                 onClick={() => setToggleTarget(row)}
               >
-                {row.status === "active" ? <MdToggleOff size={20} /> : <MdToggleOn size={20} />}
+                {row.status === "active" ? <MdToggleOff size={16} /> : <MdToggleOn size={16} />}
               </button>
             </PermissionGuard>
             <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
@@ -375,14 +442,14 @@ const SellerProductInventories = () => {
                 title="Delete product"
                 onClick={() => setDeleteTarget(row)}
               >
-                <MdDelete size={18} />
+                <MdDelete size={16} />
               </button>
             </PermissionGuard>
           </div>
         ),
       },
     ],
-    [],
+    [resolveSellerName],
   );
 
   const exportColumns = columns.filter((column) => column.key !== "actions");

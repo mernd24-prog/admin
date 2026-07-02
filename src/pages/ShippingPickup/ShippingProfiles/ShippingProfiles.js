@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   MdAdd,
   MdCheckCircle,
   MdDelete,
+  MdDeleteSweep,
   MdEdit,
   MdLocalShipping,
   MdStar,
@@ -24,6 +26,7 @@ import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganiz
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import {
+  bulkDeleteShippingProfiles,
   createShippingProfile,
   createShippingProfileTemplate,
   deleteShippingProfile,
@@ -385,6 +388,7 @@ const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const formatMoney = (value) => Number(value || 0) === 0 ? "Free" : `₹${Number(value || 0).toFixed(0)}`;
 const shortId = (value = "") => String(value || "").slice(0, 8) || "N/A";
 const profileId = (profile = {}) => profile.id || profile._id || profile.profileId;
+const initialLetter = (value = "") => String(value || "S").trim().charAt(0).toUpperCase() || "S";
 
 const modeLabel = (value) =>
   SERVICEABILITY_MODES.find((mode) => mode.value === value)?.label || displayStatus(value);
@@ -410,6 +414,7 @@ const coverageLabel = (profile = {}) => {
 
 export default function ShippingProfiles() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isSeller } = usePermission();
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const sellerSessionId = useMemo(() => getSellerIdFromUser(storedUser), [storedUser]);
@@ -444,6 +449,8 @@ export default function ShippingProfiles() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedProfileIds, setSelectedProfileIds] = useState([]);
   const [sellerOptions, setSellerOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -452,6 +459,11 @@ export default function ShippingProfiles() {
   const { shippingProfilesData, shippingProfileTemplatesData } = useSelector((state) => state.delivery);
   const profilesPayload = useMemo(() => unwrapProfiles(shippingProfilesData), [shippingProfilesData]);
   const templatesPayload = useMemo(() => unwrapTemplates(shippingProfileTemplatesData), [shippingProfileTemplatesData]);
+
+  useEffect(() => {
+    const visibleIds = new Set(profilesPayload.list.map(profileId).filter(Boolean));
+    setSelectedProfileIds((ids) => ids.filter((id) => visibleIds.has(id)));
+  }, [profilesPayload.list]);
 
   useEffect(() => {
     if (!isSeller) return undefined;
@@ -591,9 +603,17 @@ export default function ShippingProfiles() {
     return fields;
   }, [filters.sellerId, isSeller, organizationOptions]);
 
-  const sellerLabel = useCallback((sellerId) => {
-    if (isSeller) return sellerSessionLabel;
-    return sellerOptions.find((option) => String(option.value) === String(sellerId))?.label || shortId(sellerId);
+  const sellerDetails = useCallback((row = {}) => {
+    const sellerId = row.sellerId || row.seller_id || row.seller?.id || row.seller?._id;
+    const option = sellerOptions.find((item) => String(item.value) === String(sellerId));
+    const name = row.seller?.name || (isSeller ? sellerSessionLabel : option?.label) || shortId(sellerId);
+
+    return {
+      id: sellerId,
+      name,
+      email: row.seller?.email || "",
+      avatarUrl: row.seller?.avatarUrl || "",
+    };
   }, [isSeller, sellerOptions, sellerSessionLabel]);
 
   const organizationLabel = useCallback((organizationId) =>
@@ -787,16 +807,17 @@ export default function ShippingProfiles() {
     }
   };
 
-  const handleDeleteTemplate = async () => {
-    if (!deleteTemplateTarget) return;
+  const handleBulkDelete = async () => {
+    if (!selectedProfileIds.length) return;
     try {
       setSaving(true);
-      await dispatch(deleteShippingProfileTemplate({ templateId: profileId(deleteTemplateTarget) })).unwrap();
-      toast.success("Template archived");
-      setDeleteTemplateTarget(null);
-      fetchTemplates();
+      await dispatch(bulkDeleteShippingProfiles({ profileIds: selectedProfileIds })).unwrap();
+      toast.success(`${selectedProfileIds.length} shipping profile${selectedProfileIds.length > 1 ? "s" : ""} deleted`);
+      setSelectedProfileIds([]);
+      setBulkDeleteOpen(false);
+      fetchProfiles();
     } catch (err) {
-      toast.error(err?.message || err || "Failed to archive template");
+      toast.error(err?.message || err || "Failed to delete selected profiles");
     } finally {
       setSaving(false);
     }
@@ -850,14 +871,39 @@ export default function ShippingProfiles() {
       {
         key: "sellerId",
         label: "Seller",
-        render: (value, row) => (
-          <div>
-            <div className="text-sm font-medium text-[var(--admin-ink)]">{sellerLabel(value || row.seller_id)}</div>
-            {row.organizationId && (
-              <div className="text-xs text-[var(--admin-muted)]">{organizationLabel(row.organizationId)}</div>
-            )}
-          </div>
-        ),
+        render: (_, row) => {
+          const seller = sellerDetails(row);
+          return (
+            <button
+              type="button"
+              className="group flex min-w-[160px] items-center gap-2 text-left"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (seller.id) navigate(`/app/seller/view/${seller.id}`);
+              }}
+              disabled={!seller.id}
+              title={seller.id ? "View seller profile" : "Seller profile unavailable"}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--admin-line)] bg-[var(--admin-gold)]/10 text-xs font-bold text-[var(--admin-gold)]">
+                {seller.avatarUrl ? (
+                  <img src={seller.avatarUrl} alt={seller.name} className="h-full w-full object-cover" />
+                ) : (
+                  initialLetter(seller.name)
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-[var(--admin-ink)] group-hover:text-[var(--admin-gold)]">
+                  {seller.name}
+                </span>
+                {row.organizationId && (
+                  <span className="block truncate text-xs text-[var(--admin-muted)]">
+                    {organizationLabel(row.organizationId)}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        },
       },
       {
         key: "shippingMethod",
@@ -910,7 +956,7 @@ export default function ShippingProfiles() {
     ];
 
     return isSeller ? baseColumns.filter((column) => column.key !== "sellerId") : baseColumns;
-  }, [isSeller, organizationLabel, sellerLabel]);
+  }, [isSeller, navigate, organizationLabel, sellerDetails]);
 
   return (
     <div className="max-w-7xl mx-auto mt-8">
@@ -1014,6 +1060,9 @@ export default function ShippingProfiles() {
         error={error}
         requiredModule="delivery"
         rowKey={profileId}
+        selectable={!isSeller}
+        selectedKeys={selectedProfileIds}
+        onSelectionChange={setSelectedProfileIds}
         filterBar={
           <FilterBar
             filters={filterFields}
@@ -1024,6 +1073,29 @@ export default function ShippingProfiles() {
             activeCount={activeFilterCount}
           />
         }
+        bulkActionBar={!isSeller && selectedProfileIds.length ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--admin-line)] bg-white p-2 m-2 shadow-sm">
+            <span className="text-sm font-semibold text-[var(--admin-ink)]">
+              {selectedProfileIds.length} profile{selectedProfileIds.length > 1 ? "s" : ""} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--admin-muted)] transition hover:border-[var(--admin-gold)] hover:text-[var(--admin-gold-dark)]"
+                onClick={() => setSelectedProfileIds([])}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <MdDeleteSweep size={17} /> Delete Selected
+              </button>
+            </div>
+          </div>
+        ) : null}
         rowActions={(row) => [
           { label: "Edit", icon: <MdEdit size={16} />, onClick: () => openEdit(row) },
           {
@@ -1141,12 +1213,12 @@ export default function ShippingProfiles() {
       />
 
       <ConfirmModal
-        open={Boolean(deleteTemplateTarget)}
-        onClose={() => setDeleteTemplateTarget(null)}
-        onConfirm={handleDeleteTemplate}
-        title="Archive Shipping Template"
-        message={`Archive "${deleteTemplateTarget?.name}"? Existing seller copies will remain unchanged and editable.`}
-        confirmLabel="Archive"
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Selected Shipping Profiles"
+        message={`Are you sure you want to delete ${selectedProfileIds.length} selected shipping profile${selectedProfileIds.length > 1 ? "s" : ""}? Products using these profiles will fall back to seller charge settings.`}
+        confirmLabel="Delete Selected"
         variant="danger"
         loading={saving}
       />

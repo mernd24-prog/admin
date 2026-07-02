@@ -64,12 +64,29 @@ export const dropdownApi = {
   getHsnCodes: (params) => load("hsn-codes", params),
   getTaxes: (params) => load("taxes", params),
   getSystemOptions: (resource, params) => load(resource, params),
-  getSellers: (params) => loadProtected("sellers", ENDPOINTS.sellers.list, params, (item) => ({
-    label: item.displayName || item.businessName || item.email || item._id || item.id,
-    value: item._id || item.id,
-    id: item._id || item.id,
-    meta: { status: item.status || item.accountStatus || "" },
-  })),
+  getSellers: (params) => loadProtected("sellers", ENDPOINTS.sellers.list, params, (item) => {
+    const name = item.displayName ||
+      item.businessName ||
+      item.full_name ||
+      item.userName ||
+      item.sellerProfile?.displayName ||
+      item.sellerProfile?.businessName ||
+      item.sellerProfile?.legalBusinessName ||
+      [item.profile?.firstName, item.profile?.lastName].filter(Boolean).join(" ") ||
+      item.email ||
+      item._id ||
+      item.id;
+    return {
+      label: name,
+      value: item._id || item.id,
+      id: item._id || item.id,
+      meta: {
+        status: item.status || item.accountStatus || "",
+        email: item.email || "",
+        avatarUrl: item.profile?.avatarUrl || item.avatarUrl || "",
+      },
+    };
+  }),
   getSellerOrganizations: (sellerId, params) => loadProtected(
     `seller-organizations:${sellerId || "all"}`,
     ENDPOINTS.sellerOrganizations.list,
