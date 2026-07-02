@@ -22,7 +22,7 @@ import {
   deleteBrand,
   enableDisableBrand,
 } from "../../../Redux/productSlice";
-import { MdAdd, MdBrandingWatermark, MdDelete, MdEdit, MdToggleOff, MdToggleOn } from "react-icons/md";
+import { MdAdd, MdBlock, MdBrandingWatermark, MdCheckCircle, MdDelete, MdEdit, MdImage } from "react-icons/md";
 
 const FILTER_FIELDS = [
   {
@@ -37,22 +37,54 @@ const FILTER_FIELDS = [
   },
 ];
 
+const getBrandInitial = (name = "") => {
+  const firstLetter = String(name).trim().match(/[a-z0-9]/i)?.[0];
+  return (firstLetter || "B").toUpperCase();
+};
+
+const BrandAssetCell = ({ src, name, type = "logo" }) => {
+  const [imageError, setImageError] = useState(false);
+  const frameClass = "h-10 w-10 rounded-full";
+  const initialClass = "text-xs";
+
+  useEffect(() => {
+    setImageError(false);
+  }, [src]);
+
+  if (src && !imageError) {
+    return (
+      <div className={`${frameClass} overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm ring-2 ring-white`}>
+        <img
+          src={src}
+          alt={type === "thumbnail" ? `${name || "Brand"} thumbnail` : `${name || "Brand"} logo`}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${frameClass} relative flex items-center justify-center overflow-hidden border border-[var(--admin-line)] bg-[var(--admin-field)] shadow-sm ring-2 ring-white`}
+      title={name || "Brand"}
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,#fffaf1_0%,#ffffff_50%,#fff3d2_100%)]" />
+      <MdImage size={18} className="absolute text-[var(--admin-line-strong)] opacity-50" />
+      <span className={`${initialClass} relative flex h-full w-full items-center justify-center rounded-full bg-[rgba(214,163,35,0.82)] font-bold leading-none text-[var(--admin-navy)]`}>
+        {getBrandInitial(name)}
+      </span>
+    </div>
+  );
+};
+
 const BASE_COLUMNS = [
   {
     key: "logo",
     label: "Logo",
-    render: (v, row) =>
-      v ? (
-        <img
-          src={v}
-          alt={row.name}
-          className="h-10 w-10 rounded-lg object-contain border border-gray-100 bg-gray-50"
-        />
-      ) : (
-        <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
-          No logo
-        </div>
-      ),
+    width: "20",
+    render: (v, row) => <BrandAssetCell src={v} name={row.name} />,
   },
   {
     key: "name",
@@ -63,16 +95,8 @@ const BASE_COLUMNS = [
   {
     key: "thumbnails",
     label: "Thumbnail",
-    render: (v, row) =>
-      v ? (
-        <img
-          src={v}
-          alt={`${row.name} thumbnail`}
-          className="h-10 w-16 rounded-md object-cover border border-gray-100 bg-gray-50"
-        />
-      ) : (
-        <span className="text-xs text-gray-400">—</span>
-      ),
+    width: "28",
+    render: (v, row) => <BrandAssetCell src={v} name={row.name} type="thumbnail" />,
   },
   {
     key: "isDisable",
@@ -92,8 +116,8 @@ const Brands = () => {
   const dispatch = useDispatch();
   const list = useListPage({
     defaultPageSize: 10,
-    defaultSortKey: "createdAt",
-    defaultSortDir: "desc",
+    defaultSortKey: "name",
+    defaultSortDir: "asc",
   });
 
   const [brands, setBrands] = useState([]);
@@ -123,8 +147,8 @@ const Brands = () => {
           keyWord: params.search || "",
           searchFields: "name",
           select: "name isDisable createdAt logo thumbnails",
-          sortBy: list.sortKey || "createdAt",
-          sortOrder: list.sortDir || "desc",
+          sortBy: list.sortKey || "name",
+          sortOrder: list.sortDir || "asc",
           ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
         })
       ).unwrap();
@@ -235,12 +259,14 @@ const Brands = () => {
       {
         key: "actions",
         label: "Actions",
+        headerClassName: "text-center",
+        cellClassName: "admin-table-action-cell",
         render: (_, row) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-1.5">
             <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
               <button
                 type="button"
-                className="admin-icon-btn"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] shadow-sm transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
                 title="Edit brand"
                 onClick={() => {
                   setFormData({ _id: row._id, name: row.name || "", logo: row.logo || "", thumbnails: row.thumbnails || "", isDisable: row.isDisable || false });
@@ -253,17 +279,21 @@ const Brands = () => {
             <PermissionGuard module="brands" action={ACTIONS.STATUS_CHANGE} hide>
               <button
                 type="button"
-                className={row.isDisable ? "admin-icon-btn text-green-600" : "admin-icon-btn text-yellow-600"}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
+                  row.isDisable
+                    ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
+                    : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
+                }`}
                 title={row.isDisable ? "Enable brand" : "Disable brand"}
                 onClick={() => { setToggleTarget(row); setToggleOpen(true); }}
               >
-                {row.isDisable ? <MdToggleOn size={20} /> : <MdToggleOff size={20} />}
+                {row.isDisable ? <MdCheckCircle size={18} /> : <MdBlock size={18} />}
               </button>
             </PermissionGuard>
             <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
               <button
                 type="button"
-                className="admin-icon-btn text-red-600"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-100 bg-white text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
                 title="Delete brand"
                 onClick={() => { setDeleteTarget(row); setDeleteOpen(true); }}
               >
@@ -316,14 +346,16 @@ const Brands = () => {
         requiredModule="brands"
         exportConfig={{ filename: "brands", columns: BASE_COLUMNS }}
         filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
+          <div className="brand-filter-inline">
+            <FilterBar
+              filters={FILTER_FIELDS}
+              values={list.filters}
+              onChange={list.setFilter}
+              onClear={list.clearFilters}
+              loading={loading}
+              activeCount={list.activeFilterCount}
+            />
+          </div>
         }
       />
 

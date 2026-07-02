@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { MdAccountBalance, MdAssignmentTurnedIn, MdCheck, MdClose, MdCloudUpload, MdDeleteOutline, MdSettings, MdStorefront } from 'react-icons/md';
 import Loader from '../../../components/Loader/Loader';
 import FormInput from '../../../components/Atoms/FormInput/FormInput';
 import {
   getAdminUserDetails,
-  getSellerKyc,
   reviewSellerKyc,
   updateSeller,
   updateSellerBankStatus,
@@ -15,7 +15,6 @@ import { getAdminUser as getAdminCoreUser, getPlatformSubAdmins } from '../../..
 import { toast } from 'sonner';
 import VerificationDecisionModal from '../../../components/Seller/VerificationDecisionModal';
 import OnboardingChecklist from '../../../components/Seller/OnboardingChecklist';
-import SellerKycCard from '../../../components/Seller/SellerKycCard';
 import { uploadFile } from '../../../_helpers/globalFunctions';
 import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
@@ -218,13 +217,106 @@ const STATUS_COLORS = {
   pending_approval:    'bg-yellow-100 text-yellow-700',
 };
 
+const formatStatusText = (value) =>
+  String(value || 'N/A')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const StatusBadge = ({ value, status }) => {
   const lookupValue = String(status || value || '').toLowerCase().replace(/^(kyc|bank|go live)\s+/, '').replace(/[\s-]+/g, '_');
   const colorClass = STATUS_COLORS[lookupValue] || 'bg-gray-100 text-gray-600';
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${colorClass}`}>
-      {value || 'N/A'}
+      {formatStatusText(value)}
     </span>
+  );
+};
+
+const isStageComplete = (status) =>
+  ['active', 'approved', 'live', 'verified', 'ready', 'ready_for_go_live'].includes(
+    String(status || '').toLowerCase(),
+  );
+
+const isStageRejected = (status) =>
+  ['rejected', 'blocked', 'suspended'].includes(String(status || '').toLowerCase());
+
+const VerificationProgress = ({ stages = [] }) => {
+  const completeCount = stages.filter((stage) => isStageComplete(stage.status || stage.value)).length;
+  const progress = stages.length > 1 ? Math.round((completeCount / stages.length) * 100) : 0;
+  const icons = [MdSettings, MdAssignmentTurnedIn, MdAccountBalance, MdStorefront];
+
+  return (
+    <div className="rounded-lg border border-[#ead7b7] bg-[#fffdf8] px-4 py-4">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9A7A3E]">Seller verification progress</p>
+          <p className="mt-1 text-sm font-semibold text-gray-900">{completeCount}/{stages.length} checks complete</p>
+        </div>
+        <span className="rounded-full border border-[#ead7b7] bg-white px-3 py-1 text-xs font-semibold text-[#8A5A1F] shadow-sm">
+          {progress}%
+        </span>
+      </div>
+
+      <div className="relative overflow-x-auto px-1 pb-1 pt-1">
+        <div className="relative grid min-w-[620px] grid-cols-4 sm:min-w-0">
+          {stages.map((stage, index) => {
+            const status = stage.status || stage.value;
+            const complete = isStageComplete(status);
+            const rejected = isStageRejected(status);
+            const Icon = icons[index] || MdSettings;
+            const nextComplete = isStageComplete(stages[index + 1]?.status || stages[index + 1]?.value);
+            const badgeClass = complete
+              ? 'border-[var(--admin-gold)] bg-[#fff8e6] text-[var(--admin-gold-dark)]'
+              : rejected
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-gray-200 bg-gray-50 text-gray-500';
+            return (
+              <div key={stage.label} className="relative flex flex-col items-center text-center">
+                {index < stages.length - 1 && (
+                  <>
+                    <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-0.5 rounded-full bg-gray-200 sm:block" />
+                    {complete && nextComplete && (
+                      <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-0.5 rounded-full bg-[var(--admin-gold)] sm:block" />
+                    )}
+                  </>
+                )}
+                <div
+                  className={`relative z-10 grid h-9 w-9 place-items-center rounded-full p-[3px] text-sm shadow-[0_3px_8px_rgba(138,90,31,0.28)] ring-4 ring-[#fffdf8] ${
+                    complete
+                      ? 'bg-[var(--admin-gold-dark)] text-white'
+                      : rejected
+                        ? 'bg-red-700 text-white'
+                        : 'bg-gray-500 text-white'
+                  }`}
+                >
+                  <span
+                    className={`grid h-full w-full place-items-center rounded-full ${
+                      complete
+                        ? 'bg-[var(--admin-gold)]'
+                        : rejected
+                          ? 'bg-red-500'
+                          : 'bg-gray-400'
+                    }`}
+                  >
+                    {complete ? <MdCheck /> : rejected ? <MdClose /> : <Icon />}
+                  </span>
+                </div>
+                <p className={`mt-3 text-[10px] font-semibold tracking-wide ${complete ? 'text-[var(--admin-gold-dark)]' : 'text-gray-500'}`}>
+                  {stage.label}
+                </p>
+                <div className="mt-1 flex justify-center">
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold leading-none ${badgeClass}`}>
+                    {stage.value || 'N/A'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -266,9 +358,6 @@ const normalizeBankDetails = (bankDetails = {}) => ({
   bankName: firstValue(bankDetails.bankName, bankDetails.bank),
   branchName: firstValue(bankDetails.branchName, bankDetails.branch),
 });
-
-const hasAnyBankDetails = (bankDetails = {}) =>
-  Object.values(bankDetails).some((value) => String(value || '').trim().length > 0);
 
 const getPrimaryOrganization = (organizations = []) =>
   organizations.find((organization) => organization?.isDefault) || organizations[0] || null;
@@ -507,10 +596,7 @@ const UserDetails = () => {
           : 'not_submitted');
   const accountStatus = user.accountStatus || (user.isDisable ? 'suspended' : user._id || user.id ? 'active' : '');
 
-  // KYC lazy-load state
-  const [kycData, setKycData]       = useState(null);
-  const [kycLoading, setKycLoading] = useState(false);
-  const sellerKyc = kycData || user.kyc || {};
+  const sellerKyc = user.kyc || {};
 
   // modal state
   const [kycModal, setKycModal]   = useState({ open: false, defaultDecision: 'verified' });
@@ -539,8 +625,7 @@ const UserDetails = () => {
     sellerProfile.goLiveStatus ||
     (user.accountStatus === 'active' ? 'live' : 'pending');
   const goLiveLabel = organizationSummary.goLiveLabel || goLiveStatus;
-  const showSellerGoLiveAction = organizationSummary.total <= 1;
-  const showSellerBankActions = organizationSummary.total <= 1;
+  const primaryOrganization = organizationSummary.primaryOrganization || getPrimaryOrganization(organizations) || user.organization || {};
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
@@ -690,27 +775,12 @@ const UserDetails = () => {
     };
   }, [ownerAdminId, shouldShowAdminAccess, user.ownerAdmin, user.ownerAdminUser]);
 
-  // ── KYC lazy load when card is expanded ──────────────────────────────────
-  const handleLoadKyc = useCallback(async () => {
-    if (kycData || kycLoading) return;
-    setKycLoading(true);
-    try {
-      const res = await dispatch(getSellerKyc({ sellerId: id })).unwrap();
-      setKycData(res?.data?.kyc || res?.kyc || null);
-    } catch {
-      setKycData(null);
-    } finally {
-      setKycLoading(false);
-    }
-  }, [dispatch, id, kycData, kycLoading]);
-
   // ── KYC review ────────────────────────────────────────────────────────────
   const handleKycSubmit = async (decision, rejectionReason) => {
     const res = await dispatch(
       reviewSellerKyc({ sellerId: id, verificationStatus: decision, rejectionReason }),
     ).unwrap();
     toast.success(res?.message || 'KYC status updated');
-    setKycData(null); // invalidate cached KYC so it reloads on next expand
     refresh();
   };
 
@@ -1006,10 +1076,13 @@ const UserDetails = () => {
           <>
             {/* Verification Status Overview */}
             <section className="bg-white border border-gray-200 rounded-lg p-5">
-              <h2 className="text-base font-semibold text-gray-800 mb-4">Verification Status</h2>
+              <div className="mb-4">
+                <h2 className="text-base font-semibold text-gray-800">Verification Status</h2>
+                <p className="mt-1 text-xs text-gray-500">Track seller readiness from onboarding through go-live approval.</p>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                {[
+              <VerificationProgress
+                stages={[
                   { label: 'Onboarding',  value: onboarding.status || sellerProfile.onboardingStatus },
                   {
                     label: organizationSummary.total > 1 ? 'Org KYC' : 'KYC',
@@ -1022,13 +1095,8 @@ const UserDetails = () => {
                     status: organizationSummary.total > 1 ? organizationSummary.bankStatus : bankStatus,
                   },
                   { label: 'Go Live', value: goLiveLabel, status: goLiveStatus },
-                ].map(({ label, value, status }) => (
-                  <div key={label} className="flex flex-col items-center bg-gray-50 rounded-lg p-3 gap-1">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-                    <StatusBadge value={value} status={status} />
-                  </div>
-                ))}
-              </div>
+                ]}
+              />
 
               {/* Action Buttons — shown only for legacy sellers without organizations */}
               {organizationSummary.total === 0 && (
@@ -1098,13 +1166,6 @@ const UserDetails = () => {
 
             {/* Onboarding Checklist */}
             <OnboardingChecklist checklist={checklist} />
-
-            {/* KYC Details (lazy loaded) */}
-            <SellerKycCard
-              kyc={kycData}
-              loading={kycLoading}
-              onLoad={handleLoadKyc}
-            />
 
             <section className="bg-white border border-gray-200 rounded-lg p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1316,20 +1377,80 @@ const UserDetails = () => {
 
             {/* Seller Account & Profile Edit */}
             <section className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="mb-4">
-                <h2 className="text-base font-semibold text-gray-800">Seller Account Profile</h2>
-                <p className="mt-0.5 text-xs text-gray-400">These are seller-level identity fields. Organization-specific data (bank, addresses, GSTIN, official email) is managed per-organization above.</p>
+              <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-800">Seller Account Profile</h2>
+                  <p className="mt-1 text-xs text-gray-500">Seller login identity and storefront branding.</p>
+                </div>
+                <StatusBadge value={onboarding.status || sellerProfile.onboardingStatus || accountStatus} />
               </div>
 
               {/* Seller Account Identity (read-only) */}
-              <div className="mb-4 rounded-md border border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="mb-5 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Seller Account (Login Identity)</p>
                 <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
                   <Row label="Seller Login Email" value={user.email} />
                   <Row label="Seller Phone"       value={user.phone} />
                   <Row label="Onboarding Status"  value={onboarding.status || sellerProfile.onboardingStatus} />
-                  <Row label="KYC Verified At"    value={formatDateTime(sellerProfile.verifiedAt)} />
                 </div>
+              </div>
+
+              {/* Organization-based snapshot */}
+              <div className="mb-5 rounded-lg border border-[var(--admin-gold)]/30 bg-[#fffaf0] px-4 py-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8A5A1F]">Primary Organization Data</p>
+                    <p className="mt-1 text-xs text-gray-500">Organization-level details shown separately from the seller login profile.</p>
+                  </div>
+                  {primaryOrganization?.id || primaryOrganization?.organizationId ? (
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500">
+                      {primaryOrganization.isDefault ? 'Default organization' : 'Organization'}
+                    </span>
+                  ) : null}
+                </div>
+                {primaryOrganization?.id || primaryOrganization?.organizationId ? (
+                  <>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        {primaryOrganization.storeDisplayName || primaryOrganization.legalBusinessName || primaryOrganization.id || primaryOrganization.organizationId}
+                      </h3>
+                      <StatusBadge value={primaryOrganization.approvalStatus || 'not_created'} status={primaryOrganization.approvalStatus} />
+                      <StatusBadge value={`KYC ${primaryOrganization.kycStatus || 'not_submitted'}`} status={primaryOrganization.kycStatus} />
+                      <StatusBadge value={`Bank ${primaryOrganization.bankVerificationStatus || 'not_submitted'}`} status={primaryOrganization.bankVerificationStatus} />
+                    </div>
+                    <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
+                      <Row label="Official Email" value={primaryOrganization.supportEmail} />
+                      <Row label="Official Phone" value={primaryOrganization.supportPhone} />
+                      <Row label="GSTIN" value={primaryOrganization.gstin} />
+                      <Row label="PAN" value={primaryOrganization.pan} />
+                      <Row label="Business Type" value={primaryOrganization.businessType} />
+                      <Row
+                        label="Bank Account"
+                        value={
+                          hasCompleteBankDetails(normalizeBankDetails(primaryOrganization.bankDetails || {}))
+                            ? normalizeBankDetails(primaryOrganization.bankDetails || {}).accountNumber
+                            : ''
+                        }
+                      />
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {[
+                        ['Billing Address', primaryOrganization.billingAddress],
+                        ['Pickup Address', primaryOrganization.pickupAddress],
+                        ['Return Address', primaryOrganization.returnAddress],
+                      ].map(([label, address]) => (
+                        <div key={label} className="rounded-md border border-[#ead7b7] bg-white p-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
+                          <p className="mt-1 text-sm leading-relaxed text-gray-800">{formatAddress(address) || '—'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">
+                    No organization data is available for this seller yet.
+                  </p>
+                )}
               </div>
 
               {/* Display / branding fields */}
@@ -1344,66 +1465,83 @@ const UserDetails = () => {
               </div>
 
               {/* Editable Fields */}
-              <form className="border-t border-gray-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveSellerProfile}>
-                <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-2">Edit Profile</p>
+              <form className="rounded-lg border border-gray-200 bg-white" onSubmit={handleSaveSellerProfile}>
+                <div className="border-b border-gray-100 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Edit Profile</p>
+                  <p className="mt-1 text-xs text-gray-400">Update seller image and business display details.</p>
+                </div>
 
-                {/* Seller image */}
-                <div className="md:col-span-2 flex items-center gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
-                  <img
-                    src={editSeller.avatarUrl || '/Img/user.png'}
-                    alt="Seller"
-                    className="h-16 w-16 rounded-full border border-gray-200 bg-white object-cover"
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className="cursor-pointer rounded-md bg-[var(--admin-blue)] px-4 py-2 text-sm text-white hover:bg-[#2e3074]">
-                      Upload Seller Image
-                      <input type="file" accept="image/*" className="hidden" onChange={handleSellerAvatarUpload} />
-                    </label>
-                    {editSeller.avatarUrl && (
-                      <button type="button" className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-white"
-                        onClick={() => setEditSeller((prev) => ({ ...prev, avatarUrl: '' }))}>
-                        Remove
-                      </button>
-                    )}
+                <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-[220px,1fr]">
+                  {/* Seller image */}
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <img
+                        src={editSeller.avatarUrl || '/Img/user.png'}
+                        alt="Seller"
+                        className="h-24 w-24 rounded-full border border-gray-200 bg-white object-cover shadow-sm"
+                      />
+                      <p className="mt-3 text-sm font-semibold text-gray-800">{editSeller.displayName || sellerProfile.displayName || 'Seller'}</p>
+                      <p className="mt-1 max-w-full truncate text-xs text-gray-400">{user.email || 'Login email unavailable'}</p>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2">
+                      <label className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[var(--admin-gold)] px-2.5 py-2 text-center text-xs font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
+                        <MdCloudUpload size={16} />
+                        <span>Upload</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleSellerAvatarUpload} />
+                      </label>
+                      {editSeller.avatarUrl && (
+                        <button
+                          type="button"
+                          className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-[#fff8e6] px-2.5 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[#fff3cc]"
+                          onClick={() => setEditSeller((prev) => ({ ...prev, avatarUrl: '' }))}
+                        >
+                          <MdDeleteOutline size={16} />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-500">Seller Login Email</label>
+                        <input
+                          readOnly
+                          value={user.email || ''}
+                          className="min-h-[38px] rounded-md border border-gray-200 bg-gray-50 px-3 text-sm text-gray-400 outline-none cursor-not-allowed"
+                        />
+                        <p className="text-[11px] text-gray-400">Login email cannot be changed here.</p>
+                      </div>
+
+                      <FormInput
+                        label="Display Name"
+                        name="displayName"
+                        value={editSeller.displayName}
+                        onChange={(e) => setEditSeller((p) => ({ ...p, displayName: e.target.value }))}
+                      />
+                      <FormInput
+                        label="Legal Business Name"
+                        name="legalBusinessName"
+                        value={editSeller.legalBusinessName}
+                        onChange={(e) => setEditSeller((p) => ({ ...p, legalBusinessName: e.target.value }))}
+                      />
+                      <FormInput
+                        label="Business Type"
+                        name="businessType"
+                        value={editSeller.businessType}
+                        onChange={(e) => setEditSeller((p) => ({ ...p, businessType: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                      Organization-level fields such as official email, phone, bank details, addresses, GSTIN, and PAN are managed in <strong>Seller Organizations</strong>.
+                    </div>
                   </div>
                 </div>
 
-                {/* Read-only login email shown for clarity */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-gray-500">Seller Login Email</label>
-                  <input
-                    readOnly
-                    value={user.email || ''}
-                    className="min-h-[38px] rounded-md border border-gray-200 bg-gray-50 px-3 text-sm text-gray-400 outline-none cursor-not-allowed"
-                  />
-                  <p className="text-[11px] text-gray-400">Login email — cannot be changed here</p>
-                </div>
-
-                <FormInput
-                  label="Display Name"
-                  name="displayName"
-                  value={editSeller.displayName}
-                  onChange={(e) => setEditSeller((p) => ({ ...p, displayName: e.target.value }))}
-                />
-                <FormInput
-                  label="Legal Business Name"
-                  name="legalBusinessName"
-                  value={editSeller.legalBusinessName}
-                  onChange={(e) => setEditSeller((p) => ({ ...p, legalBusinessName: e.target.value }))}
-                />
-                <FormInput
-                  label="Business Type"
-                  name="businessType"
-                  value={editSeller.businessType}
-                  onChange={(e) => setEditSeller((p) => ({ ...p, businessType: e.target.value }))}
-                />
-
-                <div className="md:col-span-2 rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                  Organization-level fields (official email, phone, bank details, addresses, GSTIN, PAN) are managed in the <strong>Seller Organizations</strong> section above.
-                </div>
-
-                <div className="md:col-span-2 flex justify-end">
-                  <button type="submit" className="px-4 py-2 rounded-md bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2e3074]">
+                <div className="flex justify-end border-t border-gray-100 px-4 py-3">
+                  <button type="submit" className="rounded-md bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
                     Save Profile
                   </button>
                 </div>

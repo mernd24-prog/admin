@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibilityOff } from "react-icons/md";
+import { MdAdd, MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibilityOff } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -19,6 +19,7 @@ import {
   bulkUpdateProductReviews,
 } from "../../../Redux/adminCoreSlice";
 import EditProductReview from "./components/EditProductReview";
+import AddProductReview from "./components/AddProductReview";
 import { useListPage } from "../../../hooks/useListPage";
 
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
@@ -94,6 +95,7 @@ const ProductReviews = () => {
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
   const [editTarget, setEditTarget]       = useState(null);
+  const [addOpen, setAddOpen]             = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [loading, setLoading]             = useState(false);
@@ -345,6 +347,17 @@ const ProductReviews = () => {
           { label: "Orders Management" },
           { label: "Product Reviews" },
         ]}
+        actions={!isSellerPanelUser ? (
+          <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-navy)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            >
+              <MdAdd size={18} />
+              Add Review
+            </button>
+          </PermissionGuard>
+        ) : null}
       />
 
       <DataTable
@@ -426,6 +439,12 @@ const ProductReviews = () => {
         isOpen={Boolean(editTarget)}
         onClose={() => { setEditTarget(null); fetchReviews(); }}
         reviewData={editTarget}
+      />
+
+      <AddProductReview
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreated={fetchReviews}
       />
 
       <ConfirmModal

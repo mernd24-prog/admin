@@ -26,6 +26,7 @@ const initialState = {
   createShippingProfileData: {},
   updateShippingProfileData: {},
   deleteShippingProfileData: {},
+  bulkDeleteShippingProfilesData: {},
   setDefaultShippingProfileData: {},
 };
 
@@ -203,6 +204,14 @@ export const deleteShippingProfile = createApiThunkPrivate(
   "DELETE"
 );
 
+export const bulkDeleteShippingProfiles = createApiThunkPrivate(
+  "delivery/bulkDeleteShippingProfiles",
+  ENDPOINTS.shippingProfiles.bulkDelete,
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ profileIds: payload.profileIds || [] }) }
+);
+
 export const setDefaultShippingProfile = createApiThunkPrivate(
   "delivery/setDefaultShippingProfile",
   (payload) => ENDPOINTS.shippingProfiles.setDefault(payload?.profileId || payload?.id),
@@ -235,6 +244,7 @@ const deliverySlice = createSlice({
     createExtraReducersForThunk(builder, getShippingProfile, "shippingProfileData");
     createExtraReducersForThunk(builder, updateShippingProfile, "updateShippingProfileData");
     createExtraReducersForThunk(builder, deleteShippingProfile, "deleteShippingProfileData");
+    createExtraReducersForThunk(builder, bulkDeleteShippingProfiles, "bulkDeleteShippingProfilesData");
     createExtraReducersForThunk(builder, setDefaultShippingProfile, "setDefaultShippingProfileData");
   },
 });
