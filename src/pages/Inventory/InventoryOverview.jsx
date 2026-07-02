@@ -10,7 +10,11 @@ import {
   MdClose,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import { PageHeader, DataTable, StatusBadge } from "../../components/Shared";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+} from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -200,7 +204,7 @@ const InventoryOverview = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Inventory Overview"
         subtitle="Monitor stock levels across all products"

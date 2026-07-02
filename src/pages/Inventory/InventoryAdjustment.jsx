@@ -310,7 +310,7 @@ const InventoryAdjustment = () => {
   const ActiveIcon = activeType.icon;
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8">
+    <div>
       <PageHeader
         title="Inventory Adjustment"
         subtitle="Search a product, review stock, then apply a controlled stock correction"

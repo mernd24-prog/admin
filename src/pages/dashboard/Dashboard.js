@@ -657,8 +657,7 @@ export default function Dashboard() {
   const statusTotal = statusRows.reduce((sum, row) => sum + row.value, 0);
 
   return (
-    <div className="admin-page min-h-screen w-full px-4 py-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1480px]">
+    <div className="admin-page min-h-screen">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
             Merchant Insights
@@ -998,7 +997,7 @@ export default function Dashboard() {
               </button>
             </div>
             <table className="w-full text-left">
-              <thead className="admin-table-head font-inter text-[12px]">
+              <thead className="admin-table-head  font-inter text-[12px]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Order ID</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>
@@ -1064,7 +1063,6 @@ export default function Dashboard() {
             </table>
           </section>
         </div>
-      </div>
     </div>
   );
 }

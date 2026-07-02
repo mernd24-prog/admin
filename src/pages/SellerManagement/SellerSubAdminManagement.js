@@ -705,7 +705,7 @@ const SellerSubAdminManagement = () => {
   return (
     <>
       <Loader loading={sellerSelector?.loading || userSelector?.loading} />
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm text-gray-500">
             <Link to="/app/home" className="text-[var(--admin-blue)] hover:underline">Home</Link>

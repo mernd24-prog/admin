@@ -742,7 +742,7 @@ export default function ShippingProfiles() {
   }, [isSeller, organizationLabel, sellerLabel]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Shipping Profiles"
         subtitle={isSeller

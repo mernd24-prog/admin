@@ -934,7 +934,7 @@ const MyOrganizations = () => {
   const rejectedCount = organizations.filter((o) => ["rejected", "blocked"].includes(o.approvalStatus)).length;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-5 p-4 sm:p-5 lg:p-6">
+    <div className="space-y-5">
       <PageHeader
         title="My Organizations"
         subtitle="Each organization has its own GST registration, bank account, and independent admin approval."

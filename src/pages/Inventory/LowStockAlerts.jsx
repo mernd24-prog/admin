@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MdNotifications, MdAddCircleOutline } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import { PageHeader, DataTable, StatusBadge, FilterBar } from "../../components/Shared";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+} from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "../../utils/toast";
@@ -138,7 +143,7 @@ const LowStockAlerts = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Low Stock Alerts"
         subtitle="Products that need to be restocked soon"

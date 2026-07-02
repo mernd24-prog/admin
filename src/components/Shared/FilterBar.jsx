@@ -86,7 +86,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
   const hasValue = !!value;
 
   return (
-    <div ref={containerRef} className={`relative flex min-w-0 flex-col gap-1 ${field.width || 'w-full'}`}>
+    <div ref={containerRef} className= "relative flex min-w-0 flex-col gap-1 w-full">
       {field.label && (
         <label htmlFor={id} className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
           {field.label}
@@ -149,7 +149,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
 /* ─────────────── FilterField ─────────────── */
 const FilterField = ({ field, value, onChange }) => {
   const id = useId();
-  const wrapperClass = `flex min-w-0 flex-col gap-1 ${field.width || 'w-full'}`;
+  const wrapperClass = "flex min-w-0 flex-col gap-1 w-full";
 
   if (field.type === 'asyncDropdown') {
     return <AsyncDropdownFilter field={field} value={value} onChange={onChange} />;
@@ -325,7 +325,7 @@ const FilterBar = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {normalizedFilters.map((field) => (
           <FilterField
             key={field.key}

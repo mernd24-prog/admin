@@ -171,7 +171,7 @@ const TaxInvoices = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Tax Invoices"
         subtitle="View and manage all tax invoices"

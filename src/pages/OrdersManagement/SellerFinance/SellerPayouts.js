@@ -4,7 +4,12 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import {
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
 import { getAdminSellerPayouts, getSellerPayouts } from "../../../Redux/sellerCommissionsSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
@@ -91,7 +96,7 @@ const SellerPayouts = () => {
   }, [isSeller]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Seller Payouts"
         subtitle={isSeller ? "See how every payout was calculated and when it was paid." : "Calculated seller payouts. Use Payout Operations to approve or complete them."}
