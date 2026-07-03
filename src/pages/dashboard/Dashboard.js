@@ -939,49 +939,52 @@ export default function Dashboard() {
 
         {/* Tables */}
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {topProducts.length > 0 && (
-            <section className="admin-card overflow-hidden bg-white">
-              <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
-                <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
-                  Top Products
-                </h2>
-                <button
-                  type="button"
-                  className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  onClick={() => navigate("/app/product-catalog")}
-                >
-                  See All
-                </button>
-              </div>
-              <table className="w-full text-left">
-                <thead className="admin-table-head font-inter text-[12px]">
-                  <tr>
-                    <th className="px-5 py-3  font-semibold">Product</th>
-                    <th className="px-4 py-3 font-semibold">Units Sold</th>
-                    <th className="px-4 py-3 font-semibold">Revenue</th>
+          <section className="admin-card overflow-hidden bg-white">
+            <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
+              <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
+                Top Products
+              </h2>
+              <button
+                type="button"
+                className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                onClick={() => navigate("/app/product-catalog")}
+              >
+                See All
+              </button>
+            </div>
+            <table className="w-full text-left">
+              <thead className="admin-table-head font-inter text-[12px]">
+                <tr>
+                  <th className="px-5 py-3  font-semibold">Product</th>
+                  <th className="px-4 py-3 font-semibold">Units Sold</th>
+                  <th className="px-4 py-3 font-semibold">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="text-[12px] text-slate-600">
+                {topProducts.length === 0 && (
+                  <EmptyTableRow colSpan={3}>
+                    No top products available.
+                  </EmptyTableRow>
+                )}
+                {topProducts.map((product, index) => (
+                  <tr
+                    key={product.product_id || product.productId || index}
+                    className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                  >
+                    <td className="px-5 py-3 font-medium text-slate-700">
+                      {product.name || product.title}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatNumber(product.units_sold ?? product.unitsSold)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatCurrency(product.revenue)}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="text-[12px] text-slate-600">
-                  {topProducts.map((product, index) => (
-                    <tr
-                      key={product.product_id || product.productId || index}
-                      className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
-                    >
-                      <td className="px-5 py-3 font-medium text-slate-700">
-                        {product.name || product.title}
-                      </td>
-                      <td className="px-4 py-3">
-                        {formatNumber(product.units_sold ?? product.unitsSold)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {formatCurrency(product.revenue)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </section>
 
           <section className="admin-card overflow-hidden bg-white">
             <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
