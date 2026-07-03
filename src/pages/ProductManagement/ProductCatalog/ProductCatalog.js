@@ -933,7 +933,7 @@ const ProductCatalog = () => {
             requiredModule="products"
             cardClassName="overflow-hidden rounded-none border-0 shadow-none"
             tableContainerClassName="hide-scrollbar max-h-[calc(100vh-360px)] overflow-x-auto overflow-y-auto pb-2"
-            tableClassName="min-w-[1680px]"
+            tableClassName="min-w-[1880px]"
           />
         </section>
       </div>

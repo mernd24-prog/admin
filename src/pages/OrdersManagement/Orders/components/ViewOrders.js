@@ -26,11 +26,12 @@ const ALLOWED_TRANSITIONS = {
   payment_failed:  ["pending_payment", "cancelled"],
   confirmed:       ["packed", "cancelled"],
   packed:          ["shipped", "cancelled"],
-  shipped:         [],
+  shipped:         ["delivered", "return_requested"],
   delivered:       ["fulfilled", "return_requested"],
   fulfilled:       ["return_requested"],
   return_requested:["partially_returned", "returned"],
   partially_returned:["return_requested", "fulfilled"],
+  returned:        ["fulfilled"],
 };
 
 // Seller order actions stop at shipment handoff. Delivery progress is managed in Shipments.
