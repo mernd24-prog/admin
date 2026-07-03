@@ -111,6 +111,8 @@ const MODULE_LABELS = {
   "payments-finance": "Payments & Finance",
   "shipping-fulfilment": "Shipping & Fulfilment",
   "returns-cancellations": "Returns & Cancellations",
+  queries: "Queries",
+  "help-support": "Help & Support",
   "invoices-taxation": "Invoices & Taxation",
   "seller-finance-payouts": "Seller Finance & Payouts",
   "commerce-settings-menu": "Commerce Settings",
@@ -191,6 +193,8 @@ const MODULE_TABS = {
   carts: "Orders Management",
   orders: "Orders Management",
   returns: "Returns & Cancellations",
+  queries: "Support",
+  "help-support": "Support",
   payments: "Payments & Finance",
   "commerce-settings": "Commerce Settings",
   wallets: "Payments & Finance",
@@ -291,6 +295,8 @@ export const MODULE_DEFAULT_ROUTES = {
   carts:        "carts",
   orders:       "orders",
   returns:      "returns",
+  queries:      "queries",
+  "help-support": "help-support",
   reviews:      "product-reviews",
   payments:     "payments",
   wallets:      "wallet-transactions",
@@ -491,6 +497,7 @@ const ROUTE_MODULES = [
   // Returns & Cancellations
   [["/returns"], ["returns", "orders"]],
   [["/cancellations"], ["orders", "cancellations"]],
+  [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
   [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],

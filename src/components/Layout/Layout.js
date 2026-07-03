@@ -363,6 +363,12 @@ const PermissionTemplates = React.lazy(
   () =>
     import("../../pages/UserManagement/PermissionTemplates/PermissionTemplates"),
 );
+const AdminQueries = React.lazy(
+  () => import("../../pages/Support/AdminQueries"),
+);
+const SellerHelpSupport = React.lazy(
+  () => import("../../pages/Support/SellerHelpSupport"),
+);
 
 const getInitialSidebarState = () => {
   if (typeof window === "undefined") return true;
@@ -662,6 +668,8 @@ function Layout() {
       { path: "/activity-logs", render: () => <ActivityLogs /> },
       { path: "/rbac-audit-log", render: () => <RbacAuditLog /> },
       { path: "/permission-templates", render: () => <PermissionTemplates /> },
+      { path: "/queries", render: () => <AdminQueries /> },
+      { path: "/help-support", render: () => <SellerHelpSupport /> },
       { path: "/seller-onboarding", redirectTo: "/app/seller" },
       { path: "/seller-status", redirectTo: "/app/seller" },
       { path: "/seller-sub-admins", render: () => <SellerSubAdminManagement /> },

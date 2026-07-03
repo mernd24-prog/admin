@@ -316,6 +316,14 @@ export const ENDPOINTS = {
     send: "/notifications",
     preferences: "/notifications/preferences",
   },
+  support: {
+    mine: "/support/queries",
+    myDetail: (queryId) => `/support/queries/${queryId}`,
+    create: "/support/queries",
+    adminList: "/admin/support/queries",
+    adminDetail: (queryId) => `/admin/support/queries/${queryId}`,
+    adminStatus: (queryId) => `/admin/support/queries/${queryId}/status`,
+  },
   deals: {
     list: "/deals",
     detail: (dealId) => `/deals/${dealId}`,

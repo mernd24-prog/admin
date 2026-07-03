@@ -13,6 +13,7 @@ import {
   MdAccountBalance,
   MdBarChart,
   MdLocationOn,
+  MdSupportAgent,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -52,6 +53,7 @@ const SECTION_ICONS = {
   "reports & analytics": MdBarChart,
   settings: CiSettings,
   "location management": MdLocationOn,
+  support: MdSupportAgent,
 };
 
 const getIconForTab = (tabName) =>
