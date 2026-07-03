@@ -21,6 +21,6 @@ root.render(
         </LoaderProvider>
       </BrowserRouter>
     </Provider>
-    <Toaster position="top-right" richColors />
+    <Toaster position="bottom-center" richColors />
   </React.StrictMode>
 );

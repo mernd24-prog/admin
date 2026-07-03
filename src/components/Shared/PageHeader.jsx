@@ -56,20 +56,34 @@ const PageHeader = ({
           {breadcrumbs.length > 0 && (
             <nav
               aria-label="Breadcrumb"
-              className="flex items-center flex-wrap gap-1 text-xs text-[var(--admin-muted)] mb-1"
+              className="mb-2 inline-flex w-fit max-w-full flex-wrap items-center gap-1 py-1.5 text-[11px] "
             >
+          
               {breadcrumbs.map((crumb, i) => (
                 <React.Fragment key={i}>
-                  {i > 0 && <MdChevronRight size={14} className="flex-shrink-0" />}
+                  {i > 0 && (
+                    <MdChevronRight
+                      size={14}
+                      className="flex-shrink-0 text-[var(--admin-gold)]"
+                    />
+                  )}
                   {crumb.to ? (
                     <Link
                       to={crumb.to}
-                      className="hover:text-[var(--admin-blue)] transition-colors"
+                      className="font-medium text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-navy)]"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="text-[var(--admin-ink)]">{crumb.label}</span>
+                    <span
+                      className={
+                        i === breadcrumbs.length - 1
+                          ? "font-semibold text-[var(--admin-navy)]"
+                          : "font-medium text-[var(--admin-muted)]"
+                      }
+                    >
+                      {crumb.label}
+                    </span>
                   )}
                 </React.Fragment>
               ))}
