@@ -72,7 +72,7 @@ export const ActionButtons = ({
     <PermissionGuard module={guardModule} action={action} hide>{node}</PermissionGuard>
   ) : node;
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       {showEditButton && guard(editAction, (
         <Tooltip text="Edit" position="top">
           <button

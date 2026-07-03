@@ -120,7 +120,7 @@ const useApiReport = (loadData, filters) => {
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Failed to load report";
       setError(message);
-      toast.error(message);
+      toast.error(message, { id: "report-load-error" });
     } finally {
       setLoading(false);
     }
@@ -146,12 +146,6 @@ const StatCard = ({ label, value, sub, loading }) => (
 const EmptyPanel = ({ text = "No data returned for this period." }) => (
   <div className="admin-card flex min-h-[220px] items-center justify-center p-6 text-center text-sm text-[var(--admin-muted)]">
     {text}
-  </div>
-);
-
-const ErrorPanel = ({ message }) => (
-  <div className="admin-card border-red-100 bg-red-50 p-5 text-sm text-red-600">
-    {message}
   </div>
 );
 
@@ -205,7 +199,6 @@ export const ReportShell = ({
   stats = [],
   children,
   loading = false,
-  error = "",
   filters,
   onRefresh,
   exportEndpoint,
@@ -223,7 +216,8 @@ export const ReportShell = ({
         { filename: exportFilename || "report.csv", format: "csv" },
       );
     } catch (err) {
-      toast.error(err?.message || "Export failed");
+      const message = err?.response?.data?.message || err?.message || "Export failed";
+      toast.error(message, { id: "report-export-error" });
     } finally {
       setExporting(false);
     }
@@ -236,40 +230,63 @@ export const ReportShell = ({
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          exportEndpoint && (
+            <button type="button" onClick={handleExport} disabled={exporting} className="admin-btn-secondary">
+              <MdFileDownload size={16} /> {exporting ? "Exporting" : "Export CSV"}
+            </button>
+          )
+        }
+      />
+
+      <section className="admin-card mb-5 p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] xl:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs font-semibold text-[var(--admin-muted)]">Date range</span>
             <select
               value={filters.range}
               onChange={(event) => filters.setRange(event.target.value)}
-              className="admin-input w-40"
+              className="admin-input w-full"
             >
               {RANGE_OPTIONS.map((option) => (
                 <option key={option}>{option}</option>
               ))}
               {filters.range === "Custom" && <option>Custom</option>}
             </select>
+          </label>
+
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs font-semibold text-[var(--admin-muted)]">From date</span>
             <input
               type="date"
               value={filters.fromDate}
+              max={filters.toDate}
               onChange={(event) => filters.setFromDate(event.target.value)}
-              className="admin-input w-36"
+              className="admin-input w-full"
             />
+          </label>
+
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs font-semibold text-[var(--admin-muted)]">To date</span>
             <input
               type="date"
               value={filters.toDate}
+              min={filters.fromDate}
               onChange={(event) => filters.setToDate(event.target.value)}
-              className="admin-input w-36"
+              className="admin-input w-full"
             />
-            <button type="button" onClick={onRefresh} disabled={loading} className="admin-btn-secondary">
-              <MdRefresh size={16} /> {loading ? "Refreshing" : "Refresh"}
-            </button>
-            {exportEndpoint && (
-              <button type="button" onClick={handleExport} disabled={exporting} className="admin-btn-secondary">
-                <MdFileDownload size={16} /> {exporting ? "Exporting" : "Export CSV"}
-              </button>
-            )}
-          </div>
-        }
-      />
+          </label>
+
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            className="admin-btn-secondary w-full justify-center sm:w-auto xl:min-w-[112px] mb-1.5"
+          >
+            <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
+            {loading ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
+      </section>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
@@ -277,7 +294,7 @@ export const ReportShell = ({
         ))}
       </div>
 
-      {error ? <ErrorPanel message={error} /> : children}
+      {children}
     </div>
   );
 };

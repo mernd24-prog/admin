@@ -114,6 +114,8 @@ const OnboardingSelect = ({
         value={value}
         onChange={onChange}
         disabled={disabled || loading}
+        required={required}
+        aria-required={required}
       >
         <option value="">
           {loading ? "Loading..." : placeholder || `Select ${label}`}
@@ -613,6 +615,7 @@ const DocumentUploadField = ({
           className="hidden"
           accept={accept}
           onChange={onChange}
+          aria-required={required}
         />
       </div>
       {error && <p className={ERROR_CLASS}>{error}</p>}
@@ -1894,7 +1897,17 @@ const SellerOnboarding = () => {
       errors.businessType = "Business type is required";
     if (!profileForm.businessName.trim())
       errors.businessName = "Business name is required";
-    if (!GST_REGEX.test(profileForm.gstNumber.trim()))
+    if (!profileForm.displayName.trim())
+      errors.displayName = "Display name is required";
+    if (!profileForm.legalBusinessName.trim())
+      errors.legalBusinessName = "Legal business name is required";
+    if (!profileForm.primaryContactName.trim())
+      errors.primaryContactName = "Primary contact name is required";
+    if (!profileForm.description.trim())
+      errors.description = "Description is required";
+    if (!profileForm.gstNumber.trim())
+      errors.gstNumber = "GST number is required";
+    else if (!GST_REGEX.test(profileForm.gstNumber.trim()))
       errors.gstNumber =
         "Please enter a valid GST Number (e.g. 27ABCDE1234F1Z5)";
     if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
@@ -2415,6 +2428,7 @@ const SellerOnboarding = () => {
       {step === 2 && (
         <form
           onSubmit={submitBusinessStep}
+          noValidate
           onBlurCapture={(event) => {
             if (event.target.name) validateProfile(event.target.name);
           }}
@@ -2448,6 +2462,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.businessName}
                   onChange={onProfileChange}
+                  required
                 />
                 {profileErrors.businessName && (
                   <p className={ERROR_CLASS}>{profileErrors.businessName}</p>
@@ -2466,6 +2481,7 @@ const SellerOnboarding = () => {
                   value={profileForm.gstNumber}
                   onChange={onProfileChange}
                   maxLength={15}
+                  required
                 />
                 {profileErrors.gstNumber && (
                   <p className={ERROR_CLASS}>{profileErrors.gstNumber}</p>
@@ -2526,6 +2542,8 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.supportEmail}
                   onChange={onProfileChange}
+                  type="email"
+                  required
                 />
                 <p className="mt-1 text-[11px] text-[#8a93a5]">Used for organization support, invoices, and business communication. Login still uses your seller account email.</p>
                 {profileErrors.supportEmail && (
@@ -2546,6 +2564,7 @@ const SellerOnboarding = () => {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={10}
+                  required
                 />
                 {profileErrors.supportPhone && (
                   <p className={ERROR_CLASS}>{profileErrors.supportPhone}</p>
@@ -2554,7 +2573,7 @@ const SellerOnboarding = () => {
 
               <div>
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Display Name
+                  Display Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="displayName"
@@ -2562,12 +2581,16 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.displayName}
                   onChange={onProfileChange}
+                  required
                 />
+                {profileErrors.displayName && (
+                  <p className={ERROR_CLASS}>{profileErrors.displayName}</p>
+                )}
               </div>
 
               <div>
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Legal Business Name
+                  Legal Business Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="legalBusinessName"
@@ -2575,7 +2598,13 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.legalBusinessName}
                   onChange={onProfileChange}
+                  required
                 />
+                {profileErrors.legalBusinessName && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.legalBusinessName}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -2593,7 +2622,7 @@ const SellerOnboarding = () => {
 
               <div>
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Primary Contact Name
+                  Primary Contact Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="primaryContactName"
@@ -2601,7 +2630,13 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.primaryContactName}
                   onChange={onProfileChange}
+                  required
                 />
+                {profileErrors.primaryContactName && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.primaryContactName}
+                  </p>
+                )}
               </div>
 
               <div className="md:col-span-2">
@@ -2622,7 +2657,7 @@ const SellerOnboarding = () => {
 
               <div className="md:col-span-2">
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Description
+                  Description {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="description"
@@ -2630,7 +2665,11 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.description}
                   onChange={onProfileChange}
+                  required
                 />
+                {profileErrors.description && (
+                  <p className={ERROR_CLASS}>{profileErrors.description}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">
@@ -2643,6 +2682,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.pickupLine1}
                   onChange={onProfileChange}
+                  required
                 />
                 {profileErrors.pickupLine1 && (
                   <p className={ERROR_CLASS}>{profileErrors.pickupLine1}</p>
@@ -2750,6 +2790,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.businessAddressLine1}
                   onChange={onProfileChange}
+                  required
                 />
                 {profileErrors.businessAddressLine1 && (
                   <p className={ERROR_CLASS}>
