@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MdRefresh } from "react-icons/md";
+import { MdAdd, MdArrowBack } from "react-icons/md";
 import { DataTable, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -19,6 +19,7 @@ const initialForm = {
 };
 
 const SellerHelpSupport = () => {
+  const [showQueryForm, setShowQueryForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
@@ -79,6 +80,7 @@ const SellerHelpSupport = () => {
       setForm(initialForm);
       setPage(1);
       await fetchQueries();
+      setShowQueryForm(false);
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to submit support query");
     } finally {
@@ -96,105 +98,130 @@ const SellerHelpSupport = () => {
   ], []);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div>
       <PageHeader
         title="Help & Support"
-        subtitle="Select a category, explain the issue, and track your submitted support queries."
+        subtitle={
+          showQueryForm
+            ? "Select a category and tell us how we can help."
+            : "Track your submitted support queries and their current status."
+        }
         actions={
           <button
             type="button"
-            className="button-secondary inline-flex items-center gap-2"
-            onClick={fetchQueries}
-            disabled={loading}
+            className={showQueryForm ? "admin-btn-secondary" : "admin-btn-primary"}
+            onClick={() => {
+              if (showQueryForm) {
+                setSelectedCategory("");
+                setForm(initialForm);
+              }
+              setShowQueryForm((current) => !current);
+            }}
           >
-            <MdRefresh /> Refresh
+            {showQueryForm ? <MdArrowBack size={16} /> : <MdAdd size={18} />}
+            {showQueryForm ? "Back to Queries" : "Add Query"}
           </button>
         }
       />
 
-      <div className="mb-6 rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
-        <h2 className="mb-3 text-base font-semibold text-[var(--admin-ink)]">1. Select Query Category</h2>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {SELLER_QUERY_CATEGORIES.map((category) => (
-            <button
-              key={category.value}
-              type="button"
-              className={`rounded-md border px-3 py-3 text-left text-sm font-semibold transition ${
-                selectedCategory === category.value
-                  ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
-                  : "border-[var(--admin-line)] bg-[var(--admin-surface-soft)] text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)]"
-              }`}
-              onClick={() => {
-                setSelectedCategory(category.value);
-                setForm((prev) => ({ ...prev, category: category.value }));
-              }}
-            >
-              {category.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <form onSubmit={submitQuery} className="mb-6 rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
-        <h2 className="mb-4 text-base font-semibold text-[var(--admin-ink)]">2. Submit Query Details</h2>
-        <div className="grid gap-4">
-          <label className="text-sm font-semibold text-[var(--admin-ink)]">
-            Selected Category
-            <input
-              className="mt-1 w-full rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2 text-sm"
-              value={categoryLabel(form.category)}
-              readOnly
-            />
-          </label>
-          <label className="text-sm font-semibold text-[var(--admin-ink)]">
-            Subject
-            <input
-              className="mt-1 w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
-              value={form.subject}
-              onChange={(event) => setForm((prev) => ({ ...prev, subject: event.target.value }))}
-              maxLength={220}
-              placeholder="Short summary of the issue"
-            />
-          </label>
-          <label className="text-sm font-semibold text-[var(--admin-ink)]">
-            Message
-            <textarea
-              className="mt-1 min-h-[140px] w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
-              value={form.message}
-              onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
-              maxLength={5000}
-              placeholder="Explain what happened and include order/product/payment references when relevant."
-            />
-          </label>
-          <div className="flex justify-end">
-            <button type="submit" className="button-primary" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit Query"}
-            </button>
+      {showQueryForm ? (
+        <>
+          <div className="mb-6 rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
+            <h2 className="mb-3 text-base font-semibold text-[var(--admin-ink)]">1. Select Query Category</h2>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {SELLER_QUERY_CATEGORIES.map((category) => (
+                <button
+                  key={category.value}
+                  type="button"
+                  className={`rounded-md border px-3 py-3 text-left text-sm font-semibold transition ${
+                    selectedCategory === category.value
+                      ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
+                      : "border-[var(--admin-line)] bg-[var(--admin-surface-soft)] text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)]"
+                  }`}
+                  onClick={() => {
+                    setSelectedCategory(category.value);
+                    setForm((prev) => ({ ...prev, category: category.value }));
+                  }}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </form>
 
-      <DataTable
-        columns={columns}
-        data={queries}
-        loading={loading}
-        totalCount={total}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-        onSearch={(value) => {
-          setSearch(value);
-          setPage(1);
-        }}
-        onRefresh={fetchQueries}
-        searchPlaceholder="Search your support queries"
-        rowKey="queryId"
-        emptyText="No support queries submitted yet."
-      />
+          <form onSubmit={submitQuery} className="rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
+            <h2 className="mb-4 text-base font-semibold text-[var(--admin-ink)]">2. Submit Query Details</h2>
+            <div className="grid gap-4">
+              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+                Selected Category
+                <input
+                  className="mt-1 w-full rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2 text-sm"
+                  value={categoryLabel(form.category)}
+                  readOnly
+                />
+              </label>
+              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+                Subject
+                <input
+                  className="mt-1 w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
+                  value={form.subject}
+                  onChange={(event) => setForm((prev) => ({ ...prev, subject: event.target.value }))}
+                  maxLength={220}
+                  placeholder="Short summary of the issue"
+                />
+              </label>
+              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+                Message
+                <textarea
+                  className="mt-1 min-h-[140px] w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
+                  value={form.message}
+                  onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
+                  maxLength={5000}
+                  placeholder="Explain what happened and include order/product/payment references when relevant."
+                />
+              </label>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="admin-btn-secondary"
+                  onClick={() => {
+                    setSelectedCategory("");
+                    setForm(initialForm);
+                    setShowQueryForm(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="button-primary" disabled={submitting}>
+                  {submitting ? "Submitting..." : "Submit Query"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={queries}
+          loading={loading}
+          totalCount={total}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          onSearch={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          onRefresh={fetchQueries}
+          searchPlaceholder="Search your support queries"
+          rowKey="queryId"
+          emptyText="No support queries submitted yet."
+        />
+      )}
     </div>
   );
 };

@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { AnimatePresence, motion } from "framer-motion";
 import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import PermissionNotAllowed from "../Atoms/PermissionsNotAllowed/PermissionNotAllowed";
@@ -807,40 +806,31 @@ function Layout() {
         />
         <main className={`flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}>
           <Suspense fallback={<PageSkeletonLoader />}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                className="admin-page-transition"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -3 }}
-                transition={{ duration: 0.16, ease: "easeOut" }}
-              >
-                <Routes location={location}>
-                  {dynamicRoutes.map((route) => {
-                    const routeElement = route.redirectTo ? (
-                      <Navigate to={route.redirectTo} replace />
-                    ) : (
-                      route.render()
-                    );
-                    const permissionPath = route.permissionPath || route.path;
+            <div className="admin-page-transition">
+              <Routes location={location}>
+                {dynamicRoutes.map((route) => {
+                  const routeElement = route.redirectTo ? (
+                    <Navigate to={route.redirectTo} replace />
+                  ) : (
+                    route.render()
+                  );
+                  const permissionPath = route.permissionPath || route.path;
 
-                    return (
-                      <Route
-                        key={route.path}
-                        path={route.path}
-                        element={
-                          route.redirectTo
-                            ? routeElement
-                            : renderRoute(permissionPath, routeElement)
-                        }
-                      />
-                    );
-                  })}
-                  <Route path="*" element={<Navigate to="/app/home" replace />} />
-                </Routes>
-              </motion.div>
-            </AnimatePresence>
+                  return (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={
+                        route.redirectTo
+                          ? routeElement
+                          : renderRoute(permissionPath, routeElement)
+                      }
+                    />
+                  );
+                })}
+                <Route path="*" element={<Navigate to="/app/home" replace />} />
+              </Routes>
+            </div>
           </Suspense>
         </main>
       </div>
