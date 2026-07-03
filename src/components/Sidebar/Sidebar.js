@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   MdChevronRight,
@@ -275,6 +275,7 @@ const Sidebar = ({
   setHasPermanentOpen,
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const userSelector = useSelector((state) => state.user);
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const dynamicSidebarModules = useMemo(() => {
@@ -554,7 +555,7 @@ const Sidebar = ({
                     className={`flex flex-col py-[4px] text-[13px] ${isExpanded ? "" : "items-center"}`}
                   >
                     <Link
-                      className={`relative flex items-center ${isExpanded ? "gap-2.5" : "justify-center"} overflow-hidden rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${isActive ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
+                      className={`relative flex items-center ${isExpanded ? "gap-2.5" : "justify-center"} overflow-hidden rounded-[6px] px-2.5 py-2 outline-none transition-colors duration-200 focus:outline-none focus-visible:outline-none ${isActive ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]" : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                       to={`/app/${sub.module_code}`}
                       onClick={() => handleNavClick(sub.module_code)}
                       title={!isExpanded ? item.label : ""}
@@ -634,7 +635,7 @@ const Sidebar = ({
                               }}
                             >
                               <Link
-                                className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-sm leading-5 transition-all duration-200 ease-in-out ${isSubActive ? "font-semibold bg-white text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]" : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
+                                className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-sm leading-5 outline-none transition-all duration-200 ease-in-out focus:outline-none focus-visible:outline-none ${isSubActive ? "font-semibold bg-white text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]" : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"}`}
                                 to={`/app/${sub.module_code}`}
                                 onClick={() => handleNavClick(sub.module_code)}
                               >
@@ -660,6 +661,10 @@ const Sidebar = ({
       {isExpanded && (
         <NeedHelpCard
           title="Need Help?"
+          onClick={() => {
+            navigate("/app/help-support");
+            handleNavClick("help-support");
+          }}
           description="Our verification team is available 24/7 to help you complete KYC."
           buttonText="Contact Support"
           className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"

@@ -376,7 +376,7 @@ const DeliveryAgents = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Delivery Agents"
         subtitle={isSeller
