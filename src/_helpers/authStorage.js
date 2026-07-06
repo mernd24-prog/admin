@@ -212,9 +212,8 @@ export const hasModuleAccess = (moduleCode) => {
     zip_codes: ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
     "zip-codes": ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
     coupons: ["coupons", "discount-coupons", "discount_coupons"],
-    banners: ["banners", "promotion-banners", "promotions-banners", "content-management/promotion-banner"],
-    cms: ["cms", "cms-pages", "cms_pages", "content-management"],
-    cms_pages: ["cms-pages", "cms_pages", "content-management"],
+  
+  
     "cms-pages": ["cms-pages", "cms_pages", "content-management"],
     reviews: ["reviews", "product-reviews"],
     warranty: ["warranty", "warranty-templates"],

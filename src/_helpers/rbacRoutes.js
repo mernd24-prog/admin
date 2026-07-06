@@ -322,9 +322,9 @@ export const MODULE_DEFAULT_ROUTES = {
   "platform-fee-rules": "platform-fee-config",
   "commerce-settings":  "commerce-settings",
   // CMS/Content
-  cms:       "content-management",
+ 
   cms_pages: "content-management",
-  banners:   "content-management",
+  
   // Marketing
   coupons:         "discount-coupons",
   pricing:         "discount-coupons",
@@ -514,7 +514,7 @@ const ROUTE_MODULES = [
   [["/discount-coupons"], ["coupons", "pricing"]],
   [["/badges", "/ribbons"], ["badges", "platform", "pricing"]],
   [["/referral-commerce"], ["referral"]],
-  [["/promotions-banners", "/content-management/promotion-banner"], ["banners", "cms_pages", "cms", "pricing"]],
+ 
 
   // Invoices & Taxation
   [
@@ -546,19 +546,7 @@ const ROUTE_MODULES = [
   ],
 
   // CMS / Content
-  [
-    [
-      "/content-management", "/content-management/all",
-      "/content-management/content", "/content-management/faq",
-      "/content-management/homepage-slide", "/content-management/banner-location",
-      "/content-management/promotion-banner", "/content-management/holiday",
-      "/content-management/privacy-policy", "/content-management/return-policy",
-      "/content-management/payment-policy", "/content-management/terms-and-conditions",
-      "/content-management/help-and-support",
-      "/privacy-policy",
-    ],
-    ["cms_pages", "cms", "platform"],
-  ],
+  
 
   // Settings
   [["/settings", "/setting", "/rotate"], ["admin", "platform", "fraud"]],
@@ -590,8 +578,7 @@ const ROUTE_MODULES = [
   [["/deal-payouts"], ["deals"]],
   [["/deal-sponsorships"], ["deals"]],
 
-  // Referral influencers
-  [["/influencer-management"], ["referral"]],
+  
 
   // Analytics events
   [["/analytics-events"], ["analytics", "reports"]],

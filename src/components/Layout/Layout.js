@@ -168,9 +168,7 @@ const ManageCity = React.lazy(
 const ManageZipCode = React.lazy(
   () => import("../../pages/UserManagement/ManageZipCode/ManageZipCode"),
 );
-const ContentManagement = React.lazy(
-  () => import("../../pages/CMS/ContentManagement/ContentManagement"),
-);
+ 
 const Profile = React.lazy(() => import("../../pages/My Profile/Profile"));
 const ChangePassword = React.lazy(
   () => import("../../pages/Change Password/ChangePassword"),
@@ -298,9 +296,7 @@ const ProductModerationQueue = React.lazy(
 const NotificationTemplates = React.lazy(
   () => import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
 );
-const InfluencerManagement = React.lazy(
-  () => import("../../pages/ReferralCommerce/InfluencerManagement/InfluencerManagement"),
-);
+ 
 const CollectionsPage = React.lazy(
   () => import("../../pages/Admin/Collection/Collections"),
 );
@@ -606,8 +602,7 @@ function Layout() {
       { path: "/categories", render: () => <ProductCategories /> },
       { path: "/category-attributes", redirectTo: "/app/categories" },
       { path: "/subscription-orders", render: () => <SubscriptionOrders /> },
-      { path: "/content-management", render: () => <ContentManagement /> },
-      { path: "/content-management/:type", render: () => <ContentManagement /> },
+   
       { path: "/view-orders", render: () => <OrderSummary /> },
       { path: "/product-catalog/form/:id?", render: () => <AddEditProductPopup /> },
       { path: "/product-catalog/view/:id", render: () => <ProductAdminDetails /> },
@@ -693,7 +688,7 @@ function Layout() {
       { path: "/negative-balances", render: () => <NegativeBalances /> },
       { path: "/deal-payouts", render: () => <DealPayouts /> },
       { path: "/deal-sponsorships", render: () => <DealSponsorships /> },
-      { path: "/influencer-management", render: () => <InfluencerManagement /> },
+ 
       { path: "/analytics-events", render: () => <AnalyticsEvents /> },
       { path: "/api-keys", render: () => <ApiKeys /> },
       { path: "/feature-flags", render: () => <FeatureFlags /> },

@@ -17,9 +17,14 @@ import { toast } from "sonner";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 import {
   approveReferralPayout,
+  createReferralBonusRule,
   createReferralChild,
   createReferralCode,
   createReferralParent,
+  evaluateReferralBonusRules,
+  getReferralBonusAchievements,
+  getReferralBonusProgress,
+  getReferralBonusRules,
   getReferralCodes,
   getReferralCommissions,
   getReferralFraudReviews,
@@ -33,15 +38,19 @@ import {
   promoteReferralInfluencer,
   rejectReferralPayout,
   updateReferralCode,
+  updateReferralBonusRule,
   updateReferralInfluencerStatus,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
 
 const tabs = [
   { key: "overview", label: "Overview" },
-  { key: "influencers", label: "Influencers" },
-  { key: "codes", label: "Referral Codes" },
-  { key: "rules", label: "Commission Rules" },
+  { key: "influencers", label: "Influencer Profiles" },
+  { key: "codes", label: "Influencer Codes" },
+  { key: "rules", label: "Rules & Coins" },
+  { key: "bonusRules", label: "Bonus Rules" },
+  { key: "bonusProgress", label: "Bonus Progress" },
+  { key: "bonusHistory", label: "Bonus History" },
   { key: "orders", label: "Referral Orders" },
   { key: "commissions", label: "Wallet Ledger" },
   { key: "payouts", label: "Payout Requests" },
@@ -56,32 +65,51 @@ const emptyInfluencerForm = {
   phone: "",
   password: "",
   code: "",
-  discountPercent: 5,
-  maxDiscountAmount: 0,
   canCreateChildren: true,
 };
 
 const emptyCodeForm = {
   influencerId: "",
   code: "",
-  discountPercent: 5,
-  maxDiscountAmount: 0,
   status: "active",
   usageLimit: "",
 };
 
 const emptyRulesForm = {
-  customerDiscountPercent: 5,
-  codeOwnerBasePercent: 3,
-  directParentPercent: 2,
-  lifetimeOverridePercent: 0.5,
+  distributionType: "percentage",
+  referralPoolAmount: 0,
+  referralPoolPercent: 10,
+  maximumReferralPoolAmount: 0,
+  coinValue: 1,
+  coinExpiryDays: 365,
+  coinUsage: "wallet",
+  customerSharePercent: 50,
+  childSharePercent: 30,
+  parentSharePercent: 20,
   releaseDelayDays: 7,
-  yearlyPromotionThreshold: 10000000,
-  overrideMode: "nearest_only",
-  overrideScope: "promoted_subtree",
-  couponStackAllowed: false,
+  minimumWithdrawalCoins: 0,
+  maximumWithdrawalCoins: 0,
+  dailyWithdrawalLimitCoins: 0,
+  monthlyWithdrawalLimitCoins: 0,
+  withdrawalKycRequired: true,
+  withdrawalApprovalMode: "manual",
+  withdrawalMethods: ["upi", "bank", "manual"],
   minOrderAmount: 0,
-  maxDiscountAmount: 0,
+};
+
+const emptyBonusRuleForm = {
+  ruleName: "",
+  period: "monthly",
+  customStartAt: "",
+  customEndAt: "",
+  targetType: "order_value",
+  targetValue: "",
+  bonusType: "fixed_coins",
+  bonusValue: "",
+  applyTo: "code_owner",
+  resetCycle: "monthly",
+  releaseRule: "instantly_available",
+  status: "active",
 };
 
 const getBranchPayload = (branch = {}) =>
@@ -94,6 +122,7 @@ const getBranchList = (branch = {}) => {
 };
 
 const getId = (record = {}) => record.id || record._id || record.influencerId || record.codeId || record.payoutId;
+const shortId = (value) => (value ? String(value).slice(0, 12) : "-");
 
 const fullName = (user = {}) => {
   const profile = user.profile || {};
@@ -104,7 +133,17 @@ const formatAmount = (value) => `INR ${Number(value || 0).toLocaleString("en-IN"
   maximumFractionDigits: 2,
 })}`;
 
+const formatCoins = (value) => `${Number(value || 0).toLocaleString("en-IN", {
+  maximumFractionDigits: 2,
+})} coins`;
+
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : "-");
+
+const humanize = (value) => String(value || "").replace(/_/g, " ");
+const optionList = (options = [], fallbackValues = []) =>
+  options.length
+    ? options
+    : fallbackValues.map((value) => ({ value, label: humanize(value) }));
 
 const statusClass = (status) => {
   const normalized = String(status || "").toLowerCase();
@@ -147,7 +186,7 @@ const IconButton = ({ title, onClick, children, variant = "plain", disabled = fa
   );
 };
 
-const TextInput = ({ label, name, value, onChange, type = "text", placeholder = "", min, step }) => (
+const TextInput = ({ label, name, value, onChange, type = "text", placeholder = "", min, step, hint = "" }) => (
   <label className="block">
     <span className="mb-1 block text-xs font-medium uppercase text-gray-500">{label}</span>
     <input
@@ -160,6 +199,7 @@ const TextInput = ({ label, name, value, onChange, type = "text", placeholder = 
       step={step}
       className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
     />
+    {hint ? <span className="mt-1 block text-xs font-normal text-gray-500">{hint}</span> : null}
   </label>
 );
 
@@ -243,8 +283,15 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
 const ReferralCommerce = () => {
   const referralFilterStatuses = useDropdownOptions("referral-filter-statuses");
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
-  const referralOverrideModes = useDropdownOptions("referral-override-modes");
-  const referralOverrideScopes = useDropdownOptions("referral-override-scopes");
+  const referralDistributionTypes = useDropdownOptions("referral-distribution-types");
+  const referralCoinUsageModes = useDropdownOptions("referral-coin-usage-modes");
+  const referralWithdrawalApprovalModes = useDropdownOptions("referral-withdrawal-approval-modes");
+  const referralWithdrawalMethods = useDropdownOptions("referral-withdrawal-methods");
+  const referralBonusPeriods = useDropdownOptions("referral-bonus-periods");
+  const referralBonusTargetTypes = useDropdownOptions("referral-bonus-target-types");
+  const referralBonusTypes = useDropdownOptions("referral-bonus-types");
+  const referralBonusApplyTo = useDropdownOptions("referral-bonus-apply-to");
+  const referralBonusReleaseRules = useDropdownOptions("referral-bonus-release-rules");
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const [activeTab, setActiveTab] = useState("overview");
@@ -254,10 +301,13 @@ const ReferralCommerce = () => {
   const [childModalOpen, setChildModalOpen] = useState(false);
   const [codeModalOpen, setCodeModalOpen] = useState(false);
   const [editingCode, setEditingCode] = useState(null);
+  const [bonusRuleModalOpen, setBonusRuleModalOpen] = useState(false);
+  const [editingBonusRule, setEditingBonusRule] = useState(null);
   const [parentId, setParentId] = useState("");
   const [influencerForm, setInfluencerForm] = useState(emptyInfluencerForm);
   const [codeForm, setCodeForm] = useState(emptyCodeForm);
   const [rulesForm, setRulesForm] = useState(emptyRulesForm);
+  const [bonusRuleForm, setBonusRuleForm] = useState(emptyBonusRuleForm);
 
   const summary = getBranchPayload(referralState.summaryData);
   const rulesPayload = getBranchPayload(referralState.rulesData);
@@ -266,6 +316,9 @@ const ReferralCommerce = () => {
   const orders = getBranchList(referralState.ordersData);
   const commissions = getBranchList(referralState.commissionsData);
   const payouts = getBranchList(referralState.payoutsData);
+  const bonusRules = getBranchList(referralState.bonusRulesData);
+  const bonusAchievements = getBranchList(referralState.bonusAchievementsData);
+  const bonusProgress = getBranchList(referralState.bonusProgressData);
   const fraudReviews = getBranchList(referralState.fraudReviewsData);
   const hierarchy = getBranchPayload(referralState.hierarchyData);
   const loading = Boolean(referralState.loading);
@@ -277,6 +330,23 @@ const ReferralCommerce = () => {
       ),
     [influencers],
   );
+  const influencerById = useMemo(
+    () => new Map(influencers.map((item) => [String(getId(item)), item])),
+    [influencers],
+  );
+
+  const renderInfluencerRef = (influencerId) => {
+    const influencer = influencerById.get(String(influencerId));
+    if (!influencer) {
+      return <span className="font-mono text-xs text-gray-500">{shortId(influencerId)}</span>;
+    }
+    return (
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-gray-800">{fullName(influencer.user)}</div>
+        <div className="truncate font-mono text-xs text-gray-500">Profile {shortId(getId(influencer))}</div>
+      </div>
+    );
+  };
 
   const refreshAll = async (filters = {}) => {
     const baseQuery = {
@@ -298,6 +368,9 @@ const ReferralCommerce = () => {
       dispatch(getReferralCommissions(withStatus(["pending", "locked", "available", "payout_requested", "paid", "reversed"]))),
       dispatch(getReferralPayouts(withStatus(["pending", "approved", "rejected", "processing", "paid", "failed"]))),
       dispatch(getReferralRules({ page: 1, limit: 20 })),
+      dispatch(getReferralBonusRules(withStatus(["active", "inactive"]))),
+      dispatch(getReferralBonusProgress({ page: 1, limit: 50 })),
+      dispatch(getReferralBonusAchievements(withStatus(["locked", "released", "reversed"]))),
       dispatch(getReferralFraudReviews({
         page: 1,
         limit: 50,
@@ -360,6 +433,23 @@ const ReferralCommerce = () => {
     }));
   };
 
+  const toggleWithdrawalMethod = (method) => {
+    setRulesForm((prev) => {
+      const selected = new Set(Array.isArray(prev.withdrawalMethods) ? prev.withdrawalMethods : []);
+      if (selected.has(method)) selected.delete(method);
+      else selected.add(method);
+      return {
+        ...prev,
+        withdrawalMethods: Array.from(selected),
+      };
+    });
+  };
+
+  const handleBonusRuleField = (event) => {
+    const { name, value } = event.target;
+    setBonusRuleForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const numberize = (payload, keys = []) =>
     keys.reduce(
       (acc, key) => ({
@@ -379,9 +469,7 @@ const ReferralCommerce = () => {
     event.preventDefault();
     try {
       await dispatch(
-        createReferralParent(
-          compactPayload(numberize(influencerForm, ["discountPercent", "maxDiscountAmount"])),
-        ),
+        createReferralParent(compactPayload(influencerForm)),
       ).unwrap();
       toast.success("Parent influencer created");
       setParentModalOpen(false);
@@ -397,7 +485,7 @@ const ReferralCommerce = () => {
     try {
       await dispatch(
         createReferralChild({
-          ...compactPayload(numberize(influencerForm, ["discountPercent", "maxDiscountAmount"])),
+          ...compactPayload(influencerForm),
           parentId,
         }),
       ).unwrap();
@@ -412,41 +500,47 @@ const ReferralCommerce = () => {
 
   const submitCode = async (event) => {
     event.preventDefault();
-    const payload = compactPayload(
-      numberize(codeForm, ["discountPercent", "maxDiscountAmount", "usageLimit"]),
-    );
+    const payload = compactPayload(numberize(codeForm, ["usageLimit"]));
     try {
       if (editingCode) {
         const { influencerId: _influencerId, ...codePayload } = payload;
         await dispatch(updateReferralCode({ ...codePayload, codeId: getId(editingCode) })).unwrap();
-        toast.success("Referral code updated");
+        toast.success("Influencer code updated");
       } else {
         await dispatch(createReferralCode(payload)).unwrap();
-        toast.success("Referral code created");
+        toast.success("Influencer code created");
       }
       setCodeModalOpen(false);
       setEditingCode(null);
       setCodeForm(emptyCodeForm);
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to save referral code");
+      toast.error(error || "Unable to save influencer code");
     }
   };
 
   const submitRules = async (event) => {
     event.preventDefault();
     const cleanRules = [
-      "customerDiscountPercent",
-      "codeOwnerBasePercent",
-      "directParentPercent",
-      "lifetimeOverridePercent",
+      "distributionType",
+      "referralPoolAmount",
+      "referralPoolPercent",
+      "maximumReferralPoolAmount",
+      "coinValue",
+      "coinExpiryDays",
+      "coinUsage",
+      "customerSharePercent",
+      "childSharePercent",
+      "parentSharePercent",
       "releaseDelayDays",
-      "yearlyPromotionThreshold",
-      "overrideMode",
-      "overrideScope",
-      "couponStackAllowed",
+      "minimumWithdrawalCoins",
+      "maximumWithdrawalCoins",
+      "dailyWithdrawalLimitCoins",
+      "monthlyWithdrawalLimitCoins",
+      "withdrawalKycRequired",
+      "withdrawalApprovalMode",
+      "withdrawalMethods",
       "minOrderAmount",
-      "maxDiscountAmount",
     ].reduce((acc, key) => {
       if (rulesForm[key] !== undefined) acc[key] = rulesForm[key];
       return acc;
@@ -455,21 +549,95 @@ const ReferralCommerce = () => {
       await dispatch(
         updateReferralRules(
           numberize(cleanRules, [
-            "customerDiscountPercent",
-            "codeOwnerBasePercent",
-            "directParentPercent",
-            "lifetimeOverridePercent",
+            "referralPoolAmount",
+            "referralPoolPercent",
+            "maximumReferralPoolAmount",
+            "coinValue",
+            "coinExpiryDays",
+            "customerSharePercent",
+            "childSharePercent",
+            "parentSharePercent",
             "releaseDelayDays",
-            "yearlyPromotionThreshold",
+            "minimumWithdrawalCoins",
+            "maximumWithdrawalCoins",
+            "dailyWithdrawalLimitCoins",
+            "monthlyWithdrawalLimitCoins",
             "minOrderAmount",
-            "maxDiscountAmount",
           ]),
         ),
       ).unwrap();
-      toast.success("Commission rules saved");
+      toast.success("Referral commerce rules saved");
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to save commission rules");
+    }
+  };
+
+  const openBonusRuleModal = (rule = null) => {
+    setEditingBonusRule(rule);
+    setBonusRuleForm(rule ? {
+      ...emptyBonusRuleForm,
+      ruleName: rule.ruleName || "",
+      period: rule.period || "monthly",
+      customStartAt: rule.customStartAt ? String(rule.customStartAt).slice(0, 10) : "",
+      customEndAt: rule.customEndAt ? String(rule.customEndAt).slice(0, 10) : "",
+      targetType: rule.targetType || "order_value",
+      targetValue: rule.targetValue ?? "",
+      bonusType: rule.bonusType || "fixed_coins",
+      bonusValue: rule.bonusValue ?? "",
+      applyTo: rule.applyTo || "code_owner",
+      resetCycle: rule.resetCycle || "monthly",
+      releaseRule: rule.releaseRule || "instantly_available",
+      status: rule.status || "active",
+    } : emptyBonusRuleForm);
+    setBonusRuleModalOpen(true);
+  };
+
+  const submitBonusRule = async (event) => {
+    event.preventDefault();
+    const payload = compactPayload(
+      numberize(bonusRuleForm, ["targetValue", "bonusValue"]),
+    );
+    try {
+      if (editingBonusRule) {
+        await dispatch(updateReferralBonusRule({ ...payload, ruleId: getId(editingBonusRule) })).unwrap();
+        toast.success("Bonus rule updated");
+      } else {
+        await dispatch(createReferralBonusRule(payload)).unwrap();
+        toast.success("Bonus rule created");
+      }
+      setBonusRuleModalOpen(false);
+      setEditingBonusRule(null);
+      setBonusRuleForm(emptyBonusRuleForm);
+      await refreshAll();
+    } catch (error) {
+      toast.error(error || "Unable to save bonus rule");
+    }
+  };
+
+  const toggleBonusRuleStatus = async (rule) => {
+    try {
+      await dispatch(
+        updateReferralBonusRule({
+          ruleId: getId(rule),
+          status: rule.status === "active" ? "inactive" : "active",
+        }),
+      ).unwrap();
+      toast.success("Bonus rule status updated");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error || "Unable to update bonus rule");
+    }
+  };
+
+  const evaluateBonuses = async () => {
+    try {
+      const result = await dispatch(evaluateReferralBonusRules({})).unwrap();
+      const payload = result?.normalized?.data || result?.data || result || {};
+      toast.success(`Bonus evaluation complete: ${payload.totalCreated || 0} awarded`);
+      await refreshAll();
+    } catch (error) {
+      toast.error(error || "Unable to evaluate bonus rules");
     }
   };
 
@@ -511,10 +679,10 @@ const ReferralCommerce = () => {
           status: code.status === "active" ? "inactive" : "active",
         }),
       ).unwrap();
-      toast.success("Referral code status updated");
+      toast.success("Influencer code status updated");
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to update referral code");
+      toast.error(error || "Unable to update influencer code");
     }
   };
 
@@ -542,8 +710,6 @@ const ReferralCommerce = () => {
     setCodeForm({
       influencerId: code.influencerId || "",
       code: code.code || "",
-      discountPercent: code.discountPercent ?? 5,
-      maxDiscountAmount: code.maxDiscountAmount ?? 0,
       status: code.status || "active",
       usageLimit: code.usageLimit || "",
     });
@@ -570,10 +736,16 @@ const ReferralCommerce = () => {
       icon: <BadgeIndianRupee size={18} />,
     },
     {
-      label: "Commission",
-      value: formatAmount(summary?.commissions?.amount),
+      label: "Referral Coins",
+      value: formatCoins(summary?.commissions?.amount),
       sub: `${summary?.commissions?.totalEntries || 0} ledger entries`,
       icon: <GitBranch size={18} />,
+    },
+    {
+      label: "Bonus Coins",
+      value: formatCoins(summary?.bonuses?.totalCoins),
+      sub: `${summary?.bonuses?.achievements || 0} achievements`,
+      icon: <Check size={18} />,
     },
   ];
 
@@ -582,13 +754,21 @@ const ReferralCommerce = () => {
     influencer: (
       <div className="min-w-0">
         <div className="truncate font-medium text-gray-900">{fullName(item.user)}</div>
-        <div className="truncate text-xs text-gray-500">{item.user?.email || item.userId}</div>
+        <div className="truncate text-xs text-gray-500">{item.user?.email || "Linked account"}</div>
+      </div>
+    ),
+    profileId: (
+      <div className="min-w-0">
+        <div className="font-mono text-xs text-gray-800">{shortId(getId(item))}</div>
+        <div className="font-mono text-[11px] text-gray-400">User {shortId(item.userId)}</div>
       </div>
     ),
     type: <span className="capitalize">{item.influencerType}</span>,
-    code: item.primaryCode?.code || "-",
+    code: item.primaryCode?.code
+      ? <span className="font-mono text-sm font-semibold text-indigo-700">{item.primaryCode.code}</span>
+      : "-",
     hierarchy: `Level ${item.level || 1}`,
-    wallet: formatAmount(item.wallet?.availableBalance),
+    wallet: formatCoins(item.wallet?.availableBalance),
     status: <StatusPill value={item.status} />,
     actions: (
       <div className="flex flex-wrap gap-2">
@@ -614,13 +794,7 @@ const ReferralCommerce = () => {
   const codeRows = codes.map((code) => ({
     key: getId(code),
     code: <span className="font-semibold text-gray-900">{code.code}</span>,
-    influencer: (() => {
-      const inf = influencers.find((i) => getId(i) === code.influencerId);
-      const name = code.influencerName || (inf ? fullName(inf.user) : null) || inf?.user?.email;
-      return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{String(code.influencerId || "—").slice(0, 12)}…</span>;
-    })(),
-    discount: `${Number(code.discountPercent || 0)}%`,
-    maxDiscount: formatAmount(code.maxDiscountAmount),
+    influencer: renderInfluencerRef(code.influencerId),
     usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
     status: <StatusPill value={code.status} />,
     actions: (
@@ -649,18 +823,18 @@ const ReferralCommerce = () => {
   const commissionRows = commissions.map((entry) => ({
     key: getId(entry),
     order: entry.orderId,
-    influencer: entry.influencerId,
+    influencer: renderInfluencerRef(entry.influencerId),
     type: entry.commissionType,
     basis: formatAmount(entry.basisAmount),
-    amount: formatAmount(entry.amount),
+    amount: formatCoins(entry.amount),
     status: <StatusPill value={entry.status} />,
     releaseAt: formatDate(entry.releaseAt),
   }));
 
   const payoutRows = payouts.map((payout) => ({
     key: getId(payout),
-    influencer: payout.influencerId,
-    amount: formatAmount(payout.amount),
+    influencer: renderInfluencerRef(payout.influencerId),
+    amount: formatCoins(payout.amount),
     method: payout.payoutMethod || "-",
     status: <StatusPill value={payout.status} />,
     requested: formatDate(payout.requestedAt || payout.createdAt),
@@ -679,10 +853,57 @@ const ReferralCommerce = () => {
     ),
   }));
 
+  const bonusRuleRows = bonusRules.map((rule) => ({
+    key: getId(rule),
+    name: <span className="font-medium text-gray-900">{rule.ruleName}</span>,
+    period: <span className="capitalize">{String(rule.period || "").replace(/_/g, " ")}</span>,
+    target: `${String(rule.targetType || "").replace(/_/g, " ")} >= ${Number(rule.targetValue || 0).toLocaleString("en-IN")}`,
+    bonus: rule.bonusType === "percentage_extra_coins"
+      ? `${Number(rule.bonusValue || 0)}% extra coins`
+      : formatCoins(rule.bonusValue),
+    applyTo: String(rule.applyTo || "").replace(/_/g, " "),
+    release: String(rule.releaseRule || "").replace(/_/g, " "),
+    status: <StatusPill value={rule.status} />,
+    actions: (
+      <div className="flex flex-wrap gap-2">
+        <IconButton title="Edit bonus rule" onClick={() => openBonusRuleModal(rule)} variant="primary">
+          <Pencil size={15} />
+        </IconButton>
+        <IconButton title={rule.status === "active" ? "Deactivate" : "Activate"} onClick={() => toggleBonusRuleStatus(rule)}>
+          {rule.status === "active" ? <X size={15} /> : <Check size={15} />}
+        </IconButton>
+      </div>
+    ),
+  }));
+
+  const bonusProgressRows = bonusProgress.map((row) => ({
+    key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
+    rule: row.rule?.ruleName || "-",
+    influencer: renderInfluencerRef(row.influencer?.id),
+    cycle: row.cycleKey,
+    target: Number(row.targetValue || 0).toLocaleString("en-IN"),
+    achieved: Number(row.achievedValue || 0).toLocaleString("en-IN"),
+    progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
+    status: row.existingAchievement
+      ? <StatusPill value={row.existingAchievement.status} />
+      : <StatusPill value={row.achieved ? "achieved" : "in_progress"} />,
+  }));
+
+  const bonusAchievementRows = bonusAchievements.map((achievement) => ({
+    key: getId(achievement),
+    rule: achievement.ruleName,
+    influencer: renderInfluencerRef(achievement.influencerId),
+    cycle: achievement.cycleKey,
+    target: `${String(achievement.targetType || "").replace(/_/g, " ")} ${Number(achievement.achievedValue || 0).toLocaleString("en-IN")} / ${Number(achievement.targetValue || 0).toLocaleString("en-IN")}`,
+    bonus: formatCoins(achievement.bonusCoins),
+    status: <StatusPill value={achievement.status} />,
+    achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
+  }));
+
   const fraudRows = fraudReviews.map((review) => ({
     key: getId(review),
     reason: review.reason,
-    influencer: review.influencerId || "-",
+    influencer: renderInfluencerRef(review.influencerId),
     code: review.code || "-",
     severity: <StatusPill value={review.severity} />,
     status: <StatusPill value={review.status} />,
@@ -693,9 +914,10 @@ const ReferralCommerce = () => {
     <div key={getId(node)} className="border-l border-gray-200 pl-4">
       <div className="mb-2 flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
         <span className="font-medium text-gray-900">{fullName(node.user)}</span>
+        <span className="font-mono text-xs text-gray-500">Profile {shortId(getId(node))}</span>
         <StatusPill value={node.influencerType} />
         <span className="text-xs text-gray-500">Level {node.level || depth + 1}</span>
-        <span className="text-xs text-gray-500">{node.primaryCode?.code || "No code"}</span>
+        <span className="text-xs text-gray-500">{node.primaryCode?.code || "No influencer code"}</span>
       </div>
       {Array.isArray(node.children) && node.children.length > 0 && (
         <div className="ml-4 space-y-2">
@@ -726,14 +948,14 @@ const ReferralCommerce = () => {
       <Section title="Wallet Balances">
         <div className="grid grid-cols-1 divide-y divide-gray-100 text-sm md:grid-cols-4 md:divide-x md:divide-y-0">
           {[
-            ["Pending", summary?.wallets?.pendingBalance],
+            ["Locked", summary?.wallets?.lockedBalance ?? summary?.wallets?.pendingBalance],
             ["Available", summary?.wallets?.availableBalance],
-            ["Paid", summary?.wallets?.paidBalance],
+            ["Withdrawn", summary?.wallets?.withdrawnBalance ?? summary?.wallets?.paidBalance],
             ["Reversed", summary?.wallets?.reversedBalance],
           ].map(([label, value]) => (
             <div key={label} className="p-4">
               <p className="text-xs uppercase text-gray-500">{label}</p>
-              <p className="mt-1 font-semibold text-gray-900">{formatAmount(value)}</p>
+              <p className="mt-1 font-semibold text-gray-900">{formatCoins(value)}</p>
             </div>
           ))}
         </div>
@@ -742,38 +964,164 @@ const ReferralCommerce = () => {
   );
 
   const renderRules = () => (
-    <Section title="Commission Rules">
-      <form onSubmit={submitRules} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-        <TextInput label="Customer Discount %" name="customerDiscountPercent" type="number" step="0.01" value={rulesForm.customerDiscountPercent} onChange={handleRulesField} />
-        <TextInput label="Code Owner %" name="codeOwnerBasePercent" type="number" step="0.01" value={rulesForm.codeOwnerBasePercent} onChange={handleRulesField} />
-        <TextInput label="Direct Parent %" name="directParentPercent" type="number" step="0.01" value={rulesForm.directParentPercent} onChange={handleRulesField} />
-        <TextInput label="Lifetime Override %" name="lifetimeOverridePercent" type="number" step="0.01" value={rulesForm.lifetimeOverridePercent} onChange={handleRulesField} />
+    <Section title="Referral Commerce Rules">
+      <form onSubmit={submitRules} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
+        <div className="md:col-span-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">Referral pool and coin setup</p>
+        </div>
+        <SelectInput label="Distribution Type" name="distributionType" value={rulesForm.distributionType} onChange={handleRulesField}>
+          {optionList(referralDistributionTypes.options, ["percentage", "fixed_amount"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </SelectInput>
+        {rulesForm.distributionType === "fixed_amount" ? (
+          <TextInput label="Referral Pool Amount" name="referralPoolAmount" type="number" min="0" step="0.01" value={rulesForm.referralPoolAmount} onChange={handleRulesField} />
+        ) : (
+          <TextInput label="Referral Pool %" name="referralPoolPercent" type="number" min="0" step="0.01" value={rulesForm.referralPoolPercent} onChange={handleRulesField} />
+        )}
+        <TextInput
+          label="Maximum Referral Pool Per Order"
+          name="maximumReferralPoolAmount"
+          type="number"
+          min="0"
+          step="0.01"
+          value={rulesForm.maximumReferralPoolAmount}
+          onChange={handleRulesField}
+          hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and influencer shares are then calculated from this capped pool."
+        />
+        <TextInput label="INR per Coin" name="coinValue" type="number" min="0.000001" step="0.01" value={rulesForm.coinValue} onChange={handleRulesField} />
+        <TextInput label="Coin Expiry Days" name="coinExpiryDays" type="number" value={rulesForm.coinExpiryDays} onChange={handleRulesField} />
+        <SelectInput label="Coin Usage" name="coinUsage" value={rulesForm.coinUsage} onChange={handleRulesField}>
+          {optionList(referralCoinUsageModes.options, ["wallet", "discount", "both"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </SelectInput>
         <TextInput label="Release Delay Days" name="releaseDelayDays" type="number" value={rulesForm.releaseDelayDays} onChange={handleRulesField} />
-        <TextInput label="Yearly Threshold" name="yearlyPromotionThreshold" type="number" value={rulesForm.yearlyPromotionThreshold} onChange={handleRulesField} />
-        <SelectInput label="Override Mode" name="overrideMode" value={rulesForm.overrideMode} onChange={handleRulesField}>
-          {referralOverrideModes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        <TextInput label="Minimum Eligible Order Amount" name="minOrderAmount" type="number" min="0" step="0.01" value={rulesForm.minOrderAmount} onChange={handleRulesField} />
+
+        <div className="border-t border-gray-100 pt-2 md:col-span-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">Distribution shares</p>
+        </div>
+        <TextInput label="Customer Discount Share %" name="customerSharePercent" type="number" min="0" step="0.01" value={rulesForm.customerSharePercent} onChange={handleRulesField} />
+        <TextInput label="Code Owner / Child Share %" name="childSharePercent" type="number" min="0" step="0.01" value={rulesForm.childSharePercent} onChange={handleRulesField} />
+        <TextInput label="Parent Share %" name="parentSharePercent" type="number" step="0.01" value={rulesForm.parentSharePercent} onChange={handleRulesField} />
+
+        <div className="border-t border-gray-100 pt-2 md:col-span-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">Withdrawal rules</p>
+        </div>
+        <TextInput label="Minimum Withdrawal Coins" name="minimumWithdrawalCoins" type="number" step="0.01" value={rulesForm.minimumWithdrawalCoins} onChange={handleRulesField} />
+        <TextInput label="Maximum Withdrawal Coins" name="maximumWithdrawalCoins" type="number" step="0.01" value={rulesForm.maximumWithdrawalCoins} onChange={handleRulesField} />
+        <TextInput label="Daily Withdrawal Limit" name="dailyWithdrawalLimitCoins" type="number" step="0.01" value={rulesForm.dailyWithdrawalLimitCoins} onChange={handleRulesField} />
+        <TextInput label="Monthly Withdrawal Limit" name="monthlyWithdrawalLimitCoins" type="number" step="0.01" value={rulesForm.monthlyWithdrawalLimitCoins} onChange={handleRulesField} />
+        <SelectInput label="Approval Mode" name="withdrawalApprovalMode" value={rulesForm.withdrawalApprovalMode} onChange={handleRulesField}>
+          {optionList(referralWithdrawalApprovalModes.options, ["manual", "auto"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </SelectInput>
-        <SelectInput label="Override Scope" name="overrideScope" value={rulesForm.overrideScope} onChange={handleRulesField}>
-          {referralOverrideScopes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </SelectInput>
-        <TextInput label="Max Discount" name="maxDiscountAmount" type="number" step="0.01" value={rulesForm.maxDiscountAmount} onChange={handleRulesField} />
         <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
           <input
             type="checkbox"
-            name="couponStackAllowed"
-            checked={Boolean(rulesForm.couponStackAllowed)}
+            name="withdrawalKycRequired"
+            checked={Boolean(rulesForm.withdrawalKycRequired)}
             onChange={handleRulesField}
             className="h-4 w-4 rounded border-gray-300 text-indigo-600"
           />
-          Coupon stack allowed
+          KYC required for withdrawal
         </label>
-        <div className="md:col-span-3">
+        <div className="md:col-span-2">
+          <span className="mb-2 block text-xs font-medium uppercase text-gray-500">Withdrawal Methods</span>
+          <div className="flex flex-wrap gap-2">
+            {optionList(referralWithdrawalMethods.options, ["upi", "bank", "manual"]).map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={Array.isArray(rulesForm.withdrawalMethods) && rulesForm.withdrawalMethods.includes(option.value)}
+                  onChange={() => toggleWithdrawalMethod(option.value)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="md:col-span-4">
           <button type="submit" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             <Check size={16} />
             Save Rules
           </button>
         </div>
       </form>
+    </Section>
+  );
+
+  const renderBonusRules = () => (
+    <Section
+      title="Influencer Bonus Rules"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={evaluateBonuses}
+            className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+          >
+            <Check size={16} />
+            Evaluate Bonuses
+          </button>
+          <button
+            type="button"
+            onClick={() => openBonusRuleModal()}
+            className="inline-flex items-center gap-2 rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            <Plus size={16} />
+            Bonus Rule
+          </button>
+        </div>
+      }
+    >
+      <DataTable
+        columns={[
+          { key: "name", label: "Rule" },
+          { key: "period", label: "Period" },
+          { key: "target", label: "Target" },
+          { key: "bonus", label: "Bonus" },
+          { key: "applyTo", label: "Apply To" },
+          { key: "release", label: "Release" },
+          { key: "status", label: "Status" },
+          { key: "actions", label: "Actions" },
+        ]}
+        rows={bonusRuleRows}
+      />
+    </Section>
+  );
+
+  const renderBonusProgress = () => (
+    <Section title="Current Bonus Target Progress">
+      <DataTable
+        columns={[
+          { key: "rule", label: "Rule" },
+          { key: "influencer", label: "Influencer Profile" },
+          { key: "cycle", label: "Cycle" },
+          { key: "target", label: "Target" },
+          { key: "achieved", label: "Achieved" },
+          { key: "progress", label: "Progress" },
+          { key: "status", label: "Status" },
+        ]}
+        rows={bonusProgressRows}
+        emptyText="No active bonus progress found"
+      />
+    </Section>
+  );
+
+  const renderBonusHistory = () => (
+    <Section title="Bonus Achievement History">
+      <DataTable
+        columns={[
+          { key: "rule", label: "Rule" },
+          { key: "influencer", label: "Influencer Profile" },
+          { key: "cycle", label: "Cycle" },
+          { key: "target", label: "Target" },
+          { key: "bonus", label: "Bonus Coins" },
+          { key: "status", label: "Status" },
+          { key: "achievedAt", label: "Achieved At" },
+        ]}
+        rows={bonusAchievementRows}
+        emptyText="No bonus achievements yet"
+      />
     </Section>
   );
 
@@ -821,7 +1169,7 @@ const ReferralCommerce = () => {
             className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Plus size={16} />
-            Code
+            Influencer Code
           </button>
         </div>
       </div>
@@ -871,14 +1219,15 @@ const ReferralCommerce = () => {
 
       {activeTab === "overview" && renderOverview()}
       {activeTab === "influencers" && (
-        <Section title="Influencers">
+        <Section title="Influencer Profiles">
           <DataTable
             columns={[
               { key: "influencer", label: "Influencer" },
+              { key: "profileId", label: "Profile ID" },
               { key: "type", label: "Type" },
-              { key: "code", label: "Code" },
+              { key: "code", label: "Influencer Code" },
               { key: "hierarchy", label: "Hierarchy" },
-              { key: "wallet", label: "Available Wallet" },
+              { key: "wallet", label: "Available Coins" },
               { key: "status", label: "Status" },
               { key: "actions", label: "Actions" },
             ]}
@@ -887,13 +1236,11 @@ const ReferralCommerce = () => {
         </Section>
       )}
       {activeTab === "codes" && (
-        <Section title="Referral Codes">
+        <Section title="Influencer Codes">
           <DataTable
             columns={[
-              { key: "code", label: "Code" },
-              { key: "influencer", label: "Influencer" },
-              { key: "discount", label: "Discount" },
-              { key: "maxDiscount", label: "Max Discount" },
+              { key: "code", label: "Influencer Code" },
+              { key: "influencer", label: "Influencer Profile" },
               { key: "usage", label: "Usage" },
               { key: "status", label: "Status" },
               { key: "actions", label: "Actions" },
@@ -903,12 +1250,15 @@ const ReferralCommerce = () => {
         </Section>
       )}
       {activeTab === "rules" && renderRules()}
+      {activeTab === "bonusRules" && renderBonusRules()}
+      {activeTab === "bonusProgress" && renderBonusProgress()}
+      {activeTab === "bonusHistory" && renderBonusHistory()}
       {activeTab === "orders" && (
         <Section title="Referral Orders">
           <DataTable
             columns={[
               { key: "order", label: "Order" },
-              { key: "code", label: "Code" },
+              { key: "code", label: "Influencer Code" },
               { key: "customer", label: "Customer" },
               { key: "amount", label: "Eligible Amount" },
               { key: "discount", label: "Discount" },
@@ -920,14 +1270,14 @@ const ReferralCommerce = () => {
         </Section>
       )}
       {activeTab === "commissions" && (
-        <Section title="Referral Commission Ledger">
+        <Section title="Coin Ledger">
           <DataTable
             columns={[
               { key: "order", label: "Order" },
-              { key: "influencer", label: "Influencer" },
+              { key: "influencer", label: "Influencer Profile" },
               { key: "type", label: "Type" },
               { key: "basis", label: "Basis" },
-              { key: "amount", label: "Amount" },
+              { key: "amount", label: "Coins" },
               { key: "status", label: "Status" },
               { key: "releaseAt", label: "Release At" },
             ]}
@@ -939,8 +1289,8 @@ const ReferralCommerce = () => {
         <Section title="Payout Requests">
           <DataTable
             columns={[
-              { key: "influencer", label: "Influencer" },
-              { key: "amount", label: "Amount" },
+              { key: "influencer", label: "Influencer Profile" },
+              { key: "amount", label: "Coins" },
               { key: "method", label: "Method" },
               { key: "status", label: "Status" },
               { key: "requested", label: "Requested" },
@@ -969,8 +1319,8 @@ const ReferralCommerce = () => {
           <DataTable
             columns={[
               { key: "reason", label: "Reason" },
-              { key: "influencer", label: "Influencer" },
-              { key: "code", label: "Code" },
+              { key: "influencer", label: "Influencer Profile" },
+              { key: "code", label: "Influencer Code" },
               { key: "severity", label: "Severity" },
               { key: "status", label: "Status" },
               { key: "created", label: "Created" },
@@ -997,9 +1347,7 @@ const ReferralCommerce = () => {
           <TextInput label="Email" name="email" type="email" value={influencerForm.email} onChange={handleInfluencerField} />
           <TextInput label="Phone" name="phone" value={influencerForm.phone} onChange={handleInfluencerField} />
           <TextInput label="Password" name="password" type="password" value={influencerForm.password} onChange={handleInfluencerField} />
-          <TextInput label="Referral Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
-          <TextInput label="Discount %" name="discountPercent" type="number" step="0.01" value={influencerForm.discountPercent} onChange={handleInfluencerField} />
-          <TextInput label="Max Discount" name="maxDiscountAmount" type="number" step="0.01" value={influencerForm.maxDiscountAmount} onChange={handleInfluencerField} />
+          <TextInput label="Influencer Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
           <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
             <input type="checkbox" name="canCreateChildren" checked={Boolean(influencerForm.canCreateChildren)} onChange={handleInfluencerField} className="h-4 w-4" />
             Can create children
@@ -1032,13 +1380,12 @@ const ReferralCommerce = () => {
           <TextInput label="Email" name="email" type="email" value={influencerForm.email} onChange={handleInfluencerField} />
           <TextInput label="Phone" name="phone" value={influencerForm.phone} onChange={handleInfluencerField} />
           <TextInput label="Password" name="password" type="password" value={influencerForm.password} onChange={handleInfluencerField} />
-          <TextInput label="Referral Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
-          <TextInput label="Discount %" name="discountPercent" type="number" step="0.01" value={influencerForm.discountPercent} onChange={handleInfluencerField} />
+          <TextInput label="Influencer Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
         </form>
       </Modal>
 
       <Modal
-        title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
+        title={editingCode ? "Edit Influencer Code" : "Create Influencer Code"}
         open={codeModalOpen}
         onClose={() => {
           setCodeModalOpen(false);
@@ -1047,14 +1394,14 @@ const ReferralCommerce = () => {
         footer={
           <button type="submit" form="referralCodeForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             <Check size={16} />
-            Save Code
+            Save Influencer Code
           </button>
         }
       >
         <form id="referralCodeForm" onSubmit={submitCode} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {!editingCode && (
-            <SelectInput label="Influencer" name="influencerId" value={codeForm.influencerId} onChange={handleCodeField}>
-              <option value="">Select influencer</option>
+            <SelectInput label="Influencer Profile" name="influencerId" value={codeForm.influencerId} onChange={handleCodeField}>
+              <option value="">Select influencer profile</option>
               {influencers.map((item) => (
                 <option key={getId(item)} value={getId(item)}>
                   {fullName(item.user)} - {getId(item)}
@@ -1062,12 +1409,60 @@ const ReferralCommerce = () => {
               ))}
             </SelectInput>
           )}
-          <TextInput label="Code" name="code" value={codeForm.code} onChange={handleCodeField} />
-          <TextInput label="Discount %" name="discountPercent" type="number" step="0.01" value={codeForm.discountPercent} onChange={handleCodeField} />
-          <TextInput label="Max Discount" name="maxDiscountAmount" type="number" step="0.01" value={codeForm.maxDiscountAmount} onChange={handleCodeField} />
+          <TextInput label="Influencer Code" name="code" value={codeForm.code} onChange={handleCodeField} />
           <TextInput label="Usage Limit" name="usageLimit" type="number" value={codeForm.usageLimit} onChange={handleCodeField} />
           <SelectInput label="Status" name="status" value={codeForm.status} onChange={handleCodeField}>
             {referralCodeStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+        </form>
+      </Modal>
+
+      <Modal
+        title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
+        open={bonusRuleModalOpen}
+        onClose={() => {
+          setBonusRuleModalOpen(false);
+          setEditingBonusRule(null);
+          setBonusRuleForm(emptyBonusRuleForm);
+        }}
+        footer={
+          <button type="submit" form="bonusRuleForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            <Check size={16} />
+            Save Bonus Rule
+          </button>
+        }
+      >
+        <form id="bonusRuleForm" onSubmit={submitBonusRule} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <TextInput label="Bonus Rule Name" name="ruleName" value={bonusRuleForm.ruleName} onChange={handleBonusRuleField} />
+          <SelectInput label="Bonus Period" name="period" value={bonusRuleForm.period} onChange={handleBonusRuleField}>
+            {referralBonusPeriods.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+          {bonusRuleForm.period === "custom" && (
+            <>
+              <TextInput label="Custom Start" name="customStartAt" type="date" value={bonusRuleForm.customStartAt} onChange={handleBonusRuleField} />
+              <TextInput label="Custom End" name="customEndAt" type="date" value={bonusRuleForm.customEndAt} onChange={handleBonusRuleField} />
+            </>
+          )}
+          <SelectInput label="Target Type" name="targetType" value={bonusRuleForm.targetType} onChange={handleBonusRuleField}>
+            {referralBonusTargetTypes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+          <TextInput label="Target Value" name="targetValue" type="number" step="0.01" value={bonusRuleForm.targetValue} onChange={handleBonusRuleField} />
+          <SelectInput label="Bonus Type" name="bonusType" value={bonusRuleForm.bonusType} onChange={handleBonusRuleField}>
+            {referralBonusTypes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+          <TextInput label="Bonus Value" name="bonusValue" type="number" step="0.01" value={bonusRuleForm.bonusValue} onChange={handleBonusRuleField} />
+          <SelectInput label="Apply To" name="applyTo" value={bonusRuleForm.applyTo} onChange={handleBonusRuleField}>
+            {referralBonusApplyTo.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+          <SelectInput label="Reset Cycle" name="resetCycle" value={bonusRuleForm.resetCycle} onChange={handleBonusRuleField}>
+            {["monthly", "quarterly", "yearly"].map((value) => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}
+          </SelectInput>
+          <SelectInput label="Release Rule" name="releaseRule" value={bonusRuleForm.releaseRule} onChange={handleBonusRuleField}>
+            {referralBonusReleaseRules.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </SelectInput>
+          <SelectInput label="Status" name="status" value={bonusRuleForm.status} onChange={handleBonusRuleField}>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </SelectInput>
         </form>
       </Modal>

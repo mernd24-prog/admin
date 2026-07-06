@@ -21,6 +21,12 @@ const initialState = {
   paidPayoutData: {},
   rulesData: {},
   updateRulesData: {},
+  bonusRulesData: {},
+  createBonusRuleData: {},
+  updateBonusRuleData: {},
+  bonusAchievementsData: {},
+  bonusProgressData: {},
+  evaluateBonusRulesData: {},
   fraudReviewsData: {},
 };
 
@@ -108,7 +114,7 @@ export const getReferralCodes = createApiThunkPrivate(
   ENDPOINTS.referral.codes,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "influencerId"]) }
+  { transformParams: pickQuery([...listQueryKeys, "code", "influencerId", "fromDate", "toDate"]) }
 );
 
 export const createReferralCode = createApiThunkPrivate(
@@ -153,6 +159,7 @@ export const getReferralCommissions = createApiThunkPrivate(
       "commissionType",
       "influencerId",
       "orderId",
+      "code",
       "fromDate",
       "toDate",
     ]),
@@ -164,7 +171,7 @@ export const getReferralPayouts = createApiThunkPrivate(
   ENDPOINTS.referral.payouts,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "influencerId"]) }
+  { transformParams: pickQuery([...listQueryKeys, "influencerId", "fromDate", "toDate"]) }
 );
 
 export const approveReferralPayout = createApiThunkPrivate(
@@ -205,6 +212,50 @@ export const updateReferralRules = createApiThunkPrivate(
   "PUT"
 );
 
+export const getReferralBonusRules = createApiThunkPrivate(
+  "referralCommerce/getBonusRules",
+  ENDPOINTS.referral.bonusRules,
+  "GET",
+  true,
+  { transformParams: pickQuery([...listQueryKeys, "period", "targetType", "applyTo"]) }
+);
+
+export const createReferralBonusRule = createApiThunkPrivate(
+  "referralCommerce/createBonusRule",
+  ENDPOINTS.referral.bonusRules,
+  "POST"
+);
+
+export const updateReferralBonusRule = createApiThunkPrivate(
+  "referralCommerce/updateBonusRule",
+  (payload) => ENDPOINTS.referral.bonusRule(idOf(payload, "ruleId")),
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omit(payload, ["ruleId", "id", "_id"]) }
+);
+
+export const getReferralBonusAchievements = createApiThunkPrivate(
+  "referralCommerce/getBonusAchievements",
+  ENDPOINTS.referral.bonusAchievements,
+  "GET",
+  true,
+  { transformParams: pickQuery([...listQueryKeys, "ruleId", "influencerId", "fromDate", "toDate"]) }
+);
+
+export const getReferralBonusProgress = createApiThunkPrivate(
+  "referralCommerce/getBonusProgress",
+  ENDPOINTS.referral.bonusProgress,
+  "GET",
+  true,
+  { transformParams: pickQuery(["page", "limit", "ruleId", "influencerId", "referenceDate"]) }
+);
+
+export const evaluateReferralBonusRules = createApiThunkPrivate(
+  "referralCommerce/evaluateBonusRules",
+  ENDPOINTS.referral.evaluateBonusRules,
+  "POST"
+);
+
 export const getReferralFraudReviews = createApiThunkPrivate(
   "referralCommerce/getFraudReviews",
   ENDPOINTS.referral.fraud,
@@ -236,6 +287,12 @@ const referralCommerceSlice = createSlice({
       [markReferralPayoutPaid, "paidPayoutData"],
       [getReferralRules, "rulesData"],
       [updateReferralRules, "updateRulesData"],
+      [getReferralBonusRules, "bonusRulesData"],
+      [createReferralBonusRule, "createBonusRuleData"],
+      [updateReferralBonusRule, "updateBonusRuleData"],
+      [getReferralBonusAchievements, "bonusAchievementsData"],
+      [getReferralBonusProgress, "bonusProgressData"],
+      [evaluateReferralBonusRules, "evaluateBonusRulesData"],
       [getReferralFraudReviews, "fraudReviewsData"],
     ].forEach(([thunk, key]) => createExtraReducersForThunk(builder, thunk, key));
   },
