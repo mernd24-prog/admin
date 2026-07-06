@@ -12,6 +12,27 @@ const STATUSES = [
   { value: "rejected",  label: "Rejected" },
 ];
 
+const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
+
+const displayBuyerName = (review = {}) => {
+  const name =
+    review.buyerName ||
+    review.buyer?.displayName ||
+    review.buyer?.fullName ||
+    review.buyer?.name ||
+    review.buyer?.email ||
+    "";
+  if (name && !isLikelyId(name)) return name;
+  return "Verified Buyer";
+};
+
+const displayProductName = (review = {}) =>
+  review.productName ||
+  review.product?.title ||
+  review.product?.name ||
+  review.product?.sku ||
+  "Product not found";
+
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
   return (
@@ -124,16 +145,19 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
           {/* Meta */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
             <div>
-              <span className="font-medium text-gray-500">Product ID</span>
-              <p className="font-mono text-xs truncate">{reviewData?.productId || "—"}</p>
+              <span className="font-medium text-gray-500">Product</span>
+              <p className="text-xs font-medium truncate">{displayProductName(reviewData)}</p>
             </div>
             <div>
               <span className="font-medium text-gray-500">Order ID</span>
               <p className="font-mono text-xs truncate">{reviewData?.orderId || "—"}</p>
             </div>
             <div>
-              <span className="font-medium text-gray-500">Buyer ID</span>
-              <p className="font-mono text-xs truncate">{reviewData?.buyerId || "—"}</p>
+              <span className="font-medium text-gray-500">Buyer</span>
+              <p className="text-xs font-medium truncate">{displayBuyerName(reviewData)}</p>
+              {reviewData?.buyer?.email && (
+                <p className="text-[10px] text-gray-400 truncate">{reviewData.buyer.email}</p>
+              )}
             </div>
             <div>
               <span className="font-medium text-gray-500">Date</span>

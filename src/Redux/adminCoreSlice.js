@@ -697,11 +697,11 @@ export const getDeadLetterEvents = createApiThunkPrivate("system/getDeadLetterEv
 export const retryDeadLetterEvent = createApiThunkPrivate("system/retryDeadLetterEvent", (payload) => ENDPOINTS.system.retryDeadLetter(payload.eventId), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason"]) });
 export const discardDeadLetterEvent = createApiThunkPrivate("system/discardDeadLetterEvent", (payload) => ENDPOINTS.system.discardDeadLetter(payload.eventId), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason"]) });
 
-export const getDeals = createApiThunkPrivate("adminCore/getDeals", ENDPOINTS.deals.list, "GET", true, { transformParams: pickQuery(["status", "dealType", "sellerId", "search", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) });
+export const getDeals = createApiThunkPrivate("adminCore/getDeals", ENDPOINTS.deals.list, "GET", true, { transformParams: pickQuery(["status", "dealType", "sellerId", "productId", "search", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) });
 export const getDeal = createApiThunkPrivate("adminCore/getDeal", (payload) => ENDPOINTS.deals.detail(payload.dealId || payload.id), "GET");
 export const createDeal = createApiThunkPrivate("adminCore/createDeal", ENDPOINTS.deals.create, "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
 export const updateDeal = createApiThunkPrivate("adminCore/updateDeal", (payload) => ENDPOINTS.deals.update(payload.dealId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["dealId", "id"]) });
-export const submitDeal = createApiThunkPrivate("adminCore/submitDeal", (payload) => ENDPOINTS.deals.submit(payload.dealId || payload.id), "POST", false, { transformBody: noBody });
+export const submitDeal = createApiThunkPrivate("adminCore/submitDeal", (payload) => ENDPOINTS.deals.submit(payload.dealId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason", "note"]) });
 export const approveDeal = createApiThunkPrivate("adminCore/approveDeal", (payload) => ENDPOINTS.deals.approve(payload.dealId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["note"]) });
 export const rejectDeal = createApiThunkPrivate("adminCore/rejectDeal", (payload) => ENDPOINTS.deals.reject(payload.dealId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason", "note"]) });
 export const pauseDeal = createApiThunkPrivate("adminCore/pauseDeal", (payload) => ENDPOINTS.deals.pause(payload.dealId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["note"]) });

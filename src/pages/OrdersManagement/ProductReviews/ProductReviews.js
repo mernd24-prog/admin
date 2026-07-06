@@ -80,6 +80,36 @@ const STATUS_COLOR = {
   rejected:  "danger",
 };
 
+const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
+
+const getBuyerName = (row = {}) => {
+  const name =
+    row.buyerName ||
+    row.buyer?.displayName ||
+    row.buyer?.fullName ||
+    row.buyer?.name ||
+    row.buyer?.email ||
+    "";
+  if (name && !isLikelyId(name)) return name;
+  return "Verified Buyer";
+};
+
+const getProductName = (row = {}) =>
+  row.productName ||
+  row.product?.title ||
+  row.product?.name ||
+  row.product?.sku ||
+  row.title ||
+  "";
+
+const initials = (value = "") =>
+  String(value || "B")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "B";
+
 const getReviewsPayload = (state = {}) => {
   const payload = state?.productReviewsData?.data?.data || {};
   const list = payload?.list || payload?.items || [];
@@ -219,15 +249,19 @@ const ProductReviews = () => {
       label: "Product",
       render: (v, row) => (
         <div className="flex items-center gap-2 min-w-0">
-          {row.media?.[0] && (
+          {(row.productImage || row.product?.image || row.media?.[0]) && (
             <img
-              src={row.media[0]}
-              alt="media"
+              src={row.productImage || row.product?.image || row.media?.[0]}
+              alt={getProductName(row) || "Product"}
               className="w-9 h-9 object-cover rounded border flex-shrink-0"
               onError={(e) => { e.target.style.display = "none"; }}
             />
           )}
-          <span className="text-xs font-mono text-gray-600 truncate max-w-[100px]">{v || "—"}</span>
+          <div className="min-w-0">
+            <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">
+              {getProductName(row) || "Product not found"}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -236,21 +270,31 @@ const ProductReviews = () => {
       label: "Buyer",
       render: (v, row) => {
         const buyerImage = row.buyerImage || row.buyerAvatarUrl;
+        const buyerName = getBuyerName(row);
         return (
           <div className="flex items-center gap-2 min-w-0">
             {buyerImage ? (
               <img
                 src={buyerImage}
-                alt={row.buyerName || "Buyer"}
+                alt={buyerName}
                 className="w-8 h-8 rounded-full object-cover border flex-shrink-0"
                 onError={(e) => { e.target.style.display = "none"; }}
               />
             ) : (
               <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold grid place-items-center flex-shrink-0">
-                {(row.buyerName || "B").charAt(0).toUpperCase()}
+                {initials(buyerName)}
               </span>
             )}
-            <span className="text-xs font-mono text-gray-500 truncate max-w-[90px] block">{v || "—"}</span>
+            <div className="min-w-0">
+              <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
+                {buyerName}
+              </span>
+              {row.buyer?.email && row.buyer.email !== buyerName && (
+                <span className="block max-w-[150px] truncate text-[10px] text-gray-400">
+                  {row.buyer.email}
+                </span>
+              )}
+            </div>
           </div>
         );
       },
