@@ -269,7 +269,7 @@ const ContentManagement = () => {
   ];
 
   return (
-    <div className="p-6 mx-auto space-y-4 max-w-7xl">
+    <div className="p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

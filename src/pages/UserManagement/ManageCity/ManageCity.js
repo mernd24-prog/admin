@@ -183,7 +183,7 @@ const ManageCity = () => {
   });
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <PageHeader
         title="City Management"
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "Cities" }]}

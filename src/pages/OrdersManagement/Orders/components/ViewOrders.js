@@ -454,7 +454,7 @@ const OrderSummary = () => {
     <div className="min-h-screen bg-[#f4f6fb] p-3 md:p-5">
       <Loader loading={state.isLoading} />
 
-      <div className="mx-auto max-w-7xl">
+      <div>
         <PageHeader
           title={`Order #${orderNumber}`}
           subtitle="Customer, payment, shipment, tax, commission, and payout details"

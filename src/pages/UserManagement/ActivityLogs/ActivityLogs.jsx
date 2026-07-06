@@ -117,7 +117,7 @@ const ActivityLogs = () => {
   }, [page, search, actionFilter]);
 
   return (
-    <div className=" max-w-7xl mx-auto p-6">
+    <div className="p-6">
       <PageHeader
         title="Activity Logs"
         subtitle="Audit trail of all admin actions"

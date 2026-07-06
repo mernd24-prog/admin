@@ -295,7 +295,7 @@ const ManageZipCode = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div className="px-4 sm:px-0">
       <PageHeader
         title="Manage Zip Codes"
         subtitle="Configure serviceable pin codes with delivery settings"

@@ -192,7 +192,7 @@ const ManageCountry = () => {
   });
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <PageHeader
         title="Country Management"
         subtitle="Manage countries, codes and dial codes"

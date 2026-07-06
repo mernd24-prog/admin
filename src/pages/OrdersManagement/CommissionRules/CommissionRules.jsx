@@ -365,7 +365,7 @@ const CommissionRules = () => {
 
   if (activeRuleType === "platform_fee") {
     return (
-      <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+      <div className="px-4 sm:px-0">
         {ruleTabs}
         <PlatformFeeConfig embedded />
       </div>
@@ -373,7 +373,7 @@ const CommissionRules = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div className="px-4 sm:px-0">
       {ruleTabs}
       <PageHeader
         title="Commission & Fee Rules"

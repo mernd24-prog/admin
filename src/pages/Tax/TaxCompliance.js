@@ -247,7 +247,7 @@ const TaxCompliance = () => {
   const activeTotal = activeTab === "creditNotes" ? creditNotes.total : activeTab === "report" ? reportEntries.length : invoices.total;
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Tax Documents"
         subtitle="Invoices, credit notes, and tax ledger reports"

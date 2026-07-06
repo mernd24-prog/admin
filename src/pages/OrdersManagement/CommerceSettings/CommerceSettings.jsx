@@ -371,7 +371,7 @@ const CommerceSettings = () => {
   }, [runtime]);
 
   return (
-    <div className="mx-auto mt-8 max-w-7xl px-4 sm:px-0">
+    <div className="px-4 sm:px-0">
       <PageHeader
         title="Commerce Settings"
         subtitle="Checkout, COD, wallet, taxation, seller payout, and seller charge controls"

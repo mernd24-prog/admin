@@ -1774,7 +1774,7 @@ export default function ProductManagementUI() {
 
 
   return (
-    <div className='relative min-h-screen p-2 mx-auto max-w-7xl'>
+    <div className='relative min-h-screen p-2'>
       <Loader loading={loading} />
       <Breadcrumb isEditMode={isEditMode} />
       <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">

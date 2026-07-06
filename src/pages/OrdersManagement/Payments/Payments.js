@@ -284,7 +284,7 @@ const Payments = () => {
   ], [openDetail]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <Loader loading={loading || detailLoading} />
       <PageHeader
         title="Payments"

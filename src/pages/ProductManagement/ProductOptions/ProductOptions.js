@@ -258,7 +258,7 @@ export default function ProductOptions() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div className="px-4 sm:px-0">
       <PageHeader
         title="Product Option Masters"
         subtitle="Define reusable option attributes like Size, Color, RAM, Material"

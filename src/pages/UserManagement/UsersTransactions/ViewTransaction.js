@@ -109,7 +109,7 @@ const ViewTransaction = () => {
     <div className="min-h-screen bg-[#f4f6fb] p-3 md:p-5">
       <Loader loading={loading} />
 
-      <div className="mx-auto max-w-7xl">
+      <div>
         <PageHeader
           title={`Transaction #${transactionId}`}
           subtitle={transaction?.userLabel || transaction?.user?.email || transaction?.user_id || "Payment transaction detail"}
