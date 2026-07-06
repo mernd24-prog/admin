@@ -1,5 +1,6 @@
 import { IoMdTrendingDown } from "react-icons/io";
 import { IoTrendingUp } from "react-icons/io5";
+import { formatLabel } from "../../utils/formatters";
 
 export default function Cards({
   icon,
@@ -74,7 +75,7 @@ export default function Cards({
             )}{" "}
             {helper && (
               <span>
-                {String(helper).replace("last month", "Last month")}
+                {formatLabel(String(helper).replace("last month", "Last month"))}
               </span>
             )}
           </p>

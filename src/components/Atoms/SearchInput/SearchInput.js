@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { MdClose, MdSearch } from "react-icons/md";
+import { formatLabel } from "../../../utils/formatters";
 
 const SearchInput = ({
   placeholder,
@@ -46,12 +47,12 @@ const SearchInput = ({
       />
       <input
         type="text"
-        placeholder={placeholder || "Search..."}
+        placeholder={formatLabel(placeholder || "Search...")}
         value={searchTerm}
         onChange={onChange}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        aria-label={placeholder || "Search"}
+        aria-label={formatLabel(placeholder || "Search")}
         className="admin-input admin-header-search-input block w-full pl-9 pr-10"
       />
       {searchTerm && !disabled && (
@@ -59,7 +60,7 @@ const SearchInput = ({
           type="button"
           onClick={clearSearch}
           className="absolute right-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-          aria-label="Clear search"
+          aria-label={formatLabel("Clear search")}
         >
           <MdClose size={14} />
         </button>

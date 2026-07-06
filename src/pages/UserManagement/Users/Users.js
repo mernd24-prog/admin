@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -49,26 +49,31 @@ const FILTER_FIELDS = [
   },
 ];
 
-const COLUMNS = [
+const createColumns = (onViewUser) => [
   {
     key: "full_name",
     label: "User",
     sortable: true,
     render: (v, row) => (
-      <span className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onViewUser(row)}
+        className="group flex items-center gap-2 text-left"
+        aria-label={`View ${v || "user"} details`}
+      >
         <img
           src={row?.profile?.avatarUrl || "/Img/noData.png"}
           alt={v || "User"}
-          className="h-8 w-8 rounded-full border border-gray-200 object-cover bg-gray-50 shrink-0"
+          className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
         />
-        <span className="font-medium text-gray-800 capitalize">
+        <span className="font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
           {v ||
             [row?.profile?.firstName, row?.profile?.lastName]
               .filter(Boolean)
               .join(" ") ||
             "N/A"}
         </span>
-      </span>
+      </button>
     ),
   },
   {
@@ -155,6 +160,15 @@ const Users = () => {
   const getListData = selector?.getUserListData?.data?.data;
   const totalUsers = getListData?.total || 0;
   const userList = getListData?.list || [];
+
+  const columns = useMemo(
+    () =>
+      createColumns((row) => {
+        const userId = row?._id || row?.id;
+        if (userId) navigate(`/app/users/view/${userId}`);
+      }),
+    [navigate]
+  );
 
   useEffect(() => {
     const params = list.toQueryParams();
@@ -341,7 +355,7 @@ const Users = () => {
       />
 
       <DataTable
-        columns={COLUMNS}
+        columns={columns}
         data={userList}
         loading={selector.loading}
         totalCount={totalUsers}

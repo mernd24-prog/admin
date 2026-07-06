@@ -19,6 +19,7 @@ import { uploadFile } from '../../../_helpers/globalFunctions';
 import { apiRequest } from '../../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../../_helpers/endpoints';
 import useDropdownOptions from '../../../hooks/useDropdownOptions';
+import { formatLabel } from '../../../utils/formatters';
 
 // ─── small display helpers ────────────────────────────────────────────────────
 
@@ -308,7 +309,7 @@ const VerificationProgress = ({ stages = [] }) => {
                 </p>
                 <div className="mt-1 flex justify-center">
                   <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold leading-none ${badgeClass}`}>
-                    {stage.value || 'N/A'}
+                    {formatLabel(stage.value) || 'N/A'}
                   </span>
                 </div>
               </div>
@@ -1003,8 +1004,8 @@ const UserDetails = () => {
               <Row label="Full Name" value={getDisplayName(user)} />
               <Row label="Email"     value={user.email} />
               <Row label="Phone"     value={user.phone} />
-              <Row label="Role"      value={user.role} />
-              <Row label="Status"    value={accountStatus} />
+              <Row label="Role"      value={formatLabel(user.role)} />
+              <Row label="Status"    value={formatLabel(accountStatus)} />
               <Row label="Created At"  value={formatDateTime(user.createdAt)} />
               <Row label="Last Login"  value={lastLoginDisplay || 'N/A'} />
             </div>
@@ -1391,7 +1392,10 @@ const UserDetails = () => {
                 <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
                   <Row label="Seller Login Email" value={user.email} />
                   <Row label="Seller Phone"       value={user.phone} />
-                  <Row label="Onboarding Status"  value={onboarding.status || sellerProfile.onboardingStatus} />
+                  <Row
+                    label="Onboarding Status"
+                    value={formatLabel(onboarding.status || sellerProfile.onboardingStatus)}
+                  />
                 </div>
               </div>
 

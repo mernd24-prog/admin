@@ -67,10 +67,11 @@ export function formatRelativeDate(value, fallback = "Not available") {
 export function formatLabel(value, fallback = "Not available") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value)
-    .replace(/[_\-]+/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim() || fallback;
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase()) || fallback;
 }
 
 /**

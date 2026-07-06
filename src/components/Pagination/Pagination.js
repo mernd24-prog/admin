@@ -93,7 +93,7 @@ const Pagination = ({
       )}
       {onPageSizeChange && (
         <label className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
-          Rows per page
+          Rows Per Page
           <select
             className="admin-input !h-8 !w-auto !min-w-[68px] !border-[var(--admin-line)] !bg-white !px-2"
             value={pageSize}

@@ -4,6 +4,7 @@ import { MdSearch, MdRefresh, MdUnfoldMore, MdInbox, MdMoreVert } from "react-ic
 import Pagination from "../Pagination/Pagination";
 import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
 import { ExportButton, ImportButton } from "./TableTools";
+import { formatLabel } from "../../utils/formatters";
 
 const SkeletonRow = ({ cols }) => (
   <tr className="animate-pulse">
@@ -300,7 +301,7 @@ const DataTable = ({
               <input
                 value={searchValue}
                 onChange={handleSearch}
-                placeholder={searchPlaceholder}
+                placeholder={formatLabel(searchPlaceholder)}
                 className="admin-input w-full !pl-10 pr-4"
               />
             </div>
@@ -398,7 +399,7 @@ const DataTable = ({
                     {emptyIcon || (
                       <MdInbox size={36} className="text-gray-200" />
                     )}
-                    <span className="text-sm font-medium">{resolvedEmptyText}</span>
+                    <span className="text-sm font-medium">{formatLabel(resolvedEmptyText)}</span>
                   </div>
                 </td>
               </tr>

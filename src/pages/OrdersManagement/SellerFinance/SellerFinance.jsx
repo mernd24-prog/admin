@@ -30,6 +30,7 @@ import {
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
+import { formatLabel } from "../../../utils/formatters";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -54,7 +55,7 @@ const MetricCard = ({ label, value, hint }) => (
   <div className="rounded-lg border border-[#E6E6E6] bg-white p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-[#65718b]">{label}</p>
     <p className="mt-2 text-xl font-semibold text-[#202337]">{value}</p>
-    {hint ? <p className="mt-1 text-xs text-[#65718b]">{hint}</p> : null}
+    {hint ? <p className="mt-1 text-xs text-[#65718b]">{formatLabel(hint)}</p> : null}
   </div>
 );
 
