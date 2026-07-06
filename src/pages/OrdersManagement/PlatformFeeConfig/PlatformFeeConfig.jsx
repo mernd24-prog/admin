@@ -354,7 +354,7 @@ const PlatformFeeConfig = ({ embedded = false }) => {
   ];
 
   return (
-    <div className={embedded ? "" : "px-4 sm:px-0"}>
+    <div>
       <PageHeader
         title="Platform Fee Rules"
         subtitle="Configure reusable fixed, percentage, or mixed platform fee rules"

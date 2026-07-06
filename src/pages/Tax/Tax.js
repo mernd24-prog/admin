@@ -223,7 +223,7 @@ const Tax = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Tax Management"
         subtitle="Configure tax rules by country"

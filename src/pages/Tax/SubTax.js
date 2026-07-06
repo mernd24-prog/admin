@@ -230,7 +230,7 @@ const SubTax = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title={parentTaxName ? `${parentTaxName} — Sub-Taxes` : "Sub-Taxes"}
         subtitle="Manage sub-tax rates and percentages"

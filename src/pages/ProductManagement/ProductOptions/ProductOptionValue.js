@@ -260,7 +260,7 @@ export default function ProductOptionValue() {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title={parentOption?.name ? `${parentOption.name} — Values` : "Option Values"}
         subtitle={

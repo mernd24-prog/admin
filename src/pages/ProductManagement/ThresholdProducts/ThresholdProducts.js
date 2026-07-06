@@ -217,7 +217,7 @@ const ThresholdProducts = () => {
   const exportColumns = columns.filter((column) => column.key !== "actions");
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Threshold Products"
         subtitle="Products at or below their configured low-stock threshold"

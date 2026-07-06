@@ -607,7 +607,7 @@ const Store = () => {
   return (
     <>
       <Loader loading={isSubmitting || isLoading} />
-      <div className="overflow-hidden overflow-x-auto overflow-y-auto space-y-3 py-10">
+      <div className="overflow-hidden overflow-x-auto overflow-y-auto space-y-3">
         <div className="flex justify-between items-center">
           <h3>Home / Store</h3>
           <AddButton onClick={() => handleAction("ADD")} />

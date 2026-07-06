@@ -191,7 +191,7 @@ const ProductAdminDetails = () => {
   };
 
   return (
-    <div className="p-6">
+    <div>
       <Loader loading={selector.loading || reviewLoading || actionLoading} />
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm text-gray-500">

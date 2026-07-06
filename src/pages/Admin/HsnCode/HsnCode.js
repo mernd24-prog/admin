@@ -249,7 +249,7 @@ const HsnCode = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="HSN Codes"
         subtitle="Manage Harmonized System Nomenclature codes and tax rates"

@@ -342,7 +342,7 @@ const DataTable = ({
                   } ${col.width ? `w-${col.width}` : ""} ${col.headerClassName || ""}`}
                   onClick={() => handleSort(col)}
                 >
-                  <span className="flex items-center justify-center gap-1 ">
+                  <span className="flex items-center gap-1 ">
                     {col.label}
                     {col.sortable && (
                       <MdUnfoldMore

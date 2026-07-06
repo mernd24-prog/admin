@@ -1354,7 +1354,7 @@ const AdminUsers = () => {
   return (
     <>
       <Loader loading={loading} />
-      <div className="py-6 px-4">
+      <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm text-gray-500">
             <Link to="/app/home" className="hover:underline text-[var(--admin-blue)]">

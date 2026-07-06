@@ -586,7 +586,7 @@ const SellerUsers = () => {
   return (
     <>
       <Loader loading={loading} />
-      <div className="px-4 py-6">
+      <div>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm text-gray-500">
             <Link to="/app/home" className="text-[var(--admin-blue)] hover:underline">Home</Link> / <b className="text-gray-800">Seller Users</b>

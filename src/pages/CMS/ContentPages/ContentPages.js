@@ -224,7 +224,7 @@ const ContentPages = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Content Pages"
         subtitle="Manage static pages, blog posts, and CMS content"

@@ -455,7 +455,7 @@ const SellerProductInventories = () => {
   const exportColumns = columns.filter((column) => column.key !== "actions");
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Seller Product Inventories"
         subtitle="Manage seller product stock levels and inventory adjustments"

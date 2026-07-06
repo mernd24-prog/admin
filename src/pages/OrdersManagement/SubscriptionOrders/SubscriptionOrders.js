@@ -157,7 +157,7 @@ const SubscriptionOrders = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Subscription Orders"
         subtitle="Track and manage subscription-based orders"

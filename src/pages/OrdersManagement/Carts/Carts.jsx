@@ -247,7 +247,7 @@ const Carts = () => {
   const detailItems = Array.isArray(selectedCart?.items) ? selectedCart.items : [];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Cart Management"
         subtitle="Review active, abandoned, and empty customer carts before checkout."

@@ -184,7 +184,7 @@ const CheckoutQuote = () => {
   };
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Checkout Quote"
         subtitle="Validate checkout totals, tax, wallet, COD, and seller settlement before order creation."

@@ -323,7 +323,7 @@ const Users = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Users"
         subtitle="Manage customer accounts"

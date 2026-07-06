@@ -308,7 +308,7 @@ const Brands = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Brands"
         subtitle="Manage product brands and their logos"

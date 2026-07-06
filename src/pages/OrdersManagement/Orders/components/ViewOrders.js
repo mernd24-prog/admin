@@ -451,7 +451,7 @@ const OrderSummary = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] p-3 md:p-5">
+    <div className="min-h-screen bg-[#f4f6fb]">
       <Loader loading={state.isLoading} />
 
       <div>

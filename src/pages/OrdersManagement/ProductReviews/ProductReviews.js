@@ -339,7 +339,7 @@ const ProductReviews = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Product Reviews"
         subtitle="Manage and moderate customer product reviews"

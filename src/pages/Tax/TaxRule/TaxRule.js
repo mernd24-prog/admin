@@ -338,7 +338,7 @@ const TaxRule = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Tax Rules"
         subtitle="Map tax structures to product categories"

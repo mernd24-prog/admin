@@ -429,7 +429,7 @@ const ProductVariants = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Product Variants"
         subtitle="Manage SKU-level product variants with inventory and attribute overrides"

@@ -295,7 +295,7 @@ const InventoryTransactions = () => {
   ];
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Inventory Transactions"
         subtitle="Audit every stock reservation, release, sale, return, damage, and manual adjustment"

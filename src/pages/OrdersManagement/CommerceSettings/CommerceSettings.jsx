@@ -371,7 +371,7 @@ const CommerceSettings = () => {
   }, [runtime]);
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Commerce Settings"
         subtitle="Checkout, COD, wallet, taxation, seller payout, and seller charge controls"

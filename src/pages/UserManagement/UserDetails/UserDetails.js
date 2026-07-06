@@ -985,7 +985,7 @@ const UserDetails = () => {
         submitText={orgDecisionModal.action?.label || 'Submit'}
       />
 
-      <div className="py-6 space-y-4">
+      <div className="space-y-4">
         {/* Breadcrumb + Account Status */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm text-gray-500">

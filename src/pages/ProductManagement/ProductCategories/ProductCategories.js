@@ -867,7 +867,7 @@ const ProductCategories = () => {
   };
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Product Categories"
         subtitle="Manage hierarchical product category tree"

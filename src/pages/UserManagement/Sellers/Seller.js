@@ -332,7 +332,7 @@ const Sellers = () => {
   );
 
   return (
-    <div className="px-4 sm:px-0">
+    <div>
       <Loader loading={selector.loading} />
 
       <PageHeader

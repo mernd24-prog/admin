@@ -467,7 +467,7 @@ const CategoryAttributesPanel = ({ embedded = false, initialCategory = null, onC
   /* ── LIST VIEW ────────────────────────────────────────────────────────── */
   if (view === 'list') {
     return (
-      <div className={`${embedded ? 'h-full overflow-y-auto p-5' : 'p-6'}`}>
+      <div className={`${embedded ? 'h-full overflow-y-auto p-5' : ''}`}>
         <Loader loading={selector.loading} />
         <div className="mb-5 flex items-center justify-between">
           <div>
@@ -538,7 +538,7 @@ const CategoryAttributesPanel = ({ embedded = false, initialCategory = null, onC
   const categoryPath = selectedCategory?.label?.split(' > ').slice(0, -1).join(' > ');
 
   return (
-    <div className={`${embedded ? 'h-full overflow-y-auto p-5' : 'p-6'}`}>
+    <div className={`${embedded ? 'h-full overflow-y-auto p-5' : ''}`}>
       <Loader loading={selector.loading || saving} />
 
       {/* Header */}
