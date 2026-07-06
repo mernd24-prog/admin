@@ -142,7 +142,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
   const progress = Math.min(Math.max(step, 1), 5) * 20;
 
   return (
-    <div className="mx-auto w-full max-w-[1350px]">
+    <div className="w-full">
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">

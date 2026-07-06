@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "../../../utils/toast";
 import { formatDateTime, formatCurrency } from "../../../utils/formatters";
@@ -79,15 +79,19 @@ const orderIdOf = (order = {}) =>
 
 const formatMoney = (value) => formatCurrency(value, "—");
 
-const COLUMNS = [
+const createColumns = (navigate) => [
   {
     key: "order_number",
     label: "Order #",
     sortable: true,
     render: (v, row) => (
-      <span className="font-mono font-medium text-[var(--admin-navy)]">
+      <button
+        type="button"
+        onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
+        className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
+      >
         {v || orderIdOf(row)}
-      </span>
+      </button>
     ),
   },
   {
@@ -110,13 +114,19 @@ const COLUMNS = [
       const buyer = row.relations?.buyer || row.buyer || row.buyerSnapshot || {};
       const name = row.buyerName || buyer.displayName || buyer.fullName || buyer.name || row.buyer_name;
       const email = row.buyerEmail || buyer.email || row.buyer_email;
+      const buyerId = firstDefined(buyer.id, buyer._id, row.buyer_id, row.buyerId);
       return (
-        <div>
+        <button
+          type="button"
+          disabled={!buyerId}
+          onClick={() => buyerId && navigate(`/app/users/view/${buyerId}`)}
+          className="text-left enabled:hover:underline"
+        >
           {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
           {email && !name && <div className="text-sm text-gray-700">{email}</div>}
           {email && name && <div className="text-xs text-gray-400">{email}</div>}
           {!name && !email && <span className="text-gray-400">Customer details unavailable</span>}
-        </div>
+        </button>
       );
     },
   },
@@ -140,13 +150,25 @@ const COLUMNS = [
         row.organizationSnapshot?.storeDisplayName,
         row.organization_snapshot?.storeDisplayName,
       );
-      const sellerId = firstDefined(row.sellerId, row.seller_id);
+      const sellerId = firstDefined(
+        row.sellerId,
+        row.seller_id,
+        row.relations?.sellers?.[0]?.id,
+        row.relations?.sellers?.[0]?._id,
+        row.seller?.id,
+        row.seller?._id,
+      );
       const organizationId = firstDefined(row.organizationId, row.organization_id);
       if (!sellerName && !organizationName && !sellerId && !organizationId) {
         return <span className="text-gray-400">—</span>;
       }
       return (
-        <div>
+        <button
+          type="button"
+          disabled={!sellerId}
+          onClick={() => sellerId && navigate(`/app/seller/view/${sellerId}`)}
+          className="text-left enabled:hover:underline"
+        >
           <div className="text-sm font-medium text-gray-800">
             {organizationName || sellerName || "Seller"}
           </div>
@@ -154,7 +176,7 @@ const COLUMNS = [
             <div className="text-xs text-gray-400">{sellerName}</div>
           )}
           {!sellerName && sellerId && <div className="text-xs text-gray-400">Seller details unavailable</div>}
-        </div>
+        </button>
       );
     },
   },
@@ -238,6 +260,68 @@ const Orders = () => {
 
   const { items, total } = getListPayload(selector);
   const loading = !!selector?.getOrderListData?.loading;
+  const [buyerDirectory, setBuyerDirectory] = useState({});
+
+  const buyerIds = useMemo(
+    () => [
+      ...new Set(
+        items
+          .map((order) => firstDefined(order.buyer_id, order.buyerId))
+          .filter(Boolean),
+      ),
+    ],
+    [items],
+  );
+
+  useEffect(() => {
+    if (!buyerIds.length) {
+      setBuyerDirectory({});
+      return;
+    }
+
+    let active = true;
+    dropdownApi
+      .getUsers({
+        size: 100,
+        limit: 100,
+      })
+      .then((buyers) => {
+        if (!active) return;
+        setBuyerDirectory(
+          buyers.reduce((directory, buyer) => {
+            directory[String(buyer.value)] = {
+              name: buyer.label,
+              email: buyer.meta?.email || "",
+            };
+            return directory;
+          }, {}),
+        );
+      })
+      .catch(() => {
+        if (active) setBuyerDirectory({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [buyerIds]);
+
+  const displayItems = useMemo(
+    () =>
+      items.map((order) => {
+        const buyerId = firstDefined(order.buyer_id, order.buyerId);
+        const buyer = buyerId ? buyerDirectory[String(buyerId)] : null;
+        if (!buyer) return order;
+        return {
+          ...order,
+          buyerName: firstDefined(order.buyerName, order.buyer_name, buyer.name),
+          buyerEmail: firstDefined(order.buyerEmail, order.buyer_email, buyer.email),
+        };
+      }),
+    [items, buyerDirectory],
+  );
+
+  const baseColumns = useMemo(() => createColumns(navigate), [navigate]);
 
   useEffect(() => {
     const params = toQueryParams();
@@ -276,7 +360,7 @@ const Orders = () => {
   );
 
   const columns = [
-    ...COLUMNS,
+    ...baseColumns,
     {
       key: "_actions",
       label: "",
@@ -309,7 +393,7 @@ const Orders = () => {
 
       <DataTable
         columns={columns}
-        data={items}
+        data={displayItems}
         loading={loading}
         totalCount={total}
         page={list.page}
@@ -324,7 +408,7 @@ const Orders = () => {
         emptyText="No orders found."
         emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
         requiredModule="orders"
-        exportConfig={{ filename: "orders", columns: COLUMNS }}
+        exportConfig={{ filename: "orders", columns: baseColumns }}
         filterBar={
           <FilterBar
             filters={filterFields}

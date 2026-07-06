@@ -213,6 +213,16 @@ const InfoRow = ({ label, value, strong = false }) => (
   </div>
 );
 
+const DetailLink = ({ children, onClick, className = "" }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`text-left font-medium text-[#202337] transition-colors hover:text-[var(--admin-gold-dark)] hover:underline ${className}`}
+  >
+    {children}
+  </button>
+);
+
 const MetricCard = ({ label, value, tone = "default" }) => {
   const toneClass = {
     default: "bg-[#fffdf8] border-[#eadfbd]",
@@ -347,6 +357,7 @@ const OrderSummary = () => {
   const items = Array.isArray(order.items) ? order.items : [];
   const relations = order.relations || {};
   const buyer = relations.buyer || order.buyer || order.buyerSnapshot || {};
+  const buyerId = firstDefined(buyer.id, buyer._id, order.buyer_id, order.buyerId);
   const payments = Array.isArray(relations.payments) ? relations.payments : [];
   const shipments = Array.isArray(relations.shipments) ? relations.shipments : [];
   const walletTransactions = Array.isArray(relations.walletTransactions) ? relations.walletTransactions : [];
@@ -451,10 +462,10 @@ const OrderSummary = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] p-3 md:p-5">
+    <div className="min-h-screen bg-[#f4f6fb]">
       <Loader loading={state.isLoading} />
 
-      <div className="mx-auto max-w-7xl">
+      <div>
         <PageHeader
           title={`Order #${orderNumber}`}
           subtitle="Customer, payment, shipment, tax, commission, and payout details"
@@ -513,9 +524,15 @@ const OrderSummary = () => {
               <div key={`${group.sellerId}-${group.organizationId}`} className="mb-4 overflow-hidden rounded-lg border border-[#eadfbd] bg-white last:mb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 bg-[#fff9ea] px-4 py-3">
                   <div>
-                    <div className="text-sm font-semibold text-[#202337]">{group.organizationName || group.sellerName}</div>
+                    <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-sm font-semibold">
+                      {group.organizationName || group.sellerName}
+                    </DetailLink>
                     <div className="text-xs text-[#65718b]">
-                      Seller: {group.sellerName} · Organization: {group.organizationName || group.organizationId || "N/A"}
+                      Seller:{" "}
+                      <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-xs">
+                        {group.sellerName}
+                      </DetailLink>{" "}
+                      · Organization: {group.organizationName || group.organizationId || "N/A"}
                     </div>
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#202337] ring-1 ring-[#eadfbd]">
@@ -533,10 +550,20 @@ const OrderSummary = () => {
                   const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
                   const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
                   const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");
+                  const productId = firstDefined(item.product_id, item.productId, productSnapshot.id, productSnapshot._id);
                   return (
                     <div key={getItemKey(item)} className="grid grid-cols-1 gap-3 border-b border-[#eef0f6] px-4 py-4 text-sm last:border-b-0 md:grid-cols-12 md:items-start">
                       <div className="md:col-span-5">
-                        <div className="font-semibold text-[#202337]">{productTitle}</div>
+                        {productId ? (
+                          <DetailLink
+                            onClick={() => navigate(`/app/product-catalog/view/${productId}`)}
+                            className="font-semibold"
+                          >
+                            {productTitle}
+                          </DetailLink>
+                        ) : (
+                          <div className="font-semibold text-[#202337]">{productTitle}</div>
+                        )}
                         <div className="text-xs text-[#65718b]">
                           SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
                         </div>
@@ -599,12 +626,25 @@ const OrderSummary = () => {
             {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
                 <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#efe6cd] pt-3 md:grid-cols-2">
                 {taxBreakup.items.map((taxItem, index) => {
-                  const orderItem = items[index] || {};
+                  const taxProductId = firstDefined(taxItem.productId, taxItem.product_id);
+                  const orderItem = items.find(
+                    (item) => String(firstDefined(item.product_id, item.productId, "")) === String(taxProductId || ""),
+                  ) || items[index] || {};
                   const productSnapshot = normalizeJson(firstDefined(orderItem.product_snapshot, orderItem.productSnapshot), {});
-                  const productTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, taxItem.productId, `Item ${index + 1}`);
+                  const productId = firstDefined(taxProductId, orderItem.product_id, orderItem.productId, productSnapshot.id, productSnapshot._id);
+                  const productTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, productId, `Item ${index + 1}`);
                   return (
-                    <div key={`${taxItem.productId || "tax"}-${index}`} className="rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
-                      <div className="font-semibold text-[#202337]">{productTitle}</div>
+                    <div key={`${productId || "tax"}-${index}`} className="rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
+                      {productId ? (
+                        <DetailLink
+                          onClick={() => navigate(`/app/product-catalog/view/${productId}`)}
+                          className="text-xs font-semibold"
+                        >
+                          {productTitle}
+                        </DetailLink>
+                      ) : (
+                        <div className="font-semibold text-[#202337]">{productTitle}</div>
+                      )}
                       <div className="flex justify-between gap-2">
                         <span>{getItemTaxLabel(taxItem, orderItem)}</span>
                         <span>{formatMoney(money(taxItem.taxAmount) + money(taxItem.cessAmount))}</span>
@@ -623,7 +663,14 @@ const OrderSummary = () => {
           <Panel title="Buyer & Shipping">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(220px,320px)_1fr]">
               <div>
-                <InfoRow label="Customer" value={firstDefined(buyer.displayName, buyer.fullName, buyer.name, order.buyerName, "Customer")} />
+                <InfoRow
+                  label="Customer"
+                  value={buyerId ? (
+                    <DetailLink onClick={() => navigate(`/app/users/view/${buyerId}`)}>
+                      {firstDefined(buyer.displayName, buyer.fullName, buyer.name, order.buyerName, "Customer")}
+                    </DetailLink>
+                  ) : firstDefined(buyer.displayName, buyer.fullName, buyer.name, order.buyerName, "Customer")}
+                />
                 <InfoRow label="Email" value={firstDefined(buyer.email, order.buyerEmail, "Not available")} />
                 <InfoRow label="Phone" value={firstDefined(buyer.phone, shippingAddress.phone, "Not available")} />
               </div>
@@ -693,7 +740,11 @@ const OrderSummary = () => {
                     <RelatedCard
                       key={payment.id || payment._id || payment.transaction_reference}
                       title={`${displayStatus(payment.provider || "payment")} payment`}
-                      subtitle={`Order #${orderNumber}`}
+                      subtitle={(
+                        <DetailLink onClick={() => navigate(`/app/orders/view/${orderId}`)} className="text-xs">
+                          Order #{orderNumber}
+                        </DetailLink>
+                      )}
                       status={payment.status}
                       rows={[
                         { label: "Provider", value: displayStatus(payment.provider) },
@@ -721,7 +772,17 @@ const OrderSummary = () => {
                           shipment.sellerSnapshot?.name, shipment.sellerName,
                           shipment.seller?.displayName, shipment.seller?.name, shipment.seller?.businessName
                         );
-                        return sellerName || "Seller";
+                        const sellerId = firstDefined(
+                          shipment.seller_id,
+                          shipment.sellerId,
+                          shipment.seller?.id,
+                          shipment.seller?._id,
+                        );
+                        return sellerId ? (
+                          <DetailLink onClick={() => navigate(`/app/seller/view/${sellerId}`)} className="text-xs">
+                            {sellerName || "Seller"}
+                          </DetailLink>
+                        ) : (sellerName || "Seller");
                       })()}
                       status={shipment.status}
                       rows={[
@@ -806,7 +867,14 @@ const OrderSummary = () => {
                         status={firstDefined(walletTx.status, "recorded")}
                         rows={[
                           { label: "Amount", value: formatMoney(firstDefined(walletTx.amount, walletTx.value)) },
-                          { label: "Order", value: `#${orderNumber}` },
+                          {
+                            label: "Order",
+                            value: (
+                              <DetailLink onClick={() => navigate(`/app/orders/view/${orderId}`)} className="text-xs">
+                                #{orderNumber}
+                              </DetailLink>
+                            ),
+                          },
                           { label: "Created", value: formatDate(firstDefined(walletTx.created_at, walletTx.createdAt)) },
                         ]}
                       />
@@ -825,7 +893,9 @@ const OrderSummary = () => {
                 <div key={`${seller.sellerId}-${seller.organizationId || "default"}`} className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
                   <div className="flex justify-between gap-2 mb-3">
                     <div>
-                      <div className="font-semibold text-[#202337]">{seller.sellerName}</div>
+                      <DetailLink onClick={() => navigate(`/app/seller/view/${seller.sellerId}`)} className="font-semibold">
+                        {seller.sellerName}
+                      </DetailLink>
                       {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
                     </div>
                     <div className="text-right">

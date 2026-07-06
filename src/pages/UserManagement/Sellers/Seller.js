@@ -209,19 +209,27 @@ const Sellers = () => {
       key: "full_name",
       label: "Name",
       render: (v, row) => (
-        <span className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const sellerId = row?._id || row?.id;
+            if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+          }}
+          className="group flex items-center gap-2 text-left"
+          aria-label={`View ${v || "seller"} details`}
+        >
           <img
             src={row?.profile?.avatarUrl || "/Img/noData.png"}
             alt={v || "Seller"}
-            className="h-8 w-8 rounded-full border border-gray-200 object-cover bg-gray-50 shrink-0"
+            className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
           />
           <div className="min-w-0">
-            <p className="font-medium text-gray-800 capitalize truncate">
+            <p className="truncate font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
               {v || row?.sellerProfile?.displayName || "N/A"}
             </p>
             <p className="text-xs text-gray-400 truncate">{row?.userName || ""}</p>
           </div>
-        </span>
+        </button>
       ),
     },
     {
@@ -303,7 +311,7 @@ const Sellers = () => {
         </PermissionGuard>
       ),
     },
-  ], []);
+  ], [navigate]);
 
   const rowActions = useCallback(
     (row) => [
@@ -332,7 +340,7 @@ const Sellers = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <Loader loading={selector.loading} />
 
       <PageHeader

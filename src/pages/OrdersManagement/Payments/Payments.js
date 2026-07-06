@@ -284,7 +284,7 @@ const Payments = () => {
   ], [openDetail]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <Loader loading={loading || detailLoading} />
       <PageHeader
         title="Payments"
@@ -317,7 +317,7 @@ const Payments = () => {
               onChange={(event) => setCodForm((prev) => ({ ...prev, enabled: event.target.checked }))}
               disabled={!can("payments", ACTIONS.UPDATE)}
             />
-            COD enabled
+            COD Enabled
           </label>
           <Input labelName="COD Charge" type="number" min="0" value={codForm.chargeAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, chargeAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
           <Input labelName="Minimum Order" type="number" min="0" value={codForm.minOrderAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />

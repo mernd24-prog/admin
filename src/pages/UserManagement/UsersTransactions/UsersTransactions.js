@@ -115,7 +115,7 @@ const UsersTransactions = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <PageHeader
         title={isRefundView ? "Refund Transactions" : "Users Transactions"}
         subtitle="View wallet and payment transactions"

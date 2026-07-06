@@ -647,7 +647,7 @@ const WarehouseManagement = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
+    <div>
       <PageHeader
         title="Warehouse Management"
         subtitle="Manage fulfilment centres and stock locations"

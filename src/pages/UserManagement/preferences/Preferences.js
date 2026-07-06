@@ -170,7 +170,7 @@ const Preferences = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Preferences"
         subtitle="Manage user interest categories and preferences"

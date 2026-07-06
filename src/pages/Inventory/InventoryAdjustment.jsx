@@ -37,10 +37,10 @@ const STOCK_FILTERS = [
 ];
 
 const PRODUCT_STATUS_FILTERS = [
-  { value: "", label: "All product status" },
+  { value: "", label: "All Product Status" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
-  { value: "pending_approval", label: "Pending approval" },
+  { value: "pending_approval", label: "Pending Approval" },
   { value: "draft", label: "Draft" },
 ];
 
@@ -331,9 +331,9 @@ const InventoryAdjustment = () => {
       >
         <div className="mb-5 grid gap-3 lg:grid-cols-3">
           {[
-            { label: "1. Find product", active: true },
-            { label: "2. Review stock", active: Boolean(selected) },
-            { label: "3. Apply change", active: Boolean(selected && qty && reason) },
+            { label: "1. Find Product", active: true },
+            { label: "2. Review Stock", active: Boolean(selected) },
+            { label: "3. Apply Change", active: Boolean(selected && qty && reason) },
           ].map((step) => (
             <div
               key={step.label}

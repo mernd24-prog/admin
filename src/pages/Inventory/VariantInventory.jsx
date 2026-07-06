@@ -175,7 +175,7 @@ const VariantInventory = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto mt-8 px-4 sm:px-0">
+    <div>
       <PageHeader
         title="Variant Inventory"
         subtitle="Per-variant stock levels for all variable products"
