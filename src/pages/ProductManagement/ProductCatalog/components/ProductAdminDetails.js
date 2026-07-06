@@ -312,6 +312,14 @@ const ProductAdminDetails = () => {
             <Row label="Version" value={product.version} />
             <Row label="Stock" value={product.stock} />
             <Row
+              label="Deal Product"
+              value={
+                product.metadata?.isDealProduct
+                  ? `${product.metadata?.dealBadge || "Deal"} (${product.metadata?.dealSource || "admin_direct"})`
+                  : "No"
+              }
+            />
+            <Row
               label="Created At"
               value={
                 product.createdAt

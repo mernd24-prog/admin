@@ -48,6 +48,21 @@ const API_CALL_OBJECT = {
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
+const DEAL_BADGE_OPTIONS = [
+  "Today's Deal",
+  "Flash Sale",
+  "Hot Deal",
+  "Limited Offer",
+  "Best Deal",
+  "Festival Offer",
+  "Mega Sale",
+];
+const DEAL_SOURCE_OPTIONS = [
+  { value: "admin_direct", label: "Admin Direct" },
+  { value: "seller_request", label: "Seller Request" },
+  { value: "marketing_campaign", label: "Marketing Campaign" },
+  { value: "seasonal_campaign", label: "Seasonal Campaign" },
+];
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
@@ -236,6 +251,9 @@ export default function ProductManagementUI() {
             stock: productData?.stock ?? '',
             price: productData?.price ?? '',
             mrp: productData?.mrp ?? '',
+            isDealProduct: Boolean(productData?.metadata?.isDealProduct),
+            dealBadge: productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,
+            dealSource: productData?.metadata?.dealSource || INITIALS_DATA.dealSource,
             gstRate: productData?.gstRate ?? 18,
             gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
@@ -997,6 +1015,7 @@ export default function ProductManagementUI() {
       DISABLE: 'isDisable',
       APPROVE: 'isApproved',
       FEATURED: 'markAsFeatured',
+      DEAL_PRODUCT: 'isDealProduct',
       COD: 'cod',
       prescription_required: 'prescription_required'
     };
@@ -1140,7 +1159,11 @@ export default function ProductManagementUI() {
       documents: catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
       metadata: {
+        ...(updatedFormData.metadata || {}),
         featured: Boolean(updatedFormData.markAsFeatured),
+        isDealProduct: Boolean(updatedFormData.isDealProduct),
+        dealBadge: updatedFormData.isDealProduct ? updatedFormData.dealBadge : undefined,
+        dealSource: updatedFormData.isDealProduct ? updatedFormData.dealSource : undefined,
         codAvailable: resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
       },
@@ -1704,7 +1727,54 @@ export default function ProductManagementUI() {
             />
           </div>
 
-         
+          <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-[var(--admin-ink)]">Deal Product</h4>
+                <p className="text-xs text-gray-500">Mark this existing product so admin can pick it for Deal Management.</p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData?.isDealProduct)}
+                  onChange={() => handleToggleProductSetting('DEAL_PRODUCT')}
+                  className="h-4 w-4 accent-[var(--admin-blue)]"
+                />
+                Show in deal selection
+              </label>
+            </div>
+
+            {formData?.isDealProduct && (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="admin-label">Deal Badge</label>
+                  <select
+                    name="dealBadge"
+                    value={formData?.dealBadge || "Today's Deal"}
+                    onChange={handleChange}
+                    className="admin-input"
+                  >
+                    {DEAL_BADGE_OPTIONS.map((badge) => (
+                      <option key={badge} value={badge}>{badge}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="admin-label">Deal Source</label>
+                  <select
+                    name="dealSource"
+                    value={formData?.dealSource || "admin_direct"}
+                    onChange={handleChange}
+                    className="admin-input"
+                  >
+                    {DEAL_SOURCE_OPTIONS.map((source) => (
+                      <option key={source.value} value={source.value}>{source.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )
     },

@@ -726,6 +726,18 @@ const ProductCatalog = () => {
         render: (value) => value ?? "N/A",
       },
       {
+        key: "_deal",
+        label: "Deal",
+        render: (_, product) =>
+          product?.metadata?.isDealProduct ? (
+            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              {product.metadata.dealBadge || "Deal"}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400">-</span>
+          ),
+      },
+      {
         key: "_completeness",
         label: "Complete",
         render: (_, product) => {
