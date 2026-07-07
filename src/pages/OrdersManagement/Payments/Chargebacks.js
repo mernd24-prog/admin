@@ -4,7 +4,6 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh, MdVisibility } from "react-icons/md";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -53,7 +52,7 @@ const Chargebacks = () => {
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
 
@@ -146,15 +145,14 @@ const Chargebacks = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
       )}
 
-      {loading ? <Loader /> : (
-        <DataTable
+      <DataTable
           columns={COLUMNS}
           data={payload.list}
           total={payload.total}
           listPage={list}
+          loading={loading}
           emptyMessage="No chargebacks found"
         />
-      )}
 
       <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Chargeback Detail">
         {detail && (

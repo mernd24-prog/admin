@@ -394,8 +394,8 @@ const DataTable = ({
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={colCount} className="px-4 py-12">
-                  <div className="mx-auto flex max-w-sm flex-col items-center gap-2 rounded-lg border border-dashed border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+                <td colSpan={colCount} className="  ">
+                  <div className="mx-auto flex  flex-col items-center gap-2 rounded-lg  bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
                     {emptyIcon || (
                       <MdInbox size={36} className="text-gray-200" />
                     )}

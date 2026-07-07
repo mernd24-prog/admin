@@ -135,7 +135,7 @@ const TableData = ({
       <section className="admin-card w-full overflow-hidden bg-white">
         {(actions || onRefresh) && (
           <div className="admin-table-toolbar flex-wrap">
-            <div className="flex flex-wrap items-center gap-2">{actions}</div>
+            <div className="flex flex-wrap  items-center gap-2">{actions}</div>
             {onRefresh && (
               <button
                 type="button"

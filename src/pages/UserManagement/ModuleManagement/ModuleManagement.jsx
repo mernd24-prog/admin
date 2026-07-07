@@ -64,7 +64,9 @@ export default function ModuleManagement() {
     [selector?.rbacModulesData],
   );
   const modules = useMemo(() => payload.list || payload.items || [], [payload]);
-  const loading = selector?.loading;
+  const loading =
+    !!selector?.loading ||
+    (!selector?.rbacModulesData?.data && !selector?.rbacModulesData?.error);
 
   const parentOptions = useMemo(
     () =>
@@ -321,12 +323,16 @@ export default function ModuleManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loading && !modules.length ? (
-              <tr>
-                <td colSpan={9} className="p-8 text-center text-gray-400">
-                  Loading modules...
-                </td>
-              </tr>
+            {loading ? (
+              Array.from({ length: 8 }).map((_, rowIndex) => (
+                <tr key={rowIndex} className="animate-pulse">
+                  {Array.from({ length: 9 }).map((__, columnIndex) => (
+                    <td key={columnIndex} className="px-4 py-3">
+                      <div className="h-4 w-3/4 rounded bg-[var(--admin-surface-soft)]" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : modules.length ? (
               modules.map((row) => (
                 <tr key={idOf(row)} className="hover:bg-gray-50">

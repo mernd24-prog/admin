@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import {
   DataTable,
   FilterBar,
@@ -146,7 +145,7 @@ const WalletTransactions = () => {
   });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchTransactions = useCallback(async () => {
@@ -209,12 +208,10 @@ const WalletTransactions = () => {
           </div>
         )}
 
-        {loading ? (
-          <Loader />
-        ) : (
-          <DataTable
+        <DataTable
             columns={COLUMNS}
             data={payload.list}
+            loading={loading}
             totalCount={payload.total || payload.list.length}
             page={list.page}
             pageSize={list.pageSize}
@@ -237,7 +234,6 @@ const WalletTransactions = () => {
             )}
             emptyText="No wallet transactions found"
           />
-        )}
       </div>
     </PermissionGuard>
   );
