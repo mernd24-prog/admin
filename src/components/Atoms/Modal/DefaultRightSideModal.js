@@ -35,13 +35,13 @@ const DefaultModal = ({
         <>
             <div
                 className={`fixed inset-0 z-40 transition-all duration-300 ease-in-out 
-                    ${isOpen ? "bg-[rgba(31,27,95,0.32)] backdrop-blur-sm p-0 m-0 -top-3" : "bg-transparent backdrop-blur-0 pointer-events-none"}
+                    ${isOpen ? "bg-[rgba(31,27,95,0.32)] backdrop-blur-sm p-0 m-0 -top-[1.75rem]" : "bg-transparent backdrop-blur-0 pointer-events-none"}
                 `}
                 onClick={!loading && closeOnOutsideClick ? onClose : undefined}
             />
             <div
                 className={`
-                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-3 h-full w-full md:w-[var(--modal-width)] bg-white shadow-[var(--admin-shadow-strong)] z-50 text-sm
+                    fixed inset-0 md:inset-auto md:left-auto md:right-0 md:-top-[1.75rem] h-full w-full md:w-[var(--modal-width)] bg-white shadow-[var(--admin-shadow-strong)] z-50 text-sm
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "translate-x-full"}
                 `}

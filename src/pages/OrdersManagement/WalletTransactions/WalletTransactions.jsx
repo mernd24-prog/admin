@@ -175,7 +175,7 @@ const WalletTransactions = () => {
 
   return (
     <PermissionGuard module="wallets" action={ACTIONS.VIEW}>
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="space-y-6">
         <PageHeader
           title="Wallet Transactions"
           subtitle="Platform-wide wallet credits, debits, cashbacks, refunds, and adjustments"
