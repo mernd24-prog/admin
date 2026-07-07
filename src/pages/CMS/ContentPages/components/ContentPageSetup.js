@@ -203,6 +203,7 @@ const ContentPageSetup = ({
   onChange,
   onClose,
   onSubmit,
+  loading = false,
 }) => {
   const isControlled = Boolean(formData && onChange);
   const [internalFormData, setInternalFormData] = useState(() =>
@@ -316,6 +317,7 @@ const ContentPageSetup = ({
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (loading) return;
     if (isControlled) {
       onSubmit(event);
       return;
@@ -652,6 +654,7 @@ const ContentPageSetup = ({
 
               <ToggleButton
                 isToggle={form.status === "published" || !!form.published}
+                disabled={loading}
                 handleClick={() => {
                   const isPublished = form.status === "published" || !!form.published;
                   setField("status", isPublished ? "draft" : "published");
@@ -662,8 +665,14 @@ const ContentPageSetup = ({
           </div>
 
           <div className="flex justify-end gap-4 border-t pt-5">
-            <ButtonTransparent type="button" onClick={onClose}>Cancel</ButtonTransparent>
-            <NewButton type="submit">{form?.recordSlug || initialData ? "Update Page" : "Create Page"}</NewButton>
+            <ButtonTransparent type="button" onClick={onClose} disabled={loading}>Cancel</ButtonTransparent>
+            <NewButton type="submit" loading={loading}>
+              {loading
+                ? "Saving..."
+                : form?.recordSlug || initialData
+                  ? "Update Page"
+                  : "Create Page"}
+            </NewButton>
           </div>
         </form>
       </div>

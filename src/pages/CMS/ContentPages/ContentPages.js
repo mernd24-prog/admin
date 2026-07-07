@@ -69,6 +69,9 @@ const ContentPages = () => {
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [statusLoadingSlug, setStatusLoadingSlug] = useState("");
 
   const payload = selector?.contentPagesData?.data?.data || {};
   const pages = payload?.list || [];
@@ -110,7 +113,8 @@ const ContentPages = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const closeModal = () => {
+  const closeModal = (force = false) => {
+    if (submitting && !force) return;
     setIsModalOpen(false);
     setFormData(emptyForm);
     setErrors({});
@@ -118,6 +122,7 @@ const ContentPages = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
     if (!validate()) return;
 
     const body = {
@@ -132,6 +137,7 @@ const ContentPages = () => {
     };
 
     try {
+      setSubmitting(true);
       if (formData.recordSlug) {
         await dispatch(updateContentPage({ ...body, slug: formData.recordSlug })).unwrap();
         toast.success("Content page updated successfully");
@@ -139,14 +145,17 @@ const ContentPages = () => {
         await dispatch(createContentPage(body)).unwrap();
         toast.success("Content page created successfully");
       }
-      closeModal();
+      closeModal(true);
       setIsRefresh((v) => !v);
     } catch (error) {
       toast.error(error?.message || "Failed to save content page");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const openEdit = (page) => {
+    if (submitting || deleting || statusLoadingSlug) return;
     setFormData({
       ...emptyForm,
       ...page,
@@ -181,26 +190,34 @@ const ContentPages = () => {
 
   const confirmDelete = async () => {
     const slug = pageSlug(deleteTarget);
-    if (!slug) return;
+    if (!slug || deleting) return;
     try {
+      setDeleting(true);
       await dispatch(deleteContentPage({ slug })).unwrap();
       toast.success("Content page deleted successfully");
       setDeleteTarget(null);
       setIsRefresh((v) => !v);
     } catch (error) {
       toast.error(error?.message || "Failed to delete content page");
+    } finally {
+      setDeleting(false);
     }
   };
 
   const togglePublished = async (page) => {
+    const slug = pageSlug(page);
+    if (!slug || statusLoadingSlug) return;
     try {
+      setStatusLoadingSlug(slug);
       await dispatch(
-        updateContentPage({ slug: pageSlug(page), published: !page.published, status: !page.published ? "published" : "draft" }),
+        updateContentPage({ slug, published: !page.published, status: !page.published ? "published" : "draft" }),
       ).unwrap();
       toast.success("Status updated successfully");
       setIsRefresh((v) => !v);
     } catch (error) {
       toast.error(error?.message || "Failed to update status");
+    } finally {
+      setStatusLoadingSlug("");
     }
   };
 
@@ -213,14 +230,19 @@ const ContentPages = () => {
       key: "published",
       label: "Published",
       render: (v, row) => (
-        <ToggleButton isToggle={Boolean(v)} handleClick={() => togglePublished(row)} />
+        <ToggleButton
+          isToggle={Boolean(v)}
+          handleClick={() => togglePublished(row)}
+          loading={statusLoadingSlug === pageSlug(row)}
+          disabled={Boolean(statusLoadingSlug) || submitting || deleting}
+        />
       ),
     },
   ];
 
   const rowActions = (row) => [
-    { label: "Edit", onClick: () => openEdit(row) },
-    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true },
+    { label: "Edit", onClick: () => openEdit(row), disabled: submitting || deleting || Boolean(statusLoadingSlug) },
+    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true, disabled: submitting || deleting || Boolean(statusLoadingSlug) },
   ];
 
   return (
@@ -230,7 +252,11 @@ const ContentPages = () => {
         subtitle="Manage static pages, blog posts, and CMS content"
         breadcrumbs={[{ label: "CMS" }, { label: "Content Pages" }]}
         actions={
-          <button onClick={() => setIsModalOpen(true)} className="admin-btn-primary">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            disabled={submitting || deleting || Boolean(statusLoadingSlug)}
+            className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
             + Add Page
           </button>
         }
@@ -256,6 +282,7 @@ const ContentPages = () => {
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
+        loading={deleting}
         variant="danger"
         title="Delete Content Page?"
         message={`Delete "${deleteTarget?.title}"? This action cannot be undone.`}
@@ -269,6 +296,7 @@ const ContentPages = () => {
         onChange={onChange}
         onClose={closeModal}
         onSubmit={handleSubmit}
+        loading={submitting}
       />
     </div>
   );

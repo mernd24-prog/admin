@@ -57,6 +57,7 @@ const ManageState = () => {
   const [isEditMode,setIsEditMode]= useState(false);
   const [isFormOpen,setIsFormOpen]= useState(false);
   const [submitting,setSubmitting]= useState(false);
+  const [statusLoadingId, setStatusLoadingId] = useState("");
 
   // ── Filter fields (search + country select) ────────────────────────────────
   const FILTER_FIELDS = [
@@ -104,12 +105,19 @@ const ManageState = () => {
 
   const isActive = (row) => row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
 
-  const openAdd = () => { setFormData(INIT_FORM); setErrors({}); setIsEditMode(false); setIsFormOpen(true); };
+  const openAdd = () => {
+    if (submitting || statusLoadingId) return;
+    setFormData(INIT_FORM); setErrors({}); setIsEditMode(false); setIsFormOpen(true);
+  };
   const openEdit = (state) => {
+    if (submitting || statusLoadingId) return;
     setFormData({ name: state.name, country_code: state.countryId?._id || state.country_code?._id, _id: state._id });
     setErrors({}); setIsEditMode(true); setIsFormOpen(true);
   };
-  const closeForm = () => { setIsFormOpen(false); setFormData(INIT_FORM); setErrors({}); setSubmitting(false); };
+  const closeForm = (force = false) => {
+    if (submitting && !force) return;
+    setIsFormOpen(false); setFormData(INIT_FORM); setErrors({}); setSubmitting(false);
+  };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -127,7 +135,7 @@ const ManageState = () => {
         await dispatch(create(payload)).unwrap();
         toast.success("State created successfully.");
       }
-      closeForm();
+      closeForm(true);
       fetchStates();
     } catch (err) {
       toast.error(err?.message || "Failed to save state.");
@@ -139,11 +147,15 @@ const ManageState = () => {
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   const handleToggle = async (state) => {
+    const id = state?._id;
+    if (!id || statusLoadingId) return;
     try {
+      setStatusLoadingId(id);
       const res = await dispatch(enableDisableState({ _id: [state._id], isDisable: isActive(state) })).unwrap();
       toast.success(res?.message || "Status updated.");
       fetchStates();
     } catch (err) { toast.error(err?.message || "Failed to update status."); }
+    finally { setStatusLoadingId(""); }
   };
 
   // ── Bulk ───────────────────────────────────────────────────────────────────
@@ -166,7 +178,13 @@ const ManageState = () => {
       ...col,
       render: (_, row) => (
         <div className="flex items-center gap-2">
-          <ToggleButton isToggle={isActive(row)} handleClick={() => handleToggle(row)} requiredModule={MODULE} />
+          <ToggleButton
+            isToggle={isActive(row)}
+            handleClick={() => handleToggle(row)}
+            requiredModule={MODULE}
+            loading={statusLoadingId === row._id}
+            disabled={Boolean(statusLoadingId) || submitting}
+          />
           <ActionButtons onEdit={() => openEdit(row)} showLinkButton={false} showDeleteButton={false} requiredModule={MODULE} />
         </div>
       ),
@@ -181,7 +199,13 @@ const ManageState = () => {
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "States" }]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
-            <button onClick={openAdd} className="admin-btn-primary">+ Add State</button>
+            <button
+              onClick={openAdd}
+              disabled={submitting || Boolean(statusLoadingId)}
+              className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + Add State
+            </button>
           </PermissionGuard>
         }
       />
@@ -235,6 +259,8 @@ const ManageState = () => {
         isOpen={isFormOpen}
         onClose={closeForm}
         onSubmit={handleSubmit}
+        loading={submitting}
+        submitButtonText={submitting ? "Saving..." : isEditMode ? "Update State" : "Create State"}
       >
         <div className="grid grid-cols-1 gap-4 p-3">
           <Input labelName="Name" type="text" name="name" value={formData.name}
