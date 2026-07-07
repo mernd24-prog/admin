@@ -481,7 +481,7 @@ const OrderSummary = () => {
             <PermissionGuard module="orders" action="update" hide>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-[#2f6fed] bg-white px-3 py-2 text-sm font-medium text-[#2f6fed] shadow-sm transition hover:bg-[#f3f6ff]"
+
                 onClick={() => setState((prev) => ({ ...prev, noteModal: true }))}
               >
                 <FaRegNoteSticky /> Note
@@ -491,7 +491,7 @@ const OrderSummary = () => {
             {statusOptions.length > 0 && ((isSeller) ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
+
                 onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
               >
                 <FaFile /> Update Status
@@ -500,7 +500,7 @@ const OrderSummary = () => {
               <PermissionGuard module="orders" action="status_change" hide>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
+
                   onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
                 >
                   <FaFile /> Status

@@ -109,7 +109,7 @@ const SellerHelpSupport = () => {
         actions={
           <button
             type="button"
-            className={showQueryForm ? "admin-btn-secondary" : "admin-btn-primary"}
+
             onClick={() => {
               if (showQueryForm) {
                 setSelectedCategory("");

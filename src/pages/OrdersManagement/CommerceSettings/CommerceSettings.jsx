@@ -378,11 +378,11 @@ const CommerceSettings = () => {
         breadcrumbs={[{ label: "Commerce Settings" }, { label: "Commerce Settings" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="admin-btn-secondary" onClick={() => { fetchSettings(); fetchSellerRows(); }} disabled={loading}>
+            <button type="button" onClick={() => { fetchSettings(); fetchSellerRows(); }} disabled={loading}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="admin" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-primary" onClick={saveSettings} disabled={saving}>
+              <button type="button" onClick={saveSettings} disabled={saving}>
                 <MdSave size={16} /> {saving ? "Saving..." : "Save Policy"}
               </button>
             </PermissionGuard>

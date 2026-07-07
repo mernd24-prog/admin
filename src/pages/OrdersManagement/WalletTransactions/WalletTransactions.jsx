@@ -189,7 +189,7 @@ const WalletTransactions = () => {
               type="button"
               onClick={fetchTransactions}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+
             >
               <MdRefresh size={16} /> Refresh
             </button>

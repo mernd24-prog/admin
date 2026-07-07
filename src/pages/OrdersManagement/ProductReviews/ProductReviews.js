@@ -395,7 +395,7 @@ const ProductReviews = () => {
           <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
             <button
               onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-navy)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+
             >
               <MdAdd size={18} />
               Add Review

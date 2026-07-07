@@ -214,7 +214,7 @@ const InventoryOverview = () => {
             <button
               type="button"
               onClick={() => navigate("/app/inventory-adjustment")}
-              className="admin-btn-primary"
+
             >
               <MdAddCircleOutline size={16} /> Adjust Stock
             </button>

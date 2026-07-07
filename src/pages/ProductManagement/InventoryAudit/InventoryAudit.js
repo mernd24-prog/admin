@@ -164,7 +164,7 @@ const InventoryAudit = () => {
         actions={(
           <button
             type="button"
-            className="admin-btn-secondary"
+
             onClick={loadTransactions}
             disabled={loading}
           >

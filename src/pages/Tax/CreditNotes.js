@@ -184,13 +184,13 @@ const CreditNotes = () => {
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Credit Notes" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchNotes} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchNotes}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
               <button
                 onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+
               >
                 <MdAdd size={16} /> New Credit Note
               </button>

@@ -134,7 +134,7 @@ const Chargebacks = () => {
         subtitle="Monitor and track payment chargebacks"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Chargebacks" }]}
         actions={
-          <button onClick={fetchChargebacks} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button onClick={fetchChargebacks}>
             <MdRefresh size={16} /> Refresh
           </button>
         }

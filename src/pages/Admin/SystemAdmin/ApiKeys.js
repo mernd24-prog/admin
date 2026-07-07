@@ -153,11 +153,11 @@ const ApiKeys = () => {
         subtitle="Manage API keys for platform integrations"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchKeys} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchKeys}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
-              <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={() => setShowCreate(true)}>
                 <MdAdd size={16} /> New Key
               </button>
             </PermissionGuard>

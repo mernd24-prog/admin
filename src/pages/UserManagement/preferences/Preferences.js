@@ -176,7 +176,7 @@ const Preferences = () => {
         subtitle="Manage user interest categories and preferences"
         breadcrumbs={[{ label: "User Management" }, { label: "Preferences" }]}
         actions={
-          <button onClick={() => { setFormData(emptyForm); setIsModalOpen(true); }} className="admin-btn-primary">
+          <button onClick={() => { setFormData(emptyForm); setIsModalOpen(true); }}>
             + Add Preference
           </button>
         }

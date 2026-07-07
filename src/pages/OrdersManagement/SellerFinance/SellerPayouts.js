@@ -101,7 +101,7 @@ const SellerPayouts = () => {
         title="Seller Payouts"
         subtitle={isSeller ? "See how every payout was calculated and when it was paid." : "Calculated seller payouts. Use Payout Operations to approve or complete them."}
         breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Seller Payouts" }]}
-        actions={<button type="button" onClick={fetchPayouts} className="admin-btn-secondary"><MdRefresh size={16} /> Refresh</button>}
+        actions={<button type="button" onClick={fetchPayouts}><MdRefresh size={16} /> Refresh</button>}
       />
 
       <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">

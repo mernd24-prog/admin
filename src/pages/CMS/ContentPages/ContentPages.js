@@ -230,7 +230,7 @@ const ContentPages = () => {
         subtitle="Manage static pages, blog posts, and CMS content"
         breadcrumbs={[{ label: "CMS" }, { label: "Content Pages" }]}
         actions={
-          <button onClick={() => setIsModalOpen(true)} className="admin-btn-primary">
+          <button onClick={() => setIsModalOpen(true)}>
             + Add Page
           </button>
         }

@@ -302,7 +302,7 @@ const NegativeBalances = () => {
         actions={
           <button
             type="button"
-            className="admin-btn-secondary"
+
             onClick={fetchBalances}
           >
             <MdRefresh size={17} /> Refresh

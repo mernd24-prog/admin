@@ -385,16 +385,16 @@ const DeliveryAgents = () => {
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Delivery Agents" }]}
         actions={
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="admin-btn-secondary" onClick={fetchAgents} disabled={loading}>
+            <button type="button" onClick={fetchAgents} disabled={loading}>
               <MdRefresh size={17} /> Refresh
             </button>
             <PermissionGuard module="delivery" action={ACTIONS.EXPORT} hide>
-              <button type="button" className="admin-btn-secondary" onClick={exportAgents} disabled={loading}>
+              <button type="button" onClick={exportAgents} disabled={loading}>
                 <MdDownload size={17} /> Export
               </button>
             </PermissionGuard>
             <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
-              <button type="button" className="admin-btn-primary" onClick={openCreate}>
+              <button type="button" onClick={openCreate}>
                 <MdAdd size={17} /> New Agent
               </button>
             </PermissionGuard>

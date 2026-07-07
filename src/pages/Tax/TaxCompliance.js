@@ -255,10 +255,10 @@ const TaxCompliance = () => {
         actions={(
           <div className="flex flex-wrap gap-2">
             <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-primary" onClick={() => setInvoiceModal(true)}>
+              <button type="button" onClick={() => setInvoiceModal(true)}>
                 <MdReceiptLong size={16} /> Generate Invoice
               </button>
-              <button type="button" className="admin-btn-secondary" onClick={() => setCreditModal(true)}>
+              <button type="button" onClick={() => setCreditModal(true)}>
                 <MdAdd size={16} /> Credit Note
               </button>
             </PermissionGuard>

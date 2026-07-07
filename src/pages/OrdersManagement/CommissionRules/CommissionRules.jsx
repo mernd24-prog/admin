@@ -383,14 +383,14 @@ const CommissionRules = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={fetchRules}
-              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-sm rounded-lg hover:bg-gray-50 text-gray-600"
+
             >
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="commission" action={ACTIONS.CREATE} hide>
               <button
                 onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+
               >
                 <MdAdd size={16} /> Add Rule
               </button>

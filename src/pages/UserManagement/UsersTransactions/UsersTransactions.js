@@ -124,7 +124,7 @@ const UsersTransactions = () => {
           <button
             type="button"
             onClick={() => loadTransactions()}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+
           >
             <MdRefresh size={16} /> Refresh
           </button>

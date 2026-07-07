@@ -418,7 +418,7 @@ const PayoutOpsQueue = () => {
         actions={
           <button
             type="button"
-            className="admin-btn-secondary"
+
             onClick={fetchQueue}
           >
             <MdRefresh size={17} /> Refresh

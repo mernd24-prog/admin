@@ -200,11 +200,11 @@ const SubscriptionPlans = () => {
         breadcrumbs={[{ label: "Commerce Settings" }, { label: "Subscription Plans" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchPlans} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchPlans}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="subscriptions" action={ACTIONS.CREATE} hide>
-              <button onClick={openCreate} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={openCreate}>
                 <MdAdd size={16} /> New Plan
               </button>
             </PermissionGuard>

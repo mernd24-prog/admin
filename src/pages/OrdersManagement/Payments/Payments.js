@@ -291,7 +291,7 @@ const Payments = () => {
         subtitle="Reconcile online, COD, and manual payments"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={fetchPayments}>
+          <button type="button" onClick={fetchPayments}>
             <MdRefresh size={17} /> Refresh
           </button>
         }

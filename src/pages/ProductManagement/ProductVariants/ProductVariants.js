@@ -436,7 +436,7 @@ const ProductVariants = () => {
         breadcrumbs={[{ label: "Product Management" }, { label: "Product Variants" }]}
         actions={
           <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
-            <button onClick={() => setIsModalOpen(true)} className="admin-btn-primary">
+            <button onClick={() => setIsModalOpen(true)}>
               <MdAdd size={16} /> Add Variant
             </button>
           </PermissionGuard>

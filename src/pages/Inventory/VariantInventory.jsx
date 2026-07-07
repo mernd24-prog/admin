@@ -193,14 +193,14 @@ const VariantInventory = () => {
             <PermissionGuard module="inventory" action={ACTIONS.ADJUST}>
               <button
                 onClick={() => navigate("/app/inventory-adjustment")}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+
               >
                 Adjust Stock
               </button>
             </PermissionGuard>
             <button
               onClick={fetchData}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-sm rounded-lg hover:bg-gray-50 text-gray-600"
+
             >
               <MdRefresh size={16} /> Refresh
             </button>

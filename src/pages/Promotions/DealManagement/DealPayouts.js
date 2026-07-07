@@ -151,9 +151,9 @@ const DealPayouts = () => {
         subtitle="Generate and process deal seller payouts"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchPayouts} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"><MdRefresh size={16} /> Refresh</button>
+            <button onClick={fetchPayouts}><MdRefresh size={16} /> Refresh</button>
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
-              <button onClick={() => setShowGenerate(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"><MdAdd size={16} /> Generate Payouts</button>
+              <button onClick={() => setShowGenerate(true)}><MdAdd size={16} /> Generate Payouts</button>
             </PermissionGuard>
           </div>
         }

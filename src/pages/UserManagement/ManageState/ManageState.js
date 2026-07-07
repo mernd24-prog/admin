@@ -181,7 +181,7 @@ const ManageState = () => {
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "States" }]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
-            <button onClick={openAdd} className="admin-btn-primary">+ Add State</button>
+            <button onClick={openAdd}>+ Add State</button>
           </PermissionGuard>
         }
       />

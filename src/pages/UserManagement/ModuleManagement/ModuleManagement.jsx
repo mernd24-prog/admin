@@ -256,13 +256,13 @@ export default function ModuleManagement() {
         <div className="flex gap-2">
           <button
             onClick={normalizeOrders}
-            className="px-3 py-2 text-sm rounded border border-gray-300 bg-white"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
           >
             Normalize Order
           </button>
           <button
             onClick={openCreate}
-            className="px-4 py-2 text-sm rounded bg-[var(--admin-blue)] text-white"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
           >
             Add Module
           </button>

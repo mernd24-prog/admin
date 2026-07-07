@@ -15,23 +15,28 @@ const STATUSES = [
 const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
 
 const displayBuyerName = (review = {}) => {
+  const safeReview = review || {};
   const name =
-    review.buyerName ||
-    review.buyer?.displayName ||
-    review.buyer?.fullName ||
-    review.buyer?.name ||
-    review.buyer?.email ||
+    safeReview.buyerName ||
+    safeReview.buyer?.displayName ||
+    safeReview.buyer?.fullName ||
+    safeReview.buyer?.name ||
+    safeReview.buyer?.email ||
     "";
   if (name && !isLikelyId(name)) return name;
   return "Verified Buyer";
 };
 
-const displayProductName = (review = {}) =>
-  review.productName ||
-  review.product?.title ||
-  review.product?.name ||
-  review.product?.sku ||
-  "Product not found";
+const displayProductName = (review = {}) => {
+  const safeReview = review || {};
+  return (
+    safeReview.productName ||
+    safeReview.product?.title ||
+    safeReview.product?.name ||
+    safeReview.product?.sku ||
+    "Product not found"
+  );
+};
 
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
@@ -113,6 +118,8 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
       media: typeof updater === "function" ? updater(current.media || []) : updater,
     }));
   };
+
+  if (!isOpen || !reviewData) return null;
 
   const reviewDate = reviewData?.createdAt
     ? new Date(reviewData.createdAt).toLocaleDateString("en-GB", {

@@ -121,10 +121,10 @@ const NotificationTemplates = () => {
         subtitle="Send and manage admin notifications"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchNotifications} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchNotifications}>
               <MdRefresh size={16} /> Refresh
             </button>
-            <button onClick={() => setShowSend(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button onClick={() => setShowSend(true)}>
               <MdAdd size={16} /> Send Notification
             </button>
           </div>

@@ -777,13 +777,13 @@ const ShipmentTracking = () => {
         actions={
           <div className="flex gap-2">
             {renderDeliveryAction(ACTIONS.CREATE,
-              <button type="button" className="admin-btn-primary" onClick={() => setShipmentModal(true)}>
+              <button type="button" onClick={() => setShipmentModal(true)}>
                 <MdAdd size={16} /> Create Shipment
               </button>,
             )}
             {!isSeller && (
               <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
-                <button type="button" className="admin-btn-secondary" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
+                <button type="button" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
                   <MdFileDownload size={16} /> Manifest
                 </button>
               </PermissionGuard>

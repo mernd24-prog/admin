@@ -155,11 +155,11 @@ const Webhooks = () => {
         subtitle="Manage outbound webhook endpoints"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchWebhooks} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchWebhooks}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
-              <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={() => setShowCreate(true)}>
                 <MdAdd size={16} /> Add Webhook
               </button>
             </PermissionGuard>

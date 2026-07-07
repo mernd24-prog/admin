@@ -230,7 +230,7 @@ const Cancellations = () => {
         actions={
           <button
             onClick={fetchCancellations}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+
           >
             <MdRefresh size={16} />
             Refresh

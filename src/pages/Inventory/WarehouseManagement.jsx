@@ -657,7 +657,7 @@ const WarehouseManagement = () => {
         ]}
         actions={
           <PermissionGuard module="inventory" action={ACTIONS.CREATE}>
-            <button onClick={openCreate} className="admin-btn-primary">
+            <button onClick={openCreate}>
               <MdAdd size={16} /> Add Warehouse
             </button>
           </PermissionGuard>

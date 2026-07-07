@@ -203,7 +203,7 @@ const ManageCountry = () => {
         ]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
-            <button onClick={openAdd} className="admin-btn-primary">
+            <button onClick={openAdd}>
               + Add Country
             </button>
           </PermissionGuard>

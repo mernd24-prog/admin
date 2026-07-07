@@ -484,7 +484,7 @@ const ProductModerationQueue = () => {
         subtitle="Review and approve or reject products submitted by sellers"
         breadcrumbs={[{ label: "Product Management" }, { label: "Moderation Queue" }]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={fetchQueue}>
+          <button type="button" onClick={fetchQueue}>
             <MdRefresh size={17} /> Refresh
           </button>
         }

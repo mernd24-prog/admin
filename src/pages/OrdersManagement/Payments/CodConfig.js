@@ -98,7 +98,7 @@ const CodConfig = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
+
             >
               <MdSave size={16} />
               {saving ? "Saving..." : "Save Changes"}
