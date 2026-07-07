@@ -261,12 +261,15 @@ export const createExtraReducersForThunk = (builder, thunkAction, sliceName) => 
       if (!state[sliceName]) {
         state[sliceName] = {};
       }
+      state[sliceName].loading = true;
+      state[sliceName].error = null;
     })
     .addCase(thunkAction.fulfilled, (state, action) => {
       state.loading = false;
       if (!state[sliceName]) {
         state[sliceName] = {};
       }
+      state[sliceName].loading = false;
       const compatiblePayload = asLegacyData(action?.payload || {});
       state[sliceName].data = compatiblePayload;
       state[sliceName].normalized = action?.payload || {};
@@ -276,6 +279,7 @@ export const createExtraReducersForThunk = (builder, thunkAction, sliceName) => 
       if (!state[sliceName]) {
         state[sliceName] = {};
       }
+      state[sliceName].loading = false;
       state[sliceName].error =
         action?.payload || `Something went wrong while fetching ${sliceName} details.`;
     });

@@ -116,7 +116,10 @@ const SubscriptionOrders = () => {
   });
 
   const { items, total } = getListPayload(selector);
-  const loading = !!selector?.getOrderListData?.loading;
+  const orderListState = selector?.getOrderListData;
+  const loading =
+    !!selector?.loading ||
+    (!orderListState?.data && !orderListState?.error);
 
   useEffect(() => {
     const params = list.toQueryParams();

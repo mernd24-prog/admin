@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { IoCaretDownOutline, IoCaretUpOutline } from "react-icons/io5";
 import Nodata from "../NoData/NoData";
 // import Pagination from "../../Pagination/Pagination";
@@ -124,11 +124,18 @@ const TableData = ({
   actions,
   onRefresh,
 }) => {
+  const [hasMounted, setHasMounted] = useState(false);
   const visibleColumnCount =
     tableHeadings.length +
     (isHeaderCheckbox ? 1 : 0) +
     (showExtraHeading ? Math.max(0, 10 - tableHeadings.length) : 0);
   const totalRecords = totalData ?? data?.length ?? 0;
+  const showLoading =
+    loading || (!hasMounted && (!Array.isArray(data) || data.length === 0) && !error);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   return (
     <>
@@ -148,7 +155,7 @@ const TableData = ({
           </div>
         )}
         <div className="w-full">
-          {loading ? (
+          {showLoading ? (
             <TableSkeletonLoader
               columns={tableHeadings.length}
               rows={totalSize || 10}

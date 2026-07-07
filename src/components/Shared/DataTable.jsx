@@ -198,6 +198,7 @@ const DataTable = ({
   rowActions,
 }) => {
   const [searchValue, setSearchValue] = useState("");
+  const [hasMounted, setHasMounted] = useState(false);
   const resolvedTotalCount = Number(totalCount ?? total ?? data.length ?? 0);
   const resolvedPage = Number(listPage?.page ?? page ?? 1);
   const resolvedPageSize = Number(listPage?.pageSize ?? pageSize ?? 20);
@@ -209,6 +210,11 @@ const DataTable = ({
   const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
   const resolvedEmptyText = emptyMessage || emptyText;
   const totalPages = Math.max(1, Math.ceil(resolvedTotalCount / resolvedPageSize));
+  const showLoading = loading || (!hasMounted && data.length === 0 && !error);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const getKey = (row, index) =>
     typeof rowKey === "function"
@@ -367,7 +373,7 @@ const DataTable = ({
           </thead>
 
           <tbody className="divide-y divide-[#f0e8dc] bg-white">
-            {loading ? (
+            {showLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <SkeletonRow key={i} cols={colCount} />
               ))

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -149,19 +149,42 @@ const EmptyPanel = ({ text = "No data returned for this period." }) => (
   </div>
 );
 
-const ChartPanel = ({ title, data = [], children }) => (
-  <div className="admin-card p-5">
-    <h3 className="mb-4 text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
-    {data.length ? children : <EmptyPanel text="No chart data returned." />}
+const ReportLoadingContext = createContext(false);
+
+const PanelSkeleton = ({ rows = 6 }) => (
+  <div className="min-h-[220px] animate-pulse space-y-4 rounded-lg bg-white py-2">
+    {Array.from({ length: rows }).map((_, index) => (
+      <div key={index} className="flex items-center gap-3">
+        <div className="h-4 w-1/4 rounded bg-[var(--admin-surface-soft)]" />
+        <div
+          className="h-4 rounded bg-[var(--admin-surface-soft)]"
+          style={{ width: `${70 - (index % 3) * 12}%` }}
+        />
+      </div>
+    ))}
   </div>
 );
 
-const ReportTable = ({ title, columns = [], rows = [] }) => (
-  <div className="admin-card overflow-hidden">
+const ChartPanel = ({ title, data = [], children }) => {
+  const loading = useContext(ReportLoadingContext);
+  return (
+    <div className="admin-card p-5">
+      <h3 className="mb-4 text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
+      {loading ? <PanelSkeleton /> : data.length ? children : <EmptyPanel text="No chart data returned." />}
+    </div>
+  );
+};
+
+const ReportTable = ({ title, columns = [], rows = [] }) => {
+  const loading = useContext(ReportLoadingContext);
+  return (
+    <div className="admin-card overflow-hidden">
     <div className="border-b border-[var(--admin-line)] px-4 py-3">
       <h3 className="text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
     </div>
-    {rows.length ? (
+    {loading ? (
+      <div className="p-5"><PanelSkeleton /></div>
+    ) : rows.length ? (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="admin-table-head">
@@ -189,8 +212,9 @@ const ReportTable = ({ title, columns = [], rows = [] }) => (
     ) : (
       <EmptyPanel text="No rows returned for this report." />
     )}
-  </div>
-);
+    </div>
+  );
+};
 
 export const ReportShell = ({
   title,
@@ -294,7 +318,9 @@ export const ReportShell = ({
         ))}
       </div>
 
-      {children}
+      <ReportLoadingContext.Provider value={loading}>
+        {children}
+      </ReportLoadingContext.Provider>
     </div>
   );
 };
