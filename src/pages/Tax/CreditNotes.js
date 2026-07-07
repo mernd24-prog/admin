@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdRefresh, MdVisibility } from "react-icons/md";
+import { MdAdd, MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../components/Loader/Loader";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
@@ -18,8 +18,10 @@ import { getTaxCreditNotes, createTaxCreditNote } from "../../Redux/adminCoreSli
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import { dropdownApi } from "../../_helpers/dropdownApi";
+import { downloadApiFile } from "../../_helpers/downloadApi";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 
-const REF_TYPES = ["return", "cancellation", "adjustment", "discount", "other"];
+const REF_TYPES = ["return", "cancellation", "refund", "manual"];
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
@@ -42,6 +44,12 @@ const unwrapList = (payload = {}) => {
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+const pick = (row = {}, ...keys) => {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
+  }
+  return undefined;
+};
 const shortId = (value = "") => {
   const text = String(value || "");
   return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
@@ -51,8 +59,9 @@ const EMPTY_FORM = {
   orderId: "",
   referenceId: "",
   referenceType: "return",
-  creditAmount: "",
+  taxableAmount: "",
   taxAmount: "",
+  totalAmount: "",
   reason: "",
 };
 
@@ -63,7 +72,7 @@ const CreditNotes = () => {
 
   const list = useListPage({
     defaultPageSize: 20,
-    defaultSortKey: "created_at",
+    defaultSortKey: "issuedAt",
     defaultSortDir: "desc",
   });
   const { toQueryParams } = list;
@@ -74,13 +83,16 @@ const CreditNotes = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const fetchNotes = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const params = toQueryParams();
-      await dispatch(getTaxCreditNotes({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      const allowedSortBy = new Set(["issuedAt", "creditNoteNumber", "taxableAmount", "taxAmount", "totalAmount"]);
+      const sortBy = allowedSortBy.has(params.sortBy) ? params.sortBy : "issuedAt";
+      await dispatch(getTaxCreditNotes({ ...params, sortBy, offset: (params.page - 1) * params.limit })).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load credit notes";
       setError(msg);
@@ -94,15 +106,18 @@ const CreditNotes = () => {
 
   const handleCreate = useCallback(async () => {
     if (!form.orderId.trim()) { toast.error("Order ID required"); return; }
-    if (!form.creditAmount || Number(form.creditAmount) <= 0) { toast.error("Credit amount must be > 0"); return; }
+    if (!form.taxableAmount || Number(form.taxableAmount) <= 0) { toast.error("Taxable amount must be > 0"); return; }
     try {
       setSaving(true);
+      const taxableAmount = Number(form.taxableAmount);
+      const taxAmount = form.taxAmount ? Number(form.taxAmount) : undefined;
       await dispatch(createTaxCreditNote({
         orderId: form.orderId,
         referenceId: form.referenceId || undefined,
         referenceType: form.referenceType,
-        creditAmount: Number(form.creditAmount),
-        taxAmount: form.taxAmount ? Number(form.taxAmount) : undefined,
+        taxableAmount,
+        taxAmount,
+        ...(form.totalAmount ? { totalAmount: Number(form.totalAmount) } : {}),
         reason: form.reason || undefined,
       })).unwrap();
       toast.success("Credit note created");
@@ -116,22 +131,46 @@ const CreditNotes = () => {
     }
   }, [form, dispatch, fetchNotes]);
 
+  const downloadCreditNote = useCallback(async (row = {}) => {
+    const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
+    if (!creditNoteId) {
+      toast.error("Credit note ID is missing");
+      return;
+    }
+    try {
+      setDownloadingId(creditNoteId);
+      await downloadApiFile(
+        ENDPOINTS.tax.creditNoteDownload(creditNoteId),
+        { format: "pdf" },
+        { filename: `${pick(row, "creditNoteNumber", "credit_note_number") || creditNoteId}.pdf`, format: "pdf" },
+      );
+      toast.success("Download started");
+    } catch (downloadError) {
+      toast.error(downloadError?.message || "Unable to download credit note");
+    } finally {
+      setDownloadingId(null);
+    }
+  }, []);
+
   const COLUMNS = [
     {
       key: "creditNoteNumber",
       label: "Credit Note #",
       sortable: true,
-      render: (v) => <span className="font-mono text-sm font-medium">{v || "—"}</span>,
+      render: (v, row) => <span className="font-mono text-sm font-medium">{v || row.credit_note_number || "—"}</span>,
     },
     {
       key: "orderId",
       label: "Order",
-      render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "—").slice(-8)}</span>,
+      render: (v, row) => {
+        const orderId = v || row.order_id;
+        return <span className="font-mono text-xs text-gray-500">{orderId ? String(orderId).slice(-8) : "—"}</span>;
+      },
     },
     {
       key: "referenceType",
       label: "Ref Type",
-      render: (v) => <span className="capitalize text-sm">{v || "—"}</span>,
+      render: (v, row) => <span className="capitalize text-sm">{v || row.reference_type || "—"}</span>,
     },
     {
       key: "organizationId",
@@ -139,15 +178,15 @@ const CreditNotes = () => {
       render: (v, row) => <span className="font-mono text-xs text-gray-500">{shortId(v || row.organization_id)}</span>,
     },
     {
-      key: "creditAmount",
-      label: "Credit Amt",
+      key: "totalAmount",
+      label: "Total Credit",
       sortable: true,
-      render: (v) => <span className="text-sm font-semibold">{money(v)}</span>,
+      render: (v, row) => <span className="text-sm font-semibold">{money(v ?? row.total_amount ?? row.taxable_amount)}</span>,
     },
     {
       key: "taxAmount",
       label: "Tax",
-      render: (v) => <span className="text-sm">{money(v)}</span>,
+      render: (v, row) => <span className="text-sm">{money(v ?? row.tax_amount)}</span>,
     },
     {
       key: "status",
@@ -163,15 +202,26 @@ const CreditNotes = () => {
       key: "createdAt",
       label: "Date",
       sortable: true,
-      render: (v) => <span className="text-xs text-gray-500">{fmt(v)}</span>,
+      render: (v, row) => <span className="text-xs text-gray-500">{fmt(v ?? row.issued_at ?? row.created_at)}</span>,
     },
     {
       key: "_actions",
       label: "",
       render: (_, row) => (
-        <button onClick={() => setDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
-          <MdVisibility size={18} />
-        </button>
+        <div className="flex gap-1">
+          <button onClick={() => setDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
+            <MdVisibility size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadCreditNote(row)}
+            disabled={downloadingId === pick(row, "id", "creditNoteId", "credit_note_id")}
+            className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+            title="Download PDF"
+          >
+            <MdDownload size={18} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -222,18 +272,28 @@ const CreditNotes = () => {
         {detail && (
           <div className="p-4 space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-gray-500">Credit Note #</p><p className="font-mono">{detail.creditNoteNumber || "—"}</p></div>
+              <div><p className="text-gray-500">Credit Note #</p><p className="font-mono">{pick(detail, "creditNoteNumber", "credit_note_number") || "—"}</p></div>
               <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status || "issued"} color={detail.status === "cancelled" ? "red" : "green"} /></div>
-              <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
-              <div><p className="text-gray-500">Organization ID</p><p className="font-mono text-xs">{detail.organizationId || detail.organization_id || "—"}</p></div>
-              <div><p className="text-gray-500">Ref Type</p><p className="capitalize">{detail.referenceType || "—"}</p></div>
-              <div><p className="text-gray-500">Reference ID</p><p className="font-mono text-xs">{detail.referenceId || "—"}</p></div>
-              <div><p className="text-gray-500">Buyer ID</p><p className="font-mono text-xs">{detail.buyerId || "—"}</p></div>
-              <div><p className="text-gray-500">Credit Amount</p><p className="font-semibold">{money(detail.creditAmount)}</p></div>
-              <div><p className="text-gray-500">Tax Amount</p><p>{money(detail.taxAmount)}</p></div>
-              <div><p className="text-gray-500">Created</p><p>{fmt(detail.createdAt)}</p></div>
+              <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{pick(detail, "orderId", "order_id") || "—"}</p></div>
+              <div><p className="text-gray-500">Organization ID</p><p className="font-mono text-xs">{pick(detail, "organizationId", "organization_id") || "—"}</p></div>
+              <div><p className="text-gray-500">Ref Type</p><p className="capitalize">{pick(detail, "referenceType", "reference_type") || "—"}</p></div>
+              <div><p className="text-gray-500">Reference ID</p><p className="font-mono text-xs">{pick(detail, "referenceId", "reference_id") || "—"}</p></div>
+              <div><p className="text-gray-500">Buyer ID</p><p className="font-mono text-xs">{pick(detail, "buyerId", "buyer_id") || "—"}</p></div>
+              <div><p className="text-gray-500">Taxable Amount</p><p>{money(pick(detail, "taxableAmount", "taxable_amount"))}</p></div>
+              <div><p className="text-gray-500">Tax Amount</p><p>{money(pick(detail, "taxAmount", "tax_amount"))}</p></div>
+              <div><p className="text-gray-500">Total Credit</p><p className="font-semibold">{money(pick(detail, "totalAmount", "total_amount"))}</p></div>
+              <div><p className="text-gray-500">Created</p><p>{fmt(pick(detail, "createdAt", "issuedAt", "created_at", "issued_at"))}</p></div>
             </div>
             {detail.reason && <div><p className="text-gray-500">Reason</p><p>{detail.reason}</p></div>}
+            <button
+              type="button"
+              onClick={() => downloadCreditNote(detail)}
+              disabled={downloadingId === pick(detail, "id", "creditNoteId", "credit_note_id")}
+              className="flex items-center gap-2 text-blue-600 hover:underline text-sm disabled:opacity-50"
+            >
+              <MdDownload size={16} />
+              Download PDF
+            </button>
           </div>
         )}
       </DefaultModal>
@@ -253,8 +313,9 @@ const CreditNotes = () => {
               {REF_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          <Input label="Credit Amount *" type="number" value={form.creditAmount} onChange={(e) => setForm((p) => ({ ...p, creditAmount: e.target.value }))} placeholder="0.00" />
+          <Input label="Taxable Amount *" type="number" value={form.taxableAmount} onChange={(e) => setForm((p) => ({ ...p, taxableAmount: e.target.value }))} placeholder="0.00" />
           <Input label="Tax Amount" type="number" value={form.taxAmount} onChange={(e) => setForm((p) => ({ ...p, taxAmount: e.target.value }))} placeholder="0.00" />
+          <Input label="Total Credit Amount" type="number" value={form.totalAmount} onChange={(e) => setForm((p) => ({ ...p, totalAmount: e.target.value }))} placeholder="Taxable + tax" />
           <Input label="Reason" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Reason for credit note..." />
           <button
             onClick={handleCreate}

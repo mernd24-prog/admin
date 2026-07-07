@@ -3,9 +3,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
 import Loader from "../../components/Loader/Loader";
-import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
   FilterBar,
@@ -15,6 +15,8 @@ import {
 import { getTaxInvoices } from "../../Redux/adminCoreSlice";
 import { useListPage } from "../../hooks/useListPage";
 import { dropdownApi } from "../../_helpers/dropdownApi";
+import { downloadApiFile } from "../../_helpers/downloadApi";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 
 const STATES = [
   "draft", "issued", "cancelled", "amended",
@@ -54,6 +56,12 @@ const unwrapList = (payload = {}) => {
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+const pick = (row = {}, ...keys) => {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
+  }
+  return undefined;
+};
 const shortId = (value = "") => {
   const text = String(value || "");
   return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
@@ -61,26 +69,36 @@ const shortId = (value = "") => {
 
 const TaxInvoices = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const selector = useSelector((s) => s.adminCore);
   const payload = unwrapList(selector.taxInvoicesData);
 
   const list = useListPage({
     defaultPageSize: 20,
-    defaultSortKey: "created_at",
+    defaultSortKey: "issuedAt",
     defaultSortDir: "desc",
   });
   const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [detail, setDetail] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const params = toQueryParams();
-      await dispatch(getTaxInvoices({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      const allowedSortBy = new Set([
+        "issuedAt",
+        "invoiceNumber",
+        "taxableAmount",
+        "taxAmount",
+        "totalAmount",
+        "invoiceType",
+      ]);
+      const sortBy = allowedSortBy.has(params.sortBy) ? params.sortBy : "issuedAt";
+      await dispatch(getTaxInvoices({ ...params, sortBy, offset: (params.page - 1) * params.limit })).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load tax invoices";
       setError(msg);
@@ -92,27 +110,54 @@ const TaxInvoices = () => {
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
+  const downloadInvoice = useCallback(async (row = {}) => {
+    const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
+    if (!invoiceId) {
+      toast.error("Invoice ID is missing");
+      return;
+    }
+    try {
+      setDownloadingId(invoiceId);
+      await downloadApiFile(
+        ENDPOINTS.tax.invoiceDownload(invoiceId),
+        { format: "pdf" },
+        { filename: `${pick(row, "invoiceNumber", "invoice_number") || invoiceId}.pdf`, format: "pdf" },
+      );
+      toast.success("Download started");
+    } catch (downloadError) {
+      toast.error(downloadError?.message || "Unable to download invoice");
+    } finally {
+      setDownloadingId(null);
+    }
+  }, []);
+
   const COLUMNS = [
     {
       key: "invoiceNumber",
       label: "Invoice #",
       sortable: true,
-      render: (v) => <span className="font-mono text-sm font-medium">{v || "—"}</span>,
+      render: (v, row) => <span className="font-mono text-sm font-medium">{v || row.invoice_number || "—"}</span>,
     },
     {
       key: "orderId",
       label: "Order",
-      render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "—").slice(-8)}</span>,
+      render: (v, row) => {
+        const orderId = v || row.order_id;
+        return <span className="font-mono text-xs text-gray-500">{orderId ? String(orderId).slice(-8) : "—"}</span>;
+      },
     },
     {
       key: "state",
       label: "Status",
-      render: (v) => (
+      render: (v, row) => {
+        const status = v || row.status || row.invoice_state || "issued";
+        return (
         <StatusBadge
-          status={v}
-          color={v === "issued" ? "green" : v === "cancelled" ? "red" : v === "amended" ? "yellow" : "gray"}
+          status={status}
+          color={status === "issued" ? "green" : status === "cancelled" ? "red" : status === "amended" ? "yellow" : "gray"}
         />
-      ),
+        );
+      },
     },
     {
       key: "organizationId",
@@ -123,24 +168,25 @@ const TaxInvoices = () => {
       key: "taxableAmount",
       label: "Taxable Amt",
       sortable: true,
-      render: (v) => <span className="text-sm">{money(v)}</span>,
+      render: (v, row) => <span className="text-sm">{money(v ?? row.taxable_amount)}</span>,
     },
     {
-      key: "totalTax",
+      key: "taxAmount",
       label: "Tax",
-      render: (v) => <span className="text-sm font-medium">{money(v)}</span>,
+      sortable: true,
+      render: (v, row) => <span className="text-sm font-medium">{money(v ?? row.totalTax ?? row.tax_amount)}</span>,
     },
     {
       key: "totalAmount",
       label: "Total",
       sortable: true,
-      render: (v) => <span className="text-sm font-semibold">{money(v)}</span>,
+      render: (v, row) => <span className="text-sm font-semibold">{money(v ?? row.total_amount)}</span>,
     },
     {
-      key: "issueDate",
+      key: "issuedAt",
       label: "Issued",
       sortable: true,
-      render: (v) => <span className="text-xs text-gray-500">{fmt(v)}</span>,
+      render: (v, row) => <span className="text-xs text-gray-500">{fmt(v ?? row.issueDate ?? row.issued_at)}</span>,
     },
     {
       key: "_actions",
@@ -148,23 +194,28 @@ const TaxInvoices = () => {
       render: (_, row) => (
         <div className="flex gap-1">
           <button
-            onClick={() => setDetail(row)}
+            onClick={() => {
+              const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
+              if (!invoiceId) {
+                toast.error("Invoice ID is missing");
+                return;
+              }
+              navigate(`/app/tax-invoices/${invoiceId}`, { state: { invoice: row } });
+            }}
             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
             title="View"
           >
             <MdVisibility size={18} />
           </button>
-          {row.pdfUrl && (
-            <a
-              href={row.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1 text-gray-600 hover:bg-gray-100 rounded"
-              title="Download PDF"
-            >
+          <button
+            type="button"
+            onClick={() => downloadInvoice(row)}
+            disabled={downloadingId === pick(row, "id", "invoiceId", "invoice_id")}
+            className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+            title="Download PDF"
+          >
               <MdDownload size={18} />
-            </a>
-          )}
+          </button>
         </div>
       ),
     },
@@ -207,38 +258,6 @@ const TaxInvoices = () => {
         />
       )}
 
-      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Invoice Detail">
-        {detail && (
-          <div className="p-4 space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-gray-500">Invoice #</p><p className="font-mono font-medium">{detail.invoiceNumber || "—"}</p></div>
-              <div><p className="text-gray-500">Status</p><StatusBadge status={detail.state} color={detail.state === "issued" ? "green" : "gray"} /></div>
-              <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
-              <div><p className="text-gray-500">Seller ID</p><p className="font-mono text-xs">{detail.sellerId || "—"}</p></div>
-              <div><p className="text-gray-500">Organization ID</p><p className="font-mono text-xs">{detail.organizationId || detail.organization_id || "—"}</p></div>
-              <div><p className="text-gray-500">Buyer ID</p><p className="font-mono text-xs">{detail.buyerId || "—"}</p></div>
-              <div><p className="text-gray-500">Issue Date</p><p>{fmt(detail.issueDate)}</p></div>
-              <div><p className="text-gray-500">Taxable Amount</p><p>{money(detail.taxableAmount)}</p></div>
-              <div><p className="text-gray-500">CGST</p><p>{money(detail.cgst)}</p></div>
-              <div><p className="text-gray-500">SGST</p><p>{money(detail.sgst)}</p></div>
-              <div><p className="text-gray-500">IGST</p><p>{money(detail.igst)}</p></div>
-              <div><p className="text-gray-500">Total Tax</p><p className="font-medium">{money(detail.totalTax)}</p></div>
-              <div><p className="text-gray-500">Total Amount</p><p className="font-semibold">{money(detail.totalAmount)}</p></div>
-            </div>
-            {detail.pdfUrl && (
-              <a
-                href={detail.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-blue-600 hover:underline text-sm"
-              >
-                <MdDownload size={16} />
-                Download PDF
-              </a>
-            )}
-          </div>
-        )}
-      </DefaultModal>
     </div>
   );
 };

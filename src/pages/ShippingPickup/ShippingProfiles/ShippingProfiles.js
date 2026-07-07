@@ -41,22 +41,12 @@ import {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const INDIA_STATES = [
-  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
-  "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
-  "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
-  "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura",
-  "Uttar Pradesh","Uttarakhand","West Bengal",
-  "Andaman and Nicobar Islands","Chandigarh","Dadra & Nagar Haveli and Daman & Diu",
-  "Delhi","Jammu & Kashmir","Ladakh","Lakshadweep","Puducherry",
-];
-
 const SERVICEABILITY_MODES = [
-  { value: "all_india", label: "All India", description: "Deliver everywhere in India" },
+  { value: "all_india", label: "All Locations", description: "Deliver everywhere supported by configured locations" },
   { value: "selected_states", label: "Selected States", description: "Only selected states" },
   { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
   { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
-  { value: "block_pincodes", label: "Block Pincodes", description: "All India except blocked pincodes" },
+  { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
 ];
 
 const SHIPPING_METHODS = [
@@ -86,52 +76,36 @@ const EMPTY_FORM = {
 
 const EMPTY_CLONE_FORM = {
   templateId: "",
+  sellerId: "",
+  organizationId: "",
   name: "",
   description: "",
   isDefault: false,
   active: true,
 };
 
-// ── Reusable tag-input ───────────────────────────────────────────────────────
+const optionLabel = (option = {}) =>
+  option.label || option.name || option.title || option.code || option.pincode || option.value || "";
 
-function TagInput({ value = [], onChange, placeholder = "Type and press Enter", validate }) {
-  const [input, setInput] = useState("");
-  const inputRef = useRef(null);
+const optionValue = (option = {}) =>
+  String(option.rawValue || option.value || option.name || option.code || option.pincode || option.label || "").trim();
 
-  const commit = () => {
-    const v = input.trim();
-    if (!v) return;
-    if (validate && !validate(v)) { toast.error("Invalid value: " + v); return; }
-    if (!value.includes(v)) onChange([...value, v]);
-    setInput("");
-  };
+const optionId = (option = {}) => option.id || option.value || option._id || optionLabel(option);
 
-  return (
-    <div
-      className="admin-input min-h-[42px] flex flex-wrap gap-1 cursor-text"
-      onClick={() => inputRef.current?.focus()}
-    >
-      {value.map((tag) => (
-        <span key={tag} className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs px-2 py-0.5 font-medium">
-          {tag}
-          <button type="button" onClick={(e) => { e.stopPropagation(); onChange(value.filter((t) => t !== tag)); }} className="hover:text-red-500 ml-0.5 leading-none">×</button>
-        </span>
-      ))}
-      <input
-        ref={inputRef}
-        className="flex-1 min-w-[120px] bg-transparent outline-none text-sm"
-        value={input}
-        placeholder={value.length === 0 ? placeholder : ""}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); } if (e.key === "Backspace" && !input && value.length) onChange(value.slice(0, -1)); }}
-        onBlur={commit}
-      />
-    </div>
-  );
-}
+const optionParentId = (option = {}) => option.id || option._id || option.value || "";
 
-// Multi-select dropdown for states
-function StateMultiSelect({ value = [], onChange }) {
+// API-backed multi-select dropdown for states, cities, and pincodes.
+function OptionMultiSelect({
+  value = [],
+  onChange,
+  options = [],
+  placeholder = "Select values...",
+  searchPlaceholder = "Search...",
+  emptyText = "No options found",
+  disabled = false,
+  loading = false,
+  getValue = optionValue,
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef(null);
@@ -142,52 +116,62 @@ function StateMultiSelect({ value = [], onChange }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = INDIA_STATES.filter((s) => s.toLowerCase().includes(search.toLowerCase()));
+  const filtered = options.filter((option) =>
+    optionLabel(option).toLowerCase().includes(search.toLowerCase()),
+  );
 
-  const toggle = (state) => {
-    if (value.includes(state)) onChange(value.filter((s) => s !== state));
-    else onChange([...value, state]);
+  const toggle = (option) => {
+    const nextValue = getValue(option);
+    if (!nextValue) return;
+    if (value.includes(nextValue)) onChange(value.filter((item) => item !== nextValue));
+    else onChange([...value, nextValue]);
   };
 
   return (
     <div ref={ref} className="relative">
       <div
-        className="admin-input min-h-[42px] flex flex-wrap gap-1 cursor-pointer"
-        onClick={() => setOpen((o) => !o)}
+        className={`admin-input min-h-[42px] flex flex-wrap gap-1 ${disabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : "cursor-pointer"}`}
+        onClick={() => {
+          if (!disabled) setOpen((current) => !current);
+        }}
       >
-        {value.length === 0 && <span className="text-sm text-gray-400">Select states…</span>}
-        {value.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs px-2 py-0.5 font-medium">
-            {s}
-            <button type="button" onClick={(e) => { e.stopPropagation(); toggle(s); }} className="hover:text-red-500 ml-0.5 leading-none">×</button>
+        {value.length === 0 && <span className="text-sm text-gray-400">{placeholder}</span>}
+        {value.map((item) => (
+          <span key={item} className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs px-2 py-0.5 font-medium">
+            {item}
+            <button type="button" onClick={(e) => { e.stopPropagation(); onChange(value.filter((tag) => tag !== item)); }} className="hover:text-red-500 ml-0.5 leading-none">×</button>
           </span>
         ))}
       </div>
-      {open && (
+      {open && !disabled && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
           <div className="p-2 border-b sticky top-0 bg-white">
             <input
               className="admin-input text-sm py-1"
-              placeholder="Search states…"
+              placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClick={(e) => e.stopPropagation()}
               autoFocus
             />
           </div>
-          {filtered.map((s) => (
+          {loading && <div className="px-3 py-4 text-center text-sm text-gray-400">Loading...</div>}
+          {!loading && filtered.map((option) => {
+            const selectedValue = getValue(option);
+            const selected = value.includes(selectedValue);
+            return (
             <div
-              key={s}
-              className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${value.includes(s) ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
-              onClick={(e) => { e.stopPropagation(); toggle(s); }}
+              key={optionId(option)}
+              className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${selected ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
+              onClick={(e) => { e.stopPropagation(); toggle(option); }}
             >
-              <span className={`w-4 h-4 rounded border flex items-center justify-center ${value.includes(s) ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}>
-                {value.includes(s) && <MdCheckCircle className="text-white text-xs" />}
+              <span className={`w-4 h-4 rounded border flex items-center justify-center ${selected ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}>
+                {selected && <MdCheckCircle className="text-white text-xs" />}
               </span>
-              {s}
+              {optionLabel(option)}
             </div>
-          ))}
-          {filtered.length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">No states found</div>}
+          );})}
+          {!loading && filtered.length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">{emptyText}</div>}
         </div>
       )}
     </div>
@@ -196,15 +180,174 @@ function StateMultiSelect({ value = [], onChange }) {
 
 // ── Profile Form (inside modal) ──────────────────────────────────────────────
 
-function ProfileForm({ form, setForm, isTemplate = false }) {
+function ProfileForm({
+  form,
+  setForm,
+  isTemplate = false,
+  isSeller = false,
+  sellerOptions = [],
+  organizationOptions = [],
+  onSellerSearch,
+}) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
   const mode = form.serviceabilityMode;
+  const needsCountry = ["selected_states", "selected_cities", "selected_pincodes", "block_pincodes"].includes(mode);
+  const needsState = ["selected_cities", "selected_pincodes", "block_pincodes"].includes(mode);
+  const needsCity = ["selected_pincodes", "block_pincodes"].includes(mode);
+  const [locationFilter, setLocationFilter] = useState({ countryId: "", stateId: "", cityId: "" });
+  const [locationOptions, setLocationOptions] = useState({
+    countries: [],
+    states: [],
+    cities: [],
+    pincodes: [],
+  });
+  const [locationLoading, setLocationLoading] = useState({
+    countries: false,
+    states: false,
+    cities: false,
+    pincodes: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+    setLocationLoading((prev) => ({ ...prev, countries: true }));
+    dropdownApi.getCountries({ limit: 100 })
+      .then((options) => {
+        if (!active) return;
+        setLocationOptions((prev) => ({ ...prev, countries: options || [] }));
+        const india = (options || []).find((option) => /india/i.test(optionLabel(option)));
+        setLocationFilter((prev) => prev.countryId || !india ? prev : { ...prev, countryId: optionParentId(india) });
+      })
+      .catch(() => {
+        if (active) setLocationOptions((prev) => ({ ...prev, countries: [] }));
+      })
+      .finally(() => {
+        if (active) setLocationLoading((prev) => ({ ...prev, countries: false }));
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!locationFilter.countryId) {
+      setLocationOptions((prev) => ({ ...prev, states: [], cities: [], pincodes: [] }));
+      return undefined;
+    }
+    let active = true;
+    setLocationLoading((prev) => ({ ...prev, states: true }));
+    dropdownApi.getStates(locationFilter.countryId, { limit: 100 })
+      .then((options) => {
+        if (active) setLocationOptions((prev) => ({ ...prev, states: options || [] }));
+      })
+      .catch(() => {
+        if (active) setLocationOptions((prev) => ({ ...prev, states: [] }));
+      })
+      .finally(() => {
+        if (active) setLocationLoading((prev) => ({ ...prev, states: false }));
+      });
+    return () => { active = false; };
+  }, [locationFilter.countryId]);
+
+  useEffect(() => {
+    if (!locationFilter.stateId) {
+      setLocationOptions((prev) => ({ ...prev, cities: [], pincodes: [] }));
+      return undefined;
+    }
+    let active = true;
+    setLocationLoading((prev) => ({ ...prev, cities: true }));
+    dropdownApi.getCities(locationFilter.stateId, { limit: 100 })
+      .then((options) => {
+        if (active) setLocationOptions((prev) => ({ ...prev, cities: options || [] }));
+      })
+      .catch(() => {
+        if (active) setLocationOptions((prev) => ({ ...prev, cities: [] }));
+      })
+      .finally(() => {
+        if (active) setLocationLoading((prev) => ({ ...prev, cities: false }));
+      });
+    return () => { active = false; };
+  }, [locationFilter.stateId]);
+
+  useEffect(() => {
+    if (!locationFilter.cityId) {
+      setLocationOptions((prev) => ({ ...prev, pincodes: [] }));
+      return undefined;
+    }
+    let active = true;
+    setLocationLoading((prev) => ({ ...prev, pincodes: true }));
+    dropdownApi.getPincodes(locationFilter.cityId, { limit: 100 })
+      .then((options) => {
+        if (active) setLocationOptions((prev) => ({ ...prev, pincodes: options || [] }));
+      })
+      .catch(() => {
+        if (active) setLocationOptions((prev) => ({ ...prev, pincodes: [] }));
+      })
+      .finally(() => {
+        if (active) setLocationLoading((prev) => ({ ...prev, pincodes: false }));
+      });
+    return () => { active = false; };
+  }, [locationFilter.cityId]);
+
+  const patchLocation = (key, value) => {
+    setLocationFilter((prev) => ({
+      ...prev,
+      [key]: value,
+      ...(key === "countryId" ? { stateId: "", cityId: "" } : {}),
+      ...(key === "stateId" ? { cityId: "" } : {}),
+    }));
+  };
 
   return (
     <div className="space-y-6 py-2">
       {/* Identity */}
       <section className="space-y-3">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Profile Identity</h4>
+
+        {!isTemplate && !isSeller && (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="admin-label">Target Seller <span className="text-red-500">*</span></label>
+              <input
+                className="admin-input"
+                placeholder="Search seller by name, email, or business..."
+                onChange={(event) => onSellerSearch?.(event.target.value)}
+              />
+              <select
+                className="admin-input"
+                value={form.sellerId || ""}
+                onChange={(event) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    sellerId: event.target.value,
+                    organizationId: "",
+                  }));
+                }}
+              >
+                <option value="">Select seller...</option>
+                {sellerOptions.map((seller) => (
+                  <option key={seller.value} value={seller.value}>
+                    {seller.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="admin-label">Organization</label>
+              <select
+                className="admin-input"
+                value={form.organizationId || ""}
+                onChange={(event) => patch("organizationId", event.target.value)}
+                disabled={!form.sellerId}
+              >
+                <option value="">Seller-wide default</option>
+                {organizationOptions.map((organization) => (
+                  <option key={organization.value} value={organization.value}>
+                    {organization.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="admin-label">Profile Name <span className="text-red-500">*</span></label>
@@ -240,10 +383,75 @@ function ProfileForm({ form, setForm, isTemplate = false }) {
           ))}
         </div>
 
+        {needsCountry && (
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <label className="admin-label">Country</label>
+              <select
+                className="admin-input"
+                value={locationFilter.countryId}
+                onChange={(event) => patchLocation("countryId", event.target.value)}
+              >
+                <option value="">{locationLoading.countries ? "Loading countries..." : "Select country..."}</option>
+                {locationOptions.countries.map((country) => (
+                  <option key={optionId(country)} value={optionParentId(country)}>
+                    {optionLabel(country)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {needsState && (
+              <div className="space-y-1">
+                <label className="admin-label">State Filter</label>
+                <select
+                  className="admin-input"
+                  value={locationFilter.stateId}
+                  onChange={(event) => patchLocation("stateId", event.target.value)}
+                  disabled={!locationFilter.countryId}
+                >
+                  <option value="">{locationLoading.states ? "Loading states..." : "Select state..."}</option>
+                  {locationOptions.states.map((state) => (
+                    <option key={optionId(state)} value={optionParentId(state)}>
+                      {optionLabel(state)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {needsCity && (
+              <div className="space-y-1">
+                <label className="admin-label">City Filter</label>
+                <select
+                  className="admin-input"
+                  value={locationFilter.cityId}
+                  onChange={(event) => patchLocation("cityId", event.target.value)}
+                  disabled={!locationFilter.stateId}
+                >
+                  <option value="">{locationLoading.cities ? "Loading cities..." : "Select city..."}</option>
+                  {locationOptions.cities.map((city) => (
+                    <option key={optionId(city)} value={optionParentId(city)}>
+                      {optionLabel(city)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
         {(mode === "selected_states" || mode === "selected_cities") && (
           <div className="space-y-1">
             <label className="admin-label">States</label>
-            <StateMultiSelect value={form.allowedStates} onChange={(v) => patch("allowedStates", v)} />
+            <OptionMultiSelect
+              value={form.allowedStates}
+              onChange={(v) => patch("allowedStates", v)}
+              options={locationOptions.states}
+              placeholder={locationFilter.countryId ? "Select states..." : "Select a country first"}
+              searchPlaceholder="Search states..."
+              emptyText="No states found"
+              disabled={!locationFilter.countryId}
+              loading={locationLoading.states}
+            />
             <p className="text-xs text-gray-400">{form.allowedStates.length} state(s) selected</p>
           </div>
         )}
@@ -251,19 +459,32 @@ function ProfileForm({ form, setForm, isTemplate = false }) {
         {mode === "selected_cities" && (
           <div className="space-y-1">
             <label className="admin-label">Cities</label>
-            <TagInput value={form.allowedCities} onChange={(v) => patch("allowedCities", v)} placeholder="Type city name and press Enter…" />
-            <p className="text-xs text-gray-400">Enter each city name then press Enter</p>
+            <OptionMultiSelect
+              value={form.allowedCities}
+              onChange={(v) => patch("allowedCities", v)}
+              options={locationOptions.cities}
+              placeholder={locationFilter.stateId ? "Select cities..." : "Select a state filter first"}
+              searchPlaceholder="Search cities..."
+              emptyText="No cities found"
+              disabled={!locationFilter.stateId}
+              loading={locationLoading.cities}
+            />
+            <p className="text-xs text-gray-400">{form.allowedCities.length} city/cities selected</p>
           </div>
         )}
 
         {mode === "selected_pincodes" && (
           <div className="space-y-1">
             <label className="admin-label">Allowed Pincodes</label>
-            <TagInput
+            <OptionMultiSelect
               value={form.allowedPincodes}
               onChange={(v) => patch("allowedPincodes", v)}
-              placeholder="Type pincode and press Enter…"
-              validate={(v) => /^\d{4,10}$/.test(v)}
+              options={locationOptions.pincodes}
+              placeholder={locationFilter.cityId ? "Select allowed pincodes..." : "Select a city filter first"}
+              searchPlaceholder="Search pincodes..."
+              emptyText="No pincodes found"
+              disabled={!locationFilter.cityId}
+              loading={locationLoading.pincodes}
             />
             <p className="text-xs text-gray-400">{form.allowedPincodes.length} pincode(s) added</p>
           </div>
@@ -272,11 +493,15 @@ function ProfileForm({ form, setForm, isTemplate = false }) {
         {mode === "block_pincodes" && (
           <div className="space-y-1">
             <label className="admin-label">Blocked Pincodes</label>
-            <TagInput
+            <OptionMultiSelect
               value={form.blockedPincodes}
               onChange={(v) => patch("blockedPincodes", v)}
-              placeholder="Type pincode and press Enter…"
-              validate={(v) => /^\d{4,10}$/.test(v)}
+              options={locationOptions.pincodes}
+              placeholder={locationFilter.cityId ? "Select blocked pincodes..." : "Select a city filter first"}
+              searchPlaceholder="Search pincodes..."
+              emptyText="No pincodes found"
+              disabled={!locationFilter.cityId}
+              loading={locationLoading.pincodes}
             />
             <p className="text-xs text-gray-400">{form.blockedPincodes.length} pincode(s) blocked</p>
           </div>
@@ -402,7 +627,7 @@ const etaLabel = (profile = {}) => {
 };
 
 const coverageLabel = (profile = {}) => {
-  if (profile.serviceabilityMode === "all_india") return "All India";
+  if (profile.serviceabilityMode === "all_india") return "All locations";
   const parts = [
     profile.allowedStates?.length ? `${profile.allowedStates.length} states` : "",
     profile.allowedCities?.length ? `${profile.allowedCities.length} cities` : "",
@@ -453,6 +678,9 @@ export default function ShippingProfiles() {
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
   const [sellerOptions, setSellerOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
+  const [formOrganizationOptions, setFormOrganizationOptions] = useState([]);
+  const [cloneOrganizationOptions, setCloneOrganizationOptions] = useState([]);
+  const [cloneSellerSearch, setCloneSellerSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -476,12 +704,30 @@ export default function ShippingProfiles() {
     return () => window.removeEventListener("seller:organizationChanged", handler);
   }, [isSeller]);
 
-  useEffect(() => {
-    if (isSeller) return;
-    dropdownApi.getSellers({ keyWord: "", limit: 200 })
-      .then((options) => setSellerOptions(options || []))
-      .catch(() => {});
+  const loadSellerOptions = useCallback((term = "") => {
+    if (isSeller) return Promise.resolve([]);
+    const searchTerm = term.trim();
+    return dropdownApi.getSellers({
+      keyWord: searchTerm,
+      keyword: searchTerm,
+      search: searchTerm,
+      q: searchTerm,
+      searchFields: "full_name,email,businessName,displayName",
+      limit: 100,
+    })
+      .then((options) => {
+        setSellerOptions(options || []);
+        return options || [];
+      })
+      .catch(() => {
+        setSellerOptions([]);
+        return [];
+      });
   }, [isSeller]);
+
+  useEffect(() => {
+    loadSellerOptions("");
+  }, [loadSellerOptions]);
 
   const activeSellerId = isSeller ? sellerSessionId : filters.sellerId;
   const activeOrganizationId = isSeller ? selectedOrganizationId : filters.organizationId;
@@ -509,6 +755,50 @@ export default function ShippingProfiles() {
       setFilter("organizationId", "");
     }
   }, [filters.organizationId, filters.sellerId, isSeller, setFilter]);
+
+  useEffect(() => {
+    const cloneSellerId = isSeller ? sellerSessionId : cloneForm.sellerId;
+    if (!cloneModal.open || !cloneSellerId) {
+      setCloneOrganizationOptions([]);
+      return undefined;
+    }
+
+    let active = true;
+    dropdownApi.getSellerOrganizations(cloneSellerId)
+      .then((options) => {
+        if (active) setCloneOrganizationOptions(options || []);
+      })
+      .catch(() => {
+        if (active) setCloneOrganizationOptions([]);
+    });
+    return () => { active = false; };
+  }, [cloneForm.sellerId, cloneModal.open, isSeller, sellerSessionId]);
+
+  useEffect(() => {
+    const formSellerId = isSeller ? sellerSessionId : form.sellerId;
+    if (!modal.open || !formSellerId) {
+      setFormOrganizationOptions([]);
+      return undefined;
+    }
+
+    let active = true;
+    dropdownApi.getSellerOrganizations(formSellerId)
+      .then((options) => {
+        if (active) setFormOrganizationOptions(options || []);
+      })
+      .catch(() => {
+        if (active) setFormOrganizationOptions([]);
+      });
+    return () => { active = false; };
+  }, [form.sellerId, isSeller, modal.open, sellerSessionId]);
+
+  useEffect(() => {
+    if (!cloneModal.open || isSeller) return undefined;
+    const timeout = window.setTimeout(() => {
+      loadSellerOptions(cloneSellerSearch);
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [cloneModal.open, cloneSellerSearch, isSeller, loadSellerOptions]);
 
   const fetchProfiles = useCallback(async () => {
     try {
@@ -571,11 +861,7 @@ export default function ShippingProfiles() {
         type: "asyncDropdown",
         label: "Seller",
         width: "w-52",
-        load: (search) =>
-          dropdownApi.getSellers({
-            keyWord: search,
-            searchFields: "full_name,email,businessName",
-          }),
+        load: loadSellerOptions,
       });
       if (filters.sellerId) {
         fields.push({
@@ -601,7 +887,7 @@ export default function ShippingProfiles() {
       ],
     });
     return fields;
-  }, [filters.sellerId, isSeller, organizationOptions]);
+  }, [filters.sellerId, isSeller, loadSellerOptions, organizationOptions]);
 
   const sellerDetails = useCallback((row = {}) => {
     const sellerId = row.sellerId || row.seller_id || row.seller?.id || row.seller?._id;
@@ -622,13 +908,13 @@ export default function ShippingProfiles() {
 
   const openCreate = () => {
     const sellerId = activeSellerId;
-    if (!sellerId) {
-      toast.error(isSeller ? "Seller session not found. Please sign in again." : "Select a seller before creating a shipping profile");
+    if (isSeller && !sellerId) {
+      toast.error("Seller session not found. Please sign in again.");
       return;
     }
     setForm({
       ...EMPTY_FORM,
-      sellerId,
+      sellerId: sellerId || "",
       organizationId: activeOrganizationId || "",
     });
     setModal({ open: true, mode: "create", profile: null });
@@ -662,14 +948,18 @@ export default function ShippingProfiles() {
 
   const openClone = (template = null) => {
     const sellerId = activeSellerId;
-    if (!sellerId) {
-      toast.error(isSeller ? "Seller session not found. Please sign in again." : "Select a seller before cloning a template");
+    if (isSeller && !sellerId) {
+      toast.error("Seller session not found. Please sign in again.");
       return;
     }
+    setCloneSellerSearch("");
+    if (!isSeller) loadSellerOptions("");
     const selectedTemplate = template || templatesPayload.list[0] || null;
     setCloneForm({
       ...EMPTY_CLONE_FORM,
       templateId: profileId(selectedTemplate || {}) || "",
+      sellerId: sellerId || "",
+      organizationId: activeOrganizationId || "",
       name: selectedTemplate?.name ? `${selectedTemplate.name} - Seller Copy` : "",
       description: selectedTemplate?.description || "",
       isDefault: profilesPayload.list.length === 0,
@@ -728,6 +1018,7 @@ export default function ShippingProfiles() {
 
   const handleSave = async () => {
     if (!form.name?.trim()) { toast.error("Profile name is required"); return; }
+    if (!isSeller && !(form.sellerId || activeSellerId)) { toast.error("Select a target seller"); return; }
     setSaving(true);
     try {
       if (modal.mode === "create") {
@@ -771,12 +1062,15 @@ export default function ShippingProfiles() {
 
   const handleCloneTemplate = async () => {
     if (!cloneForm.templateId) { toast.error("Select an admin template to clone"); return; }
+    const targetSellerId = isSeller ? activeSellerId : cloneForm.sellerId;
+    const targetOrganizationId = isSeller ? activeOrganizationId : cloneForm.organizationId;
+    if (!targetSellerId) { toast.error("Select a seller before cloning a template"); return; }
     setSaving(true);
     try {
       await dispatch(cloneShippingProfileTemplate({
         templateId: cloneForm.templateId,
-        sellerId: activeSellerId,
-        organizationId: activeOrganizationId || null,
+        sellerId: targetSellerId,
+        organizationId: targetOrganizationId || null,
         name: cloneForm.name || undefined,
         description: cloneForm.description || undefined,
         isDefault: Boolean(cloneForm.isDefault),
@@ -1117,7 +1411,14 @@ export default function ShippingProfiles() {
         closeButtonText="Cancel"
         loading={saving}
       >
-        <ProfileForm form={form} setForm={setForm} />
+        <ProfileForm
+          form={form}
+          setForm={setForm}
+          isSeller={isSeller}
+          sellerOptions={sellerOptions}
+          organizationOptions={formOrganizationOptions}
+          onSellerSearch={loadSellerOptions}
+        />
       </DefaultModal>
 
       <DefaultModal
@@ -1129,7 +1430,7 @@ export default function ShippingProfiles() {
         closeButtonText="Cancel"
         loading={saving}
       >
-        <ProfileForm form={form} setForm={setForm} isTemplate />
+        <ProfileForm form={form} setForm={setForm} isTemplate isSeller={isSeller} />
       </DefaultModal>
 
       <DefaultModal
@@ -1145,6 +1446,57 @@ export default function ShippingProfiles() {
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             This creates a private seller profile. Editing pincodes, charge, ETA, COD, or status after copying will not change the admin template.
           </div>
+          {!isSeller && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="admin-label">Target Seller</label>
+                <input
+                  className="admin-input"
+                  value={cloneSellerSearch}
+                  onChange={(event) => setCloneSellerSearch(event.target.value)}
+                  placeholder="Search seller by name, email, or business..."
+                />
+                <select
+                  className="admin-input"
+                  value={cloneForm.sellerId}
+                  onChange={(event) => setCloneForm((prev) => ({
+                    ...prev,
+                    sellerId: event.target.value,
+                    organizationId: "",
+                  }))}
+                >
+                  <option value="">Select seller...</option>
+                  {sellerOptions.map((seller) => (
+                    <option key={seller.value} value={seller.value}>
+                      {seller.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[var(--admin-muted)]">
+                  This is the seller who will receive the private copy.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label className="admin-label">Organization</label>
+                <select
+                  className="admin-input"
+                  value={cloneForm.organizationId}
+                  onChange={(event) => setCloneForm((prev) => ({
+                    ...prev,
+                    organizationId: event.target.value,
+                  }))}
+                  disabled={!cloneForm.sellerId}
+                >
+                  <option value="">Seller-wide default</option>
+                  {cloneOrganizationOptions.map((organization) => (
+                    <option key={organization.value} value={organization.value}>
+                      {organization.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
           <div className="space-y-1">
             <label className="admin-label">Admin Template</label>
             <select

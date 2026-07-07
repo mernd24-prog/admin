@@ -6,6 +6,7 @@ import { getSelectedSellerOrganizationId } from "../_helpers/sellerOrganizationC
 const initialState = {
   myCommissionsData: {},
   myPayoutsData: {},
+  mySettlementsData: {},
   financeSummaryData: {},
   adminCommissionsData: {},
   adminPayoutsData: {},
@@ -48,6 +49,14 @@ export const getSellerCommissions = createApiThunkPrivate(
 export const getSellerPayouts = createApiThunkPrivate(
   "sellerCommissions/getSellerPayouts",
   ENDPOINTS.payouts.myPayouts,
+  "GET",
+  true,
+  { transformParams: withSelectedOrganization(["status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
+);
+
+export const getMySellerSettlements = createApiThunkPrivate(
+  "sellerCommissions/getMySellerSettlements",
+  ENDPOINTS.payouts.mySettlements,
   "GET",
   true,
   { transformParams: withSelectedOrganization(["status", "payoutId", "search", "fromDate", "toDate", "limit", "offset"]) }
@@ -198,6 +207,7 @@ const sellerCommissionsSlice = createSlice({
   extraReducers: (builder) => {
     createExtraReducersForThunk(builder, getSellerCommissions, "myCommissionsData");
     createExtraReducersForThunk(builder, getSellerPayouts, "myPayoutsData");
+    createExtraReducersForThunk(builder, getMySellerSettlements, "mySettlementsData");
     createExtraReducersForThunk(builder, getSellerFinanceSummary, "financeSummaryData");
     createExtraReducersForThunk(builder, getAdminSellerCommissions, "adminCommissionsData");
     createExtraReducersForThunk(builder, getAdminSellerPayouts, "adminPayoutsData");

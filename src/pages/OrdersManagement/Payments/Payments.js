@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdCheckCircle, MdRefresh, MdVisibility, MdCancel } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
+import { MdCheckCircle, MdRefresh, MdSettings, MdVisibility, MdCancel } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import {
-  ConfirmModal,
   DataTable,
   FilterBar,
   PageHeader,
@@ -16,12 +16,10 @@ import {
 } from "../../../components/Shared";
 import {
   approvePayment,
-  getCodConfig,
   getAdminPayments,
   rejectPayment,
-  updateCodConfig,
 } from "../../../Redux/adminCoreSlice";
-import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
+import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
@@ -62,15 +60,13 @@ const FILTER_FIELDS = [
   { key: "toDate", type: "date", label: "To" },
 ];
 
-const unwrapData = (payload = {}) => payload?.data?.data || payload?.data || {};
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
 
 const Payments = () => {
   const dispatch = useDispatch();
-  const { can } = usePermission();
+  const navigate = useNavigate();
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminPaymentsData);
-  const savedCodConfig = unwrapData(selector.codConfigData);
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
@@ -81,18 +77,9 @@ const Payments = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [savingConfig, setSavingConfig] = useState(false);
   const [detailPayment, setDetailPayment] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [decision, setDecision] = useState({ open: false, type: "", payment: null, referenceId: "", reason: "" });
-  const [confirmConfig, setConfirmConfig] = useState(false);
-  const [codForm, setCodForm] = useState({
-    enabled: true,
-    chargeAmount: 0,
-    minOrderAmount: "",
-    maxOrderAmount: "",
-    currency: "INR",
-  });
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -115,29 +102,6 @@ const Payments = () => {
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
-
-  const fetchCodConfig = useCallback(async () => {
-    try {
-      await dispatch(getCodConfig()).unwrap();
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to load COD settings");
-    }
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchCodConfig();
-  }, [fetchCodConfig]);
-
-  useEffect(() => {
-    if (!savedCodConfig || Object.keys(savedCodConfig).length === 0) return;
-    setCodForm({
-      enabled: savedCodConfig.enabled !== false,
-      chargeAmount: savedCodConfig.chargeAmount ?? savedCodConfig.charge_amount ?? 0,
-      minOrderAmount: savedCodConfig.minOrderAmount ?? savedCodConfig.min_order_amount ?? "",
-      maxOrderAmount: savedCodConfig.maxOrderAmount ?? savedCodConfig.max_order_amount ?? "",
-      currency: savedCodConfig.currency || "INR",
-    });
-  }, [savedCodConfig]);
 
   const openDetail = useCallback(async (payment) => {
     setDetailPayment(payment);
@@ -179,29 +143,6 @@ const Payments = () => {
       setLoading(false);
     }
   }, [decision, dispatch, fetchPayments]);
-
-  const saveCodConfig = useCallback(async () => {
-    if (codForm.maxOrderAmount !== "" && codForm.minOrderAmount !== "" && Number(codForm.maxOrderAmount) < Number(codForm.minOrderAmount)) {
-      toast.error("Maximum order amount cannot be lower than minimum amount");
-      return;
-    }
-    try {
-      setSavingConfig(true);
-      await dispatch(updateCodConfig({
-        ...codForm,
-        chargeAmount: Number(codForm.chargeAmount || 0),
-        minOrderAmount: codForm.minOrderAmount === "" ? null : Number(codForm.minOrderAmount),
-        maxOrderAmount: codForm.maxOrderAmount === "" ? null : Number(codForm.maxOrderAmount),
-      })).unwrap();
-      toast.success("COD settings saved");
-      setConfirmConfig(false);
-      await fetchCodConfig();
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to save COD settings");
-    } finally {
-      setSavingConfig(false);
-    }
-  }, [codForm, dispatch, fetchCodConfig]);
 
   const canManualDecision = (payment) =>
     ["manual_bank_transfer", "manual_upi", "cod"].includes(payment.provider) &&
@@ -291,43 +232,16 @@ const Payments = () => {
         subtitle="Reconcile online, COD, and manual payments"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={fetchPayments}>
-            <MdRefresh size={17} /> Refresh
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="admin-btn-secondary" onClick={() => navigate("/app/cod-config")}>
+              <MdSettings size={17} /> COD Settings
+            </button>
+            <button type="button" className="admin-btn-secondary" onClick={fetchPayments}>
+              <MdRefresh size={17} /> Refresh
+            </button>
+          </div>
         }
       />
-
-      <div className="admin-card p-4 mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 className="font-semibold text-gray-800">COD Settings</h2>
-            <p className="text-xs text-gray-500 mt-1">Customer sees Cash on Delivery only when enabled and the order total is inside this range.</p>
-          </div>
-          <PermissionGuard module="payments" action={ACTIONS.UPDATE} hide>
-            <button type="button" className="admin-btn-primary" onClick={() => setConfirmConfig(true)} disabled={savingConfig}>
-              {savingConfig ? "Saving..." : "Save COD Charge"}
-            </button>
-          </PermissionGuard>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={!!codForm.enabled}
-              onChange={(event) => setCodForm((prev) => ({ ...prev, enabled: event.target.checked }))}
-              disabled={!can("payments", ACTIONS.UPDATE)}
-            />
-            COD Enabled
-          </label>
-          <Input labelName="COD Charge" type="number" min="0" value={codForm.chargeAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, chargeAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
-          <Input labelName="Minimum Order" type="number" min="0" value={codForm.minOrderAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
-          <Input labelName="Maximum Order" type="number" min="0" value={codForm.maxOrderAmount} onChange={(event) => setCodForm((prev) => ({ ...prev, maxOrderAmount: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
-          <Input labelName="Currency" value={codForm.currency} onChange={(event) => setCodForm((prev) => ({ ...prev, currency: event.target.value }))} disabled={!can("payments", ACTIONS.UPDATE)} />
-        </div>
-        <div className="text-xs text-gray-500">
-          COD collection amount = order payable amount including COD charge. Admin approves the COD payment after cash is collected.
-        </div>
-      </div>
 
       <DataTable
         columns={columns}
@@ -388,16 +302,6 @@ const Payments = () => {
         </div>
       </DefaultModal>
 
-      <ConfirmModal
-        open={confirmConfig}
-        onClose={() => setConfirmConfig(false)}
-        onConfirm={saveCodConfig}
-        title="Save COD settings?"
-        message="The new charge and eligibility range will apply to future checkout quotes."
-        variant="warning"
-        confirmLabel="Save settings"
-        loading={savingConfig}
-      />
     </div>
   );
 };

@@ -87,6 +87,10 @@ const MODULE_LABELS = {
   returns: "Return Management",
   payments: "Payment Management",
   "commerce-settings": "Commerce Settings",
+  "platform-commerce-settings": "Commerce Settings",
+  "seller-commerce-config": "Commerce Settings",
+  "commerce-templates": "Commerce Settings",
+  "seller-tiers": "Commerce Settings",
   wallets: "Wallet Management",
   subscriptions: "Subscriptions",
   coupons: "Coupon Management",
@@ -321,6 +325,10 @@ export const MODULE_DEFAULT_ROUTES = {
   "platform-fee":       "platform-fee-config",
   "platform-fee-rules": "platform-fee-config",
   "commerce-settings":  "commerce-settings",
+  "platform-commerce-settings": "platform-commerce-settings",
+  "seller-commerce-config": "seller-commerce-config",
+  "commerce-templates": "commerce-templates",
+  "seller-tiers": "seller-tiers",
   // CMS/Content
  
   cms_pages: "content-management",
@@ -504,7 +512,7 @@ const ROUTE_MODULES = [
   [["/seller-payouts"], ["sellers/commissions", "payments"]],
 
   // Commerce Settings
-  [["/commerce-settings"], ["commerce-settings", "admin", "payments", "orders"]],
+  [["/commerce-settings", "/platform-commerce-settings", "/seller-commerce-config", "/commerce-templates", "/seller-tiers"], ["commerce-settings", "platform-commerce-settings", "seller-commerce-config", "commerce-templates", "seller-tiers", "admin", "payments", "orders"]],
   [["/commission-rules"], ["commission", "commission-rules", "sellers/commissions"]],
   [["/platform-fee-config"], ["platform-fee", "platform-fee-rules", "admin"]],
   [["/cod-config"], ["cod-config"]],

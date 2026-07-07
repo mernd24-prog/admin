@@ -18,6 +18,7 @@ import {
   getSelectedSellerOrganizationId,
   setSelectedSellerOrganizationId,
 } from "../../_helpers/sellerOrganizationContext";
+import Tooltip from "../Atoms/tooltip/Tooltip";
 
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
@@ -249,120 +250,101 @@ export default function Header({
 
   return (
     <>
-    <div
-      className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] text-[var(--admin-ink)]`}
-    >
-      <div className="flex items-center justify-between flex-1 px-4 md:px-5 w-full gap-4">
-        {/* Left: menu toggle + title */}
-        <div
-          className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}
-        >
-          <button
-            type="button"
-            aria-label={isSidebarExpanded ? "Sidebar open" : "Sidebar closed"}
-            className={`h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-white focus:outline-none ${isSidebarExpanded ? "flex" : "flex lg:hidden"}`}
-            onClick={handleNavbar}
+      <div
+        className={`${hasPermanentOpen ? "flex flex-shrink-0" : "fixed top-0 left-0 right-0 flex flex-shrink-0"} z-20 h-[58px] bg-[var(--admin-shell)] text-[var(--admin-ink)]`}
+      >
+        <div className="flex items-center justify-between flex-1 px-4 md:px-5 w-full gap-4">
+          {/* Left: menu toggle + title */}
+          <div
+            className={`flex items-center gap-3 min-w-0 ${hasPermanentOpen ? "" : "lg:pl-1"}`}
           >
-            {isSidebarExpanded ? (
-              <MdOutlineMenu className="h-5 w-5" />
-            ) : (
-              <FcNext className="h-5 w-5" />
-            )}
-          </button>
-
-          <div className="leading-tight min-w-0 ">
-            <h1 className="text-[13px] font-semibold capitalize font-inter text-[var(--admin-ink)] truncate">
-              {headerTitle || moduleName || "Dashboard"}
-            </h1>
-          </div>
-        </div>
-
-        {/* Center: search bar */}
-        <div className="hidden md:flex flex-1 max-w-[325px]">
-          <div className="header-search-pill group relative w-full">
-            <MdSearch
-              size={14}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
-            />
-            <input
-              type="text"
-              placeholder="Search"
-              className="admin-input admin-header-search-input"
-            />
-          </div>
-        </div>
-
-        {/* Right: user profile */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
-          >
-            <MdOutlineNotificationsNone size={18} />
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
-          </button>
-          {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
-            <select
-              className="hidden min-h-[36px] max-w-[220px] rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-medium text-[var(--admin-ink)] outline-none focus:border-[var(--admin-blue)] md:block"
-              value={selectedOrganizationId}
-              onChange={handleOrganizationChange}
-              title="Organization"
+            <button
+              type="button"
+              aria-label={isSidebarExpanded ? "Sidebar open" : "Sidebar closed"}
+              className={`h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadcc3] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-white focus:outline-none ${isSidebarExpanded ? "flex" : "flex lg:hidden"}`}
+              onClick={handleNavbar}
             >
-              {organizations.map((organization) => (
-                <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
-                  {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}
-                </option>
-              ))}
-              {incompleteOrgs.length > 0 && (
-                <optgroup label="── Incomplete Setup ──">
-                  {incompleteOrgs.map((organization) => (
-                    <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
-                      {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId} [Setup Pending]
-                    </option>
-                  ))}
-                </optgroup>
+              {isSidebarExpanded ? (
+                <MdOutlineMenu className="h-5 w-5" />
+              ) : (
+                <FcNext className="h-5 w-5" />
               )}
-            </select>
-          )}
-          <div className="relative">
-            <div className="flex items-center gap-2.5">
-              <div className="hidden md:block text-right leading-tight">
-                <p className="max-w-44 text-[12px] font-bold font-inter text-[var(--admin-ink)] truncate">
-                  {getDisplayName(userData)}
-                </p>
-                <p className="truncate text-[10px] font-inter mt-[1px] font-medium text-[var(--admin-muted)]">
-                  {userData?.email || userData?.role || "Admin"}
-                </p>
-              </div>
+            </button>
+
+            <div className="leading-tight min-w-0 ">
+              <h1 className="text-[13px] font-semibold capitalize font-inter text-[var(--admin-ink)] truncate">
+                {headerTitle || moduleName || "Dashboard"}
+              </h1>
+            </div>
+          </div>
+
+          {/* Center: search bar */}
+          <div className="hidden md:flex flex-1 max-w-[325px]">
+            <div className="header-search-pill group relative w-full">
+              <MdSearch
+                size={14}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
+              />
+              <input
+                type="text"
+                placeholder="Search"
+                className="admin-input admin-header-search-input"
+              />
+            </div>
+          </div>
+
+          {/* Right: user profile */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Tooltip text="Notifications" position="bottom">
               <button
                 type="button"
-                onClick={toggleLogoutModal}
-                className="flex h-9 w-9 overflow-hidden items-center justify-center rounded-full border border-[var(--admin-line)] bg-[var(--admin-blue-soft)] text-sm font-bold text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)]"
-                aria-label="Open profile menu"
+                aria-label="Notifications"
+                onClick={() => navigate("/app/notifications")}
+
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >
-                {avatarUrl && !avatarFailed ? (
-                  <img
-                    className="h-full w-full object-cover"
-                    src={avatarUrl}
-                    alt={getDisplayName(userData)}
-                    onError={() => setAvatarFailed(true)}
-                  />
-                ) : (
-                  getUserInitial(userData)
-                )}
+                <MdOutlineNotificationsNone size={18} />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
               </button>
-            </div>
-            <div
-              className={`absolute right-0 w-64 mt-3 bg-white text-gray-900 border border-[var(--admin-line)] shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
-              ref={dropDownRef}
-            >
-              <div className="px-4 py-3 bg-[var(--admin-shell)] border-b border-[var(--admin-line)] flex items-center gap-3">
+            </Tooltip>
+            {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
+              <select
+                className="hidden min-h-[36px] max-w-[220px] rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-medium text-[var(--admin-ink)] outline-none focus:border-[var(--admin-blue)] md:block"
+                value={selectedOrganizationId}
+                onChange={handleOrganizationChange}
+                title="Organization"
+              >
+                {organizations.map((organization) => (
+                  <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
+                    {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}
+                  </option>
+                ))}
+                {incompleteOrgs.length > 0 && (
+                  <optgroup label="── Incomplete Setup ──">
+                    {incompleteOrgs.map((organization) => (
+                      <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
+                        {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId} [Setup Pending]
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            )}
+            <div className="relative">
+              <div className="flex items-center gap-2.5">
+                <div className="hidden md:block text-right leading-tight">
+                  <p className="max-w-44 text-[12px] font-bold font-inter text-[var(--admin-ink)] truncate">
+                    {getDisplayName(userData)}
+                  </p>
+                  <p className="truncate text-[10px] font-inter mt-[1px] font-medium text-[var(--admin-muted)]">
+                    {userData?.email || userData?.role || "Admin"}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={toggleLogoutModal}
-                  className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[var(--admin-blue-soft)] text-base font-bold text-[var(--admin-navy)] transition hover:ring-2 hover:ring-[var(--admin-gold)]/30"
-                  aria-label="Close profile menu"
+                  className="flex h-9 w-9 overflow-hidden items-center justify-center rounded-full border border-[var(--admin-line)] bg-[var(--admin-blue-soft)] text-sm font-bold text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)]"
+                  aria-label="Open profile menu"
                 >
                   {avatarUrl && !avatarFailed ? (
                     <img
@@ -375,92 +357,115 @@ export default function Header({
                     getUserInitial(userData)
                   )}
                 </button>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    Hi, {getDisplayName(userData)}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate text-wrap">
-                    {userData?.email}
-                  </p>
-                </div>
               </div>
-              {userData?.role_id !== 9 && (
-                <div className="py-1 text-xs px-4">
-                  <Link
-                    to="/app/profile"
-                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+              <div
+                className={`absolute right-0 w-64 mt-3 bg-white text-gray-900 border border-[var(--admin-line)] shadow-xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${openModel ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"}`}
+                ref={dropDownRef}
+              >
+                <div className="px-4 py-3 bg-[var(--admin-shell)] border-b border-[var(--admin-line)] flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleLogoutModal}
+                    className="flex h-11 w-11 flex-shrink-0 overflow-hidden items-center justify-center rounded-full bg-[var(--admin-blue-soft)] text-base font-bold text-[var(--admin-navy)] transition hover:ring-2 hover:ring-[var(--admin-gold)]/30"
+                    aria-label="Close profile menu"
                   >
-                    <FiUser className="mr-3" />
-                    Profile
-                  </Link>
-                  <Link
-                    to={`/app/changePassword`}
-                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
-                  >
-                    <FiKey className="mr-3" />
-                    Change Password
-                  </Link>
+                    {avatarUrl && !avatarFailed ? (
+                      <img
+                        className="h-full w-full object-cover"
+                        src={avatarUrl}
+                        alt={getDisplayName(userData)}
+                        onError={() => setAvatarFailed(true)}
+                      />
+                    ) : (
+                      getUserInitial(userData)
+                    )}
+                  </button>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      Hi, {getDisplayName(userData)}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate text-wrap">
+                      {userData?.email}
+                    </p>
+                  </div>
                 </div>
-              )}
+                {userData?.role_id !== 9 && (
+                  <div className="py-1 text-xs px-4">
+                    <Link
+                      to="/app/profile"
+                      className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                    >
+                      <FiUser className="mr-3" />
+                      Profile
+                    </Link>
+                    <Link
+                      to={`/app/changePassword`}
+                      className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                    >
+                      <FiKey className="mr-3" />
+                      Change Password
+                    </Link>
+                  </div>
+                )}
 
-              <div className="py-1 border-t border-gray-100 text-xs px-4">
-                <p
-                  className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-red-500 cursor-pointer"
-                  onClick={handleLogout}
-                >
-                  <IoLogOutOutline className="mr-3" />
-                  Logout
-                </p>
+                <div className="py-1 border-t border-gray-100 text-xs px-4">
+                  <p
+                    className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-red-500 cursor-pointer"
+                    onClick={handleLogout}
+                  >
+                    <IoLogOutOutline className="mr-3" />
+                    Logout
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Incomplete org setup popup */}
-    {showIncompletePopup && pendingIncompleteOrg && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-        onClick={() => setShowIncompletePopup(false)}
-      >
+      {/* Incomplete org setup popup */}
+      {showIncompletePopup && pendingIncompleteOrg && (
         <div
-          className="w-[360px] max-w-[90vw] rounded-xl bg-white p-6 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowIncompletePopup(false)}
         >
-          <div className="mb-1 flex items-center gap-2 text-amber-500">
-            <MdInfoOutline className="text-xl" />
-            <h3 className="text-sm font-bold text-[var(--admin-ink)]">Setup Incomplete</h3>
-          </div>
-          <p className="mt-2 text-xs text-[var(--admin-muted)]">
-            <strong className="font-semibold text-[var(--admin-ink)]">
-              {pendingIncompleteOrg.storeDisplayName || pendingIncompleteOrg.legalBusinessName || "This organization"}
-            </strong>{" "}
-            has pending setup. Complete the onboarding to activate this organization.
-          </p>
-          <div className="mt-5 flex gap-3">
-            <button
-              type="button"
-              className="flex-1 rounded-md bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--admin-navy)] focus:outline-none"
-              onClick={() => {
-                setShowIncompletePopup(false);
-                const organizationId = pendingIncompleteOrg.id || pendingIncompleteOrg.organizationId || "";
-                navigate(`/seller/onboarding${organizationId ? `?organizationId=${organizationId}` : ""}`);
-              }}
-            >
-              Complete Setup
-            </button>
-            <button
-              type="button"
-              className="flex-1 rounded-md border border-[var(--admin-line)] px-4 py-2 text-xs font-semibold text-[var(--admin-ink)] hover:bg-[var(--admin-shell)] focus:outline-none"
-              onClick={() => setShowIncompletePopup(false)}
-            >
-              Not Now
-            </button>
+          <div
+            className="w-[360px] max-w-[90vw] rounded-xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-1 flex items-center gap-2 text-amber-500">
+              <MdInfoOutline className="text-xl" />
+              <h3 className="text-sm font-bold text-[var(--admin-ink)]">Setup Incomplete</h3>
+            </div>
+            <p className="mt-2 text-xs text-[var(--admin-muted)]">
+              <strong className="font-semibold text-[var(--admin-ink)]">
+                {pendingIncompleteOrg.storeDisplayName || pendingIncompleteOrg.legalBusinessName || "This organization"}
+              </strong>{" "}
+              has pending setup. Complete the onboarding to activate this organization.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                className="flex-1 rounded-md bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--admin-navy)] focus:outline-none"
+                onClick={() => {
+                  setShowIncompletePopup(false);
+                  const organizationId = pendingIncompleteOrg.id || pendingIncompleteOrg.organizationId || "";
+                  navigate(`/seller/onboarding${organizationId ? `?organizationId=${organizationId}` : ""}`);
+                }}
+              >
+                Complete Setup
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-md border border-[var(--admin-line)] px-4 py-2 text-xs font-semibold text-[var(--admin-ink)] hover:bg-[var(--admin-shell)] focus:outline-none"
+                onClick={() => setShowIncompletePopup(false)}
+              >
+                Not Now
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 }

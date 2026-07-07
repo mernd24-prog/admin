@@ -81,16 +81,18 @@ const STATUS_COLOR = {
 };
 
 const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
+const isLikelyEmail = (value = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
 const getBuyerName = (row = {}) => {
-  const name =
-    row.buyerName ||
-    row.buyer?.displayName ||
-    row.buyer?.fullName ||
-    row.buyer?.name ||
-    row.buyer?.email ||
-    "";
-  if (name && !isLikelyId(name)) return name;
+  const names = [
+    row.buyerName,
+    row.buyer?.displayName,
+    row.buyer?.fullName,
+    row.buyer?.name,
+    row.buyer?.email || "",
+  ];
+  const name = names.find((value) => value && !isLikelyId(value) && !isLikelyEmail(value));
+  if (name) return name;
   return "Verified Buyer";
 };
 

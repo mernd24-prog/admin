@@ -204,7 +204,7 @@ export const hasModuleAccess = (moduleCode) => {
     "admin-users": ["admin-users", "admin_users", "sub-admins", "sub_admins"],
     rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
     tax: ["tax", "invoices-taxation", "tax-invoices", "credit-notes", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule", "tax-documents", "gst"],
-    "commerce-settings": ["commerce-settings", "commerce-settings-menu", "platform-fee-config", "commission-rules", "discount-coupons", "cod-config", "subscription-plans"],
+    "commerce-settings": ["commerce-settings", "commerce-settings-menu", "platform-commerce-settings", "seller-commerce-config", "commerce-templates", "seller-tiers", "platform-fee-config", "commission-rules", "discount-coupons", "cod-config", "subscription-plans"],
     locations: ["locations", "country", "countries", "state", "states", "city", "cities", "zipcode", "zip-code", "zip-codes", "pincode", "pin-code"],
     countries: ["country", "countries", "locations"],
     states: ["state", "states", "locations"],

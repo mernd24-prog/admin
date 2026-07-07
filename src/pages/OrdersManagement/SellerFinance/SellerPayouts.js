@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdRefresh, MdVisibility } from "react-icons/md";
+import { MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -10,10 +10,12 @@ import {
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
-import { getAdminSellerPayouts, getSellerPayouts } from "../../../Redux/sellerCommissionsSlice";
+import { getAdminSellerPayouts, getMySellerSettlements, getSellerPayouts } from "../../../Redux/sellerCommissionsSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { downloadApiFile } from "../../../_helpers/downloadApi";
+import { ENDPOINTS } from "../../../_helpers/endpoints";
 
 const STATUSES = ["pending", "processing", "on_hold", "completed", "failed", "cancelled"];
 const FILTER_FIELDS = [
@@ -49,11 +51,13 @@ const SellerPayouts = () => {
   const { isSeller } = usePermission();
   const finance = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(isSeller ? finance.myPayoutsData : finance.adminPayoutsData);
+  const settlementsPayload = unwrapList(finance.mySettlementsData);
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "created_at", defaultSortDir: "desc" });
   const { toQueryParams } = list;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
+  const [downloading, setDownloading] = useState(false);
   const filterFields = useMemo(
     () => isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS,
     [isSeller],
@@ -64,8 +68,12 @@ const SellerPayouts = () => {
       setLoading(true);
       setError("");
       const params = toQueryParams();
+      const query = { ...params, offset: (params.page - 1) * params.limit };
       const action = isSeller ? getSellerPayouts : getAdminSellerPayouts;
-      await dispatch(action({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(action(query)).unwrap();
+      if (isSeller) {
+        await dispatch(getMySellerSettlements(query)).unwrap();
+      }
     } catch (requestError) {
       const message = requestError?.message || requestError || "Failed to load seller payouts";
       setError(message);
@@ -76,6 +84,18 @@ const SellerPayouts = () => {
   }, [dispatch, isSeller, toQueryParams]);
 
   useEffect(() => { fetchPayouts(); }, [fetchPayouts]);
+
+  const downloadFile = useCallback(async (endpoint, params, filename) => {
+    try {
+      setDownloading(true);
+      await downloadApiFile(endpoint, params, { filename, format: params?.format });
+      toast.success("Download started");
+    } catch (downloadError) {
+      toast.error(downloadError?.message || "Unable to download file");
+    } finally {
+      setDownloading(false);
+    }
+  }, []);
 
   const columns = useMemo(() => {
     const base = [
@@ -101,7 +121,23 @@ const SellerPayouts = () => {
         title="Seller Payouts"
         subtitle={isSeller ? "See how every payout was calculated and when it was paid." : "Calculated seller payouts. Use Payout Operations to approve or complete them."}
         breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Seller Payouts" }]}
-        actions={<button type="button" onClick={fetchPayouts} className="admin-btn-secondary"><MdRefresh size={16} /> Refresh</button>}
+        actions={(
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => downloadFile(
+                isSeller ? ENDPOINTS.payouts.myPayoutsExport : ENDPOINTS.payouts.sellerPayoutsExport,
+                { format: "csv" },
+                "seller-payouts.csv",
+              )}
+              disabled={downloading}
+              className="admin-btn-secondary"
+            >
+              <MdDownload size={16} /> Export
+            </button>
+            <button type="button" onClick={fetchPayouts} className="admin-btn-secondary"><MdRefresh size={16} /> Refresh</button>
+          </div>
+        )}
       />
 
       <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
@@ -126,6 +162,73 @@ const SellerPayouts = () => {
         searchPlaceholder="Search seller or payment reference"
         emptyText="No calculated payouts found"
       />
+
+      {isSeller && (
+        <section className="rounded-lg border border-gray-200 bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Settlement Statements</h2>
+              <p className="text-xs text-gray-500">Download the payout slip generated from commissions, payouts, and settlements.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => downloadFile(ENDPOINTS.payouts.mySettlementsExport, { format: "csv" }, "seller-settlements.csv")}
+              disabled={downloading}
+              className="admin-btn-secondary"
+            >
+              <MdDownload size={16} /> Export
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100 text-sm">
+              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">Settlement</th>
+                  <th className="px-4 py-3">Payout</th>
+                  <th className="px-4 py-3">Gross</th>
+                  <th className="px-4 py-3">Commission</th>
+                  <th className="px-4 py-3">GST</th>
+                  <th className="px-4 py-3">Net</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Statement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {settlementsPayload.list.length ? settlementsPayload.list.map((row) => (
+                  <tr key={row.id}>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{String(row.id || "").slice(0, 8) || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{money(valueOf(row, "gross_amount", "grossAmount"), row.currency)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(valueOf(row, "net_amount", "netAmount"), row.currency)}</td>
+                    <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status || "pending"} dot /></td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <button
+                        type="button"
+                        title="Download statement"
+                        onClick={() => downloadFile(
+                          ENDPOINTS.payouts.mySettlementStatement(row.id),
+                          { format: "pdf" },
+                          `settlement-${row.id}.pdf`,
+                        )}
+                        disabled={downloading}
+                        className="admin-btn-secondary !px-2 !py-1"
+                      >
+                        <MdDownload size={15} /> PDF
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-6 text-center text-gray-500">No settlement statements found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <DefaultModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} title="Payout Calculation">
         {detail && (

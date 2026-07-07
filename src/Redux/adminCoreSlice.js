@@ -47,6 +47,7 @@ const initialState = {
   createAdminPayoutData: {},
   taxReportsData: {},
   taxInvoicesData: {},
+  taxInvoiceData: {},
   taxCreditNotesData: {},
   marketplaceInvoicesData: {},
   createTaxInvoiceData: {},
@@ -573,6 +574,7 @@ export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoic
 export const getMarketplaceInvoices = createApiThunkPrivate("adminCore/getMarketplaceInvoices", (payload) => ENDPOINTS.tax.marketplaceInvoices(payload.orderId || payload.id), "GET", true, { transformParams: pickQuery(["format"]) });
 export const createMarketplaceInvoices = createApiThunkPrivate("adminCore/createMarketplaceInvoices", (payload) => ENDPOINTS.tax.marketplaceInvoices(payload.orderId || payload.id), "POST", false, { transformBody: noBody });
 export const getTaxInvoices = createApiThunkPrivate("adminCore/getTaxInvoices", ENDPOINTS.tax.invoices, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "organizationId", "buyerId", "state", "status", "invoiceType", "referenceType", "referenceId", "hsnCode", "search", "sortBy", "sortDir", "limit", "offset"]) });
+export const getTaxInvoice = createApiThunkPrivate("adminCore/getTaxInvoice", (payload) => ENDPOINTS.tax.invoiceDetail(payload.invoiceId || payload.id), "GET");
 export const getTaxCreditNotes = createApiThunkPrivate("adminCore/getTaxCreditNotes", ENDPOINTS.tax.creditNotes, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "orderId", "buyerId", "sellerId", "organizationId", "referenceType", "referenceId", "status", "search", "sortBy", "sortDir", "limit", "offset"]) });
 export const createTaxCreditNote = createApiThunkPrivate("adminCore/createTaxCreditNote", ENDPOINTS.tax.creditNotes, "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["id"]) });
 export const dispatchTaxInvoice = createApiThunkPrivate("adminCore/dispatchTaxInvoice", (payload) => ENDPOINTS.tax.invoiceDispatch(payload.invoiceId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["channel", "recipient", "note"]) });
@@ -760,6 +762,7 @@ const adminCoreSlice = createSlice({
       [getWalletTransactions, "walletTransactionsData"],
       [getTaxReports, "taxReportsData"],
       [getTaxInvoices, "taxInvoicesData"],
+      [getTaxInvoice, "taxInvoiceData"],
       [getTaxCreditNotes, "taxCreditNotesData"],
       [getMarketplaceInvoices, "marketplaceInvoicesData"],
       [createTaxInvoice, "createTaxInvoiceData"],

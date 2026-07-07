@@ -263,6 +263,9 @@ const Cancellations = React.lazy(
 const TaxInvoices = React.lazy(
   () => import("../../pages/Tax/TaxInvoices"),
 );
+const TaxInvoiceDetail = React.lazy(
+  () => import("../../pages/Tax/TaxInvoiceDetail"),
+);
 const CreditNotes = React.lazy(
   () => import("../../pages/Tax/CreditNotes"),
 );
@@ -588,6 +591,10 @@ function Layout() {
       { path: "/commission-rules", render: () => <CommissionRules /> },
       { path: "/platform-fee-config", render: () => <PlatformFeeConfig /> },
       { path: "/commerce-settings", render: () => <CommerceSettings /> },
+      { path: "/platform-commerce-settings", render: () => <CommerceSettings /> },
+      { path: "/seller-commerce-config", render: () => <CommerceSettings /> },
+      { path: "/commerce-templates", render: () => <CommerceSettings /> },
+      { path: "/seller-tiers", render: () => <CommerceSettings /> },
       { path: "/returns", render: () => <Returns /> },
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },
@@ -679,6 +686,7 @@ function Layout() {
       { path: "/collections", render: () => <CollectionsPage /> },
       { path: "/badges", render: () => <BadgesPage /> },
       { path: "/tax-invoices", render: () => <TaxInvoices /> },
+      { path: "/tax-invoices/:invoiceId", permissionPath: "/tax-invoices", render: () => <TaxInvoiceDetail /> },
       { path: "/credit-notes", render: () => <CreditNotes /> },
       { path: "/subscription-plans", render: () => <SubscriptionPlans /> },
       { path: "/cod-config", render: () => <CodConfig /> },
