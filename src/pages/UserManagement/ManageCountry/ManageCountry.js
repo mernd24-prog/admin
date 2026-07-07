@@ -80,6 +80,8 @@ const ManageCountry = () => {
   const [errors,    setErrors]    = useState({});
   const [isEditMode,setIsEditMode]= useState(false);
   const [isFormOpen,setIsFormOpen]= useState(false);
+  const [submitting,setSubmitting]= useState(false);
+  const [statusLoadingId, setStatusLoadingId] = useState("");
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchCountries = useCallback(() => {
@@ -111,6 +113,7 @@ const ManageCountry = () => {
     row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
 
   const openAdd = () => {
+    if (submitting || statusLoadingId) return;
     setFormData(INIT_FORM);
     setErrors({});
     setIsEditMode(false);
@@ -118,13 +121,15 @@ const ManageCountry = () => {
   };
 
   const openEdit = (country) => {
+    if (submitting || statusLoadingId) return;
     setFormData({ name: country.name, code: country.code, dialCode: country.dialCode, _id: country._id });
     setErrors({});
     setIsEditMode(true);
     setIsFormOpen(true);
   };
 
-  const closeForm = () => {
+  const closeForm = (force = false) => {
+    if (submitting && !force) return;
     setIsFormOpen(false);
     setFormData(INIT_FORM);
     setErrors({});
@@ -133,25 +138,35 @@ const ManageCountry = () => {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (submitting) return;
     const validationErrors = validateCountry(formData);
     if (Object.keys(validationErrors).length) { setErrors(validationErrors); return; }
 
-    setLoading(true);
+    setSubmitting(true);
     dispatch(isEditMode ? editCountry(formData) : create(formData))
       .unwrap()
-      .then(() => { fetchCountries(); closeForm(); })
+      .then((res) => {
+        toast.success(res?.message || `Country ${isEditMode ? "updated" : "created"} successfully.`);
+        fetchCountries();
+        closeForm(true);
+      })
       .catch((err) => { toast.error(err?.message || "Failed to save country."); })
-      .finally(() => setLoading(false));
+      .finally(() => setSubmitting(false));
   };
 
   // ── Toggle status ──────────────────────────────────────────────────────────
   const handleToggle = async (country) => {
+    const id = country?._id;
+    if (!id || statusLoadingId) return;
     try {
+      setStatusLoadingId(id);
       const res = await dispatch(enableDisableCountry({ _id: [country._id], isDisable: isActive(country) })).unwrap();
       toast.success(res?.message || "Status updated.");
       fetchCountries();
     } catch (err) {
       toast.error(err?.message || "Failed to update status.");
+    } finally {
+      setStatusLoadingId("");
     }
   };
 
@@ -178,7 +193,13 @@ const ManageCountry = () => {
       ...col,
       render: (_, row) => (
         <div className="flex items-center gap-2">
-          <ToggleButton isToggle={isActive(row)} handleClick={() => handleToggle(row)} requiredModule={MODULE} />
+          <ToggleButton
+            isToggle={isActive(row)}
+            handleClick={() => handleToggle(row)}
+            requiredModule={MODULE}
+            loading={statusLoadingId === row._id}
+            disabled={Boolean(statusLoadingId) || submitting}
+          />
           <ActionButtons
             onEdit={() => openEdit(row)}
             showLinkButton={false}
@@ -203,7 +224,11 @@ const ManageCountry = () => {
         ]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
-            <button onClick={openAdd} className="admin-btn-primary">
+            <button
+              onClick={openAdd}
+              disabled={submitting || Boolean(statusLoadingId)}
+              className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
               + Add Country
             </button>
           </PermissionGuard>
@@ -270,13 +295,15 @@ const ManageCountry = () => {
         isOpen={isFormOpen}
         onClose={closeForm}
         onSubmit={handleSubmit}
+        loading={submitting}
+        submitButtonText={submitting ? "Saving..." : isEditMode ? "Update Country" : "Create Country"}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3">
           <div className="col-span-2">
-            <Input labelName="Name" type="text" name="name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} error={errors.name} required maxLength={25} />
+            <Input labelName="Name" type="text" name="name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} error={errors.name} required maxLength={25} disabled={submitting} />
           </div>
-          <Input labelName="Code" type="text" name="code" value={formData.code} onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))} error={errors.code} required maxLength={5} />
-          <Input labelName="Dial Code" type="text" name="dialCode" value={formData.dialCode} onChange={(e) => setFormData((p) => ({ ...p, dialCode: e.target.value }))} error={errors.dialCode} required maxLength={10} />
+          <Input labelName="Code" type="text" name="code" value={formData.code} onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))} error={errors.code} required maxLength={5} disabled={submitting} />
+          <Input labelName="Dial Code" type="text" name="dialCode" value={formData.dialCode} onChange={(e) => setFormData((p) => ({ ...p, dialCode: e.target.value }))} error={errors.dialCode} required maxLength={10} disabled={submitting} />
         </div>
       </DefaultModal>
     </div>

@@ -61,6 +61,8 @@ const ManageCity = () => {
   const [errors,    setErrors]    = useState({});
   const [isEditMode,setIsEditMode]= useState(false);
   const [isFormOpen,setIsFormOpen]= useState(false);
+  const [submitting,setSubmitting]= useState(false);
+  const [statusLoadingId, setStatusLoadingId] = useState("");
 
   // States filtered by selected country in the form
   const formStateOptions = formData.country_code
@@ -114,23 +116,32 @@ const ManageCity = () => {
 
   const isActive = (row) => row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
 
-  const openAdd  = () => { setFormData(INIT_FORM); setErrors({}); setIsEditMode(false); setIsFormOpen(true); };
+  const openAdd  = () => {
+    if (submitting || statusLoadingId) return;
+    setFormData(INIT_FORM); setErrors({}); setIsEditMode(false); setIsFormOpen(true);
+  };
   const openEdit = (city) => {
+    if (submitting || statusLoadingId) return;
     const stateId   = city.stateId?._id || city.state_code?._id;
     const matchSt   = allStateOptions.find((s) => String(s.value) === String(stateId));
     const countryId = city.countryId?._id || city.country_code?._id || city.stateId?.countryId?._id || matchSt?.countryId || null;
     setFormData({ name: city.name, country_code: countryId, state_code: stateId, _id: city._id });
     setErrors({}); setIsEditMode(true); setIsFormOpen(true);
   };
-  const closeForm = () => { setIsFormOpen(false); setFormData(INIT_FORM); setErrors({}); };
+  const closeForm = (force = false) => {
+    if (submitting && !force) return;
+    setIsFormOpen(false); setFormData(INIT_FORM); setErrors({});
+  };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     const errs = validateCityForm(formData);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     const payload = { name: formData.name.trim(), country_code: formData.country_code, state_code: formData.state_code };
     try {
+      setSubmitting(true);
       if (isEditMode) {
         await dispatch(edit({ ...payload, _id: formData._id })).unwrap();
         toast.success("City updated successfully.");
@@ -138,21 +149,27 @@ const ManageCity = () => {
         await dispatch(create(payload)).unwrap();
         toast.success("City created successfully.");
       }
-      closeForm();
+      closeForm(true);
       fetchCities();
     } catch (err) {
       toast.error(err?.message || "Failed to save city.");
       if (err?.errors) setErrors(err.errors);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   const handleToggle = async (city) => {
+    const id = city?._id;
+    if (!id || statusLoadingId) return;
     try {
+      setStatusLoadingId(id);
       const res = await dispatch(enableDisableCity({ _id: [city._id], isDisable: isActive(city) })).unwrap();
       toast.success(res?.message || "Status updated.");
       fetchCities();
-    } catch (err) { toast.error(err?.message || "Failed."); }
+    } catch (err) { toast.error(err?.message || "Failed to update status."); }
+    finally { setStatusLoadingId(""); }
   };
 
   // ── Bulk ───────────────────────────────────────────────────────────────────
@@ -174,7 +191,13 @@ const ManageCity = () => {
       ...col,
       render: (_, row) => (
         <div className="flex items-center gap-2">
-          <ToggleButton isToggle={isActive(row)} handleClick={() => handleToggle(row)} requiredModule={MODULE} />
+          <ToggleButton
+            isToggle={isActive(row)}
+            handleClick={() => handleToggle(row)}
+            requiredModule={MODULE}
+            loading={statusLoadingId === row._id}
+            disabled={Boolean(statusLoadingId) || submitting}
+          />
           <ActionButtons onEdit={() => openEdit(row)} showLinkButton={false} showDeleteButton={false} requiredModule={MODULE} />
         </div>
       ),
@@ -189,7 +212,13 @@ const ManageCity = () => {
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "Cities" }]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
-            <button onClick={openAdd} className="admin-btn-primary">+ Add City</button>
+            <button
+              onClick={openAdd}
+              disabled={submitting || Boolean(statusLoadingId)}
+              className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + Add City
+            </button>
           </PermissionGuard>
         }
       />
@@ -243,11 +272,13 @@ const ManageCity = () => {
         isOpen={isFormOpen}
         onClose={closeForm}
         onSubmit={handleSubmit}
+        loading={submitting}
+        submitButtonText={submitting ? "Saving..." : isEditMode ? "Update City" : "Create City"}
       >
         <div className="grid grid-cols-1 gap-4 p-3">
           <Input labelName="Name" type="text" name="name" value={formData.name}
             onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-            error={errors.name} required maxLength={100} />
+            error={errors.name} required maxLength={100} disabled={submitting} />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Country <span className="text-red-500">*</span></label>
@@ -256,6 +287,7 @@ const ManageCity = () => {
               value={countryOptions.find((o) => o.value === formData.country_code) || null}
               onChange={(opt) => setFormData((p) => ({ ...p, country_code: opt?.value || null, state_code: null }))}
               isSearchable placeholder="Select Country"
+              isDisabled={submitting}
             />
             {errors.country_code && <p className="mt-1 text-xs text-red-500">{errors.country_code}</p>}
           </div>
@@ -267,7 +299,7 @@ const ManageCity = () => {
               value={formStateOptions.find((o) => o.value === formData.state_code) || null}
               onChange={(opt) => setFormData((p) => ({ ...p, state_code: opt?.value || null }))}
               isSearchable placeholder="Select State"
-              isDisabled={!formData.country_code}
+              isDisabled={!formData.country_code || submitting}
             />
             {errors.state_code && <p className="mt-1 text-xs text-red-500">{errors.state_code}</p>}
           </div>

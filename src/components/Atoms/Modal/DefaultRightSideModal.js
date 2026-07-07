@@ -72,6 +72,7 @@ const DefaultModal = ({
                         <TransparentButton 
                             onClick={onClose} 
                             label={closeButtonText} 
+                            isDisable={loading}
                             className="flex-1 sm:flex-none"
                         />
                         <Button 
