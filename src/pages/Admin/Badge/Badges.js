@@ -454,14 +454,14 @@ const Badges = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => fetchBadges()}
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+
               title="Refresh"
             >
               <MdRefresh size={18} />
             </button>
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+
             >
               <MdAdd size={16} />
               New Badge

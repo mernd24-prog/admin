@@ -900,11 +900,11 @@ const DealManagement = () => {
         subtitle="Convert existing products into temporary deals without changing Product Master pricing"
         actions={
           <>
-            <button onClick={fetchDeals} className="admin-btn-secondary">
+            <button onClick={fetchDeals}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="deals" action={ACTIONS.CREATE} hide>
-              <button onClick={() => openForm(isSellerPanel() ? "seller_request" : "admin_direct")} className="admin-btn-primary">
+              <button onClick={() => openForm(isSellerPanel() ? "seller_request" : "admin_direct")}>
                 <MdAdd size={17} /> {isSellerPanel() ? "Request Deal" : "Create Deal"}
               </button>
             </PermissionGuard>

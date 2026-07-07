@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdCheckCircle, MdRefresh, MdVisibility } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
@@ -50,7 +49,7 @@ const DealPayouts = () => {
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateForm, setGenerateForm] = useState({ fromDate: "", toDate: "", sellerId: "" });
@@ -151,15 +150,15 @@ const DealPayouts = () => {
         subtitle="Generate and process deal seller payouts"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchPayouts} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"><MdRefresh size={16} /> Refresh</button>
+            <button onClick={fetchPayouts}><MdRefresh size={16} /> Refresh</button>
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
-              <button onClick={() => setShowGenerate(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"><MdAdd size={16} /> Generate Payouts</button>
+              <button onClick={() => setShowGenerate(true)}><MdAdd size={16} /> Generate Payouts</button>
             </PermissionGuard>
           </div>
         }
       />
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
-      {loading ? <Loader /> : <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No deal payouts found" />}
+      <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} loading={loading} emptyMessage="No deal payouts found" />
 
       {/* Detail */}
       <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Payout Detail">

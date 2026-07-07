@@ -4,7 +4,6 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh, MdVisibility } from "react-icons/md";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
@@ -42,7 +41,7 @@ const FraudCases = () => {
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [reviewConfirm, setReviewConfirm] = useState({ open: false, item: null, decision: "approve", notes: "" });
   const [reviewing, setReviewing] = useState(false);
@@ -117,15 +116,13 @@ const FraudCases = () => {
         subtitle="Monitor payment chargebacks and fraud incidents"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Fraud Cases" }]}
         actions={
-          <button onClick={fetchCases} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button onClick={fetchCases}>
             <MdRefresh size={16} /> Refresh
           </button>
         }
       />
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
-      {loading ? <Loader /> : (
-        <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No fraud cases found" />
-      )}
+      <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} loading={loading} emptyMessage="No fraud cases found" />
 
       <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Fraud Case Detail">
         {detail && (

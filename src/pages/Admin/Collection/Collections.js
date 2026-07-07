@@ -11,7 +11,7 @@ const Collections = () => {
         actions={
           <button
             disabled
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+
           >
             <MdAdd size={16} />
             New Collection

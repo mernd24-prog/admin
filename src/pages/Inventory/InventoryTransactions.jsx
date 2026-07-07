@@ -306,7 +306,7 @@ const InventoryTransactions = () => {
             <button
               type="button"
               onClick={() => setCleanupOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-[var(--admin-navy)] text-sm font-semibold rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+
             >
               <MdOutlineAutorenew size={16} /> Release Expired
             </button>

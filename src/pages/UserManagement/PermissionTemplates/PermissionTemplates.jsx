@@ -359,13 +359,13 @@ const PermissionTemplates = () => {
             <button
               onClick={fetch}
               title="Refresh"
-              className="p-2 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+
             >
               <MdRefresh size={18} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={() => setModal(null)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#323580] transition-colors shadow-sm"
+
             >
               <MdAdd size={16} />
               New Template

@@ -153,7 +153,7 @@ const AdminQueries = () => {
         actions={
           <button
             type="button"
-            className="button-secondary inline-flex items-center gap-2"
+
             onClick={fetchQueries}
             disabled={loading}
           >

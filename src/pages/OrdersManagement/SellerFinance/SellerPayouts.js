@@ -131,11 +131,11 @@ const SellerPayouts = () => {
                 "seller-payouts.csv",
               )}
               disabled={downloading}
-              className="admin-btn-secondary"
+              
             >
               <MdDownload size={16} /> Export
             </button>
-            <button type="button" onClick={fetchPayouts} className="admin-btn-secondary"><MdRefresh size={16} /> Refresh</button>
+            <button type="button" onClick={fetchPayouts} ><MdRefresh size={16} /> Refresh</button>
           </div>
         )}
       />

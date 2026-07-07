@@ -150,11 +150,11 @@ const FeatureFlags = () => {
         subtitle="Toggle platform features and control rollouts"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchFlags} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchFlags}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
-              <button onClick={openCreate} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={openCreate}>
                 <MdAdd size={16} /> New Flag
               </button>
             </PermissionGuard>

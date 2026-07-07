@@ -16,6 +16,7 @@ import ProductReviewModal from "../../../../components/Product/ProductReviewModa
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { getProductImages } from "../../../../_helpers/productMedia";
+import { formatLabel } from "../../../../utils/formatters";
 
 const formatDisplayValue = (value) => {
   if (React.isValidElement(value)) return value;
@@ -31,7 +32,7 @@ const formatDisplayValue = (value) => {
 const Row = ({ label, value }) => (
   <div className="border-b border-gray-100 py-3">
     <p className="text-xs uppercase text-gray-400">{label}</p>
-    <p className="text-sm text-gray-900 break-words">{formatDisplayValue(value)}</p>
+    <p className="text-sm text-gray-900 break-words">{formatLabel(formatDisplayValue(value))}</p>
   </div>
 );
 
@@ -520,20 +521,20 @@ const ProductAdminDetails = () => {
                 <tbody>
                   {statusHistory.map((entry, index) => (
                     <tr key={entry._id || index} className="border-b hover:bg-gray-50">
-                      <td className="p-3">{entry.fromStatus || "N/A"}</td>
-                      <td className="p-3">{entry.toStatus || "N/A"}</td>
+                      <td className="p-3">{formatLabel(entry.fromStatus, "N/A") }</td>
+                      <td className="p-3">{formatLabel(entry.toStatus, "N/A") }</td>
                       <td className="p-3">
                         {[entry.fromRevisionStatus, entry.toRevisionStatus]
                           .filter(Boolean)
                           .join(" -> ") || "N/A"}
                       </td>
-                      <td className="p-3 max-w-xs break-words">{entry.reason || "N/A"}</td>
+                      <td className="p-3 max-w-xs break-words">{formatLabel(entry.reason , "N/A")}</td>
                       <td className="p-3">
                         {Array.isArray(entry.changedFields) && entry.changedFields.length
                           ? entry.changedFields.join(", ")
                           : "N/A"}
                       </td>
-                      <td className="p-3">{entry.actorRole || entry.actor || entry.actorId || "N/A"}</td>
+                      <td className="p-3">{formatLabel(entry.actorRole) || formatLabel(entry.actor) || formatLabel(entry.actorId , "N/A")}</td>
                       <td className="p-3">
                         {entry.createdAt || entry.at
                           ? new Date(entry.createdAt || entry.at).toLocaleString()
@@ -556,7 +557,7 @@ const ProductAdminDetails = () => {
               {Object.entries(attributes).map(([key, value]) => (
                 <Row
                   key={key}
-                  label={key}
+                  label={formatLabel(key)}
                   value={
                     Array.isArray(value)
                       ? value.join(", ")

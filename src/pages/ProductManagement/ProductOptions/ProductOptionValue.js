@@ -277,14 +277,14 @@ export default function ProductOptionValue() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate("/app/product-options")}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+
             >
               <MdArrowBack size={16} /> Option Masters
             </button>
             <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
               <button
                 onClick={openAdd}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+
               >
                 <MdAdd size={16} /> Add Value
               </button>

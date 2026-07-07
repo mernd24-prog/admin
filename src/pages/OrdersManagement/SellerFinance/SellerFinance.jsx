@@ -372,7 +372,7 @@ const SellerFinance = () => {
           { label: "Seller Finance" },
         ]}
         actions={(
-          <button type="button" className="admin-btn-secondary" onClick={loadFinance} disabled={loading}>
+          <button type="button" onClick={loadFinance} disabled={loading}>
             <MdRefresh size={17} /> Refresh
           </button>
         )}

@@ -1,7 +1,29 @@
 import React from 'react';
 import { MdChevronRight, MdArrowBack } from 'react-icons/md';
 import { Link, useNavigate } from 'react-router-dom';
+import { twMerge } from 'tailwind-merge';
 import StatusBadge from './StatusBadge';
+
+const HEADER_ACTION_CLASS =
+  'flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors';
+
+const applyHeaderActionClass = (children) => React.Children.map(children, (child) => {
+  if (!React.isValidElement(child)) return child;
+
+  if (child.type === 'button' || child.type === 'a' || child.type === Link) {
+    return React.cloneElement(child, {
+      className: twMerge(HEADER_ACTION_CLASS, child.props.className),
+    });
+  }
+
+  if (child.props?.children) {
+    return React.cloneElement(child, {
+      children: applyHeaderActionClass(child.props.children),
+    });
+  }
+
+  return child;
+});
 
 /**
  * PageHeader
@@ -111,8 +133,8 @@ const PageHeader = ({
 
       {/* Action buttons */}
       {actions && (
-        <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-          {actions}
+        <div className="admin-page-header-actions flex items-center gap-2 flex-wrap flex-shrink-0">
+          {applyHeaderActionClass(actions)}
         </div>
       )}
     </div>

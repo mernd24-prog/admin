@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import {
   DataTable,
   FilterBar,
@@ -146,7 +145,7 @@ const WalletTransactions = () => {
   });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchTransactions = useCallback(async () => {
@@ -175,7 +174,7 @@ const WalletTransactions = () => {
 
   return (
     <PermissionGuard module="wallets" action={ACTIONS.VIEW}>
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="space-y-6">
         <PageHeader
           title="Wallet Transactions"
           subtitle="Platform-wide wallet credits, debits, cashbacks, refunds, and adjustments"
@@ -189,7 +188,7 @@ const WalletTransactions = () => {
               type="button"
               onClick={fetchTransactions}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+
             >
               <MdRefresh size={16} /> Refresh
             </button>
@@ -209,12 +208,10 @@ const WalletTransactions = () => {
           </div>
         )}
 
-        {loading ? (
-          <Loader />
-        ) : (
-          <DataTable
+        <DataTable
             columns={COLUMNS}
             data={payload.list}
+            loading={loading}
             totalCount={payload.total || payload.list.length}
             page={list.page}
             pageSize={list.pageSize}
@@ -237,7 +234,6 @@ const WalletTransactions = () => {
             )}
             emptyText="No wallet transactions found"
           />
-        )}
       </div>
     </PermissionGuard>
   );

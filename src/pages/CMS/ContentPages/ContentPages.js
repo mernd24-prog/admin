@@ -255,7 +255,7 @@ const ContentPages = () => {
           <button
             onClick={() => setIsModalOpen(true)}
             disabled={submitting || deleting || Boolean(statusLoadingSlug)}
-            className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+             
           >
             + Add Page
           </button>

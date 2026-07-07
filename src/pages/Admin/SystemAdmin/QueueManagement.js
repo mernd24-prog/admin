@@ -122,7 +122,7 @@ const QueueManagement = () => {
         title="Queue Management"
         subtitle="Monitor and control background job queues"
         actions={
-          <button onClick={fetchQueues} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button onClick={fetchQueues}>
             <MdRefresh size={16} /> Refresh
           </button>
         }

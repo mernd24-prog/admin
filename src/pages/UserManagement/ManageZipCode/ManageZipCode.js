@@ -303,7 +303,7 @@ const ManageZipCode = () => {
         actions={
           <button
             onClick={() => { setFormData(initialFormState); setIsEditMode(false); setIsAddModal(true); }}
-            className="admin-btn-primary"
+
           >
             + Add Zip Code
           </button>

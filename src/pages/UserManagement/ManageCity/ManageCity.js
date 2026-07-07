@@ -215,7 +215,7 @@ const ManageCity = () => {
             <button
               onClick={openAdd}
               disabled={submitting || Boolean(statusLoadingId)}
-              className="admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+              
             >
               + Add City
             </button>

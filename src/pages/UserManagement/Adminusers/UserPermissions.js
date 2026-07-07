@@ -876,7 +876,7 @@ const UserPermissions = ({ setModuleName }) => {
                     <button
                         type="button"
                         onClick={() => setShowEffective(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--admin-blue)] border border-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
+
                         title="View final computed permissions for this user"
                     >
                         <MdBarChart size={16} /> Effective Permissions
@@ -885,7 +885,7 @@ const UserPermissions = ({ setModuleName }) => {
                         <button
                             type="button"
                             onClick={() => navigate('/app/admin-users')}
-                            className={PRIMARY_BUTTON_CLASS}
+
                         >
                             <MdAdd size={16} /> Add Sub-Admin
                         </button>

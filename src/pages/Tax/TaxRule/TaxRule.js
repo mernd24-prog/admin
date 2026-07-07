@@ -351,7 +351,7 @@ const TaxRule = () => {
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button
               onClick={() => setModalMode("add")}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+
             >
               <MdAdd size={16} /> Add Tax Rule
             </button>

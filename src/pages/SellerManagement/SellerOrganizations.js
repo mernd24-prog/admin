@@ -448,9 +448,7 @@ const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) =
 };
 
 const PrimaryButton = ({ children, icon, onClick, disabled = false, variant = "primary" }) => {
-  const cls = variant === "ghost"
-    ? "border border-[#E6E6E6] bg-white text-[#202337] hover:bg-[#f8faff]"
-    : "bg-[#2f6fed] text-white hover:bg-[#245ed5]";
+  const cls = "flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors";
   return (
     <button
       type="button"

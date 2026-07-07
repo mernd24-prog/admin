@@ -470,7 +470,7 @@ const RolesPermissions = () => {
           <PermissionGuard module="rbac" action={ACTIONS.CREATE}>
             <button
               onClick={() => setModal('create')}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-blue)] text-white text-sm rounded-lg hover:bg-[#2d3070] transition-colors shadow-sm"
+
             >
               <MdAdd size={16} /> New Custom Role
             </button>

@@ -17,6 +17,7 @@ import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 
 import { usePermission } from "../../../../_helpers/usePermission";
+import { formatLabel } from "../../../../utils/formatters";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
@@ -198,7 +199,7 @@ const Panel = ({ title, children, actions, className = "" }) => (
   <section className={`rounded-lg border border-[#eadfbd] bg-[#fffdf8] shadow-[0_1px_3px_rgba(31,41,55,0.06)] ${className}`}>
     {(title || actions) && (
       <div className="flex items-center justify-between gap-3 border-b border-[#efe6cd] px-4 py-3">
-        {title && <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>}
+        {title && <h2 className="text-sm font-semibold text-[#202337]">{formatLabel(title)}</h2>}
         {actions}
       </div>
     )}
@@ -208,8 +209,8 @@ const Panel = ({ title, children, actions, className = "" }) => (
 
 const InfoRow = ({ label, value, strong = false }) => (
   <div className="flex items-start justify-between gap-4 py-2 text-sm">
-    <span className="text-[#65718b]">{label}</span>
-    <span className={`text-right text-[#202337] ${strong ? "font-semibold" : "font-medium"}`}>{value || "N/A"}</span>
+    <span className="text-[#65718b]">{formatLabel(label)}</span>
+    <span className={`text-right text-[#202337] ${strong ? "font-semibold" : "font-medium"}`}>{formatLabel(value, "N/A")}</span>
   </div>
 );
 
@@ -256,8 +257,8 @@ const RelatedCard = ({ title, subtitle, status, rows = [], action }) => (
   <div className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
-        <div className="font-semibold text-[#202337]">{title || "N/A"}</div>
-        {subtitle && <div className="mt-0.5 text-xs text-[#65718b]">{subtitle}</div>}
+        <div className="font-semibold text-[#202337]">{formatLabel(title, "N/A")}</div>
+        {subtitle && <div className="mt-0.5 text-xs text-[#65718b]">{formatLabel(subtitle)}</div>}
       </div>
       {status && <StatusBadge status={status} size="sm" dot />}
     </div>
@@ -481,7 +482,7 @@ const OrderSummary = () => {
             <PermissionGuard module="orders" action="update" hide>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-[#2f6fed] bg-white px-3 py-2 text-sm font-medium text-[#2f6fed] shadow-sm transition hover:bg-[#f3f6ff]"
+
                 onClick={() => setState((prev) => ({ ...prev, noteModal: true }))}
               >
                 <FaRegNoteSticky /> Note
@@ -491,7 +492,7 @@ const OrderSummary = () => {
             {statusOptions.length > 0 && ((isSeller) ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
+
                 onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
               >
                 <FaFile /> Update Status
@@ -500,7 +501,7 @@ const OrderSummary = () => {
               <PermissionGuard module="orders" action="status_change" hide>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-md border border-[#f3b234] bg-[#f6b73c] px-3 py-2 text-sm font-semibold text-[#202337] shadow-sm transition hover:bg-[#f2aa22]"
+
                   onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
                 >
                   <FaFile /> Status
@@ -798,7 +799,7 @@ const OrderSummary = () => {
                           className="text-xs font-medium text-[#2f6fed]"
                           onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&shipmentId=${encodeURIComponent(firstDefined(shipment.id, shipment._id, ""))}`)}
                         >
-                          Manage tracking, agent, OTP, E-way
+                          Manage Tracking, Agent, OTP, E-way
                         </button>
                       )}
                     />
@@ -833,7 +834,7 @@ const OrderSummary = () => {
                       { label: "Created", value: formatDate(firstDefined(eWayBill.created_at, eWayBill.createdAt)) },
                     ]}
                   />
-                ) : <EmptyState>No e-way bill found</EmptyState>}
+                ) : <EmptyState>No E-Way Bill Found</EmptyState>}
               </div>
             </div>
 
@@ -856,7 +857,7 @@ const OrderSummary = () => {
                       />
                     ))}
                   </div>
-                ) : <EmptyState>No return requests found</EmptyState>}
+                ) : <EmptyState>No Return Requests Found</EmptyState>}
                 {walletTransactions.length ? (
                   <div className="space-y-3">
                     {walletTransactions.map((walletTx) => (
@@ -880,7 +881,7 @@ const OrderSummary = () => {
                       />
                     ))}
                   </div>
-                ) : <EmptyState>No wallet transactions found</EmptyState>}
+                ) : <EmptyState>No Wallet Transactions Found</EmptyState>}
               </div>
             </div>
           </div>
@@ -904,29 +905,29 @@ const OrderSummary = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between"><span>Gross product sales</span><span>{formatMoney(seller.grossSales)}</span></div>
-                    <div className="flex justify-between"><span>Seller payout base</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
-                    <div className="flex justify-between"><span>Taxable product sales</span><span>{formatMoney(seller.taxableSales)}</span></div>
-                    <div className="flex justify-between"><span>Tax to maintain</span><span>{formatMoney(seller.taxCollected)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Gross product sales")}</span><span>{formatMoney(seller.grossSales)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Seller payout base")}</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Taxable product sales")}</span><span>{formatMoney(seller.taxableSales)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Tax to maintain")}</span><span>{formatMoney(seller.taxCollected)}</span></div>
                     <div className="flex justify-between">
-                      <span>Total platform fee</span>
+                      <span>{formatLabel("Total platform fee")}</span>
                       <span>
                         -{formatMoney(seller.commissionFee)}
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Percentage commission part</span><span>{formatMoney(seller.variableCommissionFee)}</span></div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Fixed fee part</span><span>{formatMoney(seller.fixedFee)}</span></div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Closing fee part</span><span>{formatMoney(seller.closingFee)}</span></div>
-                    <div className="flex justify-between"><span>Platform fee GST</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
-                    <div className="flex justify-between"><span>Shipping reimbursement</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
-                    <div className="flex justify-between"><span>Shipping deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
-                    <div className="flex justify-between"><span>Refund adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Percentage commission part")}</span><span>{formatMoney(seller.variableCommissionFee)}</span></div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Fixed fee part")}</span><span>{formatMoney(seller.fixedFee)}</span></div>
+                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Closing fee part")}</span><span>{formatMoney(seller.closingFee)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Platform fee GST")}</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Shipping reimbursement")}</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Shipping deduction")}</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Refund adjustment")}</span><span>-{formatMoney(seller.refundAmount)}</span></div>
                     {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
-                        {seller.commissionStatus && <span>Commission: {displayStatus(seller.commissionStatus)}</span>}
-                        {seller.payoutStatus && <span className="ml-2">Payout: {displayStatus(seller.payoutStatus)}</span>}
-                        {seller.payoutMethod && <span className="ml-2">Method: {displayStatus(seller.payoutMethod)}</span>}
+                        {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}
+                        {seller.payoutStatus && <span className="ml-2">Payout: {formatLabel(displayStatus(seller.payoutStatus))}</span>}
+                        {seller.payoutMethod && <span className="ml-2">Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
                         {seller.payoutReference && <span className="ml-2">Bank ref: {seller.payoutReference}</span>}
                         {seller.payoutProcessedAt && <span className="ml-2">Paid: {formatDate(seller.payoutProcessedAt)}</span>}
                       </div>
@@ -946,9 +947,9 @@ const OrderSummary = () => {
             {timeline.length ? timeline.map((entry) => (
               <div key={entry.id} className="relative border-l border-[#dce5ff] pb-4 pl-4 text-sm last:pb-0">
                 <span className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-[#2f6fed]" />
-                <div className="font-semibold capitalize text-[#202337]">{displayStatus(entry.to_status || entry.toStatus)}</div>
-                <div className="text-[#65718b]">{entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A"} · {entry.actor_role || "system"}</div>
-                {entry.reason && <div className="text-[#65718b] mt-1">{entry.reason}</div>}
+                <div className="font-semibold capitalize text-[#202337]">{formatLabel(displayStatus(entry.to_status || entry.toStatus))}</div>
+                <div className="text-[#65718b]">{formatLabel(entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A")} · {formatLabel(entry.actor_role || "system")}</div>
+                {entry.reason && <div className="text-[#65718b] mt-1">{formatLabel(entry.reason)}</div>}
               </div>
             )) : <EmptyState>No timeline yet</EmptyState>}
           </Panel>
@@ -957,9 +958,9 @@ const OrderSummary = () => {
             {notes.length ? notes.map((note) => (
               <div key={note.id} className="mb-3 rounded-lg border border-[#eadfbd] bg-white p-3 text-sm last:mb-0">
                 <div className="text-[#202337] leading-6">{note.note}</div>
-                <div className="text-xs text-[#65718b] mt-1">{note.actor_role || "system"} · {note.visibility} · {note.created_at ? moment(note.created_at).format("DD MMM YYYY HH:mm") : "N/A"}</div>
+                <div className="text-xs text-[#65718b] mt-1">{formatLabel(note.actor_role || "system")} · {formatLabel(note.visibility)} · {formatLabel(note.created_at ? moment(note.created_at).format("DD MMM YYYY HH:mm") : "N/A")}</div>
               </div>
-            )) : <EmptyState>No notes yet</EmptyState>}
+            )) : <EmptyState>{formatLabel("No notes yet")}</EmptyState>}
           </Panel>
         </div>
       </div>

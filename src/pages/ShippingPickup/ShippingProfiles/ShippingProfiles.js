@@ -1262,15 +1262,15 @@ export default function ShippingProfiles() {
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <button className="admin-btn-secondary" onClick={() => openClone()}>
+            <button onClick={() => openClone()}>
               <MdLocalShipping size={17} /> Use Admin Template
             </button>
             {!isSeller && (
-              <button className="admin-btn-secondary" onClick={openTemplateCreate}>
+              <button onClick={openTemplateCreate}>
                 <MdAdd size={17} /> New Template
               </button>
             )}
-            <button className="admin-btn-primary" onClick={openCreate}>
+            <button onClick={openCreate}>
               <MdAdd size={17} /> New Profile
             </button>
           </div>

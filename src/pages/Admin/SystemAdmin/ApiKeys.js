@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdContentCopy, MdRefresh, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
@@ -40,7 +39,7 @@ const ApiKeys = () => {
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -153,11 +152,11 @@ const ApiKeys = () => {
         subtitle="Manage API keys for platform integrations"
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchKeys} className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={fetchKeys}>
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
-              <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={() => setShowCreate(true)}>
                 <MdAdd size={16} /> New Key
               </button>
             </PermissionGuard>
@@ -167,9 +166,7 @@ const ApiKeys = () => {
 
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
-      {loading ? <Loader /> : (
-        <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No API keys found" />
-      )}
+      <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} loading={loading} emptyMessage="No API keys found" />
 
       {/* Create modal */}
       <DefaultModal isOpen={showCreate} onClose={() => { setShowCreate(false); setForm(EMPTY_FORM); }} title="Create API Key">

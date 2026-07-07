@@ -231,7 +231,7 @@ export const ReportShell = ({
         breadcrumbs={breadcrumbs}
         actions={
           exportEndpoint && (
-            <button type="button" onClick={handleExport} disabled={exporting} className="admin-btn-secondary">
+            <button type="button" onClick={handleExport} disabled={exporting}>
               <MdFileDownload size={16} /> {exporting ? "Exporting" : "Export CSV"}
             </button>
           )

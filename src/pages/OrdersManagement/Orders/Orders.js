@@ -259,7 +259,10 @@ const Orders = () => {
   const { toQueryParams } = list;
 
   const { items, total } = getListPayload(selector);
-  const loading = !!selector?.getOrderListData?.loading;
+  const orderListState = selector?.getOrderListData;
+  const loading =
+    !!selector?.loading ||
+    (!orderListState?.data && !orderListState?.error);
   const [buyerDirectory, setBuyerDirectory] = useState({});
 
   const buyerIds = useMemo(

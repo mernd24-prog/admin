@@ -155,7 +155,7 @@ const LowStockAlerts = () => {
           <PermissionGuard module="inventory" action={ACTIONS.ADJUST} hide>
             <button
               type="button"
-              className="admin-btn-primary"
+
               onClick={() => navigate("/app/inventory-adjustment")}
             >
               <MdAddCircleOutline size={16} /> Adjust Stock

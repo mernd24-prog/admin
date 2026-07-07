@@ -249,7 +249,7 @@ const ShipmentTracking = () => {
   const [error, setError] = useState("");
   const [shipmentModal, setShipmentModal] = useState(false);
   const [sellerOptions, setSellerOptions] = useState([]);
-  useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => {}); }, []);
+  useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => { }); }, []);
   const [orderOptions, setOrderOptions] = useState([]);
   useEffect(() => {
     dropdownApi.getOrders({ limit: 100 })
@@ -632,130 +632,132 @@ const ShipmentTracking = () => {
 
   const columns = useMemo(() => {
     const baseColumns = [
-    {
-      key: "shipment",
-      label: "Shipment",
-      render: (_, row) => (
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-            <MdLocalShipping size={18} />
-          </span>
-          <div>
-            <div className="font-semibold text-gray-800">{row.awb_number || row.tracking_number || row.id}</div>
-            <div className="text-xs text-gray-400">
-              Order #{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}{row.return_id ? ` · Return #${String(row.return_id).slice(-8)}` : ""}
+      {
+        key: "shipment",
+        label: "Shipment",
+        render: (_, row) => (
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+              <MdLocalShipping size={18} />
+            </span>
+            <div>
+              <div className="font-semibold text-gray-800">{row.awb_number || row.tracking_number || row.id}</div>
+              <div className="text-xs text-gray-400">
+                Order #{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}{row.return_id ? ` · Return #${String(row.return_id).slice(-8)}` : ""}
+              </div>
             </div>
           </div>
-        </div>
-      ),
-    },
-    { key: "seller_id", label: "Seller", sortable: true, render: (value, row) => {
-      const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === value)?.label;
-      return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? String(value).slice(0, 10) + "…" : "—"}</span>;
-    } },
-    {
-      key: "delivery_agent_id",
-      label: "Agent",
-      render: (value, row) => {
-        const snapshot = row.delivery_agent_snapshot || {};
-        return value ? (
-          <div>
-            <div className="font-medium text-gray-800">{snapshot.name || value}</div>
-            {snapshot.phone && <div className="text-xs text-gray-400">{snapshot.phone}</div>}
-          </div>
-        ) : (
-          <span className="text-gray-400">Unassigned</span>
-        );
+        ),
       },
-    },
-    {
-      key: "shipment_type",
-      label: "Type",
-      render: (value, row) => <StatusBadge status={displayStatus(value || row.direction || "forward")} dot />,
-    },
-    { key: "courier_name", label: "Courier", sortable: true, render: (value) => value || "Manual" },
-    {
-      key: "status",
-      label: "Status",
-      sortable: true,
-      render: (value) => <StatusBadge status={value} dot />,
-    },
-    {
-      key: "cod",
-      label: "COD",
-      sortable: true,
-      render: (value) => (value ? "Yes" : "No"),
-    },
-    {
-      key: "expected_delivery_at",
-      label: "Expected",
-      sortable: true,
-      render: (value) => value ? moment(value).format("DD-MM-YYYY") : "N/A",
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (_, row) => {
-        const trackingDisabledReason = getTrackingDisabledReason(row);
-        const agentDisabledReason = getAgentDisabledReason(row);
-        const otpDisabledReason = getOtpDisabledReason(row);
-        const verificationDisabledReason = getVerificationDisabledReason(row);
-        const ewayDisabledReason = getEwayDisabledReason(row);
+      {
+        key: "seller_id", label: "Seller", sortable: true, render: (value, row) => {
+          const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === value)?.label;
+          return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? String(value).slice(0, 10) + "…" : "—"}</span>;
+        }
+      },
+      {
+        key: "delivery_agent_id",
+        label: "Agent",
+        render: (value, row) => {
+          const snapshot = row.delivery_agent_snapshot || {};
+          return value ? (
+            <div>
+              <div className="font-medium text-gray-800">{snapshot.name || value}</div>
+              {snapshot.phone && <div className="text-xs text-gray-400">{snapshot.phone}</div>}
+            </div>
+          ) : (
+            <span className="text-gray-400">Unassigned</span>
+          );
+        },
+      },
+      {
+        key: "shipment_type",
+        label: "Type",
+        render: (value, row) => <StatusBadge status={displayStatus(value || row.direction || "forward")} dot />,
+      },
+      { key: "courier_name", label: "Courier", sortable: true, render: (value) => value || "Manual" },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        render: (value) => <StatusBadge status={value} dot />,
+      },
+      {
+        key: "cod",
+        label: "COD",
+        sortable: true,
+        render: (value) => (value ? "Yes" : "No"),
+      },
+      {
+        key: "expected_delivery_at",
+        label: "Expected",
+        sortable: true,
+        render: (value) => value ? moment(value).format("DD-MM-YYYY") : "N/A",
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, row) => {
+          const trackingDisabledReason = getTrackingDisabledReason(row);
+          const agentDisabledReason = getAgentDisabledReason(row);
+          const otpDisabledReason = getOtpDisabledReason(row);
+          const verificationDisabledReason = getVerificationDisabledReason(row);
+          const ewayDisabledReason = getEwayDisabledReason(row);
 
-        return (
-          <div className="flex flex-wrap items-center gap-2">
-            <ActionButton onClick={() => openDetail(row)} title="View shipment details">
-              View
-            </ActionButton>
-            {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-              <ActionButton
-                onClick={() => openTracking(row)}
-                disabledReason={trackingDisabledReason}
-                title="Update shipment tracking"
-              >
-                <MdTimeline size={15} /> Track
-              </ActionButton>,
-            )}
-            {renderDeliveryAction(ACTIONS.ASSIGN,
-              <ActionButton
-                onClick={() => openAssignment(row)}
-                disabledReason={agentDisabledReason}
-                title="Assign delivery agent"
-              >
-                <MdPersonAdd size={15} /> Agent
-              </ActionButton>,
-            )}
-            {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-              <ActionButton
-                onClick={() => sendDeliveryOtp(row)}
-                disabledReason={otpDisabledReason}
-                title="Generate customer delivery OTP"
-              >
-                OTP
-              </ActionButton>,
-            )}
-            {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-              <ActionButton
-                onClick={() => openVerification(row)}
-                disabledReason={verificationDisabledReason}
-                title="Verify delivery proof"
-              >
-                <MdVerified size={15} /> Verify
-              </ActionButton>,
-            )}
-            {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
-              <ActionButton
-                onClick={() => openEwayBill(row)}
-                disabledReason={ewayDisabledReason}
-                title="Create or update e-way bill"
-              >
-                <MdDescription size={15} /> E-way
-              </ActionButton>,
-            )}
-          </div>
-        );
+          return (
+            <div className="flex items-center gap-2">
+              <ActionButton onClick={() => openDetail(row)} title="View shipment details">
+                View
+              </ActionButton>
+              {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+                <ActionButton
+                  onClick={() => openTracking(row)}
+                  disabledReason={trackingDisabledReason}
+                  title="Update shipment tracking"
+                >
+                  <MdTimeline size={15} /> Track
+                </ActionButton>,
+              )}
+              {renderDeliveryAction(ACTIONS.ASSIGN,
+                <ActionButton
+                  onClick={() => openAssignment(row)}
+                  disabledReason={agentDisabledReason}
+                  title="Assign delivery agent"
+                >
+                  <MdPersonAdd size={15} /> Agent
+                </ActionButton>,
+              )}
+              {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+                <ActionButton
+                  onClick={() => sendDeliveryOtp(row)}
+                  disabledReason={otpDisabledReason}
+                  title="Generate customer delivery OTP"
+                >
+                  OTP
+                </ActionButton>,
+              )}
+              {isForwardShipment(row) && renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+                <ActionButton
+                  onClick={() => openVerification(row)}
+                  disabledReason={verificationDisabledReason}
+                  title="Verify delivery proof"
+                >
+                  <MdVerified size={15} /> Verify
+                </ActionButton>,
+              )}
+              {renderDeliveryAction(ACTIONS.STATUS_CHANGE,
+                <ActionButton
+                  onClick={() => openEwayBill(row)}
+                  disabledReason={ewayDisabledReason}
+                  title="Create or update e-way bill"
+                >
+                  <MdDescription size={15} /> E-way
+                </ActionButton>,
+              )}
+            </div>
+          );
+        },
       },
-    },
     ];
     return isSeller ? baseColumns.filter((column) => column.key !== "seller_id") : baseColumns;
   }, [isSeller, openAssignment, openDetail, openEwayBill, openTracking, openVerification, renderDeliveryAction, sellerOptions, sendDeliveryOtp]);
@@ -777,13 +779,13 @@ const ShipmentTracking = () => {
         actions={
           <div className="flex gap-2">
             {renderDeliveryAction(ACTIONS.CREATE,
-              <button type="button" className="admin-btn-primary" onClick={() => setShipmentModal(true)}>
+              <button type="button" onClick={() => setShipmentModal(true)}>
                 <MdAdd size={16} /> Create Shipment
               </button>,
             )}
             {!isSeller && (
               <PermissionGuard module="delivery" action={ACTIONS.CREATE} hide>
-                <button type="button" className="admin-btn-secondary" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
+                <button type="button" onClick={() => setManifestConfirm(true)} disabled={!selectedRows.length}>
                   <MdFileDownload size={16} /> Manifest
                 </button>
               </PermissionGuard>
@@ -1021,7 +1023,16 @@ const ShipmentTracking = () => {
             <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
               <div><strong>Delivery agent:</strong> {selectedShipment?.delivery_agent_snapshot?.name || "Unassigned"}</div>
               <div><strong>Agent phone:</strong> {selectedShipment?.delivery_agent_snapshot?.phone || "Not available"}</div>
-              <div><strong>Verification:</strong> {selectedShipment?.verification_required ? `Required by ${displayStatus((selectedShipment?.verification_methods || []).join(" or ") || "proof")}` : "Not required"}</div>
+              <div>
+                <strong>Verification:</strong>{" "}
+                {selectedShipment?.verification_required
+                  ? `Required by ${displayStatus(
+                    Array.isArray(selectedShipment?.verification_methods)
+                      ? selectedShipment.verification_methods.join(" or ")
+                      : selectedShipment?.verification_methods || "proof"
+                  )}`
+                  : "Not required"}
+              </div>
               <div><strong>Verified:</strong> {selectedShipment?.delivered_verified_at ? moment(selectedShipment.delivered_verified_at).format("DD-MM-YYYY HH:mm") : "Not yet"}</div>
             </div>
           </div>

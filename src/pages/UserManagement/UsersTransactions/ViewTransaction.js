@@ -121,7 +121,7 @@ const ViewTransaction = () => {
           backPath="/app/transactions"
           status={status}
           actions={(
-            <button type="button" className="admin-btn-secondary" onClick={fetchTransaction}>
+            <button type="button" onClick={fetchTransaction}>
               <MdRefresh size={17} /> Refresh
             </button>
           )}
