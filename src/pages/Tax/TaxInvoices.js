@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,6 +17,7 @@ import { useListPage } from "../../hooks/useListPage";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { isSellerPanel } from "../../_helpers/panelConfig";
 
 const STATES = [
   "draft", "issued", "cancelled", "amended",
@@ -83,6 +84,7 @@ const TaxInvoices = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [downloadingId, setDownloadingId] = useState(null);
+  const hideOrganizationColumn = isSellerPanel();
 
   const fetchInvoices = useCallback(async () => {
     try {
@@ -131,7 +133,7 @@ const TaxInvoices = () => {
     }
   }, []);
 
-  const COLUMNS = [
+  const COLUMNS = useMemo(() => [
     {
       key: "invoiceNumber",
       label: "Invoice #",
@@ -219,7 +221,7 @@ const TaxInvoices = () => {
         </div>
       ),
     },
-  ];
+  ].filter((column) => !(hideOrganizationColumn && column.key === "organizationId")), [downloadInvoice, downloadingId, hideOrganizationColumn, navigate]);
 
   return (
     <div className="space-y-6">

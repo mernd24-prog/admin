@@ -65,9 +65,11 @@ const FILTER_FIELDS = [
 const EMPTY_INVENTORY_FORM = {
   user: "",
   title: "",
-  urlKeyword: "",
+  productReference: "",
+  variantSku: "",
   costPrice: "",
   sellingPrice: "",
+  specialPrice: "",
   availableQty: "",
   sku: "",
   minPurchaseQty: "1",
@@ -154,9 +156,42 @@ const sellerLabel = (product, sellerLookup = {}) => {
   return sellerLookup[sellerId]?.name || String(sellerId || "N/A");
 };
 
+const getVariantLabel = (variant = {}, fallback = "Default variant") => {
+  const title = variant.title || variant.name || (variant.isDefault ? "Default variant" : "");
+  const sku = variant.sku || variant.variantSku || "";
+  return [title || fallback, sku ? `SKU: ${sku}` : ""].filter(Boolean).join(" - ");
+};
+
+const getInventoryVariants = (product = {}) => {
+  const variants = Array.isArray(product?.variants) ? product.variants.filter(Boolean) : [];
+  if (variants.length) return variants;
+  return [{
+    _id: "default",
+    title: "Default variant",
+    sku: product?.sku || "",
+    price: product?.price,
+    mrp: product?.mrp,
+    salePrice: product?.salePrice,
+    stock: product?.stock,
+    reservedStock: product?.reservedStock,
+    isDefault: true,
+  }];
+};
+
+const getSelectedInventoryVariant = (product = {}, variantSku = "") => {
+  const variants = getInventoryVariants(product);
+  return (
+    variants.find((variant) => String(variant.sku || "") === String(variantSku || "")) ||
+    variants.find((variant) => variant.isDefault) ||
+    variants[0] ||
+    null
+  );
+};
+
 const stockStatusFor = (row) => {
   const threshold = Number(row?.inventorySettings?.lowStockThreshold ?? 5);
-  const available = Number(row?.stock || 0) - Number(row?.reservedStock || 0);
+  const variant = getSelectedInventoryVariant(row);
+  const available = Number(variant?.stock ?? row?.stock ?? 0) - Number(variant?.reservedStock ?? row?.reservedStock ?? 0);
   if (available <= 0) return "out_of_stock";
   if (available <= threshold) return "low_stock";
   return "in_stock";
@@ -211,6 +246,7 @@ const SellerProductInventories = () => {
           productType: params.productType || undefined,
           sortBy: params.sortBy,
           sortDir: params.sortDir,
+          includeVariants: true,
           includeAllStatuses: true,
         }),
       ).unwrap();
@@ -274,20 +310,23 @@ const SellerProductInventories = () => {
     }
   };
 
-  const openInventoryModal = (item) => {
+  const openInventoryModal = useCallback((item) => {
+    const variant = getSelectedInventoryVariant(item);
     setSelectedItem(item);
     setFormData({
       ...EMPTY_INVENTORY_FORM,
       user: resolveSellerName(item),
       title: item?.title || item?.name || "",
-      urlKeyword: item?._id ? `/products/${item._id}` : "",
-      costPrice: String(item?.costPrice ?? item?.mrp ?? ""),
-      sellingPrice: String(item?.price ?? item?.salePrice ?? ""),
-      availableQty: String(item?.stock ?? 0),
-      sku: item?.sku || "",
+      productReference: item?.slug || item?.sku || item?.title || item?.name || "",
+      variantSku: variant?.sku || "",
+      costPrice: String(variant?.mrp ?? item?.mrp ?? item?.costPrice ?? ""),
+      sellingPrice: String(variant?.price ?? item?.price ?? ""),
+      specialPrice: String(variant?.salePrice ?? item?.salePrice ?? ""),
+      availableQty: String(variant?.stock ?? item?.stock ?? 0),
+      sku: variant?.sku || item?.sku || "",
     });
     setInventoryOpen(true);
-  };
+  }, [resolveSellerName]);
 
   const handleInventorySave = () => {
     if (!selectedItem?._id) {
@@ -301,7 +340,8 @@ const SellerProductInventories = () => {
       return;
     }
 
-    const currentQty = Number(selectedItem.stock || 0);
+    const currentVariant = getSelectedInventoryVariant(selectedItem, formData.variantSku);
+    const currentQty = Number(currentVariant?.stock ?? selectedItem.stock ?? 0);
     const adjustment = nextQty - currentQty;
     if (adjustment === 0) {
       toast.info("No stock change to save");
@@ -321,9 +361,10 @@ const SellerProductInventories = () => {
           productId: selectedItem._id,
           adjustmentType: "set",
           quantity: adjustConfirm.nextQty,
+          variantSku: formData.variantSku || undefined,
           reason: "Admin seller inventory update",
           note: `Stock changed from ${adjustConfirm.currentQty} to ${adjustConfirm.nextQty}`,
-          reference: `seller-inventory:${selectedItem._id}:${Date.now()}`,
+          reference: `seller-inventory:${selectedItem._id}:${formData.variantSku || "default"}:${Date.now()}`,
         }),
       ).unwrap();
       toast.success("Inventory updated successfully");
@@ -357,6 +398,9 @@ const SellerProductInventories = () => {
               <div className="max-w-[220px] truncate text-xs font-medium text-[var(--admin-muted)]">
                 {resolveSellerName(row)}
               </div>
+              <div className="max-w-[220px] truncate text-xs text-gray-400">
+                {getVariantLabel(getSelectedInventoryVariant(row))}
+              </div>
             </div>
           </div>
         ),
@@ -381,12 +425,18 @@ const SellerProductInventories = () => {
         key: "stock",
         label: "Available Qty",
         sortable: true,
-        render: (value) => <span className="font-mono text-sm">{value ?? 0}</span>,
+        render: (_, row) => {
+          const variant = getSelectedInventoryVariant(row);
+          return <span className="font-mono text-sm">{variant?.stock ?? row?.stock ?? 0}</span>;
+        },
       },
       {
         key: "reservedStock",
         label: "Reserved",
-        render: (value) => <span className="font-mono text-gray-500">{value ?? 0}</span>,
+        render: (_, row) => {
+          const variant = getSelectedInventoryVariant(row);
+          return <span className="font-mono text-gray-500">{variant?.reservedStock ?? row?.reservedStock ?? 0}</span>;
+        },
       },
       {
         key: "stockStatus",
@@ -449,7 +499,7 @@ const SellerProductInventories = () => {
         ),
       },
     ],
-    [resolveSellerName],
+    [openInventoryModal, resolveSellerName],
   );
 
   const exportColumns = columns.filter((column) => column.key !== "actions");
@@ -533,6 +583,7 @@ const SellerProductInventories = () => {
       <SellerInventorySetup
         setFormData={setFormData}
         formData={formData}
+        variantOptions={getInventoryVariants(selectedItem)}
         InventorySetupOpen={inventoryOpen}
         togglePanel={() => { setInventoryOpen(false); setSelectedItem(null); }}
         onSave={handleInventorySave}

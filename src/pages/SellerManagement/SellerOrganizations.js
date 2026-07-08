@@ -11,6 +11,7 @@ import {
   MdAccountBalance,
   MdRocketLaunch,
   MdSearch,
+  MdVisibility,
 } from "react-icons/md";
 import { PageHeader, StatusBadge } from "../../components/Shared";
 import { apiRequest } from "../../_helpers/apiConfig";
@@ -462,6 +463,230 @@ const PrimaryButton = ({ children, icon, onClick, disabled = false, variant = "p
   );
 };
 
+const DetailField = ({ label, value, mono = false }) => (
+  <div className="min-w-0">
+    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#8a93a5]">{label}</div>
+    <div className={`mt-1 break-words text-sm text-[#202337] ${mono ? "font-mono text-xs" : ""}`}>
+      {value || "-"}
+    </div>
+  </div>
+);
+
+const OrganizationDetailModal = ({ open, organization, sellers = [], onClose }) => {
+  if (!open || !organization) return null;
+  const documents = organization.documents || {};
+  const missingFields = getMissingRequiredFields(organization);
+  const canOperate = canOperateOrganization(organization);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[#E6E6E6] px-5 py-4">
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-semibold text-[#202337]">
+              {organizationLabel(organization)}
+            </h3>
+            <p className="mt-1 text-sm text-[#65718b]">
+              {organization.legalBusinessName || "Seller organization details"}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#65718b] transition hover:bg-[#f3f6ff]"
+            onClick={onClose}
+            aria-label="Close details"
+          >
+            <MdClose size={20} />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(92vh-78px)] overflow-y-auto p-5">
+          <div className="mb-5 flex flex-wrap gap-2">
+            <StatusBadge status={canOperate ? "approved" : "draft"} label={canOperate ? "Can sell" : "Not approved"} dot size="sm" />
+            <StatusBadge status={organization.approvalStatus || "draft"} dot size="sm" />
+            <StatusBadge status={organization.kycStatus || "not_submitted"} label={`KYC ${labelize(organization.kycStatus || "not_submitted")}`} size="xs" />
+            <StatusBadge status={organization.bankVerificationStatus || "not_submitted"} label={`Bank ${labelize(organization.bankVerificationStatus || "not_submitted")}`} size="xs" />
+            <StatusBadge status={organization.goLiveStatus || "pending"} label={`Go Live ${labelize(organization.goLiveStatus || "pending")}`} size="xs" />
+            {organization.isDefault ? <StatusBadge status="active" label="Default" size="xs" /> : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <section className="rounded-lg border border-[#E6E6E6] p-4">
+              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Business</h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <DetailField label="Seller" value={getOrganizationSellerLabel(organization, sellers)} />
+                <DetailField label="Seller ID" value={organization.sellerId} mono />
+                <DetailField label="Organization ID" value={organization.id || organization.organizationId} mono />
+                <DetailField label="Business Type" value={labelize(organization.businessType)} />
+                <DetailField label="Primary Contact" value={organization.primaryContactName} />
+                <DetailField label="Support Email" value={organization.supportEmail} />
+                <DetailField label="Support Phone" value={organization.supportPhone} />
+                <DetailField label="Website" value={organization.businessWebsite} />
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-[#E6E6E6] p-4">
+              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Identity</h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <DetailField label="GSTIN" value={organization.gstin} mono />
+                <DetailField label="PAN" value={organization.pan} mono />
+                <DetailField label="Aadhaar" value={organization.aadhaarNumber} mono />
+                <DetailField label="Date of Birth" value={organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : ""} />
+                <DetailField label="Registration No." value={organization.registrationNumber} mono />
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-[#E6E6E6] p-4">
+              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Bank</h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <DetailField label="Bank Name" value={organization.bankDetails?.bankName} />
+                <DetailField label="Account Holder" value={organization.bankDetails?.accountHolderName} />
+                <DetailField label="Account Number" value={organization.bankDetails?.accountNumber} mono />
+                <DetailField label="IFSC" value={organization.bankDetails?.ifscCode} mono />
+                <DetailField label="Branch" value={organization.bankDetails?.branchName} />
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-[#E6E6E6] p-4">
+              <h4 className="mb-3 text-sm font-semibold text-[#202337]">Addresses</h4>
+              <div className="space-y-3">
+                <DetailField label="Billing" value={formatAddress(organization.billingAddress)} />
+                <DetailField label="Pickup" value={formatAddress(organization.pickupAddress)} />
+                <DetailField label="Return" value={formatAddress(organization.returnAddress)} />
+              </div>
+            </section>
+          </div>
+
+          <section className="mt-5 rounded-lg border border-[#E6E6E6] p-4">
+            <h4 className="mb-3 text-sm font-semibold text-[#202337]">Documents & Notes</h4>
+            <div className="flex flex-wrap gap-2">
+              {ORGANIZATION_DOCUMENTS.map(([key, label]) =>
+                documents?.[key] ? (
+                  <a
+                    key={key}
+                    href={documents[key]}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-[#dbe7ff] bg-[#f8faff] px-2.5 py-1.5 text-xs font-medium text-[#2f6fed] hover:underline"
+                  >
+                    {label}
+                  </a>
+                ) : null,
+              )}
+              {!ORGANIZATION_DOCUMENTS.some(([key]) => documents?.[key]) ? (
+                <span className="text-sm text-[#65718b]">No documents uploaded</span>
+              ) : null}
+            </div>
+            {missingFields.length ? (
+              <div className="mt-4 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-sm text-[#92400e]">
+                <span className="font-semibold">Missing fields: </span>
+                {missingFields.join(", ")}
+              </div>
+            ) : null}
+            {organization.rejectionReason ? (
+              <div className="mt-4 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-[#d92d20]">
+                {organization.rejectionReason}
+              </div>
+            ) : null}
+            {organization.description ? (
+              <p className="mt-4 text-sm leading-6 text-[#65718b]">{organization.description}</p>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReviewActionModal = ({
+  open,
+  action,
+  organization,
+  reason,
+  onReasonChange,
+  onClose,
+  onConfirm,
+  submitting,
+}) => {
+  if (!open || !organization) return null;
+  const config = {
+    resubmit: {
+      title: "Request Resubmission",
+      description: "Tell the seller what needs to be corrected before this organization can be approved.",
+      label: "Required changes",
+      confirm: "Request Resubmission",
+      tone: "amber",
+      requiresReason: true,
+    },
+    reject: {
+      title: "Reject Organization",
+      description: "This will reject the organization review. Add a clear rejection reason for the seller.",
+      label: "Rejection reason",
+      confirm: "Reject Organization",
+      tone: "red",
+      requiresReason: true,
+    },
+    block: {
+      title: "Block Organization",
+      description: "This will block the organization from selling until it is reviewed again.",
+      label: "Internal note",
+      confirm: "Block Organization",
+      tone: "red",
+      requiresReason: false,
+    },
+  }[action] || {};
+  const confirmCls = config.tone === "red"
+    ? "bg-[#d92d20] hover:bg-[#b42318]"
+    : "bg-[#c47a00] hover:bg-[#a56300]";
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[#E6E6E6] px-5 py-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[#202337]">{config.title}</h3>
+            <p className="mt-1 text-sm text-[#65718b]">{organizationLabel(organization)}</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#65718b] transition hover:bg-[#f3f6ff]"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close"
+          >
+            <MdClose size={20} />
+          </button>
+        </div>
+        <div className="space-y-4 px-5 py-4">
+          <p className="text-sm leading-6 text-[#65718b]">{config.description}</p>
+          <FieldRow label={config.label}>
+            <textarea
+              className={`${inputCls} min-h-[110px] py-2`}
+              value={reason}
+              onChange={(event) => onReasonChange(event.target.value)}
+              placeholder={config.requiresReason ? "Enter reason..." : "Optional note..."}
+              disabled={submitting}
+            />
+          </FieldRow>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
+          <PrimaryButton variant="ghost" onClick={onClose} disabled={submitting}>
+            Cancel
+          </PrimaryButton>
+          <button
+            type="button"
+            className={`inline-flex min-h-[38px] items-center rounded-md px-4 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${confirmCls}`}
+            onClick={onConfirm}
+            disabled={submitting}
+          >
+            {submitting ? "Saving..." : config.confirm}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OrganizationModal = ({
   open,
   mode,
@@ -728,6 +953,8 @@ const SellerOrganizations = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "create", organization: null });
+  const [viewModal, setViewModal] = useState({ open: false, organization: null });
+  const [reviewModal, setReviewModal] = useState({ open: false, action: "", organization: null, reason: "" });
   const [form, setForm] = useState(createEmptyForm());
   const [formErrors, setFormErrors] = useState({});
 
@@ -795,6 +1022,27 @@ const SellerOrganizations = () => {
     setForm(normalizeForEdit(organization));
     setFormErrors({});
     setModal({ open: true, mode: "edit", organization });
+  };
+
+  const openView = (organization) => {
+    setViewModal({ open: true, organization });
+  };
+
+  const closeView = () => {
+    setViewModal({ open: false, organization: null });
+  };
+
+  const openReviewAction = (action, organization) => {
+    setReviewModal({ open: true, action, organization, reason: "" });
+  };
+
+  const closeReviewAction = () => {
+    if (submitting) return;
+    setReviewModal({ open: false, action: "", organization: null, reason: "" });
+  };
+
+  const updateReviewReason = (reason) => {
+    setReviewModal((prev) => ({ ...prev, reason }));
   };
 
   const closeModal = () => {
@@ -942,54 +1190,48 @@ const SellerOrganizations = () => {
     );
   };
 
-  const requestResubmission = (organization) => {
-    const reason = window.prompt("Required changes / rejection reason");
-    if (reason === null) return;
-    if (!reason.trim()) {
+  const confirmReviewAction = async () => {
+    const { action, organization, reason } = reviewModal;
+    const cleanReason = reason.trim();
+    if (["resubmit", "reject"].includes(action) && !cleanReason) {
       toast.error("Rejection reason is required");
       return;
     }
-    applyStatus(
-      organization,
-      {
-        approvalStatus: "rejected",
-        rejectionReason: reason.trim(),
-        requiredChanges: [reason.trim()],
-        notes: "Requested resubmission from seller organization admin table",
-      },
-      "Organization sent back for resubmission",
-    );
-  };
 
-  const rejectOrganization = (organization) => {
-    const reason = window.prompt("Rejection reason");
-    if (reason === null) return;
-    if (!reason.trim()) {
-      toast.error("Rejection reason is required");
-      return;
+    if (action === "resubmit") {
+      await applyStatus(
+        organization,
+        {
+          approvalStatus: "rejected",
+          rejectionReason: cleanReason,
+          requiredChanges: [cleanReason],
+          notes: "Requested resubmission from seller organization admin table",
+        },
+        "Organization sent back for resubmission",
+      );
+    } else if (action === "reject") {
+      await applyStatus(
+        organization,
+        {
+          approvalStatus: "rejected",
+          kycStatus: "rejected",
+          rejectionReason: cleanReason,
+        },
+        "Organization rejected",
+      );
+    } else if (action === "block") {
+      await applyStatus(
+        organization,
+        {
+          approvalStatus: "blocked",
+          goLiveStatus: "blocked",
+          notes: cleanReason || "Blocked from seller organization admin table",
+        },
+        "Organization blocked",
+      );
     }
-    applyStatus(
-      organization,
-      {
-        approvalStatus: "rejected",
-        kycStatus: "rejected",
-        rejectionReason: reason.trim(),
-      },
-      "Organization rejected",
-    );
-  };
 
-  const blockOrganization = (organization) => {
-    if (!window.confirm("Block this organization?")) return;
-    applyStatus(
-      organization,
-      {
-        approvalStatus: "blocked",
-        goLiveStatus: "blocked",
-        notes: "Blocked from seller organization admin table",
-      },
-      "Organization blocked",
-    );
+    setReviewModal({ open: false, action: "", organization: null, reason: "" });
   };
 
   return (
@@ -1078,76 +1320,54 @@ const SellerOrganizations = () => {
               <tr>
                 <th className="whitespace-nowrap px-4 py-3">Organization</th>
                 <th className="whitespace-nowrap px-4 py-3">Seller</th>
-                <th className="whitespace-nowrap px-4 py-3">GST / PAN</th>
-                <th className="whitespace-nowrap px-4 py-3">Bank</th>
-                <th className="whitespace-nowrap px-4 py-3">Billing / Pickup</th>
-                <th className="whitespace-nowrap px-4 py-3">Status / History</th>
+                <th className="whitespace-nowrap px-4 py-3">GSTIN</th>
+                <th className="whitespace-nowrap px-4 py-3">Status</th>
+                <th className="whitespace-nowrap px-4 py-3">Readiness</th>
                 <th className="whitespace-nowrap px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF1F6] text-[#202337]">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">Loading organizations...</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#65718b]">Loading organizations...</td>
                 </tr>
               ) : organizations.length ? organizations.map((organization) => {
                 const canOperate = canOperateOrganization(organization);
                 const missingFields = getMissingRequiredFields(organization);
                 const businessStatus = organization.businessStatus || (canOperate ? "approved" : "not_approved");
                 return (
-                <tr key={organization.id || organization.organizationId} className="align-top hover:bg-[#fbfcff]">
+                <tr key={organization.id || organization.organizationId} className="align-middle hover:bg-[#fbfcff]">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{organizationLabel(organization)}</div>
-                    <div className="mt-1 text-xs text-[#65718b]">{organization.legalBusinessName || "-"}</div>
-                    {organization.businessType ? (
-                      <div className="mt-1 text-xs text-[#65718b]">{labelize(organization.businessType)}</div>
-                    ) : null}
-                    {organization.primaryContactName ? (
-                      <div className="mt-1 text-xs text-[#65718b]">Contact: {organization.primaryContactName}</div>
-                    ) : null}
-                    <div className="mt-1 text-[11px] text-[#8a93a5]">{shortId(organization.id || organization.organizationId)}</div>
-                    {organization.isDefault ? <div className="mt-2"><StatusBadge status="active" label="Default" size="xs" /></div> : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{getOrganizationSellerLabel(organization, sellerOptions)}</div>
-                    {organization.seller?.email ? (
-                      <div className="mt-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8a93a5]">Login Email</span>
-                        <div className="text-xs text-[#65718b]">{organization.seller.email}</div>
+                    <div className="max-w-[260px]">
+                      <div className="truncate font-medium" title={organizationLabel(organization)}>
+                        {organizationLabel(organization)}
                       </div>
-                    ) : null}
-                    {organization.supportEmail && organization.supportEmail !== organization.seller?.email ? (
-                      <div className="mt-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8a93a5]">Org Email</span>
-                        <div className="text-xs text-[#65718b]">{organization.supportEmail}</div>
+                      <div className="mt-1 truncate text-xs text-[#65718b]" title={organization.legalBusinessName || ""}>
+                        {organization.legalBusinessName || "-"}
                       </div>
-                    ) : null}
-                    {organization.seller?.phone ? <div className="mt-1 text-xs text-[#65718b]">{organization.seller.phone}</div> : null}
-                    <div className="mt-1 text-xs text-[#8a93a5]">{shortId(organization.sellerId)}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-[#8a93a5]">{shortId(organization.id || organization.organizationId)}</span>
+                        {organization.isDefault ? <StatusBadge status="active" label="Default" size="xs" /> : null}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-xs text-[#65718b]">GSTIN</div>
-                    <div className="font-medium">{organization.gstin || "-"}</div>
-                    <div className="mt-2 text-xs text-[#65718b]">PAN</div>
-                    <div className="font-medium">{organization.pan || "-"}</div>
-                    <div className="mt-2 text-xs text-[#65718b]">Aadhaar</div>
-                    <div className="font-medium">{organization.aadhaarNumber || "-"}</div>
-                    <div className="mt-2 text-xs text-[#65718b]">DOB</div>
-                    <div className="font-medium">{organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : "-"}</div>
+                    <div className="max-w-[220px]">
+                      <div className="truncate font-medium" title={getOrganizationSellerLabel(organization, sellerOptions)}>
+                        {getOrganizationSellerLabel(organization, sellerOptions)}
+                      </div>
+                      <div className="mt-1 truncate text-xs text-[#65718b]" title={organization.seller?.email || organization.supportEmail || ""}>
+                        {organization.seller?.email || organization.supportEmail || "-"}
+                      </div>
+                      <div className="mt-1 font-mono text-[11px] text-[#8a93a5]">{shortId(organization.sellerId)}</div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div>{organization.bankDetails?.bankName || "-"}</div>
-                    <div className="mt-1 text-xs text-[#65718b]">{organization.bankDetails?.accountNumber ? `A/C ${organization.bankDetails.accountNumber}` : "No account"}</div>
-                    <div className="mt-1 text-xs text-[#65718b]">{organization.bankDetails?.ifscCode || "-"}</div>
-                  </td>
-                  <td className="min-w-[220px] px-4 py-3">
-                    <div className="text-xs text-[#65718b]">Billing</div>
-                    <div>{formatAddress(organization.billingAddress)}</div>
-                    <div className="mt-2 text-xs text-[#65718b]">Pickup</div>
-                    <div>{formatAddress(organization.pickupAddress)}</div>
+                    <div className="font-mono text-xs font-medium">{organization.gstin || "-"}</div>
+                    <div className="mt-1 text-[11px] text-[#65718b]">{organization.pan ? `PAN ${organization.pan}` : "PAN -"}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col items-start gap-2">
+                    <div className="flex min-w-[190px] flex-wrap items-center gap-1.5">
                       <StatusBadge
                         status={canOperate ? "approved" : "draft"}
                         label={canOperate ? "Can sell" : labelize(businessStatus)}
@@ -1158,54 +1378,38 @@ const SellerOrganizations = () => {
                       <StatusBadge status={organization.kycStatus || "not_submitted"} label={`KYC ${labelize(organization.kycStatus || "not_submitted")}`} size="xs" />
                       <StatusBadge status={organization.bankVerificationStatus || "not_submitted"} label={`Bank ${labelize(organization.bankVerificationStatus || "not_submitted")}`} size="xs" />
                       <StatusBadge status={organization.goLiveStatus || "pending"} label={`Go Live ${labelize(organization.goLiveStatus || "pending")}`} size="xs" />
-                      {!canOperate && organization.operationDisabledReason ? (
-                        <div className="max-w-[240px] text-xs text-[#a56300]">{organization.operationDisabledReason}</div>
-                      ) : null}
-                      {missingFields.length ? (
-                        <div className="max-w-[240px] rounded-md border border-[#fde68a] bg-[#fffbeb] px-2 py-1.5 text-[11px] text-[#92400e]">
-                          <span className="font-semibold">Missing: </span>
-                          {missingFields.slice(0, 5).join(", ")}
-                          {missingFields.length > 5 ? ` +${missingFields.length - 5} more` : ""}
-                        </div>
-                      ) : null}
-                      {organization.documents && (
-                        <div className="flex max-w-[220px] flex-wrap gap-x-2 gap-y-1">
-                          {ORGANIZATION_DOCUMENTS.map(([key, label]) =>
-                            organization.documents?.[key] ? (
-                              <a
-                                key={key}
-                                href={organization.documents[key]}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[11px] text-[#2f6fed] hover:underline"
-                              >
-                                {label}
-                              </a>
-                            ) : null,
-                          )}
-                        </div>
-                      )}
-                      {organization.rejectionReason ? (
-                        <div className="max-w-[220px] text-xs text-[#d92d20]">{organization.rejectionReason}</div>
-                      ) : null}
-                      {organization.verificationHistory?.length ? (
-                        <div className="text-[11px] text-[#8a93a5]">
-                          {organization.verificationHistory.length} history events
-                        </div>
-                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex max-w-[190px] flex-wrap items-center gap-1.5">
+                    {missingFields.length ? (
                       <button
                         type="button"
-                        className="w-full rounded-md bg-[#208a3c] px-2.5 py-1.5 text-left text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-md border border-[#fde68a] bg-[#fffbeb] px-2 py-1.5 text-xs font-medium text-[#92400e] transition hover:bg-[#fff7d6]"
+                        onClick={() => openView(organization)}
+                      >
+                        {missingFields.length} missing
+                      </button>
+                    ) : (
+                      <StatusBadge status="approved" label="Complete" size="xs" />
+                    )}
+                    {organization.rejectionReason ? (
+                      <div className="mt-2 max-w-[180px] truncate text-xs text-[#d92d20]" title={organization.rejectionReason}>
+                        {organization.rejectionReason}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="admin-table-actions-nowrap">
+                      <IconButton title="View details" icon={<MdVisibility size={18} />} onClick={() => openView(organization)} disabled={submitting} />
+                      <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
+                      <button
+                        type="button"
+                        className="rounded-md bg-[#208a3c] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => approveOrganization(organization)}
                         disabled={submitting || canOperate}
                       >
-                        Approve for selling
+                        Approve
                       </button>
-                      <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
                       <IconButton
                         title="Approve KYC"
                         icon={<MdVerifiedUser size={18} />}
@@ -1233,16 +1437,16 @@ const SellerOrganizations = () => {
                           organization.goLiveStatus === "live"
                         }
                       />
-                      <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => requestResubmission(organization)} disabled={submitting} />
-                      <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => rejectOrganization(organization)} disabled={submitting} />
-                      <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => blockOrganization(organization)} disabled={submitting} />
+                      <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => openReviewAction("resubmit", organization)} disabled={submitting} />
+                      <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => openReviewAction("reject", organization)} disabled={submitting} />
+                      <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => openReviewAction("block", organization)} disabled={submitting} />
                     </div>
                   </td>
                 </tr>
                 );
               }) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[#65718b]">No seller organizations found</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#65718b]">No seller organizations found</td>
                 </tr>
               )}
             </tbody>
@@ -1263,6 +1467,22 @@ const SellerOrganizations = () => {
         onChange={updateForm}
         onNestedChange={updateNestedForm}
         onDocumentChange={handleDocumentChange}
+      />
+      <OrganizationDetailModal
+        open={viewModal.open}
+        organization={viewModal.organization}
+        sellers={sellerOptions}
+        onClose={closeView}
+      />
+      <ReviewActionModal
+        open={reviewModal.open}
+        action={reviewModal.action}
+        organization={reviewModal.organization}
+        reason={reviewModal.reason}
+        onReasonChange={updateReviewReason}
+        onClose={closeReviewAction}
+        onConfirm={confirmReviewAction}
+        submitting={submitting}
       />
     </div>
   );

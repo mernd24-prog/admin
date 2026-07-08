@@ -395,10 +395,10 @@ const Returns = () => {
     {
       key: "actions",
       label: "Actions",
-      headerClassName: "min-w-[300px]",
-      cellClassName: "min-w-[300px]",
+      headerClassName: "min-w-[360px]",
+      cellClassName: "min-w-[360px]",
       render: (_, row) => (
-        <div className="admin-table-actions">
+        <div className="admin-table-actions-nowrap">
           <PermissionGuard module="returns" action={ACTIONS.VIEW} hide>
             <button type="button" className="admin-table-action-btn" onClick={() => openDetail(row)}>
               <MdVisibility size={15} /> View
@@ -521,6 +521,8 @@ const Returns = () => {
           />
         )}
         requiredModule="returns"
+        tableContainerClassName="overflow-x-auto overscroll-x-contain"
+        tableClassName="min-w-[1480px]"
         exportConfig={{ filename: "returns-refunds", columns, data: payload.list }}
       />
 

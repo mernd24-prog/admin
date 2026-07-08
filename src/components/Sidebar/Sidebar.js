@@ -662,8 +662,8 @@ const Sidebar = ({
         <NeedHelpCard
           title="Need Help?"
           onClick={() => {
-            navigate("/app/help-support");
-            handleNavClick("help-support");
+            navigate("/app/queries");
+            handleNavClick("queries");
           }}
           description="Our verification team is available 24/7 to help you complete KYC."
           buttonText="Contact Support"

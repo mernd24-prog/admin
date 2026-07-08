@@ -62,6 +62,7 @@ const toProductBody = (payload = {}) => {
     const hsnCode = payload.hsnCode || payload.hsn_code || "";
     const variants = Array.isArray(payload.variants) ? payload.variants : [];
     const primaryVariant = variants[0] || {};
+    const salePrice = payload.salePrice ?? payload.specialPrice ?? primaryVariant.salePrice;
     const title = payload.title || payload.name || "";
 
     return {
@@ -76,7 +77,7 @@ const toProductBody = (payload = {}) => {
         ...(payload.visibility ? { visibility: payload.visibility } : {}),
         price: Number(payload.price || primaryVariant.price || primaryVariant.salePrice || 0),
         mrp: Number(payload.mrp || primaryVariant.mrp || 0),
-        ...(payload.salePrice !== undefined ? { salePrice: Number(payload.salePrice || 0) } : {}),
+        ...(salePrice !== undefined && salePrice !== "" ? { salePrice: Number(salePrice || 0) } : {}),
         ...(payload.costPrice !== undefined ? { costPrice: Number(payload.costPrice || 0) } : {}),
         gstInclusive: true,
         category,
@@ -134,7 +135,10 @@ const toProductPatchBody = (payload = {}) => {
     if (source.visibility !== undefined) body.visibility = source.visibility;
     if (source.price !== undefined) body.price = Number(source.price || 0);
     if (source.mrp !== undefined) body.mrp = Number(source.mrp || 0);
-    if (source.salePrice !== undefined) body.salePrice = Number(source.salePrice || 0);
+    if (source.salePrice !== undefined || source.specialPrice !== undefined) {
+        const salePrice = source.salePrice ?? source.specialPrice;
+        body.salePrice = salePrice === "" || salePrice === null ? null : Number(salePrice || 0);
+    }
     if (source.costPrice !== undefined) body.costPrice = Number(source.costPrice || 0);
     if (source.gstRate !== undefined) body.gstRate = Number(source.gstRate || 0);
     if (source.gstInclusive !== undefined) body.gstInclusive = Boolean(source.gstInclusive);

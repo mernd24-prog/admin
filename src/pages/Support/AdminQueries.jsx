@@ -153,11 +153,11 @@ const AdminQueries = () => {
         actions={
           <button
             type="button"
-
+            className="inline-flex min-h-[38px] items-center gap-2 rounded-md bg-[var(--admin-gold)] px-4 text-sm font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)] disabled:cursor-not-allowed disabled:opacity-60"
             onClick={fetchQueries}
             disabled={loading}
           >
-            <MdRefresh /> Refresh
+            <MdRefresh size={18} /> Refresh
           </button>
         }
       />
@@ -169,8 +169,8 @@ const AdminQueries = () => {
             type="button"
             className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
               activeTab === tab.key
-                ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
-                : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)]"
+                ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-[var(--admin-navy)]"
+                : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
             }`}
             onClick={() => {
               setActiveTab(tab.key);

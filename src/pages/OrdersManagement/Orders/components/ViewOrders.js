@@ -38,10 +38,11 @@ const ALLOWED_TRANSITIONS = {
 // Seller order actions stop at shipment handoff. Delivery progress is managed in Shipments.
 const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "fulfilled"]);
 
-const ALL_STATUSES = [
-  "pending_payment", "payment_failed", "confirmed", "packed",
-  "shipped", "delivered", "fulfilled", "return_requested", "partially_returned", "returned", "cancelled",
-];
+const normalizeStatusKey = (status = "") =>
+  String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
 
 const toOption = (status) => ({ value: status, label: status.replace(/_/g, " ") });
 
@@ -89,6 +90,71 @@ const getItemTaxLabel = (tax = {}, item = {}) => {
   return `${percent(gstRate)} GST${cessText} · ${displayStatus(mode)}`;
 };
 
+const getOrganizationName = (snapshot = {}) =>
+  firstDefined(
+    snapshot.legalBusinessName,
+    snapshot.legalName,
+    snapshot.legal_name,
+    snapshot.storeDisplayName,
+    snapshot.store_name,
+    snapshot.name,
+    "",
+  );
+
+const getSellerDisplayName = (seller = {}) =>
+  firstDefined(
+    seller.sellerName,
+    seller.seller_name,
+    seller.displayName,
+    seller.businessName,
+    seller.name,
+    seller.sellerProfile?.displayName,
+    seller.sellerProfile?.businessName,
+    seller.profile?.name,
+    seller.email,
+    "",
+  );
+
+const buildSellerLookup = (relations = {}) => {
+  const lookup = {};
+  const remember = (sellerId, organizationId, values = {}) => {
+    if (!sellerId) return;
+    const key = `${sellerId}:${organizationId || "default"}`;
+    lookup[key] = {
+      ...(lookup[key] || {}),
+      ...Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined && value !== null && value !== "")),
+    };
+    lookup[String(sellerId)] = {
+      ...(lookup[String(sellerId)] || {}),
+      ...lookup[key],
+    };
+  };
+
+  (relations.sellerFulfillmentGroups || []).forEach((group) => {
+    const organizationSnapshot = normalizeJson(group.organizationSnapshot || group.organization_snapshot, {});
+    remember(group.sellerId || group.seller_id, group.organizationId || group.organization_id, {
+      sellerName: group.sellerName || group.seller_name,
+      organizationName: group.organizationName || group.organization_name || getOrganizationName(organizationSnapshot),
+    });
+  });
+  (relations.sellerSettlements || []).forEach((seller) => {
+    const organizationSnapshot = normalizeJson(seller.organizationSnapshot || seller.organization_snapshot, {});
+    remember(seller.sellerId || seller.seller_id, seller.organizationId || seller.organization_id, {
+      sellerName: seller.sellerName || seller.seller_name,
+      organizationName: seller.organizationName || seller.organization_name || getOrganizationName(organizationSnapshot),
+    });
+  });
+  (relations.shipments || []).forEach((shipment) => {
+    const sellerSnapshot = normalizeJson(shipment.sellerSnapshot || shipment.seller_snapshot, {});
+    const organizationSnapshot = normalizeJson(shipment.organizationSnapshot || shipment.organization_snapshot, {});
+    remember(shipment.sellerId || shipment.seller_id || shipment.seller?.id || shipment.seller?._id, shipment.organizationId || shipment.organization_id, {
+      sellerName: getSellerDisplayName(shipment.seller) || getSellerDisplayName(sellerSnapshot),
+      organizationName: getOrganizationName(organizationSnapshot),
+    });
+  });
+  return lookup;
+};
+
 const getOrderTaxRates = (taxBreakup = {}, items = []) => {
   const sourceItems = Array.isArray(taxBreakup.items) && taxBreakup.items.length
     ? taxBreakup.items
@@ -100,7 +166,36 @@ const getOrderTaxRates = (taxBreakup = {}, items = []) => {
   return [...new Set(rates)].sort((a, b) => a - b);
 };
 
-const groupItemsBySeller = (items = []) =>
+const groupItemsBySeller = (items = [], relations = {}) => {
+  const sellerLookup = buildSellerLookup(relations);
+  return items.reduce((groups, item) => {
+    const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
+    const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
+    const lookup = sellerLookup[`${sellerId}:${organizationId}`] || sellerLookup[String(sellerId)] || {};
+    const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
+    const organizationSnapshot = normalizeJson(firstDefined(item.organization_snapshot, item.organizationSnapshot), {});
+    const sellerName = firstDefined(
+      lookup.sellerName,
+      getSellerDisplayName(sellerSnapshot),
+      item.sellerName,
+      "Seller",
+    );
+    const organizationName = firstDefined(
+      lookup.organizationName,
+      getOrganizationName(organizationSnapshot),
+      item.organizationName,
+      "",
+    );
+    const groupKey = `${sellerId}:${organizationId}`;
+    if (!groups[groupKey]) {
+      groups[groupKey] = { sellerId, sellerName, organizationId, organizationName, items: [] };
+    }
+    groups[groupKey].items.push(item);
+    return groups;
+  }, {});
+};
+
+const groupItemsBySellerFromItems = (items = []) =>
   items.reduce((groups, item) => {
     const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
     const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
@@ -124,7 +219,7 @@ const groupItemsBySeller = (items = []) =>
   }, {});
 
 const buildSellerSettlements = (items = []) =>
-  Object.values(groupItemsBySeller(items)).map((group) => {
+  Object.values(groupItemsBySellerFromItems(items)).map((group) => {
     const totals = group.items.reduce(
       (acc, item) => {
         const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
@@ -275,7 +370,7 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const { isSeller, isAdmin, isSuperAdmin } = usePermission();
+  const { isSeller, isAdmin, isSuperAdmin, role } = usePermission();
 
   const [state, setState] = useState({
     orderInfo: null,
@@ -366,29 +461,54 @@ const OrderSummary = () => {
   const invoice = relations.invoice || relations.taxInvoice || null;
   const eWayBill = relations.eWayBill || relations.ewayBill || null;
   const returns = Array.isArray(state.returns) ? state.returns : [];
-  const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items)), [items]);
+  const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items, relations)), [items, relations]);
   const sellerSettlements = useMemo(() => {
     const savedSettlements = Array.isArray(relations.sellerSettlements) ? relations.sellerSettlements : [];
     return savedSettlements.length
       ? savedSettlements.map(normalizeSellerSettlement)
       : buildSellerSettlements(items).map(normalizeSellerSettlement);
   }, [items, relations.sellerSettlements]);
+  const shipmentSummary = useMemo(() => {
+    const statuses = shipments
+      .filter((shipment) => String(shipment.direction || "forward") !== "reverse")
+      .map((shipment) => firstDefined(shipment.status, shipment.shipment_status, shipment.delivery_status))
+      .filter(Boolean);
+    if (statuses.length) {
+      const counts = statuses.reduce((acc, status) => {
+        const key = String(status);
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.entries(counts)
+        .map(([status, count]) => `${displayStatus(status)} (${count})`)
+        .join(", ");
+    }
+
+    const groupStatuses = (relations.sellerFulfillmentGroups || [])
+      .map((group) => firstDefined(group.shipmentStatus, group.shipment_status, group.fulfillmentStatus, group.fulfillment_status))
+      .filter(Boolean);
+    return groupStatuses.length ? [...new Set(groupStatuses.map(displayStatus))].join(", ") : "Not created";
+  }, [relations.sellerFulfillmentGroups, shipments]);
   const orderTaxRates = useMemo(() => getOrderTaxRates(taxBreakup, items), [taxBreakup, items]);
   const timeline = Array.isArray(order.timeline) ? order.timeline : [];
   const notes = Array.isArray(order.notes) ? order.notes : [];
 
   // Build role-aware status options filtered to valid next transitions from current status
   const statusOptions = useMemo(() => {
-    const currentStatus = order.status;
-    const validNext = ALLOWED_TRANSITIONS[currentStatus] || ALL_STATUSES;
-    return validNext
+    const currentStatus = normalizeStatusKey(firstDefined(order.status, order.order_status));
+    const validNext = ALLOWED_TRANSITIONS[currentStatus] || [];
+    const isAdminOrderManager = isSuperAdmin || isAdmin || role === "sub-admin";
+    const filtered = validNext
       .filter((s) => {
-        if (isSuperAdmin || isAdmin) return true;
+        if (isAdminOrderManager) return true;
         if (isSeller) return SELLER_ALLOWED_NEXT.has(s);
         return false;
       })
       .map(toOption);
-  }, [order.status, isSeller, isAdmin, isSuperAdmin]);
+    return filtered.length
+      ? filtered
+      : [{ value: "", label: "No valid status change available", isDisabled: true }];
+  }, [order.status, order.order_status, isSeller, isAdmin, isSuperAdmin, role]);
 
   const handleStatusSubmit = useCallback(async () => {
     if (!formData.status) {
@@ -512,11 +632,13 @@ const OrderSummary = () => {
           )}
         />
 
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <MetricCard label="Customer Payable" value={formatMoney(customerPayableAmount)} tone="dark" />
           <MetricCard label="Customer Total" value={formatMoney(customerTotalAmount)} tone="blue" />
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
           <MetricCard label="Delivery Status" value={<StatusBadge status={firstDefined(order.delivery_status, order.deliveryStatus)} dot />} />
+          <MetricCard label="Shipment Status" value={shipmentSummary} tone="blue" />
+          <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

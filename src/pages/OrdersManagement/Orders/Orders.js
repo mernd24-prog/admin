@@ -79,6 +79,112 @@ const orderIdOf = (order = {}) =>
 
 const formatMoney = (value) => formatCurrency(value, "—");
 
+const normalizeJson = (value, fallback = {}) => {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const sellerNameOf = (seller = {}) =>
+  firstDefined(
+    seller.sellerName,
+    seller.seller_name,
+    seller.displayName,
+    seller.businessName,
+    seller.name,
+    seller.sellerProfile?.displayName,
+    seller.sellerProfile?.businessName,
+    seller.sellerProfile?.legalBusinessName,
+    seller.profile?.name,
+    seller.email,
+  );
+
+const organizationNameOf = (organization = {}) =>
+  firstDefined(
+    organization.organizationName,
+    organization.organization_name,
+    organization.legalBusinessName,
+    organization.legalName,
+    organization.legal_name,
+    organization.storeDisplayName,
+    organization.store_display_name,
+    organization.name,
+  );
+
+const sellerGroupsOf = (row = {}) => {
+  const relationGroups = Array.isArray(row.relations?.sellerFulfillmentGroups)
+    ? row.relations.sellerFulfillmentGroups
+    : [];
+  if (relationGroups.length) return relationGroups;
+
+  const itemGroups = (Array.isArray(row.items) ? row.items : []).reduce((groups, item) => {
+    const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
+    const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
+    const key = `${sellerId}:${organizationId}`;
+    const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
+    const organizationSnapshot = normalizeJson(firstDefined(item.organization_snapshot, item.organizationSnapshot), {});
+    if (!groups[key]) {
+      groups[key] = {
+        sellerId,
+        organizationId,
+        sellerName: sellerNameOf(sellerSnapshot),
+        organizationName: organizationNameOf(organizationSnapshot),
+        itemCount: 0,
+        quantity: 0,
+      };
+    }
+    groups[key].itemCount += 1;
+    groups[key].quantity += Number(item.quantity || 0);
+    return groups;
+  }, {});
+  return Object.values(itemGroups);
+};
+
+const countItems = (row = {}) => {
+  if (Array.isArray(row.items)) {
+    return row.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+  }
+  const groups = sellerGroupsOf(row);
+  const quantity = groups.reduce((sum, group) => sum + Number(group.quantity || 0), 0);
+  return firstDefined(
+    quantity || null,
+    row.itemQuantity,
+    row.item_quantity,
+    row.itemCount,
+    row.item_count,
+    row.itemsCount,
+    row.items_count,
+    "—",
+  );
+};
+
+const shipmentStatusOf = (row = {}) => {
+  const forwardShipments = (row.relations?.shipments || []).filter(
+    (shipment) => String(shipment.direction || "forward") !== "reverse",
+  );
+  const statusCounts = forwardShipments.reduce((counts, shipment) => {
+    const status = firstDefined(shipment.status, shipment.shipment_status, shipment.delivery_status);
+    if (!status) return counts;
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
+  const statuses = Object.keys(statusCounts);
+  if (statuses.length === 1) return statuses[0];
+  if (statuses.length > 1) return statuses.map((status) => `${status} (${statusCounts[status]})`).join(", ");
+  return firstDefined(
+    row.delivery_status,
+    row.deliveryStatus,
+    row.shipmentStatus,
+    row.shipment_status,
+    row.relations?.eWayBill?.status,
+    row.relations?.eWayBill?.delivery_status,
+  );
+};
+
 const createColumns = (navigate) => [
   {
     key: "order_number",
@@ -134,16 +240,20 @@ const createColumns = (navigate) => [
     key: "seller",
     label: "Seller / Org",
     render: (_, row) => {
+      const sellerGroups = sellerGroupsOf(row);
+      const primaryGroup = sellerGroups[0] || {};
+      const primarySeller = row.relations?.sellers?.[0] || row.seller || {};
       const sellerName = firstDefined(
         row.sellerName,
-        row.relations?.sellers?.[0]?.displayName,
-        row.relations?.sellers?.[0]?.businessName,
-        row.seller?.name,
+        primaryGroup.sellerName,
+        sellerNameOf(primarySeller),
         row.sellerSnapshot?.name,
         row.seller_snapshot?.name,
       );
       const organizationName = firstDefined(
         row.organizationName,
+        primaryGroup.organizationName,
+        organizationNameOf(primaryGroup.organizationSnapshot),
         row.organization?.legalName,
         row.organizationSnapshot?.legalName,
         row.organization_snapshot?.legalName,
@@ -153,27 +263,40 @@ const createColumns = (navigate) => [
       const sellerId = firstDefined(
         row.sellerId,
         row.seller_id,
-        row.relations?.sellers?.[0]?.id,
-        row.relations?.sellers?.[0]?._id,
+        primaryGroup.sellerId,
+        primaryGroup.seller_id,
+        primarySeller.id,
+        primarySeller._id,
         row.seller?.id,
         row.seller?._id,
       );
-      const organizationId = firstDefined(row.organizationId, row.organization_id);
+      const organizationId = firstDefined(
+        row.organizationId,
+        row.organization_id,
+        primaryGroup.organizationId,
+        primaryGroup.organization_id,
+      );
       if (!sellerName && !organizationName && !sellerId && !organizationId) {
         return <span className="text-gray-400">—</span>;
       }
+      const sellerViewPath = sellerId ? `/app/seller/view/${encodeURIComponent(String(sellerId))}` : "";
       return (
         <button
           type="button"
           disabled={!sellerId}
-          onClick={() => sellerId && navigate(`/app/seller/view/${sellerId}`)}
-          className="text-left enabled:hover:underline"
+          onClick={() => sellerViewPath && navigate(sellerViewPath)}
+          className="text-left enabled:hover:underline disabled:cursor-default"
+          title={sellerViewPath || undefined}
         >
           <div className="text-sm font-medium text-gray-800">
             {organizationName || sellerName || "Seller"}
           </div>
           {sellerName && organizationName && (
             <div className="text-xs text-gray-400">{sellerName}</div>
+          )}
+          {sellerId && <div className="text-[11px] font-medium text-[#2f6fed]">View seller</div>}
+          {sellerGroups.length > 1 && (
+            <div className="text-xs text-gray-400">+{sellerGroups.length - 1} more seller</div>
           )}
           {!sellerName && sellerId && <div className="text-xs text-gray-400">Seller details unavailable</div>}
         </button>
@@ -183,12 +306,7 @@ const createColumns = (navigate) => [
   {
     key: "items",
     label: "Items",
-    render: (v, row) => {
-      const count = Array.isArray(v)
-        ? v.length
-        : firstDefined(row.itemCount, row.item_count, "—");
-      return <span className="font-mono">{count}</span>;
-    },
+    render: (_, row) => <span className="font-mono">{countItems(row)}</span>,
   },
   {
     key: "total_amount",
@@ -229,7 +347,7 @@ const createColumns = (navigate) => [
     key: "delivery_status",
     label: "Shipment Status",
     render: (v, row) => {
-      const s = firstDefined(v, row.deliveryStatus);
+      const s = firstDefined(v, shipmentStatusOf(row));
       return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">—</span>;
     },
   },
