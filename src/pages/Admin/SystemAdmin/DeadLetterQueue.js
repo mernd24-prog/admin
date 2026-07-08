@@ -19,9 +19,11 @@ const FILTER_FIELDS = [
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
+  const candidate = data?.list || data?.events || data?.items;
+  const list = Array.isArray(candidate) ? candidate : [];
   return {
-    list: data?.list || data?.events || data?.items || data || [],
-    total: Number(data?.total || data?.list?.length || 0),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
 
@@ -30,7 +32,7 @@ const fmt = (d) => (d ? moment(d).format("DD MMM YYYY, h:mm A") : "—");
 const DeadLetterQueue = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const payload = unwrapList(selector.deadLetterData);
+  const payload = unwrapList(selector?.deadLetterData);
 
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;

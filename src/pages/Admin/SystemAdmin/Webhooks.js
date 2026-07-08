@@ -29,9 +29,11 @@ const COMMON_EVENTS = [
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
+  const candidate = data?.list || data?.webhooks || data?.items;
+  const list = Array.isArray(candidate) ? candidate : [];
   return {
-    list: data?.list || data?.webhooks || data?.items || data || [],
-    total: Number(data?.total || data?.list?.length || 0),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
 
@@ -41,7 +43,7 @@ const EMPTY_FORM = { endpointUrl: "", secret: "", eventTypes: [], ownerId: "", m
 const Webhooks = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const payload = unwrapList(selector.webhooksData);
+  const payload = unwrapList(selector?.webhooksData);
 
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;

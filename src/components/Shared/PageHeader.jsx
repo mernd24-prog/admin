@@ -78,7 +78,7 @@ const PageHeader = ({
           {breadcrumbs.length > 0 && (
             <nav
               aria-label="Breadcrumb"
-              className="mb-2 inline-flex w-fit max-w-full flex-wrap items-center gap-1 py-1.5 text-[11px] "
+              className="mb-2 inline-flex w-fit max-w-full flex-wrap items-center gap-1 py-1.5 text-[13.5px] "
             >
           
               {breadcrumbs.map((crumb, i) => (

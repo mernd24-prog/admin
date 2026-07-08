@@ -20,9 +20,11 @@ const FILTER_FIELDS = [
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
+  const candidate = data?.list || data?.flags || data?.items;
+  const list = Array.isArray(candidate) ? candidate : [];
   return {
-    list: data?.list || data?.flags || data?.items || data || [],
-    total: Number(data?.total || data?.list?.length || 0),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
 
@@ -31,7 +33,7 @@ const EMPTY_FORM = { flagKey: "", description: "", enabled: true, rolloutPercent
 const FeatureFlags = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const payload = unwrapList(selector.featureFlagsData);
+  const payload = unwrapList(selector?.featureFlagsData);
 
   const list = useListPage({ defaultPageSize: 30 });
   const { toQueryParams } = list;

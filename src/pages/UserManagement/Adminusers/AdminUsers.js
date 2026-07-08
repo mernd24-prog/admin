@@ -1366,6 +1366,8 @@ const AdminUsers = () => {
             {tab === "admins" && isSuperAdmin && (
               <AddButton
                 requiredModule="rbac"
+                variant="primary"
+                className="admin-btn-white-text"
                 onClick={() => {
                   setErrors({});
                   setAdminForm({
@@ -1382,6 +1384,8 @@ const AdminUsers = () => {
             )}
             {tab === "subadmins" && isAdmin && canCreateSubAdmin && (
               <AddButton
+                variant="primary"
+                className="admin-btn-white-text"
                 onClick={() => {
                   setErrors({});
                   setSubAdminForm({

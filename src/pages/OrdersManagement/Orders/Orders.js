@@ -79,7 +79,7 @@ const orderIdOf = (order = {}) =>
 
 const formatMoney = (value) => formatCurrency(value, "—");
 
-const createColumns = (navigate) => [
+const createColumns = (navigate, canOpenBuyerDetails) => [
   {
     key: "order_number",
     label: "Order #",
@@ -115,18 +115,25 @@ const createColumns = (navigate) => [
       const name = row.buyerName || buyer.displayName || buyer.fullName || buyer.name || row.buyer_name;
       const email = row.buyerEmail || buyer.email || row.buyer_email;
       const buyerId = firstDefined(buyer.id, buyer._id, row.buyer_id, row.buyerId);
-      return (
-        <button
-          type="button"
-          disabled={!buyerId}
-          onClick={() => buyerId && navigate(`/app/users/view/${buyerId}`)}
-          className="text-left enabled:hover:underline"
-        >
+      const buyerContent = (
+        <>
           {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
           {email && !name && <div className="text-sm text-gray-700">{email}</div>}
           {email && name && <div className="text-xs text-gray-400">{email}</div>}
           {!name && !email && <span className="text-gray-400">Customer details unavailable</span>}
+        </>
+      );
+
+      return canOpenBuyerDetails && buyerId ? (
+        <button
+          type="button"
+          onClick={() => navigate(`/app/users/view/${buyerId}`)}
+          className="text-left hover:underline"
+        >
+          {buyerContent}
         </button>
+      ) : (
+        <div className="text-left">{buyerContent}</div>
       );
     },
   },
@@ -324,7 +331,10 @@ const Orders = () => {
     [items, buyerDirectory],
   );
 
-  const baseColumns = useMemo(() => createColumns(navigate), [navigate]);
+  const baseColumns = useMemo(
+    () => createColumns(navigate, !isSeller),
+    [isSeller, navigate],
+  );
 
   useEffect(() => {
     const params = toQueryParams();

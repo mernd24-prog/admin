@@ -290,7 +290,12 @@ const BarcodePage = () => {
       const response = await dispatch(getProducts(query));
 
       if (response?.payload?.data) {
-        setApiRes(response.payload.data);
+        const payload = response.payload.data;
+        setApiRes({
+          ...payload,
+          list: Array.isArray(payload?.list) ? payload.list : [],
+          total: Number(payload?.total || payload?.list?.length || 0),
+        });
       } else {
         setApiRes({ list: [], total: 0 });
       }
@@ -611,7 +616,8 @@ const BarcodePage = () => {
 `;
 
   const printAllBarcodes = useCallback(() => {
-    if (apiRes.list.length === 0) {
+    const products = Array.isArray(apiRes?.list) ? apiRes.list : [];
+    if (products.length === 0) {
       toast.warning("No products to print");
       return;
     }
@@ -641,8 +647,8 @@ const BarcodePage = () => {
         <div class="labels-container">
     `;
 
-    for (let i = 0; i < apiRes.list.length; i++) {
-      const product = apiRes.list[i];
+    for (let i = 0; i < products.length; i++) {
+      const product = products[i];
       htmlContent += `
         <div class="label-container">
             <div class="header">
@@ -692,7 +698,7 @@ const BarcodePage = () => {
         </div>
         `;
 
-      if ((i + 1) % 3 === 0 && i !== apiRes.list.length - 1) {
+      if ((i + 1) % 3 === 0 && i !== products.length - 1) {
         htmlContent += `
             <div style="page-break-after: always;"></div>
             `;
@@ -704,7 +710,7 @@ const BarcodePage = () => {
         <script>
             window.onload = function () {
                 try {
-                    ${apiRes.list
+                    ${products
                       .map(
                         (product) => `
                         bwipjs.toCanvas(document.getElementById('barcode-${product._id}'), {
@@ -739,7 +745,8 @@ const BarcodePage = () => {
   }, [apiRes.list]);
 
   const printBarcodes = useCallback(() => {
-    if (apiRes.list.length === 0) {
+    const products = Array.isArray(apiRes?.list) ? apiRes.list : [];
+    if (products.length === 0) {
       toast.warning("No products to print");
       return;
     }
@@ -924,12 +931,12 @@ const BarcodePage = () => {
     <div class="labels-container">
 `;
 
-    for (let i = 0; i < apiRes.list.length; i += 2) {
+    for (let i = 0; i < products.length; i += 2) {
       const rowClass =
         Math.floor(i / 2) % 10 === 9 ? "label-row page-break" : "label-row";
       htmlContent += `<div class="${rowClass}">`;
 
-      const product1 = apiRes.list[i];
+      const product1 = products[i];
       htmlContent += `
     <div class="label-container">
         <div class="barcode-section border-2">
@@ -937,8 +944,8 @@ const BarcodePage = () => {
         </div>
     </div>`;
 
-      if (i + 1 < apiRes.list.length) {
-        const product2 = apiRes.list[i + 1];
+      if (i + 1 < products.length) {
+        const product2 = products[i + 1];
         htmlContent += `
         <div class="label-container">
             <div class="barcode-section ">
@@ -957,7 +964,7 @@ const BarcodePage = () => {
     <script>
         window.onload = function() {
             try {
-                ${apiRes.list
+                ${products
                   .map(
                     (product) => `
                  bwipjs.toCanvas(document.getElementById('barcode-${product.product_no}'), {
@@ -1012,7 +1019,7 @@ const BarcodePage = () => {
 
   const tableRows = useMemo(
     () =>
-      apiRes.list.map((product) => [
+      (Array.isArray(apiRes?.list) ? apiRes.list : []).map((product) => [
         <div
           className="text-blue-500 font-semibold cursor-pointer"
           onClick={() => handleImageClick(product?.product_image_id?.images)}

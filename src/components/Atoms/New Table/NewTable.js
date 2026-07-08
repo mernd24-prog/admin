@@ -181,7 +181,7 @@ export default function SearchComponent({
         className={`flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center md:flex-[1_1_640px]">
-          <div className="w-full min-w-0 md:max-w-2xl">
+          <div className={`w-full min-w-0 ${largeSearchInput ? "md:max-w-2xl" : "md:max-w-md"}`}>
             <SearchInput
               type="text"
               placeholder={placeholder ? placeholder : "Search"}
