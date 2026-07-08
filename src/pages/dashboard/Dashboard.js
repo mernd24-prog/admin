@@ -142,6 +142,11 @@ const formatDate = (value) => {
     : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 };
 
+const formatRangeLabel = ({ fromDate, toDate } = {}) => {
+  if (!fromDate || !toDate) return "Custom Range";
+  return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
+};
+
 const statusStyle = (status = "") => {
   const nextStatus = String(status).toLowerCase();
   if (
@@ -179,7 +184,7 @@ function EmptyTableRow({ colSpan, children }) {
   );
 }
 
-function GoldDropdown({ icon, options, value, onChange, className = "" }) {
+function GoldDropdown({ icon, options, value, onChange, className = "", displayLabel }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
   const selected = options.find((option) => option.value === value) || options[0];
@@ -204,7 +209,7 @@ function GoldDropdown({ icon, options, value, onChange, className = "" }) {
       >
         <span className="flex min-w-0 items-center gap-2">
           {icon}
-          <span className="truncate">{selected?.label}</span>
+          <span className="truncate">{displayLabel || selected?.label}</span>
         </span>
         <span className="text-[10px] leading-none">▾</span>
       </button>
@@ -620,6 +625,7 @@ export default function Dashboard() {
     if (chartView === "recent_orders") return recentOrderChartData;
     return performanceData;
   }, [chartView, performanceData, recentOrderChartData, topProductChartData]);
+  const chartRenderKey = `${chartView}:${dateFilters.fromDate}:${dateFilters.toDate}`;
   const hasActiveChartData = activeChartData.some(
     (item) => item.value > 0 || item.orders > 0 || item.revenue > 0 || item.averageOrderValue > 0,
   );
@@ -668,6 +674,8 @@ export default function Dashboard() {
               options={RANGE_OPTIONS}
               value={range}
               onChange={handleRangeChange}
+              displayLabel={range === "custom" ? formatRangeLabel(dateFilters) : undefined}
+              className={range === "custom" ? "sm:w-[220px]" : undefined}
             />
             <GoldDropdown
               options={CHART_OPTIONS}
@@ -756,7 +764,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="h-[270px] w-full text-xs">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer key={chartRenderKey} width="100%" height="100%">
                 {chartView === "performance" ? (
                   <AreaChart
                     data={activeChartData}

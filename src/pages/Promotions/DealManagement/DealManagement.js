@@ -8,6 +8,7 @@ import {
   MdBarChart,
   MdCheckCircle,
   MdClose,
+  MdEdit,
   MdHistory,
   MdLocalOffer,
   MdPause,
@@ -20,6 +21,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   ConfirmModal,
   DataTable,
@@ -31,6 +33,7 @@ import {
   getDeals,
   getDeal,
   createDeal,
+  updateDeal,
   submitDeal,
   approveDeal,
   rejectDeal,
@@ -116,10 +119,8 @@ const initialForm = {
   dealSource: "admin_direct",
   dealBadge: "Today's Deal",
   priority: "100",
-  dealBanner: "",
   reason: "",
   message: "",
-  adminNotes: "",
 };
 
 const FILTER_FIELDS = [
@@ -196,6 +197,14 @@ const normalizeProduct = (product = {}) => {
     isDealProduct: Boolean(product.metadata?.isDealProduct),
     dealBadge: product.metadata?.dealBadge || "",
     dealSource: product.metadata?.dealSource || "",
+    sellerName:
+      product.sellerName ||
+      product.sellerDisplayName ||
+      product.seller?.displayName ||
+      product.seller?.businessName ||
+      product.seller?.name ||
+      product.seller?.email ||
+      "",
     categoryLabel:
       product.categoryName ||
       product.category?.name ||
@@ -247,6 +256,7 @@ function ProductSearch({ sellerId, value, onSelect }) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isListOpen, setIsListOpen] = useState(false);
   const requestRef = useRef(0);
 
   const searchProducts = useCallback(async (search = "") => {
@@ -254,9 +264,12 @@ function ProductSearch({ sellerId, value, onSelect }) {
     requestRef.current = requestId;
     setLoading(true);
     try {
+      const trimmed = search.trim();
       const response = await axiosPrivate.get(ENDPOINTS.products.listForPanel, {
         params: {
-          q: search.trim() || undefined,
+          q: trimmed || undefined,
+          search: trimmed || undefined,
+          keyWord: trimmed || undefined,
           sellerId: sellerId || undefined,
           limit: 10,
           includeVariants: true,
@@ -289,116 +302,96 @@ function ProductSearch({ sellerId, value, onSelect }) {
         <MdSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setIsListOpen(true)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setIsListOpen(true);
+          }}
           className="admin-input w-full !pl-9"
           placeholder={value?.label || "Search product name or SKU"}
         />
       </div>
-      <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white">
-        {loading ? (
-          <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">Loading products...</div>
-        ) : items.length ? (
-          items.map((item) => {
-            const selected = String(value?.id || "") === String(item.id);
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelect(item)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-blue-soft)] ${
-                  selected ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "text-[var(--admin-ink)]"
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{item.label}</span>
-                  <span className="block truncate text-xs text-[var(--admin-muted)]">
-                    {item.sku || "No SKU"} · Stock {item.stock || 0}
-                  </span>
-                  {item.isDealProduct && (
-                    <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                      {item.dealBadge || "Deal"}
+      {value?.label && !isListOpen ? (
+        <div className="mt-2 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2 text-sm text-[var(--admin-ink)]">
+          <span className="block truncate font-medium">{value.label}</span>
+          <span className="block truncate text-xs text-[var(--admin-muted)]">
+            {value.sku || "No SKU"} · Stock {value.stock || 0}
+          </span>
+        </div>
+      ) : null}
+      {isListOpen && (
+        <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white">
+          {loading ? (
+            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">Loading products...</div>
+          ) : items.length ? (
+            items.map((item) => {
+              const selected = String(value?.id || "") === String(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onSelect(item);
+                    setQuery("");
+                    setIsListOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-blue-soft)] ${
+                    selected ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "text-[var(--admin-ink)]"
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{item.label}</span>
+                    <span className="block truncate text-xs text-[var(--admin-muted)]">
+                      {item.sku || "No SKU"} · Stock {item.stock || 0}
                     </span>
-                  )}
-                </span>
-                <span className="shrink-0 text-xs font-semibold">{money(item.price)}</span>
-              </button>
-            );
-          })
-        ) : (
-          <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
-            Search and select an existing product.
-          </div>
-        )}
-      </div>
+                    {item.isDealProduct && (
+                      <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        {item.dealBadge || "Deal"}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold">{money(item.price)}</span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
+              Search and select an existing product.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function SellerSearch({ value, onSelect }) {
-  const [query, setQuery] = useState("");
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const searchSellers = useCallback(async (search = "") => {
-    setLoading(true);
+  const loadSellerOptions = useCallback(async (search = "") => {
     try {
-      const options = await dropdownApi.getSellers({
+      return await dropdownApi.getSellers({
         keyWord: search,
         searchFields: "full_name,email,businessName",
       });
-      setItems(options || []);
     } catch (error) {
-      setItems([]);
       toast.error(error?.response?.data?.message || "Failed to search sellers");
-    } finally {
-      setLoading(false);
+      return [];
     }
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => searchSellers(query), 250);
-    return () => clearTimeout(timer);
-  }, [query, searchSellers]);
-
   return (
-    <div className="admin-field">
-      <label className="admin-label">Seller <span className="admin-required">*</span></label>
-      <div className="relative">
-        <MdSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="admin-input w-full !pl-9"
-          placeholder={value?.label || "Search seller"}
-        />
-      </div>
-      <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white">
-        {loading ? (
-          <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">Loading sellers...</div>
-        ) : items.length ? (
-          items.map((item) => {
-            const selected = String(value?.value || "") === String(item.value);
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => onSelect(item)}
-                className={`flex w-full flex-col px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-blue-soft)] ${
-                  selected ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "text-[var(--admin-ink)]"
-                }`}
-              >
-                <span className="truncate font-medium">{item.label}</span>
-                <span className="truncate text-xs text-[var(--admin-muted)]">{item.meta?.email || item.value}</span>
-              </button>
-            );
-          })
-        ) : (
-          <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
-            Search and select a seller.
-          </div>
-        )}
-      </div>
-    </div>
+    <FilterSelect
+      label="Seller"
+      required
+      name="sellerId"
+      inputId="deal-seller-id"
+      value={value}
+      onChange={onSelect}
+      loadOptions={loadSellerOptions}
+      placeholder="Select seller"
+      defaultOptions
+      cacheOptions
+    />
   );
 }
 
@@ -420,6 +413,7 @@ const DealManagement = () => {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [sellerLookup, setSellerLookup] = useState({});
@@ -497,6 +491,7 @@ const DealManagement = () => {
   }, [dispatch]);
 
   const openForm = (mode = isSellerPanel() ? "seller_request" : "admin_direct") => {
+    setEditingDeal(null);
     setForm({
       ...initialForm,
       mode,
@@ -507,8 +502,60 @@ const DealManagement = () => {
     setFormOpen(true);
   };
 
+  const openEditDeal = (deal) => {
+    const metadata = deal.metadata || {};
+    const productLabel = metadata.productLabel || deal.title || "";
+    setEditingDeal(deal);
+    setSelectedSeller(deal.sellerId ? {
+      value: deal.sellerId,
+      label: getRowSellerName(deal) || deal.sellerName || deal.sellerId,
+    } : null);
+    setSelectedProduct({
+      id: deal.productId,
+      label: productLabel,
+      price: deal.originalPrice,
+      stock: deal.allocatedQuantity,
+      sku: metadata.productSku || deal.variantSku || "",
+    });
+    setForm({
+      ...initialForm,
+      mode: "edit",
+      sellerId: deal.sellerId || "",
+      productId: deal.productId || "",
+      productLabel,
+      variantId: deal.variantId || "",
+      variantSku: deal.variantSku || "",
+      category: deal.category || "",
+      title: deal.title || productLabel,
+      originalPrice: deal.originalPrice ?? "",
+      dealPrice: deal.dealPrice ?? "",
+      allocatedQuantity: deal.allocatedQuantity ?? "",
+      maxQuantityPerOrder: deal.maxQuantityPerOrder ?? "",
+      startAt: deal.startAt ? moment(deal.startAt).format("YYYY-MM-DDTHH:mm") : "",
+      endAt: deal.endAt ? moment(deal.endAt).format("YYYY-MM-DDTHH:mm") : "",
+      dealType: deal.dealType || "fixed_price",
+      dealSource: metadata.dealSource || "admin_direct",
+      dealBadge: metadata.dealBadge || "Today's Deal",
+      priority: String(metadata.priority ?? "100"),
+      reason: metadata.sellerReason || "",
+      message: metadata.sellerMessage || "",
+    });
+    setFormOpen(true);
+  };
+
   const openFormFromProduct = (product) => {
     openForm("admin_direct");
+    if (product.sellerId) {
+      const sellerOption = {
+        value: product.sellerId,
+        label: product.sellerName || product.sellerId,
+      };
+      setSelectedSeller(sellerOption);
+      setSellerLookup((current) => ({
+        ...current,
+        [String(product.sellerId)]: sellerLookupFromOption(sellerOption),
+      }));
+    }
     setSelectedProduct(product);
     setForm((current) => ({
       ...current,
@@ -530,8 +577,20 @@ const DealManagement = () => {
 
   const onProductSelect = (product) => {
     setSelectedProduct(product);
+    if (!selectedSeller && product.sellerId) {
+      const sellerOption = {
+        value: product.sellerId,
+        label: product.sellerName || product.sellerId,
+      };
+      setSelectedSeller(sellerOption);
+      setSellerLookup((current) => ({
+        ...current,
+        [String(product.sellerId)]: sellerLookupFromOption(sellerOption),
+      }));
+    }
     setForm((current) => ({
       ...current,
+      sellerId: current.sellerId || product.sellerId || "",
       productId: product.id,
       productLabel: product.label,
       title: current.title || `${product.label} Deal`,
@@ -551,7 +610,26 @@ const DealManagement = () => {
         [String(seller.value)]: sellerLookupFromOption(seller),
       }));
     }
-    setForm((current) => ({ ...current, sellerId: seller.value }));
+    setForm((current) => {
+      const nextSellerId = seller?.value || "";
+      const sellerChanged = String(current.sellerId || "") !== String(nextSellerId || "");
+      return {
+        ...current,
+        sellerId: nextSellerId,
+        ...(sellerChanged
+          ? {
+              productId: "",
+              productLabel: "",
+              originalPrice: "",
+              allocatedQuantity: "",
+              category: "",
+            }
+          : {}),
+      };
+    });
+    if (!seller?.value || String(form.sellerId || "") !== String(seller.value)) {
+      setSelectedProduct(null);
+    }
   };
 
   const formDeal = useMemo(() => ({
@@ -584,14 +662,14 @@ const DealManagement = () => {
 
   const buildDealPayload = () => ({
     title: form.title.trim(),
-    description: form.message || form.reason || form.adminNotes || "",
+    description: form.message || form.reason || "",
     sellerId: form.sellerId || undefined,
     productId: form.productId,
     variantId: form.variantId || undefined,
     variantSku: form.variantSku || undefined,
     category: form.category || undefined,
     dealType: form.dealType,
-    status: form.mode === "admin_direct" && isAdminPanel() ? "active" : "draft",
+    status: editingDeal ? editingDeal.status : form.mode === "admin_direct" && isAdminPanel() ? "active" : "draft",
     originalPrice: num(form.originalPrice),
     dealPrice: num(form.dealPrice),
     allocatedQuantity: Number(form.allocatedQuantity || 0),
@@ -601,11 +679,9 @@ const DealManagement = () => {
     metadata: {
       dealSource: form.dealSource,
       dealBadge: form.dealBadge,
-      dealBanner: form.dealBanner || null,
       priority: Number(form.priority || 100),
       sellerReason: form.reason || null,
       sellerMessage: form.message || null,
-      adminNotes: form.adminNotes || null,
       productLabel: form.productLabel || selectedProduct?.label || null,
       productSku: selectedProduct?.sku || null,
       originalPriceLocked: true,
@@ -622,6 +698,16 @@ const DealManagement = () => {
 
     try {
       setSubmitLoading(true);
+      if (editingDeal) {
+        await dispatch(updateDeal({ dealId: getDealId(editingDeal), ...buildDealPayload() })).unwrap();
+        toast.success("Deal updated");
+        setFormOpen(false);
+        setEditingDeal(null);
+        fetchDeals();
+        fetchAnalytics();
+        fetchDealProductKeys();
+        return;
+      }
       const created = await dispatch(createDeal(buildDealPayload())).unwrap();
       const createdDeal = created?.data?.data || created?.data || created;
       if (form.mode === "seller_request") {
@@ -637,6 +723,7 @@ const DealManagement = () => {
         toast.success("Direct deal created without changing product master price");
       }
       setFormOpen(false);
+      setEditingDeal(null);
       fetchDeals();
       fetchAnalytics();
       fetchDealProductKeys();
@@ -852,9 +939,14 @@ const DealManagement = () => {
                 Create Deal
               </button>
             ) : (
-              <button onClick={() => openDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
-                <MdVisibility size={18} />
-              </button>
+              <>
+                <button onClick={() => openDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
+                  <MdVisibility size={18} />
+                </button>
+                <button onClick={() => openEditDeal(row)} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Edit">
+                  <MdEdit size={18} />
+                </button>
+              </>
             )}
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
               {row._rowType !== "product_deal_key" && ["pending_approval", "draft"].includes(status) && isAdminPanel() && (
@@ -962,8 +1054,12 @@ const DealManagement = () => {
 
       <DefaultModal
         isOpen={formOpen}
-        onClose={() => setFormOpen(false)}
-        title={form.mode === "seller_request" ? "Request Deal Product" : "Create Direct Deal"}
+        onClose={() => {
+          setFormOpen(false);
+          setEditingDeal(null);
+        }}
+        isButtonView={false}
+        title={editingDeal ? "Edit Deal Product" : form.mode === "seller_request" ? "Request Deal Product" : "Create Direct Deal"}
       >
         <div className="space-y-5 p-4">
           {isAdminPanel() && <SellerSearch value={selectedSeller} onSelect={onSellerSelect} />}
@@ -1002,17 +1098,18 @@ const DealManagement = () => {
               onChange={(option) => setField("dealBadge", option?.value || "")}
             />
             <Input label="Priority" type="number" value={form.priority} onChange={(event) => setField("priority", event.target.value)} />
-            <Input label="Deal Banner URL" value={form.dealBanner} onChange={(event) => setField("dealBanner", event.target.value)} />
           </div>
 
-          <Input
-            label={form.mode === "seller_request" ? "Reason" : "Internal Note"}
-            type="textarea"
-            value={form.mode === "seller_request" ? form.reason : form.adminNotes}
-            onChange={(event) => setField(form.mode === "seller_request" ? "reason" : "adminNotes", event.target.value)}
-            placeholder={form.mode === "seller_request" ? "Why should this product become a deal?" : "Price finalized after discussion with seller."}
-            required={form.mode === "seller_request"}
-          />
+          {form.mode === "seller_request" && (
+            <Input
+              label="Reason"
+              type="textarea"
+              value={form.reason}
+              onChange={(event) => setField("reason", event.target.value)}
+              placeholder="Why should this product become a deal?"
+              required
+            />
+          )}
           {form.mode === "seller_request" && (
             <Input
               label="Optional Message"
@@ -1028,26 +1125,49 @@ const DealManagement = () => {
           </div>
 
           <div className="flex justify-end gap-2 border-t border-[var(--admin-line)] pt-4">
-            <button type="button" className="admin-btn-secondary" onClick={() => setFormOpen(false)}>Cancel</button>
+            <button type="button" className="admin-btn-secondary" onClick={() => {
+              setFormOpen(false);
+              setEditingDeal(null);
+            }}>Cancel</button>
             <button type="button" className="admin-btn-primary" onClick={submitForm} disabled={submitLoading}>
-              {submitLoading ? "Saving..." : form.mode === "seller_request" ? "Submit Request" : "Activate Deal"}
+              {submitLoading ? "Saving..." : editingDeal ? "Update Deal" : form.mode === "seller_request" ? "Submit Request" : "Activate Deal"}
             </button>
           </div>
         </div>
       </DefaultModal>
 
-      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Product Detail">
-        {detailLoading ? (
-          <Loader />
+      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Product Detail" isButtonView={false} width="560px">
+        {!detail && detailLoading ? (
+          <div className="flex min-h-[260px] items-center justify-center">
+            <Loader />
+          </div>
         ) : detail ? (
           <div className="space-y-5 p-4">
+            {detailLoading ? (
+              <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                Loading latest deal details...
+              </div>
+            ) : null}
             <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-[var(--admin-ink)]">{detail.metadata?.productLabel || detail.title}</p>
                   <p className="text-xs text-[var(--admin-muted)]">{detail.dealNumber || getDealId(detail)}</p>
                 </div>
-                <StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} />
+                  <button
+                    type="button"
+                    className="rounded p-1 text-amber-600 transition hover:bg-amber-50"
+                    title="Edit Deal"
+                    onClick={() => {
+                      openEditDeal(detail);
+                      setDetail(null);
+                    }}
+                  >
+                    <MdEdit size={18} />
+                  </button>
+                </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div><p className="text-gray-500">Original Price</p><p className="line-through">{money(detail.originalPrice)}</p></div>
@@ -1063,12 +1183,11 @@ const DealManagement = () => {
               </div>
             </div>
 
-            {(detail.metadata?.sellerReason || detail.metadata?.sellerMessage || detail.metadata?.adminNotes || detail.description) && (
+            {(detail.metadata?.sellerReason || detail.metadata?.sellerMessage || detail.description) && (
               <div className="rounded-md border border-[var(--admin-line)] bg-white p-4 text-sm">
                 <p className="mb-2 font-semibold text-[var(--admin-ink)]">Notes</p>
                 {detail.metadata?.sellerReason && <p><span className="text-gray-500">Reason:</span> {detail.metadata.sellerReason}</p>}
                 {detail.metadata?.sellerMessage && <p><span className="text-gray-500">Seller message:</span> {detail.metadata.sellerMessage}</p>}
-                {detail.metadata?.adminNotes && <p><span className="text-gray-500">Admin notes:</span> {detail.metadata.adminNotes}</p>}
                 {!detail.metadata?.sellerReason && detail.description && <p>{detail.description}</p>}
               </div>
             )}

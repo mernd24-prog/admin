@@ -19,7 +19,13 @@ const toggleLabels = {
   updateLanguages: "Update other languages data"
 };
 
-const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, togglePanel, onSave }) => {
+const variantLabel = (variant = {}) => {
+  const title = variant.title || variant.name || (variant.isDefault ? "Default variant" : "Variant");
+  const sku = variant.sku || variant.variantSku || "";
+  return [title, sku ? `SKU: ${sku}` : ""].filter(Boolean).join(" - ");
+};
+
+const SellerInventorySetup = ({ setFormData, formData, variantOptions = [], InventorySetupOpen, togglePanel, onSave }) => {
   const [settings, setSettings] = useState({
     activate: true,
     approval: false,
@@ -34,6 +40,19 @@ const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, toggl
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "variantSku") {
+      const selectedVariant = variantOptions.find((variant) => String(variant.sku || "") === String(value || ""));
+      setFormData(prev => ({
+        ...prev,
+        variantSku: value,
+        sku: selectedVariant?.sku || prev.sku,
+        costPrice: String(selectedVariant?.mrp ?? prev.costPrice ?? ""),
+        sellingPrice: String(selectedVariant?.price ?? prev.sellingPrice ?? ""),
+        specialPrice: String(selectedVariant?.salePrice ?? prev.specialPrice ?? ""),
+        availableQty: String(selectedVariant?.stock ?? prev.availableQty ?? "0"),
+      }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -67,9 +86,19 @@ const SellerInventorySetup = ({ setFormData, formData, InventorySetupOpen, toggl
   const formFields = [
     { label: "User*", name: "user", type: "text" },
     { label: "Title*", name: "title", type: "text" },
-    { label: "URL keyword", name: "urlKeyword", type: "text" },
-    { label: "Cost price [$]*", name: "costPrice", type: "number" },
+    { label: "Product Reference", name: "productReference", type: "text" },
+    ...(variantOptions.length ? [{
+      label: "Variant",
+      name: "variantSku",
+      type: "select",
+      options: variantOptions.map((variant) => ({
+        value: variant.sku || "",
+        label: variantLabel(variant),
+      })),
+    }] : []),
+    { label: "MRP [$]*", name: "costPrice", type: "number" },
     { label: "Selling price [$]*", name: "sellingPrice", type: "number" },
+    { label: "Special price [$]", name: "specialPrice", type: "number" },
     { label: "Available quantity*", name: "availableQty", type: "number" },
     { label: "Product SKU*", name: "sku", type: "text" },
     { label: "Minimum purchase quantity*", name: "minPurchaseQty", type: "number" },

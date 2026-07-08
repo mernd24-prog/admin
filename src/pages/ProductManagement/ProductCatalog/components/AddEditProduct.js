@@ -267,6 +267,7 @@ export default function ProductManagementUI() {
             stock: productData?.stock ?? '',
             price: productData?.price ?? '',
             mrp: productData?.mrp ?? '',
+            salePrice: productData?.salePrice ?? '',
             isDealProduct: Boolean(productData?.metadata?.isDealProduct),
             dealBadge: productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,
             dealSource: productData?.metadata?.dealSource || INITIALS_DATA.dealSource,
@@ -738,6 +739,15 @@ export default function ProductManagementUI() {
     }
     if (!formData?.price || Number(formData.price) <= 0) newErrors.price = "Price is required.";
     if (!formData?.mrp || Number(formData.mrp) <= 0) newErrors.mrp = "MRP is required.";
+    if (Number(formData.price || 0) > Number(formData.mrp || 0)) {
+      newErrors.price = "Selling price must be less than or equal to MRP.";
+    }
+    if (formData?.salePrice !== undefined && formData.salePrice !== '') {
+      if (Number(formData.salePrice) < 0) newErrors.salePrice = "Special price cannot be negative.";
+      if (Number(formData.salePrice) > Number(formData.price || 0)) {
+        newErrors.salePrice = "Special price must be less than or equal to selling price.";
+      }
+    }
     if (formData?.stock === undefined || formData?.stock === '' || Number(formData.stock) < 0) newErrors.stock = "Stock is required.";
     categoryAttributeSchema.forEach((field) => {
       const value = formData?.attributes?.[field.key];
@@ -1181,6 +1191,9 @@ export default function ProductManagementUI() {
       description: updatedFormData.description,
       price: Number(updatedFormData.price || primaryOption.salePrice || 0),
       mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),
+      ...(updatedFormData.salePrice !== undefined && updatedFormData.salePrice !== ""
+        ? { salePrice: Number(updatedFormData.salePrice || 0) }
+        : { salePrice: null }),
       gstInclusive: true,
       category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
