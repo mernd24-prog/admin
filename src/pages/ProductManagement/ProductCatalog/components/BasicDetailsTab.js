@@ -19,6 +19,8 @@ import { createCategory, createHsn } from '../../../../Redux/productSlice';
 
 import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
 import AddHsnModal from './Modals/AddHsnModal';
+import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
+import { isSellerPanel } from '../../../../_helpers/panelConfig';
 // import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
 
 const INITIAL_FORM_CATEGORY = {
@@ -42,6 +44,15 @@ const INITIAL_FORM_HSN = {
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
 
+const getSessionUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(window.sessionStorage.getItem('EcomAdmin') || 'null');
+  } catch {
+    return null;
+  }
+};
+
 export default function BasicDetailsTab({
   formData,
   handleChange,
@@ -59,6 +70,16 @@ export default function BasicDetailsTab({
   const selector = useSelector(state => state);
   const warrantyUnits = useDropdownOptions('warranty-units');
   const warrantyTemplatesFromMaster = useDropdownOptions('warranty-templates');
+  const userRole = normalizeRole(extractRole(
+    userData,
+    userData?.user,
+    userData?.data,
+    getSessionUser(),
+    getSessionUser()?.user,
+    getStoredUser(),
+    { role: getStoredRole() },
+  ));
+  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
  
   const modifiedSellerList = sellerList.length
@@ -84,7 +105,7 @@ export default function BasicDetailsTab({
     );
   }, [hsnCodeList, formData.hsn_code, formData.hsnCode]);
 
-  // ── HSN auto-suggestion ─────────────────────────────────────────────────
+  // ── HSN suggestion ──────────────────────────────────────────────────────
 
   const [hsnSuggestion, setHsnSuggestion] = useState(null);
   const userChangedCategoryRef = useRef(false);
@@ -132,7 +153,8 @@ export default function BasicDetailsTab({
     handleSelectChange(option, 'CATEGORY_ID');
   }, [handleSelectChange]);
 
-  // When category changes (user-triggered), compute HSN suggestion
+  // When category changes (user-triggered), compute HSN suggestion.
+  // Platform/admin owns HSN assignment; product form never auto-applies it.
   useEffect(() => {
     if (!userChangedCategoryRef.current) return;
     const categoryKey = String(formData?.category_id || formData?.categoryId || formData?.category || formData?.category_key || '');
@@ -147,15 +169,7 @@ export default function BasicDetailsTab({
       return;
     }
 
-    const isEditMode = Boolean(formData?._id || formData?.id);
-    const currentHsn = formData?.hsn_code || formData?.hsnCode;
-
-    if (isEditMode && currentHsn) {
-      setHsnSuggestion({ type: 'suggest', option: match });
-    } else {
-      handleSelectChange(match, 'hsn_code');
-      setHsnSuggestion({ type: 'applied', option: match });
-    }
+    setHsnSuggestion({ type: 'suggest', option: match });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData?.category_id, formData?.categoryId, formData?.category, formData?.category_key]);
 
@@ -424,7 +438,7 @@ export default function BasicDetailsTab({
 
         <div className="space-y-5">
           <div className="grid w-full grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-            {!SELLER_PANEL_ROLES.has(userData?.role) && (
+            {!isSellerPanelUser && (
               <div>
                 <FilterSelect
                   label="Seller"
@@ -438,7 +452,7 @@ export default function BasicDetailsTab({
                 />
               </div>
             )}
-            {!SELLER_PANEL_ROLES.has(userData?.role) && (
+            {!isSellerPanelUser && (
               <div>
                 <FilterSelect
                   label="Legal Organization"
@@ -452,7 +466,7 @@ export default function BasicDetailsTab({
                 />
               </div>
             )}
-            <div className={`${userData?.roleId !== 9 ? "col-span-1" : "col-span-2"}`}>
+            <div className={`${userRole !== 'seller-sub-admin' ? "col-span-1" : "col-span-2"}`}>
               <Input
                 labelName="Product Name"
                 name="name"
@@ -527,20 +541,7 @@ export default function BasicDetailsTab({
                 </PermissionGuard>
               </div>
 
-              {/* Suggestion: auto-applied (new product) */}
-              {hsnSuggestion?.type === 'applied' && (
-                <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-                  <span className="text-emerald-600 text-xs font-bold flex-shrink-0">✓</span>
-                  <p className="text-xs text-emerald-700 flex-1 min-w-0">
-                    HSN auto-filled: <strong>{hsnSuggestion.option.code}</strong>
-                    {hsnSuggestion.option.description ? ` — ${hsnSuggestion.option.description}` : ''}
-                  </p>
-                  <button type="button" onClick={() => setHsnSuggestion(null)}
-                    className="text-emerald-400 hover:text-emerald-700 text-base leading-none flex-shrink-0">×</button>
-                </div>
-              )}
-
-              {/* Suggestion: category changed on edit, existing HSN kept */}
+              {/* Suggestion: category changed, HSN kept until explicitly applied */}
               {hsnSuggestion?.type === 'suggest' && (
                 <div className="mt-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
                   <div className="flex items-start gap-2">
@@ -562,7 +563,7 @@ export default function BasicDetailsTab({
                       <button type="button"
                         onClick={() => setHsnSuggestion(null)}
                         className="rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-100 transition-colors">
-                        Keep current
+                        Dismiss
                       </button>
                     </div>
                   </div>

@@ -52,6 +52,7 @@ export const MODULE_TAB_ORDER = [
 
 const MODULE_LABELS = {
   admin: "Admin Dashboard",
+  "seller-dashboard": "Seller Dashboard",
   analytics: "Analytics",
   rbac: "Roles & Permissions",
   admin_users: "Admin/Sub Admin Management",
@@ -170,6 +171,7 @@ const MODULE_TABS = {
   admin_users: "Users & Access",
   "admin-users": "Users & Access",
   admin: "Dashboard",
+  "seller-dashboard": "Dashboard",
   users: "Users & Access",
   sellers: "Users & Access",
   seller_kyc: "Users & Access",
@@ -279,6 +281,7 @@ const formatModuleLabel = (value = "") =>
 export const MODULE_DEFAULT_ROUTES = {
   // Core
   admin:      "home",
+  "seller-dashboard": "home",
   analytics:  "analytics",
   rbac:       "roles-permissions",
   admin_users:"admin-users",
@@ -419,7 +422,7 @@ export const getModuleMeta = (moduleSlug) => {
 // ─── Route → modules mapping (for permission checks) ─────────────────────────
 const ROUTE_MODULES = [
   // Core
-  [["/home"], ["admin", "analytics"]],
+  [["/home"], ["admin", "seller-dashboard", "analytics"]],
 
   // Users & Access — admin_users is its own module per RBAC guide
   [["/admin-users"], ["admin_users", "rbac"]],

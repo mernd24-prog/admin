@@ -16,7 +16,7 @@ import {
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { apiRequest } from "../../../_helpers/apiConfig";
@@ -26,7 +26,10 @@ import {
   failSellerPayout,
   getAdminSellerCommissions,
   getAdminSellerPayouts,
+  getMySellerSettlements,
+  getSellerCommissions,
   getSellerFinanceSummary,
+  getSellerPayouts,
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
@@ -146,6 +149,7 @@ const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "ban
 
 const SellerFinance = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
   const [filters, setFilters] = useState({ sellerId: "", organizationId: "", status: "", search: "" });
   const [orderId, setOrderId] = useState("");
@@ -156,9 +160,10 @@ const SellerFinance = () => {
   const [processOrganizationOptions, setProcessOrganizationOptions] = useState([]);
 
   React.useEffect(() => {
+    if (isSeller) return;
     dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {});
     dropdownApi.getOrders({ limit: 100 }).then(setOrderOptions).catch(() => {});
-  }, []);
+  }, [isSeller]);
 
   // Process Payout modal
   const [processModal, setProcessModal] = useState({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
@@ -171,25 +176,68 @@ const SellerFinance = () => {
 
   const loadFinance = useCallback(async () => {
     try {
-      await Promise.all([
-        dispatch(getSellerFinanceSummary(filters)).unwrap(),
-        dispatch(getAdminSellerCommissions({ ...filters, limit: 100 })).unwrap(),
-        dispatch(getAdminSellerPayouts({ ...filters, limit: 100 })).unwrap(),
-        dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
-      ]);
+      if (isSeller) {
+        const sellerFilters = {
+          status: filters.status,
+          search: filters.search,
+          limit: 100,
+        };
+        await Promise.all([
+          dispatch(getSellerCommissions(sellerFilters)).unwrap(),
+          dispatch(getSellerPayouts(sellerFilters)).unwrap(),
+          dispatch(getMySellerSettlements({ ...sellerFilters, limit: 50 })).unwrap(),
+        ]);
+      } else {
+        await Promise.all([
+          dispatch(getSellerFinanceSummary(filters)).unwrap(),
+          dispatch(getAdminSellerCommissions({ ...filters, limit: 100 })).unwrap(),
+          dispatch(getAdminSellerPayouts({ ...filters, limit: 100 })).unwrap(),
+          dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
+        ]);
+      }
     } catch (error) {
       toast.error(error?.message || error || "Unable to load seller finance");
     }
-  }, [dispatch, filters]);
+  }, [dispatch, filters, isSeller]);
 
   useEffect(() => {
     loadFinance();
   }, [loadFinance]);
 
-  const summary = unwrap(financeState.financeSummaryData?.data);
-  const commissions = listOf(financeState.adminCommissionsData?.data);
-  const payouts = listOf(financeState.adminPayoutsData?.data);
-  const settlements = listOf(financeState.settlementsData?.data);
+  const commissions = listOf(isSeller ? financeState.myCommissionsData?.data : financeState.adminCommissionsData?.data);
+  const payouts = listOf(isSeller ? financeState.myPayoutsData?.data : financeState.adminPayoutsData?.data);
+  const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
+  const adminSummary = unwrap(financeState.financeSummaryData?.data);
+  const summary = useMemo(() => {
+    if (!isSeller) return adminSummary;
+    const totals = commissions.reduce(
+      (acc, row) => ({
+        count: acc.count + 1,
+        grossAmount: acc.grossAmount + Number(row.amount || row.gross_amount || row.grossAmount || 0),
+        commissionAmount: acc.commissionAmount + Number(row.commission_amount || row.commissionAmount || 0),
+        commissionTaxAmount: acc.commissionTaxAmount + Number(row.tax_amount || row.taxAmount || 0),
+        refundAmount: acc.refundAmount + Number(row.refund_amount || row.refundAmount || 0),
+        payableAmount: acc.payableAmount + Number(row.net_amount || row.netAmount || 0),
+      }),
+      {
+        count: 0,
+        grossAmount: 0,
+        commissionAmount: 0,
+        commissionTaxAmount: 0,
+        refundAmount: 0,
+        payableAmount: 0,
+      },
+    );
+    const paidAmount = payouts.reduce((total, row) => {
+      const status = String(row.status || "").toLowerCase();
+      if (!["paid", "completed"].includes(status)) return total;
+      return total + Number(row.net_amount || row.netAmount || 0);
+    }, 0);
+    return {
+      commissions: totals,
+      payouts: { paidAmount },
+    };
+  }, [adminSummary, commissions, isSeller, payouts]);
   const loading = financeState.loading;
 
   const metrics = useMemo(() => [
@@ -364,8 +412,12 @@ const SellerFinance = () => {
   return (
     <div className="min-h-screen bg-[#f4f6fb]">
       <PageHeader
-        title="Seller Finance"
-        subtitle="Commission, settlement, refund adjustment, and payout management"
+        title={isSeller ? "My Finance" : "Seller Finance"}
+        subtitle={
+          isSeller
+            ? "View commission deductions, settlement ledger, payout status, and downloadable statements"
+            : "Commission, settlement, refund adjustment, and payout management"
+        }
         breadcrumbs={[
           { label: "Home", to: "/app/home" },
           { label: "Seller Finance & Payouts" },
@@ -388,21 +440,30 @@ const SellerFinance = () => {
         {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
 
-      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className={`mb-4 grid grid-cols-1 gap-3 ${isSeller ? "" : "lg:grid-cols-3"}`}>
         <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
             <MdSearch size={18} /> Filters
           </div>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-1">
-            <select className={inputCls} value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)}>
-              <option value="">All Sellers</option>
-              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-            <select className={inputCls} value={filters.organizationId} onChange={(e) => updateFilter("organizationId", e.target.value)} disabled={!filters.sellerId}>
-              <option value="">{filters.sellerId ? "All Organizations" : "Select seller first"}</option>
-              {organizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-            <input className={inputCls} placeholder="Search order, seller, payout..." value={filters.search} onChange={(e) => updateFilter("search", e.target.value)} />
+            {!isSeller && (
+              <>
+                <select className={inputCls} value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)}>
+                  <option value="">All Sellers</option>
+                  {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                <select className={inputCls} value={filters.organizationId} onChange={(e) => updateFilter("organizationId", e.target.value)} disabled={!filters.sellerId}>
+                  <option value="">{filters.sellerId ? "All Organizations" : "Select seller first"}</option>
+                  {organizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </>
+            )}
+            <input
+              className={inputCls}
+              placeholder={isSeller ? "Search order or payout..." : "Search order, seller, payout..."}
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+            />
             <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -416,47 +477,62 @@ const SellerFinance = () => {
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-            <MdCalculate size={18} /> Recalculate Order Commission
+        {!isSeller && (
+          <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
+              <MdCalculate size={18} /> Recalculate Order Commission
+            </div>
+            <div className="flex gap-2">
+              <select className={`${inputCls} min-w-0 flex-1`} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
+                <option value="">Select order</option>
+                {orderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
+                Run
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <select className={`${inputCls} min-w-0 flex-1`} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
-              <option value="">Select order</option>
-              {orderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-            <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
-              Run
-            </button>
-          </div>
-        </div>
+        )}
 
-        <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-            <MdPayments size={18} /> Process Seller Payout
+        {!isSeller && (
+          <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
+              <MdPayments size={18} /> Process Seller Payout
+            </div>
+            <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
+                onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
+              >
+                Initiate Payout
+              </button>
+            </PermissionGuard>
           </div>
-          <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
-            <button
-              type="button"
-              className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
-              onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
-            >
-              Initiate Payout
-            </button>
-          </PermissionGuard>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TableShell
           title="Seller Commissions"
-          headings={["Order", "Seller", "Organization", "Gross", "Commission", "GST", "Refund Adj.", "Net Payable", "Status", "Created"]}
+          headings={[
+            "Order",
+            ...(!isSeller ? ["Seller"] : []),
+            "Organization",
+            "Gross",
+            "Commission",
+            "GST",
+            "Refund Adj.",
+            "Net Payable",
+            "Status",
+            "Created",
+          ]}
           emptyText="No commissions found"
         >
           {commissions.length ? commissions.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -471,12 +547,22 @@ const SellerFinance = () => {
 
         <TableShell
           title="Seller Payouts"
-          headings={["Seller", "Organization", "Period", "Gross", "Commission", "Refund", "Net", "Status", "Actions"]}
+          headings={[
+            ...(!isSeller ? ["Seller"] : []),
+            "Organization",
+            "Period",
+            "Gross",
+            "Commission",
+            "Refund",
+            "Net",
+            "Status",
+            ...(!isSeller ? ["Actions"] : []),
+          ]}
           emptyText="No payouts found"
         >
           {payouts.length ? payouts.map((row) => (
             <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
@@ -484,26 +570,28 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
-              <td className="whitespace-nowrap px-4 py-3">
-                <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      title="Mark payout complete — enter payment reference"
-                      tone="green"
-                      icon={<MdCheckCircle size={18} />}
-                      onClick={() => openCompleteModal(row)}
-                      disabled={row.status !== "processing"}
-                    />
-                    <IconButton
-                      title="Fail payout — release back to pending"
-                      tone="red"
-                      icon={<MdClose size={18} />}
-                      onClick={() => openFailModal(row)}
-                      disabled={row.status === "completed" || row.status === "failed"}
-                    />
-                  </div>
-                </PermissionGuard>
-              </td>
+              {!isSeller && (
+                <td className="whitespace-nowrap px-4 py-3">
+                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                    <div className="flex items-center gap-1">
+                      <IconButton
+                        title="Mark payout complete — enter payment reference"
+                        tone="green"
+                        icon={<MdCheckCircle size={18} />}
+                        onClick={() => openCompleteModal(row)}
+                        disabled={row.status !== "processing"}
+                      />
+                      <IconButton
+                        title="Fail payout — release back to pending"
+                        tone="red"
+                        icon={<MdClose size={18} />}
+                        onClick={() => openFailModal(row)}
+                        disabled={row.status === "completed" || row.status === "failed"}
+                      />
+                    </div>
+                  </PermissionGuard>
+                </td>
+              )}
             </tr>
           )) : null}
         </TableShell>
@@ -512,12 +600,23 @@ const SellerFinance = () => {
       <div className="mt-4">
         <TableShell
           title="Settlement Ledger"
-          headings={["Seller", "Organization", "Gross", "Commission", "Refund", "Adjustment", "Net", "Status", "Created", "Statement"]}
+          headings={[
+            ...(!isSeller ? ["Seller"] : []),
+            "Organization",
+            "Gross",
+            "Commission",
+            "Refund",
+            "Adjustment",
+            "Net",
+            "Status",
+            "Created",
+            "Statement",
+          ]}
           emptyText="No settlements found"
         >
           {settlements.length ? settlements.map((row) => (
             <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>
+              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
@@ -534,7 +633,9 @@ const SellerFinance = () => {
                     aria-label="Download settlement statement"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#2f6fed] transition hover:bg-[#f3f6ff]"
                     onClick={() => downloadApiFile(
-                      ENDPOINTS.payouts.settlementStatement(row.id),
+                      isSeller
+                        ? ENDPOINTS.payouts.mySettlementStatement(row.id)
+                        : ENDPOINTS.payouts.settlementStatement(row.id),
                       {},
                       { filename: `settlement-${row.id}.pdf`, format: "pdf" }
                     )}
@@ -548,54 +649,56 @@ const SellerFinance = () => {
         </TableShell>
       </div>
 
-      {/* Process Payout Modal */}
-      <ModalOverlay
-        isOpen={processModal.open}
-        onClose={() => setProcessModal((prev) => ({ ...prev, open: false }))}
-        title="Initiate Seller Payout"
-        onSubmit={handleProcessPayoutSubmit}
-        submitting={submitting}
-      >
-        <div className="space-y-3">
-          <FieldRow label="Seller *">
-            <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value, organizationId: "" }))}>
-              <option value="">— Select seller —</option>
-              {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </FieldRow>
-          <FieldRow label="Organization">
-            <select className={inputCls} value={processModal.organizationId} onChange={(e) => setProcessModal((prev) => ({ ...prev, organizationId: e.target.value }))} disabled={!processModal.sellerId}>
-              <option value="">{processModal.sellerId ? "All Organizations Separately" : "Select seller first"}</option>
-              {processOrganizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </FieldRow>
-          <div className="grid grid-cols-2 gap-3">
-            <FieldRow label="Period Start">
-              <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
-            </FieldRow>
-            <FieldRow label="Period End">
-              <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
-            </FieldRow>
-          </div>
-          <FieldRow label="Payment Method">
-            <select className={inputCls} value={processModal.paymentMethod} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
-              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-            </select>
-          </FieldRow>
-          <FieldRow label="Payment Reference">
-            <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
-          </FieldRow>
-          <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
-            The amount is calculated from eligible delivered orders. Required approval cannot be skipped.
-          </div>
-          <FieldRow label="Internal Note">
-            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
-          </FieldRow>
-        </div>
-      </ModalOverlay>
+      {!isSeller && (
+        <>
+          {/* Process Payout Modal */}
+          <ModalOverlay
+            isOpen={processModal.open}
+            onClose={() => setProcessModal((prev) => ({ ...prev, open: false }))}
+            title="Initiate Seller Payout"
+            onSubmit={handleProcessPayoutSubmit}
+            submitting={submitting}
+          >
+            <div className="space-y-3">
+              <FieldRow label="Seller *">
+                <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value, organizationId: "" }))}>
+                  <option value="">— Select seller —</option>
+                  {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </FieldRow>
+              <FieldRow label="Organization">
+                <select className={inputCls} value={processModal.organizationId} onChange={(e) => setProcessModal((prev) => ({ ...prev, organizationId: e.target.value }))} disabled={!processModal.sellerId}>
+                  <option value="">{processModal.sellerId ? "All Organizations Separately" : "Select seller first"}</option>
+                  {processOrganizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </FieldRow>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldRow label="Period Start">
+                  <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
+                </FieldRow>
+                <FieldRow label="Period End">
+                  <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
+                </FieldRow>
+              </div>
+              <FieldRow label="Payment Method">
+                <select className={inputCls} value={processModal.paymentMethod} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                </select>
+              </FieldRow>
+              <FieldRow label="Payment Reference">
+                <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
+              </FieldRow>
+              <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+                The amount is calculated from eligible delivered orders. Required approval cannot be skipped.
+              </div>
+              <FieldRow label="Internal Note">
+                <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
+              </FieldRow>
+            </div>
+          </ModalOverlay>
 
-      {/* Complete Payout Modal */}
-      <ModalOverlay
+          {/* Complete Payout Modal */}
+          <ModalOverlay
         isOpen={completeModal.open}
         onClose={() => setCompleteModal((prev) => ({ ...prev, open: false }))}
         title="Complete Payout"
@@ -621,10 +724,10 @@ const SellerFinance = () => {
             <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={completeModal.note} onChange={(e) => setCompleteModal((prev) => ({ ...prev, note: e.target.value }))} />
           </FieldRow>
         </div>
-      </ModalOverlay>
+          </ModalOverlay>
 
-      {/* Fail Payout Modal */}
-      <ModalOverlay
+          {/* Fail Payout Modal */}
+          <ModalOverlay
         isOpen={failModal.open}
         onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
         title="Fail Payout"
@@ -645,7 +748,9 @@ const SellerFinance = () => {
             <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional additional context" value={failModal.note} onChange={(e) => setFailModal((prev) => ({ ...prev, note: e.target.value }))} />
           </FieldRow>
         </div>
-      </ModalOverlay>
+          </ModalOverlay>
+        </>
+      )}
     </div>
   );
 };

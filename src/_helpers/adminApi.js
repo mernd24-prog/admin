@@ -32,6 +32,7 @@ export const DEFAULT_PLATFORM_MODULES = [
 ];
 
 export const DEFAULT_SELLER_MODULES = [
+  "seller-dashboard",
   "products",
   "inventory",
   "orders",
@@ -46,6 +47,9 @@ export const DEFAULT_SELLER_MODULES = [
   "sellers",
   "seller-management",
   "sellers/commissions",
+  "seller-payouts",
+  "cod-config",
+  "tax",
 ];
 
 export const normalizeModuleSlug = (value = "") =>

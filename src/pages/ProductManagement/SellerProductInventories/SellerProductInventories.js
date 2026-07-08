@@ -209,10 +209,11 @@ const SellerProductInventories = () => {
           status: params.status || undefined,
           stockStatus: params.stockStatus || undefined,
           productType: params.productType || undefined,
-          sortBy: params.sortBy,
-          sortDir: params.sortDir,
-          includeAllStatuses: true,
-        }),
+	          sortBy: params.sortBy,
+	          sortDir: params.sortDir,
+	          includeAllStatuses: true,
+	          includeVariants: true,
+	        }),
       ).unwrap();
       const rows = extractList(response);
       const sellers = extractSellerOptions(response);
@@ -274,18 +275,21 @@ const SellerProductInventories = () => {
     }
   };
 
-  const openInventoryModal = (item) => {
-    setSelectedItem(item);
-    setFormData({
-      ...EMPTY_INVENTORY_FORM,
+	  const openInventoryModal = (item) => {
+	    const defaultVariant = Array.isArray(item?.variants) && item.variants.length
+	      ? item.variants.find((variant) => variant.isDefault === true) || item.variants[0]
+	      : null;
+	    setSelectedItem(item);
+	    setFormData({
+	      ...EMPTY_INVENTORY_FORM,
       user: resolveSellerName(item),
       title: item?.title || item?.name || "",
       urlKeyword: item?._id ? `/products/${item._id}` : "",
       costPrice: String(item?.costPrice ?? item?.mrp ?? ""),
       sellingPrice: String(item?.price ?? item?.salePrice ?? ""),
-      availableQty: String(item?.stock ?? 0),
-      sku: item?.sku || "",
-    });
+	      availableQty: String(defaultVariant?.stock ?? item?.stock ?? 0),
+	      sku: defaultVariant?.sku || item?.sku || "",
+	    });
     setInventoryOpen(true);
   };
 
@@ -301,7 +305,10 @@ const SellerProductInventories = () => {
       return;
     }
 
-    const currentQty = Number(selectedItem.stock || 0);
+	    const defaultVariant = Array.isArray(selectedItem?.variants) && selectedItem.variants.length
+	      ? selectedItem.variants.find((variant) => variant.isDefault === true) || selectedItem.variants[0]
+	      : null;
+	    const currentQty = Number(defaultVariant?.stock ?? selectedItem.stock ?? 0);
     const adjustment = nextQty - currentQty;
     if (adjustment === 0) {
       toast.info("No stock change to save");
@@ -312,14 +319,18 @@ const SellerProductInventories = () => {
     setAdjustConfirm({ nextQty, currentQty, adjustment });
   };
 
-  const confirmInventorySave = async () => {
-    if (!selectedItem?._id || !adjustConfirm) return;
-    try {
-      setLoading(true);
-      await dispatch(
-        adjustProductInventory({
-          productId: selectedItem._id,
-          adjustmentType: "set",
+	  const confirmInventorySave = async () => {
+	    if (!selectedItem?._id || !adjustConfirm) return;
+	    const defaultVariant = Array.isArray(selectedItem?.variants) && selectedItem.variants.length
+	      ? selectedItem.variants.find((variant) => variant.isDefault === true) || selectedItem.variants[0]
+	      : null;
+	    try {
+	      setLoading(true);
+	      await dispatch(
+	        adjustProductInventory({
+	          productId: selectedItem._id,
+	          variantSku: defaultVariant?.sku || undefined,
+	          adjustmentType: "set",
           quantity: adjustConfirm.nextQty,
           reason: "Admin seller inventory update",
           note: `Stock changed from ${adjustConfirm.currentQty} to ${adjustConfirm.nextQty}`,

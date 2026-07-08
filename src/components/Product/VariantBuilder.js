@@ -44,8 +44,6 @@ const SmallSelect = ({ className = '', children, ...props }) => (
 const VariantBuilder = ({
   variants = [],
   options = [],
-  basePrice = 0,
-  baseMrp = 0,
   platformOptions = [],
   platformValues = {},
   onChange,
@@ -133,9 +131,9 @@ const VariantBuilder = ({
       const key = JSON.stringify(attributes);
       const existing = existingMap.get(key);
       if (existing) return existing;
-      return { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}-${idx + 1}`, title: Object.values(attributes).join(' / '), attributes, price: basePrice, mrp: baseMrp, sortOrder: idx };
+      return { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}-${idx + 1}`, title: Object.values(attributes).join(' / '), attributes, sortOrder: idx };
     }));
-  }, [options, variants, basePrice, baseMrp, onChange]);
+  }, [options, variants, onChange]);
 
   const updateVariant = (idx, field, value) =>
     onChange(variants.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
@@ -644,7 +642,7 @@ const VariantBuilder = ({
 
       {/* Add manually */}
       <button type="button"
-        onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}`, price: basePrice, mrp: baseMrp }])}
+        onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}` }])}
         className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] transition-colors font-medium">
         + Add Variant Manually
       </button>

@@ -34,6 +34,8 @@ import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { normalizeImageList } from '../../../../_helpers/productMedia';
 import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
 import { getShippingProfiles } from '../../../../Redux/deliverySlice';
+import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
+import { isSellerPanel } from '../../../../_helpers/panelConfig';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -48,6 +50,14 @@ const API_CALL_OBJECT = {
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
+const getSessionUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(window.sessionStorage.getItem('EcomAdmin') || 'null');
+  } catch {
+    return null;
+  }
+};
 const DEAL_BADGE_OPTIONS = [
   "Today's Deal",
   "Flash Sale",
@@ -70,6 +80,12 @@ const toOptionalNumber = (value) => {
   if (!hasValue(value)) return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
+};
+
+const normalizeProductServiceabilityMode = (mode) => {
+  const value = String(mode || '').trim();
+  if (value === 'all_india') return 'all_pincodes';
+  return value || 'inherit';
 };
 
 const joinList = (value) => Array.isArray(value) ? value.join(', ') : String(value || '');
@@ -611,11 +627,20 @@ export default function ProductManagementUI() {
     if (!selectedSellerId) return formattedData.organizationList;
     return formattedData.organizationList.filter((option) => String(option.sellerId || '') === selectedSellerId);
   }, [formattedData.organizationList, formData?.sellerId, userData]);
+  const userRole = normalizeRole(extractRole(
+    userData,
+    userData?.user,
+    userData?.data,
+    getSessionUser(),
+    getSessionUser()?.user,
+    getStoredUser(),
+    { role: getStoredRole() },
+  ));
+  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
   useEffect(() => {
-    const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
     if (isSellerPanelUser) {
-      // Seller panel: always use the active organization from the header switcher
+      // Seller panel: use the active organization resolved by the session/header sync.
       const activeOrgId = getSelectedSellerOrganizationId();
       if (activeOrgId && formData?.organizationId !== activeOrgId) {
         setFormData((prev) => ({ ...prev, organizationId: activeOrgId }));
@@ -634,7 +659,7 @@ export default function ProductManagementUI() {
     if (organizationOptions.length === 1) {
       setFormData((prev) => ({ ...prev, organizationId: organizationOptions[0].value }));
     }
-  }, [organizationOptions, formData?.organizationId, userData?.role]);
+  }, [organizationOptions, formData?.organizationId, isSellerPanelUser]);
 
   const createSelectOptions = useMemo(() => {
     const categorySource = prefillList('categories', getListPayload(selector?.getListData));
@@ -695,7 +720,6 @@ export default function ProductManagementUI() {
 
   const validateForm = () => {
     const newErrors = {};
-    const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
     if (formData?.name?.trim() && formData.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters.";
     if (!formData?.description?.trim()) newErrors.description = "Description is required.";
@@ -703,9 +727,8 @@ export default function ProductManagementUI() {
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
     if (!formData?.organizationId) {
       if (isSellerPanelUser) {
-        // Silently resolve from the active organization switcher
         const activeOrgId = getSelectedSellerOrganizationId();
-        if (!activeOrgId) newErrors.organizationId = "No active organization. Please select one from the header switcher.";
+        if (!activeOrgId) newErrors.organizationId = "No active organization is available for this seller account.";
       } else {
         newErrors.organizationId = "Organization is required.";
       }
@@ -1059,12 +1082,26 @@ export default function ProductManagementUI() {
       : [formData.catalogsUrls]).filter(Boolean);
 
     const updatedFormData = { ...formData };
-    const resolvedCodAvailable =
-      updatedFormData.shipping?.codAvailable !== undefined
-        ? Boolean(updatedFormData.shipping.codAvailable)
-        : updatedFormData.cod !== undefined
-          ? Boolean(updatedFormData.cod)
-          : undefined;
+    const selectedShippingProfile = updatedFormData.shipping?.shippingProfileId
+      ? shippingProfileOptions.find((option) => String(option.value) === String(updatedFormData.shipping.shippingProfileId))?.profile || null
+      : null;
+    const profileShippingCharge = selectedShippingProfile
+      ? toOptionalNumber(selectedShippingProfile.shippingCharge)
+      : undefined;
+    const profileEtaMin = selectedShippingProfile
+      ? toOptionalNumber(selectedShippingProfile.etaMin)
+      : undefined;
+    const profileEtaMax = selectedShippingProfile
+      ? toOptionalNumber(selectedShippingProfile.etaMax)
+      : undefined;
+    let resolvedCodAvailable;
+    if (selectedShippingProfile) {
+      resolvedCodAvailable = selectedShippingProfile.codAvailable !== false;
+    } else if (updatedFormData.shipping?.codAvailable !== undefined) {
+      resolvedCodAvailable = Boolean(updatedFormData.shipping.codAvailable);
+    } else if (updatedFormData.cod !== undefined) {
+      resolvedCodAvailable = Boolean(updatedFormData.cod);
+    }
 
     const formattedOptions = options.map(option => ({
       sku: option.sku || '',
@@ -1106,7 +1143,22 @@ export default function ProductManagementUI() {
         days: toOptionalNumber(updatedFormData.warrantyReturnDays || updatedFormData.warranty?.returnPolicy?.days),
       },
     });
-    const shipping = compactObject({
+    const shipping = compactObject(selectedShippingProfile ? {
+      shippingProfileId: updatedFormData.shipping?.shippingProfileId,
+      freeShipping: profileShippingCharge === 0,
+      additionalCost: profileShippingCharge,
+      shippingCharge: profileShippingCharge,
+      serviceabilityMode: normalizeProductServiceabilityMode(selectedShippingProfile.serviceabilityMode),
+      allowPincodes: selectedShippingProfile.allowPincodes || selectedShippingProfile.serviceablePincodes || [],
+      serviceablePincodes: selectedShippingProfile.serviceablePincodes || selectedShippingProfile.allowPincodes || [],
+      blockPincodes: selectedShippingProfile.blockPincodes || [],
+      regions: selectedShippingProfile.regions || selectedShippingProfile.states || [],
+      ...(resolvedCodAvailable !== undefined ? { codAvailable: resolvedCodAvailable } : {}),
+      processingDays: profileEtaMin,
+      estimatedDaysMin: profileEtaMin,
+      estimatedDaysMax: profileEtaMax,
+      shippingMethod: selectedShippingProfile.shippingMethod || 'standard',
+    } : {
       ...(updatedFormData.shipping || {}),
       freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
       freeShippingMinOrder: toOptionalNumber(updatedFormData.shipping?.freeShippingMinOrder),
@@ -1122,7 +1174,7 @@ export default function ProductManagementUI() {
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
-      organizationId: updatedFormData.organizationId || (SELLER_PANEL_ROLES.has(userData?.role) ? getSelectedSellerOrganizationId() : ''),
+      organizationId: updatedFormData.organizationId || (isSellerPanelUser ? getSelectedSellerOrganizationId() : ''),
       ...(updatedFormData.storeId ? { storeId: updatedFormData.storeId } : {}),
       ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
       title: updatedFormData.name || updatedFormData.title,
@@ -1143,8 +1195,8 @@ export default function ProductManagementUI() {
         .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
         .map((option, index) => ({
           sku: option.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
-          price: Number(option.salePrice || updatedFormData.price || 0),
-          mrp: Number(option.mrp || updatedFormData.mrp || 0),
+          price: Number(option.salePrice || 0),
+          mrp: Number(option.mrp || 0),
           stock: Number(option.stock || 0),
           attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
           images: [],
@@ -1222,7 +1274,7 @@ export default function ProductManagementUI() {
     } finally {
       setSaving(false);
     }
-  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, userData, id, navigate, productType, variantAxes, variantsData]);
+  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, isSellerPanelUser, id, navigate, productType, shippingProfileOptions, variantAxes, variantsData]);
 
 
   const handleProductDetailChange = (field, content) => {
@@ -1412,7 +1464,7 @@ export default function ProductManagementUI() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-gray-800">Shipping Profile</p>
-                <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile overrides the manual settings below for serviceability, charges, and ETA.</p>
+                <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile uses its serviceability, charges, COD, and ETA.</p>
               </div>
               {formData?.shipping?.shippingProfileId && (
                 <button type="button" className="text-xs text-red-500 hover:underline whitespace-nowrap" onClick={() => patchShipping({ shippingProfileId: null })}>
@@ -1457,223 +1509,227 @@ export default function ProductManagementUI() {
                 </div>
               );
             })()}
+            {formData?.shipping?.shippingProfileId && (
+              <p className="text-xs text-[var(--admin-blue)]">
+                Manual shipping fields are hidden while this profile is active. Remove the profile to edit product-level shipping manually.
+              </p>
+            )}
           </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Manual Override</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-          {formData?.shipping?.shippingProfileId && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              A shipping profile is active. The fields below are saved but the profile's rules take precedence for serviceability, charges, and ETA.
-            </p>
+          {!formData?.shipping?.shippingProfileId && (
+            <>
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Manual Shipping</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
+              {/* Free Shipping toggle row */}
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Free Shipping</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Enable free shipping for this product regardless of order value.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--admin-blue)] flex-shrink-0"
+                  checked={Boolean(formData?.shipping?.freeShipping)}
+                  onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
+                />
+              </label>
+
+              {/* Charges & Availability */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Charges &amp; Availability</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="admin-label">Shipping Charge (₹)</label>
+                    <input
+                      className="admin-input"
+                      type="number"
+                      min="0"
+                      placeholder="0.00"
+                      value={formData?.shipping?.shippingCharge ?? formData?.shipping?.additionalCost ?? ''}
+                      onChange={(e) => patchShipping({ shippingCharge: e.target.value, additionalCost: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-400">Charged to customer at checkout</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Free Shipping Above (₹)</label>
+                    <input
+                      className="admin-input"
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 499"
+                      value={formData?.shipping?.freeShippingMinOrder ?? ''}
+                      onChange={(e) => patchShipping({ freeShippingMinOrder: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-400">Waive shipping if cart exceeds this amount</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Handling Charge (₹)</label>
+                    <input
+                      className="admin-input"
+                      type="number"
+                      min="0"
+                      placeholder="0.00"
+                      value={formData?.shipping?.handlingCharge ?? ''}
+                      onChange={(e) => patchShipping({ handlingCharge: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Cash on Delivery (COD)</label>
+                    <select
+                      className="admin-input"
+                      value={formData?.shipping?.codAvailable === false ? 'false' : formData?.shipping?.codAvailable === true ? 'true' : ''}
+                      onChange={(e) => patchShipping({ codAvailable: e.target.value === '' ? undefined : e.target.value === 'true' })}
+                    >
+                      <option value="">Inherit from seller / org</option>
+                      <option value="true">Available</option>
+                      <option value="false">Not Available</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Serviceability */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Serviceability</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="admin-label">Serviceability Mode</label>
+                    <select
+                      className="admin-input"
+                      value={formData?.shipping?.serviceabilityMode || 'inherit'}
+                      onChange={(e) => patchShipping({ serviceabilityMode: e.target.value })}
+                    >
+                      <option value="inherit">Inherit (use seller / org settings)</option>
+                      <option value="all_pincodes">All Pincodes</option>
+                      <option value="allowlist">Allowlist - only listed pincodes</option>
+                      <option value="blocklist">Blocklist - block listed pincodes</option>
+                      <option value="regions">Regions / States / Cities</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Allow Pincodes</label>
+                    <textarea
+                      className="admin-input min-h-[80px] resize-none"
+                      placeholder="400001, 411001, 560001..."
+                      value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
+                      onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
+                    />
+                    <p className="text-xs text-gray-400">Comma-separated pincode list</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Block Pincodes</label>
+                    <textarea
+                      className="admin-input min-h-[80px] resize-none"
+                      placeholder="110001, 122001..."
+                      value={joinList(formData?.shipping?.blockPincodes)}
+                      onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
+                    />
+                    <p className="text-xs text-gray-400">Comma-separated pincode list</p>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="admin-label">Regions / States / Cities</label>
+                    <textarea
+                      className="admin-input min-h-[64px] resize-none"
+                      placeholder="Maharashtra, Delhi, Bangalore..."
+                      value={joinList(formData?.shipping?.regions)}
+                      onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ETA */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">Estimated Delivery Time (ETA)</p>
+                  <p className="text-xs text-blue-700 mt-0.5">Customer will see: <strong>Estimated Delivery: {formData?.shipping?.estimatedDaysMin || '?'} - {formData?.shipping?.estimatedDaysMax || '?'} Days</strong></p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-blue-900">Min Days</label>
+                    <input
+                      className={`admin-input bg-white ${error?.etaMin ? 'border-red-400' : ''}`}
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 2"
+                      value={formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        patchShipping({ estimatedDaysMin: val, processingDays: val });
+                        const max = formData?.shipping?.estimatedDaysMax;
+                        if (val !== '' && max !== undefined && max !== '' && Number(val) > Number(max)) {
+                          setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
+                        } else {
+                          setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
+                        }
+                      }}
+                    />
+                    {error?.etaMin && <p className="text-xs text-red-500">{error.etaMin}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-blue-900">Max Days</label>
+                    <input
+                      className={`admin-input bg-white ${error?.etaMax ? 'border-red-400' : ''}`}
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 5"
+                      value={formData?.shipping?.estimatedDaysMax ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        patchShipping({ estimatedDaysMax: val });
+                        const min = formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays;
+                        if (val !== '' && min !== undefined && min !== '' && Number(min) > Number(val)) {
+                          setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
+                        } else {
+                          setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Carrier */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Carrier &amp; Method</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="admin-label">Shipping Partner</label>
+                    <input
+                      className="admin-input"
+                      placeholder="e.g. Delhivery, BlueDart"
+                      value={formData?.shipping?.shippingPartner || ''}
+                      onChange={(e) => patchShipping({ shippingPartner: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="admin-label">Shipping Method</label>
+                    <select
+                      className="admin-input"
+                      value={formData?.shipping?.shippingMethod || 'standard'}
+                      onChange={(e) => patchShipping({ shippingMethod: e.target.value })}
+                    >
+                      {(shippingMethods.options.length > 0 ? shippingMethods.options : [
+                        { value: 'standard', label: 'Standard Delivery' },
+                        { value: 'express', label: 'Express Delivery' },
+                        { value: 'same_day', label: 'Same Day Delivery' },
+                        { value: 'store_pickup', label: 'Store Pickup' },
+                        { value: 'hyperlocal', label: 'Hyperlocal' },
+                      ]).map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
-
-          {/* Free Shipping toggle row */}
-          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Free Shipping</p>
-              <p className="text-xs text-gray-500 mt-0.5">Enable free shipping for this product regardless of order value.</p>
-            </div>
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--admin-blue)] flex-shrink-0"
-              checked={Boolean(formData?.shipping?.freeShipping)}
-              onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
-            />
-          </label>
-
-          {/* Charges & Availability */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Charges &amp; Availability</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <label className="admin-label">Shipping Charge (₹)</label>
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData?.shipping?.shippingCharge ?? formData?.shipping?.additionalCost ?? ''}
-                  onChange={(e) => patchShipping({ shippingCharge: e.target.value, additionalCost: e.target.value })}
-                />
-                <p className="text-xs text-gray-400">Charged to customer at checkout</p>
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Free Shipping Above (₹)</label>
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 499"
-                  value={formData?.shipping?.freeShippingMinOrder ?? ''}
-                  onChange={(e) => patchShipping({ freeShippingMinOrder: e.target.value })}
-                />
-                <p className="text-xs text-gray-400">Waive shipping if cart exceeds this amount</p>
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Handling Charge (₹)</label>
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData?.shipping?.handlingCharge ?? ''}
-                  onChange={(e) => patchShipping({ handlingCharge: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Cash on Delivery (COD)</label>
-                <select
-                  className="admin-input"
-                  value={formData?.shipping?.codAvailable === false ? 'false' : formData?.shipping?.codAvailable === true ? 'true' : ''}
-                  onChange={(e) => patchShipping({ codAvailable: e.target.value === '' ? undefined : e.target.value === 'true' })}
-                >
-                  <option value="">Inherit from seller / org</option>
-                  <option value="true">Available</option>
-                  <option value="false">Not Available</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Serviceability */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Serviceability</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <label className="admin-label">Serviceability Mode</label>
-                <select
-                  className="admin-input"
-                  value={formData?.shipping?.serviceabilityMode || 'inherit'}
-                  onChange={(e) => patchShipping({ serviceabilityMode: e.target.value })}
-                >
-                  <option value="inherit">Inherit (use seller / org settings)</option>
-                  <option value="all_pincodes">All Pincodes</option>
-                  <option value="allowlist">Allowlist — only listed pincodes</option>
-                  <option value="blocklist">Blocklist — block listed pincodes</option>
-                  <option value="regions">Regions / States / Cities</option>
-                  <option value="disabled">Disabled</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Allow Pincodes</label>
-                <textarea
-                  className="admin-input min-h-[80px] resize-none"
-                  placeholder="400001, 411001, 560001…"
-                  value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
-                  onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
-                />
-                <p className="text-xs text-gray-400">Comma-separated pincode list</p>
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Block Pincodes</label>
-                <textarea
-                  className="admin-input min-h-[80px] resize-none"
-                  placeholder="110001, 122001…"
-                  value={joinList(formData?.shipping?.blockPincodes)}
-                  onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
-                />
-                <p className="text-xs text-gray-400">Comma-separated pincode list</p>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="admin-label">Regions / States / Cities</label>
-                <textarea
-                  className="admin-input min-h-[64px] resize-none"
-                  placeholder="Maharashtra, Delhi, Bangalore…"
-                  value={joinList(formData?.shipping?.regions)}
-                  onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ETA */}
-          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-blue-900">Estimated Delivery Time (ETA)</p>
-              <p className="text-xs text-blue-700 mt-0.5">Customer will see: <strong>Estimated Delivery: {formData?.shipping?.estimatedDaysMin || '?'} – {formData?.shipping?.estimatedDaysMax || '?'} Days</strong></p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-blue-900">Min Days</label>
-                <input
-                  className={`admin-input bg-white ${error?.etaMin ? 'border-red-400' : ''}`}
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 2"
-                  value={formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    patchShipping({ estimatedDaysMin: val, processingDays: val });
-                    const max = formData?.shipping?.estimatedDaysMax;
-                    if (val !== '' && max !== undefined && max !== '' && Number(val) > Number(max)) {
-                      setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
-                    } else {
-                      setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
-                    }
-                  }}
-                />
-                {error?.etaMin && <p className="text-xs text-red-500">{error.etaMin}</p>}
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-blue-900">Max Days</label>
-                <input
-                  className={`admin-input bg-white ${error?.etaMax ? 'border-red-400' : ''}`}
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 5"
-                  value={formData?.shipping?.estimatedDaysMax ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    patchShipping({ estimatedDaysMax: val });
-                    const min = formData?.shipping?.estimatedDaysMin ?? formData?.shipping?.processingDays;
-                    if (val !== '' && min !== undefined && min !== '' && Number(min) > Number(val)) {
-                      setError((prev) => ({ ...prev, etaMin: 'Min cannot exceed Max' }));
-                    } else {
-                      setError((prev) => { const n = { ...prev }; delete n.etaMin; return n; });
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Carrier */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Carrier &amp; Method</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <label className="admin-label">Shipping Partner</label>
-                <input
-                  className="admin-input"
-                  placeholder="e.g. Delhivery, BlueDart"
-                  value={formData?.shipping?.shippingPartner || ''}
-                  onChange={(e) => patchShipping({ shippingPartner: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="admin-label">Shipping Method</label>
-                <select
-                  className="admin-input"
-                  value={formData?.shipping?.shippingMethod || 'standard'}
-                  onChange={(e) => patchShipping({ shippingMethod: e.target.value })}
-                >
-                  {(shippingMethods.options.length > 0 ? shippingMethods.options : [
-                    { value: 'standard', label: 'Standard Delivery' },
-                    { value: 'express', label: 'Express Delivery' },
-                    { value: 'same_day', label: 'Same Day Delivery' },
-                    { value: 'store_pickup', label: 'Store Pickup' },
-                    { value: 'hyperlocal', label: 'Hyperlocal' },
-                  ]).map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
         </div>
       )
     },

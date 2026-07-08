@@ -66,6 +66,8 @@ const toRouteCode = (routePath = "") =>
     .replace(/\/+$/, "");
 
 const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
+  "my-organizations",
+  "seller-organizations",
   "warehouse",
   "threshold-products",
   "category-attributes",
@@ -139,7 +141,7 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
     .map((item) => {
       const subItems = flattenSidebarChildren(item.children || []);
       const route = toRouteCode(item.routePath);
-      const isSingleItem = Boolean(route) && subItems.length === 0;
+      const isSingleItem = Boolean(route) && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route) && subItems.length === 0;
       return {
         label: item.moduleName || item.name,
         icon: getIconForTab(item.moduleName || item.name),
@@ -226,6 +228,40 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
       };
     })
     .filter((item) => item.subItems.length > 0);
+};
+
+const mergeSidebarData = (...groups) => {
+  const byLabel = new Map();
+  const seenRoutes = new Set();
+
+  groups.flat().forEach((group = {}) => {
+    if (!group.label || !Array.isArray(group.subItems)) return;
+    if (!byLabel.has(group.label)) {
+      byLabel.set(group.label, {
+        ...group,
+        subItems: [],
+        isSingleItem: false,
+      });
+    }
+
+    const target = byLabel.get(group.label);
+    group.subItems.forEach((subItem = {}) => {
+      const route = subItem.module_code || subItem.route;
+      if (!route || seenRoutes.has(route)) return;
+      seenRoutes.add(route);
+      target.subItems.push(subItem);
+    });
+  });
+
+  return Array.from(byLabel.values())
+    .map((group) => ({
+      ...group,
+      isSingleItem:
+        group.isSingleItem ||
+        (String(group.label || "").toLowerCase() === "dashboard" &&
+          group.subItems.length === 1),
+    }))
+    .filter((group) => group.subItems.length > 0);
 };
 
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
@@ -344,23 +380,25 @@ const Sidebar = ({
 
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
+    const accessSidebar = Array.isArray(accessModules) && accessModules.length
+      ? buildAccessModuleSidebarData(accessModules, {
+          sellerPanel,
+          superAdmin: isSuperAdmin,
+          allowedModules: assignedSidebarModules,
+        })
+      : [];
+
     if (Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length) {
       const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
         superAdmin: isSuperAdmin,
         allowedModules: assignedSidebarModules,
         trustBackend: true,
       });
-      if (sidebarTree.length) return sidebarTree;
+      const mergedSidebar = mergeSidebarData(sidebarTree, accessSidebar);
+      if (mergedSidebar.length) return mergedSidebar;
     }
 
-    if (Array.isArray(accessModules) && accessModules.length) {
-      const accessSidebar = buildAccessModuleSidebarData(accessModules, {
-        sellerPanel,
-        superAdmin: isSuperAdmin,
-        allowedModules: assignedSidebarModules,
-      });
-      if (accessSidebar.length) return accessSidebar;
-    }
+    if (accessSidebar.length) return accessSidebar;
 
     return [];
   }, [

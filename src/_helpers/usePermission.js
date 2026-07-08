@@ -1,7 +1,29 @@
 import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { getStoredRole, getStoredUser } from './authStorage';
+import { getStoredRole, getStoredUser, normalizeRole } from './authStorage';
+import { getPanelMode, getPanelRoleRules, isSellerPanel } from './panelConfig';
 import { getRouteModuleCandidates, isSelfServiceRoute } from './rbacRoutes';
+
+const SELLER_FULL_ACCESS_MODULES = [
+  'seller-dashboard',
+  'products',
+  'inventory',
+  'orders',
+  'returns',
+  'queries',
+  'coupons',
+  'pricing',
+  'notifications',
+  'delivery',
+  'analytics',
+  'reports',
+  'sellers',
+  'seller-management',
+  'sellers/commissions',
+  'seller-payouts',
+  'cod-config',
+  'tax',
+];
 
 /**
  * PERMISSION ACTIONS — match backend RBAC action slugs exactly.
@@ -76,6 +98,42 @@ const normalizeModuleCode = (value = '') =>
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/_/g, '-');
+
+const MODULE_ALIASES = {
+  admin: ['seller-dashboard'],
+  dashboard: ['seller-dashboard', 'admin'],
+  home: ['seller-dashboard', 'admin'],
+  seller: ['sellers'],
+  sellers: ['seller-management'],
+  'seller-management': ['sellers'],
+  'seller-users': ['sellers', 'seller-management'],
+  'seller-sub-admins': ['sellers', 'seller-management'],
+  'seller-organizations': ['sellers', 'seller-management'],
+  commission: ['sellers/commissions'],
+  commissions: ['sellers/commissions'],
+  'commission-rules': ['sellers/commissions'],
+  'seller-finance': ['sellers/commissions'],
+  'seller-finance-payouts': ['sellers/commissions', 'seller-payouts'],
+  'seller-payouts': ['sellers/commissions'],
+  products: ['product'],
+  product: ['products'],
+  'product-catalog': ['products'],
+  inventory: ['stock', 'seller-product-inventory'],
+  'seller-product-inventory': ['inventory'],
+  delivery: ['shipping-fulfilment', 'shipment-tracking', 'delivery-agents'],
+  'shipment-tracking': ['delivery'],
+  'delivery-agents': ['delivery'],
+  tax: ['tax-invoices', 'credit-notes'],
+  'tax-invoices': ['tax'],
+  'credit-notes': ['tax'],
+  'cod-config': ['commerce-settings'],
+};
+
+const expandModuleCandidates = (moduleSlug = '') => {
+  const normalized = normalizeModuleCode(moduleSlug);
+  const aliases = MODULE_ALIASES[normalized] || [];
+  return Array.from(new Set([normalized, ...aliases.map(normalizeModuleCode)]));
+};
 
 const safeParseStorage = (storage, key, fallback = null) => {
   try {
@@ -154,14 +212,41 @@ export const ROLES = {
  */
 export function usePermission() {
   const selector = useSelector((state) => state.user);
+  const adminCoreSelector = useSelector((state) => state.adminCore);
   const permissions = selector?.getMyModulePermissionData?.data?.data?.modules;
-  const role = getStoredRole();
+  const accessModules = useMemo(() => {
+    const accessModulePayload =
+      adminCoreSelector?.accessModulesData?.data?.data ||
+      adminCoreSelector?.accessModulesData?.normalized?.data ||
+      adminCoreSelector?.accessModulesData?.data?.normalized?.data ||
+      adminCoreSelector?.accessModulesData?.data ||
+      {};
+    return Array.isArray(accessModulePayload?.modules)
+      ? accessModulePayload.modules
+      : Array.isArray(accessModulePayload?.list)
+        ? accessModulePayload.list
+        : Array.isArray(accessModulePayload?.items)
+          ? accessModulePayload.items
+          : Array.isArray(accessModulePayload)
+            ? accessModulePayload
+            : [];
+  }, [adminCoreSelector?.accessModulesData]);
+  const role = normalizeRole(getStoredRole());
+  const panelRoleRules = getPanelRoleRules(getPanelMode());
+  const isFullAccessRole = panelRoleRules.fullAccessRoles
+    .map(normalizeRole)
+    .includes(role);
 
   // Build a fast lookup: { moduleSlug: { action: bool } }
   const permMap = useMemo(() => {
     const map = {};
-    if (Array.isArray(permissions)) {
-      permissions.forEach((mod) => {
+    const moduleSources = [
+      ...(Array.isArray(permissions) ? permissions : []),
+      ...(Array.isArray(accessModules) ? accessModules : []),
+    ];
+
+    if (moduleSources.length) {
+      moduleSources.forEach((mod) => {
         const slug = normalizeModuleCode(
           mod.slug ||
           mod.moduleKey ||
@@ -174,7 +259,7 @@ export function usePermission() {
         if (!slug) return;
 
         if (!map[slug]) map[slug] = { _assigned: false };
-        if (mod.assigned === true && !Array.isArray(mod.permissions)) {
+        if (mod.assigned === true) {
           map[slug]._assigned = true;
           map[slug].view = true;
         }
@@ -198,7 +283,7 @@ export function usePermission() {
     );
 
     return map;
-  }, [permissions]);
+  }, [permissions, accessModules]);
 
   /**
    * can(moduleSlug, action?)
@@ -208,12 +293,22 @@ export function usePermission() {
    * If action is omitted, checks module-level assignment only.
    */
   const can = (moduleSlug, action) => {
-    const normalizedModule = normalizeModuleCode(moduleSlug);
+    const moduleCandidates = expandModuleCandidates(moduleSlug);
     // Super-admin bypasses permission matrix checks. Admin, sub-admin, and
     // seller delegated users are permission-driven.
     if (role === ROLES.SUPER_ADMIN) return true;
+    if (
+      isFullAccessRole &&
+      isSellerPanel() &&
+      moduleCandidates.some((candidate) =>
+        SELLER_FULL_ACCESS_MODULES.map(normalizeModuleCode).includes(candidate) ||
+        permMap[candidate]
+      )
+    ) {
+      return true;
+    }
 
-    const mod = permMap[normalizedModule] || permMap[moduleSlug];
+    const mod = moduleCandidates.map((candidate) => permMap[candidate]).find(Boolean);
     const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
 
     // Module/page access is view access. Route bootstrap is handled by Layout;
