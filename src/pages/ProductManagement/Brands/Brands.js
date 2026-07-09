@@ -22,7 +22,15 @@ import {
   deleteBrand,
   enableDisableBrand,
 } from "../../../Redux/productSlice";
-import { MdAdd, MdBlock, MdBrandingWatermark, MdCheckCircle, MdDelete, MdEdit, MdImage } from "react-icons/md";
+import {
+  MdAdd,
+  MdBlock,
+  MdBrandingWatermark,
+  MdCheckCircle,
+  MdDelete,
+  MdEdit,
+  MdImage,
+} from "react-icons/md";
 
 const FILTER_FIELDS = [
   {
@@ -38,7 +46,9 @@ const FILTER_FIELDS = [
 ];
 
 const getBrandInitial = (name = "") => {
-  const firstLetter = String(name).trim().match(/[a-z0-9]/i)?.[0];
+  const firstLetter = String(name)
+    .trim()
+    .match(/[a-z0-9]/i)?.[0];
   return (firstLetter || "B").toUpperCase();
 };
 
@@ -53,10 +63,16 @@ const BrandAssetCell = ({ src, name, type = "logo" }) => {
 
   if (src && !imageError) {
     return (
-      <div className={`${frameClass} overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm ring-2 ring-white`}>
+      <div
+        className={`${frameClass} overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm ring-2 ring-white`}
+      >
         <img
           src={src}
-          alt={type === "thumbnail" ? `${name || "Brand"} thumbnail` : `${name || "Brand"} logo`}
+          alt={
+            type === "thumbnail"
+              ? `${name || "Brand"} thumbnail`
+              : `${name || "Brand"} logo`
+          }
           className="h-full w-full object-cover"
           loading="lazy"
           onError={() => setImageError(true)}
@@ -71,8 +87,13 @@ const BrandAssetCell = ({ src, name, type = "logo" }) => {
       title={name || "Brand"}
     >
       <div className="absolute inset-0 bg-[linear-gradient(135deg,#fffaf1_0%,#ffffff_50%,#fff3d2_100%)]" />
-      <MdImage size={18} className="absolute text-[var(--admin-line-strong)] opacity-50" />
-      <span className={`${initialClass} relative flex h-full w-full items-center justify-center rounded-full bg-[rgba(214,163,35,0.82)] font-bold leading-none text-[var(--admin-navy)]`}>
+      <MdImage
+        size={18}
+        className="absolute text-[var(--admin-line-strong)] opacity-50"
+      />
+      <span
+        className={`${initialClass} relative flex h-full w-full items-center justify-center rounded-full bg-[rgba(214,163,35,0.82)] font-bold leading-none text-[var(--admin-navy)]`}
+      >
         {getBrandInitial(name)}
       </span>
     </div>
@@ -96,7 +117,9 @@ const BASE_COLUMNS = [
     key: "thumbnails",
     label: "Thumbnail",
     width: "28",
-    render: (v, row) => <BrandAssetCell src={v} name={row.name} type="thumbnail" />,
+    render: (v, row) => (
+      <BrandAssetCell src={v} name={row.name} type="thumbnail" />
+    ),
   },
   {
     key: "isDisable",
@@ -149,8 +172,10 @@ const Brands = () => {
           select: "name isDisable createdAt logo thumbnails",
           sortBy: list.sortKey || "name",
           sortOrder: list.sortDir || "asc",
-          ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
-        })
+          ...(params.isDisable !== undefined && {
+            isDisable: params.isDisable,
+          }),
+        }),
       ).unwrap();
       const data = res?.data || {};
       setBrands(data?.list || []);
@@ -160,11 +185,28 @@ const Brands = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
+  }, [
+    dispatch,
+    list.page,
+    list.pageSize,
+    list.search,
+    list.filters,
+    list.sortKey,
+    list.sortDir,
+    isRefresh,
+  ]);
 
   useEffect(() => {
     fetchList();
-  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
+  }, [
+    list.page,
+    list.pageSize,
+    list.search,
+    list.filters,
+    list.sortKey,
+    list.sortDir,
+    isRefresh,
+  ]);
 
   const validateForm = () => {
     const errs = {};
@@ -176,16 +218,26 @@ const Brands = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const closeModal = () => { setModalMode(null); setFormData(EMPTY_FORM); setErrors({}); };
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+  };
 
   const handleFileUpload = async (file, type) => {
     const allowed = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
     const ext = file.name?.split(".").pop()?.toLowerCase();
-    if (!allowed.includes(file.type) && !["png", "jpg", "jpeg", "webp"].includes(ext)) {
+    if (
+      !allowed.includes(file.type) &&
+      !["png", "jpg", "jpeg", "webp"].includes(ext)
+    ) {
       toast.error("Only JPG/PNG/WEBP images allowed");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Max file size is 5MB"); return; }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Max file size is 5MB");
+      return;
+    }
     setImageLoading(true);
     try {
       const url = await uploadFile(file, type);
@@ -194,7 +246,10 @@ const Brands = () => {
         ...(type === "BRANDS" ? { logo: url } : { thumbnails: url }),
       }));
       if (errors[type === "BRANDS" ? "logo" : "thumbnails"])
-        setErrors((prev) => ({ ...prev, [type === "BRANDS" ? "logo" : "thumbnails"]: undefined }));
+        setErrors((prev) => ({
+          ...prev,
+          [type === "BRANDS" ? "logo" : "thumbnails"]: undefined,
+        }));
       toast.success("Image uploaded");
     } catch (err) {
       toast.error("Image upload failed");
@@ -216,29 +271,40 @@ const Brands = () => {
     try {
       let res;
       if (modalMode === "edit") {
-        res = await dispatch(updateBrand({ ...payload, _id: formData._id })).unwrap();
+        res = await dispatch(
+          updateBrand({ ...payload, _id: formData._id }),
+        ).unwrap();
       } else {
         res = await dispatch(createBrand(payload)).unwrap();
       }
-      toast.success(res?.message || `Brand ${modalMode === "edit" ? "updated" : "created"}`);
+      toast.success(
+        res?.message || `Brand ${modalMode === "edit" ? "updated" : "created"}`,
+      );
       closeModal();
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleToggleStatus = useCallback(async (row) => {
-    try {
-      await dispatch(enableDisableBrand({ _id: [row._id], isDisable: !row.isDisable })).unwrap();
-      toast.success("Brand status updated");
-      setToggleOpen(false);
-      setToggleTarget(null);
-      setIsRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Failed to update status");
-    }
-  }, [dispatch]);
+  const handleToggleStatus = useCallback(
+    async (row) => {
+      try {
+        await dispatch(
+          enableDisableBrand({ _id: [row._id], isDisable: !row.isDisable }),
+        ).unwrap();
+        toast.success("Brand status updated");
+        setToggleOpen(false);
+        setToggleTarget(null);
+        setIsRefresh((r) => !r);
+      } catch (err) {
+        toast.error(err?.message || "Failed to update status");
+      }
+    },
+    [dispatch],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -269,14 +335,24 @@ const Brands = () => {
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] shadow-sm transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
                 title="Edit brand"
                 onClick={() => {
-                  setFormData({ _id: row._id, name: row.name || "", logo: row.logo || "", thumbnails: row.thumbnails || "", isDisable: row.isDisable || false });
+                  setFormData({
+                    _id: row._id,
+                    name: row.name || "",
+                    logo: row.logo || "",
+                    thumbnails: row.thumbnails || "",
+                    isDisable: row.isDisable || false,
+                  });
                   setModalMode("edit");
                 }}
               >
                 <MdEdit size={18} />
               </button>
             </PermissionGuard>
-            <PermissionGuard module="brands" action={ACTIONS.STATUS_CHANGE} hide>
+            <PermissionGuard
+              module="brands"
+              action={ACTIONS.STATUS_CHANGE}
+              hide
+            >
               <button
                 type="button"
                 className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
@@ -285,9 +361,16 @@ const Brands = () => {
                     : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
                 }`}
                 title={row.isDisable ? "Enable brand" : "Disable brand"}
-                onClick={() => { setToggleTarget(row); setToggleOpen(true); }}
+                onClick={() => {
+                  setToggleTarget(row);
+                  setToggleOpen(true);
+                }}
               >
-                {row.isDisable ? <MdCheckCircle size={18} /> : <MdBlock size={18} />}
+                {row.isDisable ? (
+                  <MdCheckCircle size={18} />
+                ) : (
+                  <MdBlock size={18} />
+                )}
               </button>
             </PermissionGuard>
             <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
@@ -295,7 +378,10 @@ const Brands = () => {
                 type="button"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-100 bg-white text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
                 title="Delete brand"
-                onClick={() => { setDeleteTarget(row); setDeleteOpen(true); }}
+                onClick={() => {
+                  setDeleteTarget(row);
+                  setDeleteOpen(true);
+                }}
               >
                 <MdDelete size={18} />
               </button>
@@ -304,7 +390,7 @@ const Brands = () => {
         ),
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -376,13 +462,16 @@ const Brands = () => {
                   value={formData.name}
                   onChange={(e) => {
                     setFormData((p) => ({ ...p, name: e.target.value }));
-                    if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
+                    if (errors.name)
+                      setErrors((p) => ({ ...p, name: undefined }));
                   }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   placeholder="e.g. Apple, Samsung"
                   maxLength={50}
                 />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
 
               {/* Logo Upload */}
@@ -392,8 +481,18 @@ const Brands = () => {
                 </label>
                 {formData.logo && (
                   <div className="mb-2 flex items-center gap-3">
-                    <img src={formData.logo} alt="Logo preview" className="h-14 w-14 rounded-lg object-contain border border-gray-200 bg-gray-50" />
-                    <button type="button" className="text-xs text-red-500 hover:underline" onClick={() => setFormData((p) => ({ ...p, logo: "" }))}>Remove</button>
+                    <img
+                      src={formData.logo}
+                      alt="Logo preview"
+                      className="h-14 w-14 rounded-lg object-contain border border-gray-200 bg-gray-50"
+                    />
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline"
+                      onClick={() => setFormData((p) => ({ ...p, logo: "" }))}
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
                 <ImageUpload
@@ -402,7 +501,9 @@ const Brands = () => {
                   onChange={(file) => handleFileUpload(file, "BRANDS")}
                   isDisabled={imageLoading}
                 />
-                {errors.logo && <p className="text-red-500 text-xs mt-1">{errors.logo}</p>}
+                {errors.logo && (
+                  <p className="text-red-500 text-xs mt-1">{errors.logo}</p>
+                )}
               </div>
 
               {/* Thumbnail Upload */}
@@ -412,8 +513,20 @@ const Brands = () => {
                 </label>
                 {formData.thumbnails && (
                   <div className="mb-2 flex items-center gap-3">
-                    <img src={formData.thumbnails} alt="Thumb preview" className="h-14 w-20 rounded-lg object-cover border border-gray-200 bg-gray-50" />
-                    <button type="button" className="text-xs text-red-500 hover:underline" onClick={() => setFormData((p) => ({ ...p, thumbnails: "" }))}>Remove</button>
+                    <img
+                      src={formData.thumbnails}
+                      alt="Thumb preview"
+                      className="h-14 w-20 rounded-lg object-cover border border-gray-200 bg-gray-50"
+                    />
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline"
+                      onClick={() =>
+                        setFormData((p) => ({ ...p, thumbnails: "" }))
+                      }
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
                 <ImageUpload
@@ -422,21 +535,43 @@ const Brands = () => {
                   onChange={(file) => handleFileUpload(file, "BRAND_THUMBNAIL")}
                   isDisabled={imageLoading}
                 />
-                {errors.thumbnails && <p className="text-red-500 text-xs mt-1">{errors.thumbnails}</p>}
+                {errors.thumbnails && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.thumbnails}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">Active</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
                 <ToggleButton
                   isToggle={!formData.isDisable}
-                  handleClick={() => setFormData((p) => ({ ...p, isDisable: !p.isDisable }))}
+                  handleClick={() =>
+                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
+                  }
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving || imageLoading} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
-                  {saving ? "Saving…" : modalMode === "add" ? "Create Brand" : "Save Changes"}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || imageLoading}
+                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
+                >
+                  {saving
+                    ? "Saving…"
+                    : modalMode === "add"
+                      ? "Create Brand"
+                      : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -446,7 +581,10 @@ const Brands = () => {
 
       <ConfirmModal
         open={deleteOpen}
-        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
         onConfirm={handleDeleteConfirm}
         title="Delete Brand"
         message={`Delete brand "${deleteTarget?.name}"? This cannot be undone.`}
@@ -456,7 +594,10 @@ const Brands = () => {
 
       <ConfirmModal
         open={toggleOpen}
-        onClose={() => { setToggleOpen(false); setToggleTarget(null); }}
+        onClose={() => {
+          setToggleOpen(false);
+          setToggleTarget(null);
+        }}
         onConfirm={() => handleToggleStatus(toggleTarget)}
         title={`${toggleTarget?.isDisable ? "Enable" : "Disable"} Brand`}
         message={`${toggleTarget?.isDisable ? "Enable" : "Disable"} "${toggleTarget?.name}"?`}
