@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { MdNotifications, MdSend, MdRefresh } from "react-icons/md";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { MdNotifications, MdRefresh, MdSend, MdVisibility } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -28,6 +29,30 @@ const TEMPLATE_OPTIONS = [
   { value: "custom", label: "Custom" },
 ];
 
+const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
+
+const getNotificationDetailRoute = (notification = {}) => {
+  const meta = notification.payload || notification.meta || notification.metadata || {};
+  const orderId = firstValue(meta.orderId, meta.order_id, notification.orderId, notification.order_id);
+  const returnId = firstValue(meta.returnId, meta.return_id, notification.returnId, notification.return_id);
+  const shipmentId = firstValue(meta.shipmentId, meta.shipment_id, notification.shipmentId, notification.shipment_id);
+  const invoiceId = firstValue(meta.invoiceId, meta.invoice_id, meta.taxInvoiceId, notification.invoiceId, notification.invoice_id);
+  const creditNoteId = firstValue(meta.creditNoteId, meta.credit_note_id, notification.creditNoteId, notification.credit_note_id);
+  const dealId = firstValue(meta.dealId, meta.deal_id, notification.dealId, notification.deal_id);
+
+  if (invoiceId) return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
+  if (creditNoteId) return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
+  if (returnId) return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
+  if (shipmentId) {
+    const params = new URLSearchParams({ shipmentId: String(shipmentId) });
+    if (orderId) params.set("orderId", String(orderId));
+    return `/app/shipment-tracking?${params.toString()}`;
+  }
+  if (dealId) return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
+  if (orderId) return `/app/orders/view/${encodeURIComponent(orderId)}`;
+  return null;
+};
+
 const FILTER_FIELDS = [
   {
     key: "type",
@@ -38,7 +63,7 @@ const FILTER_FIELDS = [
   },
 ];
 
-const COLUMNS = [
+const BASE_COLUMNS = [
   {
     key: "userId",
     label: "Recipient",
@@ -101,6 +126,35 @@ const EMPTY_FORM = {
 
 const UserMessages = () => {
   const { isSeller } = usePermission();
+  const navigate = useNavigate();
+  const columns = useMemo(
+    () => [
+      ...BASE_COLUMNS,
+      {
+        key: "_actions",
+        label: "Actions",
+        render: (_, row) => {
+          const detailRoute = getNotificationDetailRoute(row);
+          if (!detailRoute) return null;
+          return (
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+              title="View detail"
+              aria-label="View notification detail"
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(detailRoute);
+              }}
+            >
+              <MdVisibility size={18} />
+            </button>
+          );
+        },
+      },
+    ],
+    [navigate],
+  );
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -208,7 +262,7 @@ const UserMessages = () => {
       />
 
       <DataTable
-        columns={COLUMNS}
+        columns={columns}
         data={notifications}
         loading={loading}
         error={error}
