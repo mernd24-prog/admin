@@ -100,7 +100,19 @@ const refToLabel = (value) => {
   return String(value);
 };
 
-const getInitialFiltersForPath = () => INITIAL_FILTERS;
+const getInitialFiltersForPath = (pathname = "", search = "") => {
+  const queryStatus = new URLSearchParams(search || "").get("status");
+  const isArchivedRoute =
+    String(pathname || "").includes("/product-catalog/archived") ||
+    String(queryStatus || "").toLowerCase() === "archived";
+
+  if (!isArchivedRoute) return INITIAL_FILTERS;
+
+  return {
+    ...INITIAL_FILTERS,
+    approvalStatus: { value: "Archived", label: "Archived" },
+  };
+};
 
 const ProductCatalog = () => {
   const dispatch = useDispatch();
@@ -127,8 +139,8 @@ const ProductCatalog = () => {
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
-  const [filters, setFilters] = useState(() => getInitialFiltersForPath(location.pathname));
-  const [appliedFilters, setAppliedFilters] = useState(() => getInitialFiltersForPath(location.pathname));
+  const [filters, setFilters] = useState(() => getInitialFiltersForPath(location.pathname, location.search));
+  const [appliedFilters, setAppliedFilters] = useState(() => getInitialFiltersForPath(location.pathname, location.search));
   const didMountRouteRef = useRef(false);
   const list = useListPage({
     defaultPageSize: DEFAULT_PAGE_SIZE,
@@ -268,16 +280,18 @@ const ProductCatalog = () => {
   }, [dispatch]);
 
   useEffect(() => {
+    const nextFilters = getInitialFiltersForPath(location.pathname, location.search);
     if (!didMountRouteRef.current) {
       didMountRouteRef.current = true;
+      setFilters(nextFilters);
+      setAppliedFilters(nextFilters);
       return;
     }
-    const nextFilters = getInitialFiltersForPath(location.pathname);
     setFilters(nextFilters);
     setAppliedFilters(nextFilters);
     list.setPage(1);
     list.clearSelection();
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const userDataString = sessionStorage.getItem("EcomAdmin");

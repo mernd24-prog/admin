@@ -62,6 +62,8 @@ export const SELLER_BLOCKED_ROUTE_CODES = new Set([
   "system-health",
   "queue-management",
   "dead-letter-queue",
+  "warehouse",
+  "inventory-transactions",
 ]);
 
 export const SELLER_BLOCKED_MODULE_CODES = new Set([
@@ -178,8 +180,8 @@ const MODULE_LABELS = {
   seller_bank: "Seller Bank Management",
   "seller-bank": "Seller Bank Management",
   "seller-management": "Seller Admin Management",
-  "my-organizations": "My Organizations",
-  "seller-organizations": "Seller Organization Management",
+  "my-organizations": "My Store",
+  "seller-organizations": "Seller Store Management",
   "sellers/commissions": "Seller Commissions",
   products: "Product Management",
   categories: "Category Management",
@@ -560,7 +562,7 @@ const ROUTE_MODULES = [
   // Catalog Management — products
   [
     [
-      "/product-catalog", "/store", "/bar-code", "/qty-head",
+      "/product-catalog", "/product-catalog/archived", "/store", "/bar-code", "/qty-head",
     ],
     ["products"],
   ],

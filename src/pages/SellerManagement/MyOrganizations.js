@@ -43,6 +43,7 @@ const ORGANIZATION_DOCUMENTS = [
   ["aadhaarBackUrl", "Aadhaar Back"],
   ["bankProofUrl", "Cancelled Cheque / Bank Proof"],
   ["addressProofUrl", "Business Address Proof"],
+  ["udyogAadhaarDocumentUrl", "Udhyog Aadhaar Document"],
 ];
 
 // ─── Form defaults ────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ const createEmptyForm = () => ({
   description: "",
   supportEmail: "",
   supportPhone: "",
-  registrationNumber: "",
+  udyogAadhaarNumber: "",
   gstin: "",
   pan: "",
   aadhaarNumber: "",
@@ -65,6 +66,7 @@ const createEmptyForm = () => ({
   businessWebsite: "",
   primaryContactName: "",
   documents: {},
+  existingDocuments: {},
   bankDetails: { ...emptyBankDetails },
   billingAddress: { ...emptyAddress },
   pickupAddress: { ...emptyAddress },
@@ -168,7 +170,8 @@ const validateForm = (form = {}) => {
   else if (pPin.length < 4 || pPin.length > 10) set("pickup.postalCode", "Pincode must be 4–10 digits");
 
   ORGANIZATION_DOCUMENTS.forEach(([key, label]) => {
-    if (!form.documents?.[key]) set(`doc.${key}`, `${label} is required`);
+    if (key === "udyogAadhaarDocumentUrl") return;
+    if (!form.documents?.[key] && !form.existingDocuments?.[key]) set(`doc.${key}`, `${label} is required`);
   });
 
   return errs;
@@ -187,7 +190,6 @@ const buildPayload = (form = {}) => {
     description: cleanString(form.description) || null,
     supportEmail: cleanString(form.supportEmail),
     supportPhone: cleanString(form.supportPhone),
-    registrationNumber: cleanString(form.registrationNumber) || null,
     gstin: cleanString(form.gstin) || null,
     pan: cleanString(form.pan),
     aadhaarNumber: cleanString(form.aadhaarNumber),
@@ -195,6 +197,10 @@ const buildPayload = (form = {}) => {
     businessWebsite: cleanString(form.businessWebsite) || null,
     primaryContactName: cleanString(form.primaryContactName),
     documents: form.documents || {},
+    metadata: {
+      ...(form.metadata || {}),
+      udyogAadhaarNumber: cleanString(form.udyogAadhaarNumber) || null,
+    },
     bankDetails: {
       accountHolderName: cleanString(form.bankDetails?.accountHolderName),
       accountNumber: cleanString(form.bankDetails?.accountNumber),
@@ -237,14 +243,15 @@ const normalizeForEdit = (org = {}) => {
     description: org.description || "",
     supportEmail: org.supportEmail || "",
     supportPhone: org.supportPhone || "",
-    registrationNumber: org.registrationNumber || "",
+    udyogAadhaarNumber: org.metadata?.udyogAadhaarNumber || org.udyogAadhaarNumber || "",
     gstin: org.gstin || "",
     pan: org.pan || "",
     aadhaarNumber: org.aadhaarNumber || "",
     dateOfBirth: org.dateOfBirth ? String(org.dateOfBirth).slice(0, 10) : "",
     businessWebsite: org.businessWebsite || "",
     primaryContactName: org.primaryContactName || "",
-    documents: { ...(org.documents || org.kycDocuments || {}) },
+    documents: {},
+    existingDocuments: { ...(org.documents || org.kycDocuments || {}) },
     bankDetails: { ...emptyBankDetails, ...(org.bankDetails || {}) },
     billingAddress: { ...emptyAddress, ...(org.billingAddress || {}) },
     pickupAddress: { ...emptyAddress, ...(org.pickupAddress || {}) },
@@ -491,9 +498,9 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
                 <input type="date" className={ic(errors.dateOfBirth)} value={form.dateOfBirth}
                   onChange={(e) => onChange("dateOfBirth", e.target.value)} />
               </FieldRow>
-              <FieldRow label="Registration Number" error={errors.registrationNumber} hint="Company / LLP registration (optional)">
-                <input className={ic(errors.registrationNumber)} value={form.registrationNumber}
-                  onChange={(e) => onChange("registrationNumber", e.target.value)} placeholder="Optional" />
+              <FieldRow label="Udhyog Aadhaar Number" error={errors.udyogAadhaarNumber}>
+                <input className={ic(errors.udyogAadhaarNumber)} value={form.udyogAadhaarNumber}
+                  onChange={(e) => onChange("udyogAadhaarNumber", e.target.value.toUpperCase())} placeholder="UDYAM-XX-00-0000000" />
               </FieldRow>
               <FieldRow label="Business Website" error={errors.businessWebsite}>
                 <input type="url" className={ic(errors.businessWebsite)} value={form.businessWebsite}
@@ -539,7 +546,7 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
           {/* KYC Documents */}
           <section className="rounded-lg border border-[#E6E6E6] p-4">
             <h4 className="mb-1 text-sm font-semibold text-[#202337]">KYC & Compliance Documents</h4>
-            <p className="mb-3 text-xs text-[#65718b]">PDF, JPG, PNG or WebP — max 5 MB each. All 6 documents are mandatory.</p>
+            <p className="mb-3 text-xs text-[#65718b]">PDF, JPG, PNG or WebP — max 5 MB each. Udhyog Aadhaar is optional.</p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {ORGANIZATION_DOCUMENTS.map(([key, label]) => (
                 <DocField key={key} docKey={key} label={label}
@@ -936,18 +943,18 @@ const MyOrganizations = () => {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="My Organizations"
-        subtitle="Each organization has its own GST registration, bank account, and independent admin approval."
+        title="My Store"
+        subtitle=""
         count={organizations.length}
-        breadcrumbs={[{ label: "Seller Dashboard" }, { label: "My Organizations" }]}
+        breadcrumbs={[{ label: "Seller Dashboard" }, { label: "My Store" }]}
         actions={(
           <>
             <PrimaryButton onClick={loadOrganizations} disabled={loading} icon={<MdRefresh size={18} />}>
               Refresh
             </PrimaryButton>
-            <PrimaryButton onClick={openCreate} icon={<MdAdd size={18} />}>
+            {/* <PrimaryButton onClick={openCreate} icon={<MdAdd size={18} />}>
               Add Organization
-            </PrimaryButton>
+            </PrimaryButton> */}
           </>
         )}
       />

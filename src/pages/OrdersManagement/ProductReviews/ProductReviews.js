@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdAdd, MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibilityOff } from "react-icons/md";
+import { MdAdd, MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -121,12 +121,109 @@ const getReviewsPayload = (state = {}) => {
   };
 };
 
+const ReviewDetailsDrawer = ({ review, onClose }) => {
+  if (!review) return null;
+  const productName = getProductName(review) || "Product not found";
+  const buyerName = getBuyerName(review);
+  const reviewDate = review.createdAt
+    ? new Date(review.createdAt).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">Review Details</h2>
+            <p className="mt-0.5 text-xs text-gray-500">{productName}</p>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800" aria-label="Close">
+            <MdClose size={22} />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Buyer</p>
+              <p className="mt-1 font-medium text-gray-800">{buyerName}</p>
+              {review.buyer?.email ? <p className="text-xs text-gray-500">{review.buyer.email}</p> : null}
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Status</p>
+              <div className="mt-1">
+                <StatusBadge status={review.status || "pending"} dot variant={STATUS_COLOR[review.status] || "default"} />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Rating</p>
+              <div className="mt-1"><StarRating rating={Number(review.rating) || 0} /></div>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Date</p>
+              <p className="mt-1 text-gray-800">{reviewDate}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Order ID</p>
+              <p className="mt-1 font-mono text-xs text-gray-700">{review.orderId || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-gray-400">Helpful Votes</p>
+              <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
+            </div>
+          </div>
+
+          <section>
+            <p className="text-xs font-medium uppercase text-gray-400">Title</p>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{review.title || "—"}</p>
+          </section>
+
+          <section>
+            <p className="text-xs font-medium uppercase text-gray-400">Review</p>
+            <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">
+              {review.reviewText || "—"}
+            </p>
+          </section>
+
+          {Array.isArray(review.media) && review.media.length ? (
+            <section>
+              <p className="text-xs font-medium uppercase text-gray-400">Review Photos</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {review.media.map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded border">
+                    <img src={url} alt="Review media" className="h-24 w-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {review.adminReply?.text ? (
+            <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+              <p className="text-xs font-medium uppercase text-blue-500">Admin Reply</p>
+              <p className="mt-1 text-sm text-blue-900">{review.adminReply.text}</p>
+            </section>
+          ) : null}
+        </div>
+      </aside>
+    </>
+  );
+};
+
 const ProductReviews = () => {
   const dispatch = useDispatch();
   const reviewsData = useSelector((state) => state.adminCore);
   const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
 
   const [editTarget, setEditTarget]       = useState(null);
+  const [viewTarget, setViewTarget]       = useState(null);
   const [addOpen, setAddOpen]             = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -339,13 +436,15 @@ const ProductReviews = () => {
         </button>
       ),
     },
-    {
-      key: "helpfulVotes",
-      label: "Helpful",
-      render: (v) => (
-        <span className="text-xs text-gray-500">{v || 0}</span>
-      ),
-    },
+   {
+  key: "helpfulVotes",
+  label: "Likes",
+  render: (v) => (
+    <span className="flex items-center gap-1 text-xs text-gray-500">
+      👍 {v || 0}
+    </span>
+  ),
+},
     {
       key: "createdAt",
       label: "Date",
@@ -359,26 +458,40 @@ const ProductReviews = () => {
     {
       key: "_actions",
       label: "",
-      render: (_, row) => isSellerPanelUser ? null : (
+      render: (_, row) => (
         <div className="flex items-center gap-1 justify-end">
-          <PermissionGuard module="reviews" action={ACTIONS.EDIT} hide>
-            <button
-              onClick={() => setEditTarget(row)}
-              className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
-              title="Edit review"
-            >
-              <MdEdit size={15} />
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="reviews" action={ACTIONS.DELETE} hide>
-            <button
-              onClick={() => setDeleteConfirm({ open: true, review: row })}
-              className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-              title="Delete review"
-            >
-              <MdDelete size={15} />
-            </button>
-          </PermissionGuard>
+          <button
+            onClick={() => setViewTarget(row)}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
+            title="View review"
+            aria-label="View review"
+          >
+            <MdVisibility size={15} />
+          </button>
+          {!isSellerPanelUser && (
+            <>
+              <PermissionGuard module="reviews" action={ACTIONS.EDIT} hide>
+                <button
+                  onClick={() => setEditTarget(row)}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
+                  title="Edit review"
+                  aria-label="Edit review"
+                >
+                  <MdEdit size={15} />
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="reviews" action={ACTIONS.DELETE} hide>
+                <button
+                  onClick={() => setDeleteConfirm({ open: true, review: row })}
+                  className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Delete review"
+                  aria-label="Delete review"
+                >
+                  <MdDelete size={15} />
+                </button>
+              </PermissionGuard>
+            </>
+          )}
         </div>
       ),
     },
@@ -485,6 +598,11 @@ const ProductReviews = () => {
         isOpen={Boolean(editTarget)}
         onClose={() => { setEditTarget(null); fetchReviews(); }}
         reviewData={editTarget}
+      />
+
+      <ReviewDetailsDrawer
+        review={viewTarget}
+        onClose={() => setViewTarget(null)}
       />
 
       <AddProductReview

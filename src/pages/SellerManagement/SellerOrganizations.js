@@ -40,6 +40,7 @@ const ORGANIZATION_DOCUMENTS = [
   ["aadhaarBackUrl", "Aadhaar Back"],
   ["bankProofUrl", "Bank Proof"],
   ["addressProofUrl", "Address Proof"],
+  ["udyogAadhaarDocumentUrl", "Udhyog Aadhaar"],
 ];
 
 const emptyAddress = {
@@ -67,7 +68,7 @@ const createEmptyForm = (sellerId = "") => ({
   description: "",
   supportEmail: "",
   supportPhone: "",
-  registrationNumber: "",
+  udyogAadhaarNumber: "",
   gstin: "",
   pan: "",
   aadhaarNumber: "",
@@ -75,6 +76,7 @@ const createEmptyForm = (sellerId = "") => ({
   businessWebsite: "",
   primaryContactName: "",
   documents: {},
+  existingDocuments: {},
   kycStatus: "submitted",
   bankVerificationStatus: "submitted",
   approvalStatus: "pending_review",
@@ -171,7 +173,9 @@ const REQUIRED_FIELD_CHECKS = [
   ["bankDetails.accountNumber", (organization) => organization.bankDetails?.accountNumber],
   ["bankDetails.ifscCode", (organization) => organization.bankDetails?.ifscCode],
   ["bankDetails.bankName", (organization) => organization.bankDetails?.bankName],
-  ...ORGANIZATION_DOCUMENTS.map(([key]) => [`documents.${key}`, (organization) => organization.documents?.[key]]),
+  ...ORGANIZATION_DOCUMENTS
+    .filter(([key]) => key !== "udyogAadhaarDocumentUrl")
+    .map(([key]) => [`documents.${key}`, (organization) => organization.documents?.[key]]),
 ];
 
 const getMissingRequiredFields = (organization = {}) => {
@@ -227,14 +231,15 @@ const normalizeForEdit = (organization = {}) => {
     description: organization.description || "",
     supportEmail: organization.supportEmail || "",
     supportPhone: organization.supportPhone || "",
-    registrationNumber: organization.registrationNumber || "",
+    udyogAadhaarNumber: organization.metadata?.udyogAadhaarNumber || organization.udyogAadhaarNumber || "",
     gstin: organization.gstin || "",
     pan: organization.pan || "",
     aadhaarNumber: organization.aadhaarNumber || "",
     dateOfBirth: organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : "",
     businessWebsite: organization.businessWebsite || "",
     primaryContactName: organization.primaryContactName || "",
-    documents: { ...(organization.documents || organization.kycDocuments || {}) },
+    documents: {},
+    existingDocuments: { ...(organization.documents || organization.kycDocuments || {}) },
     kycStatus: organization.kycStatus || "submitted",
     bankVerificationStatus: organization.bankVerificationStatus || "submitted",
     approvalStatus: organization.approvalStatus || "pending_review",
@@ -288,7 +293,6 @@ const buildPayload = (form = {}) => {
     description: cleanString(form.description) || null,
     supportEmail: cleanString(form.supportEmail),
     supportPhone: cleanString(form.supportPhone),
-    registrationNumber: cleanString(form.registrationNumber) || null,
     gstin: cleanString(form.gstin) || null,
     pan: cleanString(form.pan),
     aadhaarNumber: cleanString(form.aadhaarNumber),
@@ -296,6 +300,10 @@ const buildPayload = (form = {}) => {
     businessWebsite: cleanString(form.businessWebsite) || null,
     primaryContactName: cleanString(form.primaryContactName),
     documents: form.documents || {},
+    metadata: {
+      ...(form.metadata || {}),
+      udyogAadhaarNumber: cleanString(form.udyogAadhaarNumber) || null,
+    },
     kycStatus: form.kycStatus,
     bankVerificationStatus: form.bankVerificationStatus,
     approvalStatus: form.approvalStatus,
@@ -414,7 +422,9 @@ const validateForm = (form = {}) => {
   if (!pickupPin) return "Pickup pincode is required";
   if (pickupPin.length < 5 || pickupPin.length > 10) return "Pickup pincode must be 5–10 characters";
 
-  const missingDocument = ORGANIZATION_DOCUMENTS.find(([key]) => !form.documents?.[key]);
+  const missingDocument = ORGANIZATION_DOCUMENTS.find(
+    ([key]) => key !== "udyogAadhaarDocumentUrl" && !form.documents?.[key] && !form.existingDocuments?.[key],
+  );
   return missingDocument ? `${missingDocument[1]} document is required` : "";
 };
 
@@ -476,6 +486,7 @@ const DetailField = ({ label, value, mono = false }) => (
 const OrganizationDetailModal = ({ open, organization, sellers = [], onClose }) => {
   if (!open || !organization) return null;
   const documents = organization.documents || {};
+  const udyogAadhaarNumber = organization.metadata?.udyogAadhaarNumber || organization.udyogAadhaarNumber || "";
   const missingFields = getMissingRequiredFields(organization);
   const canOperate = canOperateOrganization(organization);
 
@@ -533,7 +544,7 @@ const OrganizationDetailModal = ({ open, organization, sellers = [], onClose }) 
                 <DetailField label="PAN" value={organization.pan} mono />
                 <DetailField label="Aadhaar" value={organization.aadhaarNumber} mono />
                 <DetailField label="Date of Birth" value={organization.dateOfBirth ? String(organization.dateOfBirth).slice(0, 10) : ""} />
-                <DetailField label="Registration No." value={organization.registrationNumber} mono />
+                <DetailField label="Udhyog Aadhaar No." value={udyogAadhaarNumber} mono />
               </div>
             </section>
 
@@ -775,8 +786,8 @@ const OrganizationModal = ({
             <FieldRow label="Support Phone">
               <input className={inputCls} value={form.supportPhone} onChange={(event) => onChange("supportPhone", event.target.value)} />
             </FieldRow>
-            <FieldRow label="Registration Number" error={errors.registrationNumber}>
-              <input className={inputClass(errors.registrationNumber)} value={form.registrationNumber} onChange={(event) => onChange("registrationNumber", event.target.value)} />
+            <FieldRow label="Udhyog Aadhaar Number" error={errors.udyogAadhaarNumber}>
+              <input className={inputClass(errors.udyogAadhaarNumber)} value={form.udyogAadhaarNumber} onChange={(event) => onChange("udyogAadhaarNumber", event.target.value.toUpperCase())} />
             </FieldRow>
             <FieldRow label="Aadhaar Number" error={errors.aadhaarNumber}>
               <input className={inputClass(errors.aadhaarNumber)} value={form.aadhaarNumber} maxLength={12} onChange={(event) => onChange("aadhaarNumber", event.target.value.replace(/\D/g, ""))} />
@@ -1261,9 +1272,9 @@ const SellerOrganizations = () => {
             <PrimaryButton variant="ghost" onClick={loadOrganizations} disabled={loading} icon={<MdRefresh size={18} />}>
               Refresh
             </PrimaryButton>
-            <PrimaryButton onClick={openCreate} icon={<MdAdd size={18} />}>
+            {/* <PrimaryButton onClick={openCreate} icon={<MdAdd size={18} />}>
               Add Organization
-            </PrimaryButton>
+            </PrimaryButton> */}
           </>
         )}
       />

@@ -108,7 +108,7 @@ export const ENDPOINTS = {
     sellerMine: "/products/seller/me",
     detail: byPanelFn(
       (productId) => `/admin/products/${productId}`,
-      (productId) => `/products/${productId}`
+      (productId) => `/products/manage/${productId}`
     ),
     moderationQueue: "/admin/products/moderation-queue",
     moderate: (productId) => `/admin/products/${productId}/moderate`,

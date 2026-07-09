@@ -156,12 +156,6 @@ const sellerLabel = (product, sellerLookup = {}) => {
   return sellerLookup[sellerId]?.name || String(sellerId || "N/A");
 };
 
-const getVariantLabel = (variant = {}, fallback = "Default variant") => {
-  const title = variant.title || variant.name || (variant.isDefault ? "Default variant" : "");
-  const sku = variant.sku || variant.variantSku || "";
-  return [title || fallback, sku ? `SKU: ${sku}` : ""].filter(Boolean).join(" - ");
-};
-
 const getInventoryVariants = (product = {}) => {
   const variants = Array.isArray(product?.variants) ? product.variants.filter(Boolean) : [];
   if (variants.length) return variants;
@@ -188,13 +182,34 @@ const getSelectedInventoryVariant = (product = {}, variantSku = "") => {
   );
 };
 
-const stockStatusFor = (row) => {
-  const threshold = Number(row?.inventorySettings?.lowStockThreshold ?? 5);
-  const variant = getSelectedInventoryVariant(row);
-  const available = Number(variant?.stock ?? row?.stock ?? 0) - Number(variant?.reservedStock ?? row?.reservedStock ?? 0);
+const stockStatusForVariant = (product = {}, variant = {}) => {
+  const threshold = Number(product?.inventorySettings?.lowStockThreshold ?? 5);
+  const available = Number(variant?.stock ?? product?.stock ?? 0) - Number(variant?.reservedStock ?? product?.reservedStock ?? 0);
   if (available <= 0) return "out_of_stock";
   if (available <= threshold) return "low_stock";
   return "in_stock";
+};
+
+const flattenInventoryRows = (products = [], sellerLookup = {}) => {
+  const rows = [];
+  (products || []).forEach((product) => {
+    getInventoryVariants(product).forEach((variant) => {
+      rows.push({
+        _id: `${product._id}-${variant._id || variant.sku || "default"}`,
+        product,
+        sellerName: sellerLabel(product, sellerLookup),
+        variantTitle: variant.isDefault ? "Default variant" : (variant.title || variant.name || "Variant"),
+        sku: variant.sku || product.sku || "-",
+        price: variant.price ?? variant.salePrice ?? product.price ?? product.salePrice ?? 0,
+        stock: variant.stock ?? product.stock ?? 0,
+        reservedStock: variant.reservedStock ?? product.reservedStock ?? 0,
+        stockStatus: stockStatusForVariant(product, variant),
+        status: product.status,
+        variantSku: variant.sku || "",
+      });
+    });
+  });
+  return rows;
 };
 
 const SellerProductInventories = () => {
@@ -242,7 +257,6 @@ const SellerProductInventories = () => {
           limit: params.limit,
           q: params.search || undefined,
           status: params.status || undefined,
-          stockStatus: params.stockStatus || undefined,
           productType: params.productType || undefined,
 	          sortBy: params.sortBy,
 	          sortDir: params.sortDir,
@@ -273,6 +287,13 @@ const SellerProductInventories = () => {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  const flatRows = useMemo(() => flattenInventoryRows(products, sellerLookup), [products, sellerLookup]);
+
+  const filteredRows = useMemo(() => {
+    if (!list.filters.stockStatus) return flatRows;
+    return flatRows.filter((row) => row.stockStatus === list.filters.stockStatus);
+  }, [flatRows, list.filters.stockStatus]);
 
   const confirmToggleStatus = async () => {
     if (!toggleTarget?._id) return;
@@ -310,8 +331,10 @@ const SellerProductInventories = () => {
     }
   };
 
-  const openInventoryModal = useCallback((item) => {
-    const defaultVariant = getSelectedInventoryVariant(item);
+  const openInventoryModal = useCallback((row) => {
+    const item = row?.product || row;
+    const selectedVariant =
+      getSelectedInventoryVariant(item, row?.variantSku) || getSelectedInventoryVariant(item);
     setSelectedItem(item);
     setFormData({
       ...EMPTY_INVENTORY_FORM,
@@ -320,9 +343,9 @@ const SellerProductInventories = () => {
       urlKeyword: item?._id ? `/products/${item._id}` : "",
       costPrice: String(item?.costPrice ?? item?.mrp ?? ""),
       sellingPrice: String(item?.price ?? item?.salePrice ?? ""),
-      availableQty: String(defaultVariant?.stock ?? item?.stock ?? 0),
-      sku: defaultVariant?.sku || item?.sku || "",
-      variantSku: defaultVariant?.sku || "",
+      availableQty: String(selectedVariant?.stock ?? item?.stock ?? 0),
+      sku: selectedVariant?.sku || item?.sku || "",
+      variantSku: selectedVariant?.sku || "",
     });
     setInventoryOpen(true);
   }, [resolveSellerName]);
@@ -388,18 +411,20 @@ const SellerProductInventories = () => {
         render: (_, row) => (
           <div className="flex items-center gap-3">
             <img
-              src={firstImage(row)}
+              src={firstImage(row.product)}
               alt=""
               className="h-12 w-12 shrink-0 cursor-pointer rounded border object-cover"
-              onClick={() => setSelectedImage(firstImage(row))}
+              onClick={() => setSelectedImage(firstImage(row.product))}
             />
             <div className="min-w-0">
-              <div className="max-w-[260px] truncate text-sm font-semibold text-gray-800">{row?.title || row?.name || "-"}</div>
+              <div className="max-w-[260px] truncate text-sm font-semibold text-gray-800">
+                {row.product?.title || row.product?.name || "-"}
+              </div>
               <div className="max-w-[220px] truncate text-xs font-medium text-[var(--admin-muted)]">
-                {resolveSellerName(row)}
+                {row.sellerName}
               </div>
               <div className="max-w-[220px] truncate text-xs text-gray-400">
-                {getVariantLabel(getSelectedInventoryVariant(row))}
+                {row.variantTitle}
               </div>
             </div>
           </div>
@@ -407,7 +432,7 @@ const SellerProductInventories = () => {
       },
       {
         key: "sku",
-        label: "SKU",
+        label: "Variant SKU",
         sortable: true,
         render: (value) => <span className="font-mono text-sm">{value || "-"}</span>,
       },
@@ -425,23 +450,17 @@ const SellerProductInventories = () => {
         key: "stock",
         label: "Available Qty",
         sortable: true,
-        render: (_, row) => {
-          const variant = getSelectedInventoryVariant(row);
-          return <span className="font-mono text-sm">{variant?.stock ?? row?.stock ?? 0}</span>;
-        },
+        render: (value) => <span className="font-mono text-sm">{value ?? 0}</span>,
       },
       {
         key: "reservedStock",
         label: "Reserved",
-        render: (_, row) => {
-          const variant = getSelectedInventoryVariant(row);
-          return <span className="font-mono text-gray-500">{variant?.reservedStock ?? row?.reservedStock ?? 0}</span>;
-        },
+        render: (value) => <span className="font-mono text-gray-500">{value ?? 0}</span>,
       },
       {
         key: "stockStatus",
         label: "Stock Status",
-        render: (_, row) => <StatusBadge status={stockStatusFor(row)} dot />,
+        render: (_, row) => <StatusBadge status={row.stockStatus} dot />,
       },
       {
         key: "status",
@@ -478,11 +497,11 @@ const SellerProductInventories = () => {
             <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
               <button
                 type="button"
-                className={row.status === "active" ? "admin-icon-btn text-yellow-600" : "admin-icon-btn text-green-600"}
-                title={row.status === "active" ? "Disable product" : "Enable product"}
-                onClick={() => setToggleTarget(row)}
+                className={row.product?.status === "active" ? "admin-icon-btn text-yellow-600" : "admin-icon-btn text-green-600"}
+                title={row.product?.status === "active" ? "Disable product" : "Enable product"}
+                onClick={() => setToggleTarget(row.product)}
               >
-                {row.status === "active" ? <MdToggleOff size={16} /> : <MdToggleOn size={16} />}
+                {row.product?.status === "active" ? <MdToggleOff size={16} /> : <MdToggleOn size={16} />}
               </button>
             </PermissionGuard>
             <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
@@ -490,7 +509,7 @@ const SellerProductInventories = () => {
                 type="button"
                 className="admin-icon-btn text-red-600"
                 title="Delete product"
-                onClick={() => setDeleteTarget(row)}
+                onClick={() => setDeleteTarget(row.product)}
               >
                 <MdDelete size={16} />
               </button>
@@ -499,7 +518,7 @@ const SellerProductInventories = () => {
         ),
       },
     ],
-    [openInventoryModal, resolveSellerName],
+    [openInventoryModal],
   );
 
   const exportColumns = columns.filter((column) => column.key !== "actions");
@@ -514,9 +533,9 @@ const SellerProductInventories = () => {
 
       <DataTable
         columns={columns}
-        data={products}
+        data={filteredRows}
         loading={loading || Boolean(productSelector?.getProductsData?.loading)}
-        totalCount={total}
+        totalCount={list.filters.stockStatus ? filteredRows.length : total}
         page={list.page}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
