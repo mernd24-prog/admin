@@ -36,6 +36,7 @@ import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrga
 import { getShippingProfiles } from '../../../../Redux/deliverySlice';
 import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
 import { isSellerPanel } from '../../../../_helpers/panelConfig';
+import LocationValueSelector from '../../../../components/Shared/LocationValueSelector';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -87,9 +88,6 @@ const normalizeProductServiceabilityMode = (mode) => {
   if (value === 'all_india') return 'all_pincodes';
   return value || 'inherit';
 };
-
-const joinList = (value) => Array.isArray(value) ? value.join(', ') : String(value || '');
-const splitList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 
 const inferWarrantyDuration = (template = {}) => {
   const metadata = template?.metadata || {};
@@ -1626,32 +1624,30 @@ export default function ProductManagementUI() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="admin-label">Allow Pincodes</label>
-                    <textarea
-                      className="admin-input min-h-[80px] resize-none"
-                      placeholder="400001, 411001, 560001..."
-                      value={joinList(formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes)}
-                      onChange={(e) => patchShipping({ allowPincodes: splitList(e.target.value), serviceablePincodes: splitList(e.target.value) })}
+                    <LocationValueSelector
+                      label="Allow Pincodes"
+                      value={formData?.shipping?.allowPincodes || formData?.shipping?.serviceablePincodes || []}
+                      onChange={(value) => patchShipping({ allowPincodes: value, serviceablePincodes: value })}
+                      type="pincode"
+                      hint="Select country, state, and city to pick allowed pincodes."
                     />
-                    <p className="text-xs text-gray-400">Comma-separated pincode list</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="admin-label">Block Pincodes</label>
-                    <textarea
-                      className="admin-input min-h-[80px] resize-none"
-                      placeholder="110001, 122001..."
-                      value={joinList(formData?.shipping?.blockPincodes)}
-                      onChange={(e) => patchShipping({ blockPincodes: splitList(e.target.value) })}
+                    <LocationValueSelector
+                      label="Block Pincodes"
+                      value={formData?.shipping?.blockPincodes || []}
+                      onChange={(value) => patchShipping({ blockPincodes: value })}
+                      type="pincode"
+                      hint="Select country, state, and city to pick blocked pincodes."
                     />
-                    <p className="text-xs text-gray-400">Comma-separated pincode list</p>
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="admin-label">Regions / States / Cities</label>
-                    <textarea
-                      className="admin-input min-h-[64px] resize-none"
-                      placeholder="Maharashtra, Delhi, Bangalore..."
-                      value={joinList(formData?.shipping?.regions)}
-                      onChange={(e) => patchShipping({ regions: splitList(e.target.value), states: splitList(e.target.value) })}
+                    <LocationValueSelector
+                      label="Regions / States / Cities"
+                      value={formData?.shipping?.regions || []}
+                      onChange={(value) => patchShipping({ regions: value, states: value })}
+                      type="city"
+                      hint="Select country and state to pick serviceable cities or regions."
                     />
                   </div>
                 </div>

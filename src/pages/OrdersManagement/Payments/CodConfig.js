@@ -10,6 +10,7 @@ import { PageHeader } from "../../../components/Shared";
 import { getCodConfig, updateCodConfig } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import LocationValueSelector from "../../../components/Shared/LocationValueSelector";
 
 const unwrap = (payload = {}) => payload?.data?.data || payload?.data || {};
 
@@ -26,8 +27,8 @@ const CodConfig = () => {
     minOrderAmount: "",
     maxOrderAmount: "",
     currency: "INR",
-    allowedPincodes: "",
-    blockedPincodes: "",
+    allowedPincodes: [],
+    blockedPincodes: [],
     note: "",
   });
 
@@ -53,11 +54,11 @@ const CodConfig = () => {
       maxOrderAmount: saved.maxOrderAmount ?? saved.max_order_amount ?? "",
       currency: saved.currency || "INR",
       allowedPincodes: Array.isArray(saved.allowedPincodes)
-        ? saved.allowedPincodes.join(", ")
-        : saved.allowedPincodes || "",
+        ? saved.allowedPincodes
+        : String(saved.allowedPincodes || "").split(",").map((p) => p.trim()).filter(Boolean),
       blockedPincodes: Array.isArray(saved.blockedPincodes)
-        ? saved.blockedPincodes.join(", ")
-        : saved.blockedPincodes || "",
+        ? saved.blockedPincodes
+        : String(saved.blockedPincodes || "").split(",").map((p) => p.trim()).filter(Boolean),
       note: saved.note || "",
     });
   }, [saved]);
@@ -71,12 +72,8 @@ const CodConfig = () => {
         minOrderAmount: form.minOrderAmount !== "" ? Number(form.minOrderAmount) : undefined,
         maxOrderAmount: form.maxOrderAmount !== "" ? Number(form.maxOrderAmount) : undefined,
         currency: form.currency || "INR",
-        allowedPincodes: form.allowedPincodes
-          ? form.allowedPincodes.split(",").map((p) => p.trim()).filter(Boolean)
-          : [],
-        blockedPincodes: form.blockedPincodes
-          ? form.blockedPincodes.split(",").map((p) => p.trim()).filter(Boolean)
-          : [],
+        allowedPincodes: Array.isArray(form.allowedPincodes) ? form.allowedPincodes : [],
+        blockedPincodes: Array.isArray(form.blockedPincodes) ? form.blockedPincodes : [],
         note: form.note || undefined,
       })).unwrap();
       toast.success("COD configuration saved");
@@ -169,23 +166,21 @@ const CodConfig = () => {
             <p className="font-medium text-gray-800 mb-4">Pincode Restrictions (optional)</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Allowed Pincodes</label>
-                <textarea
-                  rows={3}
+                <LocationValueSelector
+                  label="Allowed Pincodes"
                   value={form.allowedPincodes}
-                  onChange={(e) => setForm((p) => ({ ...p, allowedPincodes: e.target.value }))}
-                  placeholder="110001, 400001, 560001 (comma separated, leave blank for all)"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(value) => setForm((p) => ({ ...p, allowedPincodes: value }))}
+                  type="pincode"
+                  hint="Leave empty to allow all serviceable pincodes."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Blocked Pincodes</label>
-                <textarea
-                  rows={3}
+                <LocationValueSelector
+                  label="Blocked Pincodes"
                   value={form.blockedPincodes}
-                  onChange={(e) => setForm((p) => ({ ...p, blockedPincodes: e.target.value }))}
-                  placeholder="110092, 400099 (comma separated)"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(value) => setForm((p) => ({ ...p, blockedPincodes: value }))}
+                  type="pincode"
+                  hint="Select country, state, and city to pick blocked pincodes."
                 />
               </div>
             </div>
