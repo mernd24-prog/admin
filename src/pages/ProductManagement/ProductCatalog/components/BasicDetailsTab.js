@@ -58,13 +58,13 @@ export default function BasicDetailsTab({
   handleChange,
   formattedBrandList,
   formattedWarrantyList,
-  formattedColorList,
   formattedProductFamilyList,
   formattedCategoryList,
   handleSelectChange,
   errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], organizationList = [], userData
+  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], organizationList = [], userData,
+  hasVariantPricing = false,
 }) {
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
@@ -184,15 +184,6 @@ export default function BasicDetailsTab({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomWarranty, setIsCustomWarranty] = useState(false);
-
-  const selectedColorOption = useMemo(() => {
-    const currentColor = String(formData.color || '').trim();
-    if (!currentColor) return null;
-    return (
-      (formattedColorList || []).find((opt) => String(opt.value) === currentColor) ||
-      { value: currentColor, label: currentColor }
-    );
-  }, [formattedColorList, formData.color]);
 
   const warrantyOptions = warrantyTemplatesFromMaster.options.length > 0
     ? warrantyTemplatesFromMaster.options
@@ -593,14 +584,6 @@ export default function BasicDetailsTab({
               textareaClasses='text-sm'
             />
             <FilterSelect
-              label="Color"
-              value={selectedColorOption}
-              onChange={(e) => handleSelectChange(e, 'PRODUCT_COLOR')}
-              options={formattedColorList || []}
-              placeholder="Select color"
-              error={errors?.color}
-            />
-            <FilterSelect
               label="Product Family Code"
               value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}
               onChange={(e) => handleSelectChange(e, 'PRODUCT_FAMILY')}
@@ -608,49 +591,53 @@ export default function BasicDetailsTab({
               placeholder="Select family code"
               error={errors?.productFamilyCode}
             />
-            <Input
-              labelName="Price (GST included)"
-              name="price"
-              type="number"
-              value={formData.price}
-              onChange={handleChange}
-              required
-              placeholder="Enter selling price"
-              error={errors?.price}
-              textareaClasses='text-sm'
-            />
-            <Input
-              labelName="MRP (GST included)"
-              name="mrp"
-              type="number"
-              value={formData.mrp}
-              onChange={handleChange}
-              required
-              placeholder="Enter MRP"
-              error={errors?.mrp}
-              textareaClasses='text-sm'
-            />
-            <Input
-              labelName="Special Price (optional)"
-              name="salePrice"
-              type="number"
-              value={formData.salePrice}
-              onChange={handleChange}
-              placeholder="Enter special price"
-              error={errors?.salePrice}
-              textareaClasses='text-sm'
-            />
-            <Input
-              labelName="Stock"
-              name="stock"
-              type="number"
-              value={formData.stock}
-              onChange={handleChange}
-              required
-              placeholder="Enter stock"
-              error={errors?.stock}
-              textareaClasses='text-sm'
-            />
+            {!hasVariantPricing && (
+              <>
+                <Input
+                  labelName="Price (GST included)"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter selling price"
+                  error={errors?.price}
+                  textareaClasses='text-sm'
+                />
+                <Input
+                  labelName="MRP (GST included)"
+                  name="mrp"
+                  type="number"
+                  value={formData.mrp}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter MRP"
+                  error={errors?.mrp}
+                  textareaClasses='text-sm'
+                />
+                <Input
+                  labelName="Special Price (optional)"
+                  name="salePrice"
+                  type="number"
+                  value={formData.salePrice}
+                  onChange={handleChange}
+                  placeholder="Enter special price"
+                  error={errors?.salePrice}
+                  textareaClasses='text-sm'
+                />
+                <Input
+                  labelName="Stock"
+                  name="stock"
+                  type="number"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter stock"
+                  error={errors?.stock}
+                  textareaClasses='text-sm'
+                />
+              </>
+            )}
            
             {!showCustomWarranty && (
               <div className="space-y-1">

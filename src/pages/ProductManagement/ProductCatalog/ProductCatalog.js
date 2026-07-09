@@ -48,7 +48,6 @@ const INITIAL_FILTERS = {
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
-  productType: { value: "", label: "All" },
   dateFrom: "",
   dateTo: "",
 };
@@ -67,11 +66,6 @@ const ACTIVATION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
-];
-const PRODUCT_TYPE_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "simple", label: "Simple" },
-  { value: "variable", label: "Variable" },
 ];
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 const STATUS_TOGGLEABLE = new Set(["active", "inactive"]);
@@ -98,6 +92,44 @@ const refToLabel = (value) => {
     );
   }
   return String(value);
+};
+
+const toNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const hasVariants = (product = {}) =>
+  Array.isArray(product?.variants) && product.variants.length > 0;
+
+const getDefaultVariant = (product = {}) => {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (!variants.length) return null;
+  return variants.find((variant) => variant?.isDefault === true) ||
+    variants.find((variant) => variant?.status !== "inactive") ||
+    variants[0] ||
+    null;
+};
+
+const getEffectivePrice = (product = {}) => {
+  const defaultVariant = getDefaultVariant(product);
+  return hasVariants(product)
+    ? toNumberOrNull(defaultVariant?.price ?? defaultVariant?.salePrice)
+    : toNumberOrNull(product?.price ?? product?.salePrice);
+};
+
+const getEffectiveStock = (product = {}) => {
+  if (!hasVariants(product)) return toNumberOrNull(product?.stock);
+  return product.variants.reduce(
+    (total, variant) => total + Number(variant?.stock || 0),
+    0,
+  );
+};
+
+const formatMoney = (value) => {
+  const amount = toNumberOrNull(value);
+  return amount === null ? "N/A" : `₹${amount.toLocaleString("en-IN")}`;
 };
 
 const getInitialFiltersForPath = (pathname = "", search = "") => {
@@ -194,9 +226,6 @@ const ProductCatalog = () => {
       ...(appliedFilters?.sellerName?.value
         ? { sellerId: appliedFilters.sellerName.value }
         : {}),
-      ...(appliedFilters?.productType?.value
-        ? { productType: appliedFilters.productType.value }
-        : {}),
       ...(appliedFilters?.dateFrom ? { dateFrom: appliedFilters.dateFrom } : {}),
       ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
       ...(appliedFilters?.activationStatus?.value === "Active"
@@ -230,9 +259,6 @@ const ProductCatalog = () => {
             ...(appliedFilters?.search ? { q: appliedFilters.search } : {}),
             ...(appliedFilters?.sellerName?.value
               ? { sellerId: appliedFilters.sellerName.value }
-              : {}),
-            ...(appliedFilters?.productType?.value
-              ? { productType: appliedFilters.productType.value }
               : {}),
             ...(appliedFilters?.dateFrom ? { dateFrom: appliedFilters.dateFrom } : {}),
             ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
@@ -739,13 +765,16 @@ const ProductCatalog = () => {
         key: "price",
         label: "Price",
         sortable: true,
-        render: (value) => (value !== undefined ? `₹${value}` : "N/A"),
+        render: (_, product) => formatMoney(getEffectivePrice(product)),
       },
       {
         key: "stock",
         label: "Stock",
         sortable: true,
-        render: (value) => value ?? "N/A",
+        render: (_, product) => {
+          const stock = getEffectiveStock(product);
+          return stock === null ? "N/A" : stock;
+        },
       },
       {
         key: "_deal",
@@ -767,10 +796,10 @@ const ProductCatalog = () => {
             !!product?.title,
             !!product?.description,
             !!product?.category,
-            Number(product?.price || product?.salePrice || 0) > 0,
+            Number(getEffectivePrice(product) || 0) > 0,
             (product?.images || []).length >= 1,
             !!product?.sku,
-            Number(product?.stock ?? product?.availableStock ?? 0) >= 0,
+            Number(getEffectiveStock(product) ?? product?.availableStock ?? 0) >= 0,
             !!product?.hsnCode,
           ];
           const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -923,10 +952,8 @@ const ProductCatalog = () => {
             isApprovalOptions={true}
             isCategory={true}
             categoryOptions={categoryOptions}
-            isProductType={true}
             dateFrom={true}
             dateTo={true}
-            productTypeOptions={PRODUCT_TYPE_OPTIONS}
             isUser={true}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}

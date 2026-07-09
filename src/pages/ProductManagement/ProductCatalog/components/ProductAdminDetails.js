@@ -71,6 +71,51 @@ const formatRevisionValue = (value) => {
   return String(value);
 };
 
+const toNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const hasVariants = (product = {}) =>
+  Array.isArray(product?.variants) && product.variants.length > 0;
+
+const getDefaultVariant = (product = {}) => {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (!variants.length) return null;
+  return variants.find((variant) => variant?.isDefault === true) ||
+    variants.find((variant) => variant?.status !== "inactive") ||
+    variants[0] ||
+    null;
+};
+
+const getEffectivePrice = (product = {}) => {
+  const defaultVariant = getDefaultVariant(product);
+  return hasVariants(product)
+    ? toNumberOrNull(defaultVariant?.price ?? defaultVariant?.salePrice)
+    : toNumberOrNull(product?.price ?? product?.salePrice);
+};
+
+const getEffectiveMrp = (product = {}) => {
+  const defaultVariant = getDefaultVariant(product);
+  return hasVariants(product)
+    ? toNumberOrNull(defaultVariant?.mrp ?? defaultVariant?.price)
+    : toNumberOrNull(product?.mrp ?? product?.price);
+};
+
+const getEffectiveStock = (product = {}) => {
+  if (!hasVariants(product)) return toNumberOrNull(product?.stock);
+  return product.variants.reduce(
+    (total, variant) => total + Number(variant?.stock || 0),
+    0,
+  );
+};
+
+const formatMoney = (value) => {
+  const amount = toNumberOrNull(value);
+  return amount === null ? null : `₹${amount.toLocaleString("en-IN")}`;
+};
+
 const ProductAdminDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -114,6 +159,9 @@ const ProductAdminDetails = () => {
       ? Object.fromEntries(product.attributes)
       : product.attributes || {};
   const productImages = getProductImages(product);
+  const effectivePrice = getEffectivePrice(product);
+  const effectiveMrp = getEffectiveMrp(product);
+  const effectiveStock = getEffectiveStock(product);
 
   useEffect(() => {
     if (id) {
@@ -296,14 +344,13 @@ const ProductAdminDetails = () => {
             />
             <Row label="Brand" value={refToLabel(product.brand)} />
             <Row label="SKU" value={product.sku} />
-            <Row label="Color" value={product.color} />
             <Row
               label="Price"
-              value={product.price !== undefined ? `₹${product.price}` : null}
+              value={formatMoney(effectivePrice)}
             />
             <Row
               label="MRP"
-              value={product.mrp !== undefined ? `₹${product.mrp}` : null}
+              value={formatMoney(effectiveMrp)}
             />
             <Row
               label="GST Rate"
@@ -318,7 +365,7 @@ const ProductAdminDetails = () => {
             <Row label="HSN Code" value={product.hsnCode} />
             <Row label="Revision Status" value={product.revisionStatus} />
             <Row label="Version" value={product.version} />
-            <Row label="Stock" value={product.stock} />
+            <Row label="Stock" value={effectiveStock} />
             <Row
               label="Deal Product"
               value={

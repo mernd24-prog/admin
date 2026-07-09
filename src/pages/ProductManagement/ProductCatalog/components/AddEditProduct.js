@@ -24,12 +24,8 @@ import selectJson from '../../../../_helpers/SelectJson.json'
 import { BsMenuApp } from 'react-icons/bs';
 import DynamicAttributesTab from './DynamicAttributesTab';
 import VariantBuilder from '../../../../components/Product/VariantBuilder';
-import ProductTypeSelector from '../../../../components/Product/ProductTypeSelector';
 import SEOPanel from '../../../../components/Product/SEOPanel';
 import TagsInput from '../../../../components/Product/TagsInput';
-import DigitalProductPanel from '../../../../components/Product/DigitalProductPanel';
-import SubscriptionPanel from '../../../../components/Product/SubscriptionPanel';
-import BundleBuilder from '../../../../components/Product/BundleBuilder';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { normalizeImageList } from '../../../../_helpers/productMedia';
 import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
@@ -49,6 +45,21 @@ const API_CALL_OBJECT = {
   "Hsn code list": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
 
 }
+
+const DEFAULT_PRODUCT_VARIANT = {
+  sku: "",
+  title: "Default",
+  price: "",
+  mrp: "",
+  salePrice: "",
+  stock: 0,
+  gstRate: 18,
+  status: "active",
+  isDefault: true,
+  sortOrder: 0,
+  attributes: {},
+  images: [],
+};
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
 const getSessionUser = () => {
@@ -84,9 +95,25 @@ const toOptionalNumber = (value) => {
 };
 
 const normalizeProductServiceabilityMode = (mode) => {
-  const value = String(mode || '').trim();
-  if (value === 'all_india') return 'all_pincodes';
-  return value || 'inherit';
+  const value = String(mode || '').trim().toLowerCase();
+  const modeMap = {
+    inherit: 'inherit',
+    all_india: 'all_pincodes',
+    all_locations: 'all_pincodes',
+    all_pincodes: 'all_pincodes',
+    selected_pincodes: 'allowlist',
+    serviceable_pincodes: 'allowlist',
+    allow_pincodes: 'allowlist',
+    allowlist: 'allowlist',
+    block_pincodes: 'blocklist',
+    blocked_pincodes: 'blocklist',
+    blocklist: 'blocklist',
+    selected_states: 'regions',
+    selected_cities: 'regions',
+    regions: 'regions',
+    disabled: 'disabled',
+  };
+  return modeMap[value] || 'inherit';
 };
 
 const inferWarrantyDuration = (template = {}) => {
@@ -178,7 +205,7 @@ export default function ProductManagementUI() {
   const [taxData, setTaxData] = useState(null)
   const [userData, setUserData] = useState({})
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
-  const [variantsData, setVariantsData] = useState([]);
+  const [variantsData, setVariantsData] = useState([DEFAULT_PRODUCT_VARIANT]);
   const [variantAxes, setVariantAxes] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformValues, setPlatformValues] = useState({});
@@ -313,10 +340,22 @@ export default function ProductManagementUI() {
           ));
 
           if (Array.isArray(productData?.variants) && productData.variants.length) {
-            const hasAttributes = productData.variants.some((v) => v.attributes && Object.keys(v.attributes).length);
-            if (hasAttributes) {
-              setVariantsData(productData.variants);
-            }
+            setVariantsData(productData.variants.map((variant, index) => ({
+              ...variant,
+              isDefault: variant.isDefault === true || (!productData.variants.some((item) => item.isDefault) && index === 0),
+              sortOrder: variant.sortOrder ?? index,
+            })));
+          } else {
+            setVariantsData([{
+              ...DEFAULT_PRODUCT_VARIANT,
+              sku: productData?.sku || "",
+              title: productData?.color && productData.color !== "default" ? productData.color : "Default",
+              price: productData?.price ?? "",
+              mrp: productData?.mrp ?? "",
+              salePrice: productData?.salePrice ?? "",
+              stock: productData?.stock ?? 0,
+              attributes: productData?.color && productData.color !== "default" ? { color: productData.color } : {},
+            }]);
           }
           if (Array.isArray(productData?.options) && productData.options.length) {
             setVariantAxes(productData.options);
@@ -735,18 +774,19 @@ export default function ProductManagementUI() {
     if (!(formData?.category_id || formData?.category || formData?.category_key)) {
       newErrors.category_id = "Category is required.";
     }
-    if (!formData?.price || Number(formData.price) <= 0) newErrors.price = "Price is required.";
-    if (!formData?.mrp || Number(formData.mrp) <= 0) newErrors.mrp = "MRP is required.";
-    if (Number(formData.price || 0) > Number(formData.mrp || 0)) {
-      newErrors.price = "Selling price must be less than or equal to MRP.";
+    if (!variantsData.length) {
+      newErrors.variants = "Add at least one variant for this product.";
     }
-    if (formData?.salePrice !== undefined && formData.salePrice !== '') {
-      if (Number(formData.salePrice) < 0) newErrors.salePrice = "Special price cannot be negative.";
-      if (Number(formData.salePrice) > Number(formData.price || 0)) {
-        newErrors.salePrice = "Special price must be less than or equal to selling price.";
-      }
-    }
-    if (formData?.stock === undefined || formData?.stock === '' || Number(formData.stock) < 0) newErrors.stock = "Stock is required.";
+    const invalidVariant = variantsData.find((variant) =>
+      !variant?.sku ||
+      Number(variant?.price || 0) <= 0 ||
+      Number(variant?.mrp || 0) <= 0 ||
+      Number(variant?.price || 0) > Number(variant?.mrp || 0) ||
+      Number(variant?.stock ?? 0) < 0 ||
+      (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) < 0) ||
+      (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.price || 0))
+    );
+    if (invalidVariant) newErrors.variants = "Every variant needs SKU, valid price, MRP, and stock.";
     categoryAttributeSchema.forEach((field) => {
       const value = formData?.attributes?.[field.key];
       if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -980,9 +1020,6 @@ export default function ProductManagementUI() {
       case 'STORE_WARRANTY_ID':
         setFormData(prev => ({ ...prev, warranty_id: selectedOption?.value || "" }));
         break;
-      case 'PRODUCT_COLOR':
-        setFormData(prev => ({ ...prev, color: selectedOption?.value || "" }));
-        break;
       case 'PRODUCT_FAMILY':
         setFormData(prev => ({ ...prev, productFamilyCode: selectedOption?.value || "" }));
         break;
@@ -1081,8 +1118,6 @@ export default function ProductManagementUI() {
     }
   };
 
-  const productType = formData?.productType || 'simple';
-
   const handleSaveSubmit = useCallback(async () => {
     setSaving(true);
     const catalogsUrlsArray = (Array.isArray(formData.catalogsUrls)
@@ -1133,7 +1168,34 @@ export default function ProductManagementUI() {
       sortOrder: axis.sortOrder ?? index,
     })).filter((axis) => axis.name && axis.values.length);
 
-    const primaryOption = formattedOptions[0] || {};
+    const legacyVariants = formattedOptions
+      .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
+      .map((option, index) => ({
+        sku: option.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
+        price: Number(option.salePrice || 0),
+        mrp: Number(option.mrp || 0),
+        stock: Number(option.stock || 0),
+        attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
+        images: [],
+      }));
+    const normalizedVariants = (variantsData.length ? variantsData : legacyVariants).map((variant, index) => ({
+      ...variant,
+      sku: variant.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
+      price: Number(variant.price || variant.salePrice || 0),
+      mrp: Number(variant.mrp || variant.price || variant.salePrice || 0),
+      salePrice: variant.salePrice === undefined || variant.salePrice === "" ? undefined : Number(variant.salePrice || 0),
+      stock: Number(variant.stock || 0),
+      reservedStock: Number(variant.reservedStock || 0),
+      isDefault: variant.isDefault === true || (!variantsData.some((item) => item.isDefault) && index === 0),
+      sortOrder: variant.sortOrder ?? index,
+    }));
+    const hasVariantPricing = normalizedVariants.length > 0;
+    const primaryOption = hasVariantPricing
+      ? normalizedVariants.find((variant) => variant.isDefault) || normalizedVariants[0] || {}
+      : formattedOptions[0] || {};
+    const variantRootPrice = Number(primaryOption.price || primaryOption.salePrice || 0);
+    const variantRootMrp = Number(primaryOption.mrp || primaryOption.price || variantRootPrice || 0);
+    const variantRootStock = normalizedVariants.reduce((total, variant) => total + Number(variant.stock || 0), 0);
     const origin = compactObject(updatedFormData.origin || {});
     const dimensions = compactObject({
       unit: updatedFormData.dimensions?.unit,
@@ -1157,10 +1219,12 @@ export default function ProductManagementUI() {
       additionalCost: profileShippingCharge,
       shippingCharge: profileShippingCharge,
       serviceabilityMode: normalizeProductServiceabilityMode(selectedShippingProfile.serviceabilityMode),
-      allowPincodes: selectedShippingProfile.allowPincodes || selectedShippingProfile.serviceablePincodes || [],
-      serviceablePincodes: selectedShippingProfile.serviceablePincodes || selectedShippingProfile.allowPincodes || [],
-      blockPincodes: selectedShippingProfile.blockPincodes || [],
-      regions: selectedShippingProfile.regions || selectedShippingProfile.states || [],
+      allowPincodes: selectedShippingProfile.allowedPincodes || selectedShippingProfile.allowPincodes || selectedShippingProfile.serviceablePincodes || [],
+      serviceablePincodes: selectedShippingProfile.allowedPincodes || selectedShippingProfile.serviceablePincodes || selectedShippingProfile.allowPincodes || [],
+      blockPincodes: selectedShippingProfile.blockedPincodes || selectedShippingProfile.blockPincodes || [],
+      regions: selectedShippingProfile.regions || selectedShippingProfile.allowedStates || selectedShippingProfile.states || [],
+      states: selectedShippingProfile.allowedStates || selectedShippingProfile.states || [],
+      cities: selectedShippingProfile.allowedCities || selectedShippingProfile.cities || [],
       ...(resolvedCodAvailable !== undefined ? { codAvailable: resolvedCodAvailable } : {}),
       processingDays: profileEtaMin,
       estimatedDaysMin: profileEtaMin,
@@ -1168,6 +1232,7 @@ export default function ProductManagementUI() {
       shippingMethod: selectedShippingProfile.shippingMethod || 'standard',
     } : {
       ...(updatedFormData.shipping || {}),
+      serviceabilityMode: normalizeProductServiceabilityMode(updatedFormData.shipping?.serviceabilityMode),
       freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
       freeShippingMinOrder: toOptionalNumber(updatedFormData.shipping?.freeShippingMinOrder),
       additionalCost: toOptionalNumber(updatedFormData.shipping?.additionalCost),
@@ -1187,37 +1252,29 @@ export default function ProductManagementUI() {
       ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
-      price: Number(updatedFormData.price || primaryOption.salePrice || 0),
-      mrp: Number(updatedFormData.mrp || primaryOption.mrp || 0),
-      ...(updatedFormData.salePrice !== undefined && updatedFormData.salePrice !== ""
-        ? { salePrice: Number(updatedFormData.salePrice || 0) }
-        : { salePrice: null }),
+      price: hasVariantPricing ? variantRootPrice : Number(updatedFormData.price || primaryOption.salePrice || 0),
+      mrp: hasVariantPricing ? variantRootMrp : Number(updatedFormData.mrp || primaryOption.mrp || 0),
+      ...(hasVariantPricing
+        ? { salePrice: primaryOption.salePrice === undefined || primaryOption.salePrice === "" ? null : Number(primaryOption.salePrice || 0) }
+        : updatedFormData.salePrice !== undefined && updatedFormData.salePrice !== ""
+          ? { salePrice: Number(updatedFormData.salePrice || 0) }
+          : { salePrice: null }),
       gstInclusive: true,
       category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
       brand: updatedFormData.brand || updatedFormData.brand_id || "",
       productFamilyCode: updatedFormData.productFamilyCode,
       sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
-      color: updatedFormData.color || "default",
+      color: primaryOption.attributes?.color || primaryOption.attributes?.Color || "default",
       attributes: {
         ...(updatedFormData.attributes || {}),
       },
-      variants: formattedOptions
-        .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
-        .map((option, index) => ({
-          sku: option.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
-          price: Number(option.salePrice || 0),
-          mrp: Number(option.mrp || 0),
-          stock: Number(option.stock || 0),
-          attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
-          images: [],
-        })),
       hsnCode: updatedFormData.hsnCode || updatedFormData.hsn_code,
       origin,
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       ...(Object.keys(shipping).length ? { shipping } : {}),
-      stock: Number(updatedFormData.stock || updatedFormData.quantity || 0),
+      stock: hasVariantPricing ? variantRootStock : Number(updatedFormData.stock || updatedFormData.quantity || 0),
       images: normalizeImageList(images),
       documents: catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
@@ -1230,15 +1287,11 @@ export default function ProductManagementUI() {
         codAvailable: resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
       },
-      ...(updatedFormData.productType ? { productType: updatedFormData.productType } : {}),
+      productType: 'variable',
       ...(updatedFormData.shortDescription ? { shortDescription: updatedFormData.shortDescription } : {}),
       ...(updatedFormData.visibility ? { visibility: updatedFormData.visibility } : {}),
       tags: Array.isArray(updatedFormData.tags) ? updatedFormData.tags : [],
       ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length ? { seo: updatedFormData.seo } : {}),
-      ...(updatedFormData.digital && Object.keys(updatedFormData.digital).length ? { digital: updatedFormData.digital } : {}),
-      ...(updatedFormData.subscription && Object.keys(updatedFormData.subscription).length ? { subscription: updatedFormData.subscription } : {}),
-      ...(Array.isArray(updatedFormData.bundleItems) && updatedFormData.bundleItems.length ? { bundleItems: updatedFormData.bundleItems } : {}),
-      ...(typeof updatedFormData.bundleDiscount === 'number' ? { bundleDiscount: updatedFormData.bundleDiscount } : {}),
       ...(Array.isArray(updatedFormData.relatedProducts) ? { relatedProducts: updatedFormData.relatedProducts } : {}),
       ...(Array.isArray(updatedFormData.crossSellProducts) ? { crossSellProducts: updatedFormData.crossSellProducts } : {}),
       ...(Array.isArray(updatedFormData.upSellProducts) ? { upSellProducts: updatedFormData.upSellProducts } : {}),
@@ -1247,12 +1300,12 @@ export default function ProductManagementUI() {
       ...(Array.isArray(updatedFormData.trendingProducts) ? { trendingProducts: updatedFormData.trendingProducts } : {}),
       ...(Array.isArray(updatedFormData.bestSellerProducts) ? { bestSellerProducts: updatedFormData.bestSellerProducts } : {}),
       ...(Array.isArray(updatedFormData.collectionIds) ? { collectionIds: updatedFormData.collectionIds } : {}),
-      ...(productType === 'variable' && variableOptionAxes.length ? {
+      ...(variableOptionAxes.length ? {
         options: variableOptionAxes,
         variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name),
       } : {}),
-      ...(variantsData.length ? {
-        variants: variantsData,
+      ...(normalizedVariants.length ? {
+        variants: normalizedVariants,
         hasVariants: true,
       } : {}),
     };
@@ -1276,6 +1329,8 @@ export default function ProductManagementUI() {
             "salePrice": "",
             "stock": ""
           }]);
+          setVariantsData([DEFAULT_PRODUCT_VARIANT]);
+          setVariantAxes([]);
         }
         toast.success(response?.message || "Product saved successfully!");
         navigate(`/app/product-catalog`);
@@ -1285,7 +1340,7 @@ export default function ProductManagementUI() {
     } finally {
       setSaving(false);
     }
-  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, isSellerPanelUser, id, navigate, productType, shippingProfileOptions, variantAxes, variantsData]);
+  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, isSellerPanelUser, id, navigate, shippingProfileOptions, variantAxes, variantsData]);
 
 
   const handleProductDetailChange = (field, content) => {
@@ -1335,7 +1390,6 @@ export default function ProductManagementUI() {
           formattedCategoryList={createSelectOptions}
           formattedBrandList={formattedData.brandList}
           formattedWarrantyList={formattedData.warrantyTemplateList}
-          formattedColorList={formattedData.colorList}
           formattedProductFamilyList={formattedData.productFamilyList}
           handleSelectChange={handleSelectChange}
           fetchAllData={fetchAllData}
@@ -1347,76 +1401,11 @@ export default function ProductManagementUI() {
           API_CALL_OBJECT={API_CALL_OBJECT}
           handleInputReactQuillChange={handleProductDetailChange}
           userData={userData}
+          hasVariantPricing
         />
       )
     },
-    {
-      id: 'product-type',
-      title: 'Product Type',
-      description: 'Set the product type and type-specific configuration.',
-      icon: <BsMenuApp />,
-      component: (
-        <div className="space-y-5">
-          <div className="pb-4 mb-1 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Product Type</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Set the product type and type-specific configuration.</p>
-          </div>
-          <ProductTypeSelector
-            value={productType}
-            onChange={(val) => setFormData((prev) => ({ ...prev, productType: val }))}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="admin-label">Short Description</label>
-              <textarea
-                rows={2}
-                className="admin-input admin-textarea !min-h-[64px] w-full resize-none"
-                placeholder="Brief one-line summary shown in product cards…"
-                value={formData?.shortDescription || ''}
-                onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="admin-label">Visibility</label>
-              <select
-                className="admin-input"
-                value={formData?.visibility || 'public'}
-                onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
-              >
-                {productVisibilities.options.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {productType === 'digital' && (
-            <div className="border border-gray-200 rounded-xl p-4">
-              <h5 className="text-sm font-semibold text-gray-800 mb-4">Digital Product Settings</h5>
-              <DigitalProductPanel digital={formData?.digital || {}} onChange={handleNestedChange} />
-            </div>
-          )}
-          {productType === 'subscription' && (
-            <div className="border border-gray-200 rounded-xl p-4">
-              <h5 className="text-sm font-semibold text-gray-800 mb-4">Subscription Settings</h5>
-              <SubscriptionPanel subscription={formData?.subscription || {}} onChange={handleNestedChange} />
-            </div>
-          )}
-          {productType === 'bundle' && (
-            <div className="border border-gray-200 rounded-xl p-4">
-              <h5 className="text-sm font-semibold text-gray-800 mb-4">Bundle Configuration</h5>
-              <BundleBuilder
-                bundleItems={formData?.bundleItems || []}
-                bundleDiscount={formData?.bundleDiscount || 0}
-                onChange={(items) => setFormData((prev) => ({ ...prev, bundleItems: items }))}
-                onDiscountChange={(d) => setFormData((prev) => ({ ...prev, bundleDiscount: d }))}
-              />
-            </div>
-          )}
-        </div>
-      )
-    },
+   
     {
       id: 'product-details',
       title: 'Attributes',
@@ -1437,12 +1426,17 @@ export default function ProductManagementUI() {
       title: 'Variants & options',
       description: 'Customize the product variants, including size, color, etc.',
       icon: <BsMenuApp />,
-      component: productType === 'variable' ? (
+      component: (
         <div className="space-y-5">
           <div className="pb-4 border-b border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900">Variant Builder</h3>
             <p className="text-sm text-gray-500 mt-0.5">Define option axes (Color, Size...), generate combinations, then edit each variant.</p>
           </div>
+          {error?.variants && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error.variants}
+            </div>
+          )}
           <VariantBuilder
             variants={variantsData}
             options={variantAxes}
@@ -1455,7 +1449,7 @@ export default function ProductManagementUI() {
             onOptionSearch={handleOptionSearch}
           />
         </div>
-      ) : <></>
+      )
     },
     {
       id: 'shipping',
@@ -1652,7 +1646,7 @@ export default function ProductManagementUI() {
       )
     },
   ], [
-    formData, productType, formattedData, createSelectOptions,
+    formData, formattedData, createSelectOptions,
     handleChange, handleSelectChange, handleNestedChange, patchShipping,
     selector, options, variantsData, variantAxes, categoryAttributeSchema, error, images,
   ]);
@@ -1670,7 +1664,6 @@ export default function ProductManagementUI() {
 
   const flowGateErrors = useMemo(() => {
     const blockers = [];
-    const isVariableProduct = (formData?.productType || 'simple') === 'variable';
     if (!createSelectOptions?.length) {
       blockers.push({ key: 'categories', message: 'Create at least one category before creating products.', route: '/app/categories' });
     }
@@ -1686,11 +1679,11 @@ export default function ProductManagementUI() {
     if (!formData?.hsnCode && !formData?.hsn_code) {
       blockers.push({ key: 'hsn_selected', message: 'Select an HSN code for this product.', route: '/app/hsn-code' });
     }
-    if (isVariableProduct && !formattedData?.productFamilyList?.length) {
-      blockers.push({ key: 'family', message: 'Create at least one product family code for variable products.', route: '/app/product-families' });
+    if (!formattedData?.productFamilyList?.length) {
+      blockers.push({ key: 'family', message: 'Create at least one product family code for products.', route: '/app/product-families' });
     }
-    if (isVariableProduct && !formData?.productFamilyCode) {
-      blockers.push({ key: 'family_selected', message: 'Select a product family code for this variable product.', route: '/app/product-families' });
+    if (!formData?.productFamilyCode) {
+      blockers.push({ key: 'family_selected', message: 'Select a product family code for this product.', route: '/app/product-families' });
     }
     return blockers;
   }, [createSelectOptions, formattedData, formData]);

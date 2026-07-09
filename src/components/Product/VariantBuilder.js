@@ -131,7 +131,7 @@ const VariantBuilder = ({
       const key = JSON.stringify(attributes);
       const existing = existingMap.get(key);
       if (existing) return existing;
-      return { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}-${idx + 1}`, title: Object.values(attributes).join(' / '), attributes, sortOrder: idx };
+      return { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}-${idx + 1}`, title: Object.values(attributes).join(' / '), attributes, isDefault: idx === 0, sortOrder: idx };
     }));
   }, [options, variants, onChange]);
 
@@ -642,7 +642,7 @@ const VariantBuilder = ({
 
       {/* Add manually */}
       <button type="button"
-        onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}` }])}
+        onClick={() => onChange([...variants, { ...DEFAULT_VARIANT, sku: `SKU-${Date.now()}`, isDefault: variants.length === 0, sortOrder: variants.length }])}
         className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] transition-colors font-medium">
         + Add Variant Manually
       </button>
