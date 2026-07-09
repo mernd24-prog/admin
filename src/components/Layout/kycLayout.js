@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import BrandLogo from "../BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
@@ -84,6 +85,7 @@ const KYCStatusLayout = ({
   currentSection = "status",
   logo = "/logo.png",
 }) => {
+  const navigate = useNavigate();
   const stepsNavRef = useRef(null);
   const activeStepRef = useRef(null);
   const contentRef = useRef(null);
@@ -260,6 +262,7 @@ const KYCStatusLayout = ({
                 title="Need Help?"
                 description="Our verification team is available 24/7 to help you complete KYC."
                 buttonText="Contact Support"
+                onClick={() => navigate("/app/help-support")}
                 className="mx-auto mt-5 hidden max-w-[285px] lg:mt-8 lg:block lg:max-w-none"
               />
             </div>

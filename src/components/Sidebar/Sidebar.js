@@ -788,8 +788,10 @@ const Sidebar = ({
         <NeedHelpCard
           title="Need Help?"
           onClick={() => {
-            navigate("/app/queries");
-            handleNavClick("queries");
+            const supportRoute = isSellerPanel() ? "/app/help-support" : "/app/queries";
+            const supportKey = isSellerPanel() ? "help-support" : "queries";
+            navigate(supportRoute);
+            handleNavClick(supportKey);
           }}
           description="Our verification team is available 24/7 to help you complete KYC."
           buttonText="Contact Support"

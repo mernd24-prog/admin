@@ -141,6 +141,7 @@ export const ENDPOINTS = {
       (productId) => `/products/${productId}/inventory`
     ),
     inventoryStats: byPanel("/admin/products/inventory/stats", "/products/inventory/stats"),
+    inventoryLowStock: byPanel("/admin/inventory/low-stock", "/products/inventory/low-stock"),
     analyticsTop: byPanel("/admin/products/analytics/top", "/products/analytics/top"),
   },
   orders: {

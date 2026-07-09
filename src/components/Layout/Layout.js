@@ -672,7 +672,10 @@ function Layout() {
       { path: "/activity-logs", render: () => <ActivityLogs /> },
       { path: "/rbac-audit-log", render: () => <RbacAuditLog /> },
       { path: "/permission-templates", render: () => <PermissionTemplates /> },
-      { path: "/queries", render: () => <AdminQueries /> },
+      {
+        path: "/queries",
+        render: () => isSellerPanel() ? <Navigate to="/app/help-support" replace /> : <AdminQueries />,
+      },
       { path: "/help-support", render: () => <SellerHelpSupport /> },
       { path: "/seller-onboarding", redirectTo: "/app/seller" },
       { path: "/seller-status", redirectTo: "/app/seller" },
