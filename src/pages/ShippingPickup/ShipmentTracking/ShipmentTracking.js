@@ -233,7 +233,8 @@ const FILTER_FIELDS = [
 
 const ShipmentTracking = () => {
   const dispatch = useDispatch();
-  const { isSeller } = usePermission();
+  const { isSeller, role } = usePermission();
+  const isSellerOwner = role === "seller";
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
   const agentPayload = unwrapList(selector.agentsData);
@@ -277,14 +278,14 @@ const ShipmentTracking = () => {
     [isSeller],
   );
   const renderDeliveryAction = useCallback(
-    (action, children) => isSeller
+    (action, children) => isSellerOwner
       ? children
       : (
         <PermissionGuard module="delivery" action={action} hide>
           {children}
         </PermissionGuard>
       ),
-    [isSeller],
+    [isSellerOwner],
   );
 
   const fetchAssignableAgents = useCallback(async (sellerId) => {

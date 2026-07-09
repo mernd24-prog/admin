@@ -23,7 +23,7 @@ import {
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { getStoredUser } from "../../../_helpers/authStorage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
-import { usePermission } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import {
   bulkDeleteShippingProfiles,
@@ -640,7 +640,10 @@ const coverageLabel = (profile = {}) => {
 export default function ShippingProfiles() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isSeller } = usePermission();
+  const { can, isSeller } = usePermission();
+  const canCreateProfile = can("delivery", ACTIONS.CREATE);
+  const canUpdateProfile = can("delivery", ACTIONS.UPDATE);
+  const canDeleteProfile = can("delivery", ACTIONS.DELETE);
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const sellerSessionId = useMemo(() => getSellerIdFromUser(storedUser), [storedUser]);
   const sellerSessionLabel = useMemo(() => getSellerLabelFromUser(storedUser), [storedUser]);
@@ -907,6 +910,10 @@ export default function ShippingProfiles() {
   [organizationOptions]);
 
   const openCreate = () => {
+    if (!canCreateProfile) {
+      toast.error("You do not have permission to create shipping profiles");
+      return;
+    }
     const sellerId = activeSellerId;
     if (isSeller && !sellerId) {
       toast.error("Seller session not found. Please sign in again.");
@@ -947,6 +954,10 @@ export default function ShippingProfiles() {
   };
 
   const openClone = (template = null) => {
+    if (!canCreateProfile) {
+      toast.error("You do not have permission to copy shipping templates");
+      return;
+    }
     const sellerId = activeSellerId;
     if (isSeller && !sellerId) {
       toast.error("Seller session not found. Please sign in again.");
@@ -969,6 +980,10 @@ export default function ShippingProfiles() {
   };
 
   const openEdit = (profile) => {
+    if (!canUpdateProfile) {
+      toast.error("You do not have permission to edit shipping profiles");
+      return;
+    }
     setForm({
       name: profile.name || "",
       description: profile.description || "",
@@ -1017,6 +1032,14 @@ export default function ShippingProfiles() {
   };
 
   const handleSave = async () => {
+    if (modal.mode === "create" && !canCreateProfile) {
+      toast.error("You do not have permission to create shipping profiles");
+      return;
+    }
+    if (modal.mode !== "create" && !canUpdateProfile) {
+      toast.error("You do not have permission to edit shipping profiles");
+      return;
+    }
     if (!form.name?.trim()) { toast.error("Profile name is required"); return; }
     if (!isSeller && !(form.sellerId || activeSellerId)) { toast.error("Select a target seller"); return; }
     setSaving(true);
@@ -1061,6 +1084,10 @@ export default function ShippingProfiles() {
   };
 
   const handleCloneTemplate = async () => {
+    if (!canCreateProfile) {
+      toast.error("You do not have permission to copy shipping templates");
+      return;
+    }
     if (!cloneForm.templateId) { toast.error("Select an admin template to clone"); return; }
     const targetSellerId = isSeller ? activeSellerId : cloneForm.sellerId;
     const targetOrganizationId = isSeller ? activeOrganizationId : cloneForm.organizationId;
@@ -1088,6 +1115,10 @@ export default function ShippingProfiles() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    if (!canDeleteProfile) {
+      toast.error("You do not have permission to delete shipping profiles");
+      return;
+    }
     try {
       setSaving(true);
       await dispatch(deleteShippingProfile({ profileId: profileId(deleteTarget) })).unwrap();
@@ -1103,6 +1134,10 @@ export default function ShippingProfiles() {
 
   const handleBulkDelete = async () => {
     if (!selectedProfileIds.length) return;
+    if (!canDeleteProfile) {
+      toast.error("You do not have permission to delete shipping profiles");
+      return;
+    }
     try {
       setSaving(true);
       await dispatch(bulkDeleteShippingProfiles({ profileIds: selectedProfileIds })).unwrap();
@@ -1118,6 +1153,10 @@ export default function ShippingProfiles() {
   };
 
   const handleSetDefault = async (profile) => {
+    if (!canUpdateProfile) {
+      toast.error("You do not have permission to update shipping profiles");
+      return;
+    }
     try {
       setLoading(true);
       await dispatch(setDefaultShippingProfile({ profileId: profileId(profile) })).unwrap();
@@ -1262,17 +1301,21 @@ export default function ShippingProfiles() {
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => openClone()}>
-              <MdLocalShipping size={17} /> Use Admin Template
-            </button>
-            {!isSeller && (
+            {canCreateProfile && (
+              <button onClick={() => openClone()}>
+                <MdLocalShipping size={17} /> Use Admin Template
+              </button>
+            )}
+            {!isSeller && canCreateProfile && (
               <button onClick={openTemplateCreate}>
                 <MdAdd size={17} /> New Template
               </button>
             )}
-            <button onClick={openCreate}>
-              <MdAdd size={17} /> New Profile
-            </button>
+            {canCreateProfile && (
+              <button onClick={openCreate}>
+                <MdAdd size={17} /> New Profile
+              </button>
+            )}
           </div>
         }
       />
@@ -1367,7 +1410,7 @@ export default function ShippingProfiles() {
             activeCount={activeFilterCount}
           />
         }
-        bulkActionBar={!isSeller && selectedProfileIds.length ? (
+        bulkActionBar={!isSeller && canDeleteProfile && selectedProfileIds.length ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--admin-line)] bg-white p-2 m-2 shadow-sm">
             <span className="text-sm font-semibold text-[var(--admin-ink)]">
               {selectedProfileIds.length} profile{selectedProfileIds.length > 1 ? "s" : ""} selected
@@ -1391,15 +1434,15 @@ export default function ShippingProfiles() {
           </div>
         ) : null}
         rowActions={(row) => [
-          { label: "Edit", icon: <MdEdit size={16} />, onClick: () => openEdit(row) },
-          {
+          canUpdateProfile && { label: "Edit", icon: <MdEdit size={16} />, onClick: () => openEdit(row) },
+          canUpdateProfile && {
             label: "Set Default",
             icon: <MdStarBorder size={16} />,
             hidden: row.isDefault,
             onClick: () => handleSetDefault(row),
           },
-          { label: "Delete", icon: <MdDelete size={16} />, danger: true, onClick: () => setDeleteTarget(row) },
-        ]}
+          canDeleteProfile && { label: "Delete", icon: <MdDelete size={16} />, danger: true, onClick: () => setDeleteTarget(row) },
+        ].filter(Boolean)}
       />
 
       <DefaultModal

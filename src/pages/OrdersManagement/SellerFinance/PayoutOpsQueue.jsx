@@ -333,7 +333,7 @@ const PayoutOpsQueue = () => {
             <div className="flex flex-wrap items-center gap-2">
               {status === "pending" && (
                 <>
-                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <button
                       type="button"
                       className="admin-btn-secondary !px-2 !py-1"
@@ -342,7 +342,7 @@ const PayoutOpsQueue = () => {
                       Approve
                     </button>
                   </PermissionGuard>
-                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <button
                       type="button"
                       className="admin-btn-secondary !px-2 !py-1 text-yellow-600"
@@ -354,7 +354,7 @@ const PayoutOpsQueue = () => {
                 </>
               )}
               {status === "on_hold" && (
-                <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                   <button
                     type="button"
                     className="admin-btn-secondary !px-2 !py-1"
@@ -365,7 +365,7 @@ const PayoutOpsQueue = () => {
                 </PermissionGuard>
               )}
               {status === "failed" && (
-                <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                   <button
                     type="button"
                     className="admin-btn-secondary !px-2 !py-1"
@@ -377,7 +377,7 @@ const PayoutOpsQueue = () => {
               )}
               {status === "processing" && (
                 <>
-                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <button
                       type="button"
                       className="admin-btn-secondary !px-2 !py-1"
@@ -386,7 +386,7 @@ const PayoutOpsQueue = () => {
                       Complete
                     </button>
                   </PermissionGuard>
-                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <button
                       type="button"
                       className="admin-btn-secondary !px-2 !py-1 text-red-600"
@@ -452,7 +452,7 @@ const PayoutOpsQueue = () => {
             activeCount={list.activeFilterCount}
           />
         }
-        requiredModule="sellers"
+        requiredModule="sellers/commissions"
         exportConfig={{
           filename: "payout-ops-queue",
           columns,

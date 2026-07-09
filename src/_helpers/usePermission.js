@@ -1,29 +1,14 @@
 import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { getStoredRole, getStoredUser, normalizeRole } from './authStorage';
-import { getPanelMode, getPanelRoleRules, isSellerPanel } from './panelConfig';
-import { getRouteModuleCandidates, isSelfServiceRoute } from './rbacRoutes';
-
-const SELLER_FULL_ACCESS_MODULES = [
-  'seller-dashboard',
-  'products',
-  'inventory',
-  'orders',
-  'returns',
-  'queries',
-  'coupons',
-  'pricing',
-  'notifications',
-  'delivery',
-  'analytics',
-  'reports',
-  'sellers',
-  'seller-management',
-  'sellers/commissions',
-  'seller-payouts',
-  'cod-config',
-  'tax',
-];
+import { isSellerPanel } from './panelConfig';
+import {
+  getRouteModuleCandidates,
+  isSelfServiceRoute,
+  isSellerAllowedModule,
+  isSellerBlockedModule,
+  isSellerBlockedRoute,
+} from './rbacRoutes';
 
 /**
  * PERMISSION ACTIONS — match backend RBAC action slugs exactly.
@@ -232,11 +217,6 @@ export function usePermission() {
             : [];
   }, [adminCoreSelector?.accessModulesData]);
   const role = normalizeRole(getStoredRole());
-  const panelRoleRules = getPanelRoleRules(getPanelMode());
-  const isFullAccessRole = panelRoleRules.fullAccessRoles
-    .map(normalizeRole)
-    .includes(role);
-
   // Build a fast lookup: { moduleSlug: { action: bool } }
   const permMap = useMemo(() => {
     const map = {};
@@ -298,12 +278,15 @@ export function usePermission() {
     // seller delegated users are permission-driven.
     if (role === ROLES.SUPER_ADMIN) return true;
     if (
-      isFullAccessRole &&
       isSellerPanel() &&
-      moduleCandidates.some((candidate) =>
-        SELLER_FULL_ACCESS_MODULES.map(normalizeModuleCode).includes(candidate) ||
-        permMap[candidate]
-      )
+      moduleCandidates.some((candidate) => isSellerBlockedModule(candidate))
+    ) {
+      return false;
+    }
+    if (
+      role === ROLES.SELLER &&
+      isSellerPanel() &&
+      moduleCandidates.some((candidate) => isSellerAllowedModule(candidate))
     ) {
       return true;
     }
@@ -347,6 +330,7 @@ export function usePermission() {
    */
   const canRoute = (path) => {
     if (isSelfServiceRoute(path)) return true;
+    if (isSellerPanel() && isSellerBlockedRoute(path)) return false;
     const candidates = getRouteModuleCandidates(path);
     if (!candidates.length) return true;
     return candidates.some((mod) => can(mod));

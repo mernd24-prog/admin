@@ -394,7 +394,8 @@ const ProductCatalog = () => {
     Boolean(product?.pendingRevisionId) ||
     Boolean(product?.pendingRevision);
   const canReviewProduct = (product) =>
-    REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product);
+    !isSellerPanelUser &&
+    (REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product));
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
     if (!STATUS_TOGGLEABLE.has(status)) return false;
@@ -409,6 +410,10 @@ const ProductCatalog = () => {
   };
 
   const handleApproveToggle = async (data) => {
+    if (isSellerPanelUser) {
+      toast.error("Product approval and revision review are admin-only actions.");
+      return;
+    }
     if (!hasPendingRevision(data)) {
       setReviewModal({ open: true, product: data, revision: null });
       return;
@@ -441,6 +446,9 @@ const ProductCatalog = () => {
   };
 
   const handleReviewSubmit = async (decision, rejectionReason, checklist, notes) => {
+    if (isSellerPanelUser) {
+      throw new Error("Product approval and revision review are admin-only actions.");
+    }
     const product = reviewModal.product;
     setLoading(true);
     try {

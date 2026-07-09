@@ -15,6 +15,8 @@ import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
 import {
   getRouteModuleCandidates,
   isSelfServiceRoute,
+  isSellerBlockedModule,
+  isSellerBlockedRoute,
   routeCodeFromPath,
 } from "../../_helpers/rbacRoutes";
 import { isSellerPanel } from "../../_helpers/panelConfig";
@@ -735,6 +737,7 @@ function Layout() {
 
   const hasPermission = (path) => {
     if (isSelfServiceRoute(path)) return true;
+    if (isSellerPanel() && isSellerBlockedRoute(path)) return false;
 
     const normalizedRoute = normalizeRoutePattern(path);
     if (backendRoutePatterns.has(normalizedRoute)) return true;
@@ -753,6 +756,9 @@ function Layout() {
         .toLowerCase()
         .replace(/\s+/g, "-")
         .replace(/_/g, "-");
+      if (isSellerPanel() && isSellerBlockedModule(normalizedModuleCode)) {
+        return false;
+      }
       if (modulePermissions[normalizedModuleCode] === true) return true;
       return false;
     });

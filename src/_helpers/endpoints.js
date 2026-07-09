@@ -116,10 +116,7 @@ export const ENDPOINTS = {
       (productId) => `/admin/products/${productId}/revisions`,
       (productId) => `/products/${productId}/revisions`
     ),
-    reviewRevision: byPanelFn(
-      (productId, revisionId) => `/admin/products/${productId}/revisions/${revisionId}/review`,
-      (productId, revisionId) => `/products/${productId}/revisions/${revisionId}/review`
-    ),
+    reviewRevision: (productId, revisionId) => `/admin/products/${productId}/revisions/${revisionId}/review`,
     approve: (productId) => `/admin/products/${productId}/approve`,
     reject: (productId) => `/admin/products/${productId}/reject`,
     status: byPanelFn(

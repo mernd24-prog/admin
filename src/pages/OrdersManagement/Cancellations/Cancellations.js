@@ -21,7 +21,7 @@ import {
   retryCancellation,
   completeCancellationRefund,
 } from "../../../Redux/orderSlice";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 
 const STATUSES = ["processing", "refund_pending", "manual_review", "completed", "failed"];
@@ -67,6 +67,7 @@ const display = (v = "") => String(v || "—").replace(/_/g, " ");
 
 const Cancellations = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const selector = useSelector((s) => s.order);
   const payload = unwrapList(selector.cancellationListData);
 
@@ -102,6 +103,10 @@ const Cancellations = () => {
   useEffect(() => { fetchCancellations(); }, [fetchCancellations]);
 
   const handleRetry = useCallback(async () => {
+    if (isSeller) {
+      toast.error("Cancellation refund retry is admin-only");
+      return;
+    }
     const { item, note } = retryConfirm;
     if (!item) return;
     try {
@@ -115,9 +120,13 @@ const Cancellations = () => {
     } finally {
       setActionLoading(false);
     }
-  }, [retryConfirm, dispatch, fetchCancellations]);
+  }, [isSeller, retryConfirm, dispatch, fetchCancellations]);
 
   const handleManualRefund = useCallback(async () => {
+    if (isSeller) {
+      toast.error("Manual cancellation refund is admin-only");
+      return;
+    }
     const { item, referenceId, proofUrl, note } = manualRefund;
     if (!item) return;
     if (!referenceId.trim() || referenceId.trim().length < 3) {
@@ -140,7 +149,7 @@ const Cancellations = () => {
     } finally {
       setActionLoading(false);
     }
-  }, [manualRefund, dispatch, fetchCancellations]);
+  }, [isSeller, manualRefund, dispatch, fetchCancellations]);
 
   const COLUMNS = [
     {
@@ -196,26 +205,28 @@ const Cancellations = () => {
           >
             <MdVisibility size={18} />
           </button>
-          <PermissionGuard module="orders" action={ACTIONS.UPDATE} hide>
-            {["refund_pending", "failed"].includes(row.status) && (
-              <button
-                onClick={() => setRetryConfirm({ open: true, item: row, note: "" })}
-                className="p-1 text-orange-600 hover:bg-orange-50 rounded"
-                title="Retry Refund"
-              >
-                <MdReplay size={18} />
-              </button>
-            )}
-            {row.status === "manual_review" && (
-              <button
-                onClick={() => setManualRefund({ open: true, item: row, referenceId: "", proofUrl: "", note: "" })}
-                className="p-1 text-green-600 hover:bg-green-50 rounded"
-                title="Complete Manual Refund"
-              >
-                <MdPayment size={18} />
-              </button>
-            )}
-          </PermissionGuard>
+          {!isSeller && (
+            <PermissionGuard module="orders" action={ACTIONS.UPDATE} hide>
+              {["refund_pending", "failed"].includes(row.status) && (
+                <button
+                  onClick={() => setRetryConfirm({ open: true, item: row, note: "" })}
+                  className="p-1 text-orange-600 hover:bg-orange-50 rounded"
+                  title="Retry Refund"
+                >
+                  <MdReplay size={18} />
+                </button>
+              )}
+              {row.status === "manual_review" && (
+                <button
+                  onClick={() => setManualRefund({ open: true, item: row, referenceId: "", proofUrl: "", note: "" })}
+                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                  title="Complete Manual Refund"
+                >
+                  <MdPayment size={18} />
+                </button>
+              )}
+            </PermissionGuard>
+          )}
         </div>
       ),
     },
@@ -238,7 +249,7 @@ const Cancellations = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
+      <FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">

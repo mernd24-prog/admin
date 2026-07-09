@@ -11,8 +11,7 @@ import {
   FilterBar,
   ConfirmModal,
 } from "../../../components/Shared";
-import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { useListPage } from "../../../hooks/useListPage";
@@ -165,7 +164,11 @@ const EMPTY_FORM = {
 const DiscountCoupons = () => {
   useDropdownOptions("discount-types");
   const dispatch = useDispatch();
+  const { can } = usePermission();
   const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const canCreateCoupon = can("coupons", ACTIONS.CREATE);
+  const canUpdateCoupon = can("coupons", ACTIONS.UPDATE);
+  const canDeleteCoupon = can("coupons", ACTIONS.DELETE);
 
   const [coupons, setCoupons] = useState([]);
   const [total, setTotal] = useState(0);
@@ -244,6 +247,14 @@ const DiscountCoupons = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (modalMode === "edit" && !canUpdateCoupon) {
+      toast.error("You do not have permission to update coupons");
+      return;
+    }
+    if (modalMode !== "edit" && !canCreateCoupon) {
+      toast.error("You do not have permission to create coupons");
+      return;
+    }
     if (!validateForm()) return;
     setSaving(true);
     const apiData = toCouponApiPayload(formData);
@@ -264,6 +275,10 @@ const DiscountCoupons = () => {
 
   const handleToggleConfirm = async () => {
     if (!toggleTarget) return;
+    if (!canUpdateCoupon) {
+      toast.error("You do not have permission to update coupon status");
+      return;
+    }
     try {
       const res = await dispatch(enableDisableDiscountCoupons({ couponId: toggleTarget._id, active: toggleTarget.isDisable })).unwrap();
       toast.success(res?.message || "Status updated");
@@ -277,6 +292,10 @@ const DiscountCoupons = () => {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
+    if (!canDeleteCoupon) {
+      toast.error("You do not have permission to delete coupons");
+      return;
+    }
     try {
       const res = await dispatch(softDeleteDiscountCoupons({ couponId: deleteTarget._id })).unwrap();
       toast.success(res?.data?.message || "Coupon deleted");
@@ -290,7 +309,7 @@ const DiscountCoupons = () => {
 
   const rowActions = useCallback(
     (row) => [
-      {
+      canUpdateCoupon && {
         label: "Edit",
         onClick: () => {
           const c = normalizeCouponRecord(row);
@@ -309,18 +328,18 @@ const DiscountCoupons = () => {
           setModalMode("edit");
         },
       },
-      {
+      canUpdateCoupon && {
         label: row.isDisable ? "Enable" : "Disable",
         onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
         danger: !row.isDisable,
       },
-      {
+      canDeleteCoupon && {
         label: "Delete",
         onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
         danger: true,
       },
-    ],
-    []
+    ].filter(Boolean),
+    [canDeleteCoupon, canUpdateCoupon]
   );
 
   return (
@@ -330,14 +349,14 @@ const DiscountCoupons = () => {
         subtitle="Create and manage promotional discount codes"
         breadcrumbs={[{ label: "Marketing" }, { label: "Discount Coupons" }]}
         actions={
-          <PermissionGuard module="coupons" action={ACTIONS.CREATE} hide>
+          canCreateCoupon && (
             <button
               onClick={() => setModalMode("add")}
 
             >
               <MdAdd size={16} /> Add Coupon
             </button>
-          </PermissionGuard>
+          )
         }
       />
 

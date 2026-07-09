@@ -9,11 +9,17 @@ import {
   MdShoppingCart,
   MdLocalShipping,
   MdPeople,
+  MdGroup,
   MdCampaign,
   MdAccountBalance,
+  MdAccountBalanceWallet,
   MdBarChart,
   MdLocationOn,
   MdSupportAgent,
+  MdReceiptLong,
+  MdSettings,
+  MdLocalOffer,
+  MdAdminPanelSettings,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -29,6 +35,8 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import {
   MODULE_TAB_ORDER,
   getAccessModuleRouteEntries,
+  isSellerBlockedModule,
+  isSellerBlockedRoute,
 } from "../../_helpers/rbacRoutes";
 import BrandLogo from "../BrandLogo/BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
@@ -59,6 +67,30 @@ const SECTION_ICONS = {
 const getIconForTab = (tabName) =>
   SECTION_ICONS[String(tabName || "").toLowerCase()] || MdOutlineDashboard;
 
+const ICON_BY_NAME = {
+  MdOutlineDashboard,
+  MdInventory,
+  MdWarehouse,
+  MdShoppingCart,
+  MdLocalShipping,
+  MdPeople,
+  MdGroup,
+  MdCampaign,
+  MdAccountBalance,
+  MdAccountBalanceWallet,
+  MdBarChart,
+  MdLocationOn,
+  MdSupportAgent,
+  MdReceiptLong,
+  MdSettings,
+  MdLocalOffer,
+  MdAdminPanelSettings,
+  CiSettings,
+};
+
+const getSidebarIcon = (iconName, fallbackLabel) =>
+  ICON_BY_NAME[String(iconName || "").trim()] || getIconForTab(fallbackLabel);
+
 const toRouteCode = (routePath = "") =>
   String(routePath || "")
     .replace(/^\/app\/?/, "")
@@ -66,7 +98,6 @@ const toRouteCode = (routePath = "") =>
     .replace(/\/+$/, "");
 
 const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
-  "my-organizations",
   "seller-organizations",
   "warehouse",
   "threshold-products",
@@ -108,6 +139,24 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
     return [...self, ...children];
   });
 
+const filterSellerSidebarItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const route = toRouteCode(item.routePath);
+      const moduleCode =
+        item.metadata?.requiredModule ||
+        item.requiredModule ||
+        item.moduleKey ||
+        item.slug;
+      const children = filterSellerSidebarItems(item.children || []);
+      const blocked =
+        isSellerBlockedRoute(route) ||
+        isSellerBlockedModule(moduleCode);
+      if (blocked && !children.length) return null;
+      return { ...item, children };
+    })
+    .filter(Boolean);
+
 const firstArray = (...values) =>
   values.find((value) => Array.isArray(value)) || [];
 
@@ -137,14 +186,14 @@ const filterSidebarTreeByAccess = (items = [], options = {}) => {
 };
 
 const buildDynamicSidebarData = (modules = [], options = {}) =>
-  filterSidebarTreeByAccess(modules, options)
+  filterSidebarTreeByAccess(options.sellerPanel ? filterSellerSidebarItems(modules) : modules, options)
     .map((item) => {
       const subItems = flattenSidebarChildren(item.children || []);
       const route = toRouteCode(item.routePath);
       const isSingleItem = Boolean(route) && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route) && subItems.length === 0;
       return {
         label: item.moduleName || item.name,
-        icon: getIconForTab(item.moduleName || item.name),
+        icon: getSidebarIcon(item.icon, item.moduleName || item.name),
         subItems: isSingleItem
           ? [
               {
@@ -173,6 +222,37 @@ const tabOrderIndex = (tab) => {
   return index === -1 ? MODULE_TAB_ORDER.length : index;
 };
 
+const SELLER_SECTION_ORDER = [
+  "seller dashboard",
+  "dashboard",
+  "seller catalog",
+  "seller inventory",
+  "seller orders",
+  "seller shipping",
+  "seller marketing",
+  "seller access",
+  "my finance & payouts",
+  "seller finance",
+  "seller invoices",
+  "seller tax",
+  "my reports",
+  "seller reports",
+  "help & support",
+];
+
+const sellerSectionOrderIndex = (label = "") => {
+  const normalized = String(label || "").trim().toLowerCase();
+  const index = SELLER_SECTION_ORDER.indexOf(normalized);
+  return index === -1 ? SELLER_SECTION_ORDER.length : index;
+};
+
+const sortSidebarGroups = (groups = [], sellerPanel = false) =>
+  [...groups].sort((left, right) => {
+    const leftOrder = sellerPanel ? sellerSectionOrderIndex(left.label) : tabOrderIndex(left.label);
+    const rightOrder = sellerPanel ? sellerSectionOrderIndex(right.label) : tabOrderIndex(right.label);
+    return leftOrder - rightOrder || String(left.label).localeCompare(String(right.label));
+  });
+
 const buildAccessModuleSidebarData = (modules = [], options = {}) => {
   const seenRoutes = new Set();
   const entries = (Array.isArray(modules) ? modules : [])
@@ -192,6 +272,12 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
     .flatMap((module) => getAccessModuleRouteEntries(module, options))
     .filter((entry) => {
       if (!entry.route || HIDDEN_SIDEBAR_ROUTE_CODES.has(entry.route)) {
+        return false;
+      }
+      if (
+        options.sellerPanel &&
+        (isSellerBlockedRoute(entry.route) || isSellerBlockedModule(entry.module))
+      ) {
         return false;
       }
       if (seenRoutes.has(entry.route)) return false;
@@ -392,13 +478,15 @@ const Sidebar = ({
       const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
         superAdmin: isSuperAdmin,
         allowedModules: assignedSidebarModules,
+        sellerPanel,
         trustBackend: true,
       });
+      if (sellerPanel && sidebarTree.length) return sortSidebarGroups(sidebarTree, sellerPanel);
       const mergedSidebar = mergeSidebarData(sidebarTree, accessSidebar);
-      if (mergedSidebar.length) return mergedSidebar;
+      if (mergedSidebar.length) return sortSidebarGroups(mergedSidebar, sellerPanel);
     }
 
-    if (accessSidebar.length) return accessSidebar;
+    if (accessSidebar.length) return sortSidebarGroups(accessSidebar, sellerPanel);
 
     return [];
   }, [

@@ -371,6 +371,7 @@ const OrderSummary = () => {
   const dispatch = useDispatch();
   const { id } = useParams();
   const { isSeller, isAdmin, isSuperAdmin, role } = usePermission();
+  const canOpenAdminProfiles = !isSeller;
 
   const [state, setState] = useState({
     orderInfo: null,
@@ -647,14 +648,22 @@ const OrderSummary = () => {
               <div key={`${group.sellerId}-${group.organizationId}`} className="mb-4 overflow-hidden rounded-lg border border-[#eadfbd] bg-white last:mb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 bg-[#fff9ea] px-4 py-3">
                   <div>
-                    <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-sm font-semibold">
-                      {group.organizationName || group.sellerName}
-                    </DetailLink>
+                    {canOpenAdminProfiles && group.sellerId ? (
+                      <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-sm font-semibold">
+                        {group.organizationName || group.sellerName}
+                      </DetailLink>
+                    ) : (
+                      <span className="text-sm font-semibold text-[#202337]">{group.organizationName || group.sellerName}</span>
+                    )}
                     <div className="text-xs text-[#65718b]">
                       Seller:{" "}
-                      <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-xs">
-                        {group.sellerName}
-                      </DetailLink>{" "}
+                      {canOpenAdminProfiles && group.sellerId ? (
+                        <DetailLink onClick={() => navigate(`/app/seller/view/${group.sellerId}`)} className="text-xs">
+                          {group.sellerName}
+                        </DetailLink>
+                      ) : (
+                        <span>{group.sellerName}</span>
+                      )}{" "}
                       · Organization: {group.organizationName || group.organizationId || "N/A"}
                     </div>
                   </div>
@@ -788,7 +797,7 @@ const OrderSummary = () => {
               <div>
                 <InfoRow
                   label="Customer"
-                  value={buyerId ? (
+                  value={buyerId && canOpenAdminProfiles ? (
                     <DetailLink onClick={() => navigate(`/app/users/view/${buyerId}`)}>
                       {firstDefined(buyer.displayName, buyer.fullName, buyer.name, order.buyerName, "Customer")}
                     </DetailLink>
@@ -901,7 +910,7 @@ const OrderSummary = () => {
                           shipment.seller?.id,
                           shipment.seller?._id,
                         );
-                        return sellerId ? (
+                        return sellerId && canOpenAdminProfiles ? (
                           <DetailLink onClick={() => navigate(`/app/seller/view/${sellerId}`)} className="text-xs">
                             {sellerName || "Seller"}
                           </DetailLink>
@@ -1016,9 +1025,13 @@ const OrderSummary = () => {
                 <div key={`${seller.sellerId}-${seller.organizationId || "default"}`} className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
                   <div className="flex justify-between gap-2 mb-3">
                     <div>
-                      <DetailLink onClick={() => navigate(`/app/seller/view/${seller.sellerId}`)} className="font-semibold">
-                        {seller.sellerName}
-                      </DetailLink>
+                      {seller.sellerId && canOpenAdminProfiles ? (
+                        <DetailLink onClick={() => navigate(`/app/seller/view/${seller.sellerId}`)} className="font-semibold">
+                          {seller.sellerName}
+                        </DetailLink>
+                      ) : (
+                        <span className="font-semibold text-[#202337]">{seller.sellerName}</span>
+                      )}
                       {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
                     </div>
                     <div className="text-right">

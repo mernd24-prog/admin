@@ -43,7 +43,7 @@ import {
   syncReturnRefund,
   updateReturnReverseTracking,
 } from "../../../Redux/adminCoreSlice";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 
 const ACTION_TITLES = {
@@ -110,6 +110,8 @@ const EMPTY_ACTION = {
   itemActions: [],
 };
 
+const ADMIN_ONLY_RETURN_ACTIONS = new Set(["approve", "reject", "refund", "retry_refund", "sync_refund"]);
+
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
@@ -137,8 +139,13 @@ const sellerName = (item = {}, row = {}) => item?.sellerName || personName(item?
 
 const Returns = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminReturnsData);
+  const filterFields = useMemo(
+    () => isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS,
+    [isSeller],
+  );
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -188,7 +195,11 @@ const Returns = () => {
     }
   }, [dispatch]);
 
-  const openAction = (type, returnRequest) => {
+  const openAction = useCallback((type, returnRequest) => {
+    if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(type)) {
+      toast.error("This return action is admin-only");
+      return;
+    }
     setAction({
       ...EMPTY_ACTION,
       open: true,
@@ -218,7 +229,7 @@ const Returns = () => {
         notes: item.qcNotes || "",
       })),
     });
-  };
+  }, [isSeller]);
 
   const updateItemAction = (index, key, value) => {
     setAction((prev) => ({
@@ -247,6 +258,10 @@ const Returns = () => {
   };
 
   const prepareAction = () => {
+    if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(action.type)) {
+      toast.error("This return action is admin-only");
+      return;
+    }
     const validationMessage = validateAction();
     if (validationMessage) {
       toast.error(validationMessage);
@@ -260,6 +275,10 @@ const Returns = () => {
   };
 
   const executeAction = useCallback(async () => {
+    if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(action.type)) {
+      toast.error("This return action is admin-only");
+      return;
+    }
     const base = {
       returnId: returnId(action.returnRequest),
       refundAmount: Number(action.refundAmount || 0),
@@ -332,7 +351,7 @@ const Returns = () => {
     } finally {
       setLoading(false);
     }
-  }, [action, dispatch, fetchReturns]);
+  }, [action, dispatch, fetchReturns, isSeller]);
 
   const columns = useMemo(() => [
     {
@@ -404,7 +423,7 @@ const Returns = () => {
               <MdVisibility size={15} /> View
             </button>
           </PermissionGuard>
-          {row.status === "requested" && (
+          {!isSeller && row.status === "requested" && (
             <>
               <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
                 <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
@@ -446,24 +465,26 @@ const Returns = () => {
           )}
           {["qc_passed", "qc_completed"].includes(row.status) && (
             <>
-              <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-                <button type="button" className="admin-table-action-btn" onClick={() => openAction("refund", row)}>
-                  <MdReplay size={15} /> Refund
-                </button>
-              </PermissionGuard>
+              {!isSeller && (
+                <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
+                  <button type="button" className="admin-table-action-btn" onClick={() => openAction("refund", row)}>
+                    <MdReplay size={15} /> Refund
+                  </button>
+                </PermissionGuard>
+              )}
               <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
                 <button type="button" className="admin-table-action-btn" onClick={() => openAction("replace", row)}>Replace</button>
               </PermissionGuard>
             </>
           )}
-          {row.status === "refund_failed" && (
+          {!isSeller && row.status === "refund_failed" && (
             <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("retry_refund", row)}>
                 <MdReplay size={15} /> Retry
               </button>
             </PermissionGuard>
           )}
-          {["refund_pending", "refund_failed"].includes(row.status) && row.refund?.providerRefundId && (
+          {!isSeller && ["refund_pending", "refund_failed"].includes(row.status) && row.refund?.providerRefundId && (
             <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("sync_refund", row)}>
                 <MdRefresh size={15} /> Sync
@@ -478,7 +499,7 @@ const Returns = () => {
         </div>
       ),
     },
-  ], [openDetail]);
+  ], [isSeller, openAction, openDetail]);
 
   return (
     <div>
@@ -512,7 +533,7 @@ const Returns = () => {
         error={error}
         filterBar={(
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={filterFields}
             values={list.filters}
             onChange={list.setFilter}
             onClear={list.clearFilters}

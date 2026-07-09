@@ -20,6 +20,7 @@ import { getModuleLabel, getModuleMeta, MODULE_TAB_ORDER } from '../../_helpers/
 import { getStoredRole, getStoredUser, normalizeRole } from '../../_helpers/authStorage';
 import { apiRequest } from '../../_helpers/apiConfig';
 import { ENDPOINTS } from '../../_helpers/endpoints';
+import { ACTIONS, usePermission } from '../../_helpers/usePermission';
 import TableData from '../../components/Atoms/TableData/TableData';
 import SearchComponent from '../../components/Atoms/New Table/NewTable';
 import Loader from '../../components/Loader/Loader';
@@ -412,11 +413,16 @@ const hasAssignedModuleAccess = (module = {}) => {
 
 const SellerSubAdminManagement = () => {
   const dispatch = useDispatch();
+  const { can } = usePermission();
   const sellerSelector = useSelector((state) => state.sellerSubAdmins);
   const userSelector = useSelector((state) => state.user);
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const storedRole = normalizeRole(getStoredRole());
-  const canManage = storedRole === 'seller' || storedRole === 'seller-admin' || storedRole === 'seller-sub-admin';
+  const isSellerPanelRole = storedRole === 'seller' || storedRole === 'seller-admin' || storedRole === 'seller-sub-admin';
+  const canCreateSubAdmin = isSellerPanelRole && can('seller-management', ACTIONS.CREATE);
+  const canUpdateSubAdmin = isSellerPanelRole && can('seller-management', ACTIONS.UPDATE);
+  const canDeleteSubAdmin = isSellerPanelRole && can('seller-management', ACTIONS.DELETE);
+  const canChangeSubAdminStatus = isSellerPanelRole && can('seller-management', ACTIONS.STATUS_CHANGE);
 
   const [tab, setTab] = useState('subadmins');
   const [filters, setFilters] = useState({ search: '' });
@@ -526,6 +532,10 @@ const SellerSubAdminManagement = () => {
   }, [form.allowedModules, moduleActionOptions, moduleAssignedActions]);
 
   const openCreate = () => {
+    if (!canCreateSubAdmin) {
+      toast.error('You do not have permission to create sub-sellers');
+      return;
+    }
     const allowedModules = moduleOptions.slice(0, 2);
     setEditTarget(null);
     setErrors({});
@@ -536,6 +546,10 @@ const SellerSubAdminManagement = () => {
   };
 
   const openEdit = (user) => {
+    if (!canUpdateSubAdmin) {
+      toast.error('You do not have permission to edit sub-seller access');
+      return;
+    }
     const allowedModules = (user.allowedModules || []).filter((module) => moduleOptions.includes(module));
     setEditTarget(user);
     setErrors({});
@@ -587,6 +601,10 @@ const SellerSubAdminManagement = () => {
         moduleActionsMap,
       );
       if (editTarget) {
+        if (!canUpdateSubAdmin) {
+          toast.error('You do not have permission to edit sub-seller access');
+          return;
+        }
         await dispatch(updateSellerSubAdminModules({
           userId: getId(editTarget),
           allowedModules,
@@ -594,6 +612,10 @@ const SellerSubAdminManagement = () => {
         })).unwrap();
         toast.success('Sub-seller access updated');
       } else {
+        if (!canCreateSubAdmin) {
+          toast.error('You do not have permission to create sub-sellers');
+          return;
+        }
         await dispatch(createSellerSubAdmin({ ...form, allowedModules, modulePermissions })).unwrap();
         toast.success('Sub-seller created successfully');
       }
@@ -609,9 +631,17 @@ const SellerSubAdminManagement = () => {
     const userId = getId(confirmAction.user);
     try {
       if (confirmAction.type === 'delete') {
+        if (!canDeleteSubAdmin) {
+          toast.error('You do not have permission to delete sub-sellers');
+          return;
+        }
         await dispatch(deleteSellerSubAdmin({ userId })).unwrap();
         toast.success('Sub-seller deleted');
       } else {
+        if (!canChangeSubAdminStatus) {
+          toast.error('You do not have permission to change sub-seller status');
+          return;
+        }
         await dispatch(updateSellerSubAdminStatus({
           userId,
           accountStatus: isActive(confirmAction.user) ? 'suspended' : 'active',
@@ -674,18 +704,18 @@ const SellerSubAdminManagement = () => {
       </span>,
       <span key={`created-${id}`} className="text-gray-500">{formatDate(user.createdAt)}</span>,
       <div key={`actions-${id}`} className="flex items-center gap-2">
-        <ActionButtons
-          onEdit={() => openEdit(user)}
-          onDelete={() => setConfirmAction({ type: 'delete', user })}
-          showDeleteButton={canManage}
-          showEditButton={canManage}
+          <ActionButtons
+            onEdit={() => openEdit(user)}
+            onDelete={() => setConfirmAction({ type: 'delete', user })}
+	          showDeleteButton={canDeleteSubAdmin}
+	          showEditButton={canUpdateSubAdmin}
           showPasswordButton={false}
           showLinkButton={false}
           viewButton={true}
           onViewClick={() => openView(user)}
           userPermissions={false}
         />
-        {canManage && (
+        {canChangeSubAdminStatus && (
           <button
             type="button"
             onClick={() => setConfirmAction({ type: 'status', user })}
@@ -712,7 +742,7 @@ const SellerSubAdminManagement = () => {
             {' / '}
             <b className="text-gray-800">Seller Management</b>
           </h3>
-          {tab === 'subadmins' && canManage && (
+          {tab === 'subadmins' && canCreateSubAdmin && (
             <AddButton onClick={openCreate} labelName="Add Sub-Seller" />
           )}
         </div>

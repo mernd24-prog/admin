@@ -21,6 +21,120 @@ export const routeCodeFromPath = (routePath = "") =>
 
 export const SELF_SERVICE_ROUTES = ["/profile", "/changePassword"];
 
+export const SELLER_BLOCKED_ROUTE_CODES = new Set([
+  "admin-users",
+  "user-permissions",
+  "roles-permissions",
+  "module-management",
+  "activity-logs",
+  "rbac-audit-log",
+  "permission-templates",
+  "users",
+  "users-addresses",
+  "transactions",
+  "seller",
+  "seller/view",
+  "seller-management",
+  "seller-staff",
+  "seller-users",
+  "seller-organizations",
+  "seller-kyc",
+  "seller-bank",
+  "seller-kyc-detail",
+  "seller-bank-detail",
+  "seller-onboarding",
+  "seller-status",
+  "country",
+  "state",
+  "city",
+  "zip-codes",
+  "platform-commerce-settings",
+  "seller-commerce-config",
+  "commerce-templates",
+  "seller-tiers",
+  "commission-rules",
+  "platform-fee-config",
+  "payout-ops-queue",
+  "negative-balances",
+  "api-keys",
+  "feature-flags",
+  "webhooks",
+  "system-health",
+  "queue-management",
+  "dead-letter-queue",
+]);
+
+export const SELLER_BLOCKED_MODULE_CODES = new Set([
+  "rbac",
+  "admin-users",
+  "admin_users",
+  "users",
+  "locations",
+  "countries",
+  "states",
+  "cities",
+  "zip-codes",
+  "zip_codes",
+  "seller-kyc",
+  "seller_kyc",
+  "seller-bank",
+  "seller_bank",
+  "platform-commerce-settings",
+  "seller-commerce-config",
+  "commerce-templates",
+  "seller-tiers",
+  "commission-rules",
+  "platform-fee",
+  "platform-fee-rules",
+  "payout-ops-queue",
+  "negative-balances",
+  "api-keys",
+  "feature-flags",
+  "webhooks",
+  "system-health",
+  "queue-management",
+  "dead-letter-queue",
+]);
+
+export const SELLER_ALLOWED_MODULE_CODES = new Set([
+  "seller-dashboard",
+  "products",
+  "reviews",
+  "inventory",
+  "orders",
+  "returns",
+  "cancellations",
+  "queries",
+  "coupons",
+  "pricing",
+  "notifications",
+  "delivery",
+  "analytics",
+  "reports",
+  "seller-management",
+  "sellers/commissions",
+  "seller-payouts",
+  "cod-config",
+  "tax",
+  "tax-invoices",
+  "credit-notes",
+]);
+
+export const isSellerBlockedRoute = (routePath = "") => {
+  const code = routeCodeFromPath(routePath);
+  return Array.from(SELLER_BLOCKED_ROUTE_CODES).some(
+    (blocked) => code === blocked || code.startsWith(`${blocked}/`),
+  );
+};
+
+export const isSellerBlockedModule = (moduleCode = "") =>
+  SELLER_BLOCKED_MODULE_CODES.has(normalizeModuleCode(moduleCode));
+
+export const isSellerAllowedModule = (moduleCode = "") => {
+  const normalized = normalizeModuleCode(moduleCode);
+  return !isSellerBlockedModule(normalized) && SELLER_ALLOWED_MODULE_CODES.has(normalized);
+};
+
 export const MODULE_TAB_ORDER = [
   "Dashboard",
   "Catalog Management",
@@ -64,6 +178,7 @@ const MODULE_LABELS = {
   seller_bank: "Seller Bank Management",
   "seller-bank": "Seller Bank Management",
   "seller-management": "Seller Admin Management",
+  "my-organizations": "My Organizations",
   "seller-organizations": "Seller Organization Management",
   "sellers/commissions": "Seller Commissions",
   products: "Product Management",
@@ -322,6 +437,7 @@ export const MODULE_DEFAULT_ROUTES = {
   seller_bank:        "seller",
   "seller-bank":      "seller",
   "seller-management":"seller-users",
+  "my-organizations": "my-organizations",
   "sellers/commissions":"seller-finance",
   commission:           "commission-rules",
   "commission-rules":   "commission-rules",
@@ -436,6 +552,7 @@ const ROUTE_MODULES = [
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller"], ["sellers"]],
   [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
+  [["/my-organizations"], ["seller-management"]],
   [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
   [["/seller-bank", "/seller-bank-detail"], ["seller_bank", "seller-bank", "sellers"]],
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],

@@ -499,7 +499,7 @@ const SellerFinance = () => {
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
               <MdPayments size={18} /> Process Seller Payout
             </div>
-            <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
               <button
                 type="button"
                 className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
@@ -572,7 +572,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               {!isSeller && (
                 <td className="whitespace-nowrap px-4 py-3">
-                  <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <div className="flex items-center gap-1">
                       <IconButton
                         title="Mark payout complete — enter payment reference"
@@ -626,7 +626,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
               <td className="whitespace-nowrap px-4 py-3">
-                <PermissionGuard module="sellers" action={ACTIONS.VIEW} hide>
+                <PermissionGuard module="sellers/commissions" action={ACTIONS.VIEW} hide>
                   <button
                     type="button"
                     title="Download Settlement Statement"

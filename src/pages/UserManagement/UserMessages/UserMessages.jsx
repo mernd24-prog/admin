@@ -7,7 +7,7 @@ import {
   FilterBar,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "../../../utils/toast";
@@ -100,6 +100,7 @@ const EMPTY_FORM = {
 };
 
 const UserMessages = () => {
+  const { isSeller } = usePermission();
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -148,6 +149,10 @@ const UserMessages = () => {
   }, [fetchNotifications]);
 
   const handleSend = async () => {
+    if (isSeller) {
+      toast.error("Sending notifications is admin-only");
+      return;
+    }
     if (!form.userId.trim()) return toast.error("Recipient User ID is required");
     if (!form.template) return toast.error("Template is required");
 
@@ -188,14 +193,16 @@ const UserMessages = () => {
             >
               <MdRefresh size={16} /> Refresh
             </button>
-            <PermissionGuard module="notifications" action={ACTIONS.CREATE} hide>
-              <button
-                onClick={() => setModalOpen(true)}
+            {!isSeller && (
+              <PermissionGuard module="notifications" action={ACTIONS.CREATE} hide>
+                <button
+                  onClick={() => setModalOpen(true)}
 
-              >
-                <MdSend size={16} /> Send Notification
-              </button>
-            </PermissionGuard>
+                >
+                  <MdSend size={16} /> Send Notification
+                </button>
+              </PermissionGuard>
+            )}
           </div>
         }
       />

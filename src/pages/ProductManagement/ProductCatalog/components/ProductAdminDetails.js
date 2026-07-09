@@ -17,6 +17,7 @@ import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { getProductImages } from "../../../../_helpers/productMedia";
 import { formatLabel } from "../../../../utils/formatters";
+import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 
 const formatDisplayValue = (value) => {
   if (React.isValidElement(value)) return value;
@@ -97,13 +98,16 @@ const ProductAdminDetails = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [archiveConfirm, setArchiveConfirm] = useState(false);
   const [duplicateConfirm, setDuplicateConfirm] = useState(false);
+  const currentRole = normalizeRole(getStoredRole());
+  const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(currentRole);
 
   const REVIEWABLE_STATUSES = new Set(['pending_approval']);
-  const needsReview =
+  const needsReview = !isSellerRole && (
     REVIEWABLE_STATUSES.has(product?.status) ||
-    product?.revisionStatus === 'change_pending' ||
-    Boolean(product?.pendingRevisionId) ||
-    Boolean(product?.pendingRevision);
+      product?.revisionStatus === 'change_pending' ||
+      Boolean(product?.pendingRevisionId) ||
+      Boolean(product?.pendingRevision)
+  );
 
   const attributes =
     product.attributes instanceof Map
@@ -119,6 +123,9 @@ const ProductAdminDetails = () => {
   }, [dispatch, id]);
 
   const handleReviewSubmit = async (decision, rejectionReason, checklist, notes) => {
+    if (isSellerRole) {
+      throw new Error("Product approval and revision review are admin-only actions.");
+    }
     setReviewLoading(true);
     try {
       if (pendingRevision) {

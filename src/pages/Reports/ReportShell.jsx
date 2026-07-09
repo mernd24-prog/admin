@@ -19,6 +19,7 @@ import { PageHeader } from "../../components/Shared";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { isSellerPanel } from "../../_helpers/panelConfig";
 
 const RANGE_OPTIONS = ["Today", "Last 7 days", "Last 30 days", "Last 90 days"];
 const CHART_COLORS = ["#1f4fb2", "#d6a323", "#24b8c3", "#37b446", "#ff453d", "#6f4edb"];
@@ -328,23 +329,38 @@ export const ReportShell = ({
 const useMarketplaceAnalytics = () => {
   const filters = useReportFilters();
   const loadData = useCallback(
-    ({ fromDate, toDate }) => fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
+    ({ fromDate, toDate }) => fetchJson(
+      isSellerPanel() ? ENDPOINTS.analytics.sellerDashboard : ENDPOINTS.analytics.adminDashboard,
+      { fromDate, toDate },
+    ),
     [],
   );
   const report = useApiReport(loadData, filters);
   return { filters, ...report };
 };
 
+const orderStatusRowsFromRecentOrders = (recentOrders = []) => {
+  const buckets = listFrom(recentOrders).reduce((lookup, order) => {
+    const status = titleize(order.status || "unknown");
+    lookup[status] = (lookup[status] || 0) + 1;
+    return lookup;
+  }, {});
+  return Object.entries(buckets).map(([status, count]) => ({ status, count }));
+};
+
 export const SalesReport = () => {
   const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
+  const sellerView = isSellerPanel();
   const orders = data.orders || {};
   const payments = data.payments || {};
   const returns = data.returns || {};
-  const orderStatusRows = listFrom(orders.statusBreakdown);
+  const orderStatusRows = sellerView
+    ? orderStatusRowsFromRecentOrders(data.recentOrders)
+    : listFrom(orders.statusBreakdown);
   const paymentRows = statusRows(payments);
 
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount), sub: "GMV in selected range" },
+    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
     { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
     { label: "Delivered Orders", value: formatNumber(orders.deliveredOrders), sub: "Completed fulfilment" },
     { label: "Refund Amount", value: formatCurrency(returns.refundAmount), sub: "Return refunds" },
@@ -360,8 +376,8 @@ export const SalesReport = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={ENDPOINTS.operationsReports.orders}
-      exportFilename="sales-report.csv"
+      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.orders}
+      exportFilename={sellerView ? null : "sales-report.csv"}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartPanel title="Order Status Summary" data={orderStatusRows}>
@@ -379,7 +395,7 @@ export const SalesReport = () => {
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
-        <ChartPanel title="Payment Status Summary" data={paymentRows}>
+        {!sellerView && <ChartPanel title="Payment Status Summary" data={paymentRows}>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={paymentRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
@@ -389,7 +405,7 @@ export const SalesReport = () => {
               <Bar dataKey="count" fill="#1f4fb2" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartPanel>
+        </ChartPanel>}
       </div>
     </ReportShell>
   );
@@ -397,6 +413,7 @@ export const SalesReport = () => {
 
 export const ProductAnalytics = () => {
   const filters = useReportFilters();
+  const sellerView = isSellerPanel();
   const loadData = useCallback(async () => {
     const [topProducts, inventoryStats] = await Promise.all([
       fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases" }),
@@ -437,8 +454,8 @@ export const ProductAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={ENDPOINTS.operationsReports.products}
-      exportFilename="product-analytics.csv"
+      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.products}
+      exportFilename={sellerView ? null : "product-analytics.csv"}
     >
       <div className="space-y-4">
         <ChartPanel title="Top Products by Purchases" data={rows}>
@@ -471,7 +488,12 @@ export const ProductAnalytics = () => {
 
 export const InventoryAnalytics = () => {
   const filters = useReportFilters();
+  const sellerView = isSellerPanel();
   const loadData = useCallback(async () => {
+    if (isSellerPanel()) {
+      const stats = await fetchJson(ENDPOINTS.products.inventoryStats);
+      return { stats, lowStock: [] };
+    }
     const [stats, lowStock] = await Promise.all([
       fetchJson(ENDPOINTS.inventory.stats),
       fetchJson(ENDPOINTS.inventory.lowStock, { limit: 10, page: 1 }),
@@ -512,8 +534,8 @@ export const InventoryAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={ENDPOINTS.operationsReports.inventory}
-      exportFilename="inventory-report.csv"
+      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.inventory}
+      exportFilename={sellerView ? null : "inventory-report.csv"}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartPanel title="Stock Health" data={stockRows.filter((row) => row.count > 0)}>
@@ -612,6 +634,14 @@ export const SellerAnalytics = () => {
 export const AnalyticsDashboard = () => {
   const filters = useReportFilters();
   const loadData = useCallback(async ({ fromDate, toDate }) => {
+    if (isSellerPanel()) {
+      const [sellerDashboard, topProducts, inventoryStats] = await Promise.all([
+        fetchJson(ENDPOINTS.analytics.sellerDashboard, { fromDate, toDate }),
+        fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases" }),
+        fetchJson(ENDPOINTS.products.inventoryStats),
+      ]);
+      return { marketplace: sellerDashboard, topProducts: listFrom(topProducts), inventoryStats };
+    }
     const [marketplace, topProducts, inventoryStats] = await Promise.all([
       fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
       fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases" }),
@@ -620,12 +650,15 @@ export const AnalyticsDashboard = () => {
     return { marketplace, topProducts: listFrom(topProducts), inventoryStats };
   }, []);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
+  const sellerView = isSellerPanel();
   const marketplace = data.marketplace || {};
   const orders = marketplace.orders || {};
   const returns = marketplace.returns || {};
   const payouts = marketplace.payouts || {};
   const inventory = data.inventoryStats || {};
-  const orderStatusRows = listFrom(orders.statusBreakdown);
+  const orderStatusRows = sellerView
+    ? orderStatusRowsFromRecentOrders(marketplace.recentOrders)
+    : listFrom(orders.statusBreakdown);
   const sellerRows = listFrom(marketplace.sellerPerformance).map((seller) => ({
     sellerName: seller.sellerName || seller.sellerId,
     gmvAmount: asNumber(seller.gmvAmount),
@@ -641,7 +674,7 @@ export const AnalyticsDashboard = () => {
   ];
 
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount), sub: "GMV in selected range" },
+    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
     { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
     { label: "Return Requests", value: formatNumber(returns.returnCount), sub: "Return workflow" },
     { label: "Pending Payouts", value: formatCurrency(payouts.byStatus?.pending?.netAmount), sub: "Seller settlements" },
@@ -670,7 +703,7 @@ export const AnalyticsDashboard = () => {
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
-        <ChartPanel title="Top Sellers by GMV" data={sellerRows}>
+        {!sellerView && <ChartPanel title="Top Sellers by GMV" data={sellerRows}>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={sellerRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
@@ -680,7 +713,7 @@ export const AnalyticsDashboard = () => {
               <Bar dataKey="gmvAmount" fill="#d6a323" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartPanel>
+        </ChartPanel>}
         <ChartPanel title="Top Products by Purchases" data={productRows}>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={productRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>

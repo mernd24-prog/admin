@@ -17,6 +17,7 @@ import { PageHeader, StatusBadge } from "../../components/Shared";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { getStoredRole, normalizeRole } from "../../_helpers/authStorage";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
@@ -937,6 +938,8 @@ const OrganizationModal = ({
 };
 
 const SellerOrganizations = () => {
+  const storedRole = normalizeRole(getStoredRole());
+  const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(storedRole);
   const [organizations, setOrganizations] = useState([]);
   const [total, setTotal] = useState(0);
   const [sellerOptions, setSellerOptions] = useState([]);
@@ -1033,6 +1036,10 @@ const SellerOrganizations = () => {
   };
 
   const openReviewAction = (action, organization) => {
+    if (isSellerRole) {
+      toast.error("Organization review actions are admin-only");
+      return;
+    }
     setReviewModal({ open: true, action, organization, reason: "" });
   };
 
@@ -1126,6 +1133,10 @@ const SellerOrganizations = () => {
   };
 
   const applyStatus = async (organization, payload, successMessage) => {
+    if (isSellerRole) {
+      toast.error("Organization status actions are admin-only");
+      return;
+    }
     if (!organization?.sellerId || !(organization.id || organization.organizationId)) return;
     try {
       setSubmitting(true);
@@ -1191,6 +1202,10 @@ const SellerOrganizations = () => {
   };
 
   const confirmReviewAction = async () => {
+    if (isSellerRole) {
+      toast.error("Organization review actions are admin-only");
+      return;
+    }
     const { action, organization, reason } = reviewModal;
     const cleanReason = reason.trim();
     if (["resubmit", "reject"].includes(action) && !cleanReason) {
@@ -1402,44 +1417,48 @@ const SellerOrganizations = () => {
                     <div className="admin-table-actions-nowrap">
                       <IconButton title="View details" icon={<MdVisibility size={18} />} onClick={() => openView(organization)} disabled={submitting} />
                       <IconButton title="Edit" icon={<MdEdit size={18} />} onClick={() => openEdit(organization)} disabled={submitting} />
-                      <button
-                        type="button"
-                        className="rounded-md bg-[#208a3c] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => approveOrganization(organization)}
-                        disabled={submitting || canOperate}
-                      >
-                        Approve
-                      </button>
-                      <IconButton
-                        title="Approve KYC"
-                        icon={<MdVerifiedUser size={18} />}
-                        tone="green"
-                        onClick={() => approveKyc(organization)}
-                        disabled={submitting || organization.kycStatus === "verified"}
-                      />
-                      <IconButton
-                        title="Verify Bank"
-                        icon={<MdAccountBalance size={18} />}
-                        tone="green"
-                        onClick={() => approveBank(organization)}
-                        disabled={submitting || organization.kycStatus !== "verified" || organization.bankVerificationStatus === "verified"}
-                      />
-                      <IconButton
-                        title="Approve Go Live"
-                        icon={<MdRocketLaunch size={18} />}
-                        tone="blue"
-                        onClick={() => approveGoLive(organization)}
-                        disabled={
-                          submitting ||
-                          organization.kycStatus !== "verified" ||
-                          organization.bankVerificationStatus !== "verified" ||
-                          !["approved", "active"].includes(organization.approvalStatus) ||
-                          organization.goLiveStatus === "live"
-                        }
-                      />
-                      <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => openReviewAction("resubmit", organization)} disabled={submitting} />
-                      <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => openReviewAction("reject", organization)} disabled={submitting} />
-                      <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => openReviewAction("block", organization)} disabled={submitting} />
+	                      {!isSellerRole && (
+	                        <>
+	                          <button
+	                            type="button"
+	                            className="rounded-md bg-[#208a3c] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#176b2e] disabled:cursor-not-allowed disabled:opacity-50"
+	                            onClick={() => approveOrganization(organization)}
+	                            disabled={submitting || canOperate}
+	                          >
+	                            Approve
+	                          </button>
+	                          <IconButton
+	                            title="Approve KYC"
+	                            icon={<MdVerifiedUser size={18} />}
+	                            tone="green"
+	                            onClick={() => approveKyc(organization)}
+	                            disabled={submitting || organization.kycStatus === "verified"}
+	                          />
+	                          <IconButton
+	                            title="Verify Bank"
+	                            icon={<MdAccountBalance size={18} />}
+	                            tone="green"
+	                            onClick={() => approveBank(organization)}
+	                            disabled={submitting || organization.kycStatus !== "verified" || organization.bankVerificationStatus === "verified"}
+	                          />
+	                          <IconButton
+	                            title="Approve Go Live"
+	                            icon={<MdRocketLaunch size={18} />}
+	                            tone="blue"
+	                            onClick={() => approveGoLive(organization)}
+	                            disabled={
+	                              submitting ||
+	                              organization.kycStatus !== "verified" ||
+	                              organization.bankVerificationStatus !== "verified" ||
+	                              !["approved", "active"].includes(organization.approvalStatus) ||
+	                              organization.goLiveStatus === "live"
+	                            }
+	                          />
+	                          <IconButton title="Request resubmission" icon={<MdRefresh size={18} />} tone="amber" onClick={() => openReviewAction("resubmit", organization)} disabled={submitting} />
+	                          <IconButton title="Reject" icon={<MdClose size={18} />} tone="red" onClick={() => openReviewAction("reject", organization)} disabled={submitting} />
+	                          <IconButton title="Block" icon={<MdBlock size={18} />} tone="red" onClick={() => openReviewAction("block", organization)} disabled={submitting} />
+	                        </>
+	                      )}
                     </div>
                   </td>
                 </tr>

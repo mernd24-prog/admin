@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,7 +15,7 @@ import {
   StatusBadge,
 } from "../../components/Shared";
 import { getTaxCreditNotes, createTaxCreditNote } from "../../Redux/adminCoreSlice";
-import { ACTIONS } from "../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
@@ -67,8 +67,13 @@ const EMPTY_FORM = {
 
 const CreditNotes = () => {
   const dispatch = useDispatch();
+  const { isSeller } = usePermission();
   const selector = useSelector((s) => s.adminCore);
   const payload = unwrapList(selector.taxCreditNotesData);
+  const filterFields = useMemo(
+    () => isSeller ? FILTER_FIELDS.filter((field) => !["organizationId", "buyerId"].includes(field.key)) : FILTER_FIELDS,
+    [isSeller],
+  );
 
   const list = useListPage({
     defaultPageSize: 20,
@@ -105,6 +110,10 @@ const CreditNotes = () => {
   useEffect(() => { fetchNotes(); }, [fetchNotes]);
 
   const handleCreate = useCallback(async () => {
+    if (isSeller) {
+      toast.error("Credit note creation is admin-only");
+      return;
+    }
     if (!form.orderId.trim()) { toast.error("Order ID required"); return; }
     if (!form.taxableAmount || Number(form.taxableAmount) <= 0) { toast.error("Taxable amount must be > 0"); return; }
     try {
@@ -129,7 +138,7 @@ const CreditNotes = () => {
     } finally {
       setSaving(false);
     }
-  }, [form, dispatch, fetchNotes]);
+  }, [form, dispatch, fetchNotes, isSeller]);
 
   const downloadCreditNote = useCallback(async (row = {}) => {
     const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
@@ -152,7 +161,7 @@ const CreditNotes = () => {
     }
   }, []);
 
-  const COLUMNS = [
+  const COLUMNS = useMemo(() => [
     {
       key: "creditNoteNumber",
       label: "Credit Note #",
@@ -224,7 +233,7 @@ const CreditNotes = () => {
         </div>
       ),
     },
-  ];
+  ].filter((column) => !(isSeller && column.key === "organizationId")), [downloadCreditNote, downloadingId, isSeller]);
 
   return (
     <div className="space-y-6">
@@ -237,19 +246,21 @@ const CreditNotes = () => {
             <button onClick={fetchNotes}>
               <MdRefresh size={16} /> Refresh
             </button>
-            <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-              <button
-                onClick={() => setShowCreate(true)}
+            {!isSeller && (
+              <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
+                <button
+                  onClick={() => setShowCreate(true)}
 
-              >
-                <MdAdd size={16} /> New Credit Note
-              </button>
-            </PermissionGuard>
+                >
+                  <MdAdd size={16} /> New Credit Note
+                </button>
+              </PermissionGuard>
+            )}
           </div>
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
+      <FilterBar fields={filterFields} listPage={list} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>

@@ -1,4 +1,5 @@
 import { getPanelMode, getPanelRoleRules, PANEL_MODES } from "./panelConfig";
+import { isSellerAllowedModule, isSellerBlockedModule } from "./rbacRoutes";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -223,11 +224,13 @@ export const hasModuleAccess = (moduleCode) => {
 
   const expandedModuleCodes = moduleCodes
     .map(normalizeCode)
-    .flatMap((code) => (moduleAliases[code] || [code]).map(normalizeCode));
+    .flatMap((code) => [code, ...(moduleAliases[code] || [])].map(normalizeCode));
 
   const sellerOwnedModules = new Set([
     "dashboard",
+    "seller-dashboard",
     "products",
+    "reviews",
     "inventory",
     "orders",
     "cod-config",
@@ -237,12 +240,15 @@ export const hasModuleAccess = (moduleCode) => {
     "analytics",
     "reports",
     "tax",
-    "wallets",
-    "sellers",
+    "tax-invoices",
+    "credit-notes",
     "seller-management",
     "sellers/commissions",
+    "seller-payouts",
     "returns",
+    "cancellations",
     "delivery",
+    "queries",
   ]);
 
   const sellerOwnedAliases = new Set(
@@ -252,11 +258,12 @@ export const hasModuleAccess = (moduleCode) => {
   );
 
   const isSellerOwnedCode = (code) =>
-    sellerOwnedModules.has(code) || sellerOwnedAliases.has(code);
+    sellerOwnedModules.has(code) || sellerOwnedAliases.has(code) || isSellerAllowedModule(code);
 
   if (panelMode === PANEL_MODES.SELLER) {
+    if (expandedModuleCodes.some(isSellerBlockedModule)) return false;
     if (!expandedModuleCodes.some(isSellerOwnedCode)) return false;
-    if (fullAccessRoles.includes(role)) return true;
+    if (role === "seller") return true;
   } else if (fullAccessRoles.includes(role)) {
     return true;
   }

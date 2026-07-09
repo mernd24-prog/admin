@@ -185,7 +185,7 @@ const shipmentStatusOf = (row = {}) => {
   );
 };
 
-const createColumns = (navigate, canOpenBuyerDetails) => [
+const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
   {
     key: "order_number",
     label: "Order #",
@@ -286,27 +286,33 @@ const createColumns = (navigate, canOpenBuyerDetails) => [
       if (!sellerName && !organizationName && !sellerId && !organizationId) {
         return <span className="text-gray-400">—</span>;
       }
-      const sellerViewPath = sellerId ? `/app/seller/view/${encodeURIComponent(String(sellerId))}` : "";
-      return (
-        <button
-          type="button"
-          disabled={!sellerId}
-          onClick={() => sellerViewPath && navigate(sellerViewPath)}
-          className="text-left enabled:hover:underline disabled:cursor-default"
-          title={sellerViewPath || undefined}
-        >
+      const sellerViewPath = sellerId && canOpenSellerDetails ? `/app/seller/view/${encodeURIComponent(String(sellerId))}` : "";
+      const content = (
+        <>
           <div className="text-sm font-medium text-gray-800">
             {organizationName || sellerName || "Seller"}
           </div>
           {sellerName && organizationName && (
             <div className="text-xs text-gray-400">{sellerName}</div>
           )}
-          {sellerId && <div className="text-[11px] font-medium text-[#2f6fed]">View seller</div>}
+          {sellerViewPath && <div className="text-[11px] font-medium text-[#2f6fed]">View seller</div>}
           {sellerGroups.length > 1 && (
             <div className="text-xs text-gray-400">+{sellerGroups.length - 1} more seller</div>
           )}
           {!sellerName && sellerId && <div className="text-xs text-gray-400">Seller details unavailable</div>}
+        </>
+      );
+      return sellerViewPath ? (
+        <button
+          type="button"
+          onClick={() => navigate(sellerViewPath)}
+          className="text-left hover:underline"
+          title={sellerViewPath}
+        >
+          {content}
         </button>
+      ) : (
+        <div className="text-left">{content}</div>
       );
     },
   },
@@ -450,7 +456,7 @@ const Orders = () => {
   );
 
   const baseColumns = useMemo(
-    () => createColumns(navigate, !isSeller),
+    () => createColumns(navigate, !isSeller, !isSeller),
     [isSeller, navigate],
   );
 

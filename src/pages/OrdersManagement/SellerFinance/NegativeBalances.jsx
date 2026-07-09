@@ -273,7 +273,7 @@ const NegativeBalances = () => {
           const status = row.status;
           if (status === "completed") return null;
           return (
-            <PermissionGuard module="sellers" action={ACTIONS.UPDATE} hide>
+            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
               <button
                 type="button"
                 className="admin-btn-secondary !px-2 !py-1"
@@ -336,7 +336,7 @@ const NegativeBalances = () => {
             activeCount={list.activeFilterCount}
           />
         }
-        requiredModule="sellers"
+        requiredModule="sellers/commissions"
         exportConfig={{
           filename: "negative-balances",
           columns,
