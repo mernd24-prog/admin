@@ -112,6 +112,8 @@ const initials = (value = "") =>
     .map((part) => part.charAt(0).toUpperCase())
     .join("") || "B";
 
+const cssImageUrl = (value) => `url("${String(value || "").replace(/"/g, "%22")}")`;
+
 const getReviewsPayload = (state = {}) => {
   const payload = state?.productReviewsData?.data?.data || {};
   const list = payload?.list || payload?.items || [];
@@ -346,23 +348,27 @@ const ProductReviews = () => {
     {
       key: "productId",
       label: "Product",
-      render: (v, row) => (
-        <div className="flex items-center gap-2 min-w-0">
-          {(row.productImage || row.product?.image || row.media?.[0]) && (
-            <img
-              src={row.productImage || row.product?.image || row.media?.[0]}
-              alt={getProductName(row) || "Product"}
-              className="w-9 h-9 object-cover rounded border flex-shrink-0"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          )}
-          <div className="min-w-0">
-            <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">
-              {getProductName(row) || "Product not found"}
-            </span>
+      render: (v, row) => {
+        const productImage = row.productImage || row.product?.image || row.media?.[0];
+        const productName = getProductName(row) || "Product";
+        return (
+          <div className="flex items-center gap-2 min-w-0">
+            {productImage && (
+              <span
+                role="img"
+                aria-label={productName}
+                className="w-9 h-9 rounded border flex-shrink-0 bg-cover bg-center"
+                style={{ backgroundImage: cssImageUrl(productImage) }}
+              />
+            )}
+            <div className="min-w-0">
+              <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">
+                {productName || "Product not found"}
+              </span>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "buyerId",
@@ -373,11 +379,11 @@ const ProductReviews = () => {
         return (
           <div className="flex items-center gap-2 min-w-0">
             {buyerImage ? (
-              <img
-                src={buyerImage}
-                alt={buyerName}
-                className="w-8 h-8 rounded-full object-cover border flex-shrink-0"
-                onError={(e) => { e.target.style.display = "none"; }}
+              <span
+                role="img"
+                aria-label={buyerName}
+                className="w-8 h-8 rounded-full border flex-shrink-0 bg-cover bg-center"
+                style={{ backgroundImage: cssImageUrl(buyerImage) }}
               />
             ) : (
               <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold grid place-items-center flex-shrink-0">

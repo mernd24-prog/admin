@@ -709,11 +709,11 @@ const ProductCatalog = () => {
                   onClick={() => handleImageClick(productImages)}
                   title="View product images"
                 >
-                  <img
-                    src={primaryImage}
-                    alt={product?.title || product?.name || "Product"}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                  <span
+                    role="img"
+                    aria-label={product?.title || product?.name || "Product"}
+                    className="block h-full w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")` }}
                   />
                 </button>
               ) : (

@@ -141,6 +141,8 @@ const firstImage = (product) => {
   return "https://placehold.co/120x120?text=Product";
 };
 
+const cssImageUrl = (value) => `url("${String(value || "").replace(/"/g, "%22")}")`;
+
 const sellerLabel = (product, sellerLookup = {}) => {
   const seller = product?.sellerId || product?.seller || {};
   if (typeof seller === "object") {
@@ -408,13 +410,16 @@ const SellerProductInventories = () => {
         key: "title",
         label: "Product",
         sortable: true,
-        render: (_, row) => (
+        render: (_, row) => {
+          const imageUrl = firstImage(row.product);
+          return (
           <div className="flex items-center gap-3">
-            <img
-              src={firstImage(row.product)}
-              alt=""
-              className="h-12 w-12 shrink-0 cursor-pointer rounded border object-cover"
-              onClick={() => setSelectedImage(firstImage(row.product))}
+            <button
+              type="button"
+              className="h-12 w-12 shrink-0 cursor-pointer rounded border bg-cover bg-center"
+              style={{ backgroundImage: cssImageUrl(imageUrl) }}
+              onClick={() => setSelectedImage(imageUrl)}
+              aria-label="View product image"
             />
             <div className="min-w-0">
               <div className="max-w-[260px] truncate text-sm font-semibold text-gray-800">
@@ -428,7 +433,8 @@ const SellerProductInventories = () => {
               </div>
             </div>
           </div>
-        ),
+          );
+        },
       },
       {
         key: "sku",
