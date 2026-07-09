@@ -22,9 +22,11 @@ const FILTER_FIELDS = [
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
+  const candidate = data?.list || data?.keys || data?.items;
+  const list = Array.isArray(candidate) ? candidate : [];
   return {
-    list: data?.list || data?.keys || data?.items || data || [],
-    total: Number(data?.total || data?.list?.length || 0),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
 
@@ -34,7 +36,7 @@ const EMPTY_FORM = { keyName: "", ownerId: "", scopes: "", expiresAt: "" };
 const ApiKeys = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const payload = unwrapList(selector.apiKeysData);
+  const payload = unwrapList(selector?.apiKeysData);
 
   const list = useListPage({ defaultPageSize: 20 });
   const { toQueryParams } = list;

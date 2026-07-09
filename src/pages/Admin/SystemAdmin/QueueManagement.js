@@ -16,7 +16,7 @@ const unwrapList = (payload = {}) => {
 const QueueManagement = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const queues = unwrapList(selector.systemQueuesData);
+  const queues = unwrapList(selector?.systemQueuesData);
 
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState({ open: false, action: "", queue: null });

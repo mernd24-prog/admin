@@ -121,6 +121,11 @@ body {
   color: var(--admin-navy) !important;
 }
 
+.button-primary.my-organizations-primary-btn,
+.button-primary.my-organizations-primary-btn:hover {
+  color: #ffffff !important;
+}
+
 .button-outline-primary {
   min-height: 36px;
   padding: 9px 18px;
@@ -307,6 +312,45 @@ select:active {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11);
 }
 
+/* One search treatment for every table toolbar. */
+.admin-table-search {
+  max-width: 672px;
+}
+
+.admin-table-search--large {
+  max-width: 768px;
+}
+
+.admin-table-search-input.admin-input {
+  height: 36px;
+  min-height: 36px;
+  border-color: var(--admin-field-line);
+  border-radius: var(--admin-radius-sm);
+  background: #fff;
+  box-shadow: none;
+}
+
+.admin-table-search-input.admin-input::placeholder {
+  color: var(--admin-soft-text);
+  opacity: 1;
+}
+
+.admin-table-search-input.admin-input:hover {
+  border-color: var(--admin-line-strong);
+}
+
+.admin-table-search-input.admin-input:focus {
+  border-color: var(--admin-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11);
+}
+
+@media (max-width: 639px) {
+  .admin-table-search,
+  .admin-table-search--large {
+    max-width: none;
+  }
+}
+
 .admin-input:disabled,
 .admin-input[readonly] {
   color: #667085;
@@ -476,6 +520,11 @@ select:active {
   border-color: var(--admin-gold-dark);
   background: var(--admin-gold-dark);
   transform: translateY(-1px);
+}
+
+.admin-btn-primary.admin-btn-white-text,
+.admin-btn-primary.admin-btn-white-text:hover:not(:disabled) {
+  color: #ffffff;
 }
 
 .admin-btn-primary:disabled {

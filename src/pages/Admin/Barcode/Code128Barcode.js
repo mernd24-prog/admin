@@ -38,7 +38,7 @@ const Code128Barcode = ({ product }) => {
       </div>
       <div className="flex justify-between text-xs">
         <div>
-          <div>M.R.P. ₹: {product.basePrice || 'N/A'}</div>
+          <div>M.R.P. ₹: {product?.basePrice || 'N/A'}</div>
           <div>Sale ₹: {product.salePrice || 'N/A'}</div>
           <div>Pkd. Dt. {new Date().toLocaleDateString('en-GB', {
             day: '2-digit',

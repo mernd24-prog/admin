@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MdSearch, MdRefresh, MdUnfoldMore, MdInbox, MdMoreVert } from "react-icons/md";
+import { MdRefresh, MdUnfoldMore, MdMoreVert } from "react-icons/md";
 import Pagination from "../Pagination/Pagination";
 import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
+import SearchInput from "../Atoms/SearchInput/SearchInput";
 import { ExportButton, ImportButton } from "./TableTools";
 import { formatLabel } from "../../utils/formatters";
 
@@ -199,7 +200,9 @@ const DataTable = ({
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [hasMounted, setHasMounted] = useState(false);
-  const resolvedTotalCount = Number(totalCount ?? total ?? data.length ?? 0);
+  const safeData = Array.isArray(data) ? data : [];
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const resolvedTotalCount = Number(totalCount ?? total ?? safeData.length);
   const resolvedPage = Number(listPage?.page ?? page ?? 1);
   const resolvedPageSize = Number(listPage?.pageSize ?? pageSize ?? 20);
   const resolvedOnPageChange = onPageChange || listPage?.setPage;
@@ -210,7 +213,7 @@ const DataTable = ({
   const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
   const resolvedEmptyText = emptyMessage || emptyText;
   const totalPages = Math.max(1, Math.ceil(resolvedTotalCount / resolvedPageSize));
-  const showLoading = loading || (!hasMounted && data.length === 0 && !error);
+  const showLoading = loading || (!hasMounted && safeData.length === 0 && !error);
 
   useEffect(() => {
     setHasMounted(true);
@@ -221,10 +224,10 @@ const DataTable = ({
       ? rowKey(row)
       : (row[rowKey] ?? row.id ?? index);
 
-  const pageKeys = data.map((row, index) => getKey(row, index));
+  const pageKeys = safeData.map((row, index) => getKey(row, index));
   const allSelected =
     pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
-  const selectedData = data.filter((row, index) =>
+  const selectedData = safeData.filter((row, index) =>
     selectedKeys.includes(getKey(row, index)),
   );
 
@@ -263,16 +266,16 @@ const DataTable = ({
     );
   };
 
-  const colCount = columns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
+  const colCount = safeColumns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
 
   const tools = (
     <>
       {exportConfig && (
         <ExportButton
           {...exportConfig}
-          data={exportConfig.data || data}
+          data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
           selectedData={selectedData}
-          columns={exportConfig.columns || columns}
+          columns={Array.isArray(exportConfig.columns) ? exportConfig.columns : safeColumns}
           requiredModule={requiredModule}
         />
       )}
@@ -299,16 +302,11 @@ const DataTable = ({
       {(resolvedOnSearch || actions || exportConfig || importConfig || onRefresh) && (
         <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           {resolvedOnSearch && (
-            <div className="relative w-full sm:max-w-sm sm:flex-1 lg:max-w-md">
-              <MdSearch
-                size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                value={searchValue}
-                onChange={handleSearch}
-                placeholder={formatLabel(searchPlaceholder)}
-                className="admin-input w-full !pl-10 pr-4"
+            <div className="w-full min-w-0 sm:max-w-2xl sm:flex-1">
+              <SearchInput
+                searchTerm={searchValue}
+                handleChange={handleSearch}
+                placeholder={searchPlaceholder}
               />
             </div>
           )}
@@ -339,7 +337,7 @@ const DataTable = ({
                   />
                 </th>
               )}
-              {columns.map((col, columnIndex) => (
+              {safeColumns.map((col, columnIndex) => (
                 <th
                   key={`${col.key}-${columnIndex}`}
                   className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] whitespace-nowrap ${
@@ -398,19 +396,21 @@ const DataTable = ({
                   </div>
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : safeData.length === 0 ? (
               <tr>
-                <td colSpan={colCount} className="  ">
-                  <div className="mx-auto flex  flex-col items-center gap-2 rounded-lg  bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
-                    {emptyIcon || (
-                      <MdInbox size={36} className="text-gray-200" />
-                    )}
+                <td colSpan={colCount}>
+                  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+                    <img
+                      src="/Img/noData.png"
+                      alt="No records"
+                      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+                    />
                     <span className="text-sm font-medium">{formatLabel(resolvedEmptyText)}</span>
                   </div>
                 </td>
               </tr>
             ) : (
-              data.map((row, index) => (
+              safeData.map((row, index) => (
                 <tr
                   key={getKey(row, index)}
                   onClick={() => onRowClick?.(row)}
@@ -437,7 +437,7 @@ const DataTable = ({
                       />
                     </td>
                   )}
-                  {columns.map((col, columnIndex) => (
+                  {safeColumns.map((col, columnIndex) => (
                     <td
                       key={`${col.key}-${columnIndex}`}
                       className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}

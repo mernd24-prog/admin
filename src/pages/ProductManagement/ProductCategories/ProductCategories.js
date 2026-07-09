@@ -10,6 +10,7 @@ import { ActionButtons } from "../../../components/Atoms/TableActionButton/Table
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { PageHeader, ConfirmModal } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import CategorySetup from "./components/CategorySetup";
 import { CategoryAttributesPanel } from "./CategoryAttributes";
@@ -35,6 +36,7 @@ const ProductCategories = () => {
   const [isPublish, setIsPublish] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedCategories, setHasLoadedCategories] = useState(false);
   const [allCategories, setAllCategories] = useState([]);
   const [formData, setFormData] = useState({
     categoryName: "",
@@ -105,7 +107,12 @@ const ProductCategories = () => {
   const transformData = useCallback((apiData) => {
     const raw = Array.isArray(apiData)
       ? apiData
-      : apiData?.list || apiData?.items || [];
+      : apiData?.list ||
+        apiData?.items ||
+        apiData?.categories ||
+        apiData?.roots ||
+        apiData?.tree ||
+        [];
     if (!Array.isArray(raw) || raw.length === 0) return [];
 
     // Flatten server-side tree (children array) into a flat list so parentKey-based rebuilding works
@@ -178,8 +185,22 @@ const ProductCategories = () => {
 
   // Fetch categories on initial load and refresh
   useEffect(() => {
-    dispatch(getList({ tree: true, limit: 100 }));
+    let active = true;
+    setHasLoadedCategories(false);
+    dispatch(getList({ tree: true, limit: 100 }))
+      .unwrap()
+      .catch(() => null)
+      .finally(() => {
+        if (active) setHasLoadedCategories(true);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [dispatch, isRefresh]);
+
+  const categoriesLoading =
+    !hasLoadedCategories || selector?.getListData?.loading || isLoading;
 
   // Build select options for category dropdown
   const createSelectOptions = useMemo(() => {
@@ -918,14 +939,37 @@ const ProductCategories = () => {
 
         {/* Category tree */}
         <div className="space-y-1">
-          {(selector.loading || isLoading) && (
-            <div className="text-center py-8 text-gray-400 text-sm">Loading categories…</div>
+          {categoriesLoading && (
+            <div
+              className="space-y-2 py-2"
+              role="status"
+              aria-label="Loading categories"
+              aria-busy="true"
+            >
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div
+                  key={row}
+                  className="flex min-h-12 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-white px-3 py-2"
+                  style={{ marginLeft: row === 2 || row === 3 ? 24 : 0 }}
+                >
+                  <SkeletonLoader circle height={24} width={24} />
+                  <div className="min-w-0 flex-1">
+                    <SkeletonLoader height={12} width={row % 2 === 0 ? "38%" : "28%"} />
+                    <div className="mt-1">
+                      <SkeletonLoader height={9} width={row % 2 === 0 ? "24%" : "18%"} />
+                    </div>
+                  </div>
+                  <SkeletonLoader height={26} width={72} />
+                </div>
+              ))}
+              <span className="sr-only">Loading categories…</span>
+            </div>
           )}
-          {!selector.loading && !isLoading && categories.length > 0 ? (
+          {!categoriesLoading && categories.length > 0 ? (
             categories.map((category) =>
               renderCategory(category, 0, null, categories)
             )
-          ) : !selector.loading && !isLoading ? (
+          ) : !categoriesLoading ? (
             <div className="text-center py-8 text-gray-400 text-sm">
               {filters.search ? "No categories match your search" : "No categories found"}
             </div>

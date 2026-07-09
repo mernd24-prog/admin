@@ -363,7 +363,7 @@ const InventoryAdjustment = () => {
                       onChange={(event) => setSearch(event.target.value)}
                       onKeyDown={(event) => event.key === "Enter" && searchProducts()}
                       placeholder="Name, SKU, or keyword"
-                      className="admin-input pl-9 text-sm"
+                      className="admin-input !pl-10 text-sm"
                     />
                   </div>
                 </div>

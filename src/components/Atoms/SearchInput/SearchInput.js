@@ -40,10 +40,14 @@ const SearchInput = ({
   };
 
   return (
-    <div className="header-search-pill group relative w-full min-w-0">
+    <div
+      className={`admin-table-search group relative w-full min-w-0 ${
+        large ? "admin-table-search--large" : ""
+      }`}
+    >
       <MdSearch
-        size={14}
-        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
+        size={16}
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
       />
       <input
         type="text"
@@ -53,13 +57,13 @@ const SearchInput = ({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         aria-label={formatLabel(placeholder || "Search")}
-        className="admin-input admin-header-search-input block w-full pl-9 pr-10"
+        className="admin-input admin-table-search-input block w-full !pl-10 !pr-10"
       />
       {searchTerm && !disabled && (
         <button
           type="button"
           onClick={clearSearch}
-          className="absolute right-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
           aria-label={formatLabel("Clear search")}
         >
           <MdClose size={14} />

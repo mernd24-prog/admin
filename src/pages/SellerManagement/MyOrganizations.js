@@ -78,7 +78,7 @@ const createEmptyForm = () => ({
 
 // ─── Theme tokens (matching existing admin theme) ─────────────────────────────
 
-const inputCls = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none transition focus:border-[#2f6fed] disabled:bg-[#f8faff] disabled:text-[#8a93a5]";
+const inputCls = "admin-input min-h-[38px] px-3 text-sm disabled:bg-[var(--admin-surface-soft)] disabled:text-[var(--admin-soft-text)]";
 const inputErrCls = "min-h-[38px] rounded-md border border-red-400 bg-red-50/30 px-3 text-sm outline-none transition focus:border-red-500 disabled:bg-[#f8faff]";
 const ic = (err) => (err ? inputErrCls : inputCls);
 
@@ -284,25 +284,25 @@ const getBackendFieldErrors = (error = {}) => {
 
 const FieldRow = ({ label, required, error, hint, children }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-xs font-medium text-[#65718b]">
+    <label className="text-xs font-medium text-[var(--admin-muted)]">
       {label}
       {required && <span className="ml-0.5 text-red-500">*</span>}
     </label>
     {children}
     {error && <p className="text-[11px] font-medium text-red-500">{error}</p>}
-    {!error && hint && <p className="text-[11px] text-[#8a93a5]">{hint}</p>}
+    {!error && hint && <p className="text-[11px] text-[var(--admin-soft-text)]">{hint}</p>}
   </div>
 );
 
 const PrimaryButton = ({ children, icon, onClick, disabled = false, variant = "primary" }) => {
   const cls =
     variant === "ghost"
-      ? "border border-[#E6E6E6] bg-white text-[#202337] hover:bg-[#f8faff]"
-      : "bg-[#2f6fed] text-white hover:bg-[#245ed5]";
+      ? "admin-btn-secondary"
+      : "button-primary my-organizations-primary-btn";
   return (
     <button
       type="button"
-      className={`inline-flex min-h-[38px] items-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${cls}`}
+      className={`inline-flex min-h-[38px] items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${cls}`}
       onClick={onClick}
       disabled={disabled}
     >
@@ -332,8 +332,8 @@ const ApprovalBanner = ({ org }) => {
     <div className={`flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs ${meta.cls}`}>
       <MdInfoOutline size={14} className={`mt-0.5 shrink-0 ${meta.icon}`} />
       <div>
-        <p className="font-semibold text-[#202337]">{meta.title}</p>
-        <p className="mt-0.5 text-[#65718b]">{meta.body}</p>
+        <p className="font-semibold text-[var(--admin-ink)]">{meta.title}</p>
+        <p className="mt-0.5 text-[var(--admin-muted)]">{meta.body}</p>
         {reason && <p className="mt-1 font-medium text-red-600">Reason: {reason}</p>}
         {Array.isArray(org.requiredChanges) && org.requiredChanges.length > 0 && (
           <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-red-600">
@@ -692,25 +692,25 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
   const canEdit = !approved;
 
   return (
-    <div className={`flex flex-col rounded-lg border bg-white transition ${isActive ? "border-[#2f6fed] shadow-[0_0_0_2px_rgba(47,111,237,0.12)]" : "border-[#E6E6E6] hover:border-[#c7d4f0]"
+    <div className={`flex flex-col rounded-lg border bg-white shadow-[var(--admin-shadow)] transition ${isActive ? "border-[var(--admin-gold)] ring-2 ring-[var(--admin-gold-soft)]" : "border-[var(--admin-line)] hover:border-[var(--admin-line-strong)]"
       }`}>
       {/* Header */}
       <div className="flex items-start gap-3 p-4 pb-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#f3f6ff]">
-          <MdBusiness size={18} className="text-[#2f6fed]" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--admin-gold-soft)]">
+          <MdBusiness size={18} className="text-[var(--admin-gold-dark)]" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-sm font-semibold text-[#202337] truncate">{orgLabel(org)}</p>
+            <p className="truncate text-sm font-semibold text-[var(--admin-navy)]">{orgLabel(org)}</p>
             {org.isDefault && (
-              <span className="rounded-full bg-[#eef3ff] px-2 py-0.5 text-[10px] font-semibold text-[#2f6fed]">Default</span>
+              <span className="rounded-full bg-[var(--admin-gold-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-gold-dark)]">Default</span>
             )}
             {isActive && (
               <span className="rounded-full bg-[#effbf4] px-2 py-0.5 text-[10px] font-semibold text-green-700">Active</span>
             )}
           </div>
           {org.legalBusinessName && org.legalBusinessName !== org.storeDisplayName && (
-            <p className="text-xs text-[#65718b] truncate">{org.legalBusinessName}</p>
+            <p className="truncate text-xs text-[var(--admin-muted)]">{org.legalBusinessName}</p>
           )}
         </div>
       </div>
@@ -766,19 +766,19 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
       </div>
 
       {/* Footer actions */}
-      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[#E6E6E6] px-4 py-3">
+      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
         {canEdit ? (
           <button
             type="button"
             onClick={() => onEdit(org)}
             disabled={submitting}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[#E6E6E6] bg-white px-3 py-1.5 text-xs font-medium text-[#202337] transition hover:border-[#2f6fed] hover:text-[#2f6fed] disabled:cursor-not-allowed disabled:opacity-50"
+            className="admin-btn-secondary inline-flex min-h-8 items-center gap-1.5 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             <MdEdit size={13} />
             {status === "rejected" || status === "blocked" ? "Correct & Resubmit" : "Edit"}
           </button>
         ) : (
-          <span className="rounded-md border border-[#E6E6E6] bg-[#f8faff] px-3 py-1.5 text-xs text-[#8a93a5]">
+          <span className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs text-[var(--admin-soft-text)]">
             Legal details locked after approval
           </span>
         )}
@@ -787,7 +787,7 @@ const OrgCard = ({ org, isActive, onEdit, onSetDefault, submitting }) => {
             type="button"
             onClick={() => onSetDefault(id)}
             disabled={submitting}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[#E6E6E6] bg-white px-3 py-1.5 text-xs font-medium text-[#202337] transition hover:border-[#2f6fed] hover:text-[#2f6fed] disabled:cursor-not-allowed disabled:opacity-50"
+            className="admin-btn-secondary inline-flex min-h-8 items-center gap-1.5 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             <MdOutlineSwapHoriz size={13} />
             Set as Default
@@ -942,7 +942,7 @@ const MyOrganizations = () => {
         breadcrumbs={[{ label: "Seller Dashboard" }, { label: "My Organizations" }]}
         actions={(
           <>
-            <PrimaryButton variant="ghost" onClick={loadOrganizations} disabled={loading} icon={<MdRefresh size={18} />}>
+            <PrimaryButton onClick={loadOrganizations} disabled={loading} icon={<MdRefresh size={18} />}>
               Refresh
             </PrimaryButton>
             <PrimaryButton onClick={openCreate} icon={<MdAdd size={18} />}>
@@ -955,23 +955,23 @@ const MyOrganizations = () => {
       {/* Summary chips */}
       {organizations.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-2 rounded-md border border-[#E6E6E6] bg-white px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-xs shadow-sm">
             <span className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="font-semibold text-[#202337]">{approvedCount}</span>
-            <span className="text-[#65718b]">Approved & Usable</span>
+            <span className="font-semibold text-[var(--admin-ink)]">{approvedCount}</span>
+            <span className="text-[var(--admin-muted)]">Approved & Usable</span>
           </div>
           {pendingCount > 0 && (
             <div className="flex items-center gap-2 rounded-md border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-xs">
               <span className="h-2 w-2 rounded-full bg-yellow-500" />
-              <span className="font-semibold text-[#202337]">{pendingCount}</span>
-              <span className="text-[#65718b]">Pending Review</span>
+              <span className="font-semibold text-[var(--admin-ink)]">{pendingCount}</span>
+              <span className="text-[var(--admin-muted)]">Pending Review</span>
             </div>
           )}
           {rejectedCount > 0 && (
             <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              <span className="font-semibold text-[#202337]">{rejectedCount}</span>
-              <span className="text-[#65718b]">Needs Action</span>
+              <span className="font-semibold text-[var(--admin-ink)]">{rejectedCount}</span>
+              <span className="text-[var(--admin-muted)]">Needs Action</span>
             </div>
           )}
         </div>
@@ -979,11 +979,11 @@ const MyOrganizations = () => {
 
       {/* Switcher info — only shown when multiple orgs */}
       {organizations.length > 1 && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-4 py-3">
-          <MdOutlineSwapHoriz size={16} className="mt-0.5 shrink-0 text-[#2f6fed]" />
+        <div className="flex items-start gap-2.5 rounded-lg border border-[var(--admin-line-strong)] bg-white px-4 py-3">
+          <MdOutlineSwapHoriz size={16} className="mt-0.5 shrink-0 text-[var(--admin-gold-dark)]" />
           <div>
-            <p className="text-xs font-semibold text-[#1e40af]">Organization Switcher</p>
-            <p className="mt-0.5 text-xs text-[#3b82f6]">
+            <p className="text-xs font-semibold text-[var(--admin-navy)]">Organization Switcher</p>
+            <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
               Use the dropdown in the top header to switch between organizations. Products, orders, and reports will filter to the selected organization.
               {activeOrgId && (
                 <> Currently active: <strong>{orgLabel(organizations.find((o) => orgId(o) === activeOrgId) || {})}</strong></>
@@ -995,20 +995,20 @@ const MyOrganizations = () => {
 
       {/* Cards / Empty state */}
       {loading ? (
-        <div className="rounded-lg border border-[#E6E6E6] bg-white px-4 py-12 text-center text-sm text-[#65718b]">
+        <div className="admin-card px-4 py-12 text-center text-sm text-[var(--admin-muted)]">
           Loading your organizations…
         </div>
       ) : organizations.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#d0d5dd] bg-white px-6 py-14 text-center">
-          <MdBusiness size={36} className="mx-auto mb-3 text-[#d0d5dd]" />
-          <p className="font-semibold text-[#202337]">No organizations yet</p>
-          <p className="mt-1 text-sm text-[#65718b]">
+        <div className="rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-white px-6 py-14 text-center shadow-[var(--admin-shadow)]">
+          <MdBusiness size={36} className="mx-auto mb-3 text-[var(--admin-gold)]" />
+          <p className="font-semibold text-[var(--admin-navy)]">No organizations yet</p>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">
             Add your first organization to start selling. Your details will be reviewed by our team before approval.
           </p>
           <button
             type="button"
             onClick={openCreate}
-            className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#2f6fed] px-4 py-2 text-sm font-medium text-white hover:bg-[#245ed5]"
+            className="button-primary my-organizations-primary-btn mt-5 inline-flex items-center gap-2 text-sm"
           >
             <MdAdd size={16} /> Add Your First Organization
           </button>

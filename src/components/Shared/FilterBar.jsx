@@ -190,7 +190,10 @@ const FilterField = ({ field, value, onChange }) => {
         )}
         <div className="relative">
           {field.type === 'search' && (
-            <MdSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] pointer-events-none" />
+            <MdSearch
+              size={14}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
+            />
           )}
           <input
             id={id}
@@ -198,7 +201,7 @@ const FilterField = ({ field, value, onChange }) => {
             value={value ?? ''}
             onChange={(e) => onChange(field.key, e.target.value)}
             placeholder={field.placeholder || `Search ${field.label}…`}
-            className={`admin-input min-h-9 w-full text-sm ${field.type === 'search' ? 'pl-7' : ''}`}
+            className={`admin-input min-h-9 w-full text-sm ${field.type === 'search' ? '!pl-9' : ''}`}
           />
         </div>
       </div>

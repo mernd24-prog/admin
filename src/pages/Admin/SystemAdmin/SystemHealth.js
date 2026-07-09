@@ -45,7 +45,7 @@ const MetricCard = ({ label, value, unit }) => (
 const SystemHealth = () => {
   const dispatch = useDispatch();
   const selector = useSelector((s) => s.adminCore);
-  const healthData = selector.systemHealthData?.data?.data || selector.systemHealthData?.data || {};
+  const healthData = selector?.systemHealthData?.data?.data || selector?.systemHealthData?.data || {};
 
   const [loading, setLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(null);
@@ -129,7 +129,7 @@ const SystemHealth = () => {
                 <h3 className="font-semibold text-gray-800">Service Checks</h3>
               </div>
               <div className="divide-y divide-gray-100">
-                {Object.entries(services).map(([name, check]) => {
+                {Object.entries(services || {}).map(([name, check]) => {
                   const status = typeof check === "string" ? check : check?.status || check?.state || "unknown";
                   const latency = check?.latency || check?.responseTime;
                   return (
