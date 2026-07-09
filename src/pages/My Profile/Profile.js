@@ -7,6 +7,7 @@ import { getProfile, updateProfile } from "../../Redux/userSlice";
 import { toast } from "sonner";
 import { uploadFile } from "../../_helpers/globalFunctions";
 import Loader from "../../components/Loader/Loader";
+import { PageHeader } from "../../components/Shared";
 
 const profileToForm = (user = {}) => {
   const profile = user.profile || {};
@@ -142,7 +143,9 @@ const FieldGrid = ({ children }) => (
 
 const AddressBlock = ({ title, address }) => (
   <div className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
-    <p className="mb-4 text-xs font-semibold text-[var(--admin-navy)]">{title}</p>
+    <p className="mb-4 text-xs font-semibold text-[var(--admin-navy)]">
+      {title}
+    </p>
     <FieldGrid>
       <DetailField
         label="Address Line 1"
@@ -382,17 +385,14 @@ const Profile = () => {
       )}
 
       <div className="mb-7">
-        <div className="mb-6">
-          <p className="text-[10px] font-semibold text-[#e49e1c]">
-            {isSeller ? "Seller profile > Edit" : "My profile > Edit"}
-          </p>
-          <h1 className="mt-3 text-2xl font-bold text-[var(--admin-navy)]">
-            {isSeller ? "Seller Profile" : "My Profile"}
-          </h1>
-          <p className="mt-1 text-xs text-slate-500">
-            Manage your personal and account details
-          </p>
-        </div>
+        <PageHeader
+          title={isSeller ? "Seller Profile" : "My Profile"}
+          subtitle="Manage your personal and account details"
+          breadcrumbs={[
+            { label: isSeller ? "Seller Profile" : "My Profile" },
+            { label: "Edit" },
+          ]}
+        />
 
         <div className="admin-card px-5 py-6 sm:px-10">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-5">

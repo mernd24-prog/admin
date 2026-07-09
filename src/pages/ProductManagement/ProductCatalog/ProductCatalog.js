@@ -34,6 +34,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import {
   DataTable,
   ExportButton,
+  PageHeader,
 } from "../../../components/Shared";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
@@ -929,17 +930,23 @@ const ProductCatalog = () => {
   return (
     <div className="overflow-x-auto overflow-y-auto">
       <Loader loading={loading} />
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-bold text-[var(--admin-navy)]">Product Catalog</h1>
-        <div className="flex flex-wrap justify-end gap-2">
+      <PageHeader
+        title="Product Catalog"
+        breadcrumbs={[
+          { label: "Catalog Management" },
+          { label: "Product Catalog" },
+        ]}
+        actions={
+          <>
           <ExportButton
             data={apiRes?.list || []}
             filename="products"
             requiredModule="products"
           />
           <AddButton onClick={handleAddNavigate} requiredModule="products" />
-        </div>
-      </div>
+          </>
+        }
+      />
       <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
         <section className="border-b border-[var(--admin-line)] p-4">
           <SearchComponent

@@ -4,7 +4,7 @@ import { PageHeader } from "../../components/Shared";
 
 const AnalyticsEvents = () => {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Analytics Events"
         subtitle="Platform event tracking and behavioral analytics"

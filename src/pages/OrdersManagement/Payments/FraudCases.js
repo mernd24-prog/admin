@@ -110,7 +110,7 @@ const FraudCases = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Fraud Cases"
         subtitle="Monitor payment chargebacks and fraud incidents"

@@ -362,7 +362,7 @@ export const ReportShell = ({
   };
 
   return (
-    <div className="min-h-full bg-[var(--admin-canvas)] p-4 md:p-6">
+    <div>
       <PageHeader
         title={title}
         subtitle={subtitle}

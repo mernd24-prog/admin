@@ -1,6 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdClose, MdEdit, MdMilitaryTech, MdRefresh, MdToggleOff, MdToggleOn } from "react-icons/md";
+import {
+  MdAdd,
+  MdClose,
+  MdEdit,
+  MdMilitaryTech,
+  MdRefresh,
+  MdToggleOff,
+  MdToggleOn,
+} from "react-icons/md";
 import {
   ConfirmModal,
   DataTable,
@@ -31,7 +39,12 @@ const STATUS_OPTIONS = [
 ];
 
 const FILTER_FIELDS = [
-  { key: "search", type: "search", label: "Search", placeholder: "Search badges…" },
+  {
+    key: "search",
+    type: "search",
+    label: "Search",
+    placeholder: "Search badges…",
+  },
   { key: "type", type: "select", label: "Type", options: TYPE_OPTIONS },
   { key: "active", type: "select", label: "Status", options: STATUS_OPTIONS },
 ];
@@ -54,7 +67,11 @@ function BadgePreview({ label, color, bgColor, icon }) {
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"
-      style={{ color: color || "#E53E3E", backgroundColor: bgColor || "#FFF5F5", border: `1px solid ${color || "#E53E3E"}33` }}
+      style={{
+        color: color || "#E53E3E",
+        backgroundColor: bgColor || "#FFF5F5",
+        border: `1px solid ${color || "#E53E3E"}33`,
+      }}
     >
       {icon && <span>{icon}</span>}
       {label || "Badge"}
@@ -105,7 +122,9 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
           description: initialData.description || "",
           priority: initialData.priority ?? 0,
           active: initialData.active !== false,
-          validFrom: initialData.validFrom ? initialData.validFrom.split("T")[0] : "",
+          validFrom: initialData.validFrom
+            ? initialData.validFrom.split("T")[0]
+            : "",
           validTo: initialData.validTo ? initialData.validTo.split("T")[0] : "",
         });
       } else {
@@ -116,7 +135,11 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
   }, [open, initialData]);
 
   const set = (key) => (e) => {
-    const val = e?.target ? (e.target.type === "checkbox" ? e.target.checked : e.target.value) : e;
+    const val = e?.target
+      ? e.target.type === "checkbox"
+        ? e.target.checked
+        : e.target.value
+      : e;
     setForm((prev) => ({ ...prev, [key]: val }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: null }));
   };
@@ -124,17 +147,26 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = "Name is required";
-    else if (!/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/i.test(form.name.trim())) errs.name = "Use only letters, numbers, hyphens or underscores";
+    else if (!/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/i.test(form.name.trim()))
+      errs.name = "Use only letters, numbers, hyphens or underscores";
     if (!form.label.trim()) errs.label = "Label is required";
-    if (form.color && !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(form.color)) errs.color = "Invalid hex color";
-    if (form.bgColor && !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(form.bgColor)) errs.bgColor = "Invalid hex color";
+    if (form.color && !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(form.color))
+      errs.color = "Invalid hex color";
+    if (
+      form.bgColor &&
+      !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(form.bgColor)
+    )
+      errs.bgColor = "Invalid hex color";
     return errs;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     const payload = {
       ...form,
       priority: Number(form.priority) || 0,
@@ -154,16 +186,27 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
           <h2 className="text-base font-semibold text-gray-800">
             {isEdit ? "Edit Badge" : "Create Badge"}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-gray-100 text-gray-500"
+          >
             <MdClose size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="overflow-y-auto flex-1 px-6 py-4 space-y-4"
+        >
           {/* Live preview */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
             <span className="text-xs text-gray-400 font-medium">Preview</span>
-            <BadgePreview label={form.label} color={form.color} bgColor={form.bgColor} icon={form.icon} />
+            <BadgePreview
+              label={form.label}
+              color={form.color}
+              bgColor={form.bgColor}
+              icon={form.icon}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -178,7 +221,9 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
                 placeholder="e.g. new-arrival"
                 className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? "border-red-400" : "border-gray-200"}`}
               />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-xs text-red-500 mt-1">{errors.name}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -191,13 +236,17 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
                 placeholder="e.g. New Arrival"
                 className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.label ? "border-red-400" : "border-gray-200"}`}
               />
-              {errors.label && <p className="text-xs text-red-500 mt-1">{errors.label}</p>}
+              {errors.label && (
+                <p className="text-xs text-red-500 mt-1">{errors.label}</p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Type
+              </label>
               <select
                 value={form.type}
                 onChange={set("type")}
@@ -210,7 +259,9 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Icon / Emoji</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Icon / Emoji
+              </label>
               <input
                 type="text"
                 value={form.icon}
@@ -222,15 +273,29 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <ColorInput label="Text Color" value={form.color} onChange={set("color")} name="color" />
-            <ColorInput label="Background Color" value={form.bgColor} onChange={set("bgColor")} name="bgColor" />
+            <ColorInput
+              label="Text Color"
+              value={form.color}
+              onChange={set("color")}
+              name="color"
+            />
+            <ColorInput
+              label="Background Color"
+              value={form.bgColor}
+              onChange={set("bgColor")}
+              name="bgColor"
+            />
           </div>
           {(errors.color || errors.bgColor) && (
-            <p className="text-xs text-red-500">{errors.color || errors.bgColor}</p>
+            <p className="text-xs text-red-500">
+              {errors.color || errors.bgColor}
+            </p>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Description
+            </label>
             <textarea
               value={form.description}
               onChange={set("description")}
@@ -242,7 +307,9 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Priority
+              </label>
               <input
                 type="number"
                 min={0}
@@ -259,14 +326,18 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
                   onChange={set("active")}
                   className="w-4 h-4 accent-blue-600"
                 />
-                <span className="text-sm font-medium text-gray-700">Active</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
               </label>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Valid From</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Valid From
+              </label>
               <input
                 type="date"
                 value={form.validFrom}
@@ -275,7 +346,9 @@ function BadgeModal({ open, onClose, initialData, loading, onSubmit }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Valid To</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Valid To
+              </label>
               <input
                 type="date"
                 value={form.validTo}
@@ -314,7 +387,12 @@ const COLUMNS = [
     label: "Badge",
     render: (row) => (
       <div className="flex items-center gap-3">
-        <BadgePreview label={row.label} color={row.color} bgColor={row.bgColor} icon={row.icon} />
+        <BadgePreview
+          label={row.label}
+          color={row.color}
+          bgColor={row.bgColor}
+          icon={row.icon}
+        />
         <div>
           <p className="text-sm font-medium text-gray-800">{row.label}</p>
           <p className="text-xs text-gray-400 font-mono">{row.name}</p>
@@ -331,20 +409,33 @@ const COLUMNS = [
       </span>
     ),
   },
-  { key: "priority", label: "Priority", render: (row) => <span className="text-sm text-gray-600">{row.priority ?? 0}</span> },
+  {
+    key: "priority",
+    label: "Priority",
+    render: (row) => (
+      <span className="text-sm text-gray-600">{row.priority ?? 0}</span>
+    ),
+  },
   {
     key: "validity",
     label: "Validity",
     render: (row) => {
-      if (!row.validFrom && !row.validTo) return <span className="text-xs text-gray-400">Always</span>;
-      const fmt = (d) => d ? new Date(d).toLocaleDateString() : "—";
-      return <span className="text-xs text-gray-600">{fmt(row.validFrom)} → {fmt(row.validTo)}</span>;
+      if (!row.validFrom && !row.validTo)
+        return <span className="text-xs text-gray-400">Always</span>;
+      const fmt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
+      return (
+        <span className="text-xs text-gray-600">
+          {fmt(row.validFrom)} → {fmt(row.validTo)}
+        </span>
+      );
     },
   },
   {
     key: "active",
     label: "Status",
-    render: (row) => <StatusBadge status={row.active ? "active" : "inactive"} />,
+    render: (row) => (
+      <StatusBadge status={row.active ? "active" : "inactive"} />
+    ),
   },
 ];
 
@@ -352,7 +443,13 @@ const Badges = () => {
   const dispatch = useDispatch();
   const { loading, listBadgesData } = useSelector((state) => state.badge);
 
-  const [filters, setFilters] = useState({ search: "", type: "", active: "", page: 1, limit: 20 });
+  const [filters, setFilters] = useState({
+    search: "",
+    type: "",
+    active: "",
+    page: 1,
+    limit: 20,
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -360,8 +457,12 @@ const Badges = () => {
   const prevFilters = useRef(null);
 
   const badges = listBadgesData?.data?.data ?? listBadgesData?.data ?? [];
-  const pagination = listBadgesData?.normalized?.pagination ?? listBadgesData?.data?.pagination ?? null;
-  const total = pagination?.total ?? (Array.isArray(badges) ? badges.length : 0);
+  const pagination =
+    listBadgesData?.normalized?.pagination ??
+    listBadgesData?.data?.pagination ??
+    null;
+  const total =
+    pagination?.total ?? (Array.isArray(badges) ? badges.length : 0);
 
   const fetchBadges = useCallback(
     (override = {}) => {
@@ -385,9 +486,19 @@ const Badges = () => {
 
   const handlePageChange = (page) => setFilters((prev) => ({ ...prev, page }));
 
-  const openCreate = () => { setEditTarget(null); setModalOpen(true); };
-  const openEdit = (row) => { setEditTarget(row); setModalOpen(true); };
-  const closeModal = () => { setModalOpen(false); setEditTarget(null); dispatch(clearBadgeForm()); };
+  const openCreate = () => {
+    setEditTarget(null);
+    setModalOpen(true);
+  };
+  const openEdit = (row) => {
+    setEditTarget(row);
+    setModalOpen(true);
+  };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditTarget(null);
+    dispatch(clearBadgeForm());
+  };
 
   const handleSave = async (payload) => {
     setSaving(true);
@@ -449,35 +560,35 @@ const Badges = () => {
       <PageHeader
         title="Badges"
         subtitle="Manage product, seller, and buyer badges shown on the storefront"
+        breadcrumbs={[{ label: "Catalog Management" }, { label: "Badges" }]}
         count={total}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchBadges()}
-
-              title="Refresh"
-            >
+            <button onClick={() => fetchBadges()} title="Refresh">
               <MdRefresh size={18} />
             </button>
-            <button
-              onClick={openCreate}
 
-            >
+            <button onClick={openCreate}>
               <MdAdd size={16} />
               New Badge
             </button>
           </div>
         }
       />
-
-      <FilterBar fields={FILTER_FIELDS} values={filters} onChange={handleFilterChange} />
+      <FilterBar
+        fields={FILTER_FIELDS}
+        values={filters}
+        onChange={handleFilterChange}
+      />
 
       <div className="bg-white rounded-xl border border-gray-200">
         {!loading && Array.isArray(badges) && badges.length === 0 ? (
           <div className="py-16 text-center">
             <MdMilitaryTech size={48} className="mx-auto text-gray-200 mb-3" />
             <p className="text-sm font-medium text-gray-500">No badges found</p>
-            <p className="text-xs text-gray-400 mt-1">Create your first badge to get started</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Create your first badge to get started
+            </p>
             <button
               onClick={openCreate}
               className="mt-4 flex items-center gap-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
