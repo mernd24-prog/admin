@@ -249,7 +249,7 @@ export const ReportShell = ({
   };
 
   return (
-    <div className="p-4 md:p-6">
+    <div>
       <PageHeader
         title={title}
         subtitle={subtitle}

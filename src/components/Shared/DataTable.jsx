@@ -17,6 +17,41 @@ const SkeletonRow = ({ cols }) => (
   </tr>
 );
 
+const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
+
+const isEmptyCellValue = (value) =>
+  value === null ||
+  value === undefined ||
+  (typeof value === "string" && EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
+
+const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
+
+const formatCellText = (value) =>
+  shouldPreserveText(value) ? value : formatLabel(value, "N/A");
+
+const renderCellValue = (value, nested = false) => {
+  if (nested && (value === null || value === undefined || typeof value === "boolean")) {
+    return null;
+  }
+  if (nested && typeof value === "string" && value.trim() === "") return null;
+  if (isEmptyCellValue(value)) return <span className="text-gray-400">N/A</span>;
+  if (typeof value === "string") return formatCellText(value);
+  if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
+  if (React.isValidElement(value)) {
+    const children = value.props?.children;
+    if (isEmptyCellValue(children)) {
+      return React.cloneElement(value, undefined, "N/A");
+    }
+    if (children === undefined || children === null) return value;
+    return React.cloneElement(
+      value,
+      undefined,
+      React.Children.map(children, (child) => renderCellValue(child, true)),
+    );
+  }
+  return value;
+};
+
 const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
   const visibleActions = Array.isArray(actions)
     ? actions.filter((action) => action && action.hidden !== true)
@@ -442,9 +477,11 @@ const DataTable = ({
                       key={`${col.key}-${columnIndex}`}
                       className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
                     >
-                      {col.render
-                        ? col.render(row[col.key], row)
-                        : (row[col.key] ?? "—")}
+                      {renderCellValue(
+                        col.render
+                          ? col.render(row[col.key], row)
+                          : row[col.key],
+                      )}
                     </td>
                   ))}
                   {rowActions && (

@@ -127,7 +127,7 @@ const Chargebacks = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Chargebacks"
         subtitle="Monitor and track payment chargebacks"

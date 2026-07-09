@@ -4,6 +4,7 @@ import Nodata from "../NoData/NoData";
 // import Pagination from "../../Pagination/Pagination";
 import { TableSkeletonLoader } from "../../Loader/SkeletonLoader";
 import CustomCheckbox from "../Checkbox/Checkbox";
+import { formatLabel } from "../../../utils/formatters";
 
 const getMobileHeading = (tableHeadings, cellIndex, isHeaderCheckbox) =>
   tableHeadings[isHeaderCheckbox ? cellIndex - 1 : cellIndex] || "Select";
@@ -12,6 +13,41 @@ const isActionHeading = (heading) =>
   String(heading?.props?.children ?? heading)
     .toLowerCase()
     .includes("action");
+
+const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
+
+const isEmptyCellValue = (value) =>
+  value === null ||
+  value === undefined ||
+  (typeof value === "string" && EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
+
+const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
+
+const formatCellText = (value) =>
+  shouldPreserveText(value) ? value : formatLabel(value, "N/A");
+
+const renderCellValue = (value, nested = false) => {
+  if (nested && (value === null || value === undefined || typeof value === "boolean")) {
+    return null;
+  }
+  if (nested && typeof value === "string" && value.trim() === "") return null;
+  if (isEmptyCellValue(value)) return <span className="text-gray-400">N/A</span>;
+  if (typeof value === "string") return formatCellText(value);
+  if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
+  if (React.isValidElement(value)) {
+    const children = value.props?.children;
+    if (isEmptyCellValue(children)) {
+      return React.cloneElement(value, undefined, "N/A");
+    }
+    if (children === undefined || children === null) return value;
+    return React.cloneElement(
+      value,
+      undefined,
+      React.Children.map(children, (child) => renderCellValue(child, true)),
+    );
+  }
+  return value;
+};
 
 const getHeadingText = (heading) =>
   String(heading?.props?.children ?? heading).toLowerCase();
@@ -298,7 +334,7 @@ const TableData = ({
                                       : columnMeta.contentClass
                                   }`}
                                 >
-                                  {cell}
+                                  {renderCellValue(cell)}
                                 </div>
                               </td>
                             );
@@ -345,7 +381,7 @@ const TableData = ({
                             )}
                           </span>
                           <span className="min-w-0 text-right text-sm font-medium text-gray-800">
-                            {cell}
+                            {renderCellValue(cell)}
                           </span>
                         </div>
                       ))

@@ -407,6 +407,10 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
     Object.entries(form.billingAddress).forEach(([k, v]) => onNestedChange("pickupAddress", k, v));
   const copyPickupToReturn = () =>
     Object.entries(form.pickupAddress).forEach(([k, v]) => onNestedChange("returnAddress", k, v));
+  const MAX_DOB = new Date();
+MAX_DOB.setFullYear(MAX_DOB.getFullYear() - 18);
+
+const MAX_DOB_DATE = MAX_DOB.toISOString().split("T")[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
@@ -487,10 +491,15 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
                 <input className={ic(errors.aadhaarNumber)} value={form.aadhaarNumber}
                   onChange={(e) => onChange("aadhaarNumber", e.target.value.replace(/\D/g, ""))} maxLength={12} placeholder="123412341234" />
               </FieldRow>
-              <FieldRow label="Date of Birth" required error={errors.dateOfBirth}>
-                <input type="date" className={ic(errors.dateOfBirth)} value={form.dateOfBirth}
-                  onChange={(e) => onChange("dateOfBirth", e.target.value)} />
-              </FieldRow>
+             <FieldRow label="Date of Birth" required error={errors.dateOfBirth}>
+  <input
+    type="date"
+    className={ic(errors.dateOfBirth)}
+    value={form.dateOfBirth}
+    max={MAX_DOB_DATE}
+    onChange={(e) => onChange("dateOfBirth", e.target.value)}
+  />
+</FieldRow>
               <FieldRow label="Registration Number" error={errors.registrationNumber} hint="Company / LLP registration (optional)">
                 <input className={ic(errors.registrationNumber)} value={form.registrationNumber}
                   onChange={(e) => onChange("registrationNumber", e.target.value)} placeholder="Optional" />

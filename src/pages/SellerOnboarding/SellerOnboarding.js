@@ -294,6 +294,11 @@ const getIsoDateYearsAgo = (years) => {
 const MAX_DOB_FOR_SELLER = getIsoDateYearsAgo(MIN_SELLER_AGE);
 const SELLER_ONBOARDING_DRAFT_KEY = "sellerOnboardingDraft";
 
+const MAX_DOB = new Date();
+MAX_DOB.setFullYear(MAX_DOB.getFullYear() - 18);
+
+const MAX_DOB_DATE = MAX_DOB.toISOString().split("T")[0];
+
 const composeRegistrationName = (firstName = "", lastName = "") => {
   const first = String(firstName || "").trim();
   const last = String(lastName || "").trim();
@@ -2272,7 +2277,7 @@ const SellerOnboarding = () => {
                     type="date"
                     className="pointer-events-none absolute inset-0 h-[40px] w-full opacity-0"
                     value={toDateInputValue(kycForm.dateOfBirth)}
-                    max={MAX_DOB_FOR_SELLER}
+                    max={MAX_DOB_DATE}
                     onChange={onKycChange}
                     aria-label="Date of Birth"
                   />

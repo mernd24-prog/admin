@@ -61,6 +61,7 @@ export function formatRelativeDate(value, fallback = "Not available") {
  * Examples:
  *   "order_status"       → "Order Status"
  *   "pending_payment"    → "Pending Payment"
+ *   "cod-config"         → "Cod-Config"
  *   "seller_kyc_PENDING" → "Seller Kyc Pending"
  *   ""                   → "Not available"
  */
@@ -68,7 +69,7 @@ export function formatLabel(value, fallback = "Not available") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value)
     .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
+    .replace(/_+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase()) || fallback;

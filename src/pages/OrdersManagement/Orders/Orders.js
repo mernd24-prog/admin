@@ -361,7 +361,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
     label: "Shipment Status",
     render: (v, row) => {
       const s = firstDefined(v, shipmentStatusOf(row));
-      return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">—</span>;
+      return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">N/A</span>;
     },
   },
 ];
