@@ -1,9 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -11,9 +14,23 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { MdFileDownload, MdRefresh } from "react-icons/md";
+import {
+  MdAccountBalanceWallet,
+  MdAssignmentReturn,
+  MdCurrencyRupee,
+  MdFileDownload,
+  MdInbox,
+  MdInventory,
+  MdLocalShipping,
+  MdPayments,
+  MdRefresh,
+  MdShoppingCart,
+  MdStorefront,
+  MdTrendingUp,
+  MdWarehouse,
+} from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import Cards from "../../components/Cards/Cards";
 import { StatCardSkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import { PageHeader } from "../../components/Shared";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
@@ -22,7 +39,35 @@ import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 
 const RANGE_OPTIONS = ["Today", "Last 7 days", "Last 30 days", "Last 90 days"];
-const CHART_COLORS = ["#1f4fb2", "#d6a323", "#24b8c3", "#37b446", "#ff453d", "#6f4edb"];
+const CHART_COLORS = [
+  "var(--admin-navy)",
+  "var(--admin-gold)",
+  "var(--admin-danger)",
+  "var(--admin-navy-dark)",
+  "var(--admin-gold-dark)",
+  "var(--admin-line-strong)",
+];
+const CHART_GRID_COLOR = "var(--admin-line)";
+const SELLER_REPORT_CRUMB = "My Reports";
+
+const STAT_ICON_BY_LABEL = {
+  "Total Revenue": MdCurrencyRupee,
+  "Total Orders": MdShoppingCart,
+  "Delivered Orders": MdLocalShipping,
+  "Refund Amount": MdAssignmentReturn,
+  "Return Requests": MdAssignmentReturn,
+  "Pending Payouts": MdPayments,
+  "Total Products": MdInventory,
+  "Top Product Purchases": MdShoppingCart,
+  "Top Product Revenue": MdCurrencyRupee,
+  "Out of Stock": MdWarehouse,
+  "Total Stock": MdWarehouse,
+  "Reserved Stock": MdInventory,
+  "Low Stock Items": MdWarehouse,
+  "Top Seller GMV": MdStorefront,
+  "Platform Revenue": MdTrendingUp,
+  "Seller Payable": MdAccountBalanceWallet,
+};
 
 const integerFormatter = new Intl.NumberFormat("en-IN");
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -38,6 +83,15 @@ const asNumber = (value) => {
 
 const formatNumber = (value) => integerFormatter.format(asNumber(value));
 const formatCurrency = (value) => currencyFormatter.format(asNumber(value));
+const truncateLabel = (value = "", length = 32) => {
+  const text = String(value || "");
+  return text.length > length ? `${text.slice(0, length - 1)}...` : text;
+};
+const formatDayLabel = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Selected";
+  return date.toLocaleDateString("en-IN", { weekday: "short" });
+};
 const titleize = (value = "") =>
   String(value || "unknown")
     .replace(/[_-]+/g, " ")
@@ -74,6 +128,23 @@ const statusRows = (bucket = {}) =>
   }));
 
 const fetchJson = async (endpoint, params = {}) => unwrapData(await axiosPrivate.get(endpoint, { params }));
+
+const MetricTooltip = ({ active, payload, label, valueFormatter = formatNumber }) => {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload || {};
+  const metric = payload[0];
+
+  return (
+    <div className="max-w-[280px] rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
+      <p className="line-clamp-2 text-[12px] font-bold leading-5 text-[var(--admin-navy)]">
+        {row.title || row.sellerName || label}
+      </p>
+      <p className="mt-1 text-[12px] font-semibold text-[var(--admin-muted)]">
+        {titleize(metric.name)}: <span className="text-[var(--admin-ink)]">{valueFormatter(metric.value)}</span>
+      </p>
+    </div>
+  );
+};
 
 const useReportFilters = (defaultRange = "Last 30 days") => {
   const initial = rangeToDates(defaultRange);
@@ -134,19 +205,42 @@ const useApiReport = (loadData, filters) => {
   return { data, loading, error, refresh };
 };
 
-const StatCard = ({ label, value, sub, loading }) => (
-  <div className="h-full">
-    {loading ? (
-      <StatCardSkeletonLoader />
-    ) : (
-      <Cards label={label} value={value} helper={sub} />
-    )}
-  </div>
-);
+const StatCard = ({ label, value, sub, loading }) => {
+  const Icon = STAT_ICON_BY_LABEL[label] || MdTrendingUp;
 
-const EmptyPanel = ({ text = "No data returned for this period." }) => (
-  <div className="admin-card flex min-h-[220px] items-center justify-center p-6 text-center text-sm text-[var(--admin-muted)]">
-    {text}
+  return (
+    <div className="h-full">
+      {loading ? (
+        <StatCardSkeletonLoader />
+      ) : (
+        <div className="group relative flex h-full min-h-[108px] overflow-hidden rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-[var(--admin-shadow)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-strong)]">
+          <span className="absolute inset-y-0 left-0 w-1 bg-[var(--admin-gold)]" />
+          <span className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--admin-line)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)] transition group-hover:border-[var(--admin-gold)] group-hover:bg-[var(--admin-gold)]">
+            <Icon size={20} />
+          </span>
+          <div className="relative flex min-w-0 flex-col justify-between pr-12">
+            <p className="text-[12px] font-semibold text-[var(--admin-ink)]">{label}</p>
+            <p className="mt-2 truncate text-[24px] font-extrabold leading-7 text-[var(--admin-navy)]">{value}</p>
+            {sub && <p className="mt-3 text-[11px] font-medium capitalize text-[var(--admin-muted)]">{sub}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const EmptyPanel = ({
+  title = "No data found",
+  text = "No data returned for this period.",
+}) => (
+  <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-surface-soft)] p-6 text-center">
+    <div className="max-w-sm">
+      <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-[var(--admin-gold)] shadow-sm">
+        <MdInbox size={24} />
+      </span>
+      <h4 className="mt-4 text-sm font-bold text-[var(--admin-navy)]">{title}</h4>
+      <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{text}</p>
+    </div>
   </div>
 );
 
@@ -169,19 +263,26 @@ const PanelSkeleton = ({ rows = 6 }) => (
 const ChartPanel = ({ title, data = [], children }) => {
   const loading = useContext(ReportLoadingContext);
   return (
-    <div className="admin-card p-5">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
-      {loading ? <PanelSkeleton /> : data.length ? children : <EmptyPanel text="No chart data returned." />}
+    <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[var(--admin-shadow)]">
+      <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-4">
+        <span className="h-8 w-1 rounded-full bg-[var(--admin-gold)]" />
+        <h3 className="text-[15px] font-bold text-[var(--admin-navy)]">{title}</h3>
+      </div>
+      <div className="min-h-[280px] bg-white p-5">
+        {loading ? <PanelSkeleton /> : data.length ? children : <EmptyPanel title="No chart data" text="There is no chart data for the selected date range." />}
+      </div>
     </div>
   );
 };
 
-const ReportTable = ({ title, columns = [], rows = [] }) => {
+const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, emptyText }) => {
   const loading = useContext(ReportLoadingContext);
+  const navigate = useNavigate();
   return (
-    <div className="admin-card overflow-hidden">
-    <div className="border-b border-[var(--admin-line)] px-4 py-3">
-      <h3 className="text-sm font-semibold text-[var(--admin-ink)]">{title}</h3>
+    <div className="admin-card overflow-hidden shadow-[var(--admin-shadow)]">
+    <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-4">
+      <span className="h-8 w-1 rounded-full bg-[var(--admin-gold)]" />
+      <h3 className="text-[15px] font-bold text-[var(--admin-navy)]">{title}</h3>
     </div>
     {loading ? (
       <div className="p-5"><PanelSkeleton /></div>
@@ -197,11 +298,18 @@ const ReportTable = ({ title, columns = [], rows = [] }) => {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#f0e8dc]">
+          <tbody className="divide-y divide-[var(--admin-line)]">
             {rows.map((row, index) => (
-              <tr key={row.id || row.sellerId || row.sku || index}>
+              <tr
+                key={row.id || row.sellerId || row.sku || index}
+                onClick={() => {
+                  const link = getRowLink?.(row);
+                  if (link) navigate(link);
+                }}
+                className={getRowLink?.(row) ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]" : ""}
+              >
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-3 text-sm text-[var(--admin-ink)]">
+                  <td key={column.key} className="px-4 py-3 text-sm font-medium text-[var(--admin-ink)]">
                     {column.render ? column.render(row[column.key], row) : row[column.key]}
                   </td>
                 ))}
@@ -211,7 +319,12 @@ const ReportTable = ({ title, columns = [], rows = [] }) => {
         </table>
       </div>
     ) : (
-      <EmptyPanel text="No rows returned for this report." />
+      <div className="p-4">
+        <EmptyPanel
+          title={emptyTitle || "No rows found"}
+          text={emptyText || "No rows returned for this report."}
+        />
+      </div>
     )}
     </div>
   );
@@ -249,7 +362,7 @@ export const ReportShell = ({
   };
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="min-h-full bg-[var(--admin-canvas)] p-4 md:p-6">
       <PageHeader
         title={title}
         subtitle={subtitle}
@@ -263,7 +376,7 @@ export const ReportShell = ({
         }
       />
 
-      <section className="admin-card mb-5 p-4">
+      <section className="admin-card mb-5 p-4 shadow-[var(--admin-shadow)]">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] xl:items-end">
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="text-xs font-semibold text-[var(--admin-muted)]">Date range</span>
@@ -348,6 +461,249 @@ const orderStatusRowsFromRecentOrders = (recentOrders = []) => {
   return Object.entries(buckets).map(([status, count]) => ({ status, count }));
 };
 
+const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {} }) => {
+  const grouped = listFrom(recentOrders).reduce((lookup, order) => {
+    const key = formatDayLabel(order.createdAt);
+    const current = lookup[key] || { label: key, orders: 0, revenue: 0 };
+    current.orders += 1;
+    current.revenue += asNumber(order.sellerAmount ?? order.totalAmount ?? order.amount);
+    lookup[key] = current;
+    return lookup;
+  }, {});
+
+  const rows = Object.values(grouped).map((row) => ({
+    ...row,
+    averageOrderValue: row.orders ? Math.round(row.revenue / row.orders) : 0,
+  }));
+
+  if (rows.length) return rows.reverse();
+
+  const orderCount = asNumber(orders.orderCount);
+  const revenue = asNumber(orders.gmvAmount ?? orders.totalSalesAmount);
+  return [{
+    label: "Selected",
+    orders: orderCount,
+    revenue,
+    averageOrderValue: orderCount ? Math.round(revenue / orderCount) : 0,
+  }];
+};
+
+const SummaryDonut = ({ title, rows = [], totalLabel = "Total" }) => {
+  const total = rows.reduce((sum, row) => sum + asNumber(row.count), 0);
+  const donutRows = rows.filter((row) => asNumber(row.count) > 0);
+
+  return (
+    <ChartPanel title={title} data={donutRows}>
+      <div className="grid min-h-[240px] gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
+        <div className="relative h-[220px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={donutRows}
+                dataKey="count"
+                nameKey="status"
+                innerRadius={58}
+                outerRadius={82}
+                paddingAngle={2}
+              >
+                {donutRows.map((_, index) => (
+                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => formatNumber(value)} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-extrabold text-[var(--admin-navy)]">{formatNumber(total)}</span>
+            <span className="text-xs font-medium text-[var(--admin-muted)]">{totalLabel}</span>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {donutRows.map((row, index) => {
+            const count = asNumber(row.count);
+            const percentage = total ? Math.round((count / total) * 100) : 0;
+            return (
+              <div key={row.status} className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--admin-muted)]">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  />
+                  <span className="truncate">{row.status}</span>
+                </span>
+                <span className="shrink-0 font-bold text-[var(--admin-ink)]">
+                  {formatNumber(count)} ({percentage}%)
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </ChartPanel>
+  );
+};
+
+const PerformanceOverview = ({ rows = [] }) => {
+  const loading = useContext(ReportLoadingContext);
+  const chartRows = rows.filter(
+    (row) => asNumber(row.orders) > 0 || asNumber(row.revenue) > 0 || asNumber(row.averageOrderValue) > 0,
+  );
+  const maxValue = Math.max(
+    ...chartRows.flatMap((row) => [
+      asNumber(row.orders),
+      asNumber(row.revenue),
+      asNumber(row.averageOrderValue),
+    ]),
+    0,
+  );
+
+  return (
+    <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-5 shadow-[var(--admin-shadow)]">
+      <h3 className="text-[18px] font-bold text-[var(--admin-ink)]">Performance Overview</h3>
+      <div className="mt-5 border-t border-[var(--admin-line)] pt-5">
+        {loading ? (
+          <PanelSkeleton />
+        ) : chartRows.length ? (
+          <>
+            <div className="mb-4 flex flex-wrap items-center gap-6 text-[12px] font-medium text-[var(--admin-muted)]">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
+                Order
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                Revenue
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
+                Average Order Value
+              </span>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={chartRows} margin={{ left: 0, right: 12, top: 6, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="performanceRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--admin-gold)" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="var(--admin-gold)" stopOpacity={0.04} />
+                  </linearGradient>
+                  <linearGradient id="performanceAverage" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--admin-navy)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--admin-navy)" stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke={CHART_GRID_COLOR} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
+                  axisLine={{ stroke: "var(--admin-line-strong)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, Math.max(1, maxValue)]}
+                  tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
+                  tickFormatter={(value) => formatNumber(value)}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  formatter={(value, name) => [
+                    name === "revenue" || name === "averageOrderValue" ? formatCurrency(value) : formatNumber(value),
+                    titleize(name),
+                  ]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="var(--admin-success)"
+                  fill="transparent"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--admin-gold)"
+                  fill="url(#performanceRevenue)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="averageOrderValue"
+                  stroke="var(--admin-navy)"
+                  fill="url(#performanceAverage)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </>
+        ) : (
+          <EmptyPanel title="No chart data" text="There is no performance data for the selected date range." />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const HorizontalMetricChart = ({
+  title,
+  rows = [],
+  dataKey,
+  labelKey = "chartLabel",
+  valueFormatter = formatNumber,
+  barColor = "var(--admin-navy)",
+}) => {
+  const chartRows = rows
+    .filter((row) => asNumber(row[dataKey]) > 0)
+    .slice(0, 8);
+  const maxValue = Math.max(...chartRows.map((row) => asNumber(row[dataKey])), 0);
+
+  return (
+    <ChartPanel title={title} data={chartRows}>
+      <ResponsiveContainer width="100%" height={Math.max(260, chartRows.length * 54)}>
+        <BarChart
+          data={chartRows}
+          layout="vertical"
+          barCategoryGap={18}
+          margin={{ left: 16, right: 48, top: 8, bottom: 8 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            domain={[0, Math.max(1, maxValue)]}
+            tickCount={Math.min(5, Math.max(2, maxValue + 1))}
+            tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
+            axisLine={{ stroke: "var(--admin-line-strong)" }}
+            tickLine={false}
+          />
+          <YAxis
+            type="category"
+            dataKey={labelKey}
+            width={160}
+            tick={{ fontSize: 11, fill: "var(--admin-ink)" }}
+            tickLine={false}
+            axisLine={{ stroke: "var(--admin-line-strong)" }}
+          />
+          <Tooltip
+            cursor={{ fill: "var(--admin-surface-soft)" }}
+            content={<MetricTooltip valueFormatter={valueFormatter} />}
+          />
+          <Bar dataKey={dataKey} fill={barColor} radius={[0, 5, 5, 0]} barSize={30}>
+            <LabelList
+              dataKey={dataKey}
+              position="right"
+              formatter={valueFormatter}
+              className="fill-[var(--admin-navy)] text-[11px] font-bold"
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartPanel>
+  );
+};
+
 export const SalesReport = () => {
   const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
   const sellerView = isSellerPanel();
@@ -358,6 +714,10 @@ export const SalesReport = () => {
     ? orderStatusRowsFromRecentOrders(data.recentOrders)
     : listFrom(orders.statusBreakdown);
   const paymentRows = statusRows(payments);
+  const performanceRows = performanceRowsFromAnalytics({
+    recentOrders: data.recentOrders,
+    orders,
+  });
 
   const stats = [
     { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
@@ -368,9 +728,9 @@ export const SalesReport = () => {
 
   return (
     <ReportShell
-      title="Sales Reports"
-      subtitle="Revenue, order status, payments, and refunds from live marketplace analytics"
-      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Sales Reports" }]}
+      title={sellerView ? "Sales Report" : "Sales Reports"}
+      subtitle={sellerView ? "Revenue and order status for your seller account" : "Revenue, order status, payments, and refunds from live marketplace analytics"}
+      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Sales Report" : "Sales Reports" }]}
       stats={stats}
       loading={loading}
       error={error}
@@ -379,33 +739,10 @@ export const SalesReport = () => {
       exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.orders}
       exportFilename={sellerView ? null : "sales-report.csv"}
     >
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartPanel title="Order Status Summary" data={orderStatusRows}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={orderStatusRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value, name) => [name === "amount" ? formatCurrency(value) : formatNumber(value), titleize(name)]} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {orderStatusRows.map((_, index) => (
-                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        {!sellerView && <ChartPanel title="Payment Status Summary" data={paymentRows}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={paymentRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatNumber(value)} />
-              <Bar dataKey="count" fill="#1f4fb2" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <PerformanceOverview rows={performanceRows} />
+        <SummaryDonut title="Order Status" rows={orderStatusRows} totalLabel="Total Orders" />
+        {!sellerView && <SummaryDonut title="Payment Status" rows={paymentRows} totalLabel="Payments" />}
       </div>
     </ReportShell>
   );
@@ -414,9 +751,9 @@ export const SalesReport = () => {
 export const ProductAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async ({ fromDate, toDate }) => {
     const [topProducts, inventoryStats] = await Promise.all([
-      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases" }),
+      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases", fromDate, toDate }),
       fetchJson(ENDPOINTS.products.inventoryStats),
     ]);
     return { topProducts: listFrom(topProducts), inventoryStats };
@@ -430,6 +767,7 @@ export const ProductAnalytics = () => {
   const rows = products.map((product) => ({
     id: product._id || product.id,
     title: product.title || product.name || "Untitled",
+    chartLabel: truncateLabel(product.title || product.name || "Untitled", 26),
     sku: product.sku || "-",
     price: formatCurrency(product.price),
     purchases: asNumber(product.analytics?.purchases),
@@ -446,9 +784,9 @@ export const ProductAnalytics = () => {
 
   return (
     <ReportShell
-      title="Product Analytics"
-      subtitle="Top-selling products and current catalog health from product analytics APIs"
-      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Product Analytics" }]}
+      title={sellerView ? "Product Report" : "Product Analytics"}
+      subtitle={sellerView ? "Top-selling products and catalog health for your seller account" : "Top-selling products and current catalog health from product analytics APIs"}
+      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Product Report" : "Product Analytics" }]}
       stats={stats}
       loading={loading}
       error={error}
@@ -458,28 +796,28 @@ export const ProductAnalytics = () => {
       exportFilename={sellerView ? null : "product-analytics.csv"}
     >
       <div className="space-y-4">
-        <ChartPanel title="Top Products by Purchases" data={rows}>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={rows} layout="vertical" margin={{ left: 80, right: 20, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="title" width={120} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatNumber(value)} />
-              <Bar dataKey="purchases" fill="#1f4fb2" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+        <HorizontalMetricChart
+          title="Top Products by Purchases"
+          rows={rows}
+          dataKey="purchases"
+          barColor="var(--admin-navy)"
+        />
         <ReportTable
           title="Top Product Details"
           rows={rows}
           columns={[
-            { key: "title", label: "Product" },
+            {
+              key: "title",
+              label: "Product",
+              render: (value) => <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">{value}</span>,
+            },
             { key: "sku", label: "SKU" },
             { key: "price", label: "Price" },
             { key: "purchases", label: "Purchases", render: (value) => formatNumber(value) },
             { key: "revenue", label: "Revenue", render: (value) => formatCurrency(value) },
             { key: "views", label: "Views", render: (value) => formatNumber(value) },
           ]}
+          getRowLink={(row) => row.id ? `/app/product-catalog/view/${row.id}` : null}
         />
       </div>
     </ReportShell>
@@ -491,8 +829,11 @@ export const InventoryAnalytics = () => {
   const sellerView = isSellerPanel();
   const loadData = useCallback(async () => {
     if (isSellerPanel()) {
-      const stats = await fetchJson(ENDPOINTS.products.inventoryStats);
-      return { stats, lowStock: [] };
+      const [stats, products] = await Promise.all([
+        fetchJson(ENDPOINTS.products.inventoryStats),
+        fetchJson(ENDPOINTS.products.listForPanel, { limit: 10, page: 1, sortBy: "stock", sortDir: "asc" }),
+      ]);
+      return { stats, lowStock: listFrom(products) };
     }
     const [stats, lowStock] = await Promise.all([
       fetchJson(ENDPOINTS.inventory.stats),
@@ -526,9 +867,9 @@ export const InventoryAnalytics = () => {
 
   return (
     <ReportShell
-      title="Inventory Analytics"
-      subtitle="Current stock health and low-stock products from inventory APIs"
-      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Inventory Analytics" }]}
+      title={sellerView ? "Inventory Report" : "Inventory Analytics"}
+      subtitle={sellerView ? "Current stock health and low-stock products for your seller account" : "Current stock health and low-stock products from inventory APIs"}
+      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Inventory Report" : "Inventory Analytics" }]}
       stats={stats}
       loading={loading}
       error={error}
@@ -538,28 +879,24 @@ export const InventoryAnalytics = () => {
       exportFilename={sellerView ? null : "inventory-report.csv"}
     >
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartPanel title="Stock Health" data={stockRows.filter((row) => row.count > 0)}>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={stockRows.filter((row) => row.count > 0)} dataKey="count" nameKey="status" outerRadius={94} label>
-                {stockRows.map((_, index) => (
-                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatNumber(value)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+        <SummaryDonut title="Stock Health" rows={stockRows} totalLabel="Units" />
         <ReportTable
-          title="Low Stock Products"
+          title={sellerView ? "Inventory Products" : "Low Stock Products"}
           rows={lowStockRows}
+          emptyTitle={sellerView ? "No inventory products" : "No low-stock products"}
+          emptyText={sellerView ? "No products are available in your inventory yet." : "Your inventory is healthy for the selected range. Products will appear here when available stock reaches the low-stock threshold."}
           columns={[
-            { key: "title", label: "Product" },
+            {
+              key: "title",
+              label: "Product",
+              render: (value) => <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">{value}</span>,
+            },
             { key: "sku", label: "SKU" },
             { key: "stock", label: "Stock", render: (value) => formatNumber(value) },
             { key: "reservedStock", label: "Reserved", render: (value) => formatNumber(value) },
             { key: "availableStock", label: "Available", render: (value) => formatNumber(value) },
           ]}
+          getRowLink={(row) => row.id ? `/app/product-catalog/view/${row.id}` : null}
         />
       </div>
     </ReportShell>
@@ -574,6 +911,7 @@ export const SellerAnalytics = () => {
   const rows = sellers.map((seller) => ({
     sellerId: seller.sellerId,
     sellerName: seller.sellerName || seller.sellerId,
+    chartLabel: truncateLabel(seller.sellerName || seller.sellerId, 26),
     orderCount: asNumber(seller.orderCount),
     deliveredOrders: asNumber(seller.deliveredOrders),
     gmvAmount: asNumber(seller.gmvAmount),
@@ -603,17 +941,13 @@ export const SellerAnalytics = () => {
       exportFilename="seller-analytics.csv"
     >
       <div className="space-y-4">
-        <ChartPanel title="Top Sellers by GMV" data={rows}>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={rows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(value) => formatCurrency(value)} />
-              <YAxis type="category" dataKey="sellerName" width={130} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="gmvAmount" fill="#1f4fb2" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+        <HorizontalMetricChart
+          title="Top Sellers by GMV"
+          rows={rows}
+          dataKey="gmvAmount"
+          valueFormatter={formatCurrency}
+          barColor="var(--admin-navy)"
+        />
         <ReportTable
           title="Seller Scorecard"
           rows={rows}
@@ -635,19 +969,17 @@ export const AnalyticsDashboard = () => {
   const filters = useReportFilters();
   const loadData = useCallback(async ({ fromDate, toDate }) => {
     if (isSellerPanel()) {
-      const [sellerDashboard, topProducts, inventoryStats] = await Promise.all([
+      const [sellerDashboard, topProducts] = await Promise.all([
         fetchJson(ENDPOINTS.analytics.sellerDashboard, { fromDate, toDate }),
-        fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases" }),
-        fetchJson(ENDPOINTS.products.inventoryStats),
+        fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases", fromDate, toDate }),
       ]);
-      return { marketplace: sellerDashboard, topProducts: listFrom(topProducts), inventoryStats };
+      return { marketplace: sellerDashboard, topProducts: listFrom(topProducts) };
     }
-    const [marketplace, topProducts, inventoryStats] = await Promise.all([
+    const [marketplace, topProducts] = await Promise.all([
       fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
-      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases" }),
-      fetchJson(ENDPOINTS.inventory.stats),
+      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases", fromDate, toDate }),
     ]);
-    return { marketplace, topProducts: listFrom(topProducts), inventoryStats };
+    return { marketplace, topProducts: listFrom(topProducts) };
   }, []);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const sellerView = isSellerPanel();
@@ -655,24 +987,23 @@ export const AnalyticsDashboard = () => {
   const orders = marketplace.orders || {};
   const returns = marketplace.returns || {};
   const payouts = marketplace.payouts || {};
-  const inventory = data.inventoryStats || {};
   const orderStatusRows = sellerView
     ? orderStatusRowsFromRecentOrders(marketplace.recentOrders)
     : listFrom(orders.statusBreakdown);
+  const performanceRows = performanceRowsFromAnalytics({
+    recentOrders: marketplace.recentOrders,
+    orders,
+  });
   const sellerRows = listFrom(marketplace.sellerPerformance).map((seller) => ({
     sellerName: seller.sellerName || seller.sellerId,
+    chartLabel: truncateLabel(seller.sellerName || seller.sellerId, 26),
     gmvAmount: asNumber(seller.gmvAmount),
   }));
   const productRows = listFrom(data.topProducts).map((product) => ({
     title: product.title || product.name || "Untitled",
+    chartLabel: truncateLabel(product.title || product.name || "Untitled", 24),
     purchases: asNumber(product.analytics?.purchases),
   }));
-  const stockRows = [
-    { status: "Low Stock", count: asNumber(inventory.lowStockCount) },
-    { status: "Out of Stock", count: asNumber(inventory.outOfStockCount) },
-    { status: "Reserved", count: asNumber(inventory.totalReserved) },
-  ];
-
   const stats = [
     { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
     { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
@@ -683,60 +1014,37 @@ export const AnalyticsDashboard = () => {
   return (
     <ReportShell
       title="Analytics Dashboard"
-      subtitle="Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"
-      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
+      subtitle={sellerView ? "Live seller metrics for orders, returns, products, inventory, and wallet activity" : "Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"}
+      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
       stats={stats}
       loading={loading}
       error={error}
       filters={filters}
       onRefresh={refresh}
     >
-      <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Order Status Summary" data={orderStatusRows}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={orderStatusRows} margin={{ left: 0, right: 16, top: 4, bottom: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis dataKey="status" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatNumber(value)} />
-              <Bar dataKey="count" fill="#1f4fb2" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        {!sellerView && <ChartPanel title="Top Sellers by GMV" data={sellerRows}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={sellerRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(value) => formatCurrency(value)} />
-              <YAxis type="category" dataKey="sellerName" width={120} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="gmvAmount" fill="#d6a323" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>}
-        <ChartPanel title="Top Products by Purchases" data={productRows}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={productRows} layout="vertical" margin={{ left: 90, right: 20, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee8dc" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="title" width={120} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatNumber(value)} />
-              <Bar dataKey="purchases" fill="#24b8c3" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        <ChartPanel title="Inventory Risk" data={stockRows.filter((row) => row.count > 0)}>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={stockRows.filter((row) => row.count > 0)} dataKey="count" nameKey="status" outerRadius={90} label>
-                {stockRows.map((_, index) => (
-                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatNumber(value)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <PerformanceOverview rows={performanceRows} />
+        <SummaryDonut title="Order Status" rows={orderStatusRows} totalLabel="Total Orders" />
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        {!sellerView && (
+          <HorizontalMetricChart
+            title="Top Sellers by GMV"
+            rows={sellerRows}
+            dataKey="gmvAmount"
+            valueFormatter={formatCurrency}
+            barColor="var(--admin-gold)"
+          />
+        )}
+        <div className={sellerView ? "xl:col-span-2" : ""}>
+          <HorizontalMetricChart
+            title="Top Products by Purchases"
+            rows={productRows}
+            dataKey="purchases"
+            barColor="var(--admin-navy)"
+          />
+        </div>
       </div>
     </ReportShell>
   );
