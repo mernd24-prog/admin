@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { getDashboardOverview } from "../../Redux/adminCoreSlice";
 import Cards from "../../components/Cards/Cards";
+import { formatLabel } from "../../utils/formatters";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
@@ -1064,7 +1065,7 @@ export default function Dashboard() {
                         <span
                           className={`inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize ${statusStyle(status)}`}
                         >
-                          {status}
+                          {formatLabel(status)}
                         </span>
                       </td>
                     </tr>

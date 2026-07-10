@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MdAdd, MdArrowBack } from "react-icons/md";
+import { MdAdd, MdArrowBack, MdVisibility } from "react-icons/md";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import { DataTable, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -18,6 +19,11 @@ const initialForm = {
   message: "",
 };
 
+const truncateText = (value, limit = 70) => {
+  const text = String(value || "");
+  return text.length > limit ? `${text.slice(0, limit).trim()}...` : text;
+};
+
 const SellerHelpSupport = () => {
   const [showQueryForm, setShowQueryForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -29,6 +35,8 @@ const SellerHelpSupport = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
+  const [selectedQuery, setSelectedQuery] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const fetchQueries = useCallback(async () => {
     try {
@@ -88,14 +96,56 @@ const SellerHelpSupport = () => {
     }
   };
 
+  const handleViewDetails = useCallback(async (query) => {
+    if (!query?.queryId) {
+      toast.error("Query ID is missing");
+      return;
+    }
+    setSelectedQuery(query);
+    try {
+      setDetailLoading(true);
+      const response = await axiosProvider.get(ENDPOINTS.support.myDetail(query.queryId));
+      setSelectedQuery(response?.data?.data || query);
+    } catch (requestError) {
+      toast.error(requestError?.message || "Failed to load query details");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   const columns = useMemo(() => [
     { key: "queryId", label: "Query ID", render: (value) => <span className="font-semibold">{value}</span> },
     { key: "category", label: "Category", render: (value) => categoryLabel(value) },
     { key: "subject", label: "Subject" },
-    { key: "messagePreview", label: "Message Preview" },
+    {
+      key: "messagePreview",
+      label: "Message Preview",
+      render: (value, row) => {
+        const preview = value || row.message || "";
+        return (
+          <span className="block max-w-xs truncate" >
+            {truncateText(preview)}
+          </span>
+        );
+      },
+    },
     { key: "status", label: "Status", render: (value) => <StatusBadge status={value} label={statusLabel(value)} dot /> },
     { key: "createdAt", label: "Created Date", render: (value) => formatDateTime(value) },
-  ], []);
+    {
+      key: "_actions",
+      label: "Actions",
+      render: (_, row) => (
+        <button
+          type="button"
+          onClick={() => handleViewDetails(row)}
+          className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-navy)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-navy)] hover:text-white"
+        >
+          <MdVisibility size={15} />
+          View Details
+        </button>
+      ),
+    },
+  ], [handleViewDetails]);
 
   return (
     <div>
@@ -109,7 +159,6 @@ const SellerHelpSupport = () => {
         actions={
           <button
             type="button"
-
             onClick={() => {
               if (showQueryForm) {
                 setSelectedCategory("");
@@ -222,8 +271,57 @@ const SellerHelpSupport = () => {
           emptyText="No support queries submitted yet."
         />
       )}
+
+      <DefaultModal
+        isOpen={Boolean(selectedQuery)}
+        onClose={() => setSelectedQuery(null)}
+        title={selectedQuery?.queryId ? `Query ${selectedQuery.queryId}` : "Query Details"}
+        isButtonView={false}
+        width="620px"
+      >
+        {detailLoading ? (
+          <div className="py-10 text-center text-sm text-[var(--admin-muted)]">Loading query details...</div>
+        ) : selectedQuery ? (
+          <div className="space-y-5">
+            <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
+              <Info label="Query ID" value={selectedQuery.queryId || "N/A"} />
+              <Info label="Status" value={statusLabel(selectedQuery.status)} />
+              <Info label="Category" value={categoryLabel(selectedQuery.category)} />
+              <Info label="Created" value={formatDateTime(selectedQuery.createdAt)} />
+              <Info label="Updated" value={formatDateTime(selectedQuery.updatedAt)} />
+              <Info label="Resolved" value={formatDateTime(selectedQuery.resolvedAt)} />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Subject</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">{selectedQuery.subject || "N/A"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Message</p>
+              <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
+                {selectedQuery.message || selectedQuery.messagePreview || "N/A"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Admin Notes</p>
+              <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
+                {selectedQuery.adminNotes || "No notes yet."}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </DefaultModal>
     </div>
   );
 };
+
+const Info = ({ label, value }) => (
+  <div>
+    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">{label}</p>
+    <p className="mt-1 break-words text-sm text-[var(--admin-ink)]">{value}</p>
+  </div>
+);
 
 export default SellerHelpSupport;

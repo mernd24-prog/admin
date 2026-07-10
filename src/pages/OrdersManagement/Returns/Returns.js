@@ -80,8 +80,8 @@ const FILTER_FIELDS = [
   { key: "refundStatus", type: "select", label: "Refund Status", options: REFUND_STATUS_OPTIONS },
   { key: "shipmentStatus", type: "text", label: "Reverse Shipment", width: "w-44" },
   { key: "reason", type: "select", label: "Reason", options: RETURN_REASON_OPTIONS },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
+  // { key: "fromDate", type: "date", label: "From" },
+  // { key: "toDate", type: "date", label: "To" },
 ];
 
 const EMPTY_ACTION = {

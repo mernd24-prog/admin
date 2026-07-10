@@ -30,25 +30,56 @@ const formatCellText = (value) =>
   shouldPreserveText(value) ? value : formatLabel(value, "N/A");
 
 const renderCellValue = (value, nested = false) => {
-  if (nested && (value === null || value === undefined || typeof value === "boolean")) {
+  if (
+    nested &&
+    (value === null || value === undefined || typeof value === "boolean")
+  ) {
     return null;
   }
-  if (nested && typeof value === "string" && value.trim() === "") return null;
-  if (isEmptyCellValue(value)) return <span className="text-gray-400">N/A</span>;
-  if (typeof value === "string") return formatCellText(value);
-  if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
+
+  if (nested && typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+
+  if (isEmptyCellValue(value)) {
+    return <span className="text-gray-400">N/A</span>;
+  }
+
+  if (typeof value === "string") {
+    return formatCellText(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item, index) => (
+      <React.Fragment key={index}>
+        {renderCellValue(item, true)}
+      </React.Fragment>
+    ));
+  }
+
   if (React.isValidElement(value)) {
-    const children = value.props?.children;
-    if (isEmptyCellValue(children)) {
-      return React.cloneElement(value, undefined, "N/A");
+    // Don't modify image elements
+    if (value.type === "img") {
+      return value;
     }
-    if (children === undefined || children === null) return value;
+
+    const children = value.props?.children;
+
+    // Decorative elements like:
+    // <span style={{ backgroundImage: ... }} />
+    if (children === undefined || children === null) {
+      return value;
+    }
+
     return React.cloneElement(
       value,
-      undefined,
-      React.Children.map(children, (child) => renderCellValue(child, true)),
+      {
+        ...value.props,
+      },
+      React.Children.map(children, (child) => renderCellValue(child, true))
     );
   }
+
   return value;
 };
 
@@ -473,17 +504,17 @@ const DataTable = ({
                     </td>
                   )}
                   {safeColumns.map((col, columnIndex) => (
-                    <td
-                      key={`${col.key}-${columnIndex}`}
-                      className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
-                    >
-                      {renderCellValue(
-                        col.render
-                          ? col.render(row[col.key], row)
-                          : row[col.key],
-                      )}
-                    </td>
-                  ))}
+  <td
+    key={`${col.key}-${columnIndex}`}
+    className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+  >
+    {renderCellValue(
+      col.render
+        ? col.render(row[col.key], row)
+        : row[col.key],
+    )}
+  </td>
+))}
                   {rowActions && (
                     <td className="px-4 py-3 text-right">
                       <RowActionsMenu

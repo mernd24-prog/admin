@@ -65,16 +65,31 @@ export function formatRelativeDate(value, fallback = "Not available") {
  *   "seller_kyc_PENDING" → "Seller Kyc Pending"
  *   ""                   → "Not available"
  */
+// export function formatLabel(value, fallback = "Not available") {
+//   if (value === null || value === undefined || value === "") return fallback;
+//   return String(value)
+//     .replace(/([a-z])([A-Z])/g, "$1 $2")
+//     .replace(/_+/g, " ")
+//     .replace(/\s+/g, " ")
+//     .trim()
+//     .replace(/\b\w/g, (char) => char.toUpperCase()) || fallback;
+// }
 export function formatLabel(value, fallback = "Not available") {
-  if (value === null || value === undefined || value === "") return fallback;
+  if (
+    value == null ||
+    (typeof value === "string" &&
+      ["", "NA", "N/A"].includes(value.trim().toUpperCase()))
+  ) {
+    return fallback;
+  }
+
   return String(value)
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/_+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase()) || fallback;
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
-
 /**
  * Convert an array of raw status strings into select option objects
  * with properly formatted labels.

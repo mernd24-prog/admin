@@ -185,7 +185,7 @@ const shipmentStatusOf = (row = {}) => {
   );
 };
 
-const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
+const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, showSellerColumn = true) => [
   {
     key: "order_number",
     label: "Order #",
@@ -243,7 +243,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
       );
     },
   },
-  {
+  ...(showSellerColumn ? [{
     key: "seller",
     label: "Seller / Org",
     render: (_, row) => {
@@ -315,7 +315,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
         <div className="text-left">{content}</div>
       );
     },
-  },
+  }] : []),
   {
     key: "items",
     label: "Items",
@@ -363,7 +363,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails) => [
       const s = firstDefined(v, shipmentStatusOf(row));
       return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">N/A</span>;
     },
-  },
+  }
 ];
 
 const getListPayload = (selector = {}) => {
@@ -456,7 +456,7 @@ const Orders = () => {
   );
 
   const baseColumns = useMemo(
-    () => createColumns(navigate, !isSeller, !isSeller),
+    () => createColumns(navigate, !isSeller, !isSeller, !isSeller),
     [isSeller, navigate],
   );
 
@@ -500,7 +500,7 @@ const Orders = () => {
     ...baseColumns,
     {
       key: "_actions",
-      label: "",
+      label: "Actions",
       render: (_, row) => (
         <div className="flex flex-wrap items-center gap-2">
           <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>

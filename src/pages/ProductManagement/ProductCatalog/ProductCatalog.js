@@ -786,7 +786,7 @@ const ProductCatalog = () => {
               {product.metadata.dealBadge || "Deal"}
             </span>
           ) : (
-            <span className="text-xs text-gray-400">-</span>
+            <span className="text-xs text-gray-400">N/A</span>
           ),
       },
       {
