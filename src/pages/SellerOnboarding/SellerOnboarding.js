@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronDown, FileText, UploadCloud } from "lucide-react";
+import { ChevronDown, FileText, UploadCloud, X } from "lucide-react";
+import { LuView } from "react-icons/lu";
 import { FaCalendarAlt } from "react-icons/fa";
 import { BiSolidEdit } from "react-icons/bi";
 import { LuClipboardList } from "react-icons/lu";
+import Image from "../../assets/cheque.png";
 import {
   fetchAuthStatus,
   submitSellerKyc,
@@ -21,10 +23,17 @@ import useDropdownOptions, {
 import { AUTH_ROUTES } from "../auth/authRoutes";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[A-Z0-9]$/;
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
-const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const IFSC_REGEX = /^[A-Z0-9]{11}$/;
+const PERSON_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]{1,119}$/;
+const BANK_NAME_REGEX = /^[A-Za-z][A-Za-z .&'-]{1,119}$/;
+const BRANCH_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'/-]{1,119}$/;
+const BUSINESS_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'()/-]{1,179}$/;
+const UDYOG_AADHAAR_REGEX = /^UDYAM-[A-Z0-9-]{1,14}$/;
+const PERSON_NAME_MAX_LENGTH = 30;
+const BUSINESS_NAME_MAX_LENGTH = 30;
 const BANK_NAME_MIN_LENGTH = 2;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /^https?:\/\/.+/i;
@@ -191,6 +200,20 @@ const OnboardingSection = ({ number, title, children }) => (
     </div>
     {children}
   </section>
+);
+
+const OnboardingGridDivider = ({ number, title }) => (
+  <div className="md:col-span-2">
+    <div className="flex items-center gap-3 my-6">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E49E1C] text-[12px] font-bold text-white">
+        {number}
+      </span>
+      <h2 className="whitespace-nowrap font-inter text-[18px] my-auto font-semibold text-[#042586]">
+        {title}
+      </h2>
+      <span className="h-px flex-1 max-w-lg bg-[#E49E1C]" />
+    </div>
+  </div>
 );
 
 const OnboardingActions = ({ children }) => (
@@ -362,17 +385,37 @@ const clearAutoFilledBusinessName = (value = "", registeredContact = {}) => {
   return generatedNames.includes(currentValue) ? "" : value;
 };
 
+const clearRegisteredContactValue = (value = "", registeredValue = "") => {
+  const currentValue = String(value || "").trim().toLowerCase();
+  const registered = String(registeredValue || "").trim().toLowerCase();
+  return currentValue && currentValue === registered ? "" : value;
+};
+
 const getSellerOnboardingDraftKey = (token) =>
   `${SELLER_ONBOARDING_DRAFT_KEY}:${token || "guest"}`;
 
 const getOrganizationId = (organization = {}) =>
   organization.id || organization.organizationId || "";
 
+const parseDocumentMap = (value = {}) => {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const hasCompleteReviewDetails = (state = {}) => {
   if (!state) return false;
   const organization = state.organization || state;
   const sellerProfile = state.sellerProfile || {};
-  const documents = organization.documents || state.documents || state.kyc?.documents || {};
+  const documents = parseDocumentMap(
+    organization.documents || state.documents || state.kyc?.documents || {},
+  );
   const bankDetails = organization.bankDetails || sellerProfile.bankDetails || {};
   const pickupAddress =
     organization.pickupAddress ||
@@ -595,6 +638,54 @@ const isPreviewableImageUrl = (url = "") =>
 
 const isDocumentTooLarge = (file) => file?.size > MAX_DOCUMENT_BYTES;
 
+const onlyDigits = (value = "", limit = 255) =>
+  String(value || "").replace(/\D/g, "").slice(0, limit);
+
+const onlyAlphaNumericUpper = (value = "", limit = 255) =>
+  String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, limit);
+
+const onlyNameCharacters = (value = "", limit = 255) =>
+  String(value || "").replace(/[^A-Za-z .'-]/g, "").slice(0, limit);
+
+const onlyBankNameCharacters = (value = "", limit = 255) =>
+  String(value || "").replace(/[^A-Za-z .&'-]/g, "").slice(0, limit);
+
+const onlyBranchCharacters = (value = "", limit = 255) =>
+  String(value || "").replace(/[^A-Za-z0-9 .,&'/-]/g, "").slice(0, limit);
+
+const onlyBusinessCharacters = (value = "", limit = 255) =>
+  String(value || "").replace(/[^A-Za-z0-9 .,&'()/-]/g, "").slice(0, limit);
+
+const sanitizeEmailInput = (value = "", limit = 180) => {
+  const text = String(value || "")
+    .replace(/\s/g, "")
+    .replace(/[^A-Za-z0-9@._%+-]/g, "")
+    .slice(0, limit);
+  const [localPart, ...domainParts] = text.split("@");
+  return domainParts.length
+    ? `${localPart}@${domainParts.join("")}`
+    : localPart;
+};
+
+const onlyUdyogAadhaarCharacters = (value = "") => {
+  const text = String(value || "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  if (!text) return "";
+  const withoutPrefix = text.startsWith("UDYAM-")
+    ? text.slice(6)
+    : text.replace(/^UDYAM-?/, "");
+  return `UDYAM-${withoutPrefix}`.slice(0, 19);
+};
+
+const isBlankUdyogAadhaarNumber = (value = "") => {
+  const text = String(value || "").trim().toUpperCase();
+  return !text || text === "UDYAM" || text === "UDYAM-";
+};
+
+const getUdyogAadhaarPayloadValue = (value = "") =>
+  isBlankUdyogAadhaarNumber(value)
+    ? null
+    : String(value || "").trim().toUpperCase();
+
 const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
   try {
     const pathname = new URL(url).pathname;
@@ -609,6 +700,11 @@ const getFileNameFromUrl = (url = "", fallback = "Uploaded document") => {
   }
 };
 
+const unwrapKycDocuments = (response = {}) => {
+  const root = response?.data?.data || response?.data || response || {};
+  return parseDocumentMap(root.documents || root.kycDocuments || root.kyc?.documents || {});
+};
+
 const DocumentUploadField = ({
   id,
   label,
@@ -620,6 +716,7 @@ const DocumentUploadField = ({
   onChange,
   onDrop,
   emptyText,
+  helpAction = null,
 }) => {
   const [previewUrl, setPreviewUrl] = useState("");
 
@@ -711,7 +808,79 @@ const DocumentUploadField = ({
           aria-required={required}
         />
       </div>
+      {helpAction}
       {error && <p className={ERROR_CLASS}>{error}</p>}
+    </div>
+  );
+};
+
+const BankProofGuidanceModal = ({ open, onClose }) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[16px] font-bold text-[#082f91]">
+              Bank proof upload suggestions
+            </p>
+            <p className="mt-1 text-sm text-[#5f6678]">
+              Upload a clear cancelled cheque.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#5f6678] transition hover:bg-[#f1f4fb]"
+            aria-label="Close bank proof suggestions"
+          >
+            <X size={18} />
+          </button>
+        </div>
+       <div className="mt-4 space-y-3 text-sm text-[#30384d]">
+  <p>Make sure these details are visible:</p>
+
+  <ul className="list-disc space-y-2 pl-5">
+    <li>Account holder name</li>
+    <li>Account number</li>
+    <li>IFSC code</li>
+    <li>Bank name or branch name</li>
+  </ul>
+
+  {/* Example Image */}
+  <div className="flex justify-center">
+    <img
+      src={Image}
+      alt="Sample Bank Document"
+      className="w-full max-w-md rounded-lg border border-gray-200 shadow-sm"
+    />
+  </div>
+
+  <p className="rounded-md bg-[#fff8e6] px-3 py-2 text-xs text-[#7a5610]">
+    Do not upload cropped, password-protected, or unclear documents.
+  </p>
+</div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 w-full rounded-[7px] bg-[#082f91] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#062779]"
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const OnboardingPageLoader = ({ visible }) => {
+  if (!visible) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 top-[64px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-[1px] lg:left-[350px] lg:top-[75px]">
+      <div className="flex flex-col items-center gap-3   ">
+        <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#eadfcb] border-t-[#082f91]" />
+      </div>
     </div>
   );
 };
@@ -724,15 +893,17 @@ const SellerOnboarding = () => {
   const { seller } = useSelector((state) => state);
   const onboardingToken =
     seller?.onboardingToken || localStorage.getItem("sellerOnboardingToken");
-  const loading = seller?.loading;
+  const loading = Boolean(seller?.loading);
   const flowState = seller?.flowState;
   const accessToken =
     typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
+  const [pageLoading, setPageLoading] = useState(false);
   const [kycSubmittedApi, setKycSubmittedApi] = useState(false);
   const [requiresKycRefresh, setRequiresKycRefresh] = useState(false);
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
+  const [showBankProofGuidance, setShowBankProofGuidance] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
   const gstNumberRef = useRef(null);
@@ -744,6 +915,7 @@ const SellerOnboarding = () => {
     () => new URLSearchParams(location.search).get("organizationId") || "",
     [location.search],
   );
+  const isOnboardingLoading = loading || pageLoading;
 
   const [kycForm, setKycForm] = useState({
     panNumber: "",
@@ -817,24 +989,6 @@ const SellerOnboarding = () => {
     { parentId: pickupCountryId, limit: 250 },
     { enabled: Boolean(pickupCountryId) },
   );
-  const pickupStateId = optionIdByValue(
-    pickupStates.options,
-    profileForm.pickupState,
-  );
-  const pickupCities = useDropdownOptions(
-    "cities",
-    { parentId: pickupStateId, limit: 250 },
-    { enabled: Boolean(pickupStateId) },
-  );
-  const pickupCityId = optionIdByValue(
-    pickupCities.options,
-    profileForm.pickupCity,
-  );
-  const pickupPincodes = useDropdownOptions(
-    "pincodes",
-    { parentId: pickupCityId, limit: 250 },
-    { enabled: Boolean(pickupCityId) },
-  );
   const businessCountryId = optionIdByValue(
     countries.options,
     profileForm.businessAddressCountry,
@@ -843,24 +997,6 @@ const SellerOnboarding = () => {
     "states",
     { parentId: businessCountryId, limit: 250 },
     { enabled: Boolean(businessCountryId) },
-  );
-  const businessStateId = optionIdByValue(
-    businessStates.options,
-    profileForm.businessAddressState,
-  );
-  const businessCities = useDropdownOptions(
-    "cities",
-    { parentId: businessStateId, limit: 250 },
-    { enabled: Boolean(businessStateId) },
-  );
-  const businessCityId = optionIdByValue(
-    businessCities.options,
-    profileForm.businessAddressCity,
-  );
-  const businessPincodes = useDropdownOptions(
-    "pincodes",
-    { parentId: businessCityId, limit: 250 },
-    { enabled: Boolean(businessCityId) },
   );
   const registeredContact = useMemo(
     () => getRegistrationContact(seller?.onboardingUser, flowState),
@@ -890,8 +1026,25 @@ const SellerOnboarding = () => {
     const billingAddress = organization.billingAddress || organization.businessAddress || {};
     const pickupAddress = organization.pickupAddress || {};
     const bankDetails = organization.bankDetails || {};
+    const organizationDocuments = parseDocumentMap(
+      organization.documents || organization.kycDocuments || {},
+    );
 
     setTargetOrganization(organization);
+    setDocumentUrls((prev) => ({
+      ...prev,
+      panDocumentUrl: prev.panDocumentUrl || organizationDocuments.panDocumentUrl || "",
+      gstCertificateUrl:
+        prev.gstCertificateUrl || organizationDocuments.gstCertificateUrl || "",
+      aadhaarFrontUrl: prev.aadhaarFrontUrl || organizationDocuments.aadhaarFrontUrl || "",
+      aadhaarBackUrl: prev.aadhaarBackUrl || organizationDocuments.aadhaarBackUrl || "",
+      addressProofUrl: prev.addressProofUrl || organizationDocuments.addressProofUrl || "",
+      udyogAadhaarDocumentUrl:
+        prev.udyogAadhaarDocumentUrl ||
+        organizationDocuments.udyogAadhaarDocumentUrl ||
+        "",
+      bankProofUrl: prev.bankProofUrl || organizationDocuments.bankProofUrl || "",
+    }));
     setKycForm((prev) => ({
       ...prev,
       panNumber: prev.panNumber || organization.pan || "",
@@ -908,10 +1061,16 @@ const SellerOnboarding = () => {
         clearAutoFilledBusinessName(organization.legalBusinessName, registeredContact) ||
         "",
       gstNumber: prev.gstNumber || organization.gstin || "",
-      displayName: prev.displayName || organization.storeDisplayName || "",
+      displayName: "",
       legalBusinessName: prev.legalBusinessName || organization.legalBusinessName || "",
-      supportEmail: prev.supportEmail || organization.supportEmail || "",
-      supportPhone: prev.supportPhone || organization.supportPhone || "",
+      supportEmail:
+        prev.supportEmail ||
+        clearRegisteredContactValue(organization.supportEmail, registeredContact.emailAddress) ||
+        "",
+      supportPhone:
+        prev.supportPhone ||
+        clearRegisteredContactValue(organization.supportPhone, registeredContact.mobileNumber) ||
+        "",
       description: prev.description || organization.description || "",
       businessWebsite: prev.businessWebsite || organization.businessWebsite || "",
       udyogAadhaarNumber:
@@ -919,7 +1078,7 @@ const SellerOnboarding = () => {
         organization.metadata?.udyogAadhaarNumber ||
         organization.udyogAadhaarNumber ||
         "",
-      primaryContactName: prev.primaryContactName || organization.primaryContactName || "",
+      primaryContactName: "",
       businessAddressLine1: prev.businessAddressLine1 || billingAddress.line1 || "",
       businessAddressLine2: prev.businessAddressLine2 || billingAddress.line2 || "",
       businessAddressCity: prev.businessAddressCity || billingAddress.city || "",
@@ -1037,6 +1196,7 @@ const SellerOnboarding = () => {
     let isMounted = true;
     const hydrateSellerOnboarding = async () => {
       try {
+        setPageLoading(true);
         const response = await apiRequest("GET", ENDPOINTS.auth.me);
         if (!isMounted) return;
 
@@ -1058,7 +1218,7 @@ const SellerOnboarding = () => {
           onboarding?.kycStatus ||
           kyc?.verificationStatus ||
           sellerProfile?.kycStatus;
-        const kycDocuments = kyc?.documents || {};
+        const kycDocuments = parseDocumentMap(kyc?.documents || {});
         const hasSubmittedKyc =
           onboarding?.checklist?.kycSubmitted ||
           ["submitted", "under_review", "verified"].includes(kycStatus);
@@ -1091,6 +1251,10 @@ const SellerOnboarding = () => {
             prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
           addressProofUrl:
             prev.addressProofUrl || kycDocuments?.addressProofUrl || "",
+          udyogAadhaarDocumentUrl:
+            prev.udyogAadhaarDocumentUrl ||
+            kycDocuments?.udyogAadhaarDocumentUrl ||
+            "",
           bankProofUrl:
             prev.bankProofUrl || kycDocuments?.bankProofUrl || "",
         }));
@@ -1150,18 +1314,16 @@ const SellerOnboarding = () => {
           gstNumber:
             prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
           displayName:
-            prev.displayName ||
-            (storedBusinessName ? sellerProfile?.displayName : "") ||
             "",
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
           supportEmail:
             prev.supportEmail ||
-            sellerProfile?.supportEmail ||
+            clearRegisteredContactValue(sellerProfile?.supportEmail, registrationContact.emailAddress) ||
             "",
           supportPhone:
             prev.supportPhone ||
-            sellerProfile?.supportPhone ||
+            clearRegisteredContactValue(sellerProfile?.supportPhone, registrationContact.mobileNumber) ||
             "",
           description: prev.description || sellerProfile?.description || "",
           businessWebsite:
@@ -1172,7 +1334,7 @@ const SellerOnboarding = () => {
             sellerProfile?.udyogAadhaarNumber ||
             "",
           primaryContactName:
-            prev.primaryContactName || sellerProfile?.primaryContactName || "",
+            "",
           businessAddressLine1:
             prev.businessAddressLine1 || businessAddress?.line1 || "",
           businessAddressLine2:
@@ -1238,6 +1400,10 @@ const SellerOnboarding = () => {
         }
       } catch (error) {
         toast.error(error?.message || "Unable to load seller account details");
+      } finally {
+        if (isMounted) {
+          setPageLoading(false);
+        }
       }
     };
 
@@ -1266,7 +1432,7 @@ const SellerOnboarding = () => {
       flowState?.kycStatus ||
       kyc?.verificationStatus ||
       sellerProfile?.kycStatus;
-    const kycDocuments = kyc?.documents || {};
+    const kycDocuments = parseDocumentMap(kyc?.documents || {});
     const hasSubmittedKyc =
       flowState?.checklist?.kycSubmitted ||
       ["submitted", "under_review", "verified"].includes(kycStatus);
@@ -1295,6 +1461,10 @@ const SellerOnboarding = () => {
       aadhaarBackUrl: prev.aadhaarBackUrl || kycDocuments?.aadhaarBackUrl || "",
       addressProofUrl:
         prev.addressProofUrl || kycDocuments?.addressProofUrl || "",
+      udyogAadhaarDocumentUrl:
+        prev.udyogAadhaarDocumentUrl ||
+        kycDocuments?.udyogAadhaarDocumentUrl ||
+        "",
       bankProofUrl: prev.bankProofUrl || kycDocuments?.bankProofUrl || "",
     }));
     setKycForm((prev) => ({
@@ -1353,13 +1523,17 @@ const SellerOnboarding = () => {
       gstNumber:
         prev.gstNumber || sellerProfile?.gstNumber || kyc?.gstNumber || "",
       displayName:
-        prev.displayName ||
-        (storedBusinessName ? sellerProfile?.displayName : "") ||
         "",
       legalBusinessName:
         prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
-      supportEmail: prev.supportEmail || sellerProfile?.supportEmail || "",
-      supportPhone: prev.supportPhone || sellerProfile?.supportPhone || "",
+      supportEmail:
+        prev.supportEmail ||
+        clearRegisteredContactValue(sellerProfile?.supportEmail, registrationContact.emailAddress) ||
+        "",
+      supportPhone:
+        prev.supportPhone ||
+        clearRegisteredContactValue(sellerProfile?.supportPhone, registrationContact.mobileNumber) ||
+        "",
       description: prev.description || sellerProfile?.description || "",
       businessWebsite:
         prev.businessWebsite || sellerProfile?.businessWebsite || "",
@@ -1369,7 +1543,7 @@ const SellerOnboarding = () => {
         sellerProfile?.udyogAadhaarNumber ||
         "",
       primaryContactName:
-        prev.primaryContactName || sellerProfile?.primaryContactName || "",
+        "",
       businessAddressLine1:
         prev.businessAddressLine1 || businessAddress?.line1 || "",
       businessAddressLine2:
@@ -1515,11 +1689,13 @@ const SellerOnboarding = () => {
 
   const onKycChange = (event) => {
     const { name, value } = event.target;
-    let normalized =
-      name === "panNumber" || name === "gstNumber"
-        ? value.toUpperCase()
-        : value;
-    if (name === "gstNumber") normalized = normalized.slice(0, 15);
+    let normalized = value;
+    if (name === "panNumber") normalized = onlyAlphaNumericUpper(value, 10);
+    if (name === "gstNumber") normalized = onlyAlphaNumericUpper(value, 15);
+    if (name === "aadhaarNumber") normalized = onlyDigits(value, 12);
+    if (name === "legalName") {
+      normalized = onlyNameCharacters(value, PERSON_NAME_MAX_LENGTH);
+    }
     setKycForm((prev) => ({ ...prev, [name]: normalized }));
     setKycErrors((prev) => ({ ...prev, [name]: null }));
   };
@@ -1543,6 +1719,10 @@ const SellerOnboarding = () => {
         ...prev,
         [fieldName]: "Document file must be 5 MB or smaller",
       }));
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: "Document file must be 5 MB or smaller",
+      }));
       event.target.value = "";
       return;
     }
@@ -1558,6 +1738,7 @@ const SellerOnboarding = () => {
       setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
     }
     setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
+    setProfileErrors((prev) => ({ ...prev, [fieldName]: null }));
     event.target.value = "";
   };
 
@@ -1568,6 +1749,10 @@ const SellerOnboarding = () => {
     if (isDocumentTooLarge(file)) {
       setKycForm((prev) => ({ ...prev, [fieldName]: null }));
       setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: "Document file must be 5 MB or smaller",
+      }));
+      setProfileErrors((prev) => ({
         ...prev,
         [fieldName]: "Document file must be 5 MB or smaller",
       }));
@@ -1585,6 +1770,7 @@ const SellerOnboarding = () => {
       setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
     }
     setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
+    setProfileErrors((prev) => ({ ...prev, [fieldName]: null }));
   };
 
   const onProfileDocumentFileChange = (fieldName, urlFieldName) => (event) => {
@@ -1643,19 +1829,44 @@ const SellerOnboarding = () => {
     const normalized = upperCaseFields.includes(name)
       ? value.toUpperCase()
       : value;
-    setProfileForm((prev) => ({
-      ...prev,
-      [name]:
+    let nextValue = normalized;
+    if (name === "businessName" || name === "displayName" || name === "legalBusinessName") {
+      nextValue = onlyBusinessCharacters(value, BUSINESS_NAME_MAX_LENGTH);
+    } else if (name === "primaryContactName") {
+      nextValue = onlyNameCharacters(value, PERSON_NAME_MAX_LENGTH);
+    } else if (name === "supportEmail") {
+      nextValue = sanitizeEmailInput(value);
+    } else if (name === "businessWebsite") {
+      nextValue = String(value || "").replace(/\s/g, "").slice(0, 255);
+    } else if (name === "gstNumber") {
+      nextValue = onlyAlphaNumericUpper(value, 15);
+    } else if (name === "udyogAadhaarNumber") {
+      nextValue = onlyUdyogAadhaarCharacters(value);
+    } else if (name === "supportPhone") {
+      nextValue = onlyDigits(value, 15);
+    } else if (name === "pickupPostalCode" || name === "businessAddressPostalCode") {
+      nextValue = onlyAlphaNumericUpper(value, 10);
+    }
+    setProfileForm((prev) => {
+      const nextForm = {
+        ...prev,
+        [name]:
         name === "gstNumber"
-          ? normalized.slice(0, 15)
+          ? nextValue
           : name === "udyogAadhaarNumber"
-            ? normalized.slice(0, 32)
+            ? nextValue
             : name === "supportPhone"
-              ? normalized.replace(/\D/g, "").slice(0, 15)
+              ? nextValue
               : upperCaseFields.includes(name)
-                ? normalized.slice(0, 6)
-                : normalized,
-    }));
+                ? nextValue
+                : nextValue,
+      };
+      if (name === "businessName") {
+        nextForm.legalBusinessName = nextValue;
+        nextForm.displayName = nextValue;
+      }
+      return nextForm;
+    });
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
   };
   const onAddressSelectChange =
@@ -1683,10 +1894,19 @@ const SellerOnboarding = () => {
     const { name, value } = event.target;
     let normalized = name === "ifscCode" ? value.toUpperCase() : value;
     if (name === "ifscCode") {
-      normalized = normalized.replace(/[^A-Z0-9]/g, "").slice(0, 11);
+      normalized = onlyAlphaNumericUpper(value, 11);
     }
     if (name === "accountNumber") {
-      normalized = normalized.replace(/\D/g, "").slice(0, 18);
+      normalized = onlyDigits(value, 18);
+    }
+    if (name === "accountHolderName") {
+      normalized = onlyNameCharacters(value, PERSON_NAME_MAX_LENGTH);
+    }
+    if (name === "bankName") {
+      normalized = onlyBankNameCharacters(value, 120);
+    }
+    if (name === "branchName") {
+      normalized = onlyBranchCharacters(value, 120);
     }
     setBankForm((prev) => ({ ...prev, [name]: normalized }));
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
@@ -1720,6 +1940,10 @@ const SellerOnboarding = () => {
     const errors = {};
     const dateOfBirth = toDateInputValue(kycForm.dateOfBirth);
     if (!kycForm.legalName.trim()) errors.legalName = "Legal name is required";
+    else if (kycForm.legalName.trim().length > PERSON_NAME_MAX_LENGTH)
+      errors.legalName = `Full name cannot be more than ${PERSON_NAME_MAX_LENGTH} characters`;
+    else if (!PERSON_NAME_REGEX.test(kycForm.legalName.trim()))
+      errors.legalName = "Legal name can contain only letters, spaces, dot, apostrophe, or hyphen";
     if (!kycForm.mobileNumber.trim()) {
       errors.mobileNumber = "Mobile number is required";
     } else if (!/^[0-9]{10,15}$/.test(kycForm.mobileNumber.trim())) {
@@ -1735,8 +1959,13 @@ const SellerOnboarding = () => {
     } else if (dateOfBirth > MAX_DOB_FOR_SELLER) {
       errors.dateOfBirth = "Seller must be at least 18 years old";
     }
-    if (!PAN_REGEX.test(kycForm.panNumber.trim()))
+    if (!kycForm.panNumber.trim()) {
+      errors.panNumber = "PAN number is required";
+    } else if (!/^[A-Z0-9]{10}$/.test(kycForm.panNumber.trim())) {
+      errors.panNumber = "PAN must be 10 letters/numbers without spaces";
+    } else if (!PAN_REGEX.test(kycForm.panNumber.trim())) {
       errors.panNumber = "PAN format should be like ABCDE1234F";
+    }
     if (!kycForm.panDocumentFile && !documentUrls.panDocumentUrl)
       errors.panDocumentFile = "PAN document is required";
     if (!kycForm.aadhaarNumber.trim()) {
@@ -1803,6 +2032,10 @@ const SellerOnboarding = () => {
         kycForm.addressProofFile,
         documentUrls.addressProofUrl,
       ),
+      udyogAadhaarDocumentUrl: await getDocumentUploadValue(
+        profileForm.udyogAadhaarDocumentFile,
+        documentUrls.udyogAadhaarDocumentUrl,
+      ),
       bankProofUrl: await getDocumentUploadValue(
         kycForm.bankProofFile,
         documentUrls.bankProofUrl,
@@ -1811,12 +2044,11 @@ const SellerOnboarding = () => {
   });
 
   const buildProfilePayload = ({ includeBankDetails = false } = {}) => {
+    const legalBusinessName = profileForm.businessName.trim();
     const payload = {
-      businessName: profileForm.businessName.trim(),
-      displayName:
-        profileForm.displayName.trim() || profileForm.businessName.trim(),
-      legalBusinessName:
-        profileForm.legalBusinessName.trim() || profileForm.businessName.trim(),
+      businessName: legalBusinessName,
+      displayName: legalBusinessName,
+      legalBusinessName,
       description: profileForm.description.trim(),
       supportEmail: profileForm.supportEmail.trim(),
       supportPhone: profileForm.supportPhone.trim(),
@@ -1824,10 +2056,8 @@ const SellerOnboarding = () => {
       gstNumber: profileForm.gstNumber.trim(),
       businessWebsite: profileForm.businessWebsite.trim(),
       metadata: {
-        udyogAadhaarNumber: profileForm.udyogAadhaarNumber.trim() || null,
+        udyogAadhaarNumber: getUdyogAadhaarPayloadValue(profileForm.udyogAadhaarNumber),
       },
-      primaryContactName:
-        profileForm.primaryContactName.trim() || kycForm.legalName.trim(),
       businessAddress: {
         line1: profileForm.businessAddressLine1.trim(),
         line2: profileForm.businessAddressLine2.trim(),
@@ -1876,6 +2106,7 @@ const SellerOnboarding = () => {
   };
 
   const buildOrganizationPayload = async () => {
+    const legalBusinessName = profileForm.businessName.trim();
     const billingAddress = {
       line1: (profileForm.businessAddressLine1 || profileForm.pickupLine1).trim(),
       line2: (profileForm.businessAddressLine2 || profileForm.pickupLine2).trim(),
@@ -1894,10 +2125,8 @@ const SellerOnboarding = () => {
     };
 
     return {
-      legalBusinessName:
-        profileForm.legalBusinessName.trim() || profileForm.businessName.trim(),
-      storeDisplayName:
-        profileForm.displayName.trim() || profileForm.businessName.trim(),
+      legalBusinessName,
+      storeDisplayName: legalBusinessName,
       businessType: profileForm.businessType,
       description: profileForm.description.trim() || null,
       supportEmail: profileForm.supportEmail.trim(),
@@ -1907,8 +2136,6 @@ const SellerOnboarding = () => {
       aadhaarNumber: kycForm.aadhaarNumber.trim(),
       dateOfBirth: toDateInputValue(kycForm.dateOfBirth),
       businessWebsite: profileForm.businessWebsite.trim() || null,
-      primaryContactName:
-        profileForm.primaryContactName.trim() || kycForm.legalName.trim(),
       documents: {
         panDocumentUrl: await getDocumentUploadValue(
           kycForm.panDocumentFile,
@@ -1940,7 +2167,7 @@ const SellerOnboarding = () => {
         ),
       },
       metadata: {
-        udyogAadhaarNumber: profileForm.udyogAadhaarNumber.trim() || null,
+        udyogAadhaarNumber: getUdyogAadhaarPayloadValue(profileForm.udyogAadhaarNumber),
       },
       bankDetails: {
         accountHolderName: bankForm.accountHolderName.trim(),
@@ -2011,33 +2238,39 @@ const SellerOnboarding = () => {
     if (!profileForm.businessType.trim())
       errors.businessType = "Business type is required";
     if (!profileForm.businessName.trim())
-      errors.businessName = "Business name is required";
-    if (!profileForm.displayName.trim())
-      errors.displayName = "Display name is required";
-    if (!profileForm.legalBusinessName.trim())
-      errors.legalBusinessName = "Legal business name is required";
-    if (!profileForm.primaryContactName.trim())
-      errors.primaryContactName = "Primary contact name is required";
-    if (!profileForm.description.trim())
-      errors.description = "Description is required";
+      errors.businessName = "Legal business name is required";
+    else if (profileForm.businessName.trim().length > BUSINESS_NAME_MAX_LENGTH)
+      errors.businessName = `Legal business name cannot be more than ${BUSINESS_NAME_MAX_LENGTH} characters`;
+    else if (!BUSINESS_NAME_REGEX.test(profileForm.businessName.trim()))
+      errors.businessName = "Legal business name contains invalid characters";
+if (!profileForm.description.trim()) {
+  errors.description = "Description is required";
+} else if (profileForm.description.trim().length < 10) {
+  errors.description = "Description must be at least 10 characters long";
+}
     if (!profileForm.gstNumber.trim())
       errors.gstNumber = "GST number is required";
     else if (!GST_REGEX.test(profileForm.gstNumber.trim()))
-      errors.gstNumber =
-        "Please enter a valid GST Number (e.g. 27ABCDE1234F1Z5)";
+      errors.gstNumber = "GST number format should be like 27ABCDE1234F1Z2";
     if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
       errors.gstCertificateFile = "GST certificate is required";
 
     if (!kycForm.addressProofFile && !documentUrls.addressProofUrl)
       errors.addressProofFile = "Address proof document is required";
     if (!profileForm.supportEmail.trim())
-      errors.supportEmail = "Support email is required";
+      errors.supportEmail = "Business official email is required";
     else if (!EMAIL_REGEX.test(profileForm.supportEmail.trim()))
-      errors.supportEmail = "Support email is invalid";
+      errors.supportEmail = "Business official email is invalid";
     if (!profileForm.supportPhone.trim())
-      errors.supportPhone = "Support phone is required";
+      errors.supportPhone = "Business phone number is required";
     else if (!/^[0-9]{10,15}$/.test(profileForm.supportPhone.trim()))
-      errors.supportPhone = "Support phone must be 10 to 15 digits";
+      errors.supportPhone = "Business phone number must be 10 digits";
+    if (
+      !isBlankUdyogAadhaarNumber(profileForm.udyogAadhaarNumber) &&
+      !UDYOG_AADHAAR_REGEX.test(profileForm.udyogAadhaarNumber.trim())
+    )
+      errors.udyogAadhaarNumber =
+        "Udhyog Aadhaar number should start with UDYAM-";
     if (
       profileForm.businessWebsite.trim() &&
       !URL_REGEX.test(profileForm.businessWebsite.trim())
@@ -2099,8 +2332,13 @@ const SellerOnboarding = () => {
     event.preventDefault();
     if (!validateKyc()) return;
     try {
+      setPageLoading(true);
       const kycPayload = await buildKycPayload();
-      await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      const uploadedDocuments = unwrapKycDocuments(kycResponse);
+      if (Object.keys(uploadedDocuments).length) {
+        setDocumentUrls((prev) => ({ ...prev, ...uploadedDocuments }));
+      }
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
       setProfileForm((prev) => ({
@@ -2113,6 +2351,8 @@ const SellerOnboarding = () => {
       const parsed = parseApiError(error, "Unable to submit KYC details");
       setBackendFieldErrors(parsed.details, setKycErrors);
       toast.error(parsed.message);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -2123,11 +2363,16 @@ const SellerOnboarding = () => {
       return;
     }
     try {
+      setPageLoading(true);
       const kycPayload = await buildKycPayload({
         includeGstCertificate: true,
         includeBusinessType: true,
       });
-      await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
+      const uploadedDocuments = unwrapKycDocuments(kycResponse);
+      if (Object.keys(uploadedDocuments).length) {
+        setDocumentUrls((prev) => ({ ...prev, ...uploadedDocuments }));
+      }
       setKycSubmittedApi(true);
       setRequiresKycRefresh(false);
       await dispatch(
@@ -2147,6 +2392,8 @@ const SellerOnboarding = () => {
       if (profileDetails.length) setBackendFieldErrors(profileDetails, setProfileErrors);
       setStep(profileDetails.length ? 2 : 1);
       toast.error(parsed.message);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -2154,6 +2401,10 @@ const SellerOnboarding = () => {
     const errors = {};
     if (!bankForm.accountHolderName.trim())
       errors.accountHolderName = "Account holder name is required";
+    else if (bankForm.accountHolderName.trim().length > PERSON_NAME_MAX_LENGTH)
+      errors.accountHolderName = `Account holder name cannot be more than ${PERSON_NAME_MAX_LENGTH} characters`;
+    else if (!PERSON_NAME_REGEX.test(bankForm.accountHolderName.trim()))
+      errors.accountHolderName = "Account holder name can contain only letters and spaces";
     if (!bankForm.accountNumber.trim()) {
       errors.accountNumber = "Account number is required";
     } else if (!BANK_ACCOUNT_REGEX.test(bankForm.accountNumber.trim())) {
@@ -2162,15 +2413,19 @@ const SellerOnboarding = () => {
     if (!bankForm.ifscCode.trim()) {
       errors.ifscCode = "IFSC code is required";
     } else if (!IFSC_REGEX.test(bankForm.ifscCode.trim())) {
-      errors.ifscCode = "IFSC format should be like ABCD0123456";
+      errors.ifscCode = "IFSC code must be 11 letters or digits";
     }
     if (!bankForm.bankName.trim()) {
       errors.bankName = "Bank name is required";
     } else if (bankForm.bankName.trim().length < BANK_NAME_MIN_LENGTH) {
       errors.bankName = `Bank name must be at least ${BANK_NAME_MIN_LENGTH} characters`;
+    } else if (!BANK_NAME_REGEX.test(bankForm.bankName.trim())) {
+      errors.bankName = "Bank name can contain only letters and spaces";
     }
     if (!bankForm.branchName.trim())
       errors.branchName = "Branch name is required";
+    else if (!BRANCH_NAME_REGEX.test(bankForm.branchName.trim()))
+      errors.branchName = "Branch name can contain only letters, numbers, spaces, and basic punctuation";
     if (!kycForm.bankProofFile && !documentUrls.bankProofUrl)
       errors.bankProofFile = "Bank proof document is required";
     if (fieldName) {
@@ -2192,6 +2447,7 @@ const SellerOnboarding = () => {
     event.preventDefault();
     if (!validateBankDetails()) return;
     try {
+      setPageLoading(true);
       const payload = buildProfilePayload({ includeBankDetails: true });
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
@@ -2220,6 +2476,8 @@ const SellerOnboarding = () => {
       }
 
       toast.error(parsed.message);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -2239,14 +2497,20 @@ const SellerOnboarding = () => {
     const shouldSubmitKyc =
       !kycSubmittedApi ||
       Boolean(profileForm.gstCertificateFile) ||
+      Boolean(profileForm.udyogAadhaarDocumentFile) ||
       Boolean(kycForm.bankProofFile) ||
       Boolean(kycForm.addressProofFile);
     try {
+      setPageLoading(true);
       if (shouldSubmitKyc) {
         const kycPayload = await buildKycPayload({
           includeGstCertificate: true,
         });
-        await dispatch(submitSellerKyc(kycPayload)).unwrap();
+        const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
+        const uploadedDocuments = unwrapKycDocuments(kycResponse);
+        if (Object.keys(uploadedDocuments).length) {
+          setDocumentUrls((prev) => ({ ...prev, ...uploadedDocuments }));
+        }
         setKycSubmittedApi(true);
         setRequiresKycRefresh(false);
       }
@@ -2293,6 +2557,8 @@ const SellerOnboarding = () => {
       }
 
       toast.error(parsed.message);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -2301,7 +2567,14 @@ const SellerOnboarding = () => {
   }
 
   return (
-    <OnboardingScreen step={step}>
+    <>
+      <BankProofGuidanceModal
+        open={showBankProofGuidance}
+        onClose={() => setShowBankProofGuidance(false)}
+      />
+      <div className="relative min-h-[calc(100vh-96px)]">
+        <OnboardingPageLoader visible={isOnboardingLoading} />
+        <OnboardingScreen step={step}>
       {step === 0 && (
         <div className={ONBOARDING_CARD_CLASS}>
           <button
@@ -2336,6 +2609,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={kycForm.legalName}
                   onChange={onKycChange}
+                  maxLength={PERSON_NAME_MAX_LENGTH}
                   data-has-value={Boolean(kycForm.legalName)}
                 />
                 {kycErrors.legalName && (
@@ -2451,7 +2725,8 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={kycForm.panNumber}
                   onChange={onKycChange}
-                  maxLength="10"
+                  maxLength={10}
+                  pattern="[A-Za-z0-9]{10}"
                   data-has-value={Boolean(kycForm.panNumber)}
                 />
                 {kycErrors.panNumber && (
@@ -2471,7 +2746,9 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={kycForm.aadhaarNumber}
                   onChange={onKycChange}
-                  maxLength="12"
+                  inputMode="numeric"
+                  pattern="[0-9]{12}"
+                  maxLength={12}
                   data-has-value={Boolean(kycForm.aadhaarNumber)}
                 />
                 {kycErrors.aadhaarNumber && (
@@ -2529,11 +2806,11 @@ const SellerOnboarding = () => {
           <OnboardingActions>
             <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-start sm:gap-4">
               <button
-                disabled={loading}
+                disabled={isOnboardingLoading}
                 className={PRIMARY_BUTTON_CLASS}
                 type="submit"
               >
-                {loading ? "Submitting..." : "Continue to Business Details"}
+                {isOnboardingLoading ? "Submitting..." : "Continue to Business Details"}
               </button>
             </div>
           </OnboardingActions>
@@ -2549,7 +2826,7 @@ const SellerOnboarding = () => {
           }}
           className={ONBOARDING_CARD_CLASS}
         >
-          <OnboardingSection number="01" title="Business Information">
+          <OnboardingSection number="01" title="Business Details">
             <div className="grid w-full grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
               <div>
                 <OnboardingSelect
@@ -2569,14 +2846,15 @@ const SellerOnboarding = () => {
 
               <div>
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Name {STEP_ONE_REQUIRED}
+                  Legal Business Name {STEP_ONE_REQUIRED}
                 </label>
                 <input
                   name="businessName"
-                  placeholder="Business Name"
+                  placeholder="Legal Business Name"
                   className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.businessName}
                   onChange={onProfileChange}
+                  maxLength={BUSINESS_NAME_MAX_LENGTH}
                   required
                 />
                 {profileErrors.businessName && (
@@ -2602,6 +2880,101 @@ const SellerOnboarding = () => {
                   <p className={ERROR_CLASS}>{profileErrors.gstNumber}</p>
                 )}
               </div>
+
+              <div>
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Business Official Email {STEP_ONE_REQUIRED}
+                </label>
+                <input
+                  name="supportEmail"
+                  placeholder="Business official email"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.supportEmail}
+                  onChange={onProfileChange}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  maxLength={180}
+                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                  required
+                />
+                <p className="mt-1 text-[11px] text-[#8a93a5]">Used for organization support, invoices, and business communication. Login still uses your seller account email.</p>
+                {profileErrors.supportEmail && (
+                  <p className={ERROR_CLASS}>{profileErrors.supportEmail}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Business Phone Number {STEP_ONE_REQUIRED}
+                </label>
+                <input
+                  name="supportPhone"
+                  placeholder="Business phone number"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.supportPhone}
+                  onChange={onProfileChange}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  required
+                />
+                {profileErrors.supportPhone && (
+                  <p className={ERROR_CLASS}>{profileErrors.supportPhone}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Udhyog Aadhaar Number
+                </label>
+                <input
+                  name="udyogAadhaarNumber"
+                  placeholder="UDYAM-XX-00-0000000"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.udyogAadhaarNumber}
+                  onChange={onProfileChange}
+                  maxLength={32}
+                />
+                {profileErrors.udyogAadhaarNumber && (
+                  <p className={ERROR_CLASS}>{profileErrors.udyogAadhaarNumber}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Business Website (Optional)
+                </label>
+                <input
+                  name="businessWebsite"
+                  placeholder="https://example.com"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.businessWebsite}
+                  onChange={onProfileChange}
+                />
+                {profileErrors.businessWebsite && (
+                  <p className={ERROR_CLASS}>{profileErrors.businessWebsite}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Description {STEP_ONE_REQUIRED}
+                </label>
+                <textarea
+                  name="description"
+                  placeholder="Business Description"
+                  className={`${STEP_ONE_INPUT_CLASS} mt-2 !h-auto !min-h-[96px] resize-y !pt-4 !pb-3 leading-5`}
+                  value={profileForm.description}
+                  onChange={onProfileChange}
+                  required
+                />
+                {profileErrors.description && (
+                  <p className={ERROR_CLASS}>{profileErrors.description}</p>
+                )}
+              </div>
+
+              <OnboardingGridDivider number="02" title="Business Documents" />
 
               <div className="md:col-span-2">
                 <DocumentUploadField
@@ -2633,112 +3006,6 @@ const SellerOnboarding = () => {
                 />
               </div>
 
-              {registeredContact.emailAddress && (
-                <div>
-                  <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                    Seller Account Email
-                  </label>
-                  <input
-                    readOnly
-                    value={registeredContact.emailAddress}
-                    className="min-h-[38px] w-full rounded-md border border-[#E6E6E6] bg-[#f8faff] px-3 text-sm text-[#65718b] outline-none cursor-not-allowed"
-                  />
-                  <p className="mt-1 text-[11px] text-[#8a93a5]">This is your seller login email. It cannot be changed here.</p>
-                </div>
-              )}
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Organization Official Email {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="supportEmail"
-                  placeholder="Official email for this organization"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.supportEmail}
-                  onChange={onProfileChange}
-                  type="email"
-                  required
-                />
-                <p className="mt-1 text-[11px] text-[#8a93a5]">Used for organization support, invoices, and business communication. Login still uses your seller account email.</p>
-                {profileErrors.supportEmail && (
-                  <p className={ERROR_CLASS}>{profileErrors.supportEmail}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Support Phone {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="supportPhone"
-                  placeholder="Support Phone"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.supportPhone}
-                  onChange={onProfileChange}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={10}
-                  required
-                />
-                {profileErrors.supportPhone && (
-                  <p className={ERROR_CLASS}>{profileErrors.supportPhone}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Display Name {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="displayName"
-                  placeholder="Display Name"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.displayName}
-                  onChange={onProfileChange}
-                  required
-                />
-                {profileErrors.displayName && (
-                  <p className={ERROR_CLASS}>{profileErrors.displayName}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Legal Business Name {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="legalBusinessName"
-                  placeholder="Legal Business Name"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.legalBusinessName}
-                  onChange={onProfileChange}
-                  required
-                />
-                {profileErrors.legalBusinessName && (
-                  <p className={ERROR_CLASS}>
-                    {profileErrors.legalBusinessName}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Udhyog Aadhaar Number
-                </label>
-                <input
-                  name="udyogAadhaarNumber"
-                  placeholder="UDYAM-XX-00-0000000"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.udyogAadhaarNumber}
-                  onChange={onProfileChange}
-                  maxLength={32}
-                />
-                {profileErrors.udyogAadhaarNumber && (
-                  <p className={ERROR_CLASS}>{profileErrors.udyogAadhaarNumber}</p>
-                )}
-              </div>
-
               <div className="md:col-span-2">
                 <DocumentUploadField
                   id="udyogAadhaarDocumentFile"
@@ -2753,171 +3020,7 @@ const SellerOnboarding = () => {
                 />
               </div>
 
-              <div>
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Primary Contact Name {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="primaryContactName"
-                  placeholder="Primary Contact Name"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.primaryContactName}
-                  onChange={onProfileChange}
-                  required
-                />
-                {profileErrors.primaryContactName && (
-                  <p className={ERROR_CLASS}>
-                    {profileErrors.primaryContactName}
-                  </p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Business Website (Optional)
-                </label>
-                <input
-                  name="businessWebsite"
-                  placeholder="https://example.com"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.businessWebsite}
-                  onChange={onProfileChange}
-                />
-                {profileErrors.businessWebsite && (
-                  <p className={ERROR_CLASS}>{profileErrors.businessWebsite}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Description {STEP_ONE_REQUIRED}
-                </label>
-                <textarea
-                  name="description"
-     
-                  placeholder="Business Description"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.description}
-                  onChange={onProfileChange}
-                  required
-                />
-                {profileErrors.description && (
-                  <p className={ERROR_CLASS}>{profileErrors.description}</p>
-                )}
-              </div>
-              <OnboardingSection number="02" title="Pickup Address"></OnboardingSection>
-
-
-              <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup Address Line 1 {STEP_ONE_REQUIRED}
-                </label>
-                <input
-                  name="pickupLine1"
-                  placeholder="Pickup Address Line 1"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.pickupLine1}
-                  onChange={onProfileChange}
-                  required
-                />
-                {profileErrors.pickupLine1 && (
-                  <p className={ERROR_CLASS}>{profileErrors.pickupLine1}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                  Pickup Address Line 2
-                </label>
-                <input
-                  name="pickupLine2"
-                  placeholder="Pickup Address Line 2"
-                  className={STEP_ONE_INPUT_CLASS}
-                  value={profileForm.pickupLine2}
-                  onChange={onProfileChange}
-                />
-              </div>
-
-              <div>
-                <OnboardingSelect
-                  name="pickupCountry"
-                  label="Pickup Country"
-                  value={profileForm.pickupCountry}
-                  options={countries.options}
-                  onChange={onAddressSelectChange("pickupCountry", [
-                    "pickupState",
-                    "pickupCity",
-                    "pickupPostalCode",
-                  ])}
-                  loading={countries.loading}
-                  error={countries.error}
-                  required
-                />
-                {profileErrors.pickupCountry && (
-                  <p className={ERROR_CLASS}>{profileErrors.pickupCountry}</p>
-                )}
-              </div>
-
-              <div>
-                <OnboardingSelect
-                  name="pickupState"
-                  label="Pickup State"
-                  value={profileForm.pickupState}
-                  options={pickupStates.options}
-                  onChange={onAddressSelectChange("pickupState", [
-                    "pickupCity",
-                    "pickupPostalCode",
-                  ])}
-                  loading={pickupStates.loading}
-                  error={pickupStates.error}
-                  disabled={!pickupCountryId}
-                  required
-                />
-                {profileErrors.pickupState && (
-                  <p className={ERROR_CLASS}>{profileErrors.pickupState}</p>
-                )}
-              </div>
-
-              <div>
-                <OnboardingSelect
-                  name="pickupCity"
-                  label="Pickup City"
-                  value={profileForm.pickupCity}
-                  options={pickupCities.options}
-                  onChange={onAddressSelectChange("pickupCity", [
-                    "pickupPostalCode",
-                  ])}
-                  loading={pickupCities.loading}
-                  error={pickupCities.error}
-                  disabled={!pickupStateId}
-                  required
-                />
-                {profileErrors.pickupCity && (
-                  <p className={ERROR_CLASS}>{profileErrors.pickupCity}</p>
-                )}
-              </div>
-
-              <div>
-                <OnboardingSelect
-                  name="pickupPostalCode"
-                  label="Pickup Postal Code"
-                  value={profileForm.pickupPostalCode}
-                  options={pickupPincodes.options}
-                  onChange={onAddressSelectChange("pickupPostalCode")}
-                  loading={pickupPincodes.loading}
-                  error={pickupPincodes.error}
-                  disabled={!pickupCityId}
-                  required
-                />
-                {profileErrors.pickupPostalCode && (
-                  <p className={ERROR_CLASS}>
-                    {profileErrors.pickupPostalCode}
-                  </p>
-                )}
-              </div>
-
-
-              <OnboardingSection number="02" title="Business Address"></OnboardingSection>
+              <OnboardingGridDivider number="03" title="Business Address" />
               <div className="md:col-span-2">
                 <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
                   Business Address Line 1 {STEP_ONE_REQUIRED}
@@ -2963,6 +3066,7 @@ const SellerOnboarding = () => {
                   ])}
                   loading={countries.loading}
                   error={countries.error}
+                  disabled
                   required
                 />
                 {profileErrors.businessAddressCountry && (
@@ -2995,17 +3099,15 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <OnboardingSelect
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Business City {STEP_ONE_REQUIRED}
+                </label>
+                <input
                   name="businessAddressCity"
-                  label="Business City"
+                  placeholder="Business City"
+                  className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.businessAddressCity}
-                  options={businessCities.options}
-                  onChange={onAddressSelectChange("businessAddressCity", [
-                    "businessAddressPostalCode",
-                  ])}
-                  loading={businessCities.loading}
-                  error={businessCities.error}
-                  disabled={!businessStateId}
+                  onChange={onProfileChange}
                   required
                 />
                 {profileErrors.businessAddressCity && (
@@ -3016,20 +3118,131 @@ const SellerOnboarding = () => {
               </div>
 
               <div>
-                <OnboardingSelect
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Business Postal Code {STEP_ONE_REQUIRED}
+                </label>
+                <input
                   name="businessAddressPostalCode"
-                  label="Business Postal Code"
+                  placeholder="Business Postal Code"
+                  className={STEP_ONE_INPUT_CLASS}
                   value={profileForm.businessAddressPostalCode}
-                  options={businessPincodes.options}
-                  onChange={onAddressSelectChange("businessAddressPostalCode")}
-                  loading={businessPincodes.loading}
-                  error={businessPincodes.error}
-                  disabled={!businessCityId}
+                  onChange={onProfileChange}
+                  maxLength={10}
                   required
                 />
                 {profileErrors.businessAddressPostalCode && (
                   <p className={ERROR_CLASS}>
                     {profileErrors.businessAddressPostalCode}
+                  </p>
+                )}
+              </div>
+
+              <OnboardingGridDivider number="04" title="Pickup Address" />
+
+              <div className="md:col-span-2">
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Pickup Address Line 1 {STEP_ONE_REQUIRED}
+                </label>
+                <input
+                  name="pickupLine1"
+                  placeholder="Pickup Address Line 1"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.pickupLine1}
+                  onChange={onProfileChange}
+                  required
+                />
+                {profileErrors.pickupLine1 && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupLine1}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Pickup Address Line 2
+                </label>
+                <input
+                  name="pickupLine2"
+                  placeholder="Pickup Address Line 2"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.pickupLine2}
+                  onChange={onProfileChange}
+                />
+              </div>
+
+              <div>
+                <OnboardingSelect
+                  name="pickupCountry"
+                  label="Pickup Country"
+                  value={profileForm.pickupCountry}
+                  options={countries.options}
+                  onChange={onAddressSelectChange("pickupCountry", [
+                    "pickupState",
+                    "pickupCity",
+                    "pickupPostalCode",
+                  ])}
+                  loading={countries.loading}
+                  error={countries.error}
+                  disabled
+                  required
+                />
+                {profileErrors.pickupCountry && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupCountry}</p>
+                )}
+              </div>
+
+              <div>
+                <OnboardingSelect
+                  name="pickupState"
+                  label="Pickup State"
+                  value={profileForm.pickupState}
+                  options={pickupStates.options}
+                  onChange={onAddressSelectChange("pickupState", [
+                    "pickupCity",
+                    "pickupPostalCode",
+                  ])}
+                  loading={pickupStates.loading}
+                  error={pickupStates.error}
+                  disabled={!pickupCountryId}
+                  required
+                />
+                {profileErrors.pickupState && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupState}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Pickup City {STEP_ONE_REQUIRED}
+                </label>
+                <input
+                  name="pickupCity"
+                  placeholder="Pickup City"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.pickupCity}
+                  onChange={onProfileChange}
+                  required
+                />
+                {profileErrors.pickupCity && (
+                  <p className={ERROR_CLASS}>{profileErrors.pickupCity}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
+                  Pickup Postal Code {STEP_ONE_REQUIRED}
+                </label>
+                <input
+                  name="pickupPostalCode"
+                  placeholder="Pickup Postal Code"
+                  className={STEP_ONE_INPUT_CLASS}
+                  value={profileForm.pickupPostalCode}
+                  onChange={onProfileChange}
+                  maxLength={10}
+                  required
+                />
+                {profileErrors.pickupPostalCode && (
+                  <p className={ERROR_CLASS}>
+                    {profileErrors.pickupPostalCode}
                   </p>
                 )}
               </div>
@@ -3045,7 +3258,7 @@ const SellerOnboarding = () => {
               Back
             </button>
             <button
-              disabled={loading}
+              disabled={isOnboardingLoading}
               className={PRIMARY_BUTTON_CLASS}
               type="submit"
             >
@@ -3094,6 +3307,7 @@ const SellerOnboarding = () => {
                   className={STEP_ONE_INPUT_CLASS}
                   value={bankForm.accountHolderName}
                   onChange={onBankChange}
+                  maxLength={PERSON_NAME_MAX_LENGTH}
                 />
                 {profileErrors.accountHolderName && (
                   <p className={ERROR_CLASS}>
@@ -3175,6 +3389,16 @@ const SellerOnboarding = () => {
                   onDrop={onKycDocumentDrop("bankProofFile")}
                   onChange={onKycDocumentFileChange("bankProofFile")}
                   emptyText="Drag bank statement or cancelled cheque here"
+                  helpAction={
+                    <button
+                      type="button"
+                      onClick={() => setShowBankProofGuidance(true)}
+                      className="mt-3 inline-flex items-center gap-2 rounded-[6px] border border-[#e3d2ad] bg-[#fff8e6] px-3 py-2 text-xs font-semibold text-[#8a640f] transition hover:bg-[#fff1c7]"
+                    >
+                      <LuView size={14} />
+                      Preview Cancelled Cheque
+                    </button>
+                  }
                 />
               </div>
             </div>
@@ -3189,7 +3413,7 @@ const SellerOnboarding = () => {
               Back
             </button>
             <button
-              disabled={loading}
+              disabled={isOnboardingLoading}
               className={PRIMARY_BUTTON_CLASS}
               type="submit"
             >
@@ -3244,10 +3468,17 @@ const SellerOnboarding = () => {
                   }
                 />
                 <ReviewFileInput
-                  label="Aadhaar Card Softcopy"
+                  label="Aadhaar Front Softcopy"
                   value={
                     kycForm.aadhaarFrontFile?.name ||
                     getFileNameFromUrl(documentUrls.aadhaarFrontUrl, "-")
+                  }
+                />
+                <ReviewFileInput
+                  label="Aadhaar Back Softcopy"
+                  value={
+                    kycForm.aadhaarBackFile?.name ||
+                    getFileNameFromUrl(documentUrls.aadhaarBackUrl, "-")
                   }
                 />
               </div>
@@ -3261,7 +3492,7 @@ const SellerOnboarding = () => {
               <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
                 <ReviewInput label="Business Type" value={businessTypeLabel} />
                 <ReviewInput
-                  label="Business Name"
+                  label="Legal Business Name"
                   value={profileForm.businessName}
                 />
                 <ReviewInput
@@ -3270,25 +3501,27 @@ const SellerOnboarding = () => {
                 />
                 <ReviewInput
                   label="Udyog Aadhaar Number"
-                  value={kycForm.aadhaarNumber}
+                  value={profileForm.udyogAadhaarNumber}
                 />
                 <ReviewInput
                   label="Business Address"
                   value={[
                     profileForm.businessAddressLine1 || profileForm.pickupLine1,
+                    profileForm.businessAddressLine2 || profileForm.pickupLine2,
                     profileForm.businessAddressCity || profileForm.pickupCity,
                     profileForm.businessAddressState || profileForm.pickupState,
+                    profileForm.businessAddressPostalCode || profileForm.pickupPostalCode,
                   ]
                     .filter(Boolean)
                     .join(", ")}
                 />
                 <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
                   <ReviewInput
-                    label="Business Contact"
-                    value={profileForm.primaryContactName || kycForm.legalName}
+                    label="Business Official Email"
+                    value={profileForm.supportEmail}
                   />
                   <ReviewInput
-                    label="Contact Number"
+                    label="Business Phone Number"
                     value={profileForm.supportPhone}
                   />
                 </div>
@@ -3320,11 +3553,56 @@ const SellerOnboarding = () => {
                     getFileNameFromUrl(documentUrls.gstCertificateUrl, "-")
                   }
                 />
+                {(profileForm.udyogAadhaarDocumentFile?.name ||
+                  documentUrls.udyogAadhaarDocumentUrl) && (
+                  <ReviewFileInput
+                    label="Udhyog Aadhaar Document"
+                    value={
+                      profileForm.udyogAadhaarDocumentFile?.name ||
+                      getFileNameFromUrl(documentUrls.udyogAadhaarDocumentUrl, "-")
+                    }
+                  />
+                )}
               </div>
             </ReviewSection>
 
             <ReviewSection
               number="03"
+              title="Pickup Address"
+              onEdit={() => setStep(2)}
+            >
+              <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+                <ReviewInput
+                  label="Pickup Address Line 1"
+                  value={profileForm.pickupLine1}
+                />
+                <ReviewInput
+                  label="Pickup Address Line 2"
+                  value={profileForm.pickupLine2}
+                />
+                <ReviewInput label="Pickup City" value={profileForm.pickupCity} />
+                <ReviewInput label="Pickup State" value={profileForm.pickupState} />
+                <ReviewInput
+                  label="Pickup Postal Code"
+                  value={profileForm.pickupPostalCode}
+                />
+                <ReviewInput
+                  label="Pickup Full Address"
+                  value={[
+                    profileForm.pickupLine1,
+                    profileForm.pickupLine2,
+                    profileForm.pickupCity,
+                    profileForm.pickupState,
+                    profileForm.pickupPostalCode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                />
+              </div>
+            </ReviewSection>
+
+            <ReviewSection
+              number="04"
               title="Bank Details"
               onEdit={() => setStep(3)}
             >
@@ -3344,6 +3622,14 @@ const SellerOnboarding = () => {
                   value={bankForm.branchName}
                   className="md:col-span-2"
                 />
+                <ReviewFileInput
+                  label="Bank Proof / Cancelled Cheque"
+                  value={
+                    kycForm.bankProofFile?.name ||
+                    getFileNameFromUrl(documentUrls.bankProofUrl, "-")
+                  }
+                  className="md:col-span-2"
+                />
               </div>
             </ReviewSection>
           </div>
@@ -3357,17 +3643,19 @@ const SellerOnboarding = () => {
               Back
             </button>
             <button
-              disabled={loading}
+              disabled={isOnboardingLoading}
               className={REVIEW_PRIMARY_BUTTON_CLASS}
               type="button"
               onClick={submitFinalOnboarding}
             >
-              {loading ? "Submitting..." : "Submit For Verification"}
+              {isOnboardingLoading ? "Submitting..." : "Submit For Verification"}
             </button>
           </OnboardingActions>
         </div>
       )}
-    </OnboardingScreen>
+        </OnboardingScreen>
+      </div>
+    </>
   );
 };
 

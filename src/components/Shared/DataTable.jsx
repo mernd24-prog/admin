@@ -39,10 +39,10 @@ const renderCellValue = (value, nested = false) => {
   if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
   if (React.isValidElement(value)) {
     const children = value.props?.children;
+    if (children === undefined || children === null) return value;
     if (isEmptyCellValue(children)) {
       return React.cloneElement(value, undefined, "N/A");
     }
-    if (children === undefined || children === null) return value;
     return React.cloneElement(
       value,
       undefined,

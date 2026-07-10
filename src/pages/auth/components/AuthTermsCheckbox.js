@@ -2,7 +2,7 @@ import Checkbox from "../../../components/Atoms/Checkbox/Checkbox";
 
 const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
   <label
-    className={`mt-[20px] flex cursor-pointer items-center gap-[10px] ${className}`}
+    className={`mb-[20px] flex cursor-pointer items-center gap-[10px] ${className}`}
   >
     <Checkbox
       id="remember_me"

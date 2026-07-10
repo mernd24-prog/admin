@@ -92,7 +92,12 @@ const Login = () => {
               </button>
             </div>
           )}
-
+          {auth.sellerPanel && (
+            <AuthTermsCheckbox
+              checked={auth.termsAccepted}
+              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+            />
+          )}
           <FormSubmitButton
             buttonLabel={
               auth.loading
@@ -103,12 +108,7 @@ const Login = () => {
             }
           />
 
-          {auth.sellerPanel && (
-            <AuthTermsCheckbox
-              checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
-            />
-          )}
+
         </div>
       </FormLayout>
     </div>
