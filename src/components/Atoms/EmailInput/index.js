@@ -22,6 +22,8 @@ const EmailInput = React.memo(
     required = false,
     type = "text",
     onlyNumber = false,
+    onlyLetters = false,
+    maxLength,
     ...rest
   }) => {
     const [email, setEmail] = useState(value);
@@ -31,9 +33,16 @@ const EmailInput = React.memo(
 
     const handleChange = useCallback(
       (event) => {
-        const newEmail = onlyNumber
-          ? event.target.value.replace(/\D/g, "")
-          : event.target.value;
+        let newEmail = event.target.value;
+        if (onlyNumber) {
+          newEmail = newEmail.replace(/\D/g, "");
+        }
+        if (onlyLetters) {
+          newEmail = newEmail.replace(/[^A-Za-z]/g, "");
+        }
+        if (maxLength) {
+          newEmail = newEmail.slice(0, maxLength);
+        }
 
         setEmail(newEmail);
         setIsValid(newEmail.length >= MIN_EMAIL_LENGTH);
@@ -49,7 +58,7 @@ const EmailInput = React.memo(
           });
         }
       },
-      [onChange, onlyNumber],
+      [maxLength, onChange, onlyLetters, onlyNumber],
     );
 
     const handleBlur = useCallback(
@@ -125,6 +134,7 @@ const EmailInput = React.memo(
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder={placeholder}
+            maxLength={maxLength}
             className={`
               admin-input h-[40px] ${Icon ? "pr-10" : "pr-3"}
               disabled:cursor-not-allowed

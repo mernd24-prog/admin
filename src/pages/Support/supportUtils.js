@@ -9,6 +9,7 @@ export const CUSTOMER_QUERY_CATEGORIES = [
 ];
 
 export const SELLER_QUERY_CATEGORIES = [
+  { value: "ONBOARDING_ISSUE", label: "Onboarding Issue" },
   { value: "ORDER_ISSUE", label: "Order Issue" },
   { value: "PRODUCT_LISTING_ISSUE", label: "Product Listing Issue" },
   { value: "PAYMENT_SETTLEMENT_ISSUE", label: "Payment/Settlement Issue" },

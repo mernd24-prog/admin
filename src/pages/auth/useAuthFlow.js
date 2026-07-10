@@ -32,6 +32,11 @@ import { AUTH_ROUTES } from "./authRoutes";
 const RESEND_COOLDOWN_SECONDS = 30;
 const AUTH_FLOW_DRAFT_KEY = "authFlowDraft";
 const EMPTY_OTP = ["", "", "", "", "", ""];
+const REGISTER_NAME_MAX_LENGTH = 20;
+const REGISTER_NAME_REGEX = /^[A-Za-z]+$/;
+
+const sanitizeRegisterName = (value = "") =>
+  String(value || "").replace(/[^A-Za-z]/g, "").slice(0, REGISTER_NAME_MAX_LENGTH);
 
 const DEFAULT_FORM_FIELDS = {
   email: "",
@@ -304,6 +309,12 @@ export const useAuthFlow = ({
         } else if (formFields.firstName.trim().length < 2) {
           errors.firstName = "First name must be at least 2 characters";
           isValid = false;
+        } else if (formFields.firstName.trim().length > REGISTER_NAME_MAX_LENGTH) {
+          errors.firstName = `First name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`;
+          isValid = false;
+        } else if (!REGISTER_NAME_REGEX.test(formFields.firstName.trim())) {
+          errors.firstName = "First name can contain only letters";
+          isValid = false;
         }
 
         if (!formFields.lastName.trim()) {
@@ -311,6 +322,12 @@ export const useAuthFlow = ({
           isValid = false;
         } else if (formFields.lastName.trim().length < 2) {
           errors.lastName = "Last name must be at least 2 characters";
+          isValid = false;
+        } else if (formFields.lastName.trim().length > REGISTER_NAME_MAX_LENGTH) {
+          errors.lastName = `Last name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`;
+          isValid = false;
+        } else if (!REGISTER_NAME_REGEX.test(formFields.lastName.trim())) {
+          errors.lastName = "Last name can contain only letters";
           isValid = false;
         }
 
@@ -453,7 +470,11 @@ export const useAuthFlow = ({
   const handleInputChange = useCallback(
     (event) => {
       const { name, value } = event.target;
-      updateFormFields({ [name]: value.trim() });
+      const nextValue =
+        name === "firstName" || name === "lastName"
+          ? sanitizeRegisterName(value)
+          : value.trim();
+      updateFormFields({ [name]: nextValue });
       setFormErrors((prev) => ({ ...prev, [name]: null }));
       setLoginError("");
     },
@@ -483,13 +504,21 @@ export const useAuthFlow = ({
             ? "First name is required"
             : value.length < 2
               ? "First name must be at least 2 characters"
-              : null;
+              : value.length > REGISTER_NAME_MAX_LENGTH
+                ? `First name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`
+                : !REGISTER_NAME_REGEX.test(value)
+                  ? "First name can contain only letters"
+                  : null;
         } else if (name === "lastName") {
           error = !value
             ? "Last name is required"
             : value.length < 2
               ? "Last name must be at least 2 characters"
-              : null;
+              : value.length > REGISTER_NAME_MAX_LENGTH
+                ? `Last name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`
+                : !REGISTER_NAME_REGEX.test(value)
+                  ? "Last name can contain only letters"
+                  : null;
         } else if (name === "phone") {
           error = !value
             ? "Phone is required"

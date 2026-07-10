@@ -1,9 +1,16 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Check } from "lucide-react";
+import { toast } from "sonner";
+import { Check, ChevronDown, LogOut, X } from "lucide-react";
 import BrandLogo from "../BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
+import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
+import { clearStoredAuth } from "../../_helpers/authStorage";
+import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
+import { logout as logoutAuth } from "../../Redux/auth-Slice";
+import { clearSellerOnboarding } from "../../Redux/seller-slice";
 
 const readStoredJson = (key) => {
   try {
@@ -80,15 +87,90 @@ const getInitials = (name = "") => {
     .toUpperCase();
 };
 
+const ONBOARDING_SUPPORT_CATEGORY = "ONBOARDING_ISSUE";
+
+const OnboardingSupportModal = ({
+  open,
+  message,
+  submitting,
+  onChange,
+  onClose,
+  onSubmit,
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+          
+            <p className="text-[17px] font-bold text-[#082f91]">
+              Onboarding Issue.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#5f6678] transition hover:bg-[#f1f4fb]"
+            aria-label="Close support popup"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <label className="mt-5 block text-sm font-semibold text-[#30384d]">
+          Message
+          <textarea
+            className="mt-2 min-h-[150px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+            value={message}
+            onChange={(event) => onChange(event.target.value)}
+            maxLength={5000}
+            placeholder="Tell us what is blocking your onboarding."
+            autoFocus
+          />
+        </label>
+
+        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="admin-btn-secondary min-w-[120px]"
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="admin-btn-primary min-w-[150px]"
+            disabled={submitting}
+          >
+            {submitting ? "Submitting..." : "Submit"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 const KYCStatusLayout = ({
   children,
   currentSection = "status",
   logo = "/logo.png",
 }) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const stepsNavRef = useRef(null);
   const activeStepRef = useRef(null);
   const contentRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { seller, authSlice } = useSelector((state) => state || {});
   const storedUser = readStoredJson("currentUser");
   const storedOnboardingUser = readStoredJson("sellerOnboardingUser");
@@ -127,6 +209,83 @@ const KYCStatusLayout = ({
   const currentIndex = menuItems.findIndex(
     (item) => item.id === currentSection,
   );
+
+  useEffect(() => {
+    if (!userMenuOpen) return undefined;
+
+    const closeMenuOnOutsideClick = (event) => {
+      if (!userMenuRef.current?.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeMenuOnOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", closeMenuOnOutsideClick);
+    };
+  }, [userMenuOpen]);
+
+  const closeSupportModal = () => {
+    if (supportSubmitting) return;
+    setSupportOpen(false);
+    setSupportMessage("");
+  };
+
+  const handleLogout = () => {
+    clearStoredAuth();
+    dispatch(clearSellerOnboarding());
+    dispatch(logoutAuth());
+    setUserMenuOpen(false);
+    toast.success("Logged out");
+    navigate(AUTH_ROUTES.LOGIN, { replace: true });
+  };
+
+  const submitOnboardingSupport = async (event) => {
+    event.preventDefault();
+    const message = supportMessage.trim();
+    if (message.length < 10) {
+      toast.error("Message must be at least 10 characters.");
+      return;
+    }
+
+    const token =
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("sellerOnboardingToken");
+    if (!token) {
+      toast.error("Please login again to submit support request.");
+      return;
+    }
+
+    try {
+      setSupportSubmitting(true);
+      await axiosProvider.post(
+        ENDPOINTS.support.create,
+        {
+          category: ONBOARDING_SUPPORT_CATEGORY,
+          subject: "Onboarding issue",
+          message,
+          metadata: {
+            source: "seller_onboarding_need_help",
+            onboardingStep: currentSection,
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      toast.success("Support request submitted");
+      setSupportOpen(false);
+      setSupportMessage("");
+    } catch (requestError) {
+      toast.error(
+        requestError?.message || "Failed to submit support request",
+      );
+    } finally {
+      setSupportSubmitting(false);
+    }
+  };
 
   const scrollContentToTop = useCallback(() => {
     const content = contentRef.current;
@@ -182,6 +341,14 @@ const KYCStatusLayout = ({
 
   return (
     <div className="min-h-screen  bg-[#f6f3ef]   font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
+      <OnboardingSupportModal
+        open={supportOpen}
+        message={supportMessage}
+        submitting={supportSubmitting}
+        onChange={setSupportMessage}
+        onClose={closeSupportModal}
+        onSubmit={submitOnboardingSupport}
+      />
       <aside className="sidebar-scrollbar w-full   lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
           <div className=" bg-[#FCF5E8]  pb-5  sm:pb-7 lg:pb-10">
@@ -262,7 +429,7 @@ const KYCStatusLayout = ({
                 title="Need Help?"
                 description="Our verification team is available 24/7 to help you complete KYC."
                 buttonText="Contact Support"
-                onClick={() => navigate("/app/help-support")}
+                onClick={() => setSupportOpen(true)}
                 className="mx-auto mt-5 hidden max-w-[285px] lg:mt-8 lg:block lg:max-w-none"
               />
             </div>
@@ -279,19 +446,47 @@ const KYCStatusLayout = ({
               {menuItems[currentIndex]?.label || "Status"}
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div ref={userMenuRef} className="relative flex items-center gap-4">
             {/* <Bell size={16} className="text-white/90" /> */}
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E49E1C] bg-white text-[11px] font-bold text-[#082f91]">
-              {headerInitials}
-            </span>
-            <div className="hidden text-left sm:block">
-              <p className="max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
-                {headerName}
-              </p>
-              <p className="mt-1 max-w-[130px] truncate text-left text-[10px] font-medium leading-[15px] text-[#5f6575]">
-                {headerEmail || headerSubtitle}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((open) => !open)}
+              className="flex items-center gap-3 rounded-[8px] px-2 py-1.5 text-left transition hover:bg-white/60"
+              aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E49E1C] bg-white text-[11px] font-bold text-[#082f91]">
+                {headerInitials}
+              </span>
+              <span className="hidden text-left sm:block">
+                <span className="block max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
+                  {headerName}
+                </span>
+                <span className="mt-1 block max-w-[130px] truncate text-left text-[10px] font-medium leading-[15px] text-[#5f6575]">
+                  {headerEmail || headerSubtitle}
+                </span>
+              </span>
+              <ChevronDown
+                size={16}
+                className={`text-[#082f91] transition ${userMenuOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {userMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-[calc(100%+8px)] z-50 w-[210px] rounded-[8px] border border-[#eadfcb] bg-white py-2 shadow-xl"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#b42318] transition hover:bg-[#fff4f3]"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
 

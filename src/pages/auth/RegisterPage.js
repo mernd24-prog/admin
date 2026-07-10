@@ -49,6 +49,8 @@ const RegisterPage = () => {
               errorMessage={auth.formErrors.firstName}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
+              onlyLetters
+              maxLength={20}
             />
             <EmailInput
               id="lastName"
@@ -61,6 +63,8 @@ const RegisterPage = () => {
               errorMessage={auth.formErrors.lastName}
               inputClassName={AUTH_INPUT_CLASS_NAME}
               labelClassName={AUTH_LABEL_CLASS_NAME}
+              onlyLetters
+              maxLength={20}
             />
 
             <EmailInput
