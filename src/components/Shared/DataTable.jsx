@@ -47,13 +47,33 @@ const VOID_ELEMENT_TAGS = new Set([
 ]);
 
 const renderCellValue = (value, nested = false) => {
-  if (nested && (value === null || value === undefined || typeof value === "boolean")) {
+  if (
+    nested &&
+    (value === null || value === undefined || typeof value === "boolean")
+  ) {
     return null;
   }
-  if (nested && typeof value === "string" && value.trim() === "") return null;
-  if (isEmptyCellValue(value)) return <span className="text-gray-400">N/A</span>;
-  if (typeof value === "string") return formatCellText(value);
-  if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
+
+  if (nested && typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+
+  if (isEmptyCellValue(value)) {
+    return <span className="text-gray-400">N/A</span>;
+  }
+
+  if (typeof value === "string") {
+    return formatCellText(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item, index) => (
+      <React.Fragment key={index}>
+        {renderCellValue(item, true)}
+      </React.Fragment>
+    ));
+  }
+
   if (React.isValidElement(value)) {
     const children = value.props?.children;
     if (VOID_ELEMENT_TAGS.has(value.type)) return value;
@@ -63,10 +83,13 @@ const renderCellValue = (value, nested = false) => {
     }
     return React.cloneElement(
       value,
-      undefined,
-      React.Children.map(children, (child) => renderCellValue(child, true)),
+      {
+        ...value.props,
+      },
+      React.Children.map(children, (child) => renderCellValue(child, true))
     );
   }
+
   return value;
 };
 
@@ -491,17 +514,17 @@ const DataTable = ({
                     </td>
                   )}
                   {safeColumns.map((col, columnIndex) => (
-                    <td
-                      key={`${col.key}-${columnIndex}`}
-                      className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
-                    >
-                      {renderCellValue(
-                        col.render
-                          ? col.render(row[col.key], row)
-                          : row[col.key],
-                      )}
-                    </td>
-                  ))}
+  <td
+    key={`${col.key}-${columnIndex}`}
+    className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+  >
+    {renderCellValue(
+      col.render
+        ? col.render(row[col.key], row)
+        : row[col.key],
+    )}
+  </td>
+))}
                   {rowActions && (
                     <td className="px-4 py-3 text-right">
                       <RowActionsMenu

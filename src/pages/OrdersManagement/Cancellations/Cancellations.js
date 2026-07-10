@@ -49,8 +49,8 @@ const FILTER_FIELDS = [
   { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "refundStatus", type: "select", label: "Refund", options: REFUND_STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
   { key: "scope", type: "select", label: "Scope", options: SCOPES.map((v) => ({ value: v, label: v })) },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
+  // { key: "fromDate", type: "date", label: "From" },
+  // { key: "toDate", type: "date", label: "To" },
 ];
 
 const unwrapList = (payload = {}) => {

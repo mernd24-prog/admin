@@ -463,9 +463,9 @@ const ProductReviews = () => {
     },
     {
       key: "_actions",
-      label: "",
+      label: "Actions",
       render: (_, row) => (
-        <div className="flex items-center gap-1 justify-end">
+        <div className="flex items-center gap-1 justify-start">
           <button
             onClick={() => setViewTarget(row)}
             className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
