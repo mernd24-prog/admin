@@ -121,11 +121,10 @@ const getEffectivePrice = (product = {}) => {
 };
 
 const getEffectiveStock = (product = {}) => {
-  if (!hasVariants(product)) return toNumberOrNull(product?.stock);
-  return product.variants.reduce(
-    (total, variant) => total + Number(variant?.stock || 0),
-    0,
-  );
+  const defaultVariant = getDefaultVariant(product);
+  return hasVariants(product)
+    ? toNumberOrNull(defaultVariant?.stock)
+    : toNumberOrNull(product?.stock);
 };
 
 const formatMoney = (value) => {
@@ -798,8 +797,8 @@ const ProductCatalog = () => {
             !!product?.description,
             !!product?.category,
             Number(getEffectivePrice(product) || 0) > 0,
-            (product?.images || []).length >= 1,
-            !!product?.sku,
+            getProductImages(product).length >= 1,
+            !!(getDefaultVariant(product)?.sku || product?.sku),
             Number(getEffectiveStock(product) ?? product?.availableStock ?? 0) >= 0,
             !!product?.hsnCode,
           ];

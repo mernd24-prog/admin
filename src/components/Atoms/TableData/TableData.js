@@ -26,6 +26,23 @@ const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
 const formatCellText = (value) =>
   shouldPreserveText(value) ? value : formatLabel(value, "N/A");
 
+const VOID_ELEMENT_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
 const renderCellValue = (value, nested = false) => {
   if (nested && (value === null || value === undefined || typeof value === "boolean")) {
     return null;
@@ -36,10 +53,11 @@ const renderCellValue = (value, nested = false) => {
   if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
   if (React.isValidElement(value)) {
     const children = value.props?.children;
+    if (VOID_ELEMENT_TAGS.has(value.type)) return value;
+    if (children === undefined || children === null) return value;
     if (isEmptyCellValue(children)) {
       return React.cloneElement(value, undefined, "N/A");
     }
-    if (children === undefined || children === null) return value;
     return React.cloneElement(
       value,
       undefined,

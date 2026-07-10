@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { getProducts } from '../../Redux/productSlice';
+import { getDefaultVariant, getPrimaryProductImage } from '../../_helpers/productMedia';
 
 /**
  * Bundle / Combo product builder.
@@ -39,15 +40,16 @@ const BundleBuilder = ({ bundleItems = [], bundleDiscount = 0, onChange, onDisco
   const addItem = (product) => {
     const id = product._id || product.id;
     if (bundleItems.some((bi) => bi.productId === id)) return;
+    const defaultVariant = getDefaultVariant(product);
     onChange([
       ...bundleItems,
       {
         productId: id,
-        sku: product.sku || '',
+        sku: defaultVariant?.sku || product.sku || '',
         title: product.title || product.name || '',
-        image: product.images?.[0]?.url || product.images?.[0] || '',
+        image: getPrimaryProductImage(product),
         quantity: 1,
-        price: Number(product.price || 0),
+        price: Number(defaultVariant?.price ?? defaultVariant?.salePrice ?? product.price ?? 0),
       },
     ]);
     setSearch('');

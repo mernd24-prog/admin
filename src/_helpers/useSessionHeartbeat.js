@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import { axiosPrivate } from "./axiosProvider";
 import { getStoredAccessToken } from "./authSession";
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 10_000;
 
 /**
- * Polls /auth/status every 30 s while the user is logged in.
+ * Polls /auth/status while the user is logged in.
  * The existing axios interceptor handles any SESSION_INVALID / FORCE_LOGOUT
  * error code returned, so no explicit forceLogout() call is needed here.
  */
@@ -20,6 +20,7 @@ export const useSessionHeartbeat = () => {
       });
     };
 
+    ping();
     timerRef.current = setInterval(ping, HEARTBEAT_INTERVAL_MS);
 
     return () => clearInterval(timerRef.current);

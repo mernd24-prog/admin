@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BasicDetailsTab from './BasicDetailsTab';
-import MediaTab from './MediaTab';
 import ProductSettingsPanel from './ProductSettingsPanel';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -15,7 +14,6 @@ import Loader from '../../../../components/Loader/Loader';
 import { getAllStateList } from '../../../../Redux/stateSlice';
 import { getAllCityList } from '../../../../Redux/citySlice';
 import { GrDocument } from 'react-icons/gr';
-import { IoImage } from 'react-icons/io5';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import TabNavigation from './TabNavigation';
@@ -27,7 +25,6 @@ import VariantBuilder from '../../../../components/Product/VariantBuilder';
 import SEOPanel from '../../../../components/Product/SEOPanel';
 import TagsInput from '../../../../components/Product/TagsInput';
 import useDropdownOptions from '../../../../hooks/useDropdownOptions';
-import { normalizeImageList } from '../../../../_helpers/productMedia';
 import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
 import { getShippingProfiles } from '../../../../Redux/deliverySlice';
 import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
@@ -58,7 +55,6 @@ const DEFAULT_PRODUCT_VARIANT = {
   isDefault: true,
   sortOrder: 0,
   attributes: {},
-  images: [],
 };
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
@@ -200,7 +196,6 @@ export default function ProductManagementUI() {
   }]);
   const [activeTab, setActiveTab] = useState('basic-details');
   const [isScrolling, setIsScrolling] = useState(false);
-  const [images, setImages] = useState([])
   const isEditMode = id ? true : false;
   const [taxData, setTaxData] = useState(null)
   const [userData, setUserData] = useState({})
@@ -261,7 +256,6 @@ export default function ProductManagementUI() {
     'product-type': useRef(null),
     'variants-options': useRef(null),
     'shipping': useRef(null),
-    'media': useRef(null),
     'seo': useRef(null),
     'tags': useRef(null),
   };
@@ -273,13 +267,9 @@ export default function ProductManagementUI() {
           const productData = res?.data;
           const resolvedCategoryId = productData?.categoryId || productData?.category_id || productData?.categoryKey || productData?.category || '';
           const resolvedCategoryKey = productData?.categoryKey || productData?.category_key || productData?.category || resolvedCategoryId;
-          const catalogDocumentUrl = Array.isArray(productData?.documents)
-            ? productData.documents[0] || ''
-            : productData?.catalogsUrls || '';
           setFormData({
             ...INITIALS_DATA,
             ...productData,
-            catalogsUrls: catalogDocumentUrl,
             name: productData?.title || productData?.name || '',
             category_id: resolvedCategoryId,
             categoryId: resolvedCategoryId,
@@ -328,16 +318,6 @@ export default function ProductManagementUI() {
             }));
             setVariantRows(formattedOptions);
           }
-
-          setImages(normalizeImageList(
-            productData?.images,
-            productData?.imageUrls,
-            productData?.product_image_id?.images,
-            productData?.media?.images,
-            productData?.image,
-            productData?.thumbnail,
-            productData?.thumbnailUrl,
-          ));
 
           if (Array.isArray(productData?.variants) && productData.variants.length) {
             setVariantsData(productData.variants.map((variant, index) => ({
@@ -782,11 +762,10 @@ export default function ProductManagementUI() {
       Number(variant?.price || 0) <= 0 ||
       Number(variant?.mrp || 0) <= 0 ||
       Number(variant?.price || 0) > Number(variant?.mrp || 0) ||
-      Number(variant?.stock ?? 0) < 0 ||
       (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) < 0) ||
       (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.price || 0))
     );
-    if (invalidVariant) newErrors.variants = "Every variant needs SKU, valid price, MRP, and stock.";
+    if (invalidVariant) newErrors.variants = "Every variant needs SKU, valid price, and MRP.";
     categoryAttributeSchema.forEach((field) => {
       const value = formData?.attributes?.[field.key];
       if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -797,9 +776,6 @@ export default function ProductManagementUI() {
       }
     });
 
-    if (!images || images.length === 0) {
-      newErrors.images = "At least one image is required.";
-    }
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1085,6 +1061,7 @@ export default function ProductManagementUI() {
       FEATURED: 'markAsFeatured',
       DEAL_PRODUCT: 'isDealProduct',
       COD: 'cod',
+      FREE_SHIPPING: 'shipping.freeShipping',
       prescription_required: 'prescription_required'
     };
 
@@ -1111,6 +1088,22 @@ export default function ProductManagementUI() {
         return;
       }
 
+      if (key === 'FREE_SHIPPING') {
+        setFormData((prev) => {
+          const nextFreeShipping = !Boolean(prev?.shipping?.freeShipping);
+
+          return {
+            ...prev,
+            shipping: {
+              ...(prev.shipping || {}),
+              freeShipping: nextFreeShipping,
+              ...(nextFreeShipping ? { shippingProfileId: null } : {}),
+            },
+          };
+        });
+        return;
+      }
+
       setFormData((prev) => ({
         ...prev,
         [fieldName]: !prev[fieldName],
@@ -1120,12 +1113,9 @@ export default function ProductManagementUI() {
 
   const handleSaveSubmit = useCallback(async () => {
     setSaving(true);
-    const catalogsUrlsArray = (Array.isArray(formData.catalogsUrls)
-      ? formData.catalogsUrls
-      : [formData.catalogsUrls]).filter(Boolean);
 
     const updatedFormData = { ...formData };
-    const selectedShippingProfile = updatedFormData.shipping?.shippingProfileId
+    const selectedShippingProfile = !updatedFormData.shipping?.freeShipping && updatedFormData.shipping?.shippingProfileId
       ? shippingProfileOptions.find((option) => String(option.value) === String(updatedFormData.shipping.shippingProfileId))?.profile || null
       : null;
     const profileShippingCharge = selectedShippingProfile
@@ -1176,7 +1166,7 @@ export default function ProductManagementUI() {
         mrp: Number(option.mrp || 0),
         stock: Number(option.stock || 0),
         attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
-        images: [],
+        images: Array.isArray(option.images) ? option.images : [],
       }));
     const normalizedVariants = (variantsData.length ? variantsData : legacyVariants).map((variant, index) => ({
       ...variant,
@@ -1189,13 +1179,6 @@ export default function ProductManagementUI() {
       isDefault: variant.isDefault === true || (!variantsData.some((item) => item.isDefault) && index === 0),
       sortOrder: variant.sortOrder ?? index,
     }));
-    const hasVariantPricing = normalizedVariants.length > 0;
-    const primaryOption = hasVariantPricing
-      ? normalizedVariants.find((variant) => variant.isDefault) || normalizedVariants[0] || {}
-      : formattedOptions[0] || {};
-    const variantRootPrice = Number(primaryOption.price || primaryOption.salePrice || 0);
-    const variantRootMrp = Number(primaryOption.mrp || primaryOption.price || variantRootPrice || 0);
-    const variantRootStock = normalizedVariants.reduce((total, variant) => total + Number(variant.stock || 0), 0);
     const origin = compactObject(updatedFormData.origin || {});
     const dimensions = compactObject({
       unit: updatedFormData.dimensions?.unit,
@@ -1242,7 +1225,7 @@ export default function ProductManagementUI() {
       processingDays: toOptionalNumber(updatedFormData.shipping?.processingDays),
       estimatedDaysMin: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMin),
       estimatedDaysMax: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMax),
-      shippingProfileId: updatedFormData.shipping?.shippingProfileId || null,
+      shippingProfileId: updatedFormData.shipping?.freeShipping ? null : updatedFormData.shipping?.shippingProfileId || null,
     });
 
     const productPayload = {
@@ -1252,20 +1235,11 @@ export default function ProductManagementUI() {
       ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
-      price: hasVariantPricing ? variantRootPrice : Number(updatedFormData.price || primaryOption.salePrice || 0),
-      mrp: hasVariantPricing ? variantRootMrp : Number(updatedFormData.mrp || primaryOption.mrp || 0),
-      ...(hasVariantPricing
-        ? { salePrice: primaryOption.salePrice === undefined || primaryOption.salePrice === "" ? null : Number(primaryOption.salePrice || 0) }
-        : updatedFormData.salePrice !== undefined && updatedFormData.salePrice !== ""
-          ? { salePrice: Number(updatedFormData.salePrice || 0) }
-          : { salePrice: null }),
       gstInclusive: true,
       category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
       brand: updatedFormData.brand || updatedFormData.brand_id || "",
       productFamilyCode: updatedFormData.productFamilyCode,
-      sku: updatedFormData.sku || updatedFormData.rack_no || updatedFormData.name,
-      color: primaryOption.attributes?.color || primaryOption.attributes?.Color || "default",
       attributes: {
         ...(updatedFormData.attributes || {}),
       },
@@ -1274,9 +1248,6 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       ...(Object.keys(shipping).length ? { shipping } : {}),
-      stock: hasVariantPricing ? variantRootStock : Number(updatedFormData.stock || updatedFormData.quantity || 0),
-      images: normalizeImageList(images),
-      documents: catalogsUrlsArray,
       status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
       metadata: {
         ...(updatedFormData.metadata || {}),
@@ -1318,7 +1289,6 @@ export default function ProductManagementUI() {
       if (response) {
         if (!isEditMode) {
           setFormData({});
-          setImages([]);
           setVariantRows([{
             "sku": "",
             "type": null,
@@ -1340,7 +1310,7 @@ export default function ProductManagementUI() {
     } finally {
       setSaving(false);
     }
-  }, [formData, images, options, dispatch, setFormData, setImages, isEditMode, isSellerPanelUser, id, navigate, shippingProfileOptions, variantAxes, variantsData]);
+  }, [formData, options, dispatch, setFormData, isEditMode, isSellerPanelUser, id, navigate, shippingProfileOptions, variantAxes, variantsData]);
 
 
   const handleProductDetailChange = (field, content) => {
@@ -1464,98 +1434,71 @@ export default function ProductManagementUI() {
             <p className="text-sm text-gray-500 mt-0.5">Select a shipping profile or configure delivery settings manually.</p>
           </div>
 
-          {/* Shipping Profile selector */}
-          <div className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/5' : 'border-gray-200 bg-gray-50'}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Shipping Profile</p>
-                <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile uses its serviceability, charges, COD, and ETA.</p>
+          {formData?.shipping?.freeShipping ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-sm font-semibold text-emerald-800">Free shipping is enabled</p>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                Shipping profile selection is hidden while this product has free shipping.
+              </p>
+            </div>
+          ) : (
+            <div className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/5' : 'border-gray-200 bg-gray-50'}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Shipping Profile</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile uses its serviceability, charges, COD, and ETA.</p>
+                </div>
+                {formData?.shipping?.shippingProfileId && (
+                  <button type="button" className="text-xs text-red-500 hover:underline whitespace-nowrap" onClick={() => patchShipping({ shippingProfileId: null })}>
+                    Remove profile
+                  </button>
+                )}
               </div>
+              <select
+                className="admin-input"
+                value={formData?.shipping?.shippingProfileId || ''}
+                onChange={(e) => patchShipping({ shippingProfileId: e.target.value || null })}
+              >
+                <option value="">— No profile (use manual settings below) —</option>
+                {shippingProfileOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}{opt.profile?.isDefault ? ' (Default)' : ''}</option>
+                ))}
+              </select>
+              {shippingProfileOptions.length === 0 && !formData?.sellerId && (
+                <p className="text-xs text-amber-600">Select a seller first to load their shipping profiles.</p>
+              )}
+              {shippingProfileOptions.length === 0 && formData?.sellerId && (
+                <p className="text-xs text-gray-400">No active shipping profiles found. <a href="/app/shipping-profiles" className="text-[var(--admin-blue)] hover:underline" target="_blank" rel="noopener noreferrer">Create one →</a></p>
+              )}
+              {formData?.shipping?.shippingProfileId && (() => {
+                const selected = shippingProfileOptions.find((o) => o.value === formData.shipping.shippingProfileId);
+                const p = selected?.profile;
+                if (!p) return null;
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {[
+                      { label: 'Method', value: p.shippingMethod },
+                      { label: 'Mode', value: p.serviceabilityMode?.replace(/_/g, ' ') },
+                      { label: 'Charge', value: p.shippingCharge === 0 ? 'Free' : `₹${Number(p.shippingCharge).toFixed(0)}` },
+                      { label: 'COD', value: p.codAvailable ? 'Available' : 'Not available' },
+                      ...(p.etaMin || p.etaMax ? [{ label: 'ETA', value: [p.etaMin, p.etaMax].filter(Boolean).join('–') + ' days' }] : []),
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5">
+                        <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+                        <p className="text-xs font-semibold text-gray-700 mt-0.5">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               {formData?.shipping?.shippingProfileId && (
-                <button type="button" className="text-xs text-red-500 hover:underline whitespace-nowrap" onClick={() => patchShipping({ shippingProfileId: null })}>
-                  Remove profile
-                </button>
+                <p className="text-xs text-[var(--admin-blue)]">
+                  Manual shipping fields are hidden while this profile is active. Remove the profile to edit product-level shipping manually.
+                </p>
               )}
             </div>
-            <select
-              className="admin-input"
-              value={formData?.shipping?.shippingProfileId || ''}
-              onChange={(e) => patchShipping({ shippingProfileId: e.target.value || null })}
-            >
-              <option value="">— No profile (use manual settings below) —</option>
-              {shippingProfileOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}{opt.profile?.isDefault ? ' (Default)' : ''}</option>
-              ))}
-            </select>
-            {shippingProfileOptions.length === 0 && !formData?.sellerId && (
-              <p className="text-xs text-amber-600">Select a seller first to load their shipping profiles.</p>
-            )}
-            {shippingProfileOptions.length === 0 && formData?.sellerId && (
-              <p className="text-xs text-gray-400">No active shipping profiles found. <a href="/app/shipping-profiles" className="text-[var(--admin-blue)] hover:underline" target="_blank" rel="noopener noreferrer">Create one →</a></p>
-            )}
-            {formData?.shipping?.shippingProfileId && (() => {
-              const selected = shippingProfileOptions.find((o) => o.value === formData.shipping.shippingProfileId);
-              const p = selected?.profile;
-              if (!p) return null;
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {[
-                    { label: 'Method', value: p.shippingMethod },
-                    { label: 'Mode', value: p.serviceabilityMode?.replace(/_/g, ' ') },
-                    { label: 'Charge', value: p.shippingCharge === 0 ? 'Free' : `₹${Number(p.shippingCharge).toFixed(0)}` },
-                    { label: 'COD', value: p.codAvailable ? 'Available' : 'Not available' },
-                    ...(p.etaMin || p.etaMax ? [{ label: 'ETA', value: [p.etaMin, p.etaMax].filter(Boolean).join('–') + ' days' }] : []),
-                  ].map(({ label, value }) => (
-                    <div key={label} className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5">
-                      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
-                      <p className="text-xs font-semibold text-gray-700 mt-0.5">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-            {formData?.shipping?.shippingProfileId && (
-              <p className="text-xs text-[var(--admin-blue)]">
-                Manual shipping fields are hidden while this profile is active. Remove the profile to edit product-level shipping manually.
-              </p>
-            )}
-          </div>
-
-          {!formData?.shipping?.shippingProfileId && (
-            <>
-             
-              {/* Free Shipping toggle row */}
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Free Shipping</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Enable free shipping for this product regardless of order value.</p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[var(--admin-blue)] flex-shrink-0"
-                  checked={Boolean(formData?.shipping?.freeShipping)}
-                  onChange={(e) => patchShipping({ freeShipping: e.target.checked })}
-                />
-              </label>
-
-            
-            </>
           )}
         </div>
-      )
-    },
-    {
-      id: 'media',
-      title: 'Media',
-      description: 'Manage your product\'s image gallery.',
-      icon: <IoImage />,
-      component: (
-        <MediaTab
-          setFormData={setFormData}
-          formData={formData}
-          images={images} setImages={setImages}
-          error={error}
-        />
       )
     },
     {
@@ -1648,7 +1591,7 @@ export default function ProductManagementUI() {
   ], [
     formData, formattedData, createSelectOptions,
     handleChange, handleSelectChange, handleNestedChange, patchShipping,
-    selector, options, variantsData, variantAxes, categoryAttributeSchema, error, images,
+    selector, options, variantsData, variantAxes, categoryAttributeSchema, error,
   ]);
 
   const flowReadiness = useMemo(() => {

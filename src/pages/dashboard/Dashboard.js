@@ -501,7 +501,7 @@ export default function Dashboard() {
         iconBg: "#ffe5b5",
         iconColor: "#f5a300",
         label: "Units Sold",
-        route: "/app/inventory-overview",
+        route: "/app/inventory",
         value: formatNumber(
           sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold,
         ),

@@ -71,10 +71,6 @@ const ViewTransaction = React.lazy(
 const ProductCatalog = React.lazy(
   () => import("../../pages/ProductManagement/ProductCatalog/ProductCatalog"),
 );
-const SellerProductInventories = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/SellerProductInventories/SellerProductInventories"),
-);
 const Store = React.lazy(
   () => import("../../pages/ProductManagement/Store/Store"),
 );
@@ -83,14 +79,6 @@ const Brands = React.lazy(
 );
 const ProductOptions = React.lazy(
   () => import("../../pages/ProductManagement/ProductOptions/ProductOptions"),
-);
-const ThresholdProducts = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/ThresholdProducts/ThresholdProducts"),
-);
-const InventoryAudit = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/InventoryAudit/InventoryAudit"),
 );
 const Orders = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/Orders"),
@@ -199,23 +187,8 @@ const MyOrganizations = React.lazy(
 );
 
 // ── Inventory Management ────────────────────────────────────────────────────
-const InventoryOverview = React.lazy(
-  () => import("../../pages/Inventory/InventoryOverview"),
-);
-const VariantInventory = React.lazy(
-  () => import("../../pages/Inventory/VariantInventory"),
-);
-const InventoryAdjustment = React.lazy(
-  () => import("../../pages/Inventory/InventoryAdjustment"),
-);
-const InventoryTransactions = React.lazy(
-  () => import("../../pages/Inventory/InventoryTransactions"),
-);
-const WarehouseManagement = React.lazy(
-  () => import("../../pages/Inventory/WarehouseManagement"),
-);
-const LowStockAlerts = React.lazy(
-  () => import("../../pages/Inventory/LowStockAlerts"),
+const Inventory = React.lazy(
+  () => import("../../pages/Inventory/Inventory"),
 );
 
 // ── Reports & Analytics ─────────────────────────────────────────────────────
@@ -579,13 +552,13 @@ function Layout() {
 	      { path: "/transactions/view/:id", render: () => <ViewTransaction /> },
 	      { path: "/product-catalog", render: () => <ProductCatalog /> },
 	      { path: "/product-catalog/archived", render: () => <ProductCatalog /> },
-	      { path: "/seller-Product-Inventory", render: () => <SellerProductInventories /> },
-      { path: "/seller-product-inventory", render: () => <SellerProductInventories /> },
+      { path: "/seller-Product-Inventory", redirectTo: "/app/inventory" },
+      { path: "/seller-product-inventory", redirectTo: "/app/inventory" },
       { path: "/store", render: () => <Store /> },
       { path: "/brands", render: () => <Brands /> },
       { path: "/product-options", render: () => <ProductOptions /> },
-      { path: "/threshold-products", render: () => <ThresholdProducts /> },
-      { path: "/inventory-audit", render: () => <InventoryAudit /> },
+      { path: "/threshold-products", redirectTo: "/app/inventory" },
+      { path: "/inventory-audit", redirectTo: "/app/inventory" },
       { path: "/orders", render: () => <Orders /> },
       { path: "/carts", render: () => <Carts /> },
       { path: "/checkout-quote", render: () => <CheckoutQuote /> },
@@ -660,12 +633,14 @@ function Layout() {
         path: "/product-option-values",
         render: () => <ProductOptionValue setModuleName={setModuleName} />,
       },
-      { path: "/inventory-overview", render: () => <InventoryOverview /> },
-      { path: "/variant-inventory", render: () => <VariantInventory /> },
-      { path: "/inventory-adjustment", render: () => <InventoryAdjustment /> },
-      { path: "/inventory-transactions", render: () => <InventoryTransactions /> },
-      { path: "/warehouse", render: () => <WarehouseManagement /> },
-      { path: "/low-stock-alerts", render: () => <LowStockAlerts /> },
+      { path: "/inventory", render: () => <Inventory /> },
+      { path: "/inventory/:productId", permissionPath: "/inventory", render: () => <Inventory /> },
+      { path: "/inventory-overview", redirectTo: "/app/inventory" },
+      { path: "/variant-inventory", redirectTo: "/app/inventory" },
+      { path: "/inventory-adjustment", redirectTo: "/app/inventory" },
+      { path: "/inventory-transactions", redirectTo: "/app/inventory" },
+      { path: "/warehouse", redirectTo: "/app/inventory" },
+      { path: "/low-stock-alerts", redirectTo: "/app/inventory" },
       { path: "/seller-staff", permissionPath: "/seller-users", render: () => <SellerUsers /> },
       { path: "/roles-permissions", render: () => <RolesPermissions /> },
       { path: "/module-management", render: () => <ModuleManagement /> },

@@ -625,17 +625,6 @@ export default function BasicDetailsTab({
                   error={errors?.salePrice}
                   textareaClasses='text-sm'
                 />
-                <Input
-                  labelName="Stock"
-                  name="stock"
-                  type="number"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter stock"
-                  error={errors?.stock}
-                  textareaClasses='text-sm'
-                />
               </>
             )}
            

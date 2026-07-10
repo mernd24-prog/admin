@@ -66,8 +66,18 @@ export const normalizeImageList = (...sources) => {
   return urls;
 };
 
+export const getDefaultVariant = (product = {}) => {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (!variants.length) return null;
+  return variants.find((variant) => variant?.isDefault === true) ||
+    variants.find((variant) => variant?.status !== "inactive") ||
+    variants[0] ||
+    null;
+};
+
 export const getProductImages = (product = {}) =>
   normalizeImageList(
+    getDefaultVariant(product)?.images,
     product.images,
     product.imageUrls,
     product.product_image_id?.images,

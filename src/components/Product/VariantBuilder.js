@@ -406,7 +406,6 @@ const VariantBuilder = ({
               { field: 'price', label: 'Price (₹)', placeholder: '0' },
               { field: 'mrp', label: 'MRP (₹)', placeholder: '0' },
               { field: 'salePrice', label: 'Sale Price (₹)', placeholder: '0' },
-              { field: 'stock', label: 'Stock', placeholder: '0' },
               { field: 'gstRate', label: 'GST (%)', placeholder: '18' },
             ].map(({ field, label, placeholder }) => (
               <div key={field} className="space-y-1">
@@ -543,7 +542,8 @@ const VariantBuilder = ({
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Stock</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
+                        <SmallInput type="number" min={0} value={variant.stock ?? 0} disabled readOnly />
+                        <p className="text-[10px] text-gray-400">Managed in Inventory.</p>
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>GST (%)</FieldLabel>

@@ -7,6 +7,7 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
     formData?.shipping?.codAvailable !== undefined
       ? Boolean(formData.shipping.codAvailable)
       : Boolean(formData?.cod);
+  const freeShippingEnabled = Boolean(formData?.shipping?.freeShipping);
 
   return (
     <div className="flex flex-col gap-3">
@@ -65,6 +66,21 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
           </div>
           <div className="flex-shrink-0 mt-0.5">
             <ToggleButton isToggle={codEnabled} handleClick={() => handleToggleProductSetting('COD')} />
+          </div>
+        </div>
+      </div>
+
+      {/* Free Shipping */}
+      <div className="bg-white border border-gray-100 rounded-xl p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800">Free Shipping</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+              Hide shipping profile selection and deliver this product without a shipping charge.
+            </p>
+          </div>
+          <div className="flex-shrink-0 mt-0.5">
+            <ToggleButton isToggle={freeShippingEnabled} handleClick={() => handleToggleProductSetting('FREE_SHIPPING')} />
           </div>
         </div>
       </div>

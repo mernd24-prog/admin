@@ -175,6 +175,15 @@ export const ENDPOINTS = {
     reject: (paymentId) => `/payments/${paymentId}/reject`,
   },
   inventory: {
+    variants: byPanel("/admin/inventory/variants", "/products/inventory/variants"),
+    product: byPanelFn(
+      (productId) => `/admin/inventory/products/${productId}`,
+      (productId) => `/products/inventory/products/${productId}`
+    ),
+    adjustVariant: byPanelFn(
+      (productId, variantSku) => `/admin/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`,
+      (productId, variantSku) => `/products/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`
+    ),
     stats: "/admin/inventory/stats",
     lowStock: "/admin/inventory/low-stock",
     transactions: "/admin/inventory/transactions",

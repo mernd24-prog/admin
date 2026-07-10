@@ -23,28 +23,50 @@ const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
 // All structurally valid transitions (mirrors backend assertOrderTransitionAllowed)
 const ALLOWED_TRANSITIONS = {
-  pending_payment: ["confirmed", "payment_failed", "cancelled"],
-  payment_failed:  ["pending_payment", "cancelled"],
-  confirmed:       ["packed", "cancelled"],
-  packed:          ["shipped", "cancelled"],
-  shipped:         ["delivered", "return_requested"],
+  pending_payment: ["confirmed", "payment_failed", "cancelled", "on_hold"],
+  payment_failed:  ["pending_payment", "cancelled", "on_hold"],
+  on_hold:         ["pending_payment", "confirmed", "processing", "cancelled"],
+  confirmed:       ["processing", "packed", "cancelled", "on_hold"],
+  processing:      ["packed", "cancelled", "on_hold"],
+  packed:          ["ready_to_ship", "cancelled", "on_hold"],
+  ready_to_ship:   ["shipped", "cancelled", "on_hold"],
+  shipped:         ["out_for_delivery", "delivered", "failed_delivery", "return_requested"],
+  out_for_delivery:["delivered", "failed_delivery", "return_requested"],
+  failed_delivery: ["out_for_delivery", "returned", "cancelled"],
   delivered:       ["fulfilled", "return_requested"],
   fulfilled:       ["return_requested"],
   return_requested:["partially_returned", "returned"],
-  partially_returned:["return_requested", "fulfilled"],
-  returned:        ["fulfilled"],
+  partially_returned:["return_requested", "fulfilled", "refunded"],
+  returned:        ["fulfilled", "refunded"],
+  refunded:        ["fulfilled"],
 };
 
-// Seller order actions stop at shipment handoff. Delivery progress is managed in Shipments.
-const SELLER_ALLOWED_NEXT = new Set(["packed", "shipped", "fulfilled"]);
+const SELLER_ALLOWED_NEXT = new Set(["processing", "packed", "ready_to_ship", "shipped", "out_for_delivery", "failed_delivery", "fulfilled", "on_hold"]);
+
+const STATUS_ALIASES = {
+  pending: "pending_payment",
+  placed: "pending_payment",
+  created: "pending_payment",
+  initiated: "pending_payment",
+  authorized: "pending_payment",
+  paid: "confirmed",
+  captured: "confirmed",
+  dispatched: "shipped",
+  completed: "fulfilled",
+  complete: "fulfilled",
+};
 
 const normalizeStatusKey = (status = "") =>
+  STATUS_ALIASES[String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_")] ||
   String(status || "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/[-\s]+/g, "_");
 
-const toOption = (status) => ({ value: status, label: status.replace(/_/g, " ") });
+const toOption = (status) => ({ value: status, label: formatLabel(status) });
 
 const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
@@ -277,8 +299,10 @@ const normalizeSellerSettlement = (seller = {}) => ({
   platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
   fixedFee: money(firstDefined(seller.fixedFeeAmount, seller.fixedFee, seller.fixed_fee_amount, seller.fixed_fee, 0)),
   closingFee: money(firstDefined(seller.closingFeeAmount, seller.closingFee, seller.closing_fee_amount, seller.closing_fee, 0)),
+  sellerDeliveryCharge: money(firstDefined(seller.sellerDeliveryChargeAmount, seller.seller_delivery_charge_amount, seller.deliveryChargeAmount, seller.delivery_charge_amount, 0)),
   shippingReimbursement: money(firstDefined(seller.shippingReimbursementAmount, seller.shipping_reimbursement_amount, 0)),
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
+  shippingPolicy: firstDefined(seller.shippingPolicy, seller.shipping_policy, ""),
   refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
   sellerPayout: money(firstDefined(seller.sellerPayoutAmount, seller.sellerPayout, seller.seller_payout_amount, 0)),
   commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
@@ -305,7 +329,9 @@ const Panel = ({ title, children, actions, className = "" }) => (
 const InfoRow = ({ label, value, strong = false }) => (
   <div className="flex items-start justify-between gap-4 py-2 text-sm">
     <span className="text-[#65718b]">{formatLabel(label)}</span>
-    <span className={`text-right text-[#202337] ${strong ? "font-semibold" : "font-medium"}`}>{formatLabel(value, "N/A")}</span>
+    <span className={`text-right text-[#202337] ${strong ? "font-semibold" : "font-medium"}`}>
+      {value && typeof value === "object" ? value : formatLabel(value, "N/A")}
+    </span>
   </div>
 );
 
@@ -499,17 +525,21 @@ const OrderSummary = () => {
     const currentStatus = normalizeStatusKey(firstDefined(order.status, order.order_status));
     const validNext = ALLOWED_TRANSITIONS[currentStatus] || [];
     const isAdminOrderManager = isSuperAdmin || isAdmin || role === "sub-admin";
-    const filtered = validNext
+    const transitionOptions = validNext
       .filter((s) => {
         if (isAdminOrderManager) return true;
         if (isSeller) return SELLER_ALLOWED_NEXT.has(s);
         return false;
       })
       .map(toOption);
-    return filtered.length
-      ? filtered
-      : [{ value: "", label: "No valid status change available", isDisabled: true }];
+
+    return transitionOptions;
   }, [order.status, order.order_status, isSeller, isAdmin, isSuperAdmin, role]);
+
+  const openStatusModal = useCallback(() => {
+    setFormData((prev) => ({ ...prev, status: "", cancelItems: {} }));
+    setState((prev) => ({ ...prev, statusModal: true }));
+  }, []);
 
   const handleStatusSubmit = useCallback(async () => {
     if (!formData.status) {
@@ -614,7 +644,7 @@ const OrderSummary = () => {
               <button
                 type="button"
 
-                onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
+                onClick={openStatusModal}
               >
                 <FaFile /> Update Status
               </button>
@@ -623,7 +653,7 @@ const OrderSummary = () => {
                 <button
                   type="button"
 
-                  onClick={() => setState((prev) => ({ ...prev, statusModal: true }))}
+                  onClick={openStatusModal}
                 >
                   <FaFile /> Status
                 </button>
@@ -1055,8 +1085,12 @@ const OrderSummary = () => {
                     <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Fixed fee part")}</span><span>{formatMoney(seller.fixedFee)}</span></div>
                     <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Closing fee part")}</span><span>{formatMoney(seller.closingFee)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Platform fee GST")}</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
+                    <div className="flex justify-between"><span>{formatLabel("Customer shipping collected")}</span><span>{formatMoney(seller.sellerDeliveryCharge)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Shipping reimbursement")}</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Shipping deduction")}</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
+                    {seller.shippingPolicy && (
+                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Shipping policy")}</span><span>{formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
+                    )}
                     <div className="flex justify-between"><span>{formatLabel("Refund adjustment")}</span><span>-{formatMoney(seller.refundAmount)}</span></div>
                     {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
@@ -1117,7 +1151,7 @@ const OrderSummary = () => {
             label="Status"
             placeholder="Select Status"
           />
-          {formData.status === "shipped" && (
+          {["ready_to_ship", "shipped", "out_for_delivery"].includes(formData.status) && (
             <div className="rounded-md border border-[#e0ecff] bg-[#f0f6ff] p-3 space-y-3">
               <p className="text-xs font-semibold text-[#2f6fed]">Shipment Details</p>
               <Input labelName="Tracking Number" value={formData.trackingNumber} onChange={(event) => setFormData((prev) => ({ ...prev, trackingNumber: event.target.value }))} name="trackingNumber" placeholder="AWB / tracking number" maxLength={200} />

@@ -414,7 +414,7 @@ export const MODULE_DEFAULT_ROUTES = {
   platform:          "categories",
 
   // Inventory
-  inventory:"inventory-overview",
+  inventory:"inventory",
   // Orders
   carts:        "carts",
   orders:       "orders",
@@ -589,7 +589,7 @@ const ROUTE_MODULES = [
   // Inventory Management
   [
     [
-      "/inventory-overview", "/variant-inventory",
+      "/inventory", "/inventory-overview", "/variant-inventory",
       "/seller-Product-Inventory", "/seller-product-inventory", "/inventory-adjustment",
       "/inventory-transactions", "/warehouse", "/low-stock-alerts", "/threshold-products", "/inventory-audit",
     ],

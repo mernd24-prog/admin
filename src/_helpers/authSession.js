@@ -16,6 +16,7 @@ export const FORCE_LOGOUT_CODES = new Set([
   "ROLE_INACTIVE",
   "PERMISSION_REMOVED",
   "SESSION_INVALID",
+  "BACKEND_UNREACHABLE",
   "FORCE_LOGOUT",
 ]);
 
@@ -30,6 +31,7 @@ export const FORCE_LOGOUT_MESSAGES = {
   ROLE_INACTIVE: "Your role is no longer active. Please contact administrator.",
   PERMISSION_REMOVED: "Your permissions were updated. Please login again.",
   SESSION_INVALID: "Your session is no longer valid. Please login again.",
+  BACKEND_UNREACHABLE: "Backend is not reachable. Please login again when service is available.",
   FORCE_LOGOUT: "Please login again to continue.",
 };
 
