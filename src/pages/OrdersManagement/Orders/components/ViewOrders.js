@@ -373,25 +373,33 @@ const EmptyState = ({ children }) => (
     {children}
   </div>
 );
-
 const RelatedCard = ({ title, subtitle, status, rows = [], action }) => (
   <div className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
-        <div className="font-semibold text-[#202337]">{formatLabel(title, "N/A")}</div>
-        {subtitle && <div className="mt-0.5 text-xs text-[#65718b]">{formatLabel(subtitle)}</div>}
+        <div className="font-semibold text-[#202337]">
+          {formatLabel(title, "N/A")}
+        </div>
+
+        {subtitle && (
+          <div className="mt-0.5 text-xs text-[#65718b]">
+            {subtitle}
+          </div>
+        )}
       </div>
+
       {status && <StatusBadge status={status} size="sm" dot />}
     </div>
+
     <div className="space-y-1.5">
       {rows.map((row) => (
         <InfoRow key={row.label} label={row.label} value={row.value} />
       ))}
     </div>
+
     {action && <div className="mt-3">{action}</div>}
   </div>
 );
-
 const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -709,6 +717,7 @@ const OrderSummary = () => {
                   <span className="col-span-2 text-right">Line Total</span>
                 </div>
                 {group.items.map((item) => {
+                console.log('group: ', group);
                   const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
                   const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
                   const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");

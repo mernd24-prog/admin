@@ -22,7 +22,7 @@ const Loader = ({ loading = true, fullScreen = true, label }) => {
       role="status"
       aria-label={label || "Loading"}
     >
-      <div className="flex flex-col items-center gap-3 rounded-lg bg-white px-6 py-5 shadow-xl">
+      <div className="flex flex-col items-center gap-3 px-6 py-5">
         <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#e8eefc] border-t-[#082f91]" />
         {label && <span className="text-sm font-medium text-[#202337]">{label}</span>}
       </div>
