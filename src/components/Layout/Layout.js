@@ -135,6 +135,10 @@ const ProductAdminDetails = React.lazy(
   () =>
     import("../../pages/ProductManagement/ProductCatalog/components/ProductAdminDetails"),
 );
+const SellerSpecialPriceManager = React.lazy(
+  () =>
+    import("../../pages/ProductManagement/ProductCatalog/components/SellerSpecialPriceManager"),
+);
 const ProductCategories = React.lazy(
   () =>
     import("../../pages/ProductManagement/ProductCategories/ProductCategories"),
@@ -554,6 +558,7 @@ function Layout() {
 	      { path: "/product-catalog/archived", render: () => <ProductCatalog /> },
       { path: "/seller-Product-Inventory", redirectTo: "/app/inventory" },
       { path: "/seller-product-inventory", redirectTo: "/app/inventory" },
+      { path: "/seller-special-price-manager", render: () => <SellerSpecialPriceManager /> },
       { path: "/store", render: () => <Store /> },
       { path: "/brands", render: () => <Brands /> },
       { path: "/product-options", render: () => <ProductOptions /> },

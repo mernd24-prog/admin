@@ -562,7 +562,7 @@ const ROUTE_MODULES = [
   // Catalog Management — products
   [
     [
-      "/product-catalog", "/product-catalog/archived", "/store", "/bar-code", "/qty-head",
+      "/product-catalog", "/product-catalog/archived", "/store", "/bar-code", "/qty-head", "/seller-special-price-manager",
     ],
     ["products"],
   ],

@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 
 // Components
-import FormInput from '../../../../components/Atoms/FormInput/FormInput';
 import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
 import Input from '../../../../components/Atoms/Input/Input';
 import Loader from '../../../../components/Loader/Loader';
@@ -21,7 +20,7 @@ import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions
 import AddHsnModal from './Modals/AddHsnModal';
 import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
 import { isSellerPanel } from '../../../../_helpers/panelConfig';
-// import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
+import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
 
 const INITIAL_FORM_CATEGORY = {
   categoryName: '',
@@ -65,6 +64,7 @@ export default function BasicDetailsTab({
   fetchAllData,
   allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], organizationList = [], userData,
   hasVariantPricing = false,
+  handleInputReactQuillChange,
 }) {
   const dispatch = useDispatch();
   const selector = useSelector(state => state);
@@ -185,9 +185,11 @@ export default function BasicDetailsTab({
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomWarranty, setIsCustomWarranty] = useState(false);
 
-  const warrantyOptions = warrantyTemplatesFromMaster.options.length > 0
-    ? warrantyTemplatesFromMaster.options
-    : (formattedWarrantyList || []);
+  const warrantyOptions = useMemo(() => (
+    warrantyTemplatesFromMaster.options.length > 0
+      ? warrantyTemplatesFromMaster.options
+      : (formattedWarrantyList || [])
+  ), [formattedWarrantyList, warrantyTemplatesFromMaster.options]);
 
   const selectedWarrantyOption = useMemo(() => {
     const currentValue = `${String(formData.warranty?.period ?? '')}:${String(formData.warranty?.periodUnit || '')}`;
@@ -699,16 +701,15 @@ export default function BasicDetailsTab({
             />
           </div>
 
-          <FormInput
+          <TextEditor
             label="Description"
-            name="description"
-            type="textarea"
-            value={formData.description}
-            onChange={handleChange}
+            value={formData.description || ''}
+            onChange={(content) => handleInputReactQuillChange?.('description', content)}
             required={true}
-            placeholder="Enter detailed product description (50-500 characters)"
+            placeholder="Enter detailed product description"
             error={errors?.description}
-            textareaClasses="text-sm"
+            height="220px"
+             className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
           />
         </div>
       </div>

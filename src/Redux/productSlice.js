@@ -568,6 +568,11 @@ export const bulkUpdateProducts = createApiThunkPrivate('bulkUpdateProducts', EN
         ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
     }),
 })
+export const bulkUpdateSpecialPrices = createApiThunkPrivate('bulkUpdateSpecialPrices', ENDPOINTS.products.specialPrices, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        updates: Array.isArray(payload.updates) ? payload.updates : [],
+    }),
+})
 export const adjustProductInventory = createApiThunkPrivate(
     'adjustProductInventory',
     (payload) => ENDPOINTS.products.inventory(firstProductId(payload)),

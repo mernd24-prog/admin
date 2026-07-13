@@ -14,6 +14,7 @@ import Loader from '../../../../components/Loader/Loader';
 import { getAllStateList } from '../../../../Redux/stateSlice';
 import { getAllCityList } from '../../../../Redux/citySlice';
 import { GrDocument } from 'react-icons/gr';
+import { FiTrash2, FiAlertCircle, FiPlus } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import TabNavigation from './TabNavigation';
@@ -24,12 +25,10 @@ import DynamicAttributesTab from './DynamicAttributesTab';
 import VariantBuilder from '../../../../components/Product/VariantBuilder';
 import SEOPanel from '../../../../components/Product/SEOPanel';
 import TagsInput from '../../../../components/Product/TagsInput';
-import useDropdownOptions from '../../../../hooks/useDropdownOptions';
 import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
 import { getShippingProfiles } from '../../../../Redux/deliverySlice';
 import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
 import { isSellerPanel } from '../../../../_helpers/panelConfig';
-import LocationValueSelector from '../../../../components/Shared/LocationValueSelector';
 
 const API_CALLS = [
   { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
@@ -173,6 +172,12 @@ const compactObject = (value) => {
   }, {});
 };
 
+const getPlainTextFromHtml = (value = '') => String(value || '')
+  .replace(/<[^>]*>/g, ' ')
+  .replace(/&nbsp;/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate()
@@ -200,13 +205,15 @@ export default function ProductManagementUI() {
   const [taxData, setTaxData] = useState(null)
   const [userData, setUserData] = useState({})
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
+  const [useManualAttributes] = useState(false);
+  const [newAttrKey, setNewAttrKey] = useState('');
+  const [newAttrValue, setNewAttrValue] = useState('');
+  const [manualAttrErrors, setManualAttrErrors] = useState({});
   const [variantsData, setVariantsData] = useState([DEFAULT_PRODUCT_VARIANT]);
   const [variantAxes, setVariantAxes] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformValues, setPlatformValues] = useState({});
   const fetchedOptionIds = useRef(new Set());
-  const productVisibilities = useDropdownOptions('product-visibilities');
-  const shippingMethods = useDropdownOptions('shipping-methods');
   const [saving, setSaving] = useState(false);
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
 
@@ -543,7 +550,7 @@ export default function ProductManagementUI() {
     dispatch(getShippingProfiles(params)).unwrap().then((res) => {
       const list = res?.data?.profiles || res?.data?.data?.profiles || res?.normalized?.data?.profiles || res?.profiles || [];
       setShippingProfileOptions(list.map((p) => ({ value: p.id, label: p.name, profile: p })));
-    }).catch(() => {});
+    }).catch(() => { });
   }, [dispatch, formData?.sellerId, formData?.organizationId, userData]);
 
   const handleOptionSearch = useCallback((query) => {
@@ -738,10 +745,11 @@ export default function ProductManagementUI() {
 
   const validateForm = () => {
     const newErrors = {};
+    const descriptionText = getPlainTextFromHtml(formData?.description);
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
     if (formData?.name?.trim() && formData.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters.";
-    if (!formData?.description?.trim()) newErrors.description = "Description is required.";
-    if (formData?.description?.trim() && formData.description.trim().length < 10) newErrors.description = "Description must be at least 10 characters.";
+    if (!descriptionText) newErrors.description = "Description is required.";
+    if (descriptionText && descriptionText.length < 10) newErrors.description = "Description must be at least 10 characters.";
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
     if (!formData?.organizationId) {
       if (isSellerPanelUser) {
@@ -766,15 +774,17 @@ export default function ProductManagementUI() {
       (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.price || 0))
     );
     if (invalidVariant) newErrors.variants = "Every variant needs SKU, valid price, and MRP.";
-    categoryAttributeSchema.forEach((field) => {
-      const value = formData?.attributes?.[field.key];
-      if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
-        newErrors.attributes = {
-          ...(newErrors.attributes || {}),
-          [field.key]: `${field.label || field.key} is required.`,
-        };
-      }
-    });
+    if (!useManualAttributes) {
+      categoryAttributeSchema.forEach((field) => {
+        const value = formData?.attributes?.[field.key];
+        if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
+          newErrors.attributes = {
+            ...(newErrors.attributes || {}),
+            [field.key]: `${field.label || field.key} is required.`,
+          };
+        }
+      });
+    }
 
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -984,7 +994,7 @@ export default function ProductManagementUI() {
           categoryId: selectedOption?.value || "",
           category: selectedOption?.categoryKey || selectedOption?.value || "",
           category_key: selectedOption?.categoryKey || selectedOption?.value || "",
-          attributes: {}
+          attributes: useManualAttributes ? (prev.attributes || {}) : {}
         }));
         break;
       case 'STORE_BATCH_ID':
@@ -1115,6 +1125,8 @@ export default function ProductManagementUI() {
     setSaving(true);
 
     const updatedFormData = { ...formData };
+    // persist manual-attributes selection to payload
+    updatedFormData.attributesManual = useManualAttributes;
     const selectedShippingProfile = !updatedFormData.shipping?.freeShipping && updatedFormData.shipping?.shippingProfileId
       ? shippingProfileOptions.find((option) => String(option.value) === String(updatedFormData.shipping.shippingProfileId))?.profile || null
       : null;
@@ -1257,6 +1269,7 @@ export default function ProductManagementUI() {
         dealSource: updatedFormData.isDealProduct ? updatedFormData.dealSource : undefined,
         codAvailable: resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
+        attributesManual: Boolean(updatedFormData.attributesManual),
       },
       productType: 'variable',
       ...(updatedFormData.shortDescription ? { shortDescription: updatedFormData.shortDescription } : {}),
@@ -1346,6 +1359,63 @@ export default function ProductManagementUI() {
     }));
   }, []);
 
+  const addManualAttribute = useCallback(() => {
+    const key = (newAttrKey || '').trim();
+    const value = (newAttrValue || '').trim();
+    const existingKeys = Object.keys(formData?.attributes || {});
+    const errors = {};
+
+    if (!key) errors.key = 'Attribute key is required.';
+    else if (existingKeys.some((k) => k.toLowerCase() === key.toLowerCase())) {
+      errors.key = 'This attribute key already exists.';
+    }
+    if (!value) errors.value = 'Attribute value is required.';
+
+    if (Object.keys(errors).length > 0) {
+      setManualAttrErrors(errors);
+      return;
+    }
+
+    setManualAttrErrors({});
+    setFormData((prev) => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: value } }));
+    setNewAttrKey('');
+    setNewAttrValue('');
+  }, [newAttrKey, newAttrValue, formData?.attributes]);
+
+  const removeManualAttribute = useCallback((key) => {
+    setFormData((prev) => {
+      const next = { ...(prev.attributes || {}) };
+      delete next[key];
+      return { ...prev, attributes: next };
+    });
+    setManualAttrErrors((prev) => {
+      if (!prev?.rowErrors?.[key]) return prev;
+      const nextRowErrors = { ...prev.rowErrors };
+      delete nextRowErrors[key];
+      return { ...prev, rowErrors: nextRowErrors };
+    });
+  }, []);
+
+  const updateManualAttributeValue = useCallback((key, value) => {
+    setFormData((prev) => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: value } }));
+    setManualAttrErrors((prev) => {
+      const trimmed = (value || '').trim();
+      const hasRowError = prev?.rowErrors?.[key];
+      if (trimmed && !hasRowError) return prev;
+      const nextRowErrors = { ...(prev?.rowErrors || {}) };
+      if (trimmed) delete nextRowErrors[key];
+      else nextRowErrors[key] = 'Value cannot be empty.';
+      return { ...prev, rowErrors: nextRowErrors };
+    });
+  }, []);
+
+  const handleManualAttrKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addManualAttribute();
+    }
+  }, [addManualAttribute]);
+
   const tabs = useMemo(() => [
     {
       id: 'basic-details',
@@ -1375,20 +1445,136 @@ export default function ProductManagementUI() {
         />
       )
     },
-   
+
     {
       id: 'product-details',
       title: 'Attributes',
       description: 'Manage category-based product attributes.',
       icon: <GrDocument />,
       component: (
-        <DynamicAttributesTab
-          attributeSchema={categoryAttributeSchema}
-          formData={formData}
-          setFormData={setFormData}
-          errors={error}
-          optionValues={platformValues}
-        />
+        <div className="space-y-4">
+          {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Choose dynamic (category-driven) attributes or enter manual key/value attributes.</p>
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={useManualAttributes} onChange={() => setUseManualAttributes((v) => !v)} />
+              <span className="text-sm">Manual attributes</span>
+            </label>
+          </div> */}
+
+          {useManualAttributes ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                  <div>
+                    <label className="admin-label">Key</label>
+                    <input
+                      className={`admin-input${manualAttrErrors.key ? ' admin-input-error' : ''}`}
+                      value={newAttrKey}
+                      onChange={(e) => {
+                        setNewAttrKey(e.target.value);
+                        if (manualAttrErrors.key) setManualAttrErrors((prev) => ({ ...prev, key: undefined }));
+                      }}
+                      onKeyDown={handleManualAttrKeyDown}
+                      placeholder="eg. material"
+                      aria-invalid={Boolean(manualAttrErrors.key)}
+                    />
+                    {manualAttrErrors.key && (
+                      <p className="admin-field-error flex items-center gap-1" role="alert">
+                        <FiAlertCircle className="shrink-0" /> {manualAttrErrors.key}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="admin-label">Value</label>
+                    <input
+                      className={`admin-input${manualAttrErrors.value ? ' admin-input-error' : ''}`}
+                      value={newAttrValue}
+                      onChange={(e) => {
+                        setNewAttrValue(e.target.value);
+                        if (manualAttrErrors.value) setManualAttrErrors((prev) => ({ ...prev, value: undefined }));
+                      }}
+                      onKeyDown={handleManualAttrKeyDown}
+                      placeholder="eg. cotton"
+                      aria-invalid={Boolean(manualAttrErrors.value)}
+                    />
+                    {manualAttrErrors.value && (
+                      <p className="admin-field-error flex items-center gap-1" role="alert">
+                        <FiAlertCircle className="shrink-0" /> {manualAttrErrors.value}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="admin-label invisible sm:block hidden">Add</label>
+                    <button
+                      type="button"
+                      className="admin-btn w-full sm:w-auto flex items-center justify-center gap-1.5"
+                      onClick={addManualAttribute}
+                    >
+                      <FiPlus /> Add attribute
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {Object.keys(formData?.attributes || {}).length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-200 py-6 text-center">
+                    <p className="text-sm text-gray-400">No manual attributes added yet.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium text-gray-500">
+                      {Object.keys(formData?.attributes || {}).length} attribute{Object.keys(formData?.attributes || {}).length === 1 ? '' : 's'} added
+                    </p>
+                    {Object.keys(formData?.attributes || {}).map((key) => {
+                      const rowError = manualAttrErrors?.rowErrors?.[key];
+                      return (
+                        <div
+                          key={key}
+                          className={`flex items-start gap-3 rounded-lg border p-2.5 transition-colors ${rowError ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                        >
+                          <div className="w-36 shrink-0 pt-2 text-sm font-medium text-gray-700 truncate" title={key}>{key}</div>
+                          <div className="flex-1">
+                            <input
+                              className={`admin-input${rowError ? ' admin-input-error' : ''}`}
+                              value={formData.attributes[key] || ''}
+                              onChange={(e) => updateManualAttributeValue(key, e.target.value)}
+                            />
+                            {rowError && (
+                              <p className="admin-field-error flex items-center gap-1" role="alert">
+                                <FiAlertCircle className="shrink-0" /> {rowError}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="mt-1.5 shrink-0 rounded-md p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            onClick={() => removeManualAttribute(key)}
+                            aria-label={`Remove ${key} attribute`}
+                            title="Remove attribute"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <DynamicAttributesTab
+              attributeSchema={categoryAttributeSchema}
+              formData={formData}
+              setFormData={setFormData}
+              errors={error}
+              optionValues={platformValues}
+            />
+          )}
+        </div>
       )
     },
     {

@@ -136,6 +136,7 @@ export const ENDPOINTS = {
       (productId) => `/products/${productId}/duplicate`
     ),
     bulkUpdate: byPanel("/admin/products/bulk/update", "/products/bulk/update"),
+    specialPrices: byPanel("/admin/products/special-prices/bulk", "/products/special-prices/bulk"),
     inventory: byPanelFn(
       (productId) => `/admin/products/${productId}/inventory`,
       (productId) => `/products/${productId}/inventory`
