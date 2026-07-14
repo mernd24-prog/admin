@@ -423,11 +423,6 @@ const SellerFinance = () => {
           { label: "Seller Finance & Payouts" },
           { label: "Seller Finance" },
         ]}
-        actions={(
-          <button type="button" onClick={loadFinance} disabled={loading}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        )}
       />
 
       {/* Commission Breakdown Info Banner */}

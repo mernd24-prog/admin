@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
+import { MdDownload, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -135,7 +135,6 @@ const SellerPayouts = () => {
             >
               <MdDownload size={16} /> Export
             </button>
-            <button type="button" onClick={fetchPayouts} ><MdRefresh size={16} /> Refresh</button>
           </div>
         )}
       />
@@ -230,7 +229,12 @@ const SellerPayouts = () => {
         </section>
       )}
 
-      <DefaultModal isOpen={Boolean(detail)} onClose={() => setDetail(null)} title="Payout Calculation">
+      <DefaultModal
+        isOpen={Boolean(detail)}
+        onClose={() => setDetail(null)}
+        title="Payout Calculation"
+        isButtonView={false}
+      >
         {detail && (
           <div className="space-y-4 p-2 text-sm">
             <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">

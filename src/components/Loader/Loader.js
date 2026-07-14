@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 export const InlineLoader = ({ label = "Loading" }) => (
   <span
@@ -16,7 +17,7 @@ export const ButtonLoader = () => (
 const Loader = ({ loading = true, fullScreen = true, label }) => {
   if (!loading) return null;
 
-  return (
+  const loader = (
     <div
       className={`${fullScreen ? "fixed inset-0 z-[9999] bg-black/40 backdrop-blur-[2px]" : "min-h-32"} flex items-center justify-center`}
       role="status"
@@ -28,6 +29,12 @@ const Loader = ({ loading = true, fullScreen = true, label }) => {
       </div>
     </div>
   );
+
+  if (fullScreen && typeof document !== "undefined") {
+    return createPortal(loader, document.body);
+  }
+
+  return loader;
 };
 
 export default React.memo(Loader);

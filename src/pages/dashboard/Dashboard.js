@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import {
   Area,
@@ -975,22 +975,39 @@ export default function Dashboard() {
                     No top products available.
                   </EmptyTableRow>
                 )}
-                {topProducts.map((product, index) => (
-                  <tr
-                    key={product.product_id || product.productId || index}
-                    className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
-                  >
-                    <td className="px-5 py-3 font-medium text-slate-700">
-                      {product.name || product.title}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatNumber(product.units_sold ?? product.unitsSold)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatCurrency(product.revenue)}
-                    </td>
-                  </tr>
-                ))}
+                {topProducts.map((product, index) => {
+                  const productId = product.product_id || product.productId || product._id || product.id;
+                  const productName = product.name || product.title || "Untitled product";
+
+                  return (
+                    <tr
+                      key={productId || index}
+                      className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                    >
+                      <td className="px-5 py-3 font-medium text-slate-700">
+                        {productId ? (
+                          <Link
+                            to={`/app/product-catalog/view/${productId}`}
+                            className="line-clamp-1 max-w-[220px] break-normal font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
+                            title={productName}
+                          >
+                            {productName}
+                          </Link>
+                        ) : (
+                          <span className="line-clamp-1 max-w-[220px] break-normal" title={productName}>
+                            {productName}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatNumber(product.units_sold ?? product.unitsSold)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatCurrency(product.revenue)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </section>
@@ -1027,19 +1044,34 @@ export default function Dashboard() {
                 {recentOrders.map((order, index) => {
                   const status =
                     order.status || order.paymentStatus || "Pending";
+                  const orderId =
+                    order._id ||
+                    order.id ||
+                    order.orderId ||
+                    order.order_id ||
+                    order.order_no;
+                  const orderNumber =
+                    order.orderNumber ||
+                    order.order_number ||
+                    order.order_no ||
+                    String(orderId || index + 1).slice(0, 10);
                   return (
                     <tr
-                      key={order.id || order._id || index}
+                      key={orderId || index}
                       className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
                     >
                       <td className="px-4 py-3 font-medium">
-                        #
-                        {order.orderNumber ||
-                          order.order_number ||
-                          String(order.id || order._id || index + 1).slice(
-                            0,
-                            10,
-                          )}
+                        {orderId ? (
+                          <Link
+                            to={`/app/orders/view/${orderId}`}
+                            className="font-mono font-semibold text-[var(--admin-navy)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
+                            title={`View order #${orderNumber}`}
+                          >
+                            #{orderNumber}
+                          </Link>
+                        ) : (
+                          <span className="font-mono">#{orderNumber}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {order.customerName ||

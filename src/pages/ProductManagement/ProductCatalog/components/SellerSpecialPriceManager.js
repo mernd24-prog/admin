@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { bulkUpdateSpecialPrices, getProducts } from '../../../../Redux/productSlice';
 import { exportToExcel, parseImportFile } from '../../../../_helpers/exportToCsv';
@@ -348,8 +349,14 @@ const SellerSpecialPriceManager = () => {
       key: 'productName',
       label: 'Product',
       render: (_, row) => (
-        <div className="min-w-[180px]">
-          <p className="font-semibold text-[var(--admin-ink)]">{row.productName || 'Untitled product'}</p>
+        <div className="w-[220px] max-w-[220px] min-w-0">
+          <Link
+            to={`/app/product-catalog/view/${row.productId}`}
+            className="block truncate text-left font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
+            title={row.productName || 'Untitled product'}
+          >
+            {row.productName || 'Untitled product'}
+          </Link>
           <p className="text-xs text-[var(--admin-muted)]">{row.productSku || 'N/A'}</p>
         </div>
       ),

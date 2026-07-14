@@ -238,15 +238,6 @@ const Cancellations = () => {
         title="Cancellations"
         subtitle="Manage order cancellations and refunds"
         breadcrumbs={[{ label: "Returns & Cancellations" }, { label: "Cancellations" }]}
-        actions={
-          <button
-            onClick={fetchCancellations}
-
-          >
-            <MdRefresh size={16} />
-            Refresh
-          </button>
-        }
       />
 
       <FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />

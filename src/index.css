@@ -53,6 +53,18 @@ body {
   --admin-transition: 180ms ease;
 }
 
+/* Keep single-line truncation on complete words across the application. */
+.truncate:not(input):not(textarea):not(select) {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

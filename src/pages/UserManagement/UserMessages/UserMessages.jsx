@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MdNotifications, MdRefresh, MdSend, MdVisibility } from "react-icons/md";
+import {
+  MdNotifications,
+  MdRefresh,
+  MdSend,
+  MdVisibility,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -29,26 +34,64 @@ const TEMPLATE_OPTIONS = [
   { value: "custom", label: "Custom" },
 ];
 
-const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
+const firstValue = (...values) =>
+  values.find(
+    (value) =>
+      value !== undefined && value !== null && String(value).trim() !== "",
+  );
 
 const getNotificationDetailRoute = (notification = {}) => {
-  const meta = notification.payload || notification.meta || notification.metadata || {};
-  const orderId = firstValue(meta.orderId, meta.order_id, notification.orderId, notification.order_id);
-  const returnId = firstValue(meta.returnId, meta.return_id, notification.returnId, notification.return_id);
-  const shipmentId = firstValue(meta.shipmentId, meta.shipment_id, notification.shipmentId, notification.shipment_id);
-  const invoiceId = firstValue(meta.invoiceId, meta.invoice_id, meta.taxInvoiceId, notification.invoiceId, notification.invoice_id);
-  const creditNoteId = firstValue(meta.creditNoteId, meta.credit_note_id, notification.creditNoteId, notification.credit_note_id);
-  const dealId = firstValue(meta.dealId, meta.deal_id, notification.dealId, notification.deal_id);
+  const meta =
+    notification.payload || notification.meta || notification.metadata || {};
+  const orderId = firstValue(
+    meta.orderId,
+    meta.order_id,
+    notification.orderId,
+    notification.order_id,
+  );
+  const returnId = firstValue(
+    meta.returnId,
+    meta.return_id,
+    notification.returnId,
+    notification.return_id,
+  );
+  const shipmentId = firstValue(
+    meta.shipmentId,
+    meta.shipment_id,
+    notification.shipmentId,
+    notification.shipment_id,
+  );
+  const invoiceId = firstValue(
+    meta.invoiceId,
+    meta.invoice_id,
+    meta.taxInvoiceId,
+    notification.invoiceId,
+    notification.invoice_id,
+  );
+  const creditNoteId = firstValue(
+    meta.creditNoteId,
+    meta.credit_note_id,
+    notification.creditNoteId,
+    notification.credit_note_id,
+  );
+  const dealId = firstValue(
+    meta.dealId,
+    meta.deal_id,
+    notification.dealId,
+    notification.deal_id,
+  );
 
   if (invoiceId) return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
-  if (creditNoteId) return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
+  if (creditNoteId)
+    return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
   if (returnId) return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
   if (shipmentId) {
     const params = new URLSearchParams({ shipmentId: String(shipmentId) });
     if (orderId) params.set("orderId", String(orderId));
     return `/app/shipment-tracking?${params.toString()}`;
   }
-  if (dealId) return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
+  if (dealId)
+    return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
   if (orderId) return `/app/orders/view/${encodeURIComponent(orderId)}`;
   return null;
 };
@@ -68,11 +111,17 @@ const BASE_COLUMNS = [
     key: "userId",
     label: "Recipient",
     render: (v, row) => {
-      const name = row.recipientName || row.user?.name || row.user?.full_name || row.userName;
+      const name =
+        row.recipientName ||
+        row.user?.name ||
+        row.user?.full_name ||
+        row.userName;
       return name ? (
         <span className="text-sm font-medium text-gray-700">{name}</span>
       ) : (
-        <span className="text-xs font-mono text-gray-400">{v ? `${String(v).slice(0, 12)}…` : "—"}</span>
+        <span className="text-xs font-mono text-gray-400">
+          {v ? `${String(v).slice(0, 12)}…` : "—"}
+        </span>
       );
     },
   },
@@ -190,7 +239,8 @@ const UserMessages = () => {
       setNotifications(items);
       setTotal(totalCount);
     } catch (err) {
-      const msg = err?.response?.data?.message || "Failed to load notifications";
+      const msg =
+        err?.response?.data?.message || "Failed to load notifications";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -207,7 +257,8 @@ const UserMessages = () => {
       toast.error("Sending notifications is admin-only");
       return;
     }
-    if (!form.userId.trim()) return toast.error("Recipient User ID is required");
+    if (!form.userId.trim())
+      return toast.error("Recipient User ID is required");
     if (!form.template) return toast.error("Template is required");
 
     setSending(true);
@@ -224,7 +275,9 @@ const UserMessages = () => {
       setForm(EMPTY_FORM);
       fetchNotifications();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to send notification");
+      toast.error(
+        err?.response?.data?.message || "Failed to send notification",
+      );
     } finally {
       setSending(false);
     }
@@ -235,24 +288,16 @@ const UserMessages = () => {
       <PageHeader
         title="Notifications"
         subtitle="Send and manage user notifications"
-        breadcrumbs={[
-          { label: "User Management" },
-          { label: "Notifications" },
-        ]}
+        breadcrumbs={[{ label: "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              onClick={fetchNotifications}
-
-            >
-              <MdRefresh size={16} /> Refresh
-            </button>
             {!isSeller && (
-              <PermissionGuard module="notifications" action={ACTIONS.CREATE} hide>
-                <button
-                  onClick={() => setModalOpen(true)}
-
-                >
+              <PermissionGuard
+                module="notifications"
+                action={ACTIONS.CREATE}
+                hide
+              >
+                <button onClick={() => setModalOpen(true)}>
                   <MdSend size={16} /> Send Notification
                 </button>
               </PermissionGuard>
@@ -307,7 +352,9 @@ const UserMessages = () => {
                 <input
                   type="text"
                   value={form.userId}
-                  onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, userId: e.target.value }))
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   placeholder="User ID or email"
                 />
@@ -320,11 +367,15 @@ const UserMessages = () => {
                   </label>
                   <select
                     value={form.channel}
-                    onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, channel: e.target.value }))
+                    }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   >
                     {CHANNEL_OPTIONS.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -335,11 +386,15 @@ const UserMessages = () => {
                   </label>
                   <select
                     value={form.template}
-                    onChange={(e) => setForm((f) => ({ ...f, template: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, template: e.target.value }))
+                    }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   >
                     {TEMPLATE_OPTIONS.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -352,7 +407,9 @@ const UserMessages = () => {
                 <input
                   type="text"
                   value={form.subject}
-                  onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, subject: e.target.value }))
+                  }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   placeholder="Notification subject"
                 />
@@ -364,7 +421,9 @@ const UserMessages = () => {
                 </label>
                 <textarea
                   value={form.message}
-                  onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, message: e.target.value }))
+                  }
                   rows={3}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] resize-none"
                   placeholder="Notification message (optional for templated notifications)"

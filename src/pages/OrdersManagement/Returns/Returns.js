@@ -339,9 +339,15 @@ const Returns = () => {
       replace: replaceReturn,
       close: closeReturn,
     };
+    const actionCreator = actionMap[action.type];
+    if (typeof actionCreator !== "function") {
+      toast.error("The return action is no longer available. Please open it again.");
+      setConfirmAction({ open: false });
+      return;
+    }
     try {
       setLoading(true);
-      await dispatch(actionMap[action.type](base)).unwrap();
+      await dispatch(actionCreator(base)).unwrap();
       toast.success("Return updated");
       setAction(EMPTY_ACTION);
       setConfirmAction({ open: false });
@@ -508,11 +514,6 @@ const Returns = () => {
         title="Returns & Refunds"
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle"
         breadcrumbs={[{ label: "Returns & Cancellations" }, { label: "Returns & Refunds" }]}
-        actions={
-          <button type="button" onClick={fetchReturns}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        }
       />
 
       <DataTable

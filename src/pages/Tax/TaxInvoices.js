@@ -192,7 +192,7 @@ const TaxInvoices = () => {
     },
     {
       key: "_actions",
-      label: "",
+      label: "Actions",
       render: (_, row) => (
         <div className="flex gap-1">
           <button
@@ -229,15 +229,6 @@ const TaxInvoices = () => {
         title="Tax Invoices"
         subtitle="View and manage all tax invoices"
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
-        actions={
-          <button
-            onClick={fetchInvoices}
-
-          >
-            <MdRefresh size={16} />
-            Refresh
-          </button>
-        }
       />
 
       <FilterBar fields={FILTER_FIELDS} listPage={list} />

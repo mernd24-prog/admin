@@ -262,7 +262,12 @@ const ShipmentTracking = () => {
         exportConfig={{ filename: "shipments", columns, data: shipmentPayload.list }}
       />
 
-      <DefaultModal isOpen={detailModal} onClose={() => setDetailModal(false)} title="Shipment Detail">
+      <DefaultModal
+        isOpen={detailModal}
+        onClose={() => setDetailModal(false)}
+        title="Shipment Detail"
+        isButtonView={false}
+      >
         <div className="space-y-3 text-sm">
           <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 md:grid-cols-2">
             <div><strong>Order:</strong> #{selectedShipment?.orderNumber || selectedShipment?.order_number || "Order"}</div>
