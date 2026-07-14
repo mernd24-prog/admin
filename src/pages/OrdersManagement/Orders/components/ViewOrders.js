@@ -519,9 +519,29 @@ const OrderSummary = () => {
   const sellerPlatformFeeAmount = money(firstDefined(summary.sellerPlatformFeeAmount, summary.platformFeeAmount, order.platform_fee_amount, order.platformFeeAmount));
   const customerPlatformFeeAmount = money(firstDefined(summary.customerPlatformFeeAmount, 0));
   const customerPlatformFeeTaxAmount = money(firstDefined(summary.customerPlatformFeeTaxAmount, 0));
-  const customerTotalAmount = money(firstDefined(summary.customerTotalAmount, order.total_amount, order.totalAmount));
-  const customerPayableAmount = money(firstDefined(summary.customerPayableAmount, order.payable_amount, order.payableAmount, order.total_amount));
   const items = Array.isArray(order.items) ? order.items : [];
+  const subtotalAmount = money(firstDefined(
+    summary.subtotalAmount,
+    order.subtotal_amount,
+    order.subtotalAmount,
+    items.reduce((total, item) => total + money(firstDefined(item.line_total, item.lineTotal)), 0),
+  ));
+  const discountAmount = money(firstDefined(summary.discountAmount, order.discount_amount, order.discountAmount));
+  const deliveryChargeAmount = money(firstDefined(
+    summary.deliveryChargeAmount,
+    summary.shippingFeeAmount,
+    order.shipping_fee_amount,
+    order.shippingFeeAmount,
+  ));
+  const codChargeAmount = money(firstDefined(summary.codChargeAmount, order.cod_charge_amount, order.codChargeAmount));
+  const walletDiscountAmount = money(firstDefined(summary.walletDiscountAmount, order.wallet_discount_amount, order.walletDiscountAmount));
+  // The customer pays only customer-facing amounts. Seller commission and GST
+  // already included in item prices must never be added again.
+  const customerTotalAmount = Number(Math.max(0,
+    subtotalAmount - discountAmount + taxPayableAmount + deliveryChargeAmount +
+    customerPlatformFeeAmount + customerPlatformFeeTaxAmount + codChargeAmount,
+  ).toFixed(2));
+  const customerPayableAmount = Number(Math.max(0, customerTotalAmount - walletDiscountAmount).toFixed(2));
   const relations = order.relations || {};
   const buyer = relations.buyer || order.buyer || order.buyerSnapshot || {};
   const buyerId = firstDefined(buyer.id, buyer._id, order.buyer_id, order.buyerId);
@@ -855,16 +875,18 @@ const OrderSummary = () => {
             <Panel title="Order Summary">
               <InfoRow label="Order Date" value={order.created_at ? moment(order.created_at).format("DD MMM YYYY HH:mm") : "N/A"} />
               <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
+              <InfoRow label="Return Eligible Until" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery verification"} />
               <InfoRow label="Payment Method" value={displayStatus(firstDefined(order.payment_provider, order.paymentProvider))} />
-              <InfoRow label="Subtotal" value={formatMoney(firstDefined(order.subtotal_amount, order.subtotalAmount))} />
-              <InfoRow label="Discount" value={<span className="text-[#2ea84a]">-{formatMoney(firstDefined(order.discount_amount, order.discountAmount))}</span>} />
+              <InfoRow label="Subtotal" value={formatMoney(subtotalAmount)} />
+              <InfoRow label="Discount" value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />
               <InfoRow label="GST Payable" value={formatMoney(taxPayableAmount)} />
               <InfoRow label="GST Included" value={formatMoney(taxIncludedAmount)} />
               <InfoRow label="Seller Commission/Fee" value={formatMoney(sellerPlatformFeeAmount)} />
               {customerPlatformFeeAmount > 0 && <InfoRow label="Customer Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
               {customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
-              <InfoRow label="COD Charge" value={formatMoney(firstDefined(order.cod_charge_amount, order.codChargeAmount))} />
-              <InfoRow label="Wallet" value={`-${formatMoney(firstDefined(order.wallet_discount_amount, order.walletDiscountAmount))}`} />
+              {deliveryChargeAmount > 0 && <InfoRow label="Delivery Charge" value={formatMoney(deliveryChargeAmount)} />}
+              <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />
+              <InfoRow label="Wallet" value={`-${formatMoney(walletDiscountAmount)}`} />
               <div className="mt-2 border-t border-[#efe6cd] pt-2">
                 <InfoRow label="Customer Payable" value={formatMoney(customerPayableAmount)} strong />
               </div>

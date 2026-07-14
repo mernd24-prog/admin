@@ -107,6 +107,7 @@ export const SELLER_ALLOWED_MODULE_CODES = new Set([
   "seller-management",
   "sellers/commissions",
   "seller-payouts",
+  "seller-cod-collections",
   "cod-config",
   "tax",
   "tax-invoices",
@@ -195,6 +196,7 @@ const MODULE_LABELS = {
   orders: "Order Management",
   returns: "Return Management",
   payments: "Payment Management",
+  "cod-collections": "COD Collections",
   "commerce-settings": "Commerce Settings",
   "platform-commission": "Commerce Settings",
   "seller-tiers": "Commerce Settings",
@@ -250,6 +252,7 @@ const MODULE_LABELS = {
   chargebacks: "Chargeback Management",
   // Payouts
   "seller-payouts": "Seller Payout Management",
+  "seller-cod-collections": "COD Collections",
   "payout-ops-queue": "Payout Ops Queue",
   "negative-balances": "Negative Balance Recovery",
   "delivery-agents": "Delivery Agents",
@@ -306,6 +309,7 @@ const MODULE_TABS = {
   queries: "Support",
   "help-support": "Support",
   payments: "Payments & Finance",
+  "cod-collections": "Payments & Finance",
   "commerce-settings": "Commerce Settings",
   wallets: "Payments & Finance",
   subscriptions: "Orders Management",
@@ -354,6 +358,7 @@ const MODULE_TABS = {
   chargebacks: "Payments & Finance",
   // Payouts
   "seller-payouts": "Seller Finance & Payouts",
+  "seller-cod-collections": "Seller Finance & Payouts",
   "payout-ops-queue": "Seller Finance & Payouts",
   "negative-balances": "Seller Finance & Payouts",
   "delivery-agents": "Shipping & Fulfilment",
@@ -408,6 +413,7 @@ export const MODULE_DEFAULT_ROUTES = {
   "help-support": "help-support",
   reviews:      "product-reviews",
   payments:     "payments",
+  "cod-collections": "cod-collections",
   wallets:      "wallet-transactions",
   subscriptions:"subscription-orders",
   "payments-finance": "payments",
@@ -426,6 +432,7 @@ export const MODULE_DEFAULT_ROUTES = {
   "seller-management":"seller-users",
   "my-organizations": "my-organizations",
   "sellers/commissions":"seller-finance",
+  "seller-cod-collections": "seller-cod-collections",
   commission:           "platform-commission",
   "commission-rules":   "platform-commission",
   "platform-fee":       "platform-commission",
@@ -594,7 +601,7 @@ const ROUTE_MODULES = [
   [["/subscription-orders"], ["subscriptions", "orders"]],
 
   // Payments & Finance
-  [["/payments"], ["payments", "wallets", "orders"]],
+  [["/payments", "/cod-collections"], ["payments", "wallets", "orders"]],
   [["/chargebacks"], ["payments", "orders"]],
   [["/fraud-cases", "/fraud"], ["fraud", "payments"]],
   [["/wallet-management", "/wallet-transactions"], ["wallets"]],
@@ -616,7 +623,7 @@ const ROUTE_MODULES = [
   [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
-  [["/seller-finance", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
+  [["/seller-finance", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller-payouts"], ["sellers/commissions"]],
 
   // Commerce Settings

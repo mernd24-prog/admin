@@ -180,6 +180,10 @@ export const ENDPOINTS = {
     codConfig: "/payments/admin/cod-config",
     approve: (paymentId) => `/payments/${paymentId}/approve`,
     reject: (paymentId) => `/payments/${paymentId}/reject`,
+    codCollections: "/payments/cod-collections",
+    myCodCollections: "/payments/cod-collections/mine",
+    submitCodCollection: (shipmentId) => `/payments/cod-collections/shipments/${shipmentId}/submit`,
+    verifyCodCollection: (collectionId) => `/payments/cod-collections/${collectionId}/verify`,
   },
   inventory: {
     variants: byPanel("/admin/inventory/variants", "/products/inventory/variants"),

@@ -43,6 +43,11 @@ const DEFAULT_SETTINGS = {
     minOrderAmount: "",
     maxOrderAmount: "",
   },
+  returns: {
+    defaultWindowDays: 7,
+    allowSellerOverrides: false,
+    maxSellerOverrideDays: 7,
+  },
   shippingDefaults: {
     defaultCharge: 0,
     freeShippingThreshold: "",
@@ -54,7 +59,6 @@ const DEFAULT_SETTINGS = {
     platformFeeTaxRate: 18,
     chargePlatformFeeTaxToSeller: true,
     payoutReleaseMilestone: "return_window_closed",
-    payoutReleaseDaysAfterDelivery: 7,
     payoutSchedule: "manual",
     payoutManualApprovalRequired: true,
     minimumPayoutAmount: 0,
@@ -89,6 +93,7 @@ const mergeSettings = (data = {}) => ({
   payments: { ...DEFAULT_SETTINGS.payments, ...(data.payments || {}) },
   wallet: { ...DEFAULT_SETTINGS.wallet, ...(data.wallet || {}) },
   cod: { ...DEFAULT_SETTINGS.cod, ...(data.cod || {}) },
+  returns: { ...DEFAULT_SETTINGS.returns, ...(data.returns || {}) },
   shippingDefaults: { ...DEFAULT_SETTINGS.shippingDefaults, ...(data.shippingDefaults || {}) },
   finance: { ...DEFAULT_SETTINGS.finance, ...(data.finance || {}) },
 });
@@ -499,6 +504,16 @@ export default function CommerceSettings() {
         </div>
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
+      <Section title="Return & Settlement Policy">
+        <div className="grid gap-4 md:grid-cols-2">
+          <InputField label="Global Return Window (Days)" type="number" min="1" max="60" value={settings.returns.defaultWindowDays} onChange={(value) => patchSettings("returns", { defaultWindowDays: value })} />
+          <ToggleField label="Allow Seller Return Overrides" checked={settings.returns.allowSellerOverrides} onChange={(value) => patchSettings("returns", { allowSellerOverrides: value })} />
+          {settings.returns.allowSellerOverrides && <InputField label="Maximum Seller Override (Days)" type="number" min="1" max="60" value={settings.returns.maxSellerOverrideDays} onChange={(value) => patchSettings("returns", { maxSellerOverrideDays: value })} />}
+          <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+            The delivery-verified date and this policy are snapshotted on the order. The order becomes Fulfilled only after this deadline, then payout can be released.
+          </div>
+        </div>
+      </Section>
       <Section title="Seller Commission">
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField label="Commission Type" value={settings.platformFees.sellerCommissionType} onChange={(value) => patchSettings("platformFees", { sellerCommissionType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
@@ -519,7 +534,7 @@ export default function CommerceSettings() {
             value={settings.finance.payoutReleaseMilestone}
             onChange={(value) => patchSettings("finance", { payoutReleaseMilestone: value })}
             options={[option("return_window_closed", "Return window closed")]}
-            hint="Seller payout is eligible only after OTP delivery verification and return-window closure."
+            hint="Payout is calculated from the order's stored return deadline; it is never released before Fulfilled."
           />
         </div>
       </Section>

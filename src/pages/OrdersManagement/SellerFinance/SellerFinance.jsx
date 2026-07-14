@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import {
   MdCalculate,
   MdCheckCircle,
@@ -149,6 +150,7 @@ const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "ban
 
 const SellerFinance = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
   const [filters, setFilters] = useState({ sellerId: "", organizationId: "", status: "", search: "" });
@@ -424,9 +426,12 @@ const SellerFinance = () => {
           { label: "Seller Finance" },
         ]}
         actions={(
-          <button type="button" onClick={loadFinance} disabled={loading}>
-            <MdRefresh size={17} /> Refresh
-          </button>
+          <div className="flex gap-2">
+            {isSeller && <button type="button" onClick={() => navigate("/app/seller-cod-collections")}><MdPayments size={17} /> COD Collections</button>}
+            <button type="button" onClick={loadFinance} disabled={loading}>
+              <MdRefresh size={17} /> Refresh
+            </button>
+          </div>
         )}
       />
 

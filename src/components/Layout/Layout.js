@@ -92,11 +92,17 @@ const CheckoutQuote = React.lazy(
 const Payments = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/Payments"),
 );
+const CodCollections = React.lazy(
+  () => import("../../pages/OrdersManagement/Payments/CodCollections"),
+);
 const Returns = React.lazy(
   () => import("../../pages/OrdersManagement/Returns/Returns"),
 );
 const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
+);
+const SellerCodCollections = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/SellerCodCollections"),
 );
 const CommerceSettings = React.lazy(
   () => import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
@@ -562,7 +568,9 @@ function Layout() {
       { path: "/carts", render: () => <Carts /> },
       { path: "/checkout-quote", render: () => <CheckoutQuote /> },
       { path: "/payments", render: () => <Payments /> },
+      { path: "/cod-collections", render: () => <CodCollections /> },
       { path: "/seller-finance", render: () => <SellerFinance /> },
+      { path: "/seller-cod-collections", render: () => <SellerCodCollections /> },
       { path: "/commission-rules", redirectTo: "/app/platform-commission" },
       { path: "/platform-fee-config", redirectTo: "/app/platform-commission" },
       { path: "/commerce-settings", render: () => <CommerceSettings /> },

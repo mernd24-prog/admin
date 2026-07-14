@@ -669,11 +669,6 @@ const Profile = () => {
                   className="md:col-span-3"
                 />
                 <DetailField
-                  label="Return Window (Days)"
-                  value={sellerSettings.returnWindowDays}
-                  className="md:col-span-3"
-                />
-                <DetailField
                   label="Payout Schedule"
                   value={sellerSettings.payoutSchedule}
                   className="md:col-span-6"

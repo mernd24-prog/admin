@@ -1198,7 +1198,6 @@ export default function ProductManagementUI() {
       period: toOptionalNumber(updatedFormData.warranty?.period),
       returnPolicy: {
         ...(updatedFormData.warranty?.returnPolicy || {}),
-        days: toOptionalNumber(updatedFormData.warrantyReturnDays || updatedFormData.warranty?.returnPolicy?.days),
       },
     });
     const shipping = compactObject(selectedShippingProfile ? {

@@ -233,6 +233,9 @@ const Payments = () => {
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => navigate("/app/cod-collections")}>
+              <MdCheckCircle size={17} /> COD Collections
+            </button>
             <button type="button"  onClick={() => navigate("/app/cod-config")}>
               <MdSettings size={17} /> COD Settings
             </button>
