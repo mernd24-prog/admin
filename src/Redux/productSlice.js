@@ -72,7 +72,9 @@ const toProductBody = (payload = {}) => {
         ...(payload.warehouseId ? { warehouseId: payload.warehouseId } : {}),
         title,
         ...(payload.shortDescription ? { shortDescription: payload.shortDescription } : {}),
-        description: payload.description || "",
+        // The description editor is intentionally hidden in the current
+        // product flow, while Mongo still requires a description.
+        description: payload.description || payload.shortDescription || `Product: ${title}`,
         ...(payload.productType ? { productType: payload.productType } : {}),
         ...(payload.visibility ? { visibility: payload.visibility } : {}),
         price: Number(payload.price || primaryVariant.price || primaryVariant.salePrice || 0),
@@ -336,6 +338,26 @@ export const enableDisableBrand = patchMany(
     (payload = {}) => ({ active: payload.isDisable !== true }),
     'Brand status updated successfully',
 )
+export const submitBrandForApproval = createApiThunkPrivate('brands/submitForApproval', ENDPOINTS.brands.submissions, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        ...(payload.logo ? { logo: payload.logo } : {}),
+        ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
+        ...(payload.description ? { description: payload.description } : {}),
+    }),
+})
+export const getMyBrandSubmissions = createApiThunkPrivate('brands/getMySubmissions', ENDPOINTS.brands.mySubmissions, 'GET', true)
+export const resubmitBrandForApproval = createApiThunkPrivate('brands/resubmitForApproval', (payload) => ENDPOINTS.brands.submission(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        ...(payload.logo ? { logo: payload.logo } : {}),
+        ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
+        ...(payload.description ? { description: payload.description } : {}),
+    }),
+})
+export const reviewBrandSubmission = createApiThunkPrivate('brands/reviewSubmission', (payload) => ENDPOINTS.brands.approval(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
+})
 
 /// batch functions ===>>>>>>>>>>>>>>>>>
 
@@ -630,6 +652,10 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, updateBrand, 'updateBrandData')
         createExtraReducersForThunk(builder, deleteBrand, 'deleteBrandData')
         createExtraReducersForThunk(builder, enableDisableBrand, 'enableDisableBrandData')
+        createExtraReducersForThunk(builder, submitBrandForApproval, 'submitBrandForApprovalData')
+        createExtraReducersForThunk(builder, getMyBrandSubmissions, 'getMyBrandSubmissionsData')
+        createExtraReducersForThunk(builder, resubmitBrandForApproval, 'resubmitBrandForApprovalData')
+        createExtraReducersForThunk(builder, reviewBrandSubmission, 'reviewBrandSubmissionData')
         //Product Options
         createExtraReducersForThunk(builder, getListProduct, 'getListProductData')
         createExtraReducersForThunk(builder, enableDisableProduct, 'enableDisableProductData')

@@ -21,6 +21,7 @@ import {
   updateBrand,
   deleteBrand,
   enableDisableBrand,
+  reviewBrandSubmission,
 } from "../../../Redux/productSlice";
 import {
   MdAdd,
@@ -30,6 +31,7 @@ import {
   MdDelete,
   MdEdit,
   MdImage,
+  MdClose,
 } from "react-icons/md";
 
 const FILTER_FIELDS = [
@@ -41,6 +43,17 @@ const FILTER_FIELDS = [
     options: [
       { value: "false", label: "Active" },
       { value: "true", label: "Disabled" },
+    ],
+  },
+  {
+    key: "approvalStatus",
+    type: "select",
+    label: "Approval",
+    width: "w-36",
+    options: [
+      { value: "approved", label: "Approved" },
+      { value: "pending", label: "Pending" },
+      { value: "rejected", label: "Rejected" },
     ],
   },
 ];
@@ -122,9 +135,12 @@ const BASE_COLUMNS = [
     ),
   },
   {
-    key: "isDisable",
+    key: "approvalStatus",
     label: "Status",
-    render: (v) => <StatusBadge status={v ? "inactive" : "active"} dot />,
+    render: (v, row) => {
+      const status = v || (row.active === false || row.isDisable ? "inactive" : "approved");
+      return <StatusBadge status={status === "approved" ? (row.active === false || row.isDisable ? "inactive" : "active") : status} dot />;
+    },
   },
 ];
 
@@ -158,6 +174,8 @@ const Brands = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [toggleOpen, setToggleOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -175,6 +193,7 @@ const Brands = () => {
           ...(params.isDisable !== undefined && {
             isDisable: params.isDisable,
           }),
+          ...(params.approvalStatus && { approvalStatus: params.approvalStatus }),
         }),
       ).unwrap();
       const data = res?.data || {};
@@ -319,6 +338,27 @@ const Brands = () => {
     }
   };
 
+  const handleReview = async (action) => {
+    if (!reviewTarget) return;
+    if (action === "reject" && rejectionReason.trim().length < 2) {
+      toast.error("Enter a rejection reason");
+      return;
+    }
+    try {
+      await dispatch(reviewBrandSubmission({
+        _id: reviewTarget._id,
+        action,
+        rejectionReason: rejectionReason.trim(),
+      })).unwrap();
+      toast.success(`Brand ${action === "approve" ? "approved" : "rejected"}`);
+      setReviewTarget(null);
+      setRejectionReason("");
+      setIsRefresh((r) => !r);
+    } catch (err) {
+      toast.error(err?.message || "Could not review brand");
+    }
+  };
+
   const columns = useMemo(
     () => [
       ...BASE_COLUMNS,
@@ -329,6 +369,30 @@ const Brands = () => {
         cellClassName: "admin-table-action-cell",
         render: (_, row) => (
           <div className="flex items-center justify-center gap-1.5">
+            {row.approvalStatus === "pending" && (
+              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700"
+                  title="Approve brand"
+                  onClick={() => { setReviewTarget(row); setRejectionReason(""); }}
+                >
+                  Approve
+                </button>
+              </PermissionGuard>
+            )}
+            {row.approvalStatus === "pending" && (
+              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
+                  title="Reject brand"
+                  onClick={() => { setReviewTarget({ ...row, reviewAction: "reject" }); setRejectionReason(""); }}
+                >
+                  Reject
+                </button>
+              </PermissionGuard>
+            )}
             <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
               <button
                 type="button"
@@ -348,31 +412,33 @@ const Brands = () => {
                 <MdEdit size={18} />
               </button>
             </PermissionGuard>
-            <PermissionGuard
-              module="brands"
-              action={ACTIONS.STATUS_CHANGE}
-              hide
-            >
-              <button
-                type="button"
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
-                  row.isDisable
-                    ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
-                    : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
-                }`}
-                title={row.isDisable ? "Enable brand" : "Disable brand"}
-                onClick={() => {
-                  setToggleTarget(row);
-                  setToggleOpen(true);
-                }}
+            {row.approvalStatus !== "pending" && (
+              <PermissionGuard
+                module="brands"
+                action={ACTIONS.STATUS_CHANGE}
+                hide
               >
-                {row.isDisable ? (
-                  <MdCheckCircle size={18} />
-                ) : (
-                  <MdBlock size={18} />
-                )}
-              </button>
-            </PermissionGuard>
+                <button
+                  type="button"
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
+                    row.isDisable
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
+                      : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
+                  }`}
+                  title={row.isDisable ? "Enable brand" : "Disable brand"}
+                  onClick={() => {
+                    setToggleTarget(row);
+                    setToggleOpen(true);
+                  }}
+                >
+                  {row.isDisable ? (
+                    <MdCheckCircle size={18} />
+                  ) : (
+                    <MdBlock size={18} />
+                  )}
+                </button>
+              </PermissionGuard>
+            )}
             <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
               <button
                 type="button"
@@ -591,6 +657,35 @@ const Brands = () => {
         variant="danger"
         confirmLabel="Delete"
       />
+
+      {reviewTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[var(--admin-navy)]">
+                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"} Brand
+              </h2>
+              <button type="button" onClick={() => setReviewTarget(null)}><MdClose size={20} /></button>
+            </div>
+            <p className="mb-4 text-sm text-gray-600">{reviewTarget.name}</p>
+            {reviewTarget.reviewAction === "reject" && (
+              <textarea
+                value={rejectionReason}
+                onChange={(event) => setRejectionReason(event.target.value)}
+                placeholder="Explain what the seller needs to change"
+                className="mb-4 w-full rounded-lg border border-gray-300 p-2 text-sm"
+                rows={4}
+              />
+            )}
+            <div className="flex justify-end gap-3">
+              <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setReviewTarget(null)}>Cancel</button>
+              <button type="button" className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white" onClick={() => handleReview(reviewTarget.reviewAction || "approve")}>
+                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         open={toggleOpen}

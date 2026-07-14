@@ -12,6 +12,12 @@ export const ENDPOINTS = {
   meta: {
     dropdown: (resource) => `/meta/dropdowns/${resource}`,
   },
+  brands: {
+    submissions: "/platform/brands/submissions",
+    mySubmissions: "/platform/brands/submissions/mine",
+    submission: (brandId) => `/platform/brands/submissions/${brandId}`,
+    approval: (brandId) => `/admin/platform/brands/${brandId}/approval`,
+  },
   auth: {
     register: "/auth/register",
     login: "/auth/login",

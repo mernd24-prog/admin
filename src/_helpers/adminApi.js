@@ -211,6 +211,7 @@ export const toListParams = (params = {}, defaults = {}) => ({
   ...(params.role ? { role: params.role } : {}),
   ...(params.accountStatus ? { accountStatus: params.accountStatus } : {}),
   ...(params.status ? { status: params.status } : {}),
+  ...(params.approvalStatus ? { approvalStatus: params.approvalStatus } : {}),
   ...(params.onboardingStatus ? { onboardingStatus: params.onboardingStatus } : {}),
   ...(params.active !== undefined ? { active: params.active } : {}),
   ...(params.isDisable !== undefined

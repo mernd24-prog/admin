@@ -172,12 +172,6 @@ const compactObject = (value) => {
   }, {});
 };
 
-const getPlainTextFromHtml = (value = '') => String(value || '')
-  .replace(/<[^>]*>/g, ' ')
-  .replace(/&nbsp;/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate()
@@ -745,11 +739,10 @@ export default function ProductManagementUI() {
 
   const validateForm = () => {
     const newErrors = {};
-    const descriptionText = getPlainTextFromHtml(formData?.description);
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
     if (formData?.name?.trim() && formData.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters.";
-    if (!descriptionText) newErrors.description = "Description is required.";
-    if (descriptionText && descriptionText.length < 10) newErrors.description = "Description must be at least 10 characters.";
+    // Description editing is currently hidden in the variant-first form. The
+    // API adapter supplies a generated fallback from the product title.
     if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
     if (!formData?.organizationId) {
       if (isSellerPanelUser) {
@@ -1808,12 +1801,8 @@ export default function ProductManagementUI() {
     if (!formData?.hsnCode && !formData?.hsn_code) {
       blockers.push({ key: 'hsn_selected', message: 'Select an HSN code for this product.', route: '/app/hsn-code' });
     }
-    if (!formattedData?.productFamilyList?.length) {
-      blockers.push({ key: 'family', message: 'Create at least one product family code for products.', route: '/app/product-families' });
-    }
-    if (!formData?.productFamilyCode) {
-      blockers.push({ key: 'family_selected', message: 'Select a product family code for this product.', route: '/app/product-families' });
-    }
+    // Product Family Code remains available in the form, but it is optional.
+    // The prior gate blocked saves after related product fields were hidden.
     return blockers;
   }, [createSelectOptions, formattedData, formData]);
 
@@ -1840,7 +1829,10 @@ export default function ProductManagementUI() {
 
   return (
     <div className='relative min-h-screen'>
-      <Loader loading={loading} />
+      <Loader
+        loading={loading || saving}
+        label={saving ? 'Saving product…' : 'Loading product…'}
+      />
       <Breadcrumb isEditMode={isEditMode} />
       <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>

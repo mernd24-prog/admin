@@ -14,7 +14,7 @@ import PermissionGuard from '../../../../components/Atoms/PermissionGuard/Permis
 import AddCategoryModal from './Modals/AddCategoryModal';
 
 // Redux Actions
-import { createCategory, createHsn } from '../../../../Redux/productSlice';
+import { createBrand, createCategory, createHsn, getMyBrandSubmissions, resubmitBrandForApproval, submitBrandForApproval } from '../../../../Redux/productSlice';
 
 import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
 import AddHsnModal from './Modals/AddHsnModal';
@@ -42,6 +42,11 @@ const INITIAL_FORM_HSN = {
 }
 
 const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
+
+const getErrorMessage = (error, fallback) =>
+  typeof error === 'string'
+    ? error
+    : error?.message || error?.error?.message || error?.data?.message || error?.response?.data?.message || fallback;
 
 const getSessionUser = () => {
   if (typeof window === 'undefined') return null;
@@ -177,6 +182,10 @@ export default function BasicDetailsTab({
 
   const [isCategoryModal, setIsCategoryModal] = useState(false);
   const [isHsnAddModal, setIsHsnAddModal] = useState(false)
+  const [isBrandModal, setIsBrandModal] = useState(false);
+  const [brandSubmission, setBrandSubmission] = useState({ name: '', logo: '', thumbnails: '', description: '' });
+  const [myBrandSubmissions, setMyBrandSubmissions] = useState([]);
+  const [brandSubmitting, setBrandSubmitting] = useState(false);
 
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
@@ -184,6 +193,89 @@ export default function BasicDetailsTab({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomWarranty, setIsCustomWarranty] = useState(false);
+
+  const loadMyBrandSubmissions = useCallback(async () => {
+    if (!isSellerPanelUser) return;
+    try {
+      const response = await dispatch(getMyBrandSubmissions()).unwrap();
+      const data = response?.data;
+      setMyBrandSubmissions(Array.isArray(data) ? data : (data?.list || data?.items || []));
+    } catch {
+      // Requests are optional to editing a product, so they must not block it.
+    }
+  }, [dispatch, isSellerPanelUser]);
+
+  useEffect(() => { loadMyBrandSubmissions(); }, [loadMyBrandSubmissions]);
+
+  useEffect(() => {
+    if (!isSellerPanelUser || !fetchAllData) return undefined;
+    const interval = window.setInterval(() => fetchAllData(), 30000);
+    return () => window.clearInterval(interval);
+  }, [fetchAllData, isSellerPanelUser]);
+
+  const submitBrandRequest = async (event) => {
+    event.preventDefault();
+    if (!brandSubmission.name.trim()) return toast.error('Brand name is required');
+    setBrandSubmitting(true);
+    try {
+      if (isSellerPanelUser) {
+        await dispatch(brandSubmission._id
+          ? resubmitBrandForApproval({ ...brandSubmission, _id: brandSubmission._id })
+          : submitBrandForApproval(brandSubmission)).unwrap();
+        const brandName = brandSubmission.name.trim();
+        setMyBrandSubmissions((current) => [
+          { ...brandSubmission, name: brandName, approvalStatus: 'pending' },
+          ...current.filter((brand) => String(brand._id || '') !== String(brandSubmission._id || '')),
+        ]);
+        handleSelectChange({ value: brandName, label: brandName }, 'BRAND_ID');
+        toast.success(brandSubmission._id ? 'Brand resubmitted for approval' : 'Brand submitted for approval');
+      } else {
+        await dispatch(createBrand({ ...brandSubmission, active: true })).unwrap();
+        handleSelectChange({ value: brandSubmission.name.trim(), label: brandSubmission.name.trim() }, 'BRAND_ID');
+        toast.success('Brand created and selected');
+      }
+      setBrandSubmission({ name: '', logo: '', thumbnails: '', description: '' });
+      setIsBrandModal(false);
+      loadMyBrandSubmissions();
+      fetchAllData?.();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Could not submit brand'));
+    } finally {
+      setBrandSubmitting(false);
+    }
+  };
+
+  const brandOptions = useMemo(() => {
+    const approvedNames = new Set((formattedBrandList || []).map((brand) => String(brand.value || '').toLowerCase()));
+    const ownPendingBrands = isSellerPanelUser
+      ? myBrandSubmissions
+        .filter((brand) => brand.approvalStatus === 'pending' && !approvedNames.has(String(brand.name || '').toLowerCase()))
+        .map((brand) => ({
+          value: brand.name,
+          label: `${brand.name} (Pending approval)`,
+          brandName: brand.name,
+          isPendingBrand: true,
+        }))
+      : [];
+
+    return [
+      { value: '__add_new_brand__', label: '+ Add New Brand', isAddBrand: true },
+      ...ownPendingBrands,
+      ...(formattedBrandList || []),
+    ];
+  }, [formattedBrandList, isSellerPanelUser, myBrandSubmissions]);
+
+  const handleBrandSelect = (option) => {
+    if (option?.isAddBrand) {
+      setBrandSubmission({ name: '', logo: '', thumbnails: '', description: '' });
+      setIsBrandModal(true);
+      return;
+    }
+    handleSelectChange(
+      option?.brandName ? { ...option, label: option.brandName } : option,
+      'BRAND_ID',
+    );
+  };
 
   const warrantyOptions = useMemo(() => (
     warrantyTemplatesFromMaster.options.length > 0
@@ -475,9 +567,9 @@ export default function BasicDetailsTab({
               <FilterSelect
                 label="Brand"
                 name="brand"
-                value={formattedBrandList.find((opt) => String(opt.value) === String(formData.brand || '')) || null}
-                onChange={(e) => handleSelectChange(e, 'BRAND_ID')}
-                options={formattedBrandList || []}
+                value={brandOptions.find((opt) => String(opt.value) === String(formData.brand || '')) || null}
+                onChange={handleBrandSelect}
+                options={brandOptions}
                 placeholder="Select Brand"
                 error={errors?.brand}
               />
@@ -575,7 +667,7 @@ export default function BasicDetailsTab({
             </div>
 
 
-            <Input
+            {/* <Input
               labelName="SKU"
               name="sku"
               type="text"
@@ -584,7 +676,7 @@ export default function BasicDetailsTab({
               placeholder="Enter SKU"
               error={errors?.sku}
               textareaClasses='text-sm'
-            />
+            /> */}
             <FilterSelect
               label="Product Family Code"
               value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}
@@ -593,7 +685,7 @@ export default function BasicDetailsTab({
               placeholder="Select family code"
               error={errors?.productFamilyCode}
             />
-            {!hasVariantPricing && (
+            {/* {!hasVariantPricing && (
               <>
                 <Input
                   labelName="Price (GST included)"
@@ -628,9 +720,9 @@ export default function BasicDetailsTab({
                   textareaClasses='text-sm'
                 />
               </>
-            )}
+            )} */}
            
-            {!showCustomWarranty && (
+            {/* {!showCustomWarranty && (
               <div className="space-y-1">
                 <FilterSelect
                   label="Warranty Template"
@@ -654,15 +746,15 @@ export default function BasicDetailsTab({
                   </p>
                 )}
               </div>
-            )}
-            <Input
+            )} */}
+            {/* <Input
               labelName="Custom warranty"
               name="customWarranty"
               type="switch"
               value={showCustomWarranty}
               onChange={handleCustomWarrantyToggle}
-            />
-            {showCustomWarranty && (
+            /> */}
+            {/* {showCustomWarranty && (
               <>
                 <Input
                   labelName="Warranty Period"
@@ -682,8 +774,8 @@ export default function BasicDetailsTab({
                   isLoading={warrantyUnits.loading}
                 />
               </>
-            )}
-            <Input
+            )} */}
+            {/* <Input
               labelName="Warranty Provider"
               name="warranty.provider"
               type="text"
@@ -698,10 +790,10 @@ export default function BasicDetailsTab({
               value={formData.warrantyReturnDays || ""}
               onChange={handleChange}
               placeholder="Example: 7"
-            />
+            /> */}
           </div>
 
-          <TextEditor
+          {/* <TextEditor
             label="Description"
             value={formData.description || ''}
             onChange={(content) => handleInputReactQuillChange?.('description', content)}
@@ -710,7 +802,7 @@ export default function BasicDetailsTab({
             error={errors?.description}
             height="220px"
              className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-          />
+          /> */}
         </div>
       </div>
  
@@ -731,6 +823,64 @@ export default function BasicDetailsTab({
         resetForm={() => { setIsHsnAddModal(false); setIsHsnFormValue(INITIAL_FORM_HSN); setFormErrors({}) }}
         handleInputChange={handleHsnInputChange} handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
         errors={formErrors} />
+
+      {isBrandModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <form onSubmit={submitBrandRequest} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-2 text-lg font-bold text-[var(--admin-navy)]">
+              {brandSubmission._id ? 'Resubmit Brand' : 'Add New Brand'}
+            </h2>
+            <p className="mb-4 text-sm text-gray-600">
+              {isSellerPanelUser
+                ? 'New brands require admin approval before they can be used on products.'
+                : 'This brand will be created as active and selected for this product.'}
+            </p>
+            <input
+              value={brandSubmission.name}
+              onChange={(event) => setBrandSubmission((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Brand name"
+              className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              maxLength={200}
+              required
+            />
+            <input
+              value={brandSubmission.logo}
+              onChange={(event) => setBrandSubmission((current) => ({ ...current, logo: event.target.value }))}
+              placeholder="Logo URL (optional)"
+              className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <textarea
+              value={brandSubmission.description}
+              onChange={(event) => setBrandSubmission((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Brand details (optional)"
+              className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              rows={3}
+              maxLength={1000}
+            />
+            <div className="flex justify-end gap-3">
+              <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setIsBrandModal(false)}>Cancel</button>
+              <button type="submit" disabled={brandSubmitting} className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60">
+                {brandSubmitting ? 'Saving…' : brandSubmission._id ? 'Resubmit' : isSellerPanelUser ? 'Submit for Approval' : 'Create Brand'}
+              </button>
+            </div>
+            {myBrandSubmissions.filter((brand) => brand.approvalStatus === 'rejected').length > 0 && (
+              <div className="mt-5 border-t pt-4">
+                <p className="mb-2 text-xs font-semibold text-gray-600">Rejected submissions</p>
+                {myBrandSubmissions.filter((brand) => brand.approvalStatus === 'rejected').map((brand) => (
+                  <button
+                    key={brand._id}
+                    type="button"
+                    className="mb-2 w-full rounded-md bg-red-50 p-2 text-left text-xs text-red-700"
+                    onClick={() => setBrandSubmission({ _id: brand._id, name: brand.name || '', logo: brand.logo || '', thumbnails: brand.thumbnails || '', description: brand.description || '' })}
+                  >
+                    <span className="font-semibold">{brand.name}</span>: {brand.rejectionReason || 'Needs changes'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </form>
+        </div>
+      )}
     </>
   );
 }

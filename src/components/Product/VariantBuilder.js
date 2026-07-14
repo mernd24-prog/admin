@@ -398,39 +398,77 @@ const VariantBuilder = ({
       </div>
 
       {/* ── Bulk Actions ──────────────────────────────────────────────── */}
-      {variants.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Apply to All Variants</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[
-              { field: 'price', label: 'Price (₹)', placeholder: '0' },
-              { field: 'mrp', label: 'MRP (₹)', placeholder: '0' },
-              { field: 'salePrice', label: 'Sale Price (₹)', placeholder: '0' },
-              { field: 'gstRate', label: 'GST (%)', placeholder: '18' },
-            ].map(({ field, label, placeholder }) => (
-              <div key={field} className="space-y-1">
-                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
-                <div className="flex gap-1">
-                  <SmallInput
-                    type="number"
-                    min={0}
-                    placeholder={placeholder}
-                    value={bulkValues[field] ?? ''}
-                    onChange={(e) => setBulkValues((prev) => ({ ...prev, [field]: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { applyToAll(field, bulkValues[field]); setBulkValues((prev) => ({ ...prev, [field]: '' })); } }}
-                  />
-                  <button type="button"
-                    onClick={() => { applyToAll(field, bulkValues[field]); setBulkValues((prev) => ({ ...prev, [field]: '' })); }}
-                    className="flex-shrink-0 rounded-md border border-gray-200 bg-white px-2 text-xs text-[var(--admin-blue)] hover:bg-[var(--admin-blue)] hover:text-white transition-colors">
-                    Set
-                  </button>
-                </div>
-              </div>
-            ))}
+    {variants.length > 0 && (
+  <div className="w-full rounded-xl border border-gray-200 bg-white p-5">
+    <div className="mb-5">
+      <h3 className="text-base font-semibold text-gray-800">
+        Apply to All Variants
+      </h3>
+      <p className="mt-1 text-sm text-gray-500">
+        Update the same value for all variants at once.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      {[
+        { field: "price", label: "Price (₹)", placeholder: "0" },
+        { field: "mrp", label: "MRP (₹)", placeholder: "0" },
+        { field: "salePrice", label: "Sale Price (₹)", placeholder: "0" },
+        { field: "gstRate", label: "GST (%)", placeholder: "18" },
+      ].map(({ field, label, placeholder }) => (
+        <div key={field} className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {label}
+          </label>
+
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <SmallInput
+                type="number"
+                min={0}
+                placeholder={placeholder}
+                value={bulkValues[field] ?? ""}
+                onChange={(e) =>
+                  setBulkValues((prev) => ({
+                    ...prev,
+                    [field]: e.target.value,
+                  }))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    applyToAll(field, bulkValues[field]);
+                    setBulkValues((prev) => ({
+                      ...prev,
+                      [field]: "",
+                    }));
+                  }
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                applyToAll(field, bulkValues[field]);
+                setBulkValues((prev) => ({
+                  ...prev,
+                  [field]: "",
+                }));
+              }}
+              className="flex-shrink-0 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-[var(--admin-blue)] hover:bg-[var(--admin-blue)] hover:text-white transition-colors"
+            >
+              Set
+            </button>
           </div>
-          <p className="text-[10px] text-gray-400 mt-2">Type a value and click Set or press Enter to apply to all variants.</p>
         </div>
-      )}
+      ))}
+    </div>
+
+    <p className="mt-5 text-xs text-gray-500">
+      Type a value and click <strong>Set</strong> or press <strong>Enter</strong> to apply it to all variants.
+    </p>
+  </div>
+)}
 
       {/* ── Variant Cards ──────────────────────────────────────────────── */}
       {variants.length > 0 && (
