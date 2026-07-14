@@ -2,11 +2,39 @@ import React, { useEffect, useState } from "react";
 import { IoStarSharp } from "react-icons/io5";
 import { userDetails } from "../../data/userDetail";
 import { useAuthLayout } from "../../context/AuthLayoutContext";
+import { axiosPublic } from "../../_helpers/axiosProvider";
+
+const AUTH_TESTIMONIAL_PAGE_TYPE = "auth_testimonial";
+
+const normalizeTarget = (formType = "") =>
+  String(formType || "").toLowerCase().includes("register") ? "register" : "login";
+
+const normalizeTestimonials = (pages = [], formType = "login") => {
+  const target = normalizeTarget(formType);
+  return (Array.isArray(pages) ? pages : [])
+    .map((page = {}) => {
+      const meta = page.metadata?.data || page.metadata || {};
+      const pageTarget = meta.pageTarget || "all";
+      if (pageTarget !== "all" && pageTarget !== target) return null;
+      return {
+        profileImg: page.author?.avatar || page.image?.url || meta.avatarUrl || "/Img/auth-img/user1.jpeg",
+        name: page.title || page.author?.name || meta.name || "Sam Global Customer",
+        rating: Number(meta.rating || 5),
+        description: page.description || page.body || meta.reviewText || "",
+        googleRating: Number(meta.googleRating || 4.7),
+        googleReviewCount: meta.googleReviewCount || "",
+        googlePlaceUrl: meta.googlePlaceUrl || "",
+      };
+    })
+    .filter((item) => item && item.description);
+};
 
 const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
-  const activeUser = userData[currentUserIndex] || userDetails[0];
+  const [dynamicUsers, setDynamicUsers] = useState([]);
   const { formType, layoutConfig } = useAuthLayout();
+  const displayUsers = dynamicUsers.length ? dynamicUsers : userData;
+  const activeUser = displayUsers[currentUserIndex] || userDetails[0];
 
   const authBackgroundImg =
     backgroundImg ||
@@ -14,14 +42,38 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
     "/Img/auth-img/backgroundImg.png";
 
   useEffect(() => {
-    if (userData.length <= 1) return undefined;
+    if (displayUsers.length <= 1) return undefined;
 
     const intervalId = setInterval(() => {
-      setCurrentUserIndex((prevIndex) => (prevIndex + 1) % userData.length);
+      setCurrentUserIndex((prevIndex) => (prevIndex + 1) % displayUsers.length);
     }, 4000);
 
     return () => clearInterval(intervalId);
-  }, [userData.length]);
+  }, [displayUsers.length]);
+
+  useEffect(() => {
+    let mounted = true;
+    axiosPublic
+      .get("/cms", {
+        params: {
+          pageType: AUTH_TESTIMONIAL_PAGE_TYPE,
+          published: true,
+          limit: 20,
+        },
+      })
+      .then((response) => {
+        if (!mounted) return;
+        const pages = response?.data?.data || [];
+        setDynamicUsers(normalizeTestimonials(pages, formType));
+        setCurrentUserIndex(0);
+      })
+      .catch(() => {
+        if (mounted) setDynamicUsers([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [formType]);
 
   return (
     <div className="min-h-screen flex justify-center bg-white lg:items-center">
@@ -63,11 +115,21 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
               {/* ratings */}
 
               <div className="mt-3">
-                <img
-                  src="/Img/auth-img/rating.png"
-                  alt="rating"
-                  className="mx-auto h-auto max-w-[150px] sm:max-w-none"
-                />
+                {activeUser.googlePlaceUrl ? (
+                  <a href={activeUser.googlePlaceUrl} target="_blank" rel="noreferrer" className="inline-flex">
+                    <img
+                      src="/Img/auth-img/rating.png"
+                      alt={`Google average rating ${activeUser.googleRating || 4.7}`}
+                      className="mx-auto h-auto max-w-[150px] sm:max-w-none"
+                    />
+                  </a>
+                ) : (
+                  <img
+                    src="/Img/auth-img/rating.png"
+                    alt={`Google average rating ${activeUser.googleRating || 4.7}`}
+                    className="mx-auto h-auto max-w-[150px] sm:max-w-none"
+                  />
+                )}
               </div>
             </div>
           </div>

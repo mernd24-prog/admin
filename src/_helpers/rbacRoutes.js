@@ -671,7 +671,7 @@ const ROUTE_MODULES = [
   [["/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
 
   // CMS & Content — additional
-  [["/content-pages"], ["cms_pages", "cms"]],
+  [["/content-pages", "/auth-testimonials"], ["cms_pages", "cms"]],
 
   // Users — additional
   [["/users-addresses", "/user-addresses"], ["users"]],

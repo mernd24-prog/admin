@@ -1349,7 +1349,7 @@ const SellerSubAdminManagement = () => {
                 </span>
               </div>
               {viewLoading ? (
-                <p className="text-sm text-gray-400">Loading products...</p>
+                <p className="text-sm text-gray-400"></p>
               ) : viewProducts.length ? (
                 <div className="max-h-80 divide-y divide-gray-100 overflow-y-auto rounded border border-gray-100">
                   {viewProducts.map((product) => (
