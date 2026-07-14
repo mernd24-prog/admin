@@ -53,16 +53,17 @@ const ForgotPasswordPage = () => {
             </div>
           )}
 
-          <div className="pt-4">
+          <div className="pt-2">
+            <AuthTermsCheckbox
+              checked={auth.termsAccepted}
+              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+            />
             <FormSubmitButton
               buttonLabel={
                 auth.loading ? "Sending Reset Link..." : "Send Reset Link"
               }
             />
-            <AuthTermsCheckbox
-              checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
-            />
+
           </div>
         </div>
       </FormLayout>
