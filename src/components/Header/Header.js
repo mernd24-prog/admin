@@ -154,11 +154,11 @@ export default function Header({
   const currentPath = location.pathname;
   const [headerTitle, setHeaderTitle] = useState("");
   const [userData, setUserData] = useState({});
-  const [organizations, setOrganizations] = useState([]);
-  const [incompleteOrgs, setIncompleteOrgs] = useState([]);
+  const [, setOrganizations] = useState([]);
+  const [, setIncompleteOrgs] = useState([]);
   const [showIncompletePopup, setShowIncompletePopup] = useState(false);
-  const [pendingIncompleteOrg, setPendingIncompleteOrg] = useState(null);
-  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
+  const [pendingIncompleteOrg] = useState(null);
+  const [, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = getAvatarUrl(userData);
 
@@ -250,23 +250,6 @@ export default function Header({
   const handleLogout = () => {
     forceLogout("Logged out");
     dispatch(logout());
-  };
-
-  const handleOrganizationChange = (event) => {
-    const value = event.target.value;
-    const incompleteOrg = incompleteOrgs.find(
-      (o) => String(o.id || o.organizationId) === value,
-    );
-    if (incompleteOrg) {
-      // Reset the select to the current approved org and show the incomplete popup.
-      event.target.value = selectedOrganizationId;
-      setPendingIncompleteOrg(incompleteOrg);
-      setShowIncompletePopup(true);
-      return;
-    }
-    setSelectedOrganizationIdState(value);
-    setSelectedSellerOrganizationId(value);
-    window.setTimeout(() => window.location.reload(), 0);
   };
 
   const toggleLogoutModal = () => {

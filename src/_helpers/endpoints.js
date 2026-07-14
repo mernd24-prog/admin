@@ -222,12 +222,6 @@ export const ENDPOINTS = {
     settlementsExport: "/sellers/commissions/settlements/export",
     settlementStatement: (settlementId) => `/sellers/commissions/settlements/${settlementId}/statement`,
   },
-  finance: {
-    commissionRules: "/admin/finance/commission-rules",
-    commissionRule: (id) => `/admin/finance/commission-rules/${id}`,
-    platformFeeRules: "/admin/finance/platform-fee-rules",
-    platformFeeRule: (id) => `/admin/finance/platform-fee-rules/${id}`,
-  },
   commerceSettings: {
     detail: "/admin/commerce-settings",
     sellerChargeSettings: "/admin/commerce-settings/seller-charge-settings",
@@ -407,8 +401,6 @@ export const ENDPOINTS = {
     subscriptionPlan: (planId) => `/admin/platform/subscription-plans/${planId}`,
     subscriptions: "/admin/platform/subscriptions",
     subscriptionStatus: (subscriptionId) => `/admin/platform/subscriptions/${subscriptionId}/status`,
-    feeConfig: "/admin/platform/fee-config",
-    feeConfigDetail: (configId) => `/admin/platform/fee-config/${configId}`,
     categories: "/admin/platform/categories",
     category: (categoryKey) => `/admin/platform/categories/${categoryKey}`,
     categoryAttributes: (categoryKey) => `/admin/categories/${categoryKey}/attributes`,

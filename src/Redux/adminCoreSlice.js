@@ -78,11 +78,6 @@ const initialState = {
   deleteSubscriptionPlanData: {},
   platformSubscriptionsData: {},
   updatePlatformSubscriptionStatusData: {},
-  platformFeeConfigsData: {},
-  platformFeeConfigData: {},
-  createPlatformFeeConfigData: {},
-  updatePlatformFeeConfigData: {},
-  deletePlatformFeeConfigData: {},
   platformCategoriesData: {},
   platformCategoryData: {},
   createPlatformCategoryData: {},
@@ -288,22 +283,6 @@ const toSubscriptionPlanBody = (payload = {}) => ({
   ...(firstDefined(payload.currency, payload.currencyCode) ? { currency: firstDefined(payload.currency, payload.currencyCode) } : {}),
   ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
   ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
-});
-
-const toPlatformFeeConfigBody = (payload = {}) => ({
-  ...(firstDefined(payload.category, payload.categoryCode, payload.category_code) ? { category: firstDefined(payload.category, payload.categoryCode, payload.category_code) } : {}),
-  ...(toNum(firstDefined(payload.commissionPercent, payload.commission_percentage, payload.commission)) !== undefined
-    ? { commissionPercent: toNum(firstDefined(payload.commissionPercent, payload.commission_percentage, payload.commission)) }
-    : {}),
-  ...(toNum(firstDefined(payload.fixedFeeAmount, payload.fixed_fee_amount)) !== undefined
-    ? { fixedFeeAmount: toNum(firstDefined(payload.fixedFeeAmount, payload.fixed_fee_amount)) }
-    : {}),
-  ...(toNum(firstDefined(payload.closingFeeAmount, payload.closing_fee_amount)) !== undefined
-    ? { closingFeeAmount: toNum(firstDefined(payload.closingFeeAmount, payload.closing_fee_amount)) }
-    : {}),
-  ...(firstDefined(payload.active, payload.isActive) !== undefined ? { active: toBool(firstDefined(payload.active, payload.isActive), true) } : {}),
-  ...(firstDefined(payload.effectiveFrom, payload.effective_from) ? { effectiveFrom: firstDefined(payload.effectiveFrom, payload.effective_from) } : {}),
-  ...(firstDefined(payload.effectiveTo, payload.effective_to) ? { effectiveTo: firstDefined(payload.effectiveTo, payload.effective_to) } : {}),
 });
 
 const toPlatformCategoryBody = (payload = {}) => ({
@@ -605,11 +584,6 @@ export const updateSubscriptionPlan = createApiThunkPrivate("adminCore/updateSub
 export const deleteSubscriptionPlan = createApiThunkPrivate("adminCore/deleteSubscriptionPlan", (payload) => ENDPOINTS.platform.subscriptionPlan(payload.planId || payload.id), "DELETE", false, { transformParams: noParams });
 export const getPlatformSubscriptions = createApiThunkPrivate("adminCore/getPlatformSubscriptions", ENDPOINTS.platform.subscriptions, "GET", true, { transformParams: pickQuery(["status", "userRole", "limit", "offset"]) });
 export const updatePlatformSubscriptionStatus = createApiThunkPrivate("adminCore/updatePlatformSubscriptionStatus", (payload) => ENDPOINTS.platform.subscriptionStatus(payload.subscriptionId || payload.id), "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["status"]) });
-export const getPlatformFeeConfigs = createApiThunkPrivate("adminCore/getPlatformFeeConfigs", ENDPOINTS.platform.feeConfig, "GET", true, { transformParams: pickQuery(["active", "category", "limit", "offset"]) });
-export const getPlatformFeeConfig = createApiThunkPrivate("adminCore/getPlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "GET");
-export const createPlatformFeeConfig = createApiThunkPrivate("adminCore/createPlatformFeeConfig", ENDPOINTS.platform.feeConfig, "POST", false, { transformBody: toPlatformFeeConfigBody });
-export const updatePlatformFeeConfig = createApiThunkPrivate("adminCore/updatePlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "PATCH", false, { transformBody: (payload = {}) => toPlatformFeeConfigBody(omitPayload(payload, ["configId", "id"])) });
-export const deletePlatformFeeConfig = createApiThunkPrivate("adminCore/deletePlatformFeeConfig", (payload) => ENDPOINTS.platform.feeConfigDetail(payload.configId || payload.id), "DELETE", false, { transformParams: noParams });
 
 export const getPlatformCategories = createApiThunkPrivate("adminCore/getPlatformCategories", ENDPOINTS.platform.categories, "GET", true, { transformParams: pickQuery(["page", "limit", "parentKey", "active", "categoryKey"]) });
 export const getPlatformCategory = createApiThunkPrivate("adminCore/getPlatformCategory", (payload) => ENDPOINTS.platform.category(payload.categoryKey || payload.key || payload.id), "GET");
@@ -793,11 +767,6 @@ const adminCoreSlice = createSlice({
       [deleteSubscriptionPlan, "deleteSubscriptionPlanData"],
       [getPlatformSubscriptions, "platformSubscriptionsData"],
       [updatePlatformSubscriptionStatus, "updatePlatformSubscriptionStatusData"],
-      [getPlatformFeeConfigs, "platformFeeConfigsData"],
-      [getPlatformFeeConfig, "platformFeeConfigData"],
-      [createPlatformFeeConfig, "createPlatformFeeConfigData"],
-      [updatePlatformFeeConfig, "updatePlatformFeeConfigData"],
-      [deletePlatformFeeConfig, "deletePlatformFeeConfigData"],
       [getPlatformCategories, "platformCategoriesData"],
       [getPlatformCategory, "platformCategoryData"],
       [createPlatformCategory, "createPlatformCategoryData"],

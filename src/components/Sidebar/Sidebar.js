@@ -26,6 +26,7 @@ import { getMyModulePermission } from "../../Redux/userManagementSlice";
 import { getAccessModules, getRbacSidebarModules } from "../../Redux/adminCoreSlice";
 import {
   getAccessToken,
+  getStoredSidebarModules,
   getStoredRole,
   getStoredUser,
   normalizeRole,
@@ -400,6 +401,7 @@ const Sidebar = ({
   const navigate = useNavigate();
   const userSelector = useSelector((state) => state.user);
   const adminCoreSelector = useSelector((state) => state.adminCore);
+  const [userData, setUserData] = useState(null);
   const dynamicSidebarModules = useMemo(() => {
     const sd = adminCoreSelector?.rbacSidebarModulesData;
     return firstArray(
@@ -410,8 +412,12 @@ const Sidebar = ({
       sd?.data?.list,
       sd?.data?.data,
       sd?.data,
+      userData?.sidebarModules,
+      userData?.rbacSidebarModules,
+      getStoredUser()?.sidebarModules,
+      getStoredSidebarModules(),
     );
-  }, [adminCoreSelector?.rbacSidebarModulesData]);
+  }, [adminCoreSelector?.rbacSidebarModulesData, userData]);
   const accessModules = useMemo(() => {
     const sd = adminCoreSelector?.accessModulesData;
     const payload =
@@ -425,7 +431,6 @@ const Sidebar = ({
   const sellerPanel = isSellerPanel();
 
   const [activeTab, setActiveTab] = useState(null);
-  const [userData, setUserData] = useState(null);
   const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(
     getStoredSidebarState,
   );

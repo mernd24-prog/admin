@@ -55,6 +55,20 @@ export const normalizeAuthPayload = (response) => {
     null;
   const role = extractRole(user, raw, flowState);
   const allowedModules = extractAllowedModules(user, raw);
+  const sidebarModulesSource =
+    user?.sidebarModules ??
+    raw?.sidebarModules ??
+    raw?.data?.sidebarModules;
+  const modulePermissionsSource =
+    user?.modulePermissions ??
+    raw?.modulePermissions ??
+    raw?.data?.modulePermissions;
+  const sidebarModules = Array.isArray(sidebarModulesSource)
+    ? sidebarModulesSource
+    : undefined;
+  const modulePermissions = Array.isArray(modulePermissionsSource)
+    ? modulePermissionsSource
+    : undefined;
 
   return {
     raw,
@@ -64,6 +78,8 @@ export const normalizeAuthPayload = (response) => {
     refreshToken,
     role,
     allowedModules,
+    sidebarModules,
+    modulePermissions,
     requiresOnboarding: Boolean(
       raw?.requiresOnboarding || flowState?.requiresOnboarding || onboardingToken,
     ),
@@ -394,6 +410,8 @@ const authSlice = createSlice({
             user: auth.user,
             role: auth.role,
             allowedModules: auth.allowedModules,
+            sidebarModules: auth.sidebarModules,
+            modulePermissions: auth.modulePermissions,
           });
         }
       })
@@ -554,6 +572,8 @@ const authSlice = createSlice({
             user: auth.user || state.user,
             role: auth.role,
             allowedModules: auth.allowedModules,
+            sidebarModules: auth.sidebarModules,
+            modulePermissions: auth.modulePermissions,
           });
         }
       })

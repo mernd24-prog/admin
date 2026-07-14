@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  MdAdd,
   MdBlock,
   MdCheckCircle,
   MdClose,
@@ -1024,12 +1023,6 @@ const SellerOrganizations = () => {
       [key]: value,
       ...(key === "sellerId" ? { organizationId: "" } : {}),
     }));
-  };
-
-  const openCreate = () => {
-    setForm(createEmptyForm(filters.sellerId));
-    setFormErrors({});
-    setModal({ open: true, mode: "create", organization: null });
   };
 
   const openEdit = (organization) => {
