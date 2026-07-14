@@ -6,6 +6,9 @@ const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "currentUser";
 const ROLE_KEY = "role";
 const ALLOWED_MODULES_KEY = "allowedModules";
+const SIDEBAR_MODULES_KEY = "sidebarModules";
+const RBAC_SIDEBAR_MODULES_KEY = "rbacSidebarModules";
+const MODULE_PERMISSIONS_KEY = "modulePermissions";
 
 export const ADMIN_ROLES = ["super-admin", "admin", "sub-admin"];
 export const BLOCKED_ADMIN_ROLES = ["seller", "seller-admin", "seller-sub-admin", "buyer"];
@@ -99,6 +102,23 @@ export const getStoredUser = () => safeParse(localStorage.getItem(USER_KEY), nul
 export const getStoredRole = () => localStorage.getItem(ROLE_KEY) || "";
 export const getAllowedModules = () =>
   safeParse(localStorage.getItem(ALLOWED_MODULES_KEY), []);
+export const getStoredSidebarModules = () => {
+  const localModules =
+    safeParse(localStorage.getItem(SIDEBAR_MODULES_KEY), []) ||
+    safeParse(localStorage.getItem(RBAC_SIDEBAR_MODULES_KEY), []);
+  if (Array.isArray(localModules) && localModules.length) return localModules;
+  return (
+    safeParse(sessionStorage.getItem(SIDEBAR_MODULES_KEY), []) ||
+    safeParse(sessionStorage.getItem(RBAC_SIDEBAR_MODULES_KEY), []) ||
+    []
+  );
+};
+export const getStoredModulePermissions = () =>
+  (() => {
+    const localPermissions = safeParse(localStorage.getItem(MODULE_PERMISSIONS_KEY), []);
+    if (Array.isArray(localPermissions) && localPermissions.length) return localPermissions;
+    return safeParse(sessionStorage.getItem(MODULE_PERMISSIONS_KEY), []) || [];
+  })();
 
 export const getStoredAuth = () => ({
   accessToken: getAccessToken(),
@@ -106,6 +126,8 @@ export const getStoredAuth = () => ({
   user: getStoredUser(),
   role: getStoredRole(),
   allowedModules: getAllowedModules(),
+  sidebarModules: getStoredSidebarModules(),
+  modulePermissions: getStoredModulePermissions(),
 });
 
 export const setStoredAuth = ({
@@ -114,6 +136,8 @@ export const setStoredAuth = ({
   user,
   role,
   allowedModules,
+  sidebarModules,
+  modulePermissions,
 }) => {
   if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
@@ -121,6 +145,18 @@ export const setStoredAuth = ({
   if (role) localStorage.setItem(ROLE_KEY, normalizeRole(role));
   if (Array.isArray(allowedModules)) {
     localStorage.setItem(ALLOWED_MODULES_KEY, JSON.stringify(allowedModules.map(String)));
+  }
+  if (Array.isArray(sidebarModules)) {
+    const serialized = JSON.stringify(sidebarModules);
+    localStorage.setItem(SIDEBAR_MODULES_KEY, serialized);
+    localStorage.setItem(RBAC_SIDEBAR_MODULES_KEY, serialized);
+    sessionStorage.setItem(SIDEBAR_MODULES_KEY, serialized);
+    sessionStorage.setItem(RBAC_SIDEBAR_MODULES_KEY, serialized);
+  }
+  if (Array.isArray(modulePermissions)) {
+    const serialized = JSON.stringify(modulePermissions);
+    localStorage.setItem(MODULE_PERMISSIONS_KEY, serialized);
+    sessionStorage.setItem(MODULE_PERMISSIONS_KEY, serialized);
   }
 };
 
@@ -195,7 +231,7 @@ export const hasModuleAccess = (moduleCode) => {
     "seller-kyc": ["seller-kyc", "seller_kyc", "seller-kyc-detail"],
     seller_bank: ["seller-bank", "seller_bank", "seller-bank-detail"],
     "seller-bank": ["seller-bank", "seller_bank", "seller-bank-detail"],
-    "sellers/commissions": ["sellers/commissions", "seller-finance-payouts", "seller-finance", "seller-commissions", "seller_commissions", "commissions", "seller-payouts", "seller_payouts", "payout-ops-queue", "negative-balances", "settlements"],
+    "sellers/commissions": ["sellers/commissions", "seller-finance-payouts", "seller-finance-management", "seller-finance-summary", "seller-my-payouts", "seller-finance", "seller-commissions", "seller_commissions", "commissions", "seller-payouts", "seller_payouts", "payout-ops-queue", "negative-balances", "settlements"],
     notifications: ["notifications", "messages"],
     returns: ["returns", "return-requests", "returns-cancellations", "cancellations"],
     analytics: ["analytics", "dashboard", "home"],
@@ -205,7 +241,7 @@ export const hasModuleAccess = (moduleCode) => {
     "admin-users": ["admin-users", "admin_users", "sub-admins", "sub_admins"],
     rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
     tax: ["tax", "invoices-taxation", "tax-invoices", "credit-notes", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule", "tax-documents", "gst"],
-    "commerce-settings": ["commerce-settings", "commerce-settings-menu", "platform-commerce-settings", "seller-commerce-config", "commerce-templates", "seller-tiers", "platform-fee-config", "commission-rules", "discount-coupons", "cod-config", "subscription-plans"],
+    "commerce-settings": ["commerce-settings", "commerce-settings-menu", "platform-commission", "seller-tiers", "discount-coupons", "subscription-plans"],
     locations: ["locations", "country", "countries", "state", "states", "city", "cities", "zipcode", "zip-code", "zip-codes", "pincode", "pin-code"],
     countries: ["country", "countries", "locations"],
     states: ["state", "states", "locations"],

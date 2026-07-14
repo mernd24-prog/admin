@@ -30,7 +30,6 @@ import {
   createShippingProfile,
   createShippingProfileTemplate,
   deleteShippingProfile,
-  deleteShippingProfileTemplate,
   cloneShippingProfileTemplate,
   getShippingProfileTemplates,
   getShippingProfiles,
@@ -676,7 +675,7 @@ export default function ShippingProfiles() {
   const [cloneForm, setCloneForm] = useState({ ...EMPTY_CLONE_FORM });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
+  const [, setDeleteTemplateTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
   const [sellerOptions, setSellerOptions] = useState([]);

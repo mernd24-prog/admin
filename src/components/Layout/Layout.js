@@ -98,12 +98,6 @@ const Returns = React.lazy(
 const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
 );
-const CommissionRules = React.lazy(
-  () => import("../../pages/OrdersManagement/CommissionRules/CommissionRules"),
-);
-const PlatformFeeConfig = React.lazy(
-  () => import("../../pages/OrdersManagement/PlatformFeeConfig/PlatformFeeConfig"),
-);
 const CommerceSettings = React.lazy(
   () => import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
 );
@@ -569,13 +563,14 @@ function Layout() {
       { path: "/checkout-quote", render: () => <CheckoutQuote /> },
       { path: "/payments", render: () => <Payments /> },
       { path: "/seller-finance", render: () => <SellerFinance /> },
-      { path: "/commission-rules", render: () => <CommissionRules /> },
-      { path: "/platform-fee-config", render: () => <PlatformFeeConfig /> },
+      { path: "/commission-rules", redirectTo: "/app/platform-commission" },
+      { path: "/platform-fee-config", redirectTo: "/app/platform-commission" },
       { path: "/commerce-settings", render: () => <CommerceSettings /> },
-      { path: "/platform-commerce-settings", render: () => <CommerceSettings /> },
-      { path: "/seller-commerce-config", render: () => <CommerceSettings /> },
-      { path: "/commerce-templates", render: () => <CommerceSettings /> },
-      { path: "/seller-tiers", render: () => <CommerceSettings /> },
+      { path: "/platform-commerce-settings", redirectTo: "/app/platform-commission" },
+      { path: "/platform-commission", render: () => <CommerceSettings /> },
+      { path: "/seller-commerce-config", redirectTo: "/app/platform-commission" },
+      { path: "/commerce-templates", redirectTo: "/app/platform-commission" },
+      { path: "/seller-tiers", redirectTo: "/app/platform-commission" },
       { path: "/returns", render: () => <Returns /> },
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },

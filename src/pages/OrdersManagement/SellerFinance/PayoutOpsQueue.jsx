@@ -281,7 +281,6 @@ const PayoutOpsQueue = () => {
             row.seller?.name ||
             row.seller?.businessName;
           const email = row.sellerEmail || row.seller?.email;
-          const value = row.sellerId || row.seller_id;
           return (
             <div>
               {name && (

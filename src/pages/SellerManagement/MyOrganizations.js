@@ -417,8 +417,6 @@ const OrgFormModal = ({ open, mode, form, errors, submitting, sellerLoginEmail, 
   const MAX_DOB = new Date();
 MAX_DOB.setFullYear(MAX_DOB.getFullYear() - 18);
 
-const MAX_DOB_DATE = MAX_DOB.toISOString().split("T")[0];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
       <div className="flex max-h-[92vh] w-full max-w-4xl flex-col rounded-lg border border-[#E6E6E6] bg-white shadow-xl">

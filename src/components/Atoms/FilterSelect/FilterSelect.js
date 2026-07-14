@@ -71,7 +71,7 @@ const customStyles = (error) => ({
   menu: (provided) => ({
     ...provided,
     borderRadius: 8,
-    zIndex: 9999,
+    zIndex: 10050,
     position: "absolute",
   }),
   option: (provided, state) => ({
@@ -87,7 +87,7 @@ const customStyles = (error) => ({
   }),
   menuPortal: (provided) => ({
     ...provided,
-    zIndex: 10000,
+    zIndex: 10050,
   }),
 });
 

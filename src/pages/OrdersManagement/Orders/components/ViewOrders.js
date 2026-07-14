@@ -41,7 +41,12 @@ const ALLOWED_TRANSITIONS = {
   refunded:        ["fulfilled"],
 };
 
-const SELLER_ALLOWED_NEXT = new Set(["processing", "packed", "ready_to_ship", "shipped", "out_for_delivery", "failed_delivery", "fulfilled", "on_hold"]);
+const SELLER_ALLOWED_NEXT = new Set(["on_hold"]);
+const ADMIN_ORDER_ROLES = new Set(["super-admin", "admin", "sub-admin", "super_admin", "sub_admin"]);
+const ORDER_STATUS_VALUES = [...new Set([
+  ...Object.keys(ALLOWED_TRANSITIONS),
+  ...Object.values(ALLOWED_TRANSITIONS).flat(),
+])];
 
 const STATUS_ALIASES = {
   pending: "pending_payment",
@@ -67,6 +72,33 @@ const normalizeStatusKey = (status = "") =>
     .replace(/[-\s]+/g, "_");
 
 const toOption = (status) => ({ value: status, label: formatLabel(status) });
+
+const transitionStatusOf = (transition) => {
+  if (typeof transition === "string") return transition;
+  if (!transition || typeof transition !== "object") return "";
+  return firstDefined(
+    transition.to,
+    transition.toStatus,
+    transition.to_status,
+    transition.nextStatus,
+    transition.next_status,
+    transition.status,
+    transition.value,
+  );
+};
+
+const orderTransitionOptionsOf = (order = {}) => [
+  order.availableTransitions,
+  order.available_transitions,
+  order.allowedTransitions,
+  order.allowed_transitions,
+  order.statusTransitions,
+  order.status_transitions,
+  order.transitions,
+  order.relations?.availableTransitions,
+  order.relations?.allowedTransitions,
+]
+  .find((transitions) => Array.isArray(transitions) && transitions.length) || [];
 
 const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
@@ -216,6 +248,10 @@ const groupItemsBySeller = (items = [], relations = {}) => {
     return groups;
   }, {});
 };
+
+const sameSellerGroup = (entry = {}, group = {}) =>
+  String(firstDefined(entry.sellerId, entry.seller_id, "")) === String(group.sellerId || "") &&
+  String(firstDefined(entry.organizationId, entry.organization_id, "default") || "default") === String(group.organizationId || "default");
 
 const groupItemsBySellerFromItems = (items = []) =>
   items.reduce((groups, item) => {
@@ -531,18 +567,26 @@ const OrderSummary = () => {
   // Build role-aware status options filtered to valid next transitions from current status
   const statusOptions = useMemo(() => {
     const currentStatus = normalizeStatusKey(firstDefined(order.status, order.order_status));
-    const validNext = ALLOWED_TRANSITIONS[currentStatus] || [];
-    const isAdminOrderManager = isSuperAdmin || isAdmin || role === "sub-admin";
-    const transitionOptions = validNext
+    const backendTransitions = orderTransitionOptionsOf(order)
+      .map(transitionStatusOf)
+      .map(normalizeStatusKey)
+      .filter(Boolean);
+    const validNext = backendTransitions.length
+      ? backendTransitions
+      : ALLOWED_TRANSITIONS[currentStatus] || [];
+    const normalizedRole = normalizeStatusKey(role).replace(/_/g, "-");
+    const isAdminOrderManager = isSuperAdmin || isAdmin || ADMIN_ORDER_ROLES.has(normalizedRole);
+    const filteredNext = validNext
       .filter((s) => {
         if (isAdminOrderManager) return true;
         if (isSeller) return SELLER_ALLOWED_NEXT.has(s);
-        return false;
-      })
-      .map(toOption);
+        return true;
+      });
+    const fallbackNext = ORDER_STATUS_VALUES.filter((status) => status !== currentStatus);
+    const transitionOptions = (filteredNext.length ? filteredNext : fallbackNext).map(toOption);
 
-    return transitionOptions;
-  }, [order.status, order.order_status, isSeller, isAdmin, isSuperAdmin, role]);
+    return [...new Map(transitionOptions.map((option) => [option.value, option])).values()];
+  }, [order, order.status, order.order_status, isSeller, isAdmin, isSuperAdmin, role]);
 
   const openStatusModal = useCallback(() => {
     setFormData((prev) => ({ ...prev, status: "", cancelItems: {} }));
@@ -647,6 +691,14 @@ const OrderSummary = () => {
                 <FaRegNoteSticky /> Note
               </button>
             </PermissionGuard>
+            {orderId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`)}
+              >
+                <FaFile /> Shipments
+              </button>
+            )}
             {/* Sellers see the button based on role + available transitions; admins need status_change permission */}
             {statusOptions.length > 0 && ((isSeller) ? (
               <button
@@ -683,6 +735,18 @@ const OrderSummary = () => {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Panel title="Items By Seller" className="lg:col-span-2">
             {sellerGroups.length ? sellerGroups.map((group) => (
+              (() => {
+                const fulfillmentGroup = (relations.sellerFulfillmentGroups || []).find((entry) => sameSellerGroup(entry, group)) || {};
+                const groupShipments = shipments.filter((shipment) => sameSellerGroup(shipment, group) && String(shipment.direction || "forward") !== "reverse");
+                const groupSettlement = sellerSettlements.find((settlement) => sameSellerGroup(settlement, group)) || {};
+                const packageStatus = firstDefined(
+                  fulfillmentGroup.deliveryStatus,
+                  fulfillmentGroup.shipmentStatus,
+                  groupShipments[0]?.status,
+                  "not_created",
+                );
+                const returnLifecycle = fulfillmentGroup.returnLifecycle || {};
+                return (
               <div key={`${group.sellerId}-${group.organizationId}`} className="mb-4 overflow-hidden rounded-lg border border-[#eadfbd] bg-white last:mb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 bg-[#fff9ea] px-4 py-3">
                   <div>
@@ -704,10 +768,35 @@ const OrderSummary = () => {
                       )}{" "}
                       · Organization: {group.organizationName || group.organizationId || "N/A"}
                     </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
+                        Package: {displayStatus(packageStatus)}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
+                        Returns: {displayStatus(firstDefined(returnLifecycle.status, "none"))}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
+                        Payout: {displayStatus(firstDefined(groupSettlement.payoutStatus, groupSettlement.commissionStatus, "pending"))}
+                      </span>
+                      {groupSettlement.eligibleAt && (
+                        <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
+                          Eligible: {formatDate(groupSettlement.eligibleAt)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#202337] ring-1 ring-[#eadfbd]">
-                    {group.items.length} item{group.items.length === 1 ? "" : "s"}
-                  </span>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]"
+                      onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&sellerId=${encodeURIComponent(group.sellerId || "")}`)}
+                    >
+                      Manage Shipment
+                    </button>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#202337] ring-1 ring-[#eadfbd]">
+                      {group.items.length} item{group.items.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
                 </div>
                 <div className="hidden grid-cols-12 gap-3 border-b border-[#e6ebf7] bg-[#eef2fb] px-4 py-2 text-xs font-semibold uppercase text-[#65718b] md:grid">
                   <span className="col-span-5">Product</span>
@@ -717,7 +806,6 @@ const OrderSummary = () => {
                   <span className="col-span-2 text-right">Line Total</span>
                 </div>
                 {group.items.map((item) => {
-                console.log('group: ', group);
                   const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
                   const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
                   const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");
@@ -758,6 +846,8 @@ const OrderSummary = () => {
                   );
                 })}
               </div>
+                );
+              })()
             )) : <EmptyState>No items found</EmptyState>}
           </Panel>
 

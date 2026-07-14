@@ -584,11 +584,22 @@ const Returns = () => {
               {(detailReturn?.items || []).map((item, index) => {
                 const productLabel = item.productTitle || item.productName || item.product?.title || item.product?.name;
                 const sellerLabel = sellerName(item, detailReturn);
+                const itemPolicy = item.policySnapshot || item.policy_snapshot || {};
+                const itemReturnWindow = item.returnWindowDays || item.return_window_days || itemPolicy.returnWindowDays || itemPolicy.return_window_days;
+                const itemEligibleUntil = item.returnEligibleUntil || item.return_eligible_until || itemPolicy.eligibleUntil || itemPolicy.returnUntil;
+                const requiresImages = item.requiresImages ?? item.requires_images ?? itemPolicy.requiresImages ?? itemPolicy.requires_images;
+                const inspectionRequired = item.inspectionRequired ?? item.inspection_required ?? itemPolicy.inspectionRequired ?? itemPolicy.inspection_required;
                 return (
                   <div key={`${item.productId}-${index}`} className="rounded border border-gray-100 p-3">
                     <div className="font-medium">{productLabel || "Product details unavailable"}</div>
                     <div className="text-xs text-gray-500">
                       Seller: {sellerLabel || "Not assigned"} · SKU: {item.variantSku || item.productSku || "Not available"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Return window: {itemReturnWindow ? `${itemReturnWindow} days` : "Not available"} · Eligible until: {formatDateTime(itemEligibleUntil)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Images: {requiresImages ? "Required" : "Optional"} · Inspection: {inspectionRequired === false ? "Not required" : "Required"}
                     </div>
                     <div className="text-xs text-gray-500">Requested {item.requestedQuantity || item.quantity} · Approved {item.approvedQuantity || 0} · Received {item.receivedQuantity || 0}</div>
                     <div className="text-xs text-gray-500">Refund {money(item.refundAmount)} · QC {display(item.qcResult)} · Restocked {item.restockedQuantity || 0} · Damaged {item.damagedQuantity || 0}</div>

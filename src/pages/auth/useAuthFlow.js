@@ -442,6 +442,8 @@ export const useAuthFlow = ({
         roleId: legacyRoleId,
         role_id: legacyRoleId,
         allowedModules: auth.allowedModules || [],
+        sidebarModules: auth.sidebarModules || [],
+        modulePermissions: auth.modulePermissions || [],
       };
 
       setStoredAuth({
@@ -450,6 +452,8 @@ export const useAuthFlow = ({
         user,
         role,
         allowedModules: auth.allowedModules || [],
+        sidebarModules: auth.sidebarModules || [],
+        modulePermissions: auth.modulePermissions || [],
       });
       sessionStorage.setItem("EcomAdmin", JSON.stringify(sessionUser));
       window.dispatchEvent(new Event("auth:changed"));
