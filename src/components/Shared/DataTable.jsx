@@ -276,6 +276,7 @@ const DataTable = ({
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [hasMounted, setHasMounted] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
   const safeColumns = Array.isArray(columns) ? columns : [];
   const resolvedTotalCount = Number(totalCount ?? total ?? safeData.length);
@@ -287,13 +288,19 @@ const DataTable = ({
   const resolvedOnSort = onSort || listPage?.setSort;
   const resolvedSortKey = sortKey ?? listPage?.sortKey;
   const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
+  const resolvedSearchValue = listPage?.search ?? "";
   const resolvedEmptyText = emptyMessage || emptyText;
   const totalPages = Math.max(1, Math.ceil(resolvedTotalCount / resolvedPageSize));
   const showLoading = loading || (!hasMounted && safeData.length === 0 && !error);
+  const showRefreshLoading = refreshing || loading;
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  useEffect(() => {
+    setSearchValue(resolvedSearchValue);
+  }, [resolvedSearchValue]);
 
   const getKey = (row, index) =>
     typeof rowKey === "function"
@@ -325,6 +332,16 @@ const DataTable = ({
         col.key,
         resolvedSortKey === col.key && resolvedSortDir === "asc" ? "desc" : "asc",
       );
+  };
+
+  const handleRefresh = async () => {
+    if (!onRefresh || showRefreshLoading) return;
+    setRefreshing(true);
+    try {
+      await Promise.resolve(onRefresh());
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const toggleAll = (checked) => {
@@ -361,11 +378,14 @@ const DataTable = ({
       {onRefresh && (
         <button
           type="button"
-          onClick={onRefresh}
+          onClick={handleRefresh}
+          disabled={showRefreshLoading}
           className="admin-btn-secondary"
-          aria-label="Refresh records"
+          aria-label={showRefreshLoading ? "Refreshing records" : "Refresh records"}
+          aria-busy={showRefreshLoading}
         >
-          <MdRefresh size={17} /> Refresh
+          <MdRefresh size={17} className={showRefreshLoading ? "animate-spin" : ""} />
+          {showRefreshLoading ? "Refreshing..." : "Refresh"}
         </button>
       )}
       {actions}

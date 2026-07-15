@@ -549,7 +549,7 @@ export const updateCategoryAttributes = createApiThunkPrivate(
     }
 )
 export const getAllBrandList = createApiThunkPrivate('brands/getAllDocuments', ENDPOINTS.platform.brands, 'GET', true, {
-    transformParams: (params = {}) => toListParams(params, { limit: 100 }),
+    transformParams: (params = {}) => toListParams(params, { limit: 5000 }),
 })
 
 

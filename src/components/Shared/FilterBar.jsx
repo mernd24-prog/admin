@@ -291,7 +291,14 @@ const FilterBar = ({
   );
   const resolvedValues = listPage?.filters || values || {};
   const resolvedOnChange = onChange || listPage?.setFilter;
-  const resolvedOnClear = onClear || listPage?.clearFilters;
+  const resolvedOnClear = useCallback(() => {
+    if (onClear) {
+      onClear();
+    } else {
+      listPage?.clearFilters?.();
+    }
+    listPage?.clearSearch?.();
+  }, [listPage, onClear]);
   const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
 
   const normalizedFilters = useMemo(

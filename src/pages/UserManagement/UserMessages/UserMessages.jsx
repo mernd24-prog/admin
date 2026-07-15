@@ -178,7 +178,9 @@ const UserMessages = () => {
   const navigate = useNavigate();
   const columns = useMemo(
     () => [
-      ...BASE_COLUMNS,
+      ...(isSeller
+        ? BASE_COLUMNS.filter((column) => column.key !== "userId")
+        : BASE_COLUMNS),
       {
         key: "_actions",
         label: "Actions",
@@ -202,7 +204,7 @@ const UserMessages = () => {
         },
       },
     ],
-    [navigate],
+    [isSeller, navigate],
   );
   const list = useListPage({
     defaultPageSize: 20,
@@ -223,7 +225,10 @@ const UserMessages = () => {
     setError("");
     try {
       const params = toQueryParams();
-      const res = await axiosProvider.get(ENDPOINTS.notifications.admin, {
+      const endpoint = isSeller
+        ? ENDPOINTS.notifications.mine
+        : ENDPOINTS.notifications.admin;
+      const res = await axiosProvider.get(endpoint, {
         params: {
           page: params.page,
           limit: params.limit,
@@ -246,7 +251,7 @@ const UserMessages = () => {
     } finally {
       setLoading(false);
     }
-  }, [toQueryParams]);
+  }, [isSeller, toQueryParams]);
 
   useEffect(() => {
     fetchNotifications();
@@ -287,7 +292,7 @@ const UserMessages = () => {
     <div>
       <PageHeader
         title="Notifications"
-        subtitle="Send and manage user notifications"
+        subtitle={isSeller ? "View your notifications" : "Send and manage user notifications"}
         breadcrumbs={[{ label: "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex items-center gap-2">
@@ -327,11 +332,8 @@ const UserMessages = () => {
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
+            listPage={list}
             loading={loading}
-            activeCount={list.activeFilterCount}
           />
         }
       />
