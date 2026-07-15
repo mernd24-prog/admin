@@ -15,7 +15,8 @@ import ProductStatusBadge from "../../../../components/Product/ProductStatusBadg
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { getProductImages } from "../../../../_helpers/productMedia";
+import { getProductImages, normalizeImageList } from "../../../../_helpers/productMedia";
+import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
 import { formatLabel } from "../../../../utils/formatters";
 import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 
@@ -158,6 +159,29 @@ const ProductAdminDetails = () => {
       ? Object.fromEntries(product.attributes)
       : product.attributes || {};
   const productImages = getProductImages(product);
+
+  const getVariantImage = (variant = {}) => {
+    const imgs = normalizeImageList(
+      variant?.images,
+      variant?.image,
+      variant?.imageUrls,
+      variant?.thumbnail,
+      variant?.media?.images,
+    );
+    return imgs[0] || "";
+  };
+
+  const [variantGalleryOpen, setVariantGalleryOpen] = useState(false);
+  const [variantGalleryImages, setVariantGalleryImages] = useState([]);
+
+  const getVariantImagesList = (variant = {}) =>
+    normalizeImageList(
+      variant?.images,
+      variant?.image,
+      variant?.imageUrls,
+      variant?.thumbnail,
+      variant?.media?.images,
+    );
   const effectivePrice = getEffectivePrice(product);
   const effectiveMrp = getEffectiveMrp(product);
   const effectiveStock = getEffectiveStock(product);
@@ -631,6 +655,7 @@ const ProductAdminDetails = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
+                    <th className="text-left p-3 font-medium text-gray-600">Image</th>
                     <th className="text-left p-3 font-medium text-gray-600">
                       SKU
                     </th>
@@ -643,9 +668,7 @@ const ProductAdminDetails = () => {
                     <th className="text-left p-3 font-medium text-gray-600">
                       Stock
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">
-                      Attributes
-                    </th>
+                    <th className="text-left p-3 font-medium text-gray-600">Attributes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -654,6 +677,33 @@ const ProductAdminDetails = () => {
                       key={variant.sku || i}
                       className="border-b hover:bg-gray-50"
                     >
+                      <td className="p-3">
+                        <div className="flex items-center gap-3" >
+                          {getVariantImage(variant) ? (
+                            <img
+                              src={getVariantImage(variant)}
+                              alt={variant.sku || variant.title || "Variant"}
+                              className="w-8 h-8 object-cover rounded border border-gray-200"
+                              onClick={() => {
+                              setVariantGalleryImages(getVariantImagesList(variant));
+                              setVariantGalleryOpen(true);
+                            }}
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVariantGalleryImages(getVariantImagesList(variant));
+                              setVariantGalleryOpen(true);
+                            }}
+                            className="text-sm text-[var(--admin-blue)] hover:underline"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
                       <td className="p-3">{variant.sku || "N/A"}</td>
                       <td className="p-3">
                         {variant.price !== undefined
@@ -675,6 +725,7 @@ const ProductAdminDetails = () => {
                               .join(", ")
                           : "N/A"}
                       </td>
+                     
                     </tr>
                   ))}
                 </tbody>
@@ -682,6 +733,11 @@ const ProductAdminDetails = () => {
             </div>
           </section>
         )}
+        <ImageGallery
+          images={variantGalleryImages}
+          isOpen={variantGalleryOpen}
+          onClose={() => setVariantGalleryOpen(false)}
+        />
 
         {(product.dimensions || product.origin || product.warranty) && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">

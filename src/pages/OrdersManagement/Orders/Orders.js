@@ -62,12 +62,14 @@ const FILTER_FIELDS = [
     type: "date",
     label: "From Date",
     width: "w-36",
+    disableFuture: true,
   },
   {
     key: "toDate",
     type: "date",
     label: "To Date",
     width: "w-36",
+    disableFuture: true,
   },
 ];
 

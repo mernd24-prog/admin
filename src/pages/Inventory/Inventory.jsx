@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdInventory2, MdOpenInNew, MdRemove, MdSave } from "react-icons/md";
+import { MdAdd, MdInventory2, MdOpenInNew, MdRemove, MdSave, MdRefresh} from "react-icons/md";
 import { useNavigate, useParams } from "react-router-dom";
 import { BulkActionBar, ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -509,7 +509,6 @@ const Inventory = () => {
         title="Inventory"
         subtitle="Product-level inventory list with variant stock managed inside each product"
         count={productRows.length}
-        actions={<button type="button" onClick={refresh}><MdRefresh size={17} /> Refresh</button>}
       />
 
       <DataTable

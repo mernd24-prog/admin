@@ -166,6 +166,8 @@ export default function SearchComponent({
     setSearchDown((prev) => !prev);
   };
 
+  const today = new Date().toISOString().split("T")[0];
+
   const handleBulkAction = (action) => {
     if (selectedRow.length === 0) {
       return;
@@ -433,6 +435,7 @@ export default function SearchComponent({
                     }
                     className="w-full"
                     disabled={isFiltering}
+                    max={today}
                   />
                 </div>
               </div>
@@ -453,6 +456,7 @@ export default function SearchComponent({
                     className="w-full"
                     disabled={isFiltering}
                     min={filters.dateFrom}
+                    max={today}
                   />
                 </div>
               </div>

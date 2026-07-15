@@ -147,7 +147,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
 };
 
 /* ─────────────── FilterField ─────────────── */
-const FilterField = ({ field, value, onChange }) => {
+const FilterField = ({ field, value, onChange, values }) => {
   const id = useId();
   const wrapperClass = "flex min-w-0 flex-col gap-1 w-full";
 
@@ -209,6 +209,10 @@ const FilterField = ({ field, value, onChange }) => {
   }
 
   if (field.type === 'date') {
+    const today = new Date().toISOString().split("T")[0];
+    const maxDate = field.maxDate ?? today;
+    const isEndDate = field.key === 'endDate' || field.key === 'toDate';
+    const minDate = isEndDate && values?.fromDate ? values.fromDate : field.minDate;
     return (
       <div className={wrapperClass}>
         {field.label && (
@@ -221,6 +225,8 @@ const FilterField = ({ field, value, onChange }) => {
           type="date"
           value={value ?? ''}
           onChange={(e) => onChange(field.key, e.target.value)}
+          min={minDate}
+          max={maxDate}
           className="admin-input min-h-9 w-full text-sm"
         />
       </div>
@@ -228,6 +234,8 @@ const FilterField = ({ field, value, onChange }) => {
   }
 
   if (field.type === 'daterange') {
+    const today = new Date().toISOString().split("T")[0];
+    const maxDate = field.disableFuture ? today : field.maxDate;
     return (
       <div className={`flex min-w-0 flex-col gap-1 ${field.width || 'w-full sm:col-span-2 lg:col-span-2'}`}>
         {field.label && (
@@ -239,6 +247,7 @@ const FilterField = ({ field, value, onChange }) => {
           <input
             type="date"
             value={value?.startDate ?? ''}
+            max={maxDate}
             onChange={(e) =>
               onChange(field.key, { ...value, startDate: e.target.value })
             }
@@ -250,6 +259,7 @@ const FilterField = ({ field, value, onChange }) => {
             type="date"
             value={value?.endDate ?? ''}
             min={value?.startDate || undefined}
+            max={maxDate}
             onChange={(e) =>
               onChange(field.key, { ...value, endDate: e.target.value })
             }
@@ -334,6 +344,7 @@ const FilterBar = ({
             key={field.key}
             field={field}
             value={resolvedValues[field.key]}
+            values={resolvedValues}
             onChange={resolvedOnChange}
           />
         ))}
