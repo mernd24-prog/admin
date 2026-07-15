@@ -1830,10 +1830,10 @@ export default function ProductManagementUI() {
     <div className='relative min-h-screen'>
       <Loader
         loading={loading || saving}
-         
+
       />
       <Breadcrumb isEditMode={isEditMode} />
-      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {flowReadiness.map((item) => (
@@ -1847,8 +1847,8 @@ export default function ProductManagementUI() {
             </button>
           ))}
         </div>
-      </div>
-      {flowGateErrors.length > 0 && (
+      </div> */}
+      {/* {flowGateErrors.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
           <p className="text-sm font-semibold text-amber-900">Complete Required Master Data Before Save</p>
           <ul className="mt-2 space-y-2 text-xs text-amber-900">
@@ -1866,7 +1866,7 @@ export default function ProductManagementUI() {
             ))}
           </ul>
         </div>
-      )}
+      )} */}
       {error?.flow && (
         <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
           {error.flow}
@@ -1889,7 +1889,7 @@ export default function ProductManagementUI() {
             ref={mainContainerRef}
             className="flex-1 bg-white border border-gray-100 rounded-xl overflow-visible"
           >
-            {tabs.map(tab => (
+            {tabs?.map(tab => (
               <section key={tab.id} ref={refs[tab.id]} id={tab.id} className="px-4 py-6 sm:px-6 sm:py-8 border-b border-gray-100 last:border-b-0 scroll-mt-24">
                 {tab.component}
               </section>

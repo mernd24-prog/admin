@@ -121,10 +121,15 @@ const getEffectivePrice = (product = {}) => {
 };
 
 const getEffectiveStock = (product = {}) => {
-  const defaultVariant = getDefaultVariant(product);
-  return hasVariants(product)
-    ? toNumberOrNull(defaultVariant?.stock)
-    : toNumberOrNull(product?.stock);
+  if (!hasVariants(product)) return toNumberOrNull(product?.stock);
+
+  const variantStocks = product.variants
+    .map((variant) => toNumberOrNull(variant?.stock))
+    .filter((stock) => stock !== null);
+
+  return variantStocks.length
+    ? variantStocks.reduce((total, stock) => total + stock, 0)
+    : null;
 };
 
 const formatMoney = (value) => {
@@ -762,6 +767,15 @@ const ProductCatalog = () => {
         ),
       },
       {
+        key: "Varients",
+        label: "Varients",
+        render: (_, product) => (
+          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap">
+            {product?.variants ? product?.variants.length : "0"}
+          </span>
+        ),
+      },
+      {
         key: "price",
         label: "Price",
         sortable: true,
@@ -776,47 +790,47 @@ const ProductCatalog = () => {
           return stock === null ? "N/A" : stock;
         },
       },
-      {
-        key: "_deal",
-        label: "Deal",
-        render: (_, product) =>
-          product?.metadata?.isDealProduct ? (
-            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-              {product.metadata.dealBadge || "Deal"}
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">N/A</span>
-          ),
-      },
-      {
-        key: "_completeness",
-        label: "Complete",
-        render: (_, product) => {
-          const checks = [
-            !!product?.title,
-            !!product?.description,
-            !!product?.category,
-            Number(getEffectivePrice(product) || 0) > 0,
-            getProductImages(product).length >= 1,
-            !!(getDefaultVariant(product)?.sku || product?.sku),
-            Number(getEffectiveStock(product) ?? product?.availableStock ?? 0) >= 0,
-            !!product?.hsnCode,
-          ];
-          const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
-          const color = score >= 80 ? "#15803d" : score >= 50 ? "#b45309" : "#dc2626";
-          const bg = score >= 80 ? "#f0fdf4" : score >= 50 ? "#fffbeb" : "#fef2f2";
-          return (
-            <div title={`${score}% complete`} className="flex items-center gap-1.5">
-              <div className="relative h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
-                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${score}%`, backgroundColor: color }} />
-              </div>
-              <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ color, backgroundColor: bg }}>
-                {score}%
-              </span>
-            </div>
-          );
-        },
-      },
+      // {
+      //   key: "_deal",
+      //   label: "Deal",
+      //   render: (_, product) =>
+      //     product?.metadata?.isDealProduct ? (
+      //       <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+      //         {product.metadata.dealBadge || "Deal"}
+      //       </span>
+      //     ) : (
+      //       <span className="text-xs text-gray-400">N/A</span>
+      //     ),
+      // },
+      // {
+      //   key: "_completeness",
+      //   label: "Complete",
+      //   render: (_, product) => {
+      //     const checks = [
+      //       !!product?.title,
+      //       !!product?.description,
+      //       !!product?.category,
+      //       Number(getEffectivePrice(product) || 0) > 0,
+      //       getProductImages(product).length >= 1,
+      //       !!(getDefaultVariant(product)?.sku || product?.sku),
+      //       Number(getEffectiveStock(product) ?? product?.availableStock ?? 0) >= 0,
+      //       !!product?.hsnCode,
+      //     ];
+      //     const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+      //     const color = score >= 80 ? "#15803d" : score >= 50 ? "#b45309" : "#dc2626";
+      //     const bg = score >= 80 ? "#f0fdf4" : score >= 50 ? "#fffbeb" : "#fef2f2";
+      //     return (
+      //       <div title={`${score}% complete`} className="flex items-center gap-1.5">
+      //         <div className="relative h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
+      //           <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${score}%`, backgroundColor: color }} />
+      //         </div>
+      //         <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ color, backgroundColor: bg }}>
+      //           {score}%
+      //         </span>
+      //       </div>
+      //     );
+      //   },
+      // },
       {
         key: "status",
         label: "Status",
@@ -850,8 +864,8 @@ const ProductCatalog = () => {
       {
         key: "actions",
         label: "Action",
-        headerClassName: "min-w-[360px]",
-        cellClassName: "min-w-[360px]",
+        // headerClassName: "min-w-[360px]",
+        // cellClassName: "min-w-[360px]",
         render: (_, product) => (
           <div className="admin-table-actions-nowrap">
             <ActionButtons
@@ -865,7 +879,7 @@ const ProductCatalog = () => {
               showDeleteButton={product?.status !== "archived"}
               requiredModule="products"
             />
-            {product?.status === "archived" && (
+            {/* {product?.status === "archived" && (
               <PermissionGuard module="products" action="restore" hide>
                 <button
                   className="admin-table-action-btn"
@@ -874,8 +888,8 @@ const ProductCatalog = () => {
                   Restore
                 </button>
               </PermissionGuard>
-            )}
-            {product?.status !== "archived" && (
+            )} */}
+            {/* {product?.status !== "archived" && (
               <PermissionGuard module="products" action="delete" hide>
                 <button
                   className="admin-table-action-btn"
@@ -885,8 +899,8 @@ const ProductCatalog = () => {
                   Archive
                 </button>
               </PermissionGuard>
-            )}
-            <PermissionGuard module="products" action="create" hide>
+            )} */}
+            {/* <PermissionGuard module="products" action="create" hide>
               <button
                 className="admin-table-action-btn"
                 onClick={() => handleDuplicateProduct(product)}
@@ -894,7 +908,7 @@ const ProductCatalog = () => {
               >
                 Duplicate
               </button>
-            </PermissionGuard>
+            </PermissionGuard> */}
             {canReviewProduct(product) && (
               <PermissionGuard module="products" action="approve" hide>
                 <button
@@ -937,12 +951,12 @@ const ProductCatalog = () => {
         ]}
         actions={
           <>
-          <ExportButton
-            data={apiRes?.list || []}
-            filename="products"
-            requiredModule="products"
-          />
-          <AddButton onClick={handleAddNavigate} requiredModule="products" />
+            <ExportButton
+              data={apiRes?.list || []}
+              filename="products"
+              requiredModule="products"
+            />
+            <AddButton onClick={handleAddNavigate} requiredModule="products" />
           </>
         }
       />

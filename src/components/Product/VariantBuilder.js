@@ -580,8 +580,8 @@ const VariantBuilder = ({
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Stock</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.stock ?? 0} disabled readOnly />
-                        <p className="text-[10px] text-gray-400">Managed in Inventory.</p>
+                        <SmallInput type="number" min={0} value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
+                        <p className="text-[10px] text-gray-400">Managed in Inventory later too.</p>
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>GST (%)</FieldLabel>
