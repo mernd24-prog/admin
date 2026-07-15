@@ -62,7 +62,7 @@ const ConfirmModal = ({
   const btnClass = BTN_VARIANTS[variant] || BTN_VARIANTS.primary;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-[rgba(31,27,95,0.35)] backdrop-blur-[2px]"

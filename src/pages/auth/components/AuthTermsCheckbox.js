@@ -12,7 +12,7 @@ const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
       className="mt-[1px]"
     />
 
-    <span className="text-sm font-inter text-[#667085]">
+    <span className="text-[13px] leading-5 font-inter text-[#667085]">
       I agree to all{" "}
       <span className="font-semibold text-[#031b52]">
         Terms, Privacy, and Cancellation Policies.

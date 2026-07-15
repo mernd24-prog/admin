@@ -239,9 +239,6 @@ const Payments = () => {
             <button type="button"  onClick={() => navigate("/app/cod-config")}>
               <MdSettings size={17} /> COD Settings
             </button>
-            <button type="button"  onClick={fetchPayments}>
-              <MdRefresh size={17} /> Refresh
-            </button>
           </div>
         }
       />

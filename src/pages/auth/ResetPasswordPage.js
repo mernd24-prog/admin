@@ -75,15 +75,15 @@ const ResetPasswordPage = () => {
           )}
 
           <div
-            className="pt-4 animate-fade-in"
+            className="pt-1 animate-fade-in"
             style={{ animationDelay: "0.3s" }}
           >
-            <FormSubmitButton
-              buttonLabel={auth.loading ? "Resetting..." : "Reset Password"}
-            />
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
               onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+            />
+            <FormSubmitButton
+              buttonLabel={auth.loading ? "Resetting..." : "Reset Password"}
             />
           </div>
         </div>

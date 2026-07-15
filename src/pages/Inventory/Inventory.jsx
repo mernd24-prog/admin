@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdInventory2, MdOpenInNew, MdRefresh, MdRemove, MdSave } from "react-icons/md";
+import { MdAdd, MdInventory2, MdOpenInNew, MdRemove, MdSave } from "react-icons/md";
 import { useNavigate, useParams } from "react-router-dom";
 import { BulkActionBar, ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -56,7 +56,9 @@ const fmtDate = (value) => {
 };
 
 const numberCell = (value, className = "") => (
-  <span className={`font-mono text-sm font-semibold ${className}`}>{Number(value || 0)}</span>
+  <span className={`inline-block min-w-[3ch] text-right font-mono text-sm font-semibold tabular-nums ${className}`}>
+    {Number(value || 0)}
+  </span>
 );
 
 const firstImage = (row = {}) => row.image || "";
@@ -69,8 +71,8 @@ const variantTitle = (row = {}) => (
 );
 
 const productTitle = (row = {}) => (
-  <div className="flex min-w-[220px] items-center gap-3">
-    <div className="h-11 w-11 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
+  <div className="flex w-[280px] max-w-[280px] items-center gap-3">
+    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
       {firstImage(row) ? (
         <img src={firstImage(row)} alt={row.productName || "Variant"} className="h-full w-full object-cover" />
       ) : (
@@ -79,8 +81,13 @@ const productTitle = (row = {}) => (
         </div>
       )}
     </div>
-    <div className="min-w-0">
-      <p className="truncate font-semibold text-[var(--admin-ink)]">{row.productName || "Untitled product"}</p>
+    <div className="min-w-0 flex-1">
+      <p
+        className="truncate font-semibold text-[var(--admin-ink)]"
+        title={row.productName || "Untitled product"}
+      >
+        {row.productName || "Untitled product"}
+      </p>
       <p className="truncate text-xs text-[var(--admin-muted)]">{row.productSku || "No product SKU"}</p>
     </div>
   </div>
@@ -293,8 +300,21 @@ const Inventory = () => {
 
   const listColumns = [
     ...baseColumns,
-    ...(adminPanel ? [{ key: "seller", label: "Seller", render: (value) => value || "N/A" }] : []),
-    { key: "lastUpdated", label: "Last Updated", sortable: true, render: fmtDate },
+    ...(adminPanel ? [{
+      key: "seller",
+      label: "Seller",
+      headerClassName: "w-[180px]",
+      cellClassName: "w-[180px]",
+      render: (value) => value || "N/A",
+    }] : []),
+    {
+      key: "lastUpdated",
+      label: "Last Updated",
+      sortable: true,
+      headerClassName: "w-[190px]",
+      cellClassName: "w-[190px]",
+      render: fmtDate,
+    },
   ];
 
   const transactionColumns = [
@@ -315,7 +335,6 @@ const Inventory = () => {
           subtitle={product.name || "Variant-wise stock and history"}
           backPath="/app/inventory"
           status={product.status}
-          actions={<button type="button" onClick={refresh}><MdRefresh size={17} /> Refresh</button>}
         />
 
         <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -376,7 +395,6 @@ const Inventory = () => {
         title="Inventory"
         subtitle="One variant-level inventory workflow for product stock, reservations, and adjustments"
         count={total}
-        actions={<button type="button" onClick={refresh}><MdRefresh size={17} /> Refresh</button>}
       />
 
       <DataTable

@@ -425,14 +425,6 @@ const SellerFinance = () => {
           { label: "Seller Finance & Payouts" },
           { label: "Seller Finance" },
         ]}
-        actions={(
-          <div className="flex gap-2">
-            {isSeller && <button type="button" onClick={() => navigate("/app/seller-cod-collections")}><MdPayments size={17} /> COD Collections</button>}
-            <button type="button" onClick={loadFinance} disabled={loading}>
-              <MdRefresh size={17} /> Refresh
-            </button>
-          </div>
-        )}
       />
 
       {/* Commission Breakdown Info Banner */}
