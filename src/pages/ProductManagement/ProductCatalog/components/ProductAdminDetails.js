@@ -274,15 +274,15 @@ const ProductAdminDetails = () => {
               {pendingRevision ? "Review Revision" : "Review Product"}
             </button>
           )}
-          <PermissionGuard module="products" action="create" hide>
+          {/* <PermissionGuard module="products" action="create" hide>
             <button
               onClick={() => setDuplicateConfirm(true)}
               className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Duplicate
             </button>
-          </PermissionGuard>
-          {product.status !== "archived" && (
+          </PermissionGuard> */}
+          {/* {product.status !== "archived" && (
             <PermissionGuard module="products" action="delete" hide>
               <button
                 onClick={() => setArchiveConfirm(true)}
@@ -291,8 +291,8 @@ const ProductAdminDetails = () => {
                 Archive
               </button>
             </PermissionGuard>
-          )}
-          {product.status === "archived" && (
+          )} */}
+          {/* {product.status === "archived" && (
             <PermissionGuard module="products" action="restore" hide>
               <Link
                 to={`/app/product-catalog`}
@@ -306,7 +306,7 @@ const ProductAdminDetails = () => {
                 Restore
               </Link>
             </PermissionGuard>
-          )}
+          )} */}
           <Link
             to={`/app/product-catalog/form/${id}`}
             className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"

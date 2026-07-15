@@ -1715,7 +1715,7 @@ export default function ProductManagementUI() {
             />
           </div>
 
-          <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
+          {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-[var(--admin-ink)]">Deal Product</h4>
@@ -1762,7 +1762,7 @@ export default function ProductManagementUI() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       )
     },

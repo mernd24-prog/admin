@@ -56,7 +56,7 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
       </div>
 
       {/* COD */}
-      <div className="bg-white border border-gray-100 rounded-xl p-4">
+      {/* <div className="bg-white border border-gray-100 rounded-xl p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-800">Cash on Delivery (COD)</p>
@@ -68,7 +68,7 @@ export default function ProductSettingsPanel({ handleSaveSubmit, formData, handl
             <ToggleButton isToggle={codEnabled} handleClick={() => handleToggleProductSetting('COD')} />
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Free Shipping */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">
