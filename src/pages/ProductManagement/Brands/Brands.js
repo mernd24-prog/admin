@@ -65,6 +65,9 @@ const getBrandInitial = (name = "") => {
   return (firstLetter || "B").toUpperCase();
 };
 
+const isBrandReviewable = (brand = {}) =>
+  brand.needsApprovalReview || !brand.approvalStatus || brand.approvalStatus === "pending";
+
 const BrandAssetCell = ({ src, name, type = "logo" }) => {
   const [imageError, setImageError] = useState(false);
   const frameClass = "h-10 w-10 rounded-full";
@@ -138,7 +141,9 @@ const BASE_COLUMNS = [
     key: "approvalStatus",
     label: "Status",
     render: (v, row) => {
-      const status = v || (row.active === false || row.isDisable ? "inactive" : "approved");
+      if (row.needsApprovalReview) return <StatusBadge status="pending" dot />;
+      const status = v || "review_required";
+      if (status === "review_required") return <StatusBadge status="pending" dot />;
       return <StatusBadge status={status === "approved" ? (row.active === false || row.isDisable ? "inactive" : "active") : status} dot />;
     },
   },
@@ -369,7 +374,7 @@ const Brands = () => {
         cellClassName: "admin-table-action-cell",
         render: (_, row) => (
           <div className="flex items-center justify-center gap-1.5">
-            {row.approvalStatus === "pending" && (
+            {isBrandReviewable(row) && (
               <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
                 <button
                   type="button"
@@ -381,7 +386,7 @@ const Brands = () => {
                 </button>
               </PermissionGuard>
             )}
-            {row.approvalStatus === "pending" && (
+            {isBrandReviewable(row) && (
               <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
                 <button
                   type="button"
@@ -412,7 +417,7 @@ const Brands = () => {
                 <MdEdit size={18} />
               </button>
             </PermissionGuard>
-            {row.approvalStatus !== "pending" && (
+            {!isBrandReviewable(row) && (
               <PermissionGuard
                 module="brands"
                 action={ACTIONS.STATUS_CHANGE}

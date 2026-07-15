@@ -48,6 +48,23 @@ const DEFAULT_STATE = {
   selectedKeys: [],
 };
 
+const getFilterValue = (value) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if ('value' in value) return value.value;
+  }
+  return value;
+};
+
+const isBlankFilterValue = (value) => {
+  const normalized = getFilterValue(value);
+  return (
+    normalized === undefined ||
+    normalized === null ||
+    normalized === '' ||
+    String(normalized).toLowerCase() === 'all'
+  );
+};
+
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_PAGE':
@@ -114,6 +131,11 @@ export function useListPage(opts = {}) {
     }, 300);
   }, []);
 
+  const clearSearch = useCallback(() => {
+    clearTimeout(searchTimer.current);
+    dispatch({ type: 'SET_SEARCH', payload: '' });
+  }, []);
+
   // ── Sort ────────────────────────────────────────────────────────────────────
   const setSort = useCallback((key, dir) => {
     dispatch({ type: 'SET_SORT', payload: { key, dir } });
@@ -153,10 +175,7 @@ export function useListPage(opts = {}) {
     return Object.entries(state.filters).filter(
       ([key, val]) =>
         !ignoredFilterKeys.includes(key) &&
-        val !== undefined &&
-        val !== null &&
-        val !== '' &&
-        val !== 'all',
+        !isBlankFilterValue(val),
     ).length + (state.search ? 1 : 0);
   }, [state.filters, state.search, ignoredFilterKeys]);
 
@@ -174,12 +193,13 @@ export function useListPage(opts = {}) {
     if (state.search) params.search = state.search;
 
     for (const [key, value] of Object.entries(state.filters)) {
-      if (value === undefined || value === null || value === '' || value === 'all') continue;
+      const normalizedValue = getFilterValue(value);
+      if (isBlankFilterValue(normalizedValue)) continue;
       if (value && typeof value === 'object' && ('startDate' in value || 'endDate' in value)) {
         if (value.startDate) params[`${key}_start`] = value.startDate;
         if (value.endDate)   params[`${key}_end`]   = value.endDate;
       } else {
-        params[key] = value;
+        params[key] = normalizedValue;
       }
     }
     return params;
@@ -213,6 +233,7 @@ export function useListPage(opts = {}) {
     setPage,
     setPageSize,
     setSearch,
+    clearSearch,
     setSort,
     setFilter,
     clearFilters,

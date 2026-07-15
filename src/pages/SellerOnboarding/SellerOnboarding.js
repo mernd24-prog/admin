@@ -27,11 +27,11 @@ const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
 const GST_EXAMPLE = "27ABCDE1234F1Z2";
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
-const IFSC_REGEX = /^[A-Z0-9]{11}$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PERSON_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]{1,119}$/;
 const BANK_NAME_REGEX = /^[A-Za-z][A-Za-z .&'-]{1,119}$/;
 const BRANCH_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'/-]{1,119}$/;
-const BUSINESS_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'()/-]{1,179}$/;
+const BUSINESS_NAME_REGEX = /^[A-Za-z][A-Za-z ]{1,179}$/;
 const UDYOG_AADHAAR_REGEX = /^UDYAM-[A-Z0-9-]{1,14}$/;
 const POSTAL_CODE_REGEX = /^[0-9]{6}$/;
 const PERSON_NAME_MAX_LENGTH = 30;
@@ -260,11 +260,13 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
       {label}
     </label>
     <div
-      className={`${REVIEW_INPUT_CLASS} flex items-center gap-2`}
+      className={`${REVIEW_INPUT_CLASS} !flex min-w-0 !flex-row items-center gap-2 overflow-hidden whitespace-nowrap`}
       title={value || "-"}
     >
       <FileText size={16} className="shrink-0 text-[#484555]" />
-      <span className="min-w-0 truncate">{value || "-"}</span>
+      <span className="block min-w-0 flex-1 truncate leading-none">
+        {value || "-"}
+      </span>
     </div>
   </div>
 );
@@ -715,7 +717,7 @@ const onlyBranchCharacters = (value = "", limit = 255) =>
 
 const onlyBusinessCharacters = (value = "", limit = 255) =>
   String(value || "")
-    .replace(/[^A-Za-z0-9 .,&'()/-]/g, "")
+    .replace(/[^A-Za-z ]/g, "")
     .slice(0, limit);
 
 const sanitizeEmailInput = (value = "", limit = 180) => {
@@ -2423,7 +2425,7 @@ const SellerOnboarding = () => {
     else if (profileForm.businessName.trim().length > BUSINESS_NAME_MAX_LENGTH)
       errors.businessName = `Legal business name cannot be more than ${BUSINESS_NAME_MAX_LENGTH} characters`;
     else if (!BUSINESS_NAME_REGEX.test(profileForm.businessName.trim()))
-      errors.businessName = "Legal business name contains invalid characters";
+      errors.businessName = "Legal business name can contain only letters and spaces";
     if (!profileForm.description.trim()) {
       errors.description = "Description is required";
     } else {
@@ -2599,7 +2601,7 @@ const SellerOnboarding = () => {
     if (!bankForm.ifscCode.trim()) {
       errors.ifscCode = "IFSC code is required";
     } else if (!IFSC_REGEX.test(bankForm.ifscCode.trim())) {
-      errors.ifscCode = "IFSC code must be 11 letters or digits";
+      errors.ifscCode = "Enter a valid IFSC code, e.g. ABCD0123456";
     }
     if (!bankForm.bankName.trim()) {
       errors.bankName = "Bank name is required";
@@ -3599,6 +3601,7 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={bankForm.ifscCode}
                       onChange={onBankChange}
+                      maxLength={11}
                     />
                     {profileErrors.ifscCode && (
                       <p className={ERROR_CLASS}>{profileErrors.ifscCode}</p>
