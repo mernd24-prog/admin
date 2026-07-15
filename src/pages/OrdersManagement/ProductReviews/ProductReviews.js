@@ -256,7 +256,7 @@ const ProductReviews = () => {
         productId: params.productId || undefined,
         buyerId:   params.buyerId || undefined,
         sortBy:    params.sortBy,
-        sortOrder: params.sortDir,
+        sortDir:   params.sortDir,
         sellerScope: isSellerPanelUser || undefined,
       }),
     )

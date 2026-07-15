@@ -274,15 +274,15 @@ const ProductAdminDetails = () => {
               {pendingRevision ? "Review Revision" : "Review Product"}
             </button>
           )}
-          <PermissionGuard module="products" action="create" hide>
+          {/* <PermissionGuard module="products" action="create" hide>
             <button
               onClick={() => setDuplicateConfirm(true)}
               className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Duplicate
             </button>
-          </PermissionGuard>
-          {product.status !== "archived" && (
+          </PermissionGuard> */}
+          {/* {product.status !== "archived" && (
             <PermissionGuard module="products" action="delete" hide>
               <button
                 onClick={() => setArchiveConfirm(true)}
@@ -291,8 +291,8 @@ const ProductAdminDetails = () => {
                 Archive
               </button>
             </PermissionGuard>
-          )}
-          {product.status === "archived" && (
+          )} */}
+          {/* {product.status === "archived" && (
             <PermissionGuard module="products" action="restore" hide>
               <Link
                 to={`/app/product-catalog`}
@@ -306,7 +306,7 @@ const ProductAdminDetails = () => {
                 Restore
               </Link>
             </PermissionGuard>
-          )}
+          )} */}
           <Link
             to={`/app/product-catalog/form/${id}`}
             className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -342,15 +342,15 @@ const ProductAdminDetails = () => {
               }
             />
             <Row label="Brand" value={refToLabel(product.brand)} />
-            <Row label="SKU" value={product.sku} />
-            <Row
+            {/* <Row label="SKU" value={product.sku} /> */}
+            {/* <Row
               label="Price"
               value={formatMoney(effectivePrice)}
             />
             <Row
               label="MRP"
               value={formatMoney(effectiveMrp)}
-            />
+            /> */}
             <Row
               label="GST Rate"
               value={
@@ -362,9 +362,9 @@ const ProductAdminDetails = () => {
               value={product.gstInclusive === false ? "Excluded" : "Included"}
             />
             <Row label="HSN Code" value={product.hsnCode} />
-            <Row label="Revision Status" value={product.revisionStatus} />
-            <Row label="Version" value={product.version} />
-            <Row label="Stock" value={effectiveStock} />
+            {/* <Row label="Revision Status" value={product.revisionStatus} /> */}
+            {/* <Row label="Version" value={product.version} /> */}
+            {/* <Row label="Stock" value={effectiveStock} /> */}
             <Row
               label="Deal Product"
               value={
@@ -410,7 +410,7 @@ const ProductAdminDetails = () => {
           </div>
         </section>
 
-        {product.complianceSnapshot && (
+        {/* {product.complianceSnapshot && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Compliance Snapshot
@@ -429,9 +429,9 @@ const ProductAdminDetails = () => {
               <Row label="Source" value={product.complianceSnapshot.source} />
             </div>
           </section>
-        )}
+        )} */}
 
-        {pendingRevision && (
+        {/* {pendingRevision && (
           <section className="bg-white border border-blue-200 rounded-lg p-5 lg:col-span-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -481,9 +481,9 @@ const ProductAdminDetails = () => {
               ))}
             </div>
           </section>
-        )}
+        )} */}
 
-        {product.moderation && (
+        {/* {product.moderation && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Moderation
@@ -553,7 +553,7 @@ const ProductAdminDetails = () => {
               </div>
             </div>
           </section>
-        )}
+        )} */}
 
         {statusHistory.length > 0 && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">

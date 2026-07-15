@@ -444,7 +444,6 @@ const ProductCatalog = () => {
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
     if (!STATUS_TOGGLEABLE.has(status)) return false;
-    if (isSellerPanelUser && status === "inactive") return false;
     return true;
   };
 
@@ -747,16 +746,16 @@ const ProductCatalog = () => {
           </span>
         ),
       },
-      {
-        key: "sku",
-        label: "SKU",
-        sortable: true,
-        render: (value) => (
-          <span className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {value || "N/A"}
-          </span>
-        ),
-      },
+      // {
+      //   key: "sku",
+      //   label: "SKU",
+      //   sortable: true,
+      //   render: (value) => (
+      //     <span className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+      //       {value || "N/A"}
+      //     </span>
+      //   ),
+      // },
       {
         key: "brand",
         label: "Brand",
@@ -969,12 +968,12 @@ const ProductCatalog = () => {
             setFilters={setFilters}
             isSearchShow={true}
             isActivationStatus={true}
-            isApprovalOptions={true}
+            // isApprovalOptions={true}
             isCategory={true}
             categoryOptions={categoryOptions}
             dateFrom={true}
             dateTo={true}
-            isUser={true}
+            // isUser={true}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
             userOptions={sellerListData}
