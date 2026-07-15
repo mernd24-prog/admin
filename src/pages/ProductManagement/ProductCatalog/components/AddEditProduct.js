@@ -1830,7 +1830,7 @@ export default function ProductManagementUI() {
     <div className='relative min-h-screen'>
       <Loader
         loading={loading || saving}
-        label={saving ? 'Saving product…' : 'Loading product…'}
+         
       />
       <Breadcrumb isEditMode={isEditMode} />
       <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">

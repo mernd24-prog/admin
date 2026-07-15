@@ -317,6 +317,9 @@ const SellerSubAdminManagement = React.lazy(
 const ContentPages = React.lazy(
   () => import("../../pages/CMS/ContentPages/ContentPages"),
 );
+const AuthTestimonials = React.lazy(
+  () => import("../../pages/CMS/AuthTestimonials/AuthTestimonials"),
+);
 
 // ── User Preferences ─────────────────────────────────────────────────────────
 const Preferences = React.lazy(
@@ -664,6 +667,7 @@ function Layout() {
       { path: "/seller-status", redirectTo: "/app/seller" },
       { path: "/seller-sub-admins", render: () => <SellerSubAdminManagement /> },
       { path: "/content-pages", render: () => <ContentPages /> },
+      { path: "/auth-testimonials", render: () => <AuthTestimonials /> },
       { path: "/users-addresses", render: () => <Users /> },
       { path: "/preferences", render: () => <Preferences /> },
       { path: "/deal-management", render: () => <DealManagement /> },

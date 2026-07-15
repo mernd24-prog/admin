@@ -24,6 +24,7 @@ import { AUTH_ROUTES } from "../auth/authRoutes";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
+const GST_EXAMPLE = "27ABCDE1234F1Z2";
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
 const IFSC_REGEX = /^[A-Z0-9]{11}$/;
@@ -32,6 +33,7 @@ const BANK_NAME_REGEX = /^[A-Za-z][A-Za-z .&'-]{1,119}$/;
 const BRANCH_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'/-]{1,119}$/;
 const BUSINESS_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'()/-]{1,179}$/;
 const UDYOG_AADHAAR_REGEX = /^UDYAM-[A-Z0-9-]{1,14}$/;
+const POSTAL_CODE_REGEX = /^[0-9]{6}$/;
 const PERSON_NAME_MAX_LENGTH = 30;
 const BUSINESS_NAME_MAX_LENGTH = 30;
 const BANK_NAME_MIN_LENGTH = 2;
@@ -684,6 +686,18 @@ const onlyAlphaNumericUpper = (value = "", limit = 255) =>
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, limit);
 
+const getGstValidationError = (value = "") => {
+  const gst = String(value || "").trim().toUpperCase();
+  if (!gst) return "GST number is required";
+  if (gst.length !== 15) return `GST number must be exactly 15 characters, like ${GST_EXAMPLE}`;
+  if (!/^[0-9]{2}/.test(gst)) return "GST number must start with 2 digit state code";
+  if (!/^[0-9]{2}[A-Z]{5}/.test(gst)) return "GST PAN section must have 5 letters after state code";
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}/.test(gst)) return "GST PAN section must have 4 digits after the 5 letters";
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(gst)) return "GST PAN section must end with 1 letter";
+  if (!GST_REGEX.test(gst)) return `GST number format should be like ${GST_EXAMPLE}`;
+  return "";
+};
+
 const onlyNameCharacters = (value = "", limit = 255) =>
   String(value || "")
     .replace(/[^A-Za-z .'-]/g, "")
@@ -878,7 +892,7 @@ const BankProofGuidanceModal = ({ open, onClose }) => {
       <div className="w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[16px] font-bold text-[#082f91]">
+            <p className="text-[20px] font-bold text-[#082f91]">
               Bank proof upload suggestions
             </p>
             <p className="mt-1 text-sm text-[#5f6678]">
@@ -963,6 +977,7 @@ const SellerOnboarding = () => {
   const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
   const gstNumberRef = useRef(null);
+  const descriptionRef = useRef(null);
   const editSection = useMemo(
     () => new URLSearchParams(location.search).get("edit"),
     [location.search],
@@ -1964,7 +1979,7 @@ const SellerOnboarding = () => {
       name === "pickupPostalCode" ||
       name === "businessAddressPostalCode"
     ) {
-      nextValue = onlyAlphaNumericUpper(value, 10);
+      nextValue = onlyDigits(value, 6);
     }
     setProfileForm((prev) => {
       const nextForm = {
@@ -2031,18 +2046,32 @@ const SellerOnboarding = () => {
     setProfileErrors((prev) => ({ ...prev, [name]: null }));
   };
 
-  const scrollToFirstValidationError = (errors) => {
+  const scrollToFirstValidationError = (errors, attempt = 0) => {
     const firstField = Object.keys(errors || {})[0];
     if (!firstField || typeof document === "undefined") return;
 
     // Wait for React to render the error message before measuring the field.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        const explicitRefs = {
+          dateOfBirth: dateOfBirthRef,
+          gstNumber: gstNumberRef,
+          description: descriptionRef,
+        };
         const field =
+          explicitRefs[firstField]?.current ||
           document.querySelector(`[data-onboarding-field="${firstField}"]`) ||
           document.querySelector(`[name="${firstField}"]`) ||
           document.getElementById(firstField);
-        if (!field) return;
+        if (!field) {
+          if (attempt < 5) {
+            setTimeout(
+              () => scrollToFirstValidationError(errors, attempt + 1),
+              150,
+            );
+          }
+          return;
+        }
 
         field.scrollIntoView({ behavior: "smooth", block: "center" });
         const focusTarget = field.matches?.("input, select, textarea")
@@ -2404,10 +2433,8 @@ const SellerOnboarding = () => {
         errors.description = "Description must contain at least 5 words";
       }
     }
-    if (!profileForm.gstNumber.trim())
-      errors.gstNumber = "GST number is required";
-    else if (!GST_REGEX.test(profileForm.gstNumber.trim()))
-      errors.gstNumber = "GST number format should be like 27ABCDE1234F1Z2";
+    const gstError = getGstValidationError(profileForm.gstNumber);
+    if (gstError) errors.gstNumber = gstError;
     if (!profileForm.gstCertificateFile && !documentUrls.gstCertificateUrl)
       errors.gstCertificateFile = "GST certificate is required";
 
@@ -2446,11 +2473,8 @@ const SellerOnboarding = () => {
       errors.pickupState = "Pickup state is required";
     if (!profileForm.pickupPostalCode.trim())
       errors.pickupPostalCode = "Pickup postal code is required";
-    else if (
-      profileForm.pickupPostalCode.trim().length < 5 ||
-      profileForm.pickupPostalCode.trim().length > 10
-    )
-      errors.pickupPostalCode = "Pickup postal code must be 5 to 10 characters";
+    else if (!POSTAL_CODE_REGEX.test(profileForm.pickupPostalCode.trim()))
+      errors.pickupPostalCode = "Pickup postal code must be 6 digits";
     if (!profileForm.businessAddressLine1.trim())
       errors.businessAddressLine1 = "Business address line 1 is required";
     else if (profileForm.businessAddressLine1.trim().length < 5)
@@ -2465,12 +2489,9 @@ const SellerOnboarding = () => {
       errors.businessAddressCity = "Business city is required";
     if (!profileForm.businessAddressPostalCode.trim()) {
       errors.businessAddressPostalCode = "Business postal code is required";
-    } else if (
-      profileForm.businessAddressPostalCode.trim().length < 5 ||
-      profileForm.businessAddressPostalCode.trim().length > 10
-    ) {
+    } else if (!POSTAL_CODE_REGEX.test(profileForm.businessAddressPostalCode.trim())) {
       errors.businessAddressPostalCode =
-        "Business postal code must be 5 to 10 characters";
+        "Business postal code must be 6 digits";
     }
     if (fieldName) {
       setProfileErrors((prev) => ({
@@ -3065,6 +3086,11 @@ const SellerOnboarding = () => {
                       maxLength={15}
                       required
                     />
+                    {!profileErrors.gstNumber && (
+                      <p className="mt-1 text-xs text-[#7a7488]">
+                        Example: {GST_EXAMPLE}
+                      </p>
+                    )}
                     {profileErrors.gstNumber && (
                       <p className={ERROR_CLASS}>{profileErrors.gstNumber}</p>
                     )}
@@ -3162,6 +3188,8 @@ const SellerOnboarding = () => {
                       Description {STEP_ONE_REQUIRED}
                     </label>
                     <textarea
+                      ref={descriptionRef}
+                      data-onboarding-field="description"
                       name="description"
                       placeholder="Business Description"
                       className={`${STEP_ONE_INPUT_CLASS} mt-2 !h-auto !min-h-[96px] resize-y !pt-4 !pb-3 leading-5`}
@@ -3205,7 +3233,7 @@ const SellerOnboarding = () => {
                       accept={KYC_DOCUMENT_ACCEPT}
                       onDrop={onKycDocumentDrop("addressProofFile")}
                       onChange={onKycDocumentFileChange("addressProofFile")}
-                      emptyText="Drag address proof here (utility bill, bank statement, etc.)"
+                      emptyText="Drag address proof here (must match your GST Certificate address)"
                     />
                   </div>
 
@@ -3333,7 +3361,9 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.businessAddressPostalCode}
                       onChange={onProfileChange}
-                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
                       required
                     />
                     {profileErrors.businessAddressPostalCode && (
@@ -3445,7 +3475,9 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.pickupPostalCode}
                       onChange={onProfileChange}
-                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
                       required
                     />
                     {profileErrors.pickupPostalCode && (

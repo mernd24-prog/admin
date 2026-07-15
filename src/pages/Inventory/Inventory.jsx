@@ -48,6 +48,8 @@ const ADJUST_TYPES = [
   { value: "set", label: "Set Exact", icon: MdSave },
 ];
 
+const STOCK_HISTORY_PAGE_SIZE = 10;
+
 const fmtDate = (value) => {
   if (!value) return "N/A";
   const date = new Date(value);
@@ -71,8 +73,8 @@ const variantTitle = (row = {}) => (
 );
 
 const productTitle = (row = {}) => (
-  <div className="flex w-[280px] max-w-[280px] items-center gap-3">
-    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
+  <div className="flex min-w-[220px] max-w-[52vw] items-center gap-3 xl:w-[560px]">
+    <div className="h-11 w-11 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
       {firstImage(row) ? (
         <img src={firstImage(row)} alt={row.productName || "Variant"} className="h-full w-full object-cover" />
       ) : (
@@ -81,17 +83,119 @@ const productTitle = (row = {}) => (
         </div>
       )}
     </div>
-    <div className="min-w-0 flex-1">
-      <p
-        className="truncate font-semibold text-[var(--admin-ink)]"
-        title={row.productName || "Untitled product"}
-      >
+    <div className="min-w-0">
+      <p className="truncate font-semibold text-[var(--admin-ink)]" title={row.productName || "Untitled product"}>
         {row.productName || "Untitled product"}
       </p>
       <p className="truncate text-xs text-[var(--admin-muted)]">{row.productSku || "No product SKU"}</p>
+      {row.variantCount > 0 && (
+        <p className="text-xs text-[var(--admin-muted)]">
+          {`${row.variantCount} Variant${row.variantCount === 1 ? "" : "s"}`}
+        </p>
+      )}
     </div>
   </div>
 );
+
+const sumBy = (items = [], key) =>
+  items.reduce((total, item) => total + Number(item?.[key] || 0), 0);
+
+const latestDate = (items = [], key) =>
+  items
+    .map((item) => item?.[key])
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || "";
+
+const productStatusOf = (variants = []) => {
+  const statuses = variants
+    .flatMap((variant) => [variant.status, variant.stockStatus])
+    .filter(Boolean)
+    .map((status) => String(status).toLowerCase());
+  if (statuses.includes("out_of_stock") || variants.every((variant) => Number(variant.availableStock || 0) <= 0)) {
+    return "out_of_stock";
+  }
+  if (statuses.includes("low_stock")) return "low_stock";
+  if (statuses.length && statuses.every((status) => status === "inactive")) return "inactive";
+  if (statuses.includes("pending_approval")) return "pending_approval";
+  return statuses.find(Boolean) || "active";
+};
+
+const groupInventoryByProduct = (variantRows = []) => {
+  const groups = new Map();
+
+  variantRows.forEach((variant, index) => {
+    const productKey = String(
+      variant.productId ||
+        variant.product_id ||
+        variant.productSku ||
+        variant.productName ||
+        variant.id ||
+        index,
+    );
+
+    if (!groups.has(productKey)) {
+      groups.set(productKey, {
+        ...variant,
+        id: productKey,
+        productId: variant.productId || variant.product_id || productKey,
+        variants: [],
+      });
+    }
+
+    groups.get(productKey).variants.push(variant);
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const variants = group.variants || [];
+    return {
+      ...group,
+      variantCount: variants.length,
+      currentStock: sumBy(variants, "currentStock"),
+      reservedStock: sumBy(variants, "reservedStock"),
+      availableStock: sumBy(variants, "availableStock"),
+      lastUpdated: latestDate(variants, "lastUpdated"),
+      status: productStatusOf(variants),
+    };
+  });
+};
+
+const variantSummary = (row = {}) => {
+  const variants = Array.isArray(row.variants) ? row.variants : [];
+
+  return (
+    <span className="inline-flex rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-ink)]">
+      {`${variants.length} Variant${variants.length === 1 ? "" : "s"}`}
+    </span>
+  );
+};
+
+const looksLikeId = (value = "") =>
+  /^[a-f0-9]{24}$/i.test(String(value)) ||
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value));
+
+const sellerLabel = (row = {}) => {
+  const seller = row.seller && typeof row.seller === "object" ? row.seller : {};
+  const organization = row.organizationSnapshot || row.organization_snapshot || {};
+  const label =
+    row.sellerName ||
+    row.seller_name ||
+    row.sellerDisplayName ||
+    row.seller_display_name ||
+    row.organizationName ||
+    row.organization_name ||
+    organization.storeDisplayName ||
+    organization.legalBusinessName ||
+    organization.legalName ||
+    organization.name ||
+    organization.businessName ||
+    seller.displayName ||
+    seller.businessName ||
+    seller.legalBusinessName ||
+    seller.name ||
+    (typeof row.seller === "string" ? row.seller : "");
+
+  return label && !looksLikeId(label) ? label : "Seller details unavailable";
+};
 
 const getRowsFromResponse = (response) => {
   const payload = response?.data || {};
@@ -220,10 +324,11 @@ const Inventory = () => {
   const [detail, setDetail] = useState(null);
   const [adjustTarget, setAdjustTarget] = useState(null);
   const [adjusting, setAdjusting] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const fetchList = useCallback(async () => {
     if (productId) return;
-      setLoading(true);
+    setLoading(true);
     setError("");
     try {
       const params = toQueryParams();
@@ -263,11 +368,25 @@ const Inventory = () => {
   const refresh = () => (productId ? fetchDetail() : fetchList());
 
   const detailVariants = detail?.variants || [];
-  const transactions = detail?.transactions?.items || [];
+  const transactions = useMemo(() => detail?.transactions?.items || [], [detail?.transactions?.items]);
+  const pagedTransactions = useMemo(() => {
+    const offset = (historyPage - 1) * STOCK_HISTORY_PAGE_SIZE;
+    return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
+  }, [historyPage, transactions]);
+  const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
 
-  const selectedRows = useMemo(
-    () => rows.filter((row) => list.selectedKeys.includes(row.id)),
-    [list.selectedKeys, rows],
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [productId]);
+
+  const selectedProductRows = useMemo(
+    () => productRows.filter((row) => list.selectedKeys.includes(row.id)),
+    [list.selectedKeys, productRows],
+  );
+
+  const selectedVariantRows = useMemo(
+    () => selectedProductRows.flatMap((row) => row.variants || []),
+    [selectedProductRows],
   );
 
   const adjustRows = async (target, payload) => {
@@ -299,22 +418,14 @@ const Inventory = () => {
   ];
 
   const listColumns = [
-    ...baseColumns,
-    ...(adminPanel ? [{
-      key: "seller",
-      label: "Seller",
-      headerClassName: "w-[180px]",
-      cellClassName: "w-[180px]",
-      render: (value) => value || "N/A",
-    }] : []),
-    {
-      key: "lastUpdated",
-      label: "Last Updated",
-      sortable: true,
-      headerClassName: "w-[190px]",
-      cellClassName: "w-[190px]",
-      render: fmtDate,
-    },
+    { key: "productName", label: "Product", sortable: true, render: (_, row) => productTitle(row) },
+    { key: "variants", label: "Variants", render: (_, row) => variantSummary(row) },
+    { key: "currentStock", label: "Current", sortable: true, render: (value) => numberCell(value) },
+    { key: "reservedStock", label: "Reserved", render: (value) => numberCell(value, "text-amber-600") },
+    { key: "availableStock", label: "Available", render: (value) => numberCell(value, Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700") },
+    { key: "status", label: "Status", render: (value) => <StatusBadge status={value} dot /> },
+    ...(adminPanel ? [{ key: "seller", label: "Seller", render: (_, row) => sellerLabel(row) }] : []),
+    { key: "lastUpdated", label: "Last Updated", sortable: true, render: fmtDate },
   ];
 
   const transactionColumns = [
@@ -369,9 +480,12 @@ const Inventory = () => {
           <PageHeader title="Stock History" subtitle="Complete movement log for this product's variants" />
           <DataTable
             columns={transactionColumns}
-            data={transactions}
+            data={pagedTransactions}
             loading={loading}
             totalCount={transactions.length}
+            page={historyPage}
+            pageSize={STOCK_HISTORY_PAGE_SIZE}
+            onPageChange={setHistoryPage}
             rowKey={(row, index) => row._id || row.id || index}
             emptyText="No stock history found"
             cardClassName="admin-card overflow-hidden"
@@ -393,13 +507,14 @@ const Inventory = () => {
     <div className="p-4 md:p-6">
       <PageHeader
         title="Inventory"
-        subtitle="One variant-level inventory workflow for product stock, reservations, and adjustments"
-        count={total}
+        subtitle="Product-level inventory list with variant stock managed inside each product"
+        count={productRows.length}
+        actions={<button type="button" onClick={refresh}><MdRefresh size={17} /> Refresh</button>}
       />
 
       <DataTable
         columns={listColumns}
-        data={rows}
+        data={productRows}
         loading={loading}
         error={error}
         totalCount={total}
@@ -414,27 +529,35 @@ const Inventory = () => {
         bulkActionBar={
           <BulkActionBar
             selectedCount={list.selectedCount}
-            totalCount={rows.length}
+            totalCount={productRows.length}
             onClear={list.clearSelection}
             module="inventory"
             actions={[
               {
-                label: "Bulk Adjust",
+                label: "Bulk Adjust Variants",
                 action: "adjust",
                 icon: <MdInventory2 />,
                 variant: "primary",
-                disabled: selectedRows.length === 0,
-                onClick: () => setAdjustTarget({ rows: selectedRows }),
+                disabled: selectedVariantRows.length === 0,
+                onClick: () => setAdjustTarget({ rows: selectedVariantRows }),
               },
             ]}
           />
         }
-        emptyText="No inventory variants found"
+        emptyText="No inventory products found"
         onRowClick={(row) => navigate(`/app/inventory/${row.productId}`)}
-        rowActions={(row) => [
-          { label: "View / Adjust Inventory", icon: <MdOpenInNew />, onClick: () => navigate(`/app/inventory/${row.productId}`) },
-          { label: "Quick Adjust", icon: <MdInventory2 />, onClick: () => setAdjustTarget(row) },
-        ]}
+        rowActions={(row) => {
+          const variants = row.variants || [];
+          return [
+            { label: "View Product Inventory", icon: <MdOpenInNew />, onClick: () => navigate(`/app/inventory/${row.productId}`) },
+            {
+              label: "Quick Adjust",
+              icon: <MdInventory2 />,
+              hidden: variants.length !== 1,
+              onClick: () => setAdjustTarget(variants[0]),
+            },
+          ];
+        }}
       />
 
       <AdjustModal
