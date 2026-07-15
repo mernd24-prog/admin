@@ -509,7 +509,6 @@ const Inventory = () => {
         title="Inventory"
         subtitle="Product-level inventory list with variant stock managed inside each product"
         count={productRows.length}
-        actions={<button type="button" onClick={refresh}><MdRefresh size={17} /> Refresh</button>}
       />
 
       <DataTable

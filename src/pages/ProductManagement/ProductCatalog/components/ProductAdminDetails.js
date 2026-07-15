@@ -15,7 +15,8 @@ import ProductStatusBadge from "../../../../components/Product/ProductStatusBadg
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { getProductImages } from "../../../../_helpers/productMedia";
+import { getProductImages, normalizeImageList } from "../../../../_helpers/productMedia";
+import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
 import { formatLabel } from "../../../../utils/formatters";
 import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 
@@ -158,9 +159,45 @@ const ProductAdminDetails = () => {
       ? Object.fromEntries(product.attributes)
       : product.attributes || {};
   const productImages = getProductImages(product);
+
+  const getVariantImage = (variant = {}) => {
+    const imgs = normalizeImageList(
+      variant?.images,
+      variant?.image,
+      variant?.imageUrls,
+      variant?.thumbnail,
+      variant?.media?.images,
+    );
+    return imgs[0] || "";
+  };
+
+  const [variantGalleryOpen, setVariantGalleryOpen] = useState(false);
+  const [variantGalleryImages, setVariantGalleryImages] = useState([]);
+
+  const getVariantImagesList = (variant = {}) =>
+    normalizeImageList(
+      variant?.images,
+      variant?.image,
+      variant?.imageUrls,
+      variant?.thumbnail,
+      variant?.media?.images,
+    );
   const effectivePrice = getEffectivePrice(product);
   const effectiveMrp = getEffectiveMrp(product);
   const effectiveStock = getEffectiveStock(product);
+  const sellerDisplayName =
+    product.sellerName ||
+    product.seller?.displayName ||
+    product.seller?.name ||
+    product.seller?.email ||
+    product.sellerId;
+  const organizationDisplayName =
+    product.organizationSnapshot?.displayName ||
+    product.organizationSnapshot?.legalBusinessName ||
+    product.organizationSnapshot?.businessName ||
+    product.organizationSnapshot?.name ||
+    product.organizationName ||
+    product.organizationId;
 
   useEffect(() => {
     if (id) {
@@ -326,13 +363,16 @@ const ProductAdminDetails = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-2">
+        <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-4">
           <h2 className="text-base font-semibold text-gray-800 mb-3">
             Overview
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
             <Row label="Title" value={product.title} />
-            <Row label="Seller" value={refToLabel(product.sellerId)} />
+            <Row label="Seller" value={refToLabel(sellerDisplayName)} />
+            <Row label="Seller Email" value={product.sellerEmail || product.seller?.email} />
+            <Row label="Seller ID" value={refToLabel(product.sellerId)} />
+            <Row label="Organization" value={refToLabel(organizationDisplayName)} />
             <Row
               label="Category"
               value={
@@ -392,7 +432,7 @@ const ProductAdminDetails = () => {
           </div>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-lg p-5">
+        {/* <section className="bg-white border border-gray-200 rounded-lg p-5">
           <h2 className="text-base font-semibold text-gray-800 mb-3">Images</h2>
           <div className="grid grid-cols-2 gap-2">
             {productImages.map((image) => (
@@ -408,7 +448,7 @@ const ProductAdminDetails = () => {
               <p className="text-sm text-gray-400 col-span-2">No images</p>
             )}
           </div>
-        </section>
+        </section> */}
 
         {/* {product.complianceSnapshot && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
@@ -555,7 +595,7 @@ const ProductAdminDetails = () => {
           </section>
         )} */}
 
-        {statusHistory.length > 0 && (
+        {/* {statusHistory.length > 0 && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Status History
@@ -599,7 +639,7 @@ const ProductAdminDetails = () => {
               </table>
             </div>
           </section>
-        )}
+        )} */}
 
         {Object.keys(attributes).length > 0 && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
@@ -631,6 +671,7 @@ const ProductAdminDetails = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
+                    <th className="text-left p-3 font-medium text-gray-600">Image</th>
                     <th className="text-left p-3 font-medium text-gray-600">
                       SKU
                     </th>
@@ -643,9 +684,7 @@ const ProductAdminDetails = () => {
                     <th className="text-left p-3 font-medium text-gray-600">
                       Stock
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">
-                      Attributes
-                    </th>
+                    <th className="text-left p-3 font-medium text-gray-600">Attributes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -654,6 +693,33 @@ const ProductAdminDetails = () => {
                       key={variant.sku || i}
                       className="border-b hover:bg-gray-50"
                     >
+                      <td className="p-3">
+                        <div className="flex items-center gap-3" >
+                          {getVariantImage(variant) ? (
+                            <img
+                              src={getVariantImage(variant)}
+                              alt={variant.sku || variant.title || "Variant"}
+                              className="w-8 h-8 object-cover rounded border border-gray-200"
+                              onClick={() => {
+                              setVariantGalleryImages(getVariantImagesList(variant));
+                              setVariantGalleryOpen(true);
+                            }}
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVariantGalleryImages(getVariantImagesList(variant));
+                              setVariantGalleryOpen(true);
+                            }}
+                            className="text-sm text-[var(--admin-blue)] hover:underline"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
                       <td className="p-3">{variant.sku || "N/A"}</td>
                       <td className="p-3">
                         {variant.price !== undefined
@@ -675,6 +741,7 @@ const ProductAdminDetails = () => {
                               .join(", ")
                           : "N/A"}
                       </td>
+                     
                     </tr>
                   ))}
                 </tbody>
@@ -682,6 +749,11 @@ const ProductAdminDetails = () => {
             </div>
           </section>
         )}
+        <ImageGallery
+          images={variantGalleryImages}
+          isOpen={variantGalleryOpen}
+          onClose={() => setVariantGalleryOpen(false)}
+        />
 
         {(product.dimensions || product.origin || product.warranty) && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">

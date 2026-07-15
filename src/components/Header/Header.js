@@ -9,11 +9,12 @@ import {
 } from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
 import { FcNext } from "react-icons/fc";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getProfile, logout } from "../../Redux/userSlice";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { getMyNotifications } from "../../Redux/notificationsSlice";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
 import {
   getSelectedSellerOrganizationId,
@@ -161,6 +162,55 @@ export default function Header({
   const [, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = getAvatarUrl(userData);
+  const notificationsSelector = useSelector((state) => state.notifications || {});
+  const notificationsPayload = notificationsSelector.notificationsData || {};
+  const notificationsList =
+    notificationsPayload?.data?.list ||
+    notificationsPayload?.normalized?.data?.list ||
+    notificationsPayload?.normalized?.list ||
+    notificationsPayload?.data?.notifications ||
+    [];
+
+  const [notificationsSeenAt, setNotificationsSeenAt] = useState(() => {
+    try {
+      const saved = localStorage.getItem("notificationsSeenAt");
+      return saved ? Number(saved) : 0;
+    } catch (err) {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    // Load notifications on header mount
+    dispatch(getMyNotifications({ page: 1, size: 20 })).catch(() => {});
+  }, [dispatch]);
+
+  const isNotificationUnread = (n = {}) => {
+    // Try common fields to detect unread status
+    if (typeof n.unread === "boolean") return n.unread === true;
+    if (typeof n.isUnread === "boolean") return n.isUnread === true;
+    if (typeof n.is_read === "boolean") return n.is_read === false;
+    if (typeof n.read === "boolean") return n.read === false;
+    if (n.readAt || n.read_at || n.viewedAt || n.viewed_at) return false;
+    // fallback: assume notifications with a createdAt and newer than seen time are unread
+    return true;
+  };
+
+  const unreadExists = (() => {
+    try {
+      if (!Array.isArray(notificationsList)) return false;
+      return notificationsList.some((n) => {
+        const created = n.createdAt || n.created_at || n.time || n.date || 0;
+        const createdTs = created ? Number(new Date(created)) : 0;
+        const isUnread = isNotificationUnread(n);
+        if (!isUnread) return false;
+        if (!notificationsSeenAt) return true;
+        return createdTs > notificationsSeenAt;
+      });
+    } catch (err) {
+      return false;
+    }
+  })();
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -335,12 +385,20 @@ export default function Header({
               <button
                 type="button"
                 aria-label="Notifications"
-                onClick={() => navigate("/app/notifications")}
-
+                onClick={() => {
+                  try {
+                    const now = Date.now();
+                    localStorage.setItem("notificationsSeenAt", String(now));
+                    setNotificationsSeenAt(now);
+                  } catch (err) {}
+                  navigate("/app/notifications");
+                }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >
                 <MdOutlineNotificationsNone size={18} />
-                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
+                {unreadExists && (
+                  <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
+                )}
               </button>
             </Tooltip>
             {/* {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
