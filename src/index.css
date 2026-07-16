@@ -951,8 +951,8 @@ select:active {
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 .admin-shell select:focus,
 .admin-shell textarea:focus {
-  border-color: var(--admin-blue) !important;
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11) !important;
+  /* border-color: var(--admin-blue) !important;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11) !important; */
 }
 
 .admin-shell .header-search-pill input.admin-header-search-input.admin-input {
