@@ -114,7 +114,7 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
 
               {/* ratings */}
 
-              <div className="mt-3">
+              {/* <div className="mt-3">
                 {activeUser.googlePlaceUrl ? (
                   <a href={activeUser.googlePlaceUrl} target="_blank" rel="noreferrer" className="inline-flex">
                     <img
@@ -130,6 +130,44 @@ const AuthLayout = ({ children, backgroundImg, userData = userDetails }) => {
                     className="mx-auto h-auto max-w-[150px] sm:max-w-none"
                   />
                 )}
+              </div> */}
+
+              <div className="mt-3">
+                <div className="mx-auto flex w-fit flex-col items-center rounded-lg bg-[#1B1D60] px-4 py-3 shadow-md">
+                  {/* Rating Number */}
+                  <p className="text-3xl font-bold leading-none text-white">
+                    {activeUser.googleRating || 4.7}
+                  </p>
+
+                  {/* Average Rating + Stars */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <p className="text-xs font-medium text-white">
+                      Average Rating
+                    </p>
+
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, index) => {
+                        const ratingValue = Number(
+                          activeUser.googleRating || 4.7,
+                        );
+                        const filledStars = Math.round(
+                          Math.min(Math.max(ratingValue, 0), 5),
+                        );
+
+                        return (
+                          <IoStarSharp
+                            key={index}
+                            className={`h-4 w-4 ${
+                              index < filledStars
+                                ? "text-[#FFBB00]"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -374,7 +374,6 @@ const Inventory = () => {
     return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
   }, [historyPage, transactions]);
   const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
-
   useEffect(() => {
     setHistoryPage(1);
   }, [productId]);
@@ -408,7 +407,28 @@ const Inventory = () => {
   };
 
   const baseColumns = [
-    { key: "productName", label: "Product", sortable: true, render: (_, row) => productTitle(row) },
+    {
+    key: "productName",
+    label: "Product",
+    sortable: true,
+    render: (_, row) => (
+      <button
+        type="button"
+        className="text-left hover:underline"
+        onClick={(e) => {
+          e.stopPropagation();
+
+          const productIdValue = row?.productId || row?.product_id || row?.id;
+
+          if (productIdValue) {
+            navigate(`/app/product-catalog/view/${productIdValue}`);
+          }
+        }}
+      >
+        {productTitle(row)}
+      </button>
+    ),
+  },
     { key: "variantName", label: "Variant", render: (_, row) => variantTitle(row) },
     { key: "sku", label: "SKU", render: (value) => <span className="font-mono text-xs">{value || "N/A"}</span> },
     { key: "currentStock", label: "Current", sortable: true, render: (value) => numberCell(value) },
@@ -437,10 +457,11 @@ const Inventory = () => {
     { key: "metadata", label: "Reason", render: (value) => value?.reason || value?.note || "N/A" },
   ];
 
+  const sellerView = isSellerPanel();
   if (productId) {
     const product = detail?.product || {};
     return (
-      <div className="p-4 md:p-6">
+      <div>
         <PageHeader
           title="Product Inventory"
           subtitle={product.name || "Variant-wise stock and history"}
@@ -504,11 +525,15 @@ const Inventory = () => {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div>
       <PageHeader
         title="Inventory"
         subtitle="Product-level inventory list with variant stock managed inside each product"
         count={productRows.length}
+         breadcrumbs={[
+          { label: sellerView ? "Seller Inventory" : "Inventory" },
+          { label: "Inventory" },
+        ]}
       />
 
       <DataTable

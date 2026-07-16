@@ -293,7 +293,7 @@ const UserMessages = () => {
       <PageHeader
         title="Notifications"
         subtitle={isSeller ? "View your notifications" : "Send and manage user notifications"}
-        breadcrumbs={[{ label: "User Management" }, { label: "Notifications" }]}
+        breadcrumbs={[{ label: isSeller ? "Seller Marketing" : "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex items-center gap-2">
             {!isSeller && (

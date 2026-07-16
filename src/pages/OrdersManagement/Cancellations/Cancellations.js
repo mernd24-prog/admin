@@ -237,7 +237,7 @@ const Cancellations = () => {
       <PageHeader
         title="Cancellations"
         subtitle="Manage order cancellations and refunds"
-        breadcrumbs={[{ label: "Returns & Cancellations" }, { label: "Cancellations" }]}
+        breadcrumbs={[{ label: isSeller ? "Seller Orders" : "Returns & Cancellations" }, { label: "Cancellations" }]}
       />
 
       <FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />

@@ -22,6 +22,7 @@ import {
   FilterBar,
 } from "../../../../components/Shared";
 import { useListPage } from "../../../../hooks/useListPage";
+import { isSellerPanel } from "../../../../_helpers/panelConfig";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
@@ -166,6 +167,7 @@ const SellerSpecialPriceManager = () => {
   const fileInputRef = useRef(null);
 
   const sellerContext = useMemo(() => getSellerContext(), []);
+  const sellerView = isSellerPanel();
   const list = useListPage({ defaultPageSize: 20 });
 
   // The special-price grid is variant-level, but the products API only paginates
@@ -599,11 +601,15 @@ const SellerSpecialPriceManager = () => {
   );
 
   return (
-    <div className="p-4 md:p-6">
+    <div>
       <PageHeader
-        title="Seller Special Price Management"
+        title={sellerView ? "Seller Special Price Management" : "Special Price Management"}
         subtitle="Update variant-wise special prices, export a template, edit it in Excel, and import the updated values back here."
         count={total}
+        breadcrumbs={[
+          { label: sellerView ? "Seller Catalog" : "Product Management" },
+          { label: sellerView ? "Seller Special Price Management" : "Special Price Management" },
+        ]}
         actions={
           <>
             <button type="button" onClick={handleExport}>

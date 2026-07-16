@@ -7,6 +7,7 @@ import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import AddButton from "../../../components/Button/AddButton";
+import { isSellerPanel } from "../../../_helpers/panelConfig";
 
 // Redux
 import {
@@ -194,7 +195,7 @@ const ProductCatalog = () => {
     revision: null,
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
-
+   const sellerView = isSellerPanel();
   // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(
     selector?.store?.getAllSellerListData?.data?.data?.list || [],
@@ -943,10 +944,11 @@ const ProductCatalog = () => {
     <div className="overflow-x-auto overflow-y-auto">
       <Loader loading={loading} />
       <PageHeader
-        title="Product Catalog"
+        title={sellerView ? "Seller Products" : "Product Catalog"}
+        subtitle={sellerView ? "Manage your available products" : "Manage all products in the catalog"}
         breadcrumbs={[
-          { label: "Catalog Management" },
-          { label: "Product Catalog" },
+          { label: sellerView ? "Seller Catalog" : "Catalog Management" },
+          { label: "Seller Products" },
         ]}
         actions={
           <>
@@ -960,7 +962,7 @@ const ProductCatalog = () => {
         }
       />
       <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
-        <section className="border-b border-[var(--admin-line)] p-4">
+        <section className="border-b border-[var(--admin-line)]">
           <SearchComponent
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
