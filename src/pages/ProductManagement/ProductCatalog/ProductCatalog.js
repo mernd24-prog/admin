@@ -671,10 +671,10 @@ const ProductCatalog = () => {
     list.clearSelection();
   };
   const handleBulkAction = async (action) => {
-    if (isSellerPanelUser && action === "Active") {
-      toast.error("Seller products must be approved by admin before activation.");
-      return;
-    }
+    // if (isSellerPanelUser && action === "Active") {
+    //   toast.error("Seller products must be approved by admin before activation.");
+    //   return;
+    // }
     if (action === "Active" || action === "Inactive") {
       const nextStatus = action === "Active" ? "active" : "inactive";
       setStatusConfirmation({

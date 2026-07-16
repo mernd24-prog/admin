@@ -568,24 +568,53 @@ const VariantBuilder = ({
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Price (₹)</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.price ?? ''} onChange={(e) => updateVariant(idx, 'price', Number(e.target.value))} placeholder="0" />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          value={variant.price ?? ''}
+                          onChange={(e) => updateVariant(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder=""
+                        />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>MRP (₹)</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.mrp ?? ''} onChange={(e) => updateVariant(idx, 'mrp', Number(e.target.value))} placeholder="0" />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          value={variant.mrp ?? ''}
+                          onChange={(e) => updateVariant(idx, 'mrp', e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder=""
+                        />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Sale Price (₹)</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.salePrice ?? ''} onChange={(e) => updateVariant(idx, 'salePrice', Number(e.target.value))} placeholder="0" />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          value={variant.salePrice ?? ''}
+                          onChange={(e) => updateVariant(idx, 'salePrice', e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder=""
+                        />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Stock</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.stock ?? 0} onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))} />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          value={variant.stock ?? ''}
+                          onChange={(e) => updateVariant(idx, 'stock', e.target.value === '' ? '' : Number(e.target.value))}
+                        />
                         <p className="text-[10px] text-gray-400">Managed in Inventory later too.</p>
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>GST (%)</FieldLabel>
-                        <SmallInput type="number" min={0} max={100} value={variant.gstRate ?? 18} onChange={(e) => updateVariant(idx, 'gstRate', Number(e.target.value))} />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={variant.gstRate ?? ''}
+                          onChange={(e) => updateVariant(idx, 'gstRate', e.target.value === '' ? '' : Number(e.target.value))}
+                        />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Status</FieldLabel>
@@ -595,21 +624,23 @@ const VariantBuilder = ({
                           ))}
                         </SmallSelect>
                       </div>
-                      <div className="space-y-1">
+                      {/* <div className="space-y-1">
                         <FieldLabel>Barcode (EAN/UPC)</FieldLabel>
                         <SmallInput value={variant.barcode || ''} onChange={(e) => updateVariant(idx, 'barcode', e.target.value)} placeholder="Optional" />
-                      </div>
-                      <div className="space-y-1">
-                        <FieldLabel>Weight (kg)</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.weight || ''} onChange={(e) => updateVariant(idx, 'weight', Number(e.target.value))} />
-                      </div>
+                      </div> */}
+                      
                       <div className="space-y-1">
                         <FieldLabel>Title Override</FieldLabel>
                         <SmallInput value={variant.title || ''} onChange={(e) => updateVariant(idx, 'title', e.target.value)} placeholder="Auto from attributes" />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Sort Order</FieldLabel>
-                        <SmallInput type="number" min={0} value={variant.sortOrder ?? idx} onChange={(e) => updateVariant(idx, 'sortOrder', Number(e.target.value))} />
+                        <SmallInput
+                          type="number"
+                          min={0}
+                          value={variant.sortOrder ?? ''}
+                          onChange={(e) => updateVariant(idx, 'sortOrder', e.target.value === '' ? '' : Number(e.target.value))}
+                        />
                       </div>
                     </div>
 

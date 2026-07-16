@@ -1,46 +1,66 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BasicDetailsTab from './BasicDetailsTab';
-import ProductSettingsPanel from './ProductSettingsPanel';
-import { useDispatch, useSelector } from 'react-redux';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BasicDetailsTab from "./BasicDetailsTab";
+import ProductSettingsPanel from "./ProductSettingsPanel";
+import { useDispatch, useSelector } from "react-redux";
 import {
-  createProducts, getProductPrefill,
-  getProductById, updateProductsById, getCategoryAttributes,
-
-} from '../../../../Redux/productSlice';
-import { getPlatformOptions, getPlatformOptionValues } from '../../../../Redux/adminCoreSlice';
-import { transformArray } from '../../../../_helpers/globalFunctions';
-import Loader from '../../../../components/Loader/Loader';
-import { getAllStateList } from '../../../../Redux/stateSlice';
-import { getAllCityList } from '../../../../Redux/citySlice';
-import { GrDocument } from 'react-icons/gr';
-import { FiTrash2, FiAlertCircle, FiPlus } from 'react-icons/fi';
-import { toast } from 'sonner';
-import { useNavigate, useParams } from 'react-router-dom';
-import TabNavigation from './TabNavigation';
-import Breadcrumb from './Breadcrumb';
-import selectJson from '../../../../_helpers/SelectJson.json'
-import { BsMenuApp } from 'react-icons/bs';
-import DynamicAttributesTab from './DynamicAttributesTab';
-import VariantBuilder from '../../../../components/Product/VariantBuilder';
-import SEOPanel from '../../../../components/Product/SEOPanel';
-import TagsInput from '../../../../components/Product/TagsInput';
-import { getSelectedSellerOrganizationId } from '../../../../_helpers/sellerOrganizationContext';
-import { getShippingProfiles } from '../../../../Redux/deliverySlice';
-import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
-import { isSellerPanel } from '../../../../_helpers/panelConfig';
+  createProducts,
+  getProductPrefill,
+  getProductById,
+  updateProductsById,
+  getCategoryAttributes,
+} from "../../../../Redux/productSlice";
+import {
+  getPlatformOptions,
+  getPlatformOptionValues,
+} from "../../../../Redux/adminCoreSlice";
+import { transformArray } from "../../../../_helpers/globalFunctions";
+import Loader from "../../../../components/Loader/Loader";
+import { getAllStateList } from "../../../../Redux/stateSlice";
+import { getAllCityList } from "../../../../Redux/citySlice";
+import { GrDocument } from "react-icons/gr";
+import { FiTrash2, FiAlertCircle, FiPlus } from "react-icons/fi";
+import { toast } from "sonner";
+import { useNavigate, useParams } from "react-router-dom";
+import TabNavigation from "./TabNavigation";
+import Breadcrumb from "./Breadcrumb";
+import selectJson from "../../../../_helpers/SelectJson.json";
+import { BsMenuApp } from "react-icons/bs";
+import DynamicAttributesTab from "./DynamicAttributesTab";
+import VariantBuilder from "../../../../components/Product/VariantBuilder";
+import SEOPanel from "../../../../components/Product/SEOPanel";
+import TagsInput from "../../../../components/Product/TagsInput";
+import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrganizationContext";
+import { getShippingProfiles } from "../../../../Redux/deliverySlice";
+import {
+  extractRole,
+  getStoredRole,
+  getStoredUser,
+  normalizeRole,
+} from "../../../../_helpers/authStorage";
+import { isSellerPanel } from "../../../../_helpers/panelConfig";
 
 const API_CALLS = [
-  { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: 'Product Prefill' },
-
+  {
+    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
+    name: "Product Prefill",
+  },
 ];
 
 const API_CALL_OBJECT = {
-  "Category List": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
-  "Country List": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
-  "Hsn code list": { action: () => getProductPrefill({ includeProducts: true, limit: 100 }), name: "Product Prefill" },
-
-}
+  "Category List": {
+    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
+    name: "Product Prefill",
+  },
+  "Country List": {
+    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
+    name: "Product Prefill",
+  },
+  "Hsn code list": {
+    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
+    name: "Product Prefill",
+  },
+};
 
 const DEFAULT_PRODUCT_VARIANT = {
   sku: "",
@@ -56,11 +76,15 @@ const DEFAULT_PRODUCT_VARIANT = {
   attributes: {},
 };
 
-const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
+const SELLER_PANEL_ROLES = new Set([
+  "seller",
+  "seller-admin",
+  "seller-sub-admin",
+]);
 const getSessionUser = () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(window.sessionStorage.getItem('EcomAdmin') || 'null');
+    return JSON.parse(window.sessionStorage.getItem("EcomAdmin") || "null");
   } catch {
     return null;
   }
@@ -81,7 +105,8 @@ const DEAL_SOURCE_OPTIONS = [
   { value: "seasonal_campaign", label: "Seasonal Campaign" },
 ];
 
-const hasValue = (value) => value !== undefined && value !== null && value !== '';
+const hasValue = (value) =>
+  value !== undefined && value !== null && value !== "";
 
 const toOptionalNumber = (value) => {
   if (!hasValue(value)) return undefined;
@@ -90,25 +115,27 @@ const toOptionalNumber = (value) => {
 };
 
 const normalizeProductServiceabilityMode = (mode) => {
-  const value = String(mode || '').trim().toLowerCase();
+  const value = String(mode || "")
+    .trim()
+    .toLowerCase();
   const modeMap = {
-    inherit: 'inherit',
-    all_india: 'all_pincodes',
-    all_locations: 'all_pincodes',
-    all_pincodes: 'all_pincodes',
-    selected_pincodes: 'allowlist',
-    serviceable_pincodes: 'allowlist',
-    allow_pincodes: 'allowlist',
-    allowlist: 'allowlist',
-    block_pincodes: 'blocklist',
-    blocked_pincodes: 'blocklist',
-    blocklist: 'blocklist',
-    selected_states: 'regions',
-    selected_cities: 'regions',
-    regions: 'regions',
-    disabled: 'disabled',
+    inherit: "inherit",
+    all_india: "all_pincodes",
+    all_locations: "all_pincodes",
+    all_pincodes: "all_pincodes",
+    selected_pincodes: "allowlist",
+    serviceable_pincodes: "allowlist",
+    allow_pincodes: "allowlist",
+    allowlist: "allowlist",
+    block_pincodes: "blocklist",
+    blocked_pincodes: "blocklist",
+    blocklist: "blocklist",
+    selected_states: "regions",
+    selected_cities: "regions",
+    regions: "regions",
+    disabled: "disabled",
   };
-  return modeMap[value] || 'inherit';
+  return modeMap[value] || "inherit";
 };
 
 const inferWarrantyDuration = (template = {}) => {
@@ -122,31 +149,35 @@ const inferWarrantyDuration = (template = {}) => {
 
   const durationMonths = template?.durationMonths ?? metadata.durationMonths;
   if (durationMonths !== undefined && durationMonths !== null) {
-    return { value: durationMonths, unit: 'months' };
+    return { value: durationMonths, unit: "months" };
   }
 
-  const label = String(template?.period || template?.name || '').trim().toLowerCase();
-  if (!label || label.includes('no warranty')) {
-    return { value: 0, unit: 'months' };
+  const label = String(template?.period || template?.name || "")
+    .trim()
+    .toLowerCase();
+  if (!label || label.includes("no warranty")) {
+    return { value: 0, unit: "months" };
   }
 
-  const match = label.match(/(\d+)\s*(day|days|week|weeks|month|months|year|years)?/);
+  const match = label.match(
+    /(\d+)\s*(day|days|week|weeks|month|months|year|years)?/,
+  );
   if (!match) return null;
 
   const unitMap = {
-    day: 'days',
-    days: 'days',
-    week: 'weeks',
-    weeks: 'weeks',
-    month: 'months',
-    months: 'months',
-    year: 'years',
-    years: 'years',
+    day: "days",
+    days: "days",
+    week: "weeks",
+    weeks: "weeks",
+    month: "months",
+    months: "months",
+    year: "years",
+    years: "years",
   };
 
   return {
     value: Number(match[1]),
-    unit: unitMap[match[2]] || 'months',
+    unit: unitMap[match[2]] || "months",
   };
 };
 
@@ -154,17 +185,29 @@ const compactObject = (value) => {
   if (Array.isArray(value)) {
     return value
       .map(compactObject)
-      .filter((item) => hasValue(item) && !(typeof item === 'object' && !Array.isArray(item) && Object.keys(item).length === 0));
+      .filter(
+        (item) =>
+          hasValue(item) &&
+          !(
+            typeof item === "object" &&
+            !Array.isArray(item) &&
+            Object.keys(item).length === 0
+          ),
+      );
   }
 
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== "object") {
     return value;
   }
 
   return Object.entries(value).reduce((acc, [key, item]) => {
     const nextValue = compactObject(item);
     if (!hasValue(nextValue)) return acc;
-    if (typeof nextValue === 'object' && !Array.isArray(nextValue) && Object.keys(nextValue).length === 0) {
+    if (
+      typeof nextValue === "object" &&
+      !Array.isArray(nextValue) &&
+      Object.keys(nextValue).length === 0
+    ) {
       return acc;
     }
     acc[key] = nextValue;
@@ -174,34 +217,36 @@ const compactObject = (value) => {
 
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
-  const navigate = useNavigate()
-  const selector = useSelector(state => state.product);
-  const adminCoreSelector = useSelector(state => state.adminCore);
+  const navigate = useNavigate();
+  const selector = useSelector((state) => state.product);
+  const adminCoreSelector = useSelector((state) => state.adminCore);
   const mainContainerRef = useRef(null);
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  let { INITIALS_DATA } = selectJson
+  let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
-  const [options, setVariantRows] = useState([{
-    "sku": "",
-    "type": null,
-    "remark": "",
-    "packaging": "",
-    "mrp": "",
-    "discount": "",
-    "salePrice": "",
-    "stock": ""
-  }]);
-  const [activeTab, setActiveTab] = useState('basic-details');
+  const [options, setVariantRows] = useState([
+    {
+      sku: "",
+      type: null,
+      remark: "",
+      packaging: "",
+      mrp: "",
+      discount: "",
+      salePrice: "",
+      stock: "",
+    },
+  ]);
+  const [activeTab, setActiveTab] = useState("basic-details");
   const [isScrolling, setIsScrolling] = useState(false);
   const isEditMode = id ? true : false;
-  const [taxData, setTaxData] = useState(null)
-  const [userData, setUserData] = useState({})
+  const [taxData, setTaxData] = useState(null);
+  const [userData, setUserData] = useState({});
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
   const [useManualAttributes] = useState(false);
-  const [newAttrKey, setNewAttrKey] = useState('');
-  const [newAttrValue, setNewAttrValue] = useState('');
+  const [newAttrKey, setNewAttrKey] = useState("");
+  const [newAttrValue, setNewAttrValue] = useState("");
   const [manualAttrErrors, setManualAttrErrors] = useState({});
   const [variantsData, setVariantsData] = useState([DEFAULT_PRODUCT_VARIANT]);
   const [variantAxes, setVariantAxes] = useState([]);
@@ -217,34 +262,51 @@ export default function ProductManagementUI() {
     const sgst = product?.SGST ?? 0;
     const cgst = product?.CGST ?? 0;
     const totalTaxRate = igst + additionalTax + sgst + cgst;
-    const taxAmount = (basePrice * totalTaxRate / 100);
+    const taxAmount = (basePrice * totalTaxRate) / 100;
     const priceWithTax = Number(basePrice) + Number(taxAmount);
     return priceWithTax;
   };
 
   const getListPayload = (sliceData) => {
-    const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
+    const data =
+      sliceData?.data?.data ||
+      sliceData?.normalized?.data ||
+      sliceData?.data ||
+      {};
     if (Array.isArray(data)) return data;
     return data.list || data.items || [];
   };
 
   const prefillData = useMemo(() => {
-    const data = selector?.productPrefillData?.data?.data ||
+    const data =
+      selector?.productPrefillData?.data?.data ||
       selector?.productPrefillData?.normalized?.data ||
       selector?.productPrefillData?.data ||
       {};
-    return data && typeof data === 'object' ? data : {};
+    return data && typeof data === "object" ? data : {};
   }, [selector?.productPrefillData]);
 
-  const prefillList = useCallback((key, fallback = []) => {
-    const value = prefillData?.[key];
-    return Array.isArray(value) ? value : fallback;
-  }, [prefillData]);
+  const prefillList = useCallback(
+    (key, fallback = []) => {
+      const value = prefillData?.[key];
+      return Array.isArray(value) ? value : fallback;
+    },
+    [prefillData],
+  );
 
-  const toSelectId = (record = {}) => String(record.categoryKey || record._id || record.id || record.value || record.code || "");
+  const toSelectId = (record = {}) =>
+    String(
+      record.categoryKey ||
+        record._id ||
+        record.id ||
+        record.value ||
+        record.code ||
+        "",
+    );
 
-  const toCategoryOption = (category = {}, prefix = '') => {
-    const categoryName = category.name || category.title || category.categoryKey;
+  const toCategoryOption = (category = {}, prefix = "") => {
+    const categoryName =
+      category.name || category.title || category.categoryKey;
     return {
       value: toSelectId(category),
       categoryKey: category.categoryKey || toSelectId(category),
@@ -253,105 +315,152 @@ export default function ProductManagementUI() {
   };
 
   const refs = {
-    'basic-details': useRef(null),
-    'product-type': useRef(null),
-    'variants-options': useRef(null),
-    'shipping': useRef(null),
-    'seo': useRef(null),
-    'tags': useRef(null),
+    "basic-details": useRef(null),
+    "product-type": useRef(null),
+    "variants-options": useRef(null),
+    shipping: useRef(null),
+    seo: useRef(null),
+    tags: useRef(null),
   };
 
   const fetchProductById = async (productId) => {
     try {
-      dispatch(getProductById({ _id: productId })).unwrap()
+      dispatch(getProductById({ _id: productId }))
+        .unwrap()
         .then((res) => {
           const productData = res?.data;
-          const resolvedCategoryId = productData?.categoryId || productData?.category_id || productData?.categoryKey || productData?.category || '';
-          const resolvedCategoryKey = productData?.categoryKey || productData?.category_key || productData?.category || resolvedCategoryId;
+          const resolvedCategoryId =
+            productData?.categoryId ||
+            productData?.category_id ||
+            productData?.categoryKey ||
+            productData?.category ||
+            "";
+          const resolvedCategoryKey =
+            productData?.categoryKey ||
+            productData?.category_key ||
+            productData?.category ||
+            resolvedCategoryId;
           setFormData({
             ...INITIALS_DATA,
             ...productData,
-            name: productData?.title || productData?.name || '',
+            name: productData?.title || productData?.name || "",
             category_id: resolvedCategoryId,
             categoryId: resolvedCategoryId,
             category: resolvedCategoryKey,
             category_key: resolvedCategoryKey,
-            sellerId: productData?.sellerId || '',
-            organizationId: productData?.organizationId || '',
-            storeId: productData?.storeId || '',
-            warehouseId: productData?.warehouseId || '',
-            stock: productData?.stock ?? '',
-            price: productData?.price ?? '',
-            mrp: productData?.mrp ?? '',
-            salePrice: productData?.salePrice ?? '',
+            sellerId: productData?.sellerId || "",
+            organizationId: productData?.organizationId || "",
+            storeId: productData?.storeId || "",
+            warehouseId: productData?.warehouseId || "",
+            stock: productData?.stock ?? "",
+            price: productData?.price ?? "",
+            mrp: productData?.mrp ?? "",
+            salePrice: productData?.salePrice ?? "",
             isDealProduct: Boolean(productData?.metadata?.isDealProduct),
-            dealBadge: productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,
-            dealSource: productData?.metadata?.dealSource || INITIALS_DATA.dealSource,
+            dealBadge:
+              productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,
+            dealSource:
+              productData?.metadata?.dealSource || INITIALS_DATA.dealSource,
             gstRate: productData?.gstRate ?? 18,
             gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
             shipping: productData?.shipping || {},
-            options: productData?.options || [{
-              "sku": "",
-              "type": null,
-              "remark": "",
-              "packaging": "",
-              "mrp": "",
-              "discount": "",
-              "salePrice": "",
-              "stock": ""
-            }]
+            options: productData?.options || [
+              {
+                sku: "",
+                type: null,
+                remark: "",
+                packaging: "",
+                mrp: "",
+                discount: "",
+                salePrice: "",
+                stock: "",
+              },
+            ],
           });
 
-          const sourceVariants = productData?.variants?.length ? productData.variants : productData?.options;
+          const sourceVariants = productData?.variants?.length
+            ? productData.variants
+            : productData?.options;
           if (sourceVariants && Array.isArray(sourceVariants)) {
             const formattedOptions = sourceVariants.map((option, index) => ({
               id: option._id || Date.now() + index,
-              sku: option.sku || '',
-              type: option.type || Object.keys(option.attributes || {})[0] || '',
-              remark: option.remark || '',
-              packaging: option.packaging || '',
-              mrp: option.mrp || '',
-              discount: option.discount || '',
-              salePrice: option.salePrice || option.price || '',
-              stock: option.stock || '',
+              sku: option.sku || "",
+              type:
+                option.type || Object.keys(option.attributes || {})[0] || "",
+              remark: option.remark || "",
+              packaging: option.packaging || "",
+              mrp: option.mrp || "",
+              discount: option.discount || "",
+              salePrice: option.salePrice || option.price || "",
+              stock: option.stock || "",
               images: option.images || [],
             }));
             setVariantRows(formattedOptions);
           }
 
-          if (Array.isArray(productData?.variants) && productData.variants.length) {
-            setVariantsData(productData.variants.map((variant, index) => ({
-              ...variant,
-              isDefault: variant.isDefault === true || (!productData.variants.some((item) => item.isDefault) && index === 0),
-              sortOrder: variant.sortOrder ?? index,
-            })));
+          if (
+            Array.isArray(productData?.variants) &&
+            productData.variants.length
+          ) {
+            setVariantsData(
+              productData.variants.map((variant, index) => ({
+                ...variant,
+                isDefault:
+                  variant.isDefault === true ||
+                  (!productData.variants.some((item) => item.isDefault) &&
+                    index === 0),
+                sortOrder: variant.sortOrder ?? index,
+              })),
+            );
           } else {
-            setVariantsData([{
-              ...DEFAULT_PRODUCT_VARIANT,
-              sku: productData?.sku || "",
-              title: productData?.color && productData.color !== "default" ? productData.color : "Default",
-              price: productData?.price ?? "",
-              mrp: productData?.mrp ?? "",
-              salePrice: productData?.salePrice ?? "",
-              stock: productData?.stock ?? 0,
-              attributes: productData?.color && productData.color !== "default" ? { color: productData.color } : {},
-            }]);
+            setVariantsData([
+              {
+                ...DEFAULT_PRODUCT_VARIANT,
+                sku: productData?.sku || "",
+                title:
+                  productData?.color && productData.color !== "default"
+                    ? productData.color
+                    : "Default",
+                price: productData?.price ?? "",
+                mrp: productData?.mrp ?? "",
+                salePrice: productData?.salePrice ?? "",
+                stock: productData?.stock ?? 0,
+                attributes:
+                  productData?.color && productData.color !== "default"
+                    ? { color: productData.color }
+                    : {},
+              },
+            ]);
           }
-          if (Array.isArray(productData?.options) && productData.options.length) {
+          if (
+            Array.isArray(productData?.options) &&
+            productData.options.length
+          ) {
             setVariantAxes(productData.options);
-          } else if (Array.isArray(productData?.variantAxes) && productData.variantAxes.length) {
-            setVariantAxes(productData.variantAxes.map((axis, index) => ({
-              name: String(axis || ''),
-              values: [],
-              sortOrder: index,
-            })));
+          } else if (
+            Array.isArray(productData?.variantAxes) &&
+            productData.variantAxes.length
+          ) {
+            setVariantAxes(
+              productData.variantAxes.map((axis, index) => ({
+                name: String(axis || ""),
+                values: [],
+                sortOrder: index,
+              })),
+            );
           }
 
           if (res?.data?.hsnCode || res?.data?.hsn_code) {
             const hsnValue = res?.data?.hsnCode || res?.data?.hsn_code;
-            const hsnCodeData = prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).find(item =>
-              item?.code === hsnValue || item?._id === hsnValue || item?.id === hsnValue
+            const hsnCodeData = prefillList(
+              "hsnCodes",
+              getListPayload(selector?.getAllHsnData),
+            ).find(
+              (item) =>
+                item?.code === hsnValue ||
+                item?._id === hsnValue ||
+                item?.id === hsnValue,
             );
             if (hsnCodeData) {
               setTaxData(hsnCodeData);
@@ -366,38 +475,48 @@ export default function ProductManagementUI() {
     }
   };
 
-  const fetchAllData = useCallback(async (callsArray = API_CALLS) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const results = await Promise.allSettled(
-        callsArray.map(({ action }) => dispatch(action()).unwrap?.() || dispatch(action()))
-      );
+  const fetchAllData = useCallback(
+    async (callsArray = API_CALLS) => {
+      // setLoading(true);
+      setError(null);
+      try {
+        const results = await Promise.allSettled(
+          callsArray.map(
+            ({ action }) => dispatch(action()).unwrap?.() || dispatch(action()),
+          ),
+        );
 
-      const failedCalls = results
-        .filter(({ status }) => status === 'rejected')
-        .map((_, index) => callsArray[index].name);
+        const failedCalls = results
+          .filter(({ status }) => status === "rejected")
+          .map((_, index) => callsArray[index].name);
 
-      if (failedCalls.length > 0) {
-        setError(`Some data failed to load: ${failedCalls.join(', ')}. Please refresh to try again.`);
-      } else {
-        // setApiCallsCompleted(true);
+        if (failedCalls.length > 0) {
+          setError(
+            `Some data failed to load: ${failedCalls.join(", ")}. Please refresh to try again.`,
+          );
+        } else {
+          // setApiCallsCompleted(true);
+        }
+      } catch (err) {
+        toast.error(
+          err ||
+            "Failed to load product data. Please refresh the page and try again.",
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      toast.error(err || 'Failed to load product data. Please refresh the page and try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch]);
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
-    const userDataString = sessionStorage.getItem('EcomAdmin');
+    const userDataString = sessionStorage.getItem("EcomAdmin");
     if (userDataString) {
       try {
         const parsedData = JSON.parse(userDataString);
         setUserData(parsedData);
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error("Error parsing user data:", error);
       }
     }
 
@@ -411,14 +530,20 @@ export default function ProductManagementUI() {
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const categoryKey = formData?.category_key || formData?.category || formData?.category_id || formData?.categoryId;
+    const categoryKey =
+      formData?.category_key ||
+      formData?.category ||
+      formData?.category_id ||
+      formData?.categoryId;
     if (!categoryKey) {
       setCategoryAttributeSchema([]);
       return;
     }
 
-    const cachedCategoryAttributes = prefillList('categoryAttributes').find((item) =>
-      String(item.categoryKey || item.categoryId || item._id || '') === String(categoryKey)
+    const cachedCategoryAttributes = prefillList("categoryAttributes").find(
+      (item) =>
+        String(item.categoryKey || item.categoryId || item._id || "") ===
+        String(categoryKey),
     );
     if (cachedCategoryAttributes) {
       const schema = cachedCategoryAttributes.attributeSchema || [];
@@ -445,23 +570,42 @@ export default function ProductManagementUI() {
           const optId = field.platformOptionId;
           if (!optId || fetchedOptionIds.current.has(optId)) return;
           fetchedOptionIds.current.add(optId);
-          dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
+          dispatch(
+            getPlatformOptionValues({
+              optionId: optId,
+              limit: 100,
+              active: true,
+            }),
+          )
             .unwrap()
             .then((valueRes) => {
               const raw = valueRes?.data;
-              const list = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
+              const list = Array.isArray(raw)
+                ? raw
+                : raw?.list || raw?.items || [];
               setPlatformValues((prev) => ({ ...prev, [optId]: list }));
             })
-            .catch(() => { fetchedOptionIds.current.delete(optId); });
+            .catch(() => {
+              fetchedOptionIds.current.delete(optId);
+            });
         });
       })
       .catch(() => {
         setCategoryAttributeSchema([]);
       });
-  }, [dispatch, formData?.category_key, formData?.category, formData?.category_id, formData?.categoryId, prefillData.optionValuesByOptionId, prefillList]);
+  }, [
+    dispatch,
+    formData?.category_key,
+    formData?.category,
+    formData?.category_id,
+    formData?.categoryId,
+    prefillData.optionValuesByOptionId,
+    prefillList,
+  ]);
 
   useEffect(() => {
-    const originCountry = formData?.origin?.countryCode || formData?.origin?.country;
+    const originCountry =
+      formData?.origin?.countryCode || formData?.origin?.country;
     const originState = formData?.origin?.stateCode || formData?.origin?.state;
     if (originCountry) {
       dispatch(getAllStateList({ countryId: originCountry }));
@@ -473,22 +617,26 @@ export default function ProductManagementUI() {
 
   // Load platform attribute options once on mount
   useEffect(() => {
-    const cachedOptions = prefillList('productOptions');
+    const cachedOptions = prefillList("productOptions");
     if (cachedOptions.length) {
       const valuesByOptionId = prefillData.optionValuesByOptionId || {};
       setPlatformOptions(cachedOptions);
       setPlatformValues(valuesByOptionId);
-      Object.keys(valuesByOptionId).forEach((optionId) => fetchedOptionIds.current.add(optionId));
+      Object.keys(valuesByOptionId).forEach((optionId) =>
+        fetchedOptionIds.current.add(optionId),
+      );
       return;
     }
 
     dispatch(getPlatformOptions({ limit: 100, active: true }))
       .unwrap()
       .then((res) => {
-        const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.list || res?.data?.items || [];
         setPlatformOptions(list);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [dispatch, prefillData.optionValuesByOptionId, prefillList]);
 
   useEffect(() => {
@@ -502,14 +650,18 @@ export default function ProductManagementUI() {
         return;
       }
       fetchedOptionIds.current.add(optId);
-      dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
+      dispatch(
+        getPlatformOptionValues({ optionId: optId, limit: 100, active: true }),
+      )
         .unwrap()
         .then((res) => {
           const raw = res?.data;
-          const list = Array.isArray(raw) ? raw : (raw?.list || raw?.items || []);
+          const list = Array.isArray(raw) ? raw : raw?.list || raw?.items || [];
           setPlatformValues((prev) => ({ ...prev, [optId]: list }));
         })
-        .catch(() => { fetchedOptionIds.current.delete(optId); });
+        .catch(() => {
+          fetchedOptionIds.current.delete(optId);
+        });
     });
   }, [dispatch, platformOptions, prefillData.optionValuesByOptionId]);
 
@@ -525,37 +677,65 @@ export default function ProductManagementUI() {
         return;
       }
       fetchedOptionIds.current.add(optId);
-      dispatch(getPlatformOptionValues({ optionId: optId, limit: 100, active: true }))
+      dispatch(
+        getPlatformOptionValues({ optionId: optId, limit: 100, active: true }),
+      )
         .unwrap()
         .then((res) => {
-          const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
+          const list = Array.isArray(res?.data)
+            ? res.data
+            : res?.data?.list || res?.data?.items || [];
           setPlatformValues((prev) => ({ ...prev, [optId]: list }));
         })
-        .catch(() => { fetchedOptionIds.current.delete(optId); });
+        .catch(() => {
+          fetchedOptionIds.current.delete(optId);
+        });
     });
   }, [dispatch, variantAxes, prefillData.optionValuesByOptionId]);
 
   // Load shipping profiles whenever the seller / org context changes
   useEffect(() => {
-    const sid = formData?.sellerId || userData?.ownerSellerId || userData?._id || userData?.id;
+    const sid =
+      formData?.sellerId ||
+      userData?.ownerSellerId ||
+      userData?._id ||
+      userData?.id;
     if (!sid) return;
     const params = { sellerId: sid, active: true, limit: 100 };
-    if (formData?.organizationId) params.organizationId = formData.organizationId;
-    dispatch(getShippingProfiles(params)).unwrap().then((res) => {
-      const list = res?.data?.profiles || res?.data?.data?.profiles || res?.normalized?.data?.profiles || res?.profiles || [];
-      setShippingProfileOptions(list.map((p) => ({ value: p.id, label: p.name, profile: p })));
-    }).catch(() => { });
-  }, [dispatch, formData?.sellerId, formData?.organizationId, userData]);
-
-  const handleOptionSearch = useCallback((query) => {
-    dispatch(getPlatformOptions({ limit: 100, active: true, q: query || undefined }))
+    if (formData?.organizationId)
+      params.organizationId = formData.organizationId;
+    dispatch(getShippingProfiles(params))
       .unwrap()
       .then((res) => {
-        const list = Array.isArray(res?.data) ? res.data : (res?.data?.list || res?.data?.items || []);
-        setPlatformOptions(list);
+        const list =
+          res?.data?.profiles ||
+          res?.data?.data?.profiles ||
+          res?.normalized?.data?.profiles ||
+          res?.profiles ||
+          [];
+        setShippingProfileOptions(
+          list.map((p) => ({ value: p.id, label: p.name, profile: p })),
+        );
       })
-      .catch(() => { });
-  }, [dispatch]);
+      .catch(() => {});
+  }, [dispatch, formData?.sellerId, formData?.organizationId, userData]);
+
+  const handleOptionSearch = useCallback(
+    (query) => {
+      dispatch(
+        getPlatformOptions({ limit: 100, active: true, q: query || undefined }),
+      )
+        .unwrap()
+        .then((res) => {
+          const list = Array.isArray(res?.data)
+            ? res.data
+            : res?.data?.list || res?.data?.items || [];
+          setPlatformOptions(list);
+        })
+        .catch(() => {});
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
     const container = mainContainerRef.current;
@@ -565,96 +745,155 @@ export default function ProductManagementUI() {
       const scrollTop = container.scrollTop;
       const sideScrollOffset = Math.min(scrollTop * 0.2, 200);
 
-      [container.previousElementSibling, container.nextElementSibling].forEach(panel => {
-        if (panel) panel.style.transform = `translateY(-${sideScrollOffset}px)`;
-      });
+      [container.previousElementSibling, container.nextElementSibling].forEach(
+        (panel) => {
+          if (panel)
+            panel.style.transform = `translateY(-${sideScrollOffset}px)`;
+        },
+      );
     };
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const formattedData = useMemo(() => ({
-    brandList: prefillList('brands', getListPayload(selector?.getAllBrandListData)).map((item) => ({
-      value: item?.name || item?._id || item?.id,
-      label: item?.name || item?.title || item?.code || String(item?._id || item?.id || ''),
-    })),
-    warrantyTemplateList: prefillList('warrantyTemplates', getListPayload(selector?.getAllWarrantyListData))
-      .map((item) => {
-        const metadata = item?.metadata || {};
-        const duration = inferWarrantyDuration(item);
-        const durationValue = duration?.value;
-        const durationUnit = duration?.unit;
-        const supportedUnits = new Set(['days', 'weeks', 'months', 'years']);
+  const formattedData = useMemo(
+    () => ({
+      brandList: prefillList(
+        "brands",
+        getListPayload(selector?.getAllBrandListData),
+      ).map((item) => ({
+        value: item?.name || item?._id || item?.id,
+        label:
+          item?.name ||
+          item?.title ||
+          item?.code ||
+          String(item?._id || item?.id || ""),
+      })),
+      warrantyTemplateList: prefillList(
+        "warrantyTemplates",
+        getListPayload(selector?.getAllWarrantyListData),
+      )
+        .map((item) => {
+          const metadata = item?.metadata || {};
+          const duration = inferWarrantyDuration(item);
+          const durationValue = duration?.value;
+          const durationUnit = duration?.unit;
+          const supportedUnits = new Set(["days", "weeks", "months", "years"]);
 
-        if (durationValue === undefined || durationValue === null || !supportedUnits.has(durationUnit)) return null;
+          if (
+            durationValue === undefined ||
+            durationValue === null ||
+            !supportedUnits.has(durationUnit)
+          )
+            return null;
 
+          return {
+            value: `${durationValue}:${durationUnit}`,
+            label:
+              item?.period || item?.name || String(item?._id || item?.id || ""),
+            durationValue,
+            durationUnit,
+            sortOrder: metadata.sortOrder || 999,
+          };
+        })
+        .filter(Boolean)
+        .sort(
+          (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label),
+        ),
+      colorList: (() => {
+        const colorOption = platformOptions.find(
+          (item) =>
+            String(item.name || item.slug || "").toLowerCase() === "color",
+        );
+        const colorValues = colorOption
+          ? platformValues[colorOption._id || colorOption.id] || []
+          : [];
+        return colorValues
+          .filter((item) => item.active !== false)
+          .map((item) => ({ value: item.name, label: item.name }));
+      })(),
+      productFamilyList: prefillList(
+        "productFamilies",
+        getListPayload(adminCoreSelector?.productFamiliesData),
+      )
+        .map((item) => String(item?.familyCode || item?.code || "").trim())
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index)
+        .map((code) => ({ value: code, label: code })),
+      taxList: transformArray(
+        selector?.getAllTaxListData?.data?.data?.list || [],
+      ),
+      hsnCodeList: prefillList(
+        "hsnCodes",
+        getListPayload(selector?.getAllHsnData),
+      ).map((item) => {
+        const code = item.code || item._id || item.id;
+        const desc = item.description || "";
+        const gst = Number(item.gstRate || item.IGST || 0);
         return {
-          value: `${durationValue}:${durationUnit}`,
-          label: item?.period || item?.name || String(item?._id || item?.id || ''),
-          durationValue,
-          durationUnit,
-          sortOrder: metadata.sortOrder || 999,
+          value: code,
+          code: item.code,
+          description: desc,
+          hsnCategory: item.category || "",
+          gstRate: gst,
+          label: [code, desc ? ` - ${desc}` : "", ` (${gst}% GST)`].join(""),
         };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label)),
-    colorList: (() => {
-      const colorOption = platformOptions.find((item) => String(item.name || item.slug || '').toLowerCase() === 'color');
-      const colorValues = colorOption ? (platformValues[colorOption._id || colorOption.id] || []) : [];
-      return colorValues
-        .filter((item) => item.active !== false)
-        .map((item) => ({ value: item.name, label: item.name }));
-    })(),
-    productFamilyList: prefillList('productFamilies', getListPayload(adminCoreSelector?.productFamiliesData))
-      .map((item) => String(item?.familyCode || item?.code || '').trim())
-      .filter(Boolean)
-      .filter((value, index, arr) => arr.indexOf(value) === index)
-      .map((code) => ({ value: code, label: code })),
-    taxList: transformArray(selector?.getAllTaxListData?.data?.data?.list || []),
-    hsnCodeList: prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).map((item) => {
-      const code = item.code || item._id || item.id;
-      const desc = item.description || '';
-      const gst = Number(item.gstRate || item.IGST || 0);
-      return {
-        value: code,
-        code: item.code,
-        description: desc,
-        hsnCategory: item.category || '',
-        gstRate: gst,
-        label: [code, desc ? ` - ${desc}` : '', ` (${gst}% GST)`].join(''),
-      };
+      }),
+      countryList: transformArray(prefillList("countries")),
+      sellerList: transformArray(prefillList("sellers")),
+      organizationList: prefillList("organizations").map((item) => ({
+        value: item.id || item.organizationId,
+        label: [
+          item.storeDisplayName ||
+            item.legalBusinessName ||
+            item.id ||
+            item.organizationId,
+          item.gstin ? `GSTIN ${item.gstin}` : null,
+          item.approvalStatus
+            ? String(item.approvalStatus).replace(/_/g, " ")
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" | "),
+        sellerId: item.sellerId,
+        approvalStatus: item.approvalStatus,
+        raw: item,
+      })),
     }),
-    countryList: transformArray(prefillList('countries')),
-    sellerList: transformArray(prefillList('sellers')),
-    organizationList: prefillList('organizations').map((item) => ({
-      value: item.id || item.organizationId,
-      label: [
-        item.storeDisplayName || item.legalBusinessName || item.id || item.organizationId,
-        item.gstin ? `GSTIN ${item.gstin}` : null,
-        item.approvalStatus ? String(item.approvalStatus).replace(/_/g, ' ') : null,
-      ].filter(Boolean).join(' | '),
-      sellerId: item.sellerId,
-      approvalStatus: item.approvalStatus,
-      raw: item,
-    })),
-
-  }), [selector, adminCoreSelector?.productFamiliesData, platformOptions, platformValues, prefillList]);
+    [
+      selector,
+      adminCoreSelector?.productFamiliesData,
+      platformOptions,
+      platformValues,
+      prefillList,
+    ],
+  );
 
   const organizationOptions = useMemo(() => {
-    const selectedSellerId = String(formData?.sellerId || userData?.ownerSellerId || userData?._id || userData?.id || '');
+    const selectedSellerId = String(
+      formData?.sellerId ||
+        userData?.ownerSellerId ||
+        userData?._id ||
+        userData?.id ||
+        "",
+    );
     if (!selectedSellerId) return formattedData.organizationList;
-    return formattedData.organizationList.filter((option) => String(option.sellerId || '') === selectedSellerId);
+    return formattedData.organizationList.filter(
+      (option) => String(option.sellerId || "") === selectedSellerId,
+    );
   }, [formattedData.organizationList, formData?.sellerId, userData]);
-  const userRole = normalizeRole(extractRole(
-    userData,
-    userData?.user,
-    userData?.data,
-    getSessionUser(),
-    getSessionUser()?.user,
-    getStoredUser(),
-    { role: getStoredRole() },
-  ));
+  const userRole = normalizeRole(
+    extractRole(
+      userData,
+      userData?.user,
+      userData?.data,
+      getSessionUser(),
+      getSessionUser()?.user,
+      getStoredUser(),
+      { role: getStoredRole() },
+    ),
+  );
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
   useEffect(() => {
@@ -669,32 +908,48 @@ export default function ProductManagementUI() {
 
     // Admin: derive from the organization list (existing behavior)
     if (formData?.organizationId) {
-      const exists = organizationOptions.some((option) => String(option.value) === String(formData.organizationId));
+      const exists = organizationOptions.some(
+        (option) => String(option.value) === String(formData.organizationId),
+      );
       if (!exists) {
-        setFormData((prev) => ({ ...prev, organizationId: '' }));
+        setFormData((prev) => ({ ...prev, organizationId: "" }));
       }
       return;
     }
     if (organizationOptions.length === 1) {
-      setFormData((prev) => ({ ...prev, organizationId: organizationOptions[0].value }));
+      setFormData((prev) => ({
+        ...prev,
+        organizationId: organizationOptions[0].value,
+      }));
     }
   }, [organizationOptions, formData?.organizationId, isSellerPanelUser]);
 
   const createSelectOptions = useMemo(() => {
-    const categorySource = prefillList('categories', getListPayload(selector?.getListData));
+    const categorySource = prefillList(
+      "categories",
+      getListPayload(selector?.getListData),
+    );
     const options = [];
-    if (!Array.isArray(categorySource) || categorySource.length === 0) return options;
+    if (!Array.isArray(categorySource) || categorySource.length === 0)
+      return options;
 
     const hasNested = categorySource.some(
-      (item) => Array.isArray(item?.children) || Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+      (item) =>
+        Array.isArray(item?.children) ||
+        Array.isArray(item?.subcategories) ||
+        Array.isArray(item?.subCategories),
     );
 
-    const addOptions = (categories, prefix = '') => {
+    const addOptions = (categories, prefix = "") => {
       if (!Array.isArray(categories)) return;
       categories.forEach((category) => {
         const option = toCategoryOption(category, prefix);
         options.push(option);
-        const children = category.children || category.subcategories || category.subCategories || [];
+        const children =
+          category.children ||
+          category.subcategories ||
+          category.subCategories ||
+          [];
         if (Array.isArray(children) && children.length > 0) {
           addOptions(children, option.label);
         }
@@ -736,41 +991,60 @@ export default function ProductManagementUI() {
     return options;
   }, [selector?.getListData, prefillList]);
 
-
   const validateForm = () => {
     const newErrors = {};
     if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
-    if (formData?.name?.trim() && formData.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters.";
+    if (formData?.name?.trim() && formData.name.trim().length < 3)
+      newErrors.name = "Product name must be at least 3 characters.";
+    if (formData?.name?.trim() && formData.name.trim().length > 200)
+      newErrors.name = "Product name must be not more than 200 characters.";
     // Description editing is currently hidden in the variant-first form. The
     // API adapter supplies a generated fallback from the product title.
-    if (!formData?.sellerId && !isSellerPanelUser) newErrors.sellerId = "Seller is required.";
+    if (!formData?.sellerId && !isSellerPanelUser)
+      newErrors.sellerId = "Seller is required.";
     if (!formData?.organizationId) {
       if (isSellerPanelUser) {
         const activeOrgId = getSelectedSellerOrganizationId();
-        if (!activeOrgId) newErrors.organizationId = "No active organization is available for this seller account.";
+        if (!activeOrgId)
+          newErrors.organizationId =
+            "No active organization is available for this seller account.";
       } else {
         newErrors.organizationId = "Organization is required.";
       }
     }
-    if (!(formData?.category_id || formData?.category || formData?.category_key)) {
+    if (
+      !(formData?.category_id || formData?.category || formData?.category_key)
+    ) {
       newErrors.category_id = "Category is required.";
     }
     if (!variantsData.length) {
       newErrors.variants = "Add at least one variant for this product.";
     }
-    const invalidVariant = variantsData.find((variant) =>
-      !variant?.sku ||
-      Number(variant?.price || 0) <= 0 ||
-      Number(variant?.mrp || 0) <= 0 ||
-      Number(variant?.price || 0) > Number(variant?.mrp || 0) ||
-      (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) < 0) ||
-      (variant?.salePrice !== undefined && variant.salePrice !== '' && Number(variant.salePrice) > Number(variant.price || 0))
+    const invalidVariant = variantsData.find(
+      (variant) =>
+        !variant?.sku ||
+        Number(variant?.price || 0) <= 0 ||
+        Number(variant?.mrp || 0) <= 0 ||
+        Number(variant?.price || 0) > Number(variant?.mrp || 0) ||
+        (variant?.salePrice !== undefined &&
+          variant.salePrice !== "" &&
+          Number(variant.salePrice) < 0) ||
+        (variant?.salePrice !== undefined &&
+          variant.salePrice !== "" &&
+          Number(variant.salePrice) > Number(variant.price || 0)),
     );
-    if (invalidVariant) newErrors.variants = "Every variant needs SKU, valid price, and MRP.";
+    if (invalidVariant)
+      newErrors.variants = "Every variant needs SKU, valid price, and MRP.";
     if (!useManualAttributes) {
       categoryAttributeSchema.forEach((field) => {
         const value = formData?.attributes?.[field.key];
-        if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
+        if (
+          field.required &&
+          (value === undefined ||
+            value === null ||
+            value === "" ||
+            (Array.isArray(value) && value.length === 0))
+        ) {
           newErrors.attributes = {
             ...(newErrors.attributes || {}),
             [field.key]: `${field.label || field.key} is required.`,
@@ -782,7 +1056,6 @@ export default function ProductManagementUI() {
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
 
   useEffect(() => {
     if (isScrolling) return;
@@ -808,9 +1081,9 @@ export default function ProductManagementUI() {
       },
       {
         root: null,
-        rootMargin: '-20% 0px -20% 0px',
+        rootMargin: "-20% 0px -20% 0px",
         threshold: [0.1, 0.5, 0.9],
-      }
+      },
     );
 
     Object.values(refs).forEach((ref) => {
@@ -820,37 +1093,39 @@ export default function ProductManagementUI() {
     const handleManualScroll = () => {
       if (isScrolling) return;
 
-      if (window.scrollY <= 100 && activeTab !== 'basic-details') {
-        setActiveTab('basic-details');
+      if (window.scrollY <= 100 && activeTab !== "basic-details") {
+        setActiveTab("basic-details");
       }
     };
 
-    window.addEventListener('scroll', handleManualScroll);
+    window.addEventListener("scroll", handleManualScroll);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', handleManualScroll);
+      window.removeEventListener("scroll", handleManualScroll);
     };
   }, [isScrolling, refs, activeTab]);
 
-  const scrollToSection = useCallback((id) => {
-    setIsScrolling(true);
+  const scrollToSection = useCallback(
+    (id) => {
+      setIsScrolling(true);
 
-    refs[id]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      refs[id]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    const handleScrollStop = () => {
-      setIsScrolling(false);
-      window.removeEventListener('scroll', handleScrollStop);
-    };
+      const handleScrollStop = () => {
+        setIsScrolling(false);
+        window.removeEventListener("scroll", handleScrollStop);
+      };
 
-    window.addEventListener('scroll', handleScrollStop);
+      window.addEventListener("scroll", handleScrollStop);
 
-    setTimeout(() => {
-      setIsScrolling(false);
-      window.removeEventListener('scroll', handleScrollStop);
-    }, 1200);
-  }, [refs]);
-
+      setTimeout(() => {
+        setIsScrolling(false);
+        window.removeEventListener("scroll", handleScrollStop);
+      }, 1200);
+    },
+    [refs],
+  );
 
   function calculateDiscount(price, discountPercent = 0) {
     const validPrice = parseFloat(price) || 0;
@@ -859,7 +1134,7 @@ export default function ProductManagementUI() {
     if (validPrice < 0 || validDiscount < 0) {
       return {
         discountedPrice: 0,
-        discountAmount: 0
+        discountAmount: 0,
       };
     }
 
@@ -868,7 +1143,7 @@ export default function ProductManagementUI() {
 
     return {
       discountedPrice: parseFloat(discountedPrice.toFixed(2)),
-      discountAmount: parseFloat(discountAmount.toFixed(2))
+      discountAmount: parseFloat(discountAmount.toFixed(2)),
     };
   }
 
@@ -876,20 +1151,21 @@ export default function ProductManagementUI() {
     if (!formData.basePrice || !taxData) return;
 
     const priceWithTax = calculatePriceWithTax(taxData, formData.basePrice);
-    const { discountedPrice } = calculateDiscount(priceWithTax, formData.discount);
+    const { discountedPrice } = calculateDiscount(
+      priceWithTax,
+      formData.discount,
+    );
 
     setFormData((prev) => ({
       ...prev,
-      salePrice: discountedPrice.toString()
+      salePrice: discountedPrice.toString(),
     }));
   }, [formData.basePrice, formData.discount, taxData]);
 
-
-
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [group, field] = name.split('.');
+    if (name.includes(".")) {
+      const [group, field] = name.split(".");
       setFormData((prev) => ({
         ...prev,
         [group]: {
@@ -900,62 +1176,60 @@ export default function ProductManagementUI() {
       return;
     }
     setFormData((prev) => ({
-      ...prev, [name]: value
-    }))
+      ...prev,
+      [name]: value,
+    }));
   }, []);
 
-
-
-
   const handleSelectChange = (selectedOption, action) => {
-    setError(prevErrors => {
+    setError((prevErrors) => {
       const newErrors = { ...prevErrors };
       switch (action) {
-        case 'COUNTRY':
+        case "COUNTRY":
           delete newErrors.mfd_country;
           delete newErrors.mfd_state;
           delete newErrors.mfd_city;
           delete newErrors.mfd_zip_code;
           break;
 
-        case 'STORE_ID':
+        case "STORE_ID":
           delete newErrors.store_id;
           break;
-        case 'SELLER_ID':
+        case "SELLER_ID":
           delete newErrors.sellerId;
           delete newErrors.organizationId;
           break;
-        case 'ORGANIZATION_ID':
+        case "ORGANIZATION_ID":
           delete newErrors.organizationId;
           break;
-        case 'BRAND_ID':
+        case "BRAND_ID":
           delete newErrors.brand_id;
           break;
-        case 'CATEGORY_ID':
+        case "CATEGORY_ID":
           delete newErrors.category_id;
           break;
-        case 'REPLACE_ID':
+        case "REPLACE_ID":
           delete newErrors.replace_id;
           break;
-        case 'STORE_TAX_ID':
+        case "STORE_TAX_ID":
           delete newErrors.store_tax_id;
           break;
-        case 'STORE_BATCH_ID':
+        case "STORE_BATCH_ID":
           delete newErrors.store_batch_id;
           break;
-        case 'STORE_qtyHead_ID':
+        case "STORE_qtyHead_ID":
           delete newErrors.store_qtyHead_id;
           break;
-        case 'STORE_WARRANTY_ID':
+        case "STORE_WARRANTY_ID":
           delete newErrors.store_warranty_id;
           break;
-        case 'OPTION_ID':
+        case "OPTION_ID":
           delete newErrors.option_id;
           break;
-        case 'OPTION_VALUE_IDS':
+        case "OPTION_VALUE_IDS":
           delete newErrors.option_value_ids;
           break;
-        case 'STORE_SHIPPING_DURATION_ID':
+        case "STORE_SHIPPING_DURATION_ID":
           delete newErrors.store_shipping_duration_id;
           break;
         default:
@@ -964,60 +1238,89 @@ export default function ProductManagementUI() {
       return newErrors;
     });
     switch (action) {
+      case "STORE_ID":
+        setFormData((prev) => ({
+          ...prev,
+          store_id: selectedOption?.value || "",
+        }));
+        setError({});
+        break;
+      case "SELLER_ID":
+        setFormData((prev) => ({
+          ...prev,
+          sellerId: selectedOption?.value || "",
+          organizationId: "",
+        }));
+        break;
+      case "ORGANIZATION_ID":
+        setFormData((prev) => ({
+          ...prev,
+          organizationId: selectedOption?.value || "",
+        }));
+        break;
 
-      case 'STORE_ID':
-        setFormData(prev => ({ ...prev, store_id: selectedOption?.value || "" }));
-        setError({})
-        break;
-      case 'SELLER_ID':
-        setFormData(prev => ({ ...prev, sellerId: selectedOption?.value || "", organizationId: "" }));
-        break;
-      case 'ORGANIZATION_ID':
-        setFormData(prev => ({ ...prev, organizationId: selectedOption?.value || "" }));
+      case "BRAND_ID":
+        setFormData((prev) => ({
+          ...prev,
+          brand: selectedOption?.label || selectedOption?.value || "",
+        }));
         break;
 
-      case 'BRAND_ID':
-        setFormData(prev => ({ ...prev, brand: selectedOption?.label || selectedOption?.value || "" }));
-        break;
-
-      case 'CATEGORY_ID':
-        setFormData(prev => ({
+      case "CATEGORY_ID":
+        setFormData((prev) => ({
           ...prev,
           category_id: selectedOption?.value || "",
           categoryId: selectedOption?.value || "",
           category: selectedOption?.categoryKey || selectedOption?.value || "",
-          category_key: selectedOption?.categoryKey || selectedOption?.value || "",
-          attributes: useManualAttributes ? (prev.attributes || {}) : {}
+          category_key:
+            selectedOption?.categoryKey || selectedOption?.value || "",
+          attributes: useManualAttributes ? prev.attributes || {} : {},
         }));
         break;
-      case 'STORE_BATCH_ID':
-        setFormData(prev => ({ ...prev, batch_id: selectedOption?.value || "" }));
+      case "STORE_BATCH_ID":
+        setFormData((prev) => ({
+          ...prev,
+          batch_id: selectedOption?.value || "",
+        }));
         break;
-      case 'STORE_qtyHead_ID':
-        setFormData(prev => ({ ...prev, qty_head_id: selectedOption?.value || "" }));
+      case "STORE_qtyHead_ID":
+        setFormData((prev) => ({
+          ...prev,
+          qty_head_id: selectedOption?.value || "",
+        }));
         break;
-      case 'STORE_WARRANTY_ID':
-        setFormData(prev => ({ ...prev, warranty_id: selectedOption?.value || "" }));
+      case "STORE_WARRANTY_ID":
+        setFormData((prev) => ({
+          ...prev,
+          warranty_id: selectedOption?.value || "",
+        }));
         break;
-      case 'PRODUCT_FAMILY':
-        setFormData(prev => ({ ...prev, productFamilyCode: selectedOption?.value || "" }));
+      case "PRODUCT_FAMILY":
+        setFormData((prev) => ({
+          ...prev,
+          productFamilyCode: selectedOption?.value || "",
+        }));
         break;
-      case 'hsn_code':
-        setFormData(prev => ({
+      case "hsn_code":
+        setFormData((prev) => ({
           ...prev,
           hsn_code: selectedOption?.value || "",
           hsnCode: selectedOption?.code || selectedOption?.value || "",
         }));
-        const hsnCodeData = prefillList('hsnCodes', getListPayload(selector?.getAllHsnData)).find(item =>
-          toSelectId(item) === String(selectedOption?.value) || item?.code === selectedOption?.value
-        )
+        const hsnCodeData = prefillList(
+          "hsnCodes",
+          getListPayload(selector?.getAllHsnData),
+        ).find(
+          (item) =>
+            toSelectId(item) === String(selectedOption?.value) ||
+            item?.code === selectedOption?.value,
+        );
 
-        setTaxData(hsnCodeData)
-
+        setTaxData(hsnCodeData);
 
         break;
-      case 'PRODUCT_COUNTRY':
-        setFormData(prev => ({
+      case "PRODUCT_COUNTRY":
+        setFormData((prev) => ({
           ...prev,
           origin: {
             ...(prev.origin || {}),
@@ -1030,8 +1333,8 @@ export default function ProductManagementUI() {
           },
         }));
         break;
-      case 'PRODUCT_STATE':
-        setFormData(prev => ({
+      case "PRODUCT_STATE":
+        setFormData((prev) => ({
           ...prev,
           origin: {
             ...(prev.origin || {}),
@@ -1042,8 +1345,8 @@ export default function ProductManagementUI() {
           },
         }));
         break;
-      case 'PRODUCT_CITY':
-        setFormData(prev => ({
+      case "PRODUCT_CITY":
+        setFormData((prev) => ({
           ...prev,
           origin: {
             ...(prev.origin || {}),
@@ -1059,19 +1362,19 @@ export default function ProductManagementUI() {
   };
   const handleToggleProductSetting = (key) => {
     const fieldMap = {
-      DISABLE: 'isDisable',
-      APPROVE: 'isApproved',
-      FEATURED: 'markAsFeatured',
-      DEAL_PRODUCT: 'isDealProduct',
-      COD: 'cod',
-      FREE_SHIPPING: 'shipping.freeShipping',
-      prescription_required: 'prescription_required'
+      DISABLE: "isDisable",
+      APPROVE: "isApproved",
+      FEATURED: "markAsFeatured",
+      DEAL_PRODUCT: "isDealProduct",
+      COD: "cod",
+      FREE_SHIPPING: "shipping.freeShipping",
+      prescription_required: "prescription_required",
     };
 
     const fieldName = fieldMap[key];
 
     if (fieldName) {
-      if (key === 'COD') {
+      if (key === "COD") {
         setFormData((prev) => {
           const currentCod =
             prev?.shipping?.codAvailable !== undefined
@@ -1091,7 +1394,7 @@ export default function ProductManagementUI() {
         return;
       }
 
-      if (key === 'FREE_SHIPPING') {
+      if (key === "FREE_SHIPPING") {
         setFormData((prev) => {
           const nextFreeShipping = !Boolean(prev?.shipping?.freeShipping);
 
@@ -1120,9 +1423,15 @@ export default function ProductManagementUI() {
     const updatedFormData = { ...formData };
     // persist manual-attributes selection to payload
     updatedFormData.attributesManual = useManualAttributes;
-    const selectedShippingProfile = !updatedFormData.shipping?.freeShipping && updatedFormData.shipping?.shippingProfileId
-      ? shippingProfileOptions.find((option) => String(option.value) === String(updatedFormData.shipping.shippingProfileId))?.profile || null
-      : null;
+    const selectedShippingProfile =
+      !updatedFormData.shipping?.freeShipping &&
+      updatedFormData.shipping?.shippingProfileId
+        ? shippingProfileOptions.find(
+            (option) =>
+              String(option.value) ===
+              String(updatedFormData.shipping.shippingProfileId),
+          )?.profile || null
+        : null;
     const profileShippingCharge = selectedShippingProfile
       ? toOptionalNumber(selectedShippingProfile.shippingCharge)
       : undefined;
@@ -1141,47 +1450,65 @@ export default function ProductManagementUI() {
       resolvedCodAvailable = Boolean(updatedFormData.cod);
     }
 
-    const formattedOptions = options.map(option => ({
-      sku: option.sku || '',
+    const formattedOptions = options.map((option) => ({
+      sku: option.sku || "",
       type: option.type,
-      remark: option.remark || '',
-      packaging: option.packaging || '',
+      remark: option.remark || "",
+      packaging: option.packaging || "",
       mrp: parseFloat(option.mrp) || 0,
       discount: parseFloat(option.discount) || 0,
       salePrice: parseFloat(option.salePrice) || 0,
       stock: Number(option.stock || 0),
-      ...(option._id && { _id: option._id })
+      ...(option._id && { _id: option._id }),
     }));
-    const variableOptionAxes = variantAxes.map((axis, index) => ({
-      name: axis.name,
-      slug: axis.slug,
-      platformOptionId: axis.platformOptionId,
-      displayType: axis.displayType,
-      values: Array.isArray(axis.values) ? axis.values : [],
-      valueCodes: axis.valueCodes || {},
-      required: Boolean(axis.required),
-      sortOrder: axis.sortOrder ?? index,
-    })).filter((axis) => axis.name && axis.values.length);
+    const variableOptionAxes = variantAxes
+      .map((axis, index) => ({
+        name: axis.name,
+        slug: axis.slug,
+        platformOptionId: axis.platformOptionId,
+        displayType: axis.displayType,
+        values: Array.isArray(axis.values) ? axis.values : [],
+        valueCodes: axis.valueCodes || {},
+        required: Boolean(axis.required),
+        sortOrder: axis.sortOrder ?? index,
+      }))
+      .filter((axis) => axis.name && axis.values.length);
 
     const legacyVariants = formattedOptions
-      .filter((option) => option.sku || option.salePrice || option.mrp || option.stock)
+      .filter(
+        (option) =>
+          option.sku || option.salePrice || option.mrp || option.stock,
+      )
       .map((option, index) => ({
-        sku: option.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
+        sku:
+          option.sku ||
+          `${updatedFormData.sku || updatedFormData.name || "SKU"}-${index + 1}`,
         price: Number(option.salePrice || 0),
         mrp: Number(option.mrp || 0),
         stock: Number(option.stock || 0),
-        attributes: option.type ? { [option.type]: option.remark || option.packaging || option.type } : {},
+        attributes: option.type
+          ? { [option.type]: option.remark || option.packaging || option.type }
+          : {},
         images: Array.isArray(option.images) ? option.images : [],
       }));
-    const normalizedVariants = (variantsData.length ? variantsData : legacyVariants).map((variant, index) => ({
+    const normalizedVariants = (
+      variantsData.length ? variantsData : legacyVariants
+    ).map((variant, index) => ({
       ...variant,
-      sku: variant.sku || `${updatedFormData.sku || updatedFormData.name || 'SKU'}-${index + 1}`,
+      sku:
+        variant.sku ||
+        `${updatedFormData.sku || updatedFormData.name || "SKU"}-${index + 1}`,
       price: Number(variant.price || variant.salePrice || 0),
       mrp: Number(variant.mrp || variant.price || variant.salePrice || 0),
-      salePrice: variant.salePrice === undefined || variant.salePrice === "" ? undefined : Number(variant.salePrice || 0),
+      salePrice:
+        variant.salePrice === undefined || variant.salePrice === ""
+          ? undefined
+          : Number(variant.salePrice || 0),
       stock: Number(variant.stock || 0),
       reservedStock: Number(variant.reservedStock || 0),
-      isDefault: variant.isDefault === true || (!variantsData.some((item) => item.isDefault) && index === 0),
+      isDefault:
+        variant.isDefault === true ||
+        (!variantsData.some((item) => item.isDefault) && index === 0),
       sortOrder: variant.sortOrder ?? index,
     }));
     const origin = compactObject(updatedFormData.origin || {});
@@ -1200,47 +1527,104 @@ export default function ProductManagementUI() {
         ...(updatedFormData.warranty?.returnPolicy || {}),
       },
     });
-    const shipping = compactObject(selectedShippingProfile ? {
-      shippingProfileId: updatedFormData.shipping?.shippingProfileId,
-      freeShipping: profileShippingCharge === 0,
-      additionalCost: profileShippingCharge,
-      shippingCharge: profileShippingCharge,
-      serviceabilityMode: normalizeProductServiceabilityMode(selectedShippingProfile.serviceabilityMode),
-      allowPincodes: selectedShippingProfile.allowedPincodes || selectedShippingProfile.allowPincodes || selectedShippingProfile.serviceablePincodes || [],
-      serviceablePincodes: selectedShippingProfile.allowedPincodes || selectedShippingProfile.serviceablePincodes || selectedShippingProfile.allowPincodes || [],
-      blockPincodes: selectedShippingProfile.blockedPincodes || selectedShippingProfile.blockPincodes || [],
-      regions: selectedShippingProfile.regions || selectedShippingProfile.allowedStates || selectedShippingProfile.states || [],
-      states: selectedShippingProfile.allowedStates || selectedShippingProfile.states || [],
-      cities: selectedShippingProfile.allowedCities || selectedShippingProfile.cities || [],
-      ...(resolvedCodAvailable !== undefined ? { codAvailable: resolvedCodAvailable } : {}),
-      processingDays: profileEtaMin,
-      estimatedDaysMin: profileEtaMin,
-      estimatedDaysMax: profileEtaMax,
-      shippingMethod: selectedShippingProfile.shippingMethod || 'standard',
-    } : {
-      ...(updatedFormData.shipping || {}),
-      serviceabilityMode: normalizeProductServiceabilityMode(updatedFormData.shipping?.serviceabilityMode),
-      freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
-      freeShippingMinOrder: toOptionalNumber(updatedFormData.shipping?.freeShippingMinOrder),
-      additionalCost: toOptionalNumber(updatedFormData.shipping?.additionalCost),
-      shippingCharge: toOptionalNumber(updatedFormData.shipping?.shippingCharge),
-      handlingCharge: toOptionalNumber(updatedFormData.shipping?.handlingCharge),
-      ...(resolvedCodAvailable !== undefined ? { codAvailable: resolvedCodAvailable } : {}),
-      processingDays: toOptionalNumber(updatedFormData.shipping?.processingDays),
-      estimatedDaysMin: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMin),
-      estimatedDaysMax: toOptionalNumber(updatedFormData.shipping?.estimatedDaysMax),
-      shippingProfileId: updatedFormData.shipping?.freeShipping ? null : updatedFormData.shipping?.shippingProfileId || null,
-    });
+    const shipping = compactObject(
+      selectedShippingProfile
+        ? {
+            shippingProfileId: updatedFormData.shipping?.shippingProfileId,
+            freeShipping: profileShippingCharge === 0,
+            additionalCost: profileShippingCharge,
+            shippingCharge: profileShippingCharge,
+            serviceabilityMode: normalizeProductServiceabilityMode(
+              selectedShippingProfile.serviceabilityMode,
+            ),
+            allowPincodes:
+              selectedShippingProfile.allowedPincodes ||
+              selectedShippingProfile.allowPincodes ||
+              selectedShippingProfile.serviceablePincodes ||
+              [],
+            serviceablePincodes:
+              selectedShippingProfile.allowedPincodes ||
+              selectedShippingProfile.serviceablePincodes ||
+              selectedShippingProfile.allowPincodes ||
+              [],
+            blockPincodes:
+              selectedShippingProfile.blockedPincodes ||
+              selectedShippingProfile.blockPincodes ||
+              [],
+            regions:
+              selectedShippingProfile.regions ||
+              selectedShippingProfile.allowedStates ||
+              selectedShippingProfile.states ||
+              [],
+            states:
+              selectedShippingProfile.allowedStates ||
+              selectedShippingProfile.states ||
+              [],
+            cities:
+              selectedShippingProfile.allowedCities ||
+              selectedShippingProfile.cities ||
+              [],
+            ...(resolvedCodAvailable !== undefined
+              ? { codAvailable: resolvedCodAvailable }
+              : {}),
+            processingDays: profileEtaMin,
+            estimatedDaysMin: profileEtaMin,
+            estimatedDaysMax: profileEtaMax,
+            shippingMethod:
+              selectedShippingProfile.shippingMethod || "standard",
+          }
+        : {
+            ...(updatedFormData.shipping || {}),
+            serviceabilityMode: normalizeProductServiceabilityMode(
+              updatedFormData.shipping?.serviceabilityMode,
+            ),
+            freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
+            freeShippingMinOrder: toOptionalNumber(
+              updatedFormData.shipping?.freeShippingMinOrder,
+            ),
+            additionalCost: toOptionalNumber(
+              updatedFormData.shipping?.additionalCost,
+            ),
+            shippingCharge: toOptionalNumber(
+              updatedFormData.shipping?.shippingCharge,
+            ),
+            handlingCharge: toOptionalNumber(
+              updatedFormData.shipping?.handlingCharge,
+            ),
+            ...(resolvedCodAvailable !== undefined
+              ? { codAvailable: resolvedCodAvailable }
+              : {}),
+            processingDays: toOptionalNumber(
+              updatedFormData.shipping?.processingDays,
+            ),
+            estimatedDaysMin: toOptionalNumber(
+              updatedFormData.shipping?.estimatedDaysMin,
+            ),
+            estimatedDaysMax: toOptionalNumber(
+              updatedFormData.shipping?.estimatedDaysMax,
+            ),
+            shippingProfileId: updatedFormData.shipping?.freeShipping
+              ? null
+              : updatedFormData.shipping?.shippingProfileId || null,
+          },
+    );
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
-      organizationId: updatedFormData.organizationId || (isSellerPanelUser ? getSelectedSellerOrganizationId() : ''),
+      organizationId:
+        updatedFormData.organizationId ||
+        (isSellerPanelUser ? getSelectedSellerOrganizationId() : ""),
       ...(updatedFormData.storeId ? { storeId: updatedFormData.storeId } : {}),
-      ...(updatedFormData.warehouseId ? { warehouseId: updatedFormData.warehouseId } : {}),
+      ...(updatedFormData.warehouseId
+        ? { warehouseId: updatedFormData.warehouseId }
+        : {}),
       title: updatedFormData.name || updatedFormData.title,
       description: updatedFormData.description,
       gstInclusive: true,
-      category: updatedFormData.category_key || updatedFormData.category || updatedFormData.category_id,
+      category:
+        updatedFormData.category_key ||
+        updatedFormData.category ||
+        updatedFormData.category_id,
       categoryId: updatedFormData.category_id || updatedFormData.categoryId,
       brand: updatedFormData.brand || updatedFormData.brand_id || "",
       productFamilyCode: updatedFormData.productFamilyCode,
@@ -1252,58 +1636,99 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       ...(Object.keys(shipping).length ? { shipping } : {}),
-      status: updatedFormData.isApproved ? "active" : updatedFormData.isDisable ? "inactive" : "draft",
+      status: updatedFormData.isApproved
+        ? "active"
+        : updatedFormData.isDisable
+          ? "inactive"
+          : "draft",
       metadata: {
         ...(updatedFormData.metadata || {}),
         featured: Boolean(updatedFormData.markAsFeatured),
         isDealProduct: Boolean(updatedFormData.isDealProduct),
-        dealBadge: updatedFormData.isDealProduct ? updatedFormData.dealBadge : undefined,
-        dealSource: updatedFormData.isDealProduct ? updatedFormData.dealSource : undefined,
-        codAvailable: resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
+        dealBadge: updatedFormData.isDealProduct
+          ? updatedFormData.dealBadge
+          : undefined,
+        dealSource: updatedFormData.isDealProduct
+          ? updatedFormData.dealSource
+          : undefined,
+        codAvailable:
+          resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
         attributesManual: Boolean(updatedFormData.attributesManual),
       },
-      productType: 'variable',
-      ...(updatedFormData.shortDescription ? { shortDescription: updatedFormData.shortDescription } : {}),
-      ...(updatedFormData.visibility ? { visibility: updatedFormData.visibility } : {}),
+      productType: "variable",
+      ...(updatedFormData.shortDescription
+        ? { shortDescription: updatedFormData.shortDescription }
+        : {}),
+      ...(updatedFormData.visibility
+        ? { visibility: updatedFormData.visibility }
+        : {}),
       tags: Array.isArray(updatedFormData.tags) ? updatedFormData.tags : [],
-      ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length ? { seo: updatedFormData.seo } : {}),
-      ...(Array.isArray(updatedFormData.relatedProducts) ? { relatedProducts: updatedFormData.relatedProducts } : {}),
-      ...(Array.isArray(updatedFormData.crossSellProducts) ? { crossSellProducts: updatedFormData.crossSellProducts } : {}),
-      ...(Array.isArray(updatedFormData.upSellProducts) ? { upSellProducts: updatedFormData.upSellProducts } : {}),
-      ...(Array.isArray(updatedFormData.frequentlyBoughtTogether) ? { frequentlyBoughtTogether: updatedFormData.frequentlyBoughtTogether } : {}),
-      ...(Array.isArray(updatedFormData.featuredProducts) ? { featuredProducts: updatedFormData.featuredProducts } : {}),
-      ...(Array.isArray(updatedFormData.trendingProducts) ? { trendingProducts: updatedFormData.trendingProducts } : {}),
-      ...(Array.isArray(updatedFormData.bestSellerProducts) ? { bestSellerProducts: updatedFormData.bestSellerProducts } : {}),
-      ...(Array.isArray(updatedFormData.collectionIds) ? { collectionIds: updatedFormData.collectionIds } : {}),
-      ...(variableOptionAxes.length ? {
-        options: variableOptionAxes,
-        variantAxes: variableOptionAxes.map((axis) => axis.slug || axis.name),
-      } : {}),
-      ...(normalizedVariants.length ? {
-        variants: normalizedVariants,
-        hasVariants: true,
-      } : {}),
+      ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length
+        ? { seo: updatedFormData.seo }
+        : {}),
+      ...(Array.isArray(updatedFormData.relatedProducts)
+        ? { relatedProducts: updatedFormData.relatedProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.crossSellProducts)
+        ? { crossSellProducts: updatedFormData.crossSellProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.upSellProducts)
+        ? { upSellProducts: updatedFormData.upSellProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.frequentlyBoughtTogether)
+        ? { frequentlyBoughtTogether: updatedFormData.frequentlyBoughtTogether }
+        : {}),
+      ...(Array.isArray(updatedFormData.featuredProducts)
+        ? { featuredProducts: updatedFormData.featuredProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.trendingProducts)
+        ? { trendingProducts: updatedFormData.trendingProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.bestSellerProducts)
+        ? { bestSellerProducts: updatedFormData.bestSellerProducts }
+        : {}),
+      ...(Array.isArray(updatedFormData.collectionIds)
+        ? { collectionIds: updatedFormData.collectionIds }
+        : {}),
+      ...(variableOptionAxes.length
+        ? {
+            options: variableOptionAxes,
+            variantAxes: variableOptionAxes.map(
+              (axis) => axis.slug || axis.name,
+            ),
+          }
+        : {}),
+      ...(normalizedVariants.length
+        ? {
+            variants: normalizedVariants,
+            hasVariants: true,
+          }
+        : {}),
     };
 
     try {
       const response = isEditMode
-        ? await dispatch(updateProductsById({ id, body: productPayload })).unwrap()
+        ? await dispatch(
+            updateProductsById({ id, body: productPayload }),
+          ).unwrap()
         : await dispatch(createProducts(productPayload)).unwrap();
 
       if (response) {
         if (!isEditMode) {
           setFormData({});
-          setVariantRows([{
-            "sku": "",
-            "type": null,
-            "remark": "",
-            "packaging": "",
-            "mrp": "",
-            "discount": "",
-            "salePrice": "",
-            "stock": ""
-          }]);
+          setVariantRows([
+            {
+              sku: "",
+              type: null,
+              remark: "",
+              packaging: "",
+              mrp: "",
+              discount: "",
+              salePrice: "",
+              stock: "",
+            },
+          ]);
           setVariantsData([DEFAULT_PRODUCT_VARIANT]);
           setVariantAxes([]);
         }
@@ -1315,19 +1740,30 @@ export default function ProductManagementUI() {
     } finally {
       setSaving(false);
     }
-  }, [formData, options, dispatch, setFormData, isEditMode, isSellerPanelUser, id, navigate, shippingProfileOptions, variantAxes, variantsData]);
-
+  }, [
+    formData,
+    options,
+    dispatch,
+    setFormData,
+    isEditMode,
+    isSellerPanelUser,
+    id,
+    navigate,
+    shippingProfileOptions,
+    variantAxes,
+    variantsData,
+  ]);
 
   const handleProductDetailChange = (field, content) => {
     setFormData((prev) => ({
       ...prev,
       [field]: content,
     }));
-    setError({})
+    setError({});
   };
 
   const handleNestedChange = useCallback((field, value) => {
-    const parts = field.split('.');
+    const parts = field.split(".");
     if (parts.length === 1) {
       setFormData((prev) => ({ ...prev, [field]: value }));
     } else {
@@ -1335,7 +1771,13 @@ export default function ProductManagementUI() {
       setFormData((prev) => ({
         ...prev,
         [group]: deepKey
-          ? { ...(prev[group] || {}), [subKey]: { ...((prev[group] || {})[subKey] || {}), [deepKey]: value } }
+          ? {
+              ...(prev[group] || {}),
+              [subKey]: {
+                ...((prev[group] || {})[subKey] || {}),
+                [deepKey]: value,
+              },
+            }
           : { ...(prev[group] || {}), [subKey]: value },
       }));
     }
@@ -1352,16 +1794,16 @@ export default function ProductManagementUI() {
   }, []);
 
   const addManualAttribute = useCallback(() => {
-    const key = (newAttrKey || '').trim();
-    const value = (newAttrValue || '').trim();
+    const key = (newAttrKey || "").trim();
+    const value = (newAttrValue || "").trim();
     const existingKeys = Object.keys(formData?.attributes || {});
     const errors = {};
 
-    if (!key) errors.key = 'Attribute key is required.';
+    if (!key) errors.key = "Attribute key is required.";
     else if (existingKeys.some((k) => k.toLowerCase() === key.toLowerCase())) {
-      errors.key = 'This attribute key already exists.';
+      errors.key = "This attribute key already exists.";
     }
-    if (!value) errors.value = 'Attribute value is required.';
+    if (!value) errors.value = "Attribute value is required.";
 
     if (Object.keys(errors).length > 0) {
       setManualAttrErrors(errors);
@@ -1369,9 +1811,12 @@ export default function ProductManagementUI() {
     }
 
     setManualAttrErrors({});
-    setFormData((prev) => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: value } }));
-    setNewAttrKey('');
-    setNewAttrValue('');
+    setFormData((prev) => ({
+      ...prev,
+      attributes: { ...(prev.attributes || {}), [key]: value },
+    }));
+    setNewAttrKey("");
+    setNewAttrValue("");
   }, [newAttrKey, newAttrValue, formData?.attributes]);
 
   const removeManualAttribute = useCallback((key) => {
@@ -1389,63 +1834,73 @@ export default function ProductManagementUI() {
   }, []);
 
   const updateManualAttributeValue = useCallback((key, value) => {
-    setFormData((prev) => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: value } }));
+    setFormData((prev) => ({
+      ...prev,
+      attributes: { ...(prev.attributes || {}), [key]: value },
+    }));
     setManualAttrErrors((prev) => {
-      const trimmed = (value || '').trim();
+      const trimmed = (value || "").trim();
       const hasRowError = prev?.rowErrors?.[key];
       if (trimmed && !hasRowError) return prev;
       const nextRowErrors = { ...(prev?.rowErrors || {}) };
       if (trimmed) delete nextRowErrors[key];
-      else nextRowErrors[key] = 'Value cannot be empty.';
+      else nextRowErrors[key] = "Value cannot be empty.";
       return { ...prev, rowErrors: nextRowErrors };
     });
   }, []);
 
-  const handleManualAttrKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addManualAttribute();
-    }
-  }, [addManualAttribute]);
-
-  const tabs = useMemo(() => [
-    {
-      id: 'basic-details',
-      title: 'Basic details',
-      description: 'Manage the product\'s basic information.',
-      icon: <GrDocument />,
-      component: (
-        <BasicDetailsTab
-          formData={formData}
-          errors={error}
-          handleChange={handleChange}
-          formattedCategoryList={createSelectOptions}
-          formattedBrandList={formattedData.brandList}
-          formattedWarrantyList={formattedData.warrantyTemplateList}
-          formattedProductFamilyList={formattedData.productFamilyList}
-          handleSelectChange={handleSelectChange}
-          fetchAllData={fetchAllData}
-          allCategories={prefillList('categories', getListPayload(selector?.getListData))}
-          countryList={formattedData.countryList}
-          sellerList={formattedData.sellerList}
-          organizationList={organizationOptions}
-          hsnCodeList={formattedData?.hsnCodeList}
-          API_CALL_OBJECT={API_CALL_OBJECT}
-          handleInputReactQuillChange={handleProductDetailChange}
-          userData={userData}
-          hasVariantPricing
-        />
-      )
+  const handleManualAttrKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addManualAttribute();
+      }
     },
+    [addManualAttribute],
+  );
 
-    {
-      id: 'product-details',
-      title: 'Attributes',
-      description: 'Manage category-based product attributes.',
-      icon: <GrDocument />,
-      component: (
-        <div className="space-y-4">
-          {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
+  const tabs = useMemo(
+    () => [
+      {
+        id: "basic-details",
+        title: "Basic details",
+        description: "Manage the product's basic information.",
+        icon: <GrDocument />,
+        component: (
+          <BasicDetailsTab
+            formData={formData}
+            errors={error}
+            handleChange={handleChange}
+            formattedCategoryList={createSelectOptions}
+            formattedBrandList={formattedData.brandList}
+            formattedWarrantyList={formattedData.warrantyTemplateList}
+            formattedProductFamilyList={formattedData.productFamilyList}
+            handleSelectChange={handleSelectChange}
+            fetchAllData={fetchAllData}
+            allCategories={prefillList(
+              "categories",
+              getListPayload(selector?.getListData),
+            )}
+            countryList={formattedData.countryList}
+            sellerList={formattedData.sellerList}
+            organizationList={organizationOptions}
+            hsnCodeList={formattedData?.hsnCodeList}
+            API_CALL_OBJECT={API_CALL_OBJECT}
+            handleInputReactQuillChange={handleProductDetailChange}
+            userData={userData}
+            hasVariantPricing
+          />
+        ),
+      },
+
+      {
+        id: "product-details",
+        title: "Attributes",
+        description: "Manage category-based product attributes.",
+        icon: <GrDocument />,
+        component: (
+          <div className="space-y-4">
+            {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
               <p className="text-xs text-gray-500 mt-0.5">Choose dynamic (category-driven) attributes or enter manual key/value attributes.</p>
@@ -1456,266 +1911,399 @@ export default function ProductManagementUI() {
             </label>
           </div> */}
 
-          {useManualAttributes ? (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-                  <div>
-                    <label className="admin-label">Key</label>
-                    <input
-                      className={`admin-input${manualAttrErrors.key ? ' admin-input-error' : ''}`}
-                      value={newAttrKey}
-                      onChange={(e) => {
-                        setNewAttrKey(e.target.value);
-                        if (manualAttrErrors.key) setManualAttrErrors((prev) => ({ ...prev, key: undefined }));
-                      }}
-                      onKeyDown={handleManualAttrKeyDown}
-                      placeholder="eg. material"
-                      aria-invalid={Boolean(manualAttrErrors.key)}
-                    />
-                    {manualAttrErrors.key && (
-                      <p className="admin-field-error flex items-center gap-1" role="alert">
-                        <FiAlertCircle className="shrink-0" /> {manualAttrErrors.key}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="admin-label">Value</label>
-                    <input
-                      className={`admin-input${manualAttrErrors.value ? ' admin-input-error' : ''}`}
-                      value={newAttrValue}
-                      onChange={(e) => {
-                        setNewAttrValue(e.target.value);
-                        if (manualAttrErrors.value) setManualAttrErrors((prev) => ({ ...prev, value: undefined }));
-                      }}
-                      onKeyDown={handleManualAttrKeyDown}
-                      placeholder="eg. cotton"
-                      aria-invalid={Boolean(manualAttrErrors.value)}
-                    />
-                    {manualAttrErrors.value && (
-                      <p className="admin-field-error flex items-center gap-1" role="alert">
-                        <FiAlertCircle className="shrink-0" /> {manualAttrErrors.value}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="admin-label invisible sm:block hidden">Add</label>
-                    <button
-                      type="button"
-                      className="admin-btn w-full sm:w-auto flex items-center justify-center gap-1.5"
-                      onClick={addManualAttribute}
-                    >
-                      <FiPlus /> Add attribute
-                    </button>
+            {useManualAttributes ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                    <div>
+                      <label className="admin-label">Key</label>
+                      <input
+                        className={`admin-input${manualAttrErrors.key ? " admin-input-error" : ""}`}
+                        value={newAttrKey}
+                        onChange={(e) => {
+                          setNewAttrKey(e.target.value);
+                          if (manualAttrErrors.key)
+                            setManualAttrErrors((prev) => ({
+                              ...prev,
+                              key: undefined,
+                            }));
+                        }}
+                        onKeyDown={handleManualAttrKeyDown}
+                        placeholder="eg. material"
+                        aria-invalid={Boolean(manualAttrErrors.key)}
+                      />
+                      {manualAttrErrors.key && (
+                        <p
+                          className="admin-field-error flex items-center gap-1"
+                          role="alert"
+                        >
+                          <FiAlertCircle className="shrink-0" />{" "}
+                          {manualAttrErrors.key}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="admin-label">Value</label>
+                      <input
+                        className={`admin-input${manualAttrErrors.value ? " admin-input-error" : ""}`}
+                        value={newAttrValue}
+                        onChange={(e) => {
+                          setNewAttrValue(e.target.value);
+                          if (manualAttrErrors.value)
+                            setManualAttrErrors((prev) => ({
+                              ...prev,
+                              value: undefined,
+                            }));
+                        }}
+                        onKeyDown={handleManualAttrKeyDown}
+                        placeholder="eg. cotton"
+                        aria-invalid={Boolean(manualAttrErrors.value)}
+                      />
+                      {manualAttrErrors.value && (
+                        <p
+                          className="admin-field-error flex items-center gap-1"
+                          role="alert"
+                        >
+                          <FiAlertCircle className="shrink-0" />{" "}
+                          {manualAttrErrors.value}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="admin-label invisible sm:block hidden">
+                        Add
+                      </label>
+                      <button
+                        type="button"
+                        className="admin-btn w-full sm:w-auto flex items-center justify-center gap-1.5"
+                        onClick={addManualAttribute}
+                      >
+                        <FiPlus /> Add attribute
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                {Object.keys(formData?.attributes || {}).length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-200 py-6 text-center">
-                    <p className="text-sm text-gray-400">No manual attributes added yet.</p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs font-medium text-gray-500">
-                      {Object.keys(formData?.attributes || {}).length} attribute{Object.keys(formData?.attributes || {}).length === 1 ? '' : 's'} added
-                    </p>
-                    {Object.keys(formData?.attributes || {}).map((key) => {
-                      const rowError = manualAttrErrors?.rowErrors?.[key];
-                      return (
-                        <div
-                          key={key}
-                          className={`flex items-start gap-3 rounded-lg border p-2.5 transition-colors ${rowError ? 'border-red-300 bg-red-50/40' : 'border-gray-200 bg-white hover:border-gray-300'}`}
-                        >
-                          <div className="w-36 shrink-0 pt-2 text-sm font-medium text-gray-700 truncate" title={key}>{key}</div>
-                          <div className="flex-1">
-                            <input
-                              className={`admin-input${rowError ? ' admin-input-error' : ''}`}
-                              value={formData.attributes[key] || ''}
-                              onChange={(e) => updateManualAttributeValue(key, e.target.value)}
-                            />
-                            {rowError && (
-                              <p className="admin-field-error flex items-center gap-1" role="alert">
-                                <FiAlertCircle className="shrink-0" /> {rowError}
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            className="mt-1.5 shrink-0 rounded-md p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                            onClick={() => removeManualAttribute(key)}
-                            aria-label={`Remove ${key} attribute`}
-                            title="Remove attribute"
+                <div className="space-y-2">
+                  {Object.keys(formData?.attributes || {}).length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-200 py-6 text-center">
+                      <p className="text-sm text-gray-400">
+                        No manual attributes added yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs font-medium text-gray-500">
+                        {Object.keys(formData?.attributes || {}).length}{" "}
+                        attribute
+                        {Object.keys(formData?.attributes || {}).length === 1
+                          ? ""
+                          : "s"}{" "}
+                        added
+                      </p>
+                      {Object.keys(formData?.attributes || {}).map((key) => {
+                        const rowError = manualAttrErrors?.rowErrors?.[key];
+                        return (
+                          <div
+                            key={key}
+                            className={`flex items-start gap-3 rounded-lg border p-2.5 transition-colors ${rowError ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-white hover:border-gray-300"}`}
                           >
-                            <FiTrash2 size={16} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
+                            <div
+                              className="w-36 shrink-0 pt-2 text-sm font-medium text-gray-700 truncate"
+                              title={key}
+                            >
+                              {key}
+                            </div>
+                            <div className="flex-1">
+                              <input
+                                className={`admin-input${rowError ? " admin-input-error" : ""}`}
+                                value={formData.attributes[key] || ""}
+                                onChange={(e) =>
+                                  updateManualAttributeValue(
+                                    key,
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                              {rowError && (
+                                <p
+                                  className="admin-field-error flex items-center gap-1"
+                                  role="alert"
+                                >
+                                  <FiAlertCircle className="shrink-0" />{" "}
+                                  {rowError}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-1.5 shrink-0 rounded-md p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              onClick={() => removeManualAttribute(key)}
+                              aria-label={`Remove ${key} attribute`}
+                              title="Remove attribute"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <DynamicAttributesTab
-              attributeSchema={categoryAttributeSchema}
-              formData={formData}
-              setFormData={setFormData}
-              errors={error}
-              optionValues={platformValues}
-            />
-          )}
-        </div>
-      )
-    },
-    {
-      id: 'variants-options',
-      title: 'Variants & options',
-      description: 'Customize the product variants, including size, color, etc.',
-      icon: <BsMenuApp />,
-      component: (
-        <div className="space-y-5">
-          <div className="pb-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Variant Builder</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Define option axes (Color, Size...), generate combinations, then edit each variant.</p>
+            ) : (
+              <DynamicAttributesTab
+                attributeSchema={categoryAttributeSchema}
+                formData={formData}
+                setFormData={setFormData}
+                errors={error}
+                optionValues={platformValues}
+              />
+            )}
           </div>
-          {error?.variants && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error.variants}
-            </div>
-          )}
-          <VariantBuilder
-            variants={variantsData}
-            options={variantAxes}
-            basePrice={Number(formData?.price || 0)}
-            baseMrp={Number(formData?.mrp || 0)}
-            onChange={setVariantsData}
-            onOptionsChange={setVariantAxes}
-            platformOptions={platformOptions}
-            platformValues={platformValues}
-            onOptionSearch={handleOptionSearch}
-          />
-        </div>
-      )
-    },
-    {
-      id: 'shipping',
-      title: 'Shipping',
-      description: 'Product delivery and serviceability.',
-      icon: <BsMenuApp />,
-      component: (
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="pb-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Select a shipping profile or configure delivery settings manually.</p>
-          </div>
-
-          {formData?.shipping?.freeShipping ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-sm font-semibold text-emerald-800">Free shipping is enabled</p>
-              <p className="text-xs text-emerald-700 mt-0.5">
-                Shipping profile selection is hidden while this product has free shipping.
+        ),
+      },
+      {
+        id: "variants-options",
+        title: "Variants & options",
+        description:
+          "Customize the product variants, including size, color, etc.",
+        icon: <BsMenuApp />,
+        component: (
+          <div className="space-y-5">
+            <div className="pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Variant Builder
+              </h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Define option axes (Color, Size...), generate combinations, then
+                edit each variant.
               </p>
             </div>
-          ) : (
-            <div className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? 'border-[var(--admin-blue)] bg-[var(--admin-blue)]/5' : 'border-gray-200 bg-gray-50'}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Shipping Profile</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Reusable delivery configuration. Selecting a profile uses its serviceability, charges, COD, and ETA.</p>
-                </div>
-                {formData?.shipping?.shippingProfileId && (
-                  <button type="button" className="text-xs text-red-500 hover:underline whitespace-nowrap" onClick={() => patchShipping({ shippingProfileId: null })}>
-                    Remove profile
-                  </button>
-                )}
+            {error?.variants && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error.variants}
               </div>
-              <select
-                className="admin-input"
-                value={formData?.shipping?.shippingProfileId || ''}
-                onChange={(e) => patchShipping({ shippingProfileId: e.target.value || null })}
-              >
-                <option value="">— No profile (use manual settings below) —</option>
-                {shippingProfileOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}{opt.profile?.isDefault ? ' (Default)' : ''}</option>
-                ))}
-              </select>
-              {shippingProfileOptions.length === 0 && !formData?.sellerId && (
-                <p className="text-xs text-amber-600">Select a seller first to load their shipping profiles.</p>
-              )}
-              {shippingProfileOptions.length === 0 && formData?.sellerId && (
-                <p className="text-xs text-gray-400">No active shipping profiles found. <a href="/app/shipping-profiles" className="text-[var(--admin-blue)] hover:underline" target="_blank" rel="noopener noreferrer">Create one →</a></p>
-              )}
-              {formData?.shipping?.shippingProfileId && (() => {
-                const selected = shippingProfileOptions.find((o) => o.value === formData.shipping.shippingProfileId);
-                const p = selected?.profile;
-                if (!p) return null;
-                return (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    {[
-                      { label: 'Method', value: p.shippingMethod },
-                      { label: 'Mode', value: p.serviceabilityMode?.replace(/_/g, ' ') },
-                      { label: 'Charge', value: p.shippingCharge === 0 ? 'Free' : `₹${Number(p.shippingCharge).toFixed(0)}` },
-                      { label: 'COD', value: p.codAvailable ? 'Available' : 'Not available' },
-                      ...(p.etaMin || p.etaMax ? [{ label: 'ETA', value: [p.etaMin, p.etaMax].filter(Boolean).join('–') + ' days' }] : []),
-                    ].map(({ label, value }) => (
-                      <div key={label} className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5">
-                        <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
-                        <p className="text-xs font-semibold text-gray-700 mt-0.5">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-              {formData?.shipping?.shippingProfileId && (
-                <p className="text-xs text-[var(--admin-blue)]">
-                  Manual shipping fields are hidden while this profile is active. Remove the profile to edit product-level shipping manually.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      id: 'seo',
-      title: 'SEO',
-      description: 'Search engine metadata and social sharing settings.',
-      icon: <GrDocument />,
-      component: (
-        <div className="space-y-5">
-          <div className="pb-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">SEO &amp; Metadata</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Optimise how this product appears in search engines and social sharing.</p>
-          </div>
-          <SEOPanel seo={formData?.seo || {}} onChange={handleNestedChange} slug={formData?.slug || ''} />
-        </div>
-      )
-    },
-    {
-      id: 'tags',
-      title: 'Tags & Discovery',
-      description: 'Tags, badges, and discoverability settings.',
-      icon: <BsMenuApp />,
-      component: (
-        <div className="space-y-6">
-          <div className="pb-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Tags &amp; Discovery</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Tags, badges, and discoverability settings.</p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">Tags help customers find this product through search and filters.</p>
-            <TagsInput
-              tags={Array.isArray(formData?.tags) ? formData.tags : []}
-              onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
-              placeholder="Add tag…"
-              maxTags={20}
+            )}
+            <VariantBuilder
+              variants={variantsData}
+              options={variantAxes}
+              basePrice={Number(formData?.price || 0)}
+              baseMrp={Number(formData?.mrp || 0)}
+              onChange={setVariantsData}
+              onOptionsChange={setVariantAxes}
+              platformOptions={platformOptions}
+              platformValues={platformValues}
+              onOptionSearch={handleOptionSearch}
             />
           </div>
+        ),
+      },
+      {
+        id: "shipping",
+        title: "Shipping",
+        description: "Product delivery and serviceability.",
+        icon: <BsMenuApp />,
+        component: (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Select a shipping profile or configure delivery settings
+                manually.
+              </p>
+            </div>
 
-          {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
+            {formData?.shipping?.freeShipping ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-800">
+                  Free shipping is enabled
+                </p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  Shipping profile selection is hidden while this product has
+                  free shipping.
+                </p>
+              </div>
+            ) : (
+              <div
+                className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5" : "border-gray-200 bg-gray-50"}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Shipping Profile
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Reusable delivery configuration. Selecting a profile uses
+                      its serviceability, charges, COD, and ETA.
+                    </p>
+                  </div>
+                  {formData?.shipping?.shippingProfileId && (
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline whitespace-nowrap"
+                      onClick={() => patchShipping({ shippingProfileId: null })}
+                    >
+                      Remove profile
+                    </button>
+                  )}
+                </div>
+                <select
+                  className="admin-input"
+                  value={formData?.shipping?.shippingProfileId || ""}
+                  onChange={(e) =>
+                    patchShipping({ shippingProfileId: e.target.value || null })
+                  }
+                >
+                  <option value="">
+                    — No profile (use manual settings below) —
+                  </option>
+                  {shippingProfileOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                      {opt.profile?.isDefault ? " (Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+                {shippingProfileOptions.length === 0 && !formData?.sellerId && (
+                  <p className="text-xs text-amber-600">
+                    Select a seller first to load their shipping profiles.
+                  </p>
+                )}
+                {shippingProfileOptions.length === 0 && formData?.sellerId && (
+                  <p className="text-xs text-gray-400">
+                    No active shipping profiles found.{" "}
+                    <a
+                      href="/app/shipping-profiles"
+                      className="text-[var(--admin-blue)] hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Create one →
+                    </a>
+                  </p>
+                )}
+                {formData?.shipping?.shippingProfileId &&
+                  (() => {
+                    const selected = shippingProfileOptions.find(
+                      (o) => o.value === formData.shipping.shippingProfileId,
+                    );
+                    const p = selected?.profile;
+                    if (!p) return null;
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        {[
+                          { label: "Method", value: p.shippingMethod },
+                          {
+                            label: "Mode",
+                            value: p.serviceabilityMode?.replace(/_/g, " "),
+                          },
+                          {
+                            label: "Charge",
+                            value:
+                              p.shippingCharge === 0
+                                ? "Free"
+                                : `₹${Number(p.shippingCharge).toFixed(0)}`,
+                          },
+                          {
+                            label: "COD",
+                            value: p.codAvailable
+                              ? "Available"
+                              : "Not available",
+                          },
+                          ...(p.etaMin || p.etaMax
+                            ? [
+                                {
+                                  label: "ETA",
+                                  value:
+                                    [p.etaMin, p.etaMax]
+                                      .filter(Boolean)
+                                      .join("–") + " days",
+                                },
+                              ]
+                            : []),
+                        ].map(({ label, value }) => (
+                          <div
+                            key={label}
+                            className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5"
+                          >
+                            <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                              {label}
+                            </p>
+                            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                {formData?.shipping?.shippingProfileId && (
+                  <p className="text-xs text-[var(--admin-blue)]">
+                    Manual shipping fields are hidden while this profile is
+                    active. Remove the profile to edit product-level shipping
+                    manually.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "seo",
+        title: "SEO",
+        description: "Search engine metadata and social sharing settings.",
+        icon: <GrDocument />,
+        component: (
+          <div className="space-y-5">
+            <div className="pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                SEO &amp; Metadata
+              </h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Optimise how this product appears in search engines and social
+                sharing.
+              </p>
+            </div>
+            <SEOPanel
+              seo={formData?.seo || {}}
+              onChange={handleNestedChange}
+              slug={formData?.slug || ""}
+            />
+          </div>
+        ),
+      },
+      {
+        id: "tags",
+        title: "Tags & Discovery",
+        description: "Tags, badges, and discoverability settings.",
+        icon: <BsMenuApp />,
+        component: (
+          <div className="space-y-6">
+            <div className="pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Tags &amp; Discovery
+              </h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Tags, badges, and discoverability settings.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">
+                Tags help customers find this product through search and
+                filters.
+              </p>
+              <TagsInput
+                tags={Array.isArray(formData?.tags) ? formData.tags : []}
+                onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+                placeholder="Add tag…"
+                maxTags={20}
+              />
+            </div>
+
+            {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-[var(--admin-ink)]">Deal Product</h4>
@@ -1763,22 +2351,54 @@ export default function ProductManagementUI() {
               </div>
             )}
           </div> */}
-        </div>
-      )
-    },
-  ], [
-    formData, formattedData, createSelectOptions,
-    handleChange, handleSelectChange, handleNestedChange, patchShipping,
-    selector, options, variantsData, variantAxes, categoryAttributeSchema, error,
-  ]);
+          </div>
+        ),
+      },
+    ],
+    [
+      formData,
+      formattedData,
+      createSelectOptions,
+      handleChange,
+      handleSelectChange,
+      handleNestedChange,
+      patchShipping,
+      selector,
+      options,
+      variantsData,
+      variantAxes,
+      categoryAttributeSchema,
+      error,
+    ],
+  );
 
   const flowReadiness = useMemo(() => {
     const items = [
-      { label: 'Categories', count: createSelectOptions?.length || 0, route: '/app/categories' },
-      { label: 'Attributes (selected category)', count: categoryAttributeSchema?.length || 0, route: '/app/categories' },
-      { label: 'Brands', count: formattedData?.brandList?.length || 0, route: '/app/brands' },
-      { label: 'HSN Codes', count: formattedData?.hsnCodeList?.length || 0, route: '/app/hsn-code' },
-      { label: 'Warranty Templates', count: formattedData?.warrantyTemplateList?.length || 0, route: '/app/warranty' },
+      {
+        label: "Categories",
+        count: createSelectOptions?.length || 0,
+        route: "/app/categories",
+      },
+      {
+        label: "Attributes (selected category)",
+        count: categoryAttributeSchema?.length || 0,
+        route: "/app/categories",
+      },
+      {
+        label: "Brands",
+        count: formattedData?.brandList?.length || 0,
+        route: "/app/brands",
+      },
+      {
+        label: "HSN Codes",
+        count: formattedData?.hsnCodeList?.length || 0,
+        route: "/app/hsn-code",
+      },
+      {
+        label: "Warranty Templates",
+        count: formattedData?.warrantyTemplateList?.length || 0,
+        route: "/app/warranty",
+      },
     ];
     return items;
   }, [createSelectOptions, categoryAttributeSchema, formattedData]);
@@ -1786,19 +2406,39 @@ export default function ProductManagementUI() {
   const flowGateErrors = useMemo(() => {
     const blockers = [];
     if (!createSelectOptions?.length) {
-      blockers.push({ key: 'categories', message: 'Create at least one category before creating products.', route: '/app/categories' });
+      blockers.push({
+        key: "categories",
+        message: "Create at least one category before creating products.",
+        route: "/app/categories",
+      });
     }
     if (!formattedData?.brandList?.length) {
-      blockers.push({ key: 'brands', message: 'Create at least one brand to assign products properly.', route: '/app/brands' });
+      blockers.push({
+        key: "brands",
+        message: "Create at least one brand to assign products properly.",
+        route: "/app/brands",
+      });
     }
     if (!formattedData?.hsnCodeList?.length) {
-      blockers.push({ key: 'hsn', message: 'Create at least one HSN code so tax mapping is consistent.', route: '/app/hsn-code' });
+      blockers.push({
+        key: "hsn",
+        message: "Create at least one HSN code so tax mapping is consistent.",
+        route: "/app/hsn-code",
+      });
     }
     if (!formData?.brand) {
-      blockers.push({ key: 'brand_selected', message: 'Select a brand for this product.', route: '/app/brands' });
+      blockers.push({
+        key: "brand_selected",
+        message: "Select a brand for this product.",
+        route: "/app/brands",
+      });
     }
     if (!formData?.hsnCode && !formData?.hsn_code) {
-      blockers.push({ key: 'hsn_selected', message: 'Select an HSN code for this product.', route: '/app/hsn-code' });
+      blockers.push({
+        key: "hsn_selected",
+        message: "Select an HSN code for this product.",
+        route: "/app/hsn-code",
+      });
     }
     // Product Family Code remains available in the form, but it is optional.
     // The prior gate blocked saves after related product fields were hidden.
@@ -1811,9 +2451,11 @@ export default function ProductManagementUI() {
     if (flowGateErrors.length) {
       setError((prev) => ({
         ...(prev || {}),
-        flow: `Complete ${flowGateErrors.length} setup ${flowGateErrors.length > 1 ? 'items' : 'item'} before saving.`,
+        flow: `Complete ${flowGateErrors.length} setup ${flowGateErrors.length > 1 ? "items" : "item"} before saving.`,
       }));
-      toast.error('Product flow is incomplete. Complete the highlighted setup items first.');
+      toast.error(
+        "Product flow is incomplete. Complete the highlighted setup items first.",
+      );
       return;
     }
     setError((prev) => {
@@ -1825,13 +2467,9 @@ export default function ProductManagementUI() {
     handleSaveSubmit();
   }, [flowGateErrors, handleSaveSubmit]);
 
-
   return (
-    <div className='relative min-h-screen'>
-      <Loader
-        loading={loading || saving}
-
-      />
+    <div className="relative min-h-screen">
+      <Loader loading={loading || saving} />
       <Breadcrumb isEditMode={isEditMode} />
       {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
@@ -1882,22 +2520,37 @@ export default function ProductManagementUI() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="space-y-1 pb-5">
-            <h3 className="text-2xl font-semibold">{isEditMode ? "Edit" : "Add"} Product</h3>
-            <p className="text-xs text-gray-500">Fields with (<span className="text-red-500">*</span>) are mandatory</p>
+            <h3 className="text-2xl font-semibold">
+              {isEditMode ? "Edit" : "Add"} Product
+            </h3>
+            <p className="text-xs text-gray-500">
+              Fields with (<span className="text-red-500">*</span>) are
+              mandatory
+            </p>
           </div>
           <main
             ref={mainContainerRef}
             className="flex-1 bg-white border border-gray-100 rounded-xl overflow-visible"
           >
-            {tabs?.map(tab => (
-              <section key={tab.id} ref={refs[tab.id]} id={tab.id} className="px-4 py-6 sm:px-6 sm:py-8 border-b border-gray-100 last:border-b-0 scroll-mt-24">
+            {tabs?.map((tab) => (
+              <section
+                key={tab.id}
+                ref={refs[tab.id]}
+                id={tab.id}
+                className="px-4 py-6 sm:px-6 sm:py-8 border-b border-gray-100 last:border-b-0 scroll-mt-24"
+              >
                 {tab.component}
               </section>
             ))}
           </main>
         </div>
         <div className="lg:w-64 xl:w-72 flex-shrink-0 lg:sticky lg:top-24 h-fit">
-          <ProductSettingsPanel handleSaveSubmit={handleValidateAndSubmit} formData={formData} handleToggleProductSetting={handleToggleProductSetting} saving={saving} />
+          <ProductSettingsPanel
+            handleSaveSubmit={handleValidateAndSubmit}
+            formData={formData}
+            handleToggleProductSetting={handleToggleProductSetting}
+            saving={saving}
+          />
         </div>
       </div>
     </div>
