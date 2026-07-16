@@ -120,7 +120,7 @@ const SellerPayouts = () => {
       <PageHeader
         title="Seller Payouts"
         subtitle={isSeller ? "See how every payout was calculated and when it was paid." : "Calculated seller payouts. Use Payout Operations to approve or complete them."}
-        breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Seller Payouts" }]}
+        breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Payouts" }]}
         actions={(
           <div className="flex flex-wrap gap-2">
             <button

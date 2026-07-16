@@ -345,7 +345,7 @@ const ShipmentTracking = () => {
       <PageHeader
         title="Shipments"
         subtitle="Manage seller delivery progress, customer OTP verification, courier details, AWB, and tracking history"
-        breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipments" }]}
+        breadcrumbs={[{ label: isSeller ? "Seller Shipping" : "Shipping & Fulfilment" }, { label: isSeller ? "Shipment Tracking" : "Shipments" }]}
       />
 
       <DataTable

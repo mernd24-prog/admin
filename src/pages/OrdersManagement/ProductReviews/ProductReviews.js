@@ -21,6 +21,7 @@ import {
 import EditProductReview from "./components/EditProductReview";
 import AddProductReview from "./components/AddProductReview";
 import { useListPage } from "../../../hooks/useListPage";
+import { isSellerPanel } from "../../../_helpers/panelConfig";
 
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
@@ -237,6 +238,7 @@ const ProductReviews = () => {
 
   const { list: items, total } = getReviewsPayload(reviewsData);
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
+  const sellerView = isSellerPanel();
 
   useEffect(() => {
     setUserData(getSessionUserData());
@@ -509,7 +511,7 @@ const ProductReviews = () => {
         title="Product Reviews"
         subtitle="Manage and moderate customer product reviews"
         breadcrumbs={[
-          { label: "Orders Management" },
+          { label: sellerView ? "Seller Catalog" : "Orders Management" },
           { label: "Product Reviews" },
         ]}
         actions={!isSellerPanelUser ? (

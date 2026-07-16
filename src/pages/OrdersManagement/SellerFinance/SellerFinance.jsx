@@ -421,9 +421,8 @@ const SellerFinance = () => {
             : "Commission, settlement, refund adjustment, and payout management"
         }
         breadcrumbs={[
-          { label: "Home", to: "/app/home" },
-          { label: "Seller Finance & Payouts" },
-          { label: "Seller Finance" },
+          { label: isSeller ? "Seller Finance & Payouts" : "Seller Finance & Payouts" },
+          { label: "Finance Summary" },
         ]}
       />
 

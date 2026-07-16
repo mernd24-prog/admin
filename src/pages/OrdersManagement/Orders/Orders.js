@@ -522,11 +522,11 @@ const Orders = () => {
   return (
     <div>
       <PageHeader
-        title="Orders"
+        title="Orders List"
         subtitle="Manage and track all customer orders"
         breadcrumbs={[
-          { label: "Orders Management" },
-          { label: "Orders" },
+          { label: isSeller ? "Seller Orders" : "Orders Management" },
+          { label: "Seller Orders List" },
         ]}
       />
 

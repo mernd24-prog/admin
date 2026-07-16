@@ -297,25 +297,34 @@ export default function SearchComponent({
               : "pointer-events-none max-h-0 overflow-hidden opacity-0"
           }`}
         >
-          <div className="flex items-end gap-3">
-            <div className="mb-3 flex shrink-0 items-center gap-1.5">
-              <div
-                className="flex items-center justify-center text-[var(--admin-muted)]"
-                title="Filters"
-                aria-label="Filters"
-              >
-                <MdFilterList size={16} />
+          <div className="flex flex-col gap-3 ">
+            <div className="flex shrink-0 items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <MdFilterList size={16} className="text-[var(--admin-muted)]" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                  Filters
+                </span>
+                <span
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] ${activeFilterCount > 0 ? "visible" : "invisible"}`}
+                  aria-hidden={activeFilterCount === 0}
+                >
+                  {activeFilterCount || 0}
+                </span>
               </div>
-              <span
-                className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1 text-[9px] font-bold text-[var(--admin-navy)] ${activeFilterCount > 0 ? "visible" : "invisible"}`}
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={isFiltering || activeFilterCount === 0}
                 aria-hidden={activeFilterCount === 0}
+                tabIndex={activeFilterCount > 0 ? 0 : -1}
+                className={`shrink-0 whitespace-nowrap text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:cursor-not-allowed ${activeFilterCount > 0 ? "visible" : "invisible pointer-events-none"}`}
               >
-                {activeFilterCount || 0}
-              </span>
+                × Clear filters
+              </button>
             </div>
-            <div className={`grid min-w-0 flex-1 ${filterGridClassName} items-end gap-x-3 gap-y-4 text-xs`}>
+            <div className={`flex min-w-0 flex-1 items-center gap-x-3 gap-y-4 text-xs flex-wrap`}>
             {isBrand && (
-              <div className="w-full">
+              <div className="shrink-0">
                 <FilterSelect
                   label={`Brand`}
                   value={filters.brand}
@@ -327,7 +336,7 @@ export default function SearchComponent({
             )}
 
             {isProduct && (
-              <div className="w-full">
+              <div className="shrink-0">
                 <FilterSelect
                   label={productLabel ? productLabel : `Product`}
                   value={filters.product}
@@ -493,16 +502,6 @@ export default function SearchComponent({
               </Button>
             </div>}
             </div>
-            <button
-              type="button"
-              onClick={clearFilters}
-              disabled={isFiltering || activeFilterCount === 0}
-              aria-hidden={activeFilterCount === 0}
-              tabIndex={activeFilterCount > 0 ? 0 : -1}
-              className={`mb-2 w-[76px] shrink-0 whitespace-nowrap text-left text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:cursor-not-allowed ${activeFilterCount > 0 ? "visible" : "invisible pointer-events-none"}`}
-            >
-              × Clear filters
-            </button>
           </div>
         </div>
       )}
