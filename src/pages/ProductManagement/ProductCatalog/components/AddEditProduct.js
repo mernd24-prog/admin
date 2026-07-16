@@ -1196,9 +1196,26 @@ export default function ProductManagementUI() {
     const warranty = compactObject({
       ...(updatedFormData.warranty || {}),
       period: toOptionalNumber(updatedFormData.warranty?.period),
-      returnPolicy: {
-        ...(updatedFormData.warranty?.returnPolicy || {}),
-      },
+      returnPolicy: (() => {
+        const current = updatedFormData.warranty?.returnPolicy || {};
+        const returnable = current.returnable ?? current.eligible ?? true;
+        const returnWindowDays = returnable
+          ? Number(current.returnWindowDays ?? current.days ?? 7)
+          : 0;
+        return {
+          ...current,
+          returnable,
+          eligible: returnable,
+          returnWindowDays,
+          days: returnWindowDays,
+          type: returnable ? current.type || 'standard' : 'non_returnable',
+          resolution: current.resolution || 'refund_or_replacement',
+          requiresImages: Boolean(current.requiresImages),
+          inspectionRequired: current.inspectionRequired !== false,
+          shippingPaidBy: current.shippingPaidBy || 'platform',
+          restockingFee: Number(current.restockingFee || 0),
+        };
+      })(),
     });
     const shipping = compactObject(selectedShippingProfile ? {
       shippingProfileId: updatedFormData.shipping?.shippingProfileId,
@@ -1419,6 +1436,7 @@ export default function ProductManagementUI() {
           formData={formData}
           errors={error}
           handleChange={handleChange}
+          handleNestedChange={handleNestedChange}
           formattedCategoryList={createSelectOptions}
           formattedBrandList={formattedData.brandList}
           formattedWarrantyList={formattedData.warrantyTemplateList}

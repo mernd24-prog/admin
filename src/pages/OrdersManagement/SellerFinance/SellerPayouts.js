@@ -17,7 +17,7 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
-const STATUSES = ["pending", "processing", "on_hold", "completed", "failed", "cancelled"];
+const STATUSES = ["pending", "processing", "approved", "on_hold", "completed", "failed", "cancelled"];
 const FILTER_FIELDS = [
   {
     key: "sellerId",

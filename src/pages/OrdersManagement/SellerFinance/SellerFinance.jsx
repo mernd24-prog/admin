@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import {
   MdCalculate,
   MdCheckCircle,
@@ -54,6 +53,22 @@ const organizationName = (row = {}) => {
 };
 
 const dateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
+const eligibilityCountdown = (value) => {
+  if (!value) return "Waiting for delivery";
+  const remaining = new Date(value).getTime() - Date.now();
+  if (remaining <= 0) return "Window closed";
+  const hours = Math.ceil(remaining / 3600000);
+  return hours <= 48 ? `${hours} hour${hours === 1 ? "" : "s"} left` : `${Math.ceil(hours / 24)} days left`;
+};
+const payoutDecision = (row = {}) => {
+  const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+  if (["eligible", "available"].includes(status) && !row.payout_id) return { allowed: true, label: "Allowed", reason: "Return window closed; no active hold" };
+  if (row.payout_id) return { allowed: false, label: "In Payout", reason: "Already added to a payout" };
+  if (["held", "blocked", "on_hold"].includes(status)) return { allowed: false, label: "Held", reason: row.payoutHoldReason || "Return, refund, dispute, or payment hold" };
+  if (row.releaseReason === "waiting_for_item_return_window") return { allowed: false, label: "Not Yet", reason: `Return window open · ${eligibilityCountdown(row.returnWindowEndsAt || row.eligibleAt)}` };
+  if (!row.deliveredAt) return { allowed: false, label: "Not Yet", reason: "Waiting for delivery" };
+  return { allowed: false, label: "Not Yet", reason: row.releaseReason ? formatLabel(row.releaseReason) : "Waiting for eligibility" };
+};
 
 const MetricCard = ({ label, value, hint }) => (
   <div className="rounded-lg border border-[#E6E6E6] bg-white p-4">
@@ -150,11 +165,16 @@ const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "ban
 
 const SellerFinance = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
-  const [filters, setFilters] = useState({ sellerId: "", organizationId: "", status: "", search: "" });
-  const [orderId, setOrderId] = useState("");
+  const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const [filters, setFilters] = useState({
+    sellerId: initialParams.get("sellerId") || "",
+    organizationId: initialParams.get("organizationId") || "",
+    status: "",
+    search: initialParams.get("orderId") || "",
+  });
+  const [orderId, setOrderId] = useState(initialParams.get("orderId") || "");
   const [submitting, setSubmitting] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
   const [orderOptions, setOrderOptions] = useState([]);
@@ -168,7 +188,18 @@ const SellerFinance = () => {
   }, [isSeller]);
 
   // Process Payout modal
-  const [processModal, setProcessModal] = useState({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+  const [processModal, setProcessModal] = useState({
+    open: false,
+    mode: "order",
+    orderId: initialParams.get("orderId") || "",
+    sellerId: initialParams.get("sellerId") || "",
+    organizationId: initialParams.get("organizationId") || "",
+    paymentMethod: "manual",
+    paymentReference: "",
+    periodStart: "",
+    periodEnd: "",
+    note: "",
+  });
 
   // Complete Payout modal
   const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
@@ -192,8 +223,8 @@ const SellerFinance = () => {
       } else {
         await Promise.all([
           dispatch(getSellerFinanceSummary(filters)).unwrap(),
-          dispatch(getAdminSellerCommissions({ ...filters, limit: 100 })).unwrap(),
-          dispatch(getAdminSellerPayouts({ ...filters, limit: 100 })).unwrap(),
+          dispatch(getAdminSellerCommissions({ ...filters, limit: 200 })).unwrap(),
+          dispatch(getAdminSellerPayouts({ ...filters, limit: 200 })).unwrap(),
           dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
         ]);
       }
@@ -241,6 +272,45 @@ const SellerFinance = () => {
     };
   }, [adminSummary, commissions, isSeller, payouts]);
   const loading = financeState.loading;
+
+  const sellerOverview = useMemo(() => {
+    const grouped = new Map();
+    commissions.forEach((row) => {
+      const sellerId = String(row.seller_id || row.sellerId || "unknown");
+      const current = grouped.get(sellerId) || {
+        sellerId,
+        sellerName: row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(sellerId, sellerOptions),
+        gross: 0,
+        payable: 0,
+        pending: 0,
+        eligible: 0,
+        held: 0,
+        released: 0,
+        nextEligibleAt: null,
+      };
+      current.gross += Number(row.amount || 0);
+      current.payable += Number(row.net_amount || row.netAmount || 0);
+      const lifecycle = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+      if (["available", "eligible"].includes(lifecycle)) current.eligible += 1;
+      else if (["held", "blocked", "on_hold"].includes(lifecycle)) current.held += 1;
+      else if (["paid", "released", "completed"].includes(lifecycle)) current.released += 1;
+      else current.pending += 1;
+      const eligibleAt = row.eligibleAt || row.eligible_at;
+      if (eligibleAt && (!current.nextEligibleAt || new Date(eligibleAt) < new Date(current.nextEligibleAt))) {
+        current.nextEligibleAt = eligibleAt;
+      }
+      grouped.set(sellerId, current);
+    });
+    payouts.forEach((row) => {
+      const sellerId = String(row.seller_id || row.sellerId || "unknown");
+      const current = grouped.get(sellerId);
+      if (!current) return;
+      if (["completed", "paid"].includes(String(row.status || "").toLowerCase())) {
+        current.released += 1;
+      }
+    });
+    return Array.from(grouped.values()).sort((left, right) => right.eligible - left.eligible || right.pending - left.pending);
+  }, [commissions, payouts, sellerOptions]);
 
   const metrics = useMemo(() => [
     {
@@ -336,6 +406,14 @@ const SellerFinance = () => {
 
   const handleProcessPayoutSubmit = async () => {
     if (!processModal.sellerId.trim()) { toast.error("Seller ID is required"); return; }
+    const selectedCommissions = processModal.mode === "order"
+      ? commissions.filter((commission) =>
+        String(commission.order_id || commission.orderId) === String(processModal.orderId) &&
+        ["eligible", "available"].includes(String(commission.lifecycleStatus || commission.releaseStatus || "").toLowerCase()) &&
+        !commission.payout_id)
+      : [];
+    if (processModal.mode === "order" && !processModal.orderId) { toast.error("Select an eligible order"); return; }
+    if (processModal.mode === "order" && !selectedCommissions.length) { toast.error("This order has no eligible unpaid commission"); return; }
     try {
       setSubmitting(true);
       const payload = {
@@ -344,15 +422,63 @@ const SellerFinance = () => {
         paymentMethod: processModal.paymentMethod,
         paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
+        ...(selectedCommissions.length ? { commissionIds: selectedCommissions.map((commission) => commission.id) } : {}),
       };
       if (processModal.periodStart) payload.periodStart = processModal.periodStart;
       if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
       await dispatch(processSellerPayouts(payload)).unwrap();
       toast.success("Payout created and sent to the approval queue");
-      setProcessModal({ open: false, sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+      setProcessModal({ open: false, mode: "order", orderId: "", sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to process payout");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const eligibleOrders = useMemo(() => {
+    const orders = new Map();
+    commissions.forEach((commission) => {
+      const lifecycle = String(commission.lifecycleStatus || commission.releaseStatus || "").toLowerCase();
+      if (!["eligible", "available"].includes(lifecycle) || commission.payout_id) return;
+      const id = commission.order_id || commission.orderId;
+      if (!id) return;
+      const current = orders.get(String(id)) || {
+        id: String(id),
+        label: commission.orderNumber || commission.order_number || String(id).slice(-8),
+        amount: 0,
+      };
+      current.amount += Number(commission.net_amount || commission.netAmount || 0);
+      orders.set(String(id), current);
+    });
+    return Array.from(orders.values());
+  }, [commissions]);
+
+  const handleSingleCommissionPayout = async (commission) => {
+    const sellerId = commission.seller_id || commission.sellerId;
+    if (!sellerId || !commission.id) return;
+    const orderId = commission.order_id || commission.orderId;
+    const commissionIds = commissions
+      .filter((row) =>
+        String(row.order_id || row.orderId) === String(orderId) &&
+        ["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) &&
+        !row.payout_id)
+      .map((row) => row.id);
+    try {
+      setSubmitting(true);
+      await dispatch(processSellerPayouts({
+        sellerId,
+        organizationId: commission.organization_id || commission.organizationId || undefined,
+        commissionIds,
+        paymentMethod: "manual",
+        paymentReference: `commission_${commission.id}_${Date.now()}`,
+        note: `Single eligible commission payout for order ${commission.order_number || commission.order_id}`,
+      })).unwrap();
+      toast.success("This order's eligible amount was added to the payout approval queue");
+      await loadFinance();
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to initiate this commission payout");
     } finally {
       setSubmitting(false);
     }
@@ -429,9 +555,79 @@ const SellerFinance = () => {
 
       {/* Commission Breakdown Info Banner */}
       <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
-        <strong>How commission is calculated:</strong> Platform deducts commission (tier-based: Bronze 15% / Silver 12% / Gold 10% / Platinum 8%) + fixed fee + closing fee from each order item.
-        Seller receives: <em>Item sale price − platform commission − GST on commission</em>. Refund adjustments are applied before payout.
+        <strong>How commission is calculated:</strong> The configured platform commission and GST are calculated from each order item's checkout snapshot.
+        Seller receives: <em>eligible item value − platform commission − commission GST − refund adjustments</em> after that item's return window closes.
       </div>
+
+      {!isSeller && filters.sellerId && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <strong>Eligible</strong> means the item is delivered, its return window has closed, and no return, refund, dispute, or payout hold is active. Only eligible rows can be initiated individually.
+        </div>
+      )}
+
+      {filters.sellerId && (
+        <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-[#E6E6E6] bg-white p-3">
+          {[
+            ["return_window_open", "Return Window Open"],
+            ["eligible", "Eligible for Payout"],
+            ["held", "Held"],
+            ["", "All"],
+          ].map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => updateFilter("status", value)}
+              className={`rounded-md px-3 py-2 text-xs font-semibold ${filters.status === value ? "bg-[#2f6fed] text-white" : "bg-[#f3f6ff] text-[#2f6fed]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!isSeller && (
+        <div className="mb-4">
+          <TableShell
+            title="Seller-wise Payout Queue"
+            headings={["Seller", "Gross", "Payable", "Pending Window", "Eligible", "Held", "Released", "Next Eligible", "Action"]}
+            emptyText="No seller commission records found"
+          >
+            {sellerOverview.length ? sellerOverview.map((seller) => (
+              <tr key={seller.sellerId} className={String(filters.sellerId) === seller.sellerId ? "bg-blue-50" : ""}>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <div className="font-semibold text-[#202337]">{seller.sellerName}</div>
+                  <div className="font-mono text-[11px] text-[#65718b]">{seller.sellerId}</div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">{money(seller.gross)}</td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(seller.payable)}</td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="pending" dot /> <span className="ml-1">{seller.pending}</span></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="eligible" dot /> <span className="ml-1">{seller.eligible}</span></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="held" dot /> <span className="ml-1">{seller.held}</span></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="released" dot /> <span className="ml-1">{seller.released}</span></td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">{seller.nextEligibleAt ? dateTime(seller.nextEligibleAt) : "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <button
+                    type="button"
+                    className="rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
+                    onClick={() => {
+                      updateFilter("sellerId", seller.sellerId);
+                      setProcessModal((prev) => ({ ...prev, sellerId: seller.sellerId, organizationId: "" }));
+                    }}
+                  >
+                    View Seller
+                  </button>
+                </td>
+              </tr>
+            )) : null}
+          </TableShell>
+        </div>
+      )}
+
+      {!isSeller && !filters.sellerId && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Select <strong>View Seller</strong> to inspect that seller's commissions, return-window dues, settlements, and payout actions.
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
@@ -464,12 +660,12 @@ const SellerFinance = () => {
             <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="processing">Processing</option>
-              <option value="on_hold">On Hold</option>
-              <option value="paid">Paid</option>
-              <option value="completed">Completed</option>
+              <option value="return_window_open">Return Window Open</option>
+              <option value="eligible">Eligible</option>
+              <option value="held">Held</option>
+              <option value="released">Released</option>
               <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
@@ -482,6 +678,9 @@ const SellerFinance = () => {
             <div className="flex gap-2">
               <select className={`${inputCls} min-w-0 flex-1`} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
                 <option value="">Select order</option>
+                {orderId && !orderOptions.some((option) => String(option.value) === String(orderId)) && (
+                  <option value={orderId}>Order #{orderId}</option>
+                )}
                 {orderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
@@ -499,17 +698,55 @@ const SellerFinance = () => {
             <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
               <button
                 type="button"
-                className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white"
-                onClick={() => setProcessModal((prev) => ({ ...prev, open: true }))}
+                className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => setProcessModal((prev) => ({ ...prev, open: true, sellerId: filters.sellerId || prev.sellerId, organizationId: filters.organizationId || prev.organizationId }))}
+                disabled={!filters.sellerId}
               >
-                Initiate Payout
+                {filters.sellerId ? "Initiate Seller Payout" : "Select Seller First"}
               </button>
             </PermissionGuard>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className={`${!isSeller && !filters.sellerId ? "hidden" : "mb-4"}`}>
+        <TableShell
+          title="Order Payout Eligibility"
+          headings={["Order", "Delivered", "Return Window Starts", "Return Window Ends", "Net Payable", "Can Payout?", "Reason", ...(!isSeller ? ["Action"] : [])]}
+          emptyText="No order payout records found for this seller"
+        >
+          {commissions.length ? commissions.map((row) => {
+            const decision = payoutDecision(row);
+            return (
+              <tr key={`eligibility-${row.id}`}>
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? dateTime(row.deliveredAt) : <span className="text-amber-700">Not delivered</span>}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? dateTime(row.returnWindowStartsAt) : "Starts after delivery"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">
+                  {row.returnWindowEndsAt ? dateTime(row.returnWindowEndsAt) : "—"}
+                  {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
+                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{decision.reason}</td>
+                {!isSeller && (
+                  <td className="whitespace-nowrap px-4 py-3">
+                    {decision.allowed ? (
+                      <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+                        <button type="button" className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white" onClick={() => handleSingleCommissionPayout(row)} disabled={submitting}>Payout This Order</button>
+                      </PermissionGuard>
+                    ) : <span className="text-xs text-[#65718b]">Not allowed</span>}
+                  </td>
+                )}
+              </tr>
+            );
+          }) : null}
+        </TableShell>
+      </div>
+
+      <details className={`${!isSeller && !filters.sellerId ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}>
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">Advanced financial breakdown and payout history</summary>
+        <div className="grid grid-cols-1 gap-4 border-t border-[#E6E6E6] p-4 xl:grid-cols-2">
         <TableShell
           title="Seller Commissions"
           headings={[
@@ -523,6 +760,7 @@ const SellerFinance = () => {
             "Net Payable",
             "Status",
             "Created",
+            ...(!isSeller ? ["Payout Action"] : []),
           ]}
           emptyText="No commissions found"
         >
@@ -536,8 +774,32 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
+              <td className="whitespace-nowrap px-4 py-3">
+                <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
+                {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
+                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible on {dateTime(row.eligibleAt)}</div>}
+              </td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
+              {!isSeller && (
+                <td className="whitespace-nowrap px-4 py-3">
+                  {["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) && !row.payout_id ? (
+                    <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+                      <button
+                        type="button"
+                        className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                        onClick={() => handleSingleCommissionPayout(row)}
+                        disabled={submitting}
+                      >
+                        Payout This Order
+                      </button>
+                    </PermissionGuard>
+                  ) : (
+                    <span className="text-xs text-[#65718b]">
+                      {row.payout_id ? "Already in payout" : "Wait until eligible"}
+                    </span>
+                  )}
+                </td>
+              )}
             </tr>
           )) : null}
         </TableShell>
@@ -566,7 +828,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
+              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.lifecycleStatus || row.status} dot /></td>
               {!isSeller && (
                 <td className="whitespace-nowrap px-4 py-3">
                   <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
@@ -594,7 +856,7 @@ const SellerFinance = () => {
         </TableShell>
       </div>
 
-      <div className="mt-4">
+      <div className="m-4 mt-0">
         <TableShell
           title="Settlement Ledger"
           headings={[
@@ -645,6 +907,7 @@ const SellerFinance = () => {
           )) : null}
         </TableShell>
       </div>
+      </details>
 
       {!isSeller && (
         <>
@@ -657,6 +920,24 @@ const SellerFinance = () => {
             submitting={submitting}
           >
             <div className="space-y-3">
+              <FieldRow label="Payout Type *">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "order" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
+                    onClick={() => setProcessModal((prev) => ({ ...prev, mode: "order" }))}
+                  >
+                    Particular Order
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "bulk" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
+                    onClick={() => setProcessModal((prev) => ({ ...prev, mode: "bulk", orderId: "" }))}
+                  >
+                    Bulk Eligible Orders
+                  </button>
+                </div>
+              </FieldRow>
               <FieldRow label="Seller *">
                 <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value, organizationId: "" }))}>
                   <option value="">— Select seller —</option>
@@ -669,24 +950,33 @@ const SellerFinance = () => {
                   {processOrganizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </FieldRow>
-              <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Period Start">
-                  <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
+              {processModal.mode === "order" ? (
+                <FieldRow label="Eligible Order *">
+                  <select className={inputCls} value={processModal.orderId} onChange={(e) => setProcessModal((prev) => ({ ...prev, orderId: e.target.value }))}>
+                    <option value="">— Select eligible order —</option>
+                    {eligibleOrders.map((order) => <option key={order.id} value={order.id}>#{order.label} · {money(order.amount)}</option>)}
+                  </select>
                 </FieldRow>
-                <FieldRow label="Period End">
-                  <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
-                </FieldRow>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldRow label="Period Start">
+                    <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
+                  </FieldRow>
+                  <FieldRow label="Period End">
+                    <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
+                  </FieldRow>
+                </div>
+              )}
               <FieldRow label="Payment Method">
                 <select className={inputCls} value={processModal.paymentMethod} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
                   {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
                 </select>
               </FieldRow>
-              <FieldRow label="Payment Reference">
-                <input className={inputCls} placeholder="Transaction / UTR number" value={processModal.paymentReference} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
-              </FieldRow>
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
-                The amount is calculated from eligible delivered orders. Required approval cannot be skipped.
+                {processModal.mode === "order"
+                  ? "Only eligible unpaid commissions from the selected order will be prepared."
+                  : "All eligible unpaid orders for this seller and period will be prepared together."}
+                {" "}Approval remains required. Enter the transaction/UTR reference only when completing payment.
               </div>
               <FieldRow label="Internal Note">
                 <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />

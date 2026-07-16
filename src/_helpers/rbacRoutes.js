@@ -255,7 +255,6 @@ const MODULE_LABELS = {
   "seller-cod-collections": "COD Collections",
   "payout-ops-queue": "Payout Ops Queue",
   "negative-balances": "Negative Balance Recovery",
-  "delivery-agents": "Delivery Agents",
   // Deal sub-sections
   "deal-payouts": "Deal Payout Management",
   "deal-sponsorships": "Deal Sponsorship Management",
@@ -361,7 +360,6 @@ const MODULE_TABS = {
   "seller-cod-collections": "Seller Finance & Payouts",
   "payout-ops-queue": "Seller Finance & Payouts",
   "negative-balances": "Seller Finance & Payouts",
-  "delivery-agents": "Shipping & Fulfilment",
   // Deal sub-sections
   "deal-payouts": "Marketing",
   "deal-sponsorships": "Marketing",
@@ -492,7 +490,6 @@ export const MODULE_DEFAULT_ROUTES = {
   "payout-ops-queue": "payout-ops-queue",
   "negative-balances": "negative-balances",
   "platform-fee-config": "platform-commission",
-  "delivery-agents": "delivery-agents",
   // Deal sub-sections
   "deal-payouts": "deal-payouts",
   "deal-sponsorships": "deal-sponsorships",
@@ -610,8 +607,6 @@ const ROUTE_MODULES = [
   [
     [
       "/shipping-company-users", "/shipment-tracking",
-      "/delivery-staff",
-      "/delivery-agents",
       "/shipping-duration",
     ],
     ["delivery"],

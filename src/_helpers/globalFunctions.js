@@ -277,9 +277,6 @@ export const roleBasedAccess2 = () => {
   return [
     { label: 'user', value: 5 },
     { label: 'seller', value: 3 },
-    { label: 'Delivery Partner', value: 8 },
-
-
   ];
 };
 export const roles = {

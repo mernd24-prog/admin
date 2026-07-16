@@ -31,6 +31,20 @@
     "gstInclusive": true,
     "hsn_code": "",
     "warranty_id": "",
+    "warranty": {
+      "returnPolicy": {
+        "eligible": true,
+        "returnable": true,
+        "days": 7,
+        "returnWindowDays": 7,
+        "type": "standard",
+        "resolution": "refund_or_replacement",
+        "requiresImages": false,
+        "inspectionRequired": true,
+        "shippingPaidBy": "platform",
+        "restockingFee": 0
+      }
+    },
     "salt_composition": "",
     "primary_use": "",
     "salt_synonyms": "",

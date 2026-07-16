@@ -68,7 +68,6 @@ export const DELIVERY_STATUSES = [
   "out_for_delivery",
   "partially_delivered",
   "delivered",
-  "delivered_verified",
   "failed",
   "cancelled",
   "rto",

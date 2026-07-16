@@ -13,8 +13,6 @@ import {
 } from "../../../components/Shared";
 import {
   addShipmentTracking,
-  confirmShipmentDelivery,
-  generateShipmentDeliveryOtp,
   getShipment,
   getShipments,
 } from "../../../Redux/deliverySlice";
@@ -24,12 +22,8 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const STATUS_OPTIONS = [
   "initiated",
-  "manifested",
-  "picked_up",
   "in_transit",
-  "out_for_delivery",
   "delivered",
-  "delivered_verified",
   "failed",
   "cancelled",
   "rto",
@@ -38,19 +32,19 @@ const STATUS_OPTIONS = [
 ];
 const FULFILLMENT_STATUS_OPTIONS = [
   { value: "initiated", label: "Packed" },
-  { value: "manifested", label: "Ready to ship" },
   { value: "in_transit", label: "Shipped" },
-  { value: "out_for_delivery", label: "Out for delivery" },
+  { value: "delivered", label: "Delivered" },
   { value: "failed", label: "Failed delivery" },
   { value: "rto", label: "Return to origin" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 const FULFILLMENT_TRANSITIONS = {
-  initiated: ["manifested", "in_transit", "failed"],
-  manifested: ["in_transit", "failed"],
-  picked_up: ["in_transit", "failed", "rto"],
-  in_transit: ["out_for_delivery", "failed", "rto"],
-  out_for_delivery: ["failed", "rto"],
-  failed: ["in_transit", "out_for_delivery", "rto"],
+  initiated: ["in_transit", "failed", "cancelled"],
+  manifested: ["in_transit", "failed", "cancelled"],
+  picked_up: ["in_transit", "failed", "rto", "cancelled"],
+  in_transit: ["delivered", "failed", "rto", "cancelled"],
+  out_for_delivery: ["delivered", "failed", "rto", "cancelled"],
+  failed: ["in_transit", "rto", "cancelled"],
 };
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -132,8 +126,7 @@ const ShipmentTracking = () => {
   useEffect(() => { dropdownApi.getSellers({ limit: 200 }).then(setSellerOptions).catch(() => { }); }, []);
   const [detailModal, setDetailModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
-  const [trackingAction, setTrackingAction] = useState({ status: "manifested", note: "", location: "" });
-  const [deliveryOtp, setDeliveryOtp] = useState("");
+  const [trackingAction, setTrackingAction] = useState({ status: "in_transit", note: "", location: "", courierName: "", awbNumber: "", trackingUrl: "", shippedAt: "" });
   const trackingActionOptions = useMemo(
     () => getTrackingActionOptions(selectedShipment?.status || "initiated"),
     [selectedShipment?.status],
@@ -168,14 +161,13 @@ const ShipmentTracking = () => {
   const openDetail = useCallback(async (row) => {
     setSelectedShipment(row);
     setDetailModal(true);
-    setTrackingAction({ status: getDefaultTrackingStatus(row.status || "initiated"), note: "", location: "" });
-    setDeliveryOtp("");
+    setTrackingAction({ status: getDefaultTrackingStatus(row.status || "initiated"), note: "", location: "", courierName: row.courier_name || "", awbNumber: row.awb_number || row.tracking_number || "", trackingUrl: row.tracking_url || "", shippedAt: row.shipped_at ? moment(row.shipped_at).format("YYYY-MM-DDTHH:mm") : "" });
     try {
       setLoading(true);
       const response = await dispatch(getShipment({ shipmentId: row.id })).unwrap();
       const nextShipment = unwrapResult(response);
       setSelectedShipment(nextShipment);
-      setTrackingAction({ status: getDefaultTrackingStatus(nextShipment.status || "initiated"), note: "", location: "" });
+      setTrackingAction({ status: getDefaultTrackingStatus(nextShipment.status || "initiated"), note: "", location: "", courierName: nextShipment.courier_name || "", awbNumber: nextShipment.awb_number || nextShipment.tracking_number || "", trackingUrl: nextShipment.tracking_url || "", shippedAt: nextShipment.shipped_at ? moment(nextShipment.shipped_at).format("YYYY-MM-DDTHH:mm") : "" });
     } catch (requestError) {
       toast.error(requestError?.message || requestError || "Failed to load shipment detail");
     } finally {
@@ -207,8 +199,13 @@ const ShipmentTracking = () => {
         note: trackingAction.note,
         location: trackingAction.location,
         source: "seller_panel",
+        courierName: trackingAction.courierName,
+        awbNumber: trackingAction.awbNumber,
+        trackingNumber: trackingAction.awbNumber,
+        trackingUrl: trackingAction.trackingUrl,
+        shippedAt: trackingAction.shippedAt || undefined,
       })).unwrap();
-      toast.success("Shipment status updated");
+      toast.success(`Shipment marked ${shipmentStepLabel(trackingAction.status).toLowerCase()}. Order listing and customer tracking are now updated.`);
       await refreshSelectedShipment(selectedShipment.id);
     } catch (requestError) {
       toast.error(requestError?.message || requestError || "Failed to update shipment status");
@@ -216,49 +213,6 @@ const ShipmentTracking = () => {
       setLoading(false);
     }
   }, [dispatch, refreshSelectedShipment, selectedShipment?.id, trackingAction]);
-
-  const handleGenerateOtp = useCallback(async () => {
-    if (!selectedShipment?.id) return;
-    try {
-      setLoading(true);
-      const response = await dispatch(generateShipmentDeliveryOtp({
-        shipmentId: selectedShipment.id,
-        channels: ["in_app"],
-      })).unwrap();
-      const result = unwrapResult(response);
-      toast.success(result?.otp ? `Delivery OTP generated: ${result.otp}` : "Delivery OTP generated");
-      await refreshSelectedShipment(selectedShipment.id);
-    } catch (requestError) {
-      toast.error(requestError?.message || requestError || "Failed to generate delivery OTP");
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, refreshSelectedShipment, selectedShipment?.id]);
-
-  const handleConfirmDelivery = useCallback(async () => {
-    if (!selectedShipment?.id) return;
-    if (!deliveryOtp.trim()) {
-      toast.error("Enter customer OTP");
-      return;
-    }
-    try {
-      setLoading(true);
-      await dispatch(confirmShipmentDelivery({
-        shipmentId: selectedShipment.id,
-        method: "otp",
-        otp: deliveryOtp.trim(),
-        note: "Customer OTP verified",
-        source: "seller_panel",
-      })).unwrap();
-      toast.success("Delivery verified");
-      setDeliveryOtp("");
-      await refreshSelectedShipment(selectedShipment.id);
-    } catch (requestError) {
-      toast.error(requestError?.message || requestError || "Failed to verify delivery");
-    } finally {
-      setLoading(false);
-    }
-  }, [deliveryOtp, dispatch, refreshSelectedShipment, selectedShipment?.id]);
 
   const columns = useMemo(() => {
     const baseColumns = [
@@ -284,21 +238,6 @@ const ShipmentTracking = () => {
           const name = row.sellerName || row.seller?.name || row.seller?.companyName || sellerOptions.find((o) => o.value === value)?.label;
           return name ? <span className="text-sm font-medium text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-400">{value ? String(value).slice(0, 10) + "…" : "—"}</span>;
         }
-      },
-      {
-        key: "delivery_agent_id",
-        label: "Agent",
-        render: (value, row) => {
-          const snapshot = row.delivery_agent_snapshot || {};
-          return value ? (
-            <div>
-              <div className="font-medium text-gray-800">{snapshot.name || value}</div>
-              {snapshot.phone && <div className="text-xs text-gray-400">{snapshot.phone}</div>}
-            </div>
-          ) : (
-            <span className="text-gray-400">Unassigned</span>
-          );
-        },
       },
       {
         key: "shipment_type",
@@ -344,7 +283,7 @@ const ShipmentTracking = () => {
       <Loader loading={loading} />
       <PageHeader
         title="Shipments"
-        subtitle="Manage seller delivery progress, customer OTP verification, courier details, AWB, and tracking history"
+        subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details"
         breadcrumbs={[{ label: "Shipping & Fulfilment" }, { label: "Shipments" }]}
       />
 
@@ -395,26 +334,10 @@ const ShipmentTracking = () => {
             <div><strong>Customer:</strong> {selectedShipment?.buyerName || selectedShipment?.buyer?.displayName || selectedShipment?.buyer?.email || "Customer"}</div>
             <div><strong>Courier:</strong> {selectedShipment?.courier_name || "Seller delivery"}</div>
             <div><strong>Tracking number:</strong> {selectedShipment?.tracking_number || selectedShipment?.awb_number || "Not added"}</div>
+            <div><strong>Tracking URL:</strong> {selectedShipment?.tracking_url ? <a className="text-blue-600 underline" href={selectedShipment.tracking_url} target="_blank" rel="noreferrer">Open tracking</a> : "Not added"}</div>
+            <div><strong>Shipment date:</strong> {selectedShipment?.shipped_at ? moment(selectedShipment.shipped_at).format("DD-MM-YYYY HH:mm") : "Not shipped"}</div>
             <div><strong>Payment collection:</strong> {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}</div>
             <div><strong>Shipment type:</strong> {displayStatus(selectedShipment?.shipment_type || selectedShipment?.direction || "forward")}</div>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-4">
-            <div className="font-semibold text-gray-800">Handover and verification</div>
-            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-              <div><strong>Delivery agent:</strong> {selectedShipment?.delivery_agent_snapshot?.name || "Unassigned"}</div>
-              <div><strong>Agent phone:</strong> {selectedShipment?.delivery_agent_snapshot?.phone || "Not available"}</div>
-              <div>
-                <strong>Verification:</strong>{" "}
-                {selectedShipment?.verification_required
-                  ? `Required by ${displayStatus(
-                    Array.isArray(selectedShipment?.verification_methods)
-                      ? selectedShipment.verification_methods.join(" or ")
-                      : selectedShipment?.verification_methods || "proof"
-                  )}`
-                  : "Not required"}
-              </div>
-              <div><strong>Verified:</strong> {selectedShipment?.delivered_verified_at ? moment(selectedShipment.delivered_verified_at).format("DD-MM-YYYY HH:mm") : "Not yet"}</div>
-            </div>
           </div>
           <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
             <div className="font-semibold text-gray-800">Seller delivery actions</div>
@@ -423,7 +346,7 @@ const ShipmentTracking = () => {
                 className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
                 value={trackingAction.status}
                 onChange={(event) => setTrackingAction((prev) => ({ ...prev, status: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered_verified"}
+                disabled={selectedShipment?.status === "delivered"}
               >
                 {trackingActionOptions.length ? trackingActionOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -436,41 +359,29 @@ const ShipmentTracking = () => {
                 placeholder="Location"
                 value={trackingAction.location}
                 onChange={(event) => setTrackingAction((prev) => ({ ...prev, location: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered_verified"}
+                disabled={selectedShipment?.status === "delivered"}
               />
               <input
                 className="rounded-md border border-gray-200 px-3 py-2 text-sm"
                 placeholder="Note"
                 value={trackingAction.note}
                 onChange={(event) => setTrackingAction((prev) => ({ ...prev, note: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered_verified"}
+                disabled={selectedShipment?.status === "delivered"}
               />
-              <ActionButton onClick={handleTrackingStatus} disabled={selectedShipment?.status === "delivered_verified" || !trackingActionOptions.length}>
+              <ActionButton onClick={handleTrackingStatus} disabled={selectedShipment?.status === "delivered" || !trackingActionOptions.length}>
                 Update
               </ActionButton>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr_auto]">
-              <ActionButton
-                onClick={handleGenerateOtp}
-                disabledReason={selectedShipment?.status !== "out_for_delivery" ? "Move shipment to out for delivery first" : ""}
-                disabled={selectedShipment?.status === "delivered_verified"}
-              >
-                Generate OTP
-              </ActionButton>
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
               <input
                 className="rounded-md border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Enter customer OTP"
-                value={deliveryOtp}
-                onChange={(event) => setDeliveryOtp(event.target.value)}
-                disabled={selectedShipment?.status === "delivered_verified"}
+                placeholder="Courier name"
+                value={trackingAction.courierName}
+                onChange={(event) => setTrackingAction((prev) => ({ ...prev, courierName: event.target.value }))}
               />
-              <ActionButton
-                onClick={handleConfirmDelivery}
-                disabledReason={!selectedShipment?.delivery_otp_expires_at ? "Generate OTP first" : ""}
-                disabled={selectedShipment?.status === "delivered_verified"}
-              >
-                Verify Delivery
-              </ActionButton>
+              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" placeholder="AWB / tracking number" value={trackingAction.awbNumber} onChange={(event) => setTrackingAction((prev) => ({ ...prev, awbNumber: event.target.value }))} />
+              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" placeholder="Tracking URL" value={trackingAction.trackingUrl} onChange={(event) => setTrackingAction((prev) => ({ ...prev, trackingUrl: event.target.value }))} />
+              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" type="datetime-local" value={trackingAction.shippedAt} onChange={(event) => setTrackingAction((prev) => ({ ...prev, shippedAt: event.target.value }))} />
             </div>
           </div>
           <div className="rounded-lg border border-gray-100 p-4">
@@ -508,22 +419,6 @@ const ShipmentTracking = () => {
                 </div>
               ))}
               {!selectedShipment?.trackingEvents?.length && <div className="text-xs text-gray-500">No tracking events found.</div>}
-            </div>
-          </div>
-          <div className="border-t pt-3">
-            <strong>Verification events</strong>
-            <div className="mt-2 space-y-2">
-              {(selectedShipment?.verificationEvents || []).map((event) => (
-                <div key={event.id} className="border-l-2 border-emerald-200 pl-3 py-1">
-                  <div className="font-medium capitalize">{displayStatus(event.status)} · {displayStatus(event.method)}</div>
-                  <div className="text-xs text-gray-500">
-                    {event.created_at ? moment(event.created_at).format("DD-MM-YYYY HH:mm") : "N/A"}
-                    {event.actor?.displayName ? ` · ${event.actor.displayName}` : ""}
-                  </div>
-                  {event.failure_reason && <div className="text-xs text-red-600 mt-1">{event.failure_reason}</div>}
-                </div>
-              ))}
-              {!selectedShipment?.verificationEvents?.length && <div className="text-xs text-gray-500">No verification events found.</div>}
             </div>
           </div>
         </div>

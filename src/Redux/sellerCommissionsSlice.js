@@ -148,6 +148,14 @@ export const failSellerPayout = createApiThunkPrivate(
   { transformBody: (payload = {}) => ({ reason: payload.reason }) }
 );
 
+export const cancelSellerPayout = createApiThunkPrivate(
+  "sellerCommissions/cancelSellerPayout",
+  (payload) => ENDPOINTS.payouts.cancel(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  { transformBody: (payload = {}) => ({ reason: payload.reason }) }
+);
+
 export const approveSellerPayout = createApiThunkPrivate(
   "sellerCommissions/approveSellerPayout",
   (payload) => ENDPOINTS.payouts.approve(payload?.payoutId || payload?.id),
@@ -219,6 +227,7 @@ const sellerCommissionsSlice = createSlice({
     createExtraReducersForThunk(builder, processSellerPayouts, "processPayoutsData");
     createExtraReducersForThunk(builder, completeSellerPayout, "completePayoutData");
     createExtraReducersForThunk(builder, failSellerPayout, "failPayoutData");
+    createExtraReducersForThunk(builder, cancelSellerPayout, "cancelPayoutData");
     createExtraReducersForThunk(builder, approveSellerPayout, "approvePayoutData");
     createExtraReducersForThunk(builder, holdSellerPayout, "holdPayoutData");
     createExtraReducersForThunk(builder, releaseSellerPayoutHold, "releasePayoutHoldData");

@@ -18,7 +18,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
-import { MdShoppingCart, MdVisibility } from "react-icons/md";
+import { MdPayments, MdShoppingCart, MdVisibility } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const FILTER_FIELDS = [
@@ -185,6 +185,31 @@ const shipmentStatusOf = (row = {}) => {
     row.relations?.eWayBill?.status,
     row.relations?.eWayBill?.delivery_status,
   );
+};
+
+const payoutWindowOf = (row = {}) => {
+  const items = Array.isArray(row.items) ? row.items : [];
+  const commissions = row.relations?.sellerCommissions || [];
+  const deadlines = items
+    .map((item) => firstDefined(item.payout_eligible_at, item.payoutEligibleAt, item.return_eligible_until, item.returnEligibleUntil))
+    .filter(Boolean);
+  const latestDeadline = deadlines.length
+    ? deadlines.reduce((latest, value) => new Date(value).getTime() > new Date(latest).getTime() ? value : latest)
+    : null;
+  const held = items.some((item) => item.payout_status === "held");
+  const paid = commissions.length > 0 && commissions.every((commission) => commission.status === "paid");
+  const fulfilled = row.status === "fulfilled";
+  return { latestDeadline, held, paid, fulfilled };
+};
+
+const returnWindowLabel = (deadline) => {
+  if (!deadline) return "Starts after delivery";
+  const remaining = new Date(deadline).getTime() - Date.now();
+  if (remaining <= 0) return "Return window closed";
+  const hours = Math.ceil(remaining / 3600000);
+  if (hours <= 48) return `${hours} hour${hours === 1 ? "" : "s"} remaining`;
+  const days = Math.ceil(hours / 24);
+  return `${days} days remaining`;
 };
 
 const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, showSellerColumn = true) => [
@@ -501,6 +526,23 @@ const Orders = () => {
   const columns = [
     ...baseColumns,
     {
+      key: "_payout_window",
+      label: "Return Window / Payout",
+      render: (_, row) => {
+        const payout = payoutWindowOf(row);
+        if (payout.paid) return <StatusBadge status="paid" dot />;
+        if (payout.held) return <><StatusBadge status="held" dot /><div className="mt-1 text-[11px] text-red-600">Return or refund hold</div></>;
+        if (payout.fulfilled) return <><StatusBadge status="eligible" dot /><div className="mt-1 text-[11px] text-green-700">Ready for payout</div></>;
+        return (
+          <div>
+            <StatusBadge status={payout.latestDeadline ? "pending" : "waiting"} dot />
+            <div className="mt-1 text-[11px] text-gray-500">{returnWindowLabel(payout.latestDeadline)}</div>
+            {payout.latestDeadline && <div className="text-[11px] text-gray-400">Until {formatDateTime(payout.latestDeadline)}</div>}
+          </div>
+        );
+      },
+    },
+    {
       key: "_actions",
       label: "Actions",
       render: (_, row) => (
@@ -514,6 +556,23 @@ const Orders = () => {
               <MdVisibility size={15} /> View Details
             </button>
           </PermissionGuard>
+          {!isSeller && payoutWindowOf(row).fulfilled && !payoutWindowOf(row).paid && (
+            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                onClick={() => {
+                  const group = sellerGroupsOf(row)[0] || {};
+                  const params = new URLSearchParams({ orderId: String(orderIdOf(row)) });
+                  if (group.sellerId) params.set("sellerId", String(group.sellerId));
+                  if (group.organizationId) params.set("organizationId", String(group.organizationId));
+                  navigate(`/app/seller-finance?${params.toString()}`);
+                }}
+                className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
+              >
+                <MdPayments size={15} /> Manage Payout
+              </button>
+            </PermissionGuard>
+          )}
         </div>
       ),
     },

@@ -23,6 +23,7 @@ import {
   retrySellerPayout,
   completeSellerPayout,
   failSellerPayout,
+  cancelSellerPayout,
 } from "../../../Redux/sellerCommissionsSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
@@ -32,6 +33,7 @@ const PAYOUT_STATUSES = [
   "processing",
   "on_hold",
   "failed",
+  "cancelled",
 ];
 
 const PAYMENT_METHODS = [
@@ -51,6 +53,7 @@ const ACTION_TITLES = {
   retry: "Retry Payout",
   complete: "Complete Payout",
   fail: "Fail Payout",
+  cancel: "Cancel Payout",
 };
 
 const FILTER_FIELDS = [
@@ -186,6 +189,8 @@ const PayoutOpsQueue = () => {
       return "Hold reason is required";
     if (action.type === "fail" && !action.reason.trim())
       return "Failure reason is required";
+    if (action.type === "cancel" && !action.reason.trim())
+      return "Cancellation reason is required";
     if (action.type === "complete" && !action.paymentReference.trim())
       return "Payment reference is required before completion";
     return "";
@@ -237,6 +242,7 @@ const PayoutOpsQueue = () => {
             notes: action.notes,
           };
         case "fail":
+        case "cancel":
           return { ...base, reason: action.reason };
         default:
           return base;
@@ -250,6 +256,7 @@ const PayoutOpsQueue = () => {
       retry: retrySellerPayout,
       complete: completeSellerPayout,
       fail: failSellerPayout,
+      cancel: cancelSellerPayout,
     };
 
     try {
@@ -395,6 +402,13 @@ const PayoutOpsQueue = () => {
                     </button>
                   </PermissionGuard>
                 </>
+              )}
+              {!["completed", "cancelled"].includes(status) && (
+                <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+                  <button type="button" className="admin-btn-secondary !px-2 !py-1 text-red-600" onClick={() => openAction("cancel", row)}>
+                    Cancel
+                  </button>
+                </PermissionGuard>
               )}
             </div>
           );
@@ -638,9 +652,9 @@ const PayoutOpsQueue = () => {
           )}
 
           {/* Fail */}
-          {action.type === "fail" && (
+          {["fail", "cancel"].includes(action.type) && (
             <Input
-              labelName="Failure Reason"
+              labelName={action.type === "cancel" ? "Cancellation Reason" : "Failure Reason"}
               type="textarea"
               value={action.reason}
               onChange={(e) =>
@@ -659,7 +673,7 @@ const PayoutOpsQueue = () => {
         title={confirmAction.title}
         message={confirmAction.message}
         variant={
-          action.type === "fail" || action.type === "hold"
+          action.type === "fail" || action.type === "hold" || action.type === "cancel"
             ? "danger"
             : "warning"
         }

@@ -11,7 +11,6 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { toast } from "../../../utils/toast";
 
 const DEFAULT_SETTINGS = {
@@ -74,7 +73,6 @@ const option = (value, label) => ({ value, label });
 const joinList = (value) => (Array.isArray(value) ? value.join(", ") : String(value || ""));
 const splitList = (value) => String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 const nullableNumber = (value) => (value === "" || value === null || value === undefined ? null : Number(value));
-const money = (value) => `INR ${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 const optionLabel = (item = {}) =>
   item.label || item.name || item.title || item.zipCode || item.pincode || item.code || String(item.value || "");
 const optionValue = (item = {}) =>
@@ -233,145 +231,6 @@ const OptionMultiSelect = ({
   );
 };
 
-const LocationValueSelector = ({
-  label,
-  value = [],
-  onChange,
-  type = "pincode",
-  hint,
-}) => {
-  const [filters, setFilters] = useState({ countryId: "", stateId: "", cityId: "" });
-  const [options, setOptions] = useState({ countries: [], states: [], cities: [], pincodes: [] });
-  const [loading, setLoading] = useState({ countries: false, states: false, cities: false, pincodes: false });
-
-  useEffect(() => {
-    let active = true;
-    setLoading((current) => ({ ...current, countries: true }));
-    dropdownApi.getCountries({ limit: 100 })
-      .then((items) => {
-        if (!active) return;
-        setOptions((current) => ({ ...current, countries: items || [] }));
-        const india = (items || []).find((item) => /india/i.test(optionLabel(item)));
-        setFilters((current) => current.countryId || !india ? current : { ...current, countryId: optionParentId(india) });
-      })
-      .catch(() => {
-        if (active) setOptions((current) => ({ ...current, countries: [] }));
-      })
-      .finally(() => {
-        if (active) setLoading((current) => ({ ...current, countries: false }));
-      });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!filters.countryId) {
-      setOptions((current) => ({ ...current, states: [], cities: [], pincodes: [] }));
-      return undefined;
-    }
-    let active = true;
-    setLoading((current) => ({ ...current, states: true }));
-    dropdownApi.getStates(filters.countryId, { limit: 100 })
-      .then((items) => {
-        if (active) setOptions((current) => ({ ...current, states: items || [] }));
-      })
-      .catch(() => {
-        if (active) setOptions((current) => ({ ...current, states: [] }));
-      })
-      .finally(() => {
-        if (active) setLoading((current) => ({ ...current, states: false }));
-      });
-    return () => { active = false; };
-  }, [filters.countryId]);
-
-  useEffect(() => {
-    if (!filters.stateId) {
-      setOptions((current) => ({ ...current, cities: [], pincodes: [] }));
-      return undefined;
-    }
-    let active = true;
-    setLoading((current) => ({ ...current, cities: true }));
-    dropdownApi.getCities(filters.stateId, { limit: 100 })
-      .then((items) => {
-        if (active) setOptions((current) => ({ ...current, cities: items || [] }));
-      })
-      .catch(() => {
-        if (active) setOptions((current) => ({ ...current, cities: [] }));
-      })
-      .finally(() => {
-        if (active) setLoading((current) => ({ ...current, cities: false }));
-      });
-    return () => { active = false; };
-  }, [filters.stateId]);
-
-  useEffect(() => {
-    if (type !== "pincode" || !filters.cityId) {
-      setOptions((current) => ({ ...current, pincodes: [] }));
-      return undefined;
-    }
-    let active = true;
-    setLoading((current) => ({ ...current, pincodes: true }));
-    dropdownApi.getPincodes(filters.cityId, { limit: 100 })
-      .then((items) => {
-        if (active) setOptions((current) => ({ ...current, pincodes: items || [] }));
-      })
-      .catch(() => {
-        if (active) setOptions((current) => ({ ...current, pincodes: [] }));
-      })
-      .finally(() => {
-        if (active) setLoading((current) => ({ ...current, pincodes: false }));
-      });
-    return () => { active = false; };
-  }, [filters.cityId, type]);
-
-  const patchFilter = (key, selectedValue) => {
-    setFilters((current) => ({
-      ...current,
-      [key]: selectedValue,
-      ...(key === "countryId" ? { stateId: "", cityId: "" } : {}),
-      ...(key === "stateId" ? { cityId: "" } : {}),
-    }));
-  };
-
-  const selectedOptions = type === "state" ? options.states : type === "city" ? options.cities : options.pincodes;
-  const needsState = type === "city" || type === "pincode";
-  const needsCity = type === "pincode";
-
-  return (
-    <div className="space-y-2">
-      <Field label={label} hint={hint}>
-        <div className="grid gap-2 md:grid-cols-3">
-          <select className="admin-input" value={filters.countryId} onChange={(event) => patchFilter("countryId", event.target.value)}>
-            <option value="">{loading.countries ? "Loading countries..." : "Country"}</option>
-            {options.countries.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
-          </select>
-          {needsState ? (
-            <select className="admin-input" value={filters.stateId} onChange={(event) => patchFilter("stateId", event.target.value)} disabled={!filters.countryId}>
-              <option value="">{loading.states ? "Loading states..." : "State"}</option>
-              {options.states.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
-            </select>
-          ) : null}
-          {needsCity ? (
-            <select className="admin-input" value={filters.cityId} onChange={(event) => patchFilter("cityId", event.target.value)} disabled={!filters.stateId}>
-              <option value="">{loading.cities ? "Loading cities..." : "City"}</option>
-              {options.cities.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
-            </select>
-          ) : null}
-        </div>
-        <OptionMultiSelect
-          value={value}
-          onChange={onChange}
-          options={selectedOptions}
-          disabled={type === "state" ? !filters.countryId : type === "city" ? !filters.stateId : !filters.cityId}
-          loading={type === "state" ? loading.states : type === "city" ? loading.cities : loading.pincodes}
-          placeholder={type === "state" ? "Select states..." : type === "city" ? "Select cities..." : "Select pincodes..."}
-          searchPlaceholder={type === "state" ? "Search states..." : type === "city" ? "Search cities..." : "Search pincodes..."}
-          emptyText={type === "state" ? "No states found" : type === "city" ? "No cities found" : "No pincodes found"}
-        />
-      </Field>
-    </div>
-  );
-};
-
 const Section = ({ title, icon: Icon = MdStorefront, children, action }) => (
   <section className="admin-card p-5">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -431,8 +290,7 @@ export default function CommerceSettings() {
         },
         platformFees: {
           ...nextSettings.platformFees,
-          customerFeeType: "fixed",
-          customerFeeValue: 0,
+          customerFeeValue: Number(nextSettings.platformFees.customerFeeValue || 0),
           sellerCommissionValue: Number(nextSettings.platformFees.sellerCommissionValue || 0),
           gstRate: Number(nextSettings.platformFees.gstRate || 0),
         },
@@ -489,18 +347,22 @@ export default function CommerceSettings() {
 
   const renderPlatform = () => (
     <div className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="admin-card p-4">
           <p className="text-xs font-semibold uppercase text-gray-400">Seller Commission</p>
           <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.platformFees.sellerCommissionValue}{settings.platformFees.sellerCommissionType === "percentage" ? "%" : " INR"}</p>
+        </div>
+        <div className="admin-card p-4">
+          <p className="text-xs font-semibold uppercase text-gray-400">Customer Fee</p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.platformFees.customerFeeValue}{settings.platformFees.customerFeeType === "percentage" ? "%" : " INR"}</p>
         </div>
         <div className="admin-card p-4">
           <p className="text-xs font-semibold uppercase text-gray-400">COD</p>
           <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.cod.enabled ? "Enabled" : "Disabled"}</p>
         </div>
         <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">Shipping</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{money(settings.shippingDefaults.defaultCharge)}</p>
+          <p className="text-xs font-semibold uppercase text-gray-400">Shipping Payout</p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.finance.shippingPolicy === "not_in_seller_payout" ? "Excluded" : settings.finance.shippingPolicy === "reimburse_seller" ? "Reimburse" : "Deduct"}</p>
         </div>
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
@@ -510,7 +372,7 @@ export default function CommerceSettings() {
           <ToggleField label="Allow Seller Return Overrides" checked={settings.returns.allowSellerOverrides} onChange={(value) => patchSettings("returns", { allowSellerOverrides: value })} />
           {settings.returns.allowSellerOverrides && <InputField label="Maximum Seller Override (Days)" type="number" min="1" max="60" value={settings.returns.maxSellerOverrideDays} onChange={(value) => patchSettings("returns", { maxSellerOverrideDays: value })} />}
           <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-            The delivery-verified date and this policy are snapshotted on the order. The order becomes Fulfilled only after this deadline, then payout can be released.
+            The delivered date and this policy are snapshotted per order item. Each item becomes payout-eligible only after its return deadline closes.
           </div>
         </div>
       </Section>
@@ -520,6 +382,12 @@ export default function CommerceSettings() {
           <InputField label="Commission Value" type="number" min="0" value={settings.platformFees.sellerCommissionValue} onChange={(value) => patchSettings("platformFees", { sellerCommissionValue: value })} />
           <InputField label="GST Percentage" type="number" min="0" max="100" value={settings.platformFees.gstRate} onChange={(value) => patchSettings("platformFees", { gstRate: value })} />
           <SelectField label="Apply On" value={settings.platformFees.calculationBase} onChange={(value) => patchSettings("platformFees", { calculationBase: value })} options={[option("subtotal", "Subtotal"), option("order_total", "Total")]} />
+        </div>
+      </Section>
+      <Section title="Customer Commission / Fee">
+        <div className="grid gap-4 md:grid-cols-2">
+          <SelectField label="Fee Type" value={settings.platformFees.customerFeeType} onChange={(value) => patchSettings("platformFees", { customerFeeType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
+          <InputField label="Fee Value" type="number" min="0" value={settings.platformFees.customerFeeValue} onChange={(value) => patchSettings("platformFees", { customerFeeValue: value })} hint="Added to the customer-facing order total." />
         </div>
       </Section>
       <Section title="Payment Settings">
@@ -538,36 +406,8 @@ export default function CommerceSettings() {
           />
         </div>
       </Section>
-      <Section title="COD Configuration">
+      <Section title="Payout Calculation">
         <div className="grid gap-4 md:grid-cols-2">
-          <ToggleField label="Enable COD" checked={settings.cod.enabled} onChange={(value) => patchSettings("cod", { enabled: value, availabilityMode: value ? settings.cod.availabilityMode : "disabled" })} />
-          <InputField label="COD Fee Default" type="number" min="0" value={settings.cod.feeAmount} onChange={(value) => patchSettings("cod", { feeAmount: value })} />
-          <SelectField label="COD Availability" value={settings.cod.availabilityMode} onChange={(value) => patchSettings("cod", { availabilityMode: value, enabled: value !== "disabled" })} options={[option("all_pincodes", "All India"), option("allowlist", "Serviceable pincodes only"), option("blocklist", "All except blocked pincodes"), option("disabled", "Disabled")]} />
-          <SelectField label="COD Collection Mode" value={settings.cod.collectionPolicy} onChange={(value) => patchSettings("cod", { collectionPolicy: value })} options={[option("platform_or_courier", "Platform or courier"), option("seller_direct", "Seller direct"), option("hybrid", "Hybrid")]} />
-          <InputField label="COD Minimum Order" type="number" min="0" value={settings.cod.minOrderAmount || ""} onChange={(value) => patchSettings("cod", { minOrderAmount: value })} />
-          <InputField label="COD Maximum Order" type="number" min="0" value={settings.cod.maxOrderAmount || ""} onChange={(value) => patchSettings("cod", { maxOrderAmount: value })} />
-          <LocationValueSelector
-            label="COD Serviceable Pincodes"
-            value={settings.cod.allowPincodes}
-            onChange={(value) => patchSettings("cod", { allowPincodes: value })}
-            type="pincode"
-            hint="Used when COD availability is serviceable pincodes only."
-          />
-          <LocationValueSelector
-            label="COD Block Pincodes"
-            value={settings.cod.blockPincodes}
-            onChange={(value) => patchSettings("cod", { blockPincodes: value })}
-            type="pincode"
-            hint="Used when COD availability is all except blocked pincodes."
-          />
-        </div>
-      </Section>
-      <Section title="Shipping Defaults">
-        <div className="grid gap-4 md:grid-cols-2">
-          <InputField label="Default Shipping Charge" type="number" min="0" value={settings.shippingDefaults.defaultCharge} onChange={(value) => patchSettings("shippingDefaults", { defaultCharge: value })} />
-          <InputField label="Free Shipping Threshold" type="number" min="0" value={settings.shippingDefaults.freeShippingThreshold || ""} onChange={(value) => patchSettings("shippingDefaults", { freeShippingThreshold: value })} />
-          <InputField label="Default Handling Fee" type="number" min="0" value={settings.shippingDefaults.handlingFee} onChange={(value) => patchSettings("shippingDefaults", { handlingFee: value })} />
-          <SelectField label="Default Shipping Method" value={settings.shippingDefaults.shippingMethod} onChange={(value) => patchSettings("shippingDefaults", { shippingMethod: value })} options={[option("standard", "Standard"), option("express", "Express"), option("same_day", "Same Day"), option("seller_managed", "Seller Managed")]} />
           <SelectField label="Seller Payout Base" value={settings.finance.sellerPayoutBase} onChange={(value) => patchSettings("finance", { sellerPayoutBase: value })} options={[option("gross_customer_price", "Gross customer price"), option("taxable_ex_gst", "Taxable ex GST")]} />
           <SelectField label="Shipping In Payout" value={settings.finance.shippingPolicy} onChange={(value) => patchSettings("finance", { shippingPolicy: value })} options={[option("not_in_seller_payout", "Not in seller payout"), option("reimburse_seller", "Reimburse seller"), option("deduct_from_seller", "Deduct from seller")]} />
         </div>

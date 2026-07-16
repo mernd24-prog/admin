@@ -120,9 +120,6 @@ const ReferralCommerce = React.lazy(
 const ShipmentTracking = React.lazy(
   () => import("../../pages/ShippingPickup/ShipmentTracking/ShipmentTracking"),
 );
-const DeliveryAgents = React.lazy(
-  () => import("../../pages/ShippingPickup/DeliveryAgents/DeliveryAgents"),
-);
 const ShippingProfiles = React.lazy(
   () => import("../../pages/ShippingPickup/ShippingProfiles/ShippingProfiles"),
 );
@@ -586,12 +583,9 @@ function Layout() {
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },
       { path: "/referral-commerce", render: () => <ReferralCommerce /> },
-      { path: "/shipping-company-users", redirectTo: "/app/delivery-agents" },
       { path: "/shipping-packages", redirectTo: "/app/shipment-tracking" },
       { path: "/pickup-addresses", redirectTo: "/app/shipment-tracking" },
       { path: "/shipment-tracking", render: () => <ShipmentTracking /> },
-      { path: "/delivery-agents", render: () => <DeliveryAgents /> },
-      { path: "/delivery-staff", render: () => <DeliveryAgents /> },
       { path: "/shipping-profiles", render: () => <ShippingProfiles /> },
       { path: "/categories", render: () => <ProductCategories /> },
       { path: "/category-attributes", redirectTo: "/app/categories" },

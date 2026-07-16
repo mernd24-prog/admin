@@ -224,7 +224,7 @@ export const hasModuleAccess = (moduleCode) => {
     wallets: ["wallets", "wallet", "transactions", "user-transactions", "wallet-transactions", "wallet-management"],
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
-    delivery: ["delivery", "delivery-shipping", "shipping-fulfilment", "delivery-staff", "delivery-agents", "shipment-tracking", "shipping-duration"],
+    delivery: ["delivery", "delivery-shipping", "shipping-fulfilment", "shipment-tracking", "shipping-duration"],
     sellers: ["sellers", "seller", "vendors", "profile", "seller-management", "seller-users", "seller-staff", "seller-organizations"],
     "seller-management": ["seller-management", "sellers", "seller-admins", "seller-sub-admins", "seller-hierarchy", "seller-users", "seller-staff", "seller-organizations"],
     seller_kyc: ["seller-kyc", "seller_kyc", "seller-kyc-detail"],

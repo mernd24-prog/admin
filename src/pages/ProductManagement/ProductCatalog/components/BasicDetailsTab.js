@@ -60,6 +60,7 @@ const getSessionUser = () => {
 export default function BasicDetailsTab({
   formData,
   handleChange,
+  handleNestedChange,
   formattedBrandList,
   formattedWarrantyList,
   formattedProductFamilyList,
@@ -775,25 +776,73 @@ export default function BasicDetailsTab({
                 />
               </>
             )} */}
-            {/* <Input
-              labelName="Warranty Provider"
-              name="warranty.provider"
-              type="text"
-              value={formData.warranty?.provider || ""}
-              onChange={handleChange}
-              placeholder="Enter provider name"
-            />
-            <Input
-              labelName="Return Window Days"
-              name="warrantyReturnDays"
-              type="number"
-              value={formData.warrantyReturnDays || ""}
-              onChange={handleChange}
-              placeholder="Example: 7"
-            /> */}
+            <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-900">Product Return Policy</h4>
+                <p className="mt-1 text-xs text-gray-500">This policy is snapshotted on each order item and cannot be changed for existing orders.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  labelName="Returnable"
+                  name="warranty.returnPolicy.returnable"
+                  type="switch"
+                  value={formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true}
+                  onChange={(event) => handleNestedChange('warranty.returnPolicy.returnable', event.target.checked)}
+                />
+                <Input
+                  labelName="Return Window Days"
+                  name="warranty.returnPolicy.returnWindowDays"
+                  type="number"
+                  min={0}
+                  max={365}
+                  disabled={(formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true) === false}
+                  value={(formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true) === false ? 0 : (formData.warranty?.returnPolicy?.returnWindowDays ?? formData.warranty?.returnPolicy?.days ?? 7)}
+                  onChange={(event) => handleNestedChange('warranty.returnPolicy.returnWindowDays', event.target.value)}
+                  helperText="Starts from the item delivery timestamp."
+                />
+                <Input
+                  labelName="Allowed Resolution"
+                  name="warranty.returnPolicy.resolution"
+                  type="select"
+                  value={formData.warranty?.returnPolicy?.resolution || 'refund_or_replacement'}
+                  onChange={(option) => handleNestedChange('warranty.returnPolicy.resolution', option?.value || 'refund_or_replacement')}
+                  options={[
+                    { value: 'refund_or_replacement', label: 'Refund or replacement' },
+                    { value: 'refund', label: 'Refund only' },
+                    { value: 'replacement', label: 'Replacement only' },
+                  ]}
+                />
+                <Input
+                  labelName="Return Shipping Paid By"
+                  name="warranty.returnPolicy.shippingPaidBy"
+                  type="select"
+                  value={formData.warranty?.returnPolicy?.shippingPaidBy || 'platform'}
+                  onChange={(option) => handleNestedChange('warranty.returnPolicy.shippingPaidBy', option?.value || 'platform')}
+                  options={[
+                    { value: 'platform', label: 'Platform' },
+                    { value: 'seller', label: 'Seller' },
+                    { value: 'customer', label: 'Customer' },
+                  ]}
+                />
+                <Input
+                  labelName="Require Return Images"
+                  name="warranty.returnPolicy.requiresImages"
+                  type="switch"
+                  value={Boolean(formData.warranty?.returnPolicy?.requiresImages)}
+                  onChange={(event) => handleNestedChange('warranty.returnPolicy.requiresImages', event.target.checked)}
+                />
+                <Input
+                  labelName="Require Inspection / QC"
+                  name="warranty.returnPolicy.inspectionRequired"
+                  type="switch"
+                  value={formData.warranty?.returnPolicy?.inspectionRequired !== false}
+                  onChange={(event) => handleNestedChange('warranty.returnPolicy.inspectionRequired', event.target.checked)}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* <TextEditor
+          <TextEditor
             label="Description"
             value={formData.description || ''}
             onChange={(content) => handleInputReactQuillChange?.('description', content)}
@@ -802,7 +851,7 @@ export default function BasicDetailsTab({
             error={errors?.description}
             height="220px"
              className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-          /> */}
+          />
         </div>
       </div>
  
