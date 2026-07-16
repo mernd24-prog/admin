@@ -187,6 +187,7 @@ export default function BasicDetailsTab({
   const [brandSubmission, setBrandSubmission] = useState({ name: '', logo: '', thumbnails: '', description: '' });
   const [myBrandSubmissions, setMyBrandSubmissions] = useState([]);
   const [brandSubmitting, setBrandSubmitting] = useState(false);
+  const [brandLogoUploading, setBrandLogoUploading] = useState(false);
 
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
@@ -214,9 +215,38 @@ export default function BasicDetailsTab({
     return () => window.clearInterval(interval);
   }, [fetchAllData, isSellerPanelUser]);
 
+  const handleBrandLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
+    const extension = file.name?.split('.').pop()?.toLowerCase();
+    if (!allowedTypes.includes(file.type) && !['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+      toast.error('Only JPG, PNG, or WEBP images allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Brand logo must be 5MB or less');
+      return;
+    }
+
+    setBrandLogoUploading(true);
+    try {
+      const logoUrl = await uploadFile(file, 'BRANDS');
+      setBrandSubmission((current) => ({ ...current, logo: logoUrl }));
+      toast.success('Brand logo uploaded');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to upload brand logo'));
+    } finally {
+      setBrandLogoUploading(false);
+    }
+  };
+
   const submitBrandRequest = async (event) => {
     event.preventDefault();
     if (!brandSubmission.name.trim()) return toast.error('Brand name is required');
+    if (brandLogoUploading) return toast.error('Please wait for logo upload to finish');
     setBrandSubmitting(true);
     try {
       if (isSellerPanelUser) {
@@ -892,12 +922,30 @@ export default function BasicDetailsTab({
               maxLength={200}
               required
             />
-            <input
-              value={brandSubmission.logo}
-              onChange={(event) => setBrandSubmission((current) => ({ ...current, logo: event.target.value }))}
-              placeholder="Logo URL (optional)"
-              className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
+            <div className="mb-3">
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">Brand logo (optional)</label>
+              <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-2">
+                {brandSubmission.logo ? (
+                  <img src={brandSubmission.logo} alt="Brand logo preview" className="h-10 w-10 rounded-md border border-gray-200 object-contain" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-gray-400">
+                    Logo
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleBrandLogoUpload}
+                    disabled={brandLogoUploading || brandSubmitting}
+                    className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-[var(--admin-navy)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {brandLogoUploading ? 'Uploading logo...' : 'JPG, PNG, or WEBP up to 5MB'}
+                  </p>
+                </div>
+              </div>
+            </div>
             <textarea
               value={brandSubmission.description}
               onChange={(event) => setBrandSubmission((current) => ({ ...current, description: event.target.value }))}
@@ -908,8 +956,8 @@ export default function BasicDetailsTab({
             />
             <div className="flex justify-end gap-3">
               <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setIsBrandModal(false)}>Cancel</button>
-              <button type="submit" disabled={brandSubmitting} className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60">
-                {brandSubmitting ? 'Saving…' : brandSubmission._id ? 'Resubmit' : isSellerPanelUser ? 'Submit for Approval' : 'Create Brand'}
+              <button type="submit" disabled={brandSubmitting || brandLogoUploading} className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60">
+                {brandSubmitting ? 'Saving…' : brandLogoUploading ? 'Uploading…' : brandSubmission._id ? 'Resubmit' : isSellerPanelUser ? 'Submit for Approval' : 'Create Brand'}
               </button>
             </div>
             {myBrandSubmissions.filter((brand) => brand.approvalStatus === 'rejected').length > 0 && (
