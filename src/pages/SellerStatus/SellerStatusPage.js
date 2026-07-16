@@ -13,17 +13,47 @@ import { AUTH_ROUTES } from "../auth/authRoutes";
 
 const STATUS_KEYS = ["pending", "rejected", "approved", "complete"];
 
+const cleanText = (value) => String(value || "").trim();
+
+const getOrganizationReason = (organization, statusField) => {
+  if (!organization || organization[statusField] !== "rejected") return "";
+  const requiredChanges = Array.isArray(organization.requiredChanges)
+    ? organization.requiredChanges.map(cleanText).filter(Boolean).join(" ")
+    : "";
+  return cleanText(organization.rejectionReason) || requiredChanges;
+};
+
+const getRejectedOrganizationReason = (flowState, statusField) => {
+  const selectedReason = getOrganizationReason(flowState?.organization, statusField);
+  if (selectedReason) return selectedReason;
+
+  const organizations = Array.isArray(flowState?.organizations)
+    ? flowState.organizations
+    : [];
+  const rejectedOrganization = organizations.find(
+    (organization) => organization?.[statusField] === "rejected",
+  );
+  return getOrganizationReason(rejectedOrganization, statusField);
+};
+
 const getRejectionReason = (flowState, verificationCase) => {
   const kycReason =
     flowState?.kycRejectionReason ||
     flowState?.sellerProfile?.kycRejectionReason ||
+    getRejectedOrganizationReason(flowState, "kycStatus") ||
+    flowState?.sellerProfile?.organizationRejectionReason ||
     "";
   const bankReason =
     flowState?.bankRejectionReason ||
     flowState?.sellerProfile?.bankRejectionReason ||
+    getRejectedOrganizationReason(flowState, "bankVerificationStatus") ||
+    flowState?.sellerProfile?.organizationRejectionReason ||
     "";
 
   if (verificationCase === "both_rejected") {
+    if (kycReason && kycReason === bankReason) {
+      return `KYC/Bank: ${kycReason}`;
+    }
     return [
       kycReason && `KYC: ${kycReason}`,
       bankReason && `Bank: ${bankReason}`,

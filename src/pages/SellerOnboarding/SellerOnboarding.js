@@ -399,16 +399,6 @@ const clearAutoFilledBusinessName = (value = "", registeredContact = {}) => {
   return generatedNames.includes(currentValue) ? "" : value;
 };
 
-const clearRegisteredContactValue = (value = "", registeredValue = "") => {
-  const currentValue = String(value || "")
-    .trim()
-    .toLowerCase();
-  const registered = String(registeredValue || "")
-    .trim()
-    .toLowerCase();
-  return currentValue && currentValue === registered ? "" : value;
-};
-
 const getSellerOnboardingDraftKey = (token) =>
   `${SELLER_ONBOARDING_DRAFT_KEY}:${token || "guest"}`;
 
@@ -1075,6 +1065,26 @@ const SellerOnboarding = () => {
     () => getRegistrationContact(seller?.onboardingUser, flowState),
     [flowState, seller?.onboardingUser],
   );
+  const getResolvedSupportEmail = () =>
+    String(
+      profileForm.supportEmail ||
+        targetOrganization?.supportEmail ||
+        flowState?.organization?.supportEmail ||
+        flowState?.sellerProfile?.supportEmail ||
+        registeredContact.emailAddress ||
+        kycForm.emailAddress ||
+        "",
+    ).trim();
+  const getResolvedSupportPhone = () =>
+    String(
+      profileForm.supportPhone ||
+        targetOrganization?.supportPhone ||
+        flowState?.organization?.supportPhone ||
+        flowState?.sellerProfile?.supportPhone ||
+        registeredContact.mobileNumber ||
+        kycForm.mobileNumber ||
+        "",
+    ).trim();
   const businessTypeLabel =
     withSelectedOption(businessTypes.options, profileForm.businessType).find(
       (option) => String(option.value) === String(profileForm.businessType),
@@ -1154,19 +1164,17 @@ const SellerOnboarding = () => {
       legalBusinessName:
         prev.legalBusinessName || organization.legalBusinessName || "",
       supportEmail:
-        prev.supportEmail ||
-        clearRegisteredContactValue(
-          organization.supportEmail,
-          registeredContact.emailAddress,
-        ) ||
-        "",
+        organization.supportEmail &&
+        (!prev.supportEmail ||
+          prev.supportEmail === registeredContact.emailAddress)
+          ? organization.supportEmail
+          : prev.supportEmail || "",
       supportPhone:
-        prev.supportPhone ||
-        clearRegisteredContactValue(
-          organization.supportPhone,
-          registeredContact.mobileNumber,
-        ) ||
-        "",
+        organization.supportPhone &&
+        (!prev.supportPhone ||
+          prev.supportPhone === registeredContact.mobileNumber)
+          ? organization.supportPhone
+          : prev.supportPhone || "",
       description: prev.description || organization.description || "",
       businessWebsite:
         prev.businessWebsite || organization.businessWebsite || "",
@@ -1284,6 +1292,8 @@ const SellerOnboarding = () => {
         prev.businessName,
         registeredContact,
       ),
+      supportEmail: prev.supportEmail || registeredContact.emailAddress || "",
+      supportPhone: prev.supportPhone || registeredContact.mobileNumber || "",
     }));
   }, [registeredContact]);
 
@@ -1420,19 +1430,17 @@ const SellerOnboarding = () => {
           legalBusinessName:
             prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
           supportEmail:
-            prev.supportEmail ||
-            clearRegisteredContactValue(
-              sellerProfile?.supportEmail,
-              registrationContact.emailAddress,
-            ) ||
-            "",
+            sellerProfile?.supportEmail &&
+            (!prev.supportEmail ||
+              prev.supportEmail === registrationContact.emailAddress)
+              ? sellerProfile.supportEmail
+              : prev.supportEmail || "",
           supportPhone:
-            prev.supportPhone ||
-            clearRegisteredContactValue(
-              sellerProfile?.supportPhone,
-              registrationContact.mobileNumber,
-            ) ||
-            "",
+            sellerProfile?.supportPhone &&
+            (!prev.supportPhone ||
+              prev.supportPhone === registrationContact.mobileNumber)
+              ? sellerProfile.supportPhone
+              : prev.supportPhone || "",
           description: prev.description || sellerProfile?.description || "",
           businessWebsite:
             prev.businessWebsite || sellerProfile?.businessWebsite || "",
@@ -1635,19 +1643,17 @@ const SellerOnboarding = () => {
       legalBusinessName:
         prev.legalBusinessName || sellerProfile?.legalBusinessName || "",
       supportEmail:
-        prev.supportEmail ||
-        clearRegisteredContactValue(
-          sellerProfile?.supportEmail,
-          registrationContact.emailAddress,
-        ) ||
-        "",
+        sellerProfile?.supportEmail &&
+        (!prev.supportEmail ||
+          prev.supportEmail === registrationContact.emailAddress)
+          ? sellerProfile.supportEmail
+          : prev.supportEmail || "",
       supportPhone:
-        prev.supportPhone ||
-        clearRegisteredContactValue(
-          sellerProfile?.supportPhone,
-          registrationContact.mobileNumber,
-        ) ||
-        "",
+        sellerProfile?.supportPhone &&
+        (!prev.supportPhone ||
+          prev.supportPhone === registrationContact.mobileNumber)
+          ? sellerProfile.supportPhone
+          : prev.supportPhone || "",
       description: prev.description || sellerProfile?.description || "",
       businessWebsite:
         prev.businessWebsite || sellerProfile?.businessWebsite || "",
@@ -2203,8 +2209,8 @@ const SellerOnboarding = () => {
       displayName: legalBusinessName,
       legalBusinessName,
       description: profileForm.description.trim(),
-      supportEmail: profileForm.supportEmail.trim(),
-      supportPhone: profileForm.supportPhone.trim(),
+      supportEmail: getResolvedSupportEmail(),
+      supportPhone: getResolvedSupportPhone(),
       businessType: profileForm.businessType,
       gstNumber: profileForm.gstNumber.trim(),
       businessWebsite: profileForm.businessWebsite.trim(),
@@ -2310,8 +2316,8 @@ const SellerOnboarding = () => {
       storeDisplayName: legalBusinessName,
       businessType: profileForm.businessType,
       description: profileForm.description.trim() || null,
-      supportEmail: profileForm.supportEmail.trim(),
-      supportPhone: profileForm.supportPhone.trim(),
+      supportEmail: getResolvedSupportEmail(),
+      supportPhone: getResolvedSupportPhone(),
       gstin: profileForm.gstNumber.trim(),
       pan: kycForm.panNumber.trim(),
       aadhaarNumber: kycForm.aadhaarNumber.trim(),
@@ -2442,13 +2448,15 @@ const SellerOnboarding = () => {
 
     if (!kycForm.addressProofFile && !documentUrls.addressProofUrl)
       errors.addressProofFile = "Address proof document is required";
-    if (!profileForm.supportEmail.trim())
+    const supportEmail = getResolvedSupportEmail();
+    const supportPhone = getResolvedSupportPhone();
+    if (!supportEmail)
       errors.supportEmail = "Business official email is required";
-    else if (!EMAIL_REGEX.test(profileForm.supportEmail.trim()))
+    else if (!EMAIL_REGEX.test(supportEmail))
       errors.supportEmail = "Business official email is invalid";
-    if (!profileForm.supportPhone.trim())
+    if (!supportPhone)
       errors.supportPhone = "Business phone number is required";
-    else if (!/^[0-9]{10,15}$/.test(profileForm.supportPhone.trim()))
+    else if (!/^[0-9]{10,15}$/.test(supportPhone))
       errors.supportPhone = "Business phone number must be 10 digits";
     if (
       !isBlankUdyogAadhaarNumber(profileForm.udyogAadhaarNumber) &&

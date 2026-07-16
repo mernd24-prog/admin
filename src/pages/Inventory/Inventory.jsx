@@ -374,6 +374,7 @@ const Inventory = () => {
     return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
   }, [historyPage, transactions]);
   const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
+  const listTableLoading = loading && productRows.length === 0;
 
   useEffect(() => {
     setHistoryPage(1);
@@ -514,7 +515,7 @@ const Inventory = () => {
       <DataTable
         columns={listColumns}
         data={productRows}
-        loading={loading}
+        loading={listTableLoading}
         error={error}
         totalCount={total}
         listPage={list}
@@ -524,7 +525,7 @@ const Inventory = () => {
         onSelectionChange={list.setSelectedKeys}
         onRefresh={refresh}
         searchPlaceholder="Search product, variant, or SKU"
-        filterBar={<FilterBar filters={FILTERS} listPage={list} loading={loading} />}
+        filterBar={<FilterBar filters={FILTERS} listPage={list} loading={false} />}
         bulkActionBar={
           <BulkActionBar
             selectedCount={list.selectedCount}

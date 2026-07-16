@@ -506,8 +506,12 @@ const ORG_ACTION_CLS = {
 
 const getOrgContextActions = (organization) => {
   const { kycStatus, bankVerificationStatus, approvalStatus, goLiveStatus } = organization;
-  const kycOk     = kycStatus === 'verified';
-  const bankOk    = bankVerificationStatus === 'verified';
+  const normalizedKycStatus = kycStatus || 'not_submitted';
+  const normalizedBankStatus = bankVerificationStatus || 'not_submitted';
+  const kycOk     = normalizedKycStatus === 'verified';
+  const bankOk    = normalizedBankStatus === 'verified';
+  const canRejectKyc = !['not_submitted', 'rejected', 'resubmit_required'].includes(normalizedKycStatus);
+  const canRejectBank = !['not_submitted', 'rejected', 'resubmit_required'].includes(normalizedBankStatus);
   const approved  = ['approved', 'active'].includes(approvalStatus);
   const blocked   = approvalStatus === 'blocked';
   const rejected  = approvalStatus === 'rejected';
@@ -516,22 +520,23 @@ const getOrgContextActions = (organization) => {
 
   if (!kycOk) {
     acts.push({ id: 'kyc_approve', label: 'Approve KYC', cls: 'green', payload: { kycStatus: 'verified' } });
-    if (kycStatus !== 'under_review') {
+    if (normalizedKycStatus !== 'under_review') {
       acts.push({ id: 'kyc_review', label: 'Mark KYC Under Review', cls: 'yellow', payload: { kycStatus: 'under_review', approvalStatus: 'pending_review' } });
     }
-  } else {
+  }
+  if (canRejectKyc) {
     acts.push({ id: 'kyc_reject', label: 'Reject KYC', cls: 'red', payload: { kycStatus: 'rejected' }, needsReason: true });
   }
 
   if (kycOk && !bankOk) {
     acts.push({ id: 'bank_verify', label: 'Verify Bank', cls: 'green', payload: { bankVerificationStatus: 'verified' } });
   }
-  if (kycOk && bankOk) {
+  if (canRejectBank) {
     acts.push({ id: 'bank_reject', label: 'Reject Bank', cls: 'red', payload: { bankVerificationStatus: 'rejected' }, needsReason: true });
   }
 
   if (kycOk && bankOk && !approved && !blocked) {
-    acts.push({ id: 'org_approve', label: 'Approve Organization', cls: 'blue', payload: { approvalStatus: 'approved' } });
+    acts.push({ id: 'org_approve', label: 'Approve Store', cls: 'blue', payload: { approvalStatus: 'approved' } });
   }
   if (approved && !live) {
     acts.push({ id: 'golive_approve', label: 'Approve Go Live', cls: 'blue', payload: { goLiveStatus: 'live' } });
@@ -544,10 +549,10 @@ const getOrgContextActions = (organization) => {
     acts.push({ id: 'reopen', label: 'Reopen for Review', cls: 'yellow', payload: { approvalStatus: 'pending_review' } });
   } else {
     acts.push({ id: 'pending_review', label: 'Mark Under Review', cls: 'yellow', payload: { approvalStatus: 'pending_review' } });
-    acts.push({ id: 'org_reject', label: 'Reject Organization', cls: 'red', payload: { approvalStatus: 'rejected' }, needsReason: true });
+    acts.push({ id: 'org_reject', label: 'Reject Store', cls: 'red', payload: { approvalStatus: 'rejected' }, needsReason: true });
   }
   if (!blocked) {
-    acts.push({ id: 'org_block', label: 'Block Organization', cls: 'gray', payload: { approvalStatus: 'blocked', goLiveStatus: 'blocked' } });
+    acts.push({ id: 'org_block', label: 'Block Store', cls: 'gray', payload: { approvalStatus: 'blocked', goLiveStatus: 'blocked' } });
   }
 
   return acts;

@@ -21,6 +21,7 @@ import {
   PageHeader,
   FilterBar,
 } from "../../../../components/Shared";
+import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
 
 const getErrorMessage = (error, fallback) => {
@@ -216,6 +217,7 @@ const SellerSpecialPriceManager = () => {
     () => rows.filter((row) => getRowFlags(row).isPending).length,
     [rows],
   );
+  const canSave = pendingCount > 0 && !saving && !importing && !loading;
 
   const filteredRows = useMemo(() => {
     const priceStatus = list.filters.priceStatus;
@@ -600,6 +602,10 @@ const SellerSpecialPriceManager = () => {
 
   return (
     <div className="p-4 md:p-6">
+      <Loader
+        loading={saving || importing}
+        label={importing ? "Importing special prices..." : "Saving special prices..."}
+      />
       <PageHeader
         title="Seller Special Price Management"
         subtitle="Update variant-wise special prices, export a template, edit it in Excel, and import the updated values back here."
@@ -622,7 +628,9 @@ const SellerSpecialPriceManager = () => {
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || !pendingCount}
+              disabled={!canSave}
+              title={pendingCount ? "Save special price changes" : "No changes to save"}
+              className="disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
             >
               {saving
                 ? "Saving…"

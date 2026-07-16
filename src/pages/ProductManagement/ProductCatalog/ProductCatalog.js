@@ -137,6 +137,47 @@ const formatMoney = (value) => {
   return amount === null ? "N/A" : `₹${amount.toLocaleString("en-IN")}`;
 };
 
+const formatExportDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+};
+
+const PRODUCT_EXPORT_COLUMNS = [
+  { key: "_id", label: "Product ID" },
+  { key: "title", label: "Title", value: (product) => product.title || product.name || product.full_name || "" },
+  { key: "sku", label: "SKU" },
+  { key: "slug", label: "Slug" },
+  { key: "productType", label: "Product Type" },
+  { key: "visibility", label: "Visibility" },
+  { key: "category", label: "Category", value: (product) => refToLabel(product.category || product.categoryId) },
+  { key: "brand", label: "Brand", value: (product) => refToLabel(product.brand) },
+  { key: "productFamilyCode", label: "Product Family" },
+  { key: "tags", label: "Tags", value: (product) => Array.isArray(product.tags) ? product.tags.join(", ") : "" },
+  { key: "price", label: "Price" },
+  { key: "mrp", label: "MRP" },
+  { key: "salePrice", label: "Sale Price" },
+  { key: "currency", label: "Currency" },
+  { key: "gstRate", label: "GST Rate" },
+  { key: "hsnCode", label: "HSN Code" },
+  { key: "variants", label: "Variants Count", value: (product) => Array.isArray(product.variants) ? product.variants.length : 0 },
+  { key: "image", label: "Primary Image", value: (product) => getPrimaryProductImage(product) || "" },
+  { key: "stock", label: "Stock", value: (product) => getEffectiveStock(product) ?? "" },
+  { key: "reservedStock", label: "Reserved Stock" },
+  { key: "rating", label: "Rating" },
+  { key: "reviewCount", label: "Review Count" },
+  { key: "status", label: "Status", value: getProductStatus },
+  { key: "revisionStatus", label: "Revision Status" },
+  { key: "isApproved", label: "Approved", value: (product) => product.isApproved === true ? "Yes" : "No" },
+  { key: "isDisable", label: "Disabled", value: (product) => product.isDisable === true ? "Yes" : "No" },
+  { key: "sellerId", label: "Seller ID" },
+  { key: "seller", label: "Seller", value: (product) => refToLabel(product.seller || product.sellerName || product.full_name) },
+  { key: "organizationId", label: "Organization ID" },
+  { key: "createdAt", label: "Created At", value: (product) => formatExportDate(product.createdAt) },
+  { key: "updatedAt", label: "Updated At", value: (product) => formatExportDate(product.updatedAt) },
+];
+
 const getInitialFiltersForPath = (pathname = "", search = "") => {
   const queryStatus = new URLSearchParams(search || "").get("status");
   const isArchivedRoute =
@@ -953,6 +994,7 @@ const ProductCatalog = () => {
             <ExportButton
               data={apiRes?.list || []}
               filename="products"
+              columns={PRODUCT_EXPORT_COLUMNS}
               requiredModule="products"
             />
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
