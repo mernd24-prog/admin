@@ -97,6 +97,15 @@ const getBuyerName = (row = {}) => {
   return "Verified Buyer";
 };
 
+const isPlatformCreatedReview = (row = {}) =>
+  String(row.orderId || "").startsWith("admin:") ||
+  String(row.orderItemId || "").startsWith("admin:");
+
+const getCreatedByName = (row = {}, sellerView = false) => {
+  if (sellerView && isPlatformCreatedReview(row)) return "Platform";
+  return getBuyerName(row);
+};
+
 const getProductName = (row = {}) =>
   row.productName ||
   row.product?.title ||
@@ -124,10 +133,10 @@ const getReviewsPayload = (state = {}) => {
   };
 };
 
-const ReviewDetailsDrawer = ({ review, onClose }) => {
+const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
   if (!review) return null;
   const productName = getProductName(review) || "Product not found";
-  const buyerName = getBuyerName(review);
+  const createdByName = getCreatedByName(review, sellerView);
   const reviewDate = review.createdAt
     ? new Date(review.createdAt).toLocaleString("en-GB", {
         day: "2-digit",
@@ -155,9 +164,11 @@ const ReviewDetailsDrawer = ({ review, onClose }) => {
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Buyer</p>
-              <p className="mt-1 font-medium text-gray-800">{buyerName}</p>
-              {review.buyer?.email ? <p className="text-xs text-gray-500">{review.buyer.email}</p> : null}
+              <p className="text-xs font-medium uppercase text-gray-400">
+                {sellerView ? "Created By" : "Buyer"}
+              </p>
+              <p className="mt-1 font-medium text-gray-800">{createdByName}</p>
+              
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-gray-400">Status</p>
@@ -173,10 +184,7 @@ const ReviewDetailsDrawer = ({ review, onClose }) => {
               <p className="text-xs font-medium uppercase text-gray-400">Date</p>
               <p className="mt-1 text-gray-800">{reviewDate}</p>
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Order ID</p>
-              <p className="mt-1 font-mono text-xs text-gray-700">{review.orderId || "—"}</p>
-            </div>
+           
             <div>
               <p className="text-xs font-medium uppercase text-gray-400">Helpful Votes</p>
               <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
@@ -374,13 +382,14 @@ const ProductReviews = () => {
     },
     {
       key: "buyerId",
-      label: "Buyer",
+      label: sellerView ? "Created By" : "Buyer",
       render: (v, row) => {
         const buyerImage = row.buyerImage || row.buyerAvatarUrl;
-        const buyerName = getBuyerName(row);
+        const buyerName = getCreatedByName(row, sellerView);
+        const showBuyerDetails = !(sellerView && isPlatformCreatedReview(row));
         return (
           <div className="flex items-center gap-2 min-w-0">
-            {buyerImage ? (
+            {buyerImage && showBuyerDetails ? (
               <span
                 role="img"
                 aria-label={buyerName}
@@ -396,7 +405,7 @@ const ProductReviews = () => {
               <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
                 {buyerName}
               </span>
-              {row.buyer?.email && row.buyer.email !== buyerName && (
+              {showBuyerDetails && row.buyer?.email && row.buyer.email !== buyerName && (
                 <span className="block max-w-[150px] truncate text-[10px] text-gray-400">
                   {row.buyer.email}
                 </span>
@@ -449,7 +458,7 @@ const ProductReviews = () => {
   label: "Likes",
   render: (v) => (
     <span className="flex items-center gap-1 text-xs text-gray-500">
-      👍 {v || 0}
+      👍  {v || 0}
     </span>
   ),
 },
@@ -611,6 +620,7 @@ const ProductReviews = () => {
       <ReviewDetailsDrawer
         review={viewTarget}
         onClose={() => setViewTarget(null)}
+        sellerView={sellerView}
       />
 
       <AddProductReview

@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import { toast } from "react-toastify";
 import {
   bulkUpdateSpecialPrices,
   getProducts,
@@ -24,6 +23,7 @@ import {
 import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
+import { toast } from "../../../../utils/toast";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
@@ -32,6 +32,23 @@ const getErrorMessage = (error, fallback) => {
 
 const formatMoney = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const MIN_SPECIAL_PRICE_RATIO = 0.5;
+const IMPORT_COLUMNS = [
+  "productId",
+  "productName",
+  "sku",
+  "variantId",
+  "variantSku",
+  "variantTitle",
+  "mrp",
+  "sellingPrice",
+  "currentSpecialPrice",
+  "newSpecialPrice",
+];
+const EDITABLE_IMPORT_COLUMN = "newSpecialPrice";
+const READ_ONLY_IMPORT_COLUMNS = IMPORT_COLUMNS.filter(
+  (column) => column !== EDITABLE_IMPORT_COLUMN,
+);
+
 const getMinimumSpecialPrice = (sellingPrice) =>
   Math.ceil(Number(sellingPrice || 0) * MIN_SPECIAL_PRICE_RATIO * 100) / 100;
 
@@ -40,6 +57,39 @@ const normalizeSpecialPriceValue = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
+
+const normalizeImportText = (value) => String(value ?? "").trim();
+
+const normalizeImportNumber = (value) => {
+  if (value === "" || value === null || value === undefined) return "";
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(parsed) : normalizeImportText(value);
+};
+
+const getExpectedImportValue = (row, column) => {
+  const values = {
+    productId: row.productId,
+    productName: row.productName,
+    sku: row.productSku,
+    variantId: row.variantId,
+    variantSku: row.variantSku,
+    variantTitle: row.variantTitle,
+    mrp: row.mrp,
+    sellingPrice: row.sellingPrice,
+    currentSpecialPrice: row.originalSpecialPrice,
+  };
+  return values[column];
+};
+
+const importValuesMatch = (actual, expected, column) => {
+  if (["mrp", "sellingPrice", "currentSpecialPrice"].includes(column)) {
+    return normalizeImportNumber(actual) === normalizeImportNumber(expected);
+  }
+  return normalizeImportText(actual) === normalizeImportText(expected);
+};
+
+const buildImportValidationError = (message) =>
+  `${message} Suggestion: export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`;
 
 const getRowFlags = (row) => {
   const current = normalizeSpecialPriceValue(row.specialPrice ?? "");
@@ -165,6 +215,7 @@ const SellerSpecialPriceManager = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
   const fileInputRef = useRef(null);
 
   const sellerContext = useMemo(() => getSellerContext(), []);
@@ -241,6 +292,7 @@ const SellerSpecialPriceManager = () => {
   }, [filteredRows, list.page, list.pageSize]);
 
   const handleRowChange = useCallback((rowId, value) => {
+    setImportError("");
     setRows((current) =>
       current.map((row) => {
         if (row.id === rowId) {
@@ -252,14 +304,20 @@ const SellerSpecialPriceManager = () => {
     );
   }, []);
 
-  const persistRows = async (nextRows = rows, allowedRowIds = null) => {
+  const persistRows = async (
+    nextRows = rows,
+    allowedRowIds = null,
+    { showToast = true } = {},
+  ) => {
     const allowedIds = allowedRowIds ? new Set(allowedRowIds) : null;
     const changedRows = nextRows.filter(
       (row) =>
         (!allowedIds || allowedIds.has(row.id)) && getRowFlags(row).isPending,
     );
     if (!changedRows.length) {
-      toast.info("No valid special price changes to save");
+      const message = "No valid special price changes to save";
+      if (showToast) toast.info(message);
+      else setImportError(message);
       return 0;
     }
 
@@ -298,7 +356,9 @@ const SellerSpecialPriceManager = () => {
     });
 
     if (!updates.length) {
-      toast.info("No matching products were found to update");
+      const message = "No matching products were found to update";
+      if (showToast) toast.info(message);
+      else setImportError(message);
       return 0;
     }
 
@@ -311,12 +371,17 @@ const SellerSpecialPriceManager = () => {
           return { ...row, originalSpecialPrice: matching.specialPrice };
         }),
       );
-      toast.success(
-        `Updated ${changedRows.length} special price ${changedRows.length > 1 ? "entries" : "entry"}`,
-      );
+      setImportError("");
+      if (showToast) {
+        toast.success(
+          `Updated ${changedRows.length} special price ${changedRows.length > 1 ? "entries" : "entry"}`,
+        );
+      }
       return changedRows.length;
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to save special prices"));
+      const message = getErrorMessage(error, "Failed to save special prices");
+      setImportError(message);
+      if (showToast) toast.error(message);
       return 0;
     }
   };
@@ -368,9 +433,32 @@ const SellerSpecialPriceManager = () => {
 
     try {
       setImporting(true);
+      setImportError("");
       const imported = await parseImportFile(file);
       if (!imported.length) {
         throw new Error("The selected file did not contain any rows");
+      }
+
+      const importedColumns = Object.keys(imported[0] || {});
+      const missingColumns = IMPORT_COLUMNS.filter(
+        (column) => !importedColumns.includes(column),
+      );
+      const unknownColumns = importedColumns.filter(
+        (column) => !IMPORT_COLUMNS.includes(column),
+      );
+      if (missingColumns.length) {
+        throw new Error(
+          buildImportValidationError(
+            `Missing required column(s): ${missingColumns.join(", ")}.`,
+          ),
+        );
+      }
+      if (unknownColumns.length) {
+        throw new Error(
+          buildImportValidationError(
+            `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
+          ),
+        );
       }
 
       const catalogByIdentity = new Map(
@@ -394,7 +482,9 @@ const SellerSpecialPriceManager = () => {
         const variantSku = String(item.variantSku || "").trim();
         if (!productId || (!variantId && !variantSku)) {
           throw new Error(
-            `Row ${rowNumber}: productId and variantId/variantSku are required. Use a freshly exported template.`,
+            buildImportValidationError(
+              `Row ${rowNumber}: productId and variantId/variantSku are required.`,
+            ),
           );
         }
 
@@ -405,17 +495,36 @@ const SellerSpecialPriceManager = () => {
           : catalogByProductAndSku.get(fallbackIdentity);
         if (!catalogRow) {
           throw new Error(
-            `Row ${rowNumber}: product or variant identity was edited, is duplicated, or no longer exists.`,
+            buildImportValidationError(
+              `Row ${rowNumber}: product or variant identity was edited, duplicated, or no longer exists.`,
+            ),
           );
         }
         if (importedUpdates.has(catalogRow.id)) {
           throw new Error(
-            `Row ${rowNumber}: duplicate product/variant row in the import file.`,
+            buildImportValidationError(
+              `Row ${rowNumber}: duplicate product/variant row in the import file.`,
+            ),
+          );
+        }
+        const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter((column) => {
+          const expected = getExpectedImportValue(catalogRow, column);
+          return !importValuesMatch(item[column], expected, column);
+        });
+        if (editedColumns.length) {
+          const preview = editedColumns.slice(0, 3).join(", ");
+          const extraCount = editedColumns.length - 3;
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: ${preview}${extraCount > 0 ? ` and ${extraCount} more column(s)` : ""} cannot be changed in this import.`,
+            ),
           );
         }
         if (!Object.prototype.hasOwnProperty.call(item, "newSpecialPrice")) {
           throw new Error(
-            `Row ${rowNumber}: newSpecialPrice column is required.`,
+            buildImportValidationError(
+              `Row ${rowNumber}: newSpecialPrice column is required.`,
+            ),
           );
         }
 
@@ -425,7 +534,7 @@ const SellerSpecialPriceManager = () => {
         const price = isBlank ? null : Number(rawPrice);
         if (!isBlank && (!Number.isFinite(price) || price < 0)) {
           throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be a non-negative number or blank to clear it.`,
+            `Row ${rowNumber}: newSpecialPrice must be a non-negative number or blank to clear it. Valid example: 84990.`,
           );
         }
         const minimumSpecialPrice = getMinimumSpecialPrice(
@@ -433,12 +542,12 @@ const SellerSpecialPriceManager = () => {
         );
         if (price !== null && price < minimumSpecialPrice) {
           throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be at least ${formatMoney(minimumSpecialPrice)} (50% of selling price).`,
+            `Row ${rowNumber}: newSpecialPrice must be at least ${formatMoney(minimumSpecialPrice)} (50% of selling price). Valid range: ${formatMoney(minimumSpecialPrice)} to below ${formatMoney(catalogRow.sellingPrice)}.`,
           );
         }
         if (price !== null && price >= Number(catalogRow.sellingPrice || 0)) {
           throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be less than the current selling price.`,
+            `Row ${rowNumber}: newSpecialPrice must be less than the current selling price. Valid range: ${formatMoney(minimumSpecialPrice)} to below ${formatMoney(catalogRow.sellingPrice)}.`,
           );
         }
         importedUpdates.set(catalogRow.id, price);
@@ -452,17 +561,19 @@ const SellerSpecialPriceManager = () => {
 
       setRows(nextRows);
       if (importedUpdates.size === 0) {
-        toast.error(
-          "No rows matched the imported file. Check the product ID / SKU columns.",
-        );
+        const message =
+          "No rows matched the imported file. Check the product ID / SKU columns.";
+        setImportError(message);
         return;
       }
 
-      await persistRows(nextRows, importedUpdates.keys());
+      await persistRows(nextRows, importedUpdates.keys(), { showToast: false });
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, "Failed to import special price Excel"),
+      const message = getErrorMessage(
+        error,
+        "Failed to import special price Excel",
       );
+      setImportError(message);
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -645,6 +756,23 @@ const SellerSpecialPriceManager = () => {
           </>
         }
       />
+
+      {importError ? (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div>
+            <p className="font-semibold">Import issue</p>
+            <p className="mt-1 whitespace-pre-wrap">{importError}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close import issue"
+            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            onClick={() => setImportError("")}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
 
       <DataTable
         columns={columns}

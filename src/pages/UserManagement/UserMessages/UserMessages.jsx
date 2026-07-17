@@ -80,10 +80,18 @@ const getNotificationDetailRoute = (notification = {}) => {
     notification.dealId,
     notification.deal_id,
   );
+  const payoutId = firstValue(
+    meta.payoutId,
+    meta.payout_id,
+    notification.payoutId,
+    notification.payout_id,
+  );
 
   if (invoiceId) return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
   if (creditNoteId)
     return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
+  if (payoutId)
+    return `/app/seller-payouts?payoutId=${encodeURIComponent(payoutId)}`;
   if (returnId) return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
   if (shipmentId) {
     const params = new URLSearchParams({ shipmentId: String(shipmentId) });
