@@ -141,7 +141,13 @@ const getItemTaxLabel = (tax = {}, item = {}) => {
   const cessRate = firstDefined(tax.cessRate, item.cess_rate, item.cessRate, 0);
   const mode = firstDefined(tax.taxMode, tax.tax_mode, "N/A");
   const cessText = money(cessRate) > 0 ? ` + Cess ${percent(cessRate)}` : "";
-  return `${percent(gstRate)} GST${cessText} · ${displayStatus(mode)}`;
+  if (mode === "cgst_sgst") {
+    return `CGST ${percent(money(gstRate) / 2)} + SGST ${percent(money(gstRate) / 2)}${cessText}`;
+  }
+  if (mode === "igst") return `IGST ${percent(gstRate)}${cessText}`;
+  if (mode === "zero_rated_export") return `Zero-rated export${cessText}`;
+  if (mode === "exempt") return "GST exempt";
+  return `${percent(gstRate)} GST${cessText}`;
 };
 
 const getOrganizationName = (snapshot = {}) =>
@@ -332,6 +338,10 @@ const normalizeSellerSettlement = (seller = {}) => ({
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
   shippingPolicy: firstDefined(seller.shippingPolicy, seller.shipping_policy, ""),
   refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
+  gstTcsRate: money(firstDefined(seller.gstTcsRate, seller.gst_tcs_rate, 0)),
+  gstTcsAmount: money(firstDefined(seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
+  incomeTaxTdsRate: money(firstDefined(seller.incomeTaxTdsRate, seller.income_tax_tds_rate, 0)),
+  incomeTaxTdsAmount: money(firstDefined(seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
   sellerPayout: money(firstDefined(seller.sellerPayoutAmount, seller.sellerPayout, seller.seller_payout_amount, 0)),
   commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
   payoutStatus: firstDefined(seller.payoutStatus, seller.payout_status, ""),
@@ -516,7 +526,6 @@ const OrderSummary = () => {
   const summary = order.summary || {};
   const taxIncludedAmount = money(firstDefined(summary.taxIncludedAmount, taxBreakup.taxIncludedAmount));
   const taxPayableAmount = money(firstDefined(summary.taxPayableAmount, taxBreakup.taxPayableAmount));
-  const sellerPlatformFeeAmount = money(firstDefined(summary.sellerPlatformFeeAmount, summary.platformFeeAmount, order.platform_fee_amount, order.platformFeeAmount));
   const customerPlatformFeeAmount = money(firstDefined(summary.customerPlatformFeeAmount, 0));
   const customerPlatformFeeTaxAmount = money(firstDefined(summary.customerPlatformFeeTaxAmount, 0));
   const items = Array.isArray(order.items) ? order.items : [];
@@ -527,6 +536,14 @@ const OrderSummary = () => {
     items.reduce((total, item) => total + money(firstDefined(item.line_total, item.lineTotal)), 0),
   ));
   const discountAmount = money(firstDefined(summary.discountAmount, order.discount_amount, order.discountAmount));
+  const discountSource = String(firstDefined(
+    summary.discountSource,
+    order.discount_source,
+    order.discountSource,
+    order.metadata?.discountSource,
+    "platform",
+  )).toLowerCase();
+  const discountLabel = discountSource === "influencer" ? "Influencer Discount" : "Platform Discount";
   const deliveryChargeAmount = money(firstDefined(
     summary.deliveryChargeAmount,
     summary.shippingFeeAmount,
@@ -877,19 +894,18 @@ const OrderSummary = () => {
               <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
               <InfoRow label="Return Eligible Until" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery verification"} />
               <InfoRow label="Payment Method" value={displayStatus(firstDefined(order.payment_provider, order.paymentProvider))} />
-              <InfoRow label="Subtotal" value={formatMoney(subtotalAmount)} />
-              <InfoRow label="Discount" value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />
-              <InfoRow label="GST Payable" value={formatMoney(taxPayableAmount)} />
-              <InfoRow label="GST Included" value={formatMoney(taxIncludedAmount)} />
-              <InfoRow label="Seller Commission/Fee" value={formatMoney(sellerPlatformFeeAmount)} />
-              {customerPlatformFeeAmount > 0 && <InfoRow label="Customer Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
-              {customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
+              <InfoRow label="Product Total" value={formatMoney(subtotalAmount)} />
               {deliveryChargeAmount > 0 && <InfoRow label="Delivery Charge" value={formatMoney(deliveryChargeAmount)} />}
-              <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />
-              <InfoRow label="Wallet" value={`-${formatMoney(walletDiscountAmount)}`} />
+              {customerPlatformFeeAmount > 0 && <InfoRow label="Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
+              {customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
+              {taxPayableAmount > 0 && <InfoRow label="Additional GST" value={formatMoney(taxPayableAmount)} />}
+              {codChargeAmount > 0 && <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />}
+              {discountAmount > 0 && <InfoRow label={discountLabel} value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />}
+              {walletDiscountAmount > 0 && <InfoRow label="Wallet Deduction" value={<span className="text-[#2ea84a]">-{formatMoney(walletDiscountAmount)}</span>} />}
               <div className="mt-2 border-t border-[#efe6cd] pt-2">
                 <InfoRow label="Customer Payable" value={formatMoney(customerPayableAmount)} strong />
               </div>
+              {taxIncludedAmount > 0 && <InfoRow label="Includes GST" value={formatMoney(taxIncludedAmount)} />}
             </Panel>
           </aside>
         </div>
@@ -897,14 +913,14 @@ const OrderSummary = () => {
         <div className="mt-4 space-y-4">
           <Panel title="Tax Breakup">
             <div className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
-              <InfoRow label="Taxable" value={formatMoney(taxBreakup.taxableAmount)} />
+              <InfoRow label="Product Value Before GST" value={formatMoney(taxBreakup.taxableAmount)} />
               <InfoRow label="GST Rate" value={orderTaxRates.length ? orderTaxRates.map(percent).join(", ") : "N/A"} />
-              <InfoRow label={`CGST ${money(taxBreakup.cgstAmount) > 0 && orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.cgstAmount)} />
-              <InfoRow label={`SGST ${money(taxBreakup.sgstAmount) > 0 && orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.sgstAmount)} />
-              <InfoRow label={`IGST ${money(taxBreakup.igstAmount) > 0 ? orderTaxRates.map(percent).join(", ") : ""}`} value={formatMoney(taxBreakup.igstAmount)} />
-              <InfoRow label="Cess" value={formatMoney(taxBreakup.cessAmount)} />
-              <InfoRow label="Total Tax" value={formatMoney(firstDefined(order.tax_amount, order.taxAmount, taxBreakup.totalTaxAmount))} />
-              <InfoRow label="Mode" value={displayStatus(taxBreakup.taxMode)} />
+              {money(taxBreakup.cgstAmount) > 0 && <InfoRow label={`CGST ${orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.cgstAmount)} />}
+              {money(taxBreakup.sgstAmount) > 0 && <InfoRow label={`SGST ${orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.sgstAmount)} />}
+              {money(taxBreakup.igstAmount) > 0 && <InfoRow label={`IGST ${orderTaxRates.map(percent).join(", ")}`} value={formatMoney(taxBreakup.igstAmount)} />}
+              {money(taxBreakup.cessAmount) > 0 && <InfoRow label="Cess" value={formatMoney(taxBreakup.cessAmount)} />}
+              <InfoRow label={taxPayableAmount > 0 ? "Total GST" : "GST Included in Product Total"} value={formatMoney(firstDefined(order.tax_amount, order.taxAmount, taxBreakup.totalTaxAmount, taxIncludedAmount))} />
+              {taxBreakup.taxMode && <InfoRow label="Tax Pricing" value={taxPayableAmount > 0 ? "Added at checkout" : "Included in product price"} />}
             </div>
             {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
                 <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#efe6cd] pt-3 md:grid-cols-2">
@@ -1175,26 +1191,24 @@ const OrderSummary = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between"><span>{formatLabel("Gross product sales")}</span><span>{formatMoney(seller.grossSales)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Seller payout base")}</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Taxable product sales")}</span><span>{formatMoney(seller.taxableSales)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Tax to maintain")}</span><span>{formatMoney(seller.taxCollected)}</span></div>
+                    <div className="flex justify-between"><span>Product Total</span><span>{formatMoney(seller.grossSales)}</span></div>
                     <div className="flex justify-between">
-                      <span>{formatLabel("Total platform fee")}</span>
+                      <span>Platform Commission</span>
                       <span>
                         -{formatMoney(seller.commissionFee)}
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Percentage commission part")}</span><span>{formatMoney(seller.variableCommissionFee)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Platform fee GST")}</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Customer shipping collected")}</span><span>{formatMoney(seller.sellerDeliveryCharge)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Shipping reimbursement")}</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>
-                    <div className="flex justify-between"><span>{formatLabel("Shipping deduction")}</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>
+                    {seller.platformFeeTax > 0 && <div className="flex justify-between"><span>GST on Commission</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>}
+                    {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping Reimbursement</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
+                    {seller.shippingDeduction > 0 && <div className="flex justify-between"><span>Shipping Deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>}
                     {seller.shippingPolicy && (
                       <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Shipping policy")}</span><span>{formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
                     )}
-                    <div className="flex justify-between"><span>{formatLabel("Refund adjustment")}</span><span>-{formatMoney(seller.refundAmount)}</span></div>
+                    {seller.refundAmount > 0 && <div className="flex justify-between"><span>Refund Adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>}
+                    {seller.gstTcsAmount > 0 && <div className="flex justify-between"><span>GST TCS ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsAmount)}</span></div>}
+                    {seller.incomeTaxTdsAmount > 0 && <div className="flex justify-between"><span>Income-tax TDS ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsAmount)}</span></div>}
+                    <div className="mt-2 flex justify-between border-t border-[#efe6cd] pt-2 font-semibold"><span>Final Seller Payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
                     {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
                         {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}

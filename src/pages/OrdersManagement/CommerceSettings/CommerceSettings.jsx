@@ -62,6 +62,10 @@ const DEFAULT_SETTINGS = {
     payoutManualApprovalRequired: true,
     minimumPayoutAmount: 0,
     shippingPolicy: "not_in_seller_payout",
+    gstTcsEnabled: false,
+    gstTcsRate: 0.5,
+    incomeTaxTdsEnabled: false,
+    incomeTaxTdsRate: 0.1,
   },
 };
 
@@ -307,6 +311,8 @@ export default function CommerceSettings() {
         finance: {
           ...nextSettings.finance,
           platformFeeTaxRate: Number(nextSettings.platformFees.gstRate ?? nextSettings.finance.platformFeeTaxRate ?? 0),
+          gstTcsRate: Number(nextSettings.finance.gstTcsRate || 0),
+          incomeTaxTdsRate: Number(nextSettings.finance.incomeTaxTdsRate || 0),
         },
       };
       const response = await axiosProvider.put(ENDPOINTS.commerceSettings.detail, payload);
@@ -410,6 +416,14 @@ export default function CommerceSettings() {
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField label="Seller Payout Base" value={settings.finance.sellerPayoutBase} onChange={(value) => patchSettings("finance", { sellerPayoutBase: value })} options={[option("gross_customer_price", "Gross customer price"), option("taxable_ex_gst", "Taxable ex GST")]} />
           <SelectField label="Shipping In Payout" value={settings.finance.shippingPolicy} onChange={(value) => patchSettings("finance", { shippingPolicy: value })} options={[option("not_in_seller_payout", "Not in seller payout"), option("reimburse_seller", "Reimburse seller"), option("deduct_from_seller", "Deduct from seller")]} />
+        </div>
+      </Section>
+      <Section title="Seller Statutory Deductions">
+        <div className="grid gap-4 md:grid-cols-2">
+          <SelectField label="GST TCS" value={settings.finance.gstTcsEnabled ? "enabled" : "disabled"} onChange={(value) => patchSettings("finance", { gstTcsEnabled: value === "enabled" })} options={[option("disabled", "Disabled"), option("enabled", "Enabled")]} hint="Collected from net taxable supplies and credited through GST compliance." />
+          <InputField label="GST TCS Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.finance.gstTcsRate} onChange={(value) => patchSettings("finance", { gstTcsRate: value })} />
+          <SelectField label="Income-tax TDS" value={settings.finance.incomeTaxTdsEnabled ? "enabled" : "disabled"} onChange={(value) => patchSettings("finance", { incomeTaxTdsEnabled: value === "enabled" })} options={[option("disabled", "Disabled"), option("enabled", "Enabled")]} hint="Withheld from seller gross sales and shown separately in payout statements." />
+          <InputField label="Income-tax TDS Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.finance.incomeTaxTdsRate} onChange={(value) => patchSettings("finance", { incomeTaxTdsRate: value })} />
         </div>
       </Section>
       </div>
