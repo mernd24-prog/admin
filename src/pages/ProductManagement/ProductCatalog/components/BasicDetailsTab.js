@@ -871,17 +871,18 @@ export default function BasicDetailsTab({
               </div>
             </div>
           </div>
-
+<div data-error-field="description" name="description" className="md:col-span-2">
           <TextEditor
             label="Description"
             value={formData.description || ''}
             onChange={(content) => handleInputReactQuillChange?.('description', content)}
             required={true}
-            placeholder="Enter detailed product description"
+            placeholder="Enter detailed product description"   
             error={errors?.description}
             height="220px"
              className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
           />
+          </div>
         </div>
       </div>
  

@@ -323,6 +323,77 @@ export default function ProductManagementUI() {
     tags: useRef(null),
   };
 
+  const FIELD_TO_SECTION = {
+    sellerId: "basic-details",
+    organizationId: "basic-details",
+    name: "basic-details",
+    brand: "basic-details",
+    description: "basic-details",
+    category_id: "basic-details",
+    hsn_code: "basic-details",
+    productFamilyCode: "basic-details",
+    variants: "variants-options",
+    attributes: "product-details",
+    shipping: "shipping",
+    seo: "seo",
+    tags: "tags",
+  };
+
+  const scrollToFirstValidationError = (errors, attempt = 0) => {
+    console.log("errors: ", errors);
+    const firstField = Object.keys(errors || {})[0];
+    if (!firstField || typeof document === "undefined") return;
+    console.log("First Field:", firstField);
+    console.log(
+      "Found:",
+      document.querySelector(`[data-error-field="${firstField}"]`),
+    );
+
+    const sectionId = FIELD_TO_SECTION[firstField] || "basic-details";
+    if (activeTab !== sectionId) setActiveTab(sectionId);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const selectors = [
+          `[name="${firstField}"]`,
+          `[id="${firstField}"]`,
+          `[data-error-field="${firstField}"]`,
+        ];
+        let field = null;
+
+        for (const selector of selectors) {
+          const found = document.querySelector(selector);
+          if (found) {
+            field = found;
+            break;
+          }
+        }
+        const target =
+          field?.closest?.(".admin-field") || field || refs[sectionId]?.current;
+        console.log("Scrolling to:", target);
+        if (target?.scrollIntoView) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        const focusTarget = field?.matches?.("input, select, textarea")
+          ? field
+          : field?.querySelector?.(
+              "input:not([type='hidden']), select, textarea",
+            );
+        if (focusTarget && focusTarget.type !== "file") {
+          focusTarget.focus({ preventScroll: true });
+        }
+
+        if (!field && attempt < 5) {
+          setTimeout(
+            () => scrollToFirstValidationError(errors, attempt + 1),
+            150,
+          );
+        }
+      });
+    });
+  };
+
   const fetchProductById = async (productId) => {
     try {
       dispatch(getProductById({ _id: productId }))
@@ -998,7 +1069,23 @@ export default function ProductManagementUI() {
       newErrors.name = "Product name must be at least 3 characters.";
     if (formData?.name?.trim() && formData.name.trim().length > 200)
       newErrors.name = "Product name must be not more than 200 characters.";
-    // Description editing is currently hidden in the variant-first form. The
+    // Description Validation
+    const description = formData.description || "";
+
+    const plainDescription = description
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .trim();
+    console.log("plainDescription: ", plainDescription);
+
+    if (!plainDescription) {
+      newErrors.description = "Description is required.";
+    } else if (plainDescription.length < 10) {
+      newErrors.description = "Description must be at least 10 characters.";
+    } else if (plainDescription.length > 5000) {
+      newErrors.description =
+        "Description must not be more than 5000 characters.";
+    }
     // API adapter supplies a generated fallback from the product title.
     if (!formData?.sellerId && !isSellerPanelUser)
       newErrors.sellerId = "Seller is required.";
@@ -1054,6 +1141,9 @@ export default function ProductManagementUI() {
     }
 
     setError(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      scrollToFirstValidationError(newErrors);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -1164,8 +1254,11 @@ export default function ProductManagementUI() {
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
+
+    // Update form data
     if (name.includes(".")) {
       const [group, field] = name.split(".");
+
       setFormData((prev) => ({
         ...prev,
         [group]: {
@@ -1173,12 +1266,32 @@ export default function ProductManagementUI() {
           [field]: value,
         },
       }));
-      return;
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
     }
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Clear/revalidate the error while typing
+    setError((prev) => {
+      const updatedErrors = { ...prev };
+
+      if (name === "name") {
+        if (!value.trim()) {
+          updatedErrors.name = "Product name is required.";
+        } else if (value.trim().length < 3) {
+          updatedErrors.name = "Product name must be at least 3 characters.";
+        } else if (value.trim().length > 200) {
+          updatedErrors.name =
+            "Product name must not be more than 200 characters.";
+        } else {
+          delete updatedErrors.name;
+        }
+      }
+
+      return updatedErrors;
+    });
   }, []);
 
   const handleSelectChange = (selectedOption, action) => {
@@ -1535,11 +1648,11 @@ export default function ProductManagementUI() {
           eligible: returnable,
           returnWindowDays,
           days: returnWindowDays,
-          type: returnable ? current.type || 'standard' : 'non_returnable',
-          resolution: current.resolution || 'refund_or_replacement',
+          type: returnable ? current.type || "standard" : "non_returnable",
+          resolution: current.resolution || "refund_or_replacement",
           requiresImages: Boolean(current.requiresImages),
           inspectionRequired: current.inspectionRequired !== false,
-          shippingPaidBy: current.shippingPaidBy || 'platform',
+          shippingPaidBy: current.shippingPaidBy || "platform",
           restockingFee: Number(current.restockingFee || 0),
         };
       })(),
@@ -1772,6 +1885,8 @@ export default function ProductManagementUI() {
   ]);
 
   const handleProductDetailChange = (field, content) => {
+    console.log("Field:", field);
+    console.log("Content:", content);
     setFormData((prev) => ({
       ...prev,
       [field]: content,
@@ -1866,14 +1981,16 @@ export default function ProductManagementUI() {
     });
   }, []);
 
-  const handleManualAttrKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addManualAttribute();
-    }
-  }, [addManualAttribute]);
+  const handleManualAttrKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addManualAttribute();
+      }
+    },
+    [addManualAttribute],
+  );
 
-   
   const tabs = useMemo(
     () => [
       {
