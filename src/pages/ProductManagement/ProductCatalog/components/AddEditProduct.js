@@ -14,7 +14,7 @@ import {
   getPlatformOptions,
   getPlatformOptionValues,
 } from "../../../../Redux/adminCoreSlice";
-import { transformArray } from "../../../../_helpers/globalFunctions";
+import { transformArray, uploadFileMulti } from "../../../../_helpers/globalFunctions";
 import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
@@ -81,6 +81,7 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-admin",
   "seller-sub-admin",
 ]);
+const MAX_COMMON_PRODUCT_IMAGES = 8;
 const getSessionUser = () => {
   if (typeof window === "undefined") return null;
   try {
@@ -226,6 +227,8 @@ export default function ProductManagementUI() {
   const [error, setError] = useState(null);
   let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
+  const [commonImageUrl, setCommonImageUrl] = useState("");
+  const [commonImagesUploading, setCommonImagesUploading] = useState(false);
   const [options, setVariantRows] = useState([
     {
       sku: "",
@@ -1539,7 +1542,7 @@ export default function ProductManagementUI() {
           resolution: current.resolution || 'refund_or_replacement',
           requiresImages: Boolean(current.requiresImages),
           inspectionRequired: current.inspectionRequired !== false,
-          shippingPaidBy: current.shippingPaidBy || 'platform',
+          shippingPaidBy: isSellerPanelUser ? 'seller' : (current.shippingPaidBy || 'seller'),
           restockingFee: Number(current.restockingFee || 0),
         };
       })(),
@@ -1681,6 +1684,9 @@ export default function ProductManagementUI() {
         ? { visibility: updatedFormData.visibility }
         : {}),
       tags: Array.isArray(updatedFormData.tags) ? updatedFormData.tags : [],
+      commonImages: Array.isArray(updatedFormData.commonImages)
+        ? updatedFormData.commonImages.filter(Boolean)
+        : [],
       ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length
         ? { seo: updatedFormData.seo }
         : {}),
@@ -1873,6 +1879,50 @@ export default function ProductManagementUI() {
     }
   }, [addManualAttribute]);
 
+  const uploadCommonProductImages = async (files) => {
+    const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
+    const remaining = MAX_COMMON_PRODUCT_IMAGES - current.length;
+    if (!files?.length || remaining <= 0) {
+      if (remaining <= 0) toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
+      return;
+    }
+    setCommonImagesUploading(true);
+    try {
+      const urls = await uploadFileMulti(Array.from(files).slice(0, remaining), "PRODUCT");
+      setFormData((previous) => ({
+        ...previous,
+        commonImages: [...(previous.commonImages || []), ...urls],
+      }));
+      toast.success(`${urls.length} common product image${urls.length === 1 ? "" : "s"} uploaded`);
+    } catch (uploadError) {
+      toast.error(uploadError?.message || "Common image upload failed");
+    } finally {
+      setCommonImagesUploading(false);
+    }
+  };
+
+  const addCommonProductImageUrl = () => {
+    const url = commonImageUrl.trim();
+    const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
+    if (!url) return;
+    if (current.length >= MAX_COMMON_PRODUCT_IMAGES) {
+      toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
+      return;
+    }
+    setFormData((previous) => ({
+      ...previous,
+      commonImages: [...(previous.commonImages || []), url],
+    }));
+    setCommonImageUrl("");
+  };
+
+  const removeCommonProductImage = (imageIndex) => {
+    setFormData((previous) => ({
+      ...previous,
+      commonImages: (previous.commonImages || []).filter((_, index) => index !== imageIndex),
+    }));
+  };
+
    
   const tabs = useMemo(
     () => [
@@ -1886,6 +1936,7 @@ export default function ProductManagementUI() {
             formData={formData}
             errors={error}
             handleChange={handleChange}
+            handleNestedChange={handleNestedChange}
             formattedCategoryList={createSelectOptions}
             formattedBrandList={formattedData.brandList}
             formattedWarrantyList={formattedData.warrantyTemplateList}
@@ -2079,6 +2130,82 @@ export default function ProductManagementUI() {
         ),
       },
       {
+        id: "common-images",
+        title: "Common Images",
+        description: "Images shown across every product variant.",
+        icon: <BsMenuApp />,
+        component: (
+          <section className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">Common product images</h3>
+                  <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
+                    {(formData.commonImages || []).length}/{MAX_COMMON_PRODUCT_IMAGES}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Upload shared catalog images such as front, back, packaging, usage, and detail views. They appear for every variant.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {(formData.commonImages || []).map((image, imageIndex) => (
+                  <div key={`${image}-${imageIndex}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                    <img src={image} alt={`Common product ${imageIndex + 1}`} className="h-full w-full object-contain p-1" />
+                    {imageIndex === 0 && (
+                      <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">Cover</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeCommonProductImage(imageIndex)}
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label={`Remove common product image ${imageIndex + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
+                  <label className={`flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}>
+                    <FiPlus size={20} />
+                    <span>{commonImagesUploading ? "Uploading…" : "Upload"}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={(event) => {
+                        uploadCommonProductImages(event.target.files);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+{/* 
+              {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="url"
+                    className="admin-input flex-1"
+                    placeholder="Or paste a common image URL"
+                    value={commonImageUrl}
+                    onChange={(event) => setCommonImageUrl(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addCommonProductImageUrl();
+                      }
+                    }}
+                  />
+                  <button type="button" className="admin-btn" onClick={addCommonProductImageUrl}>Add image</button>
+                </div>
+              )} */}
+          </section>
+        ),
+      },
+      {
         id: "variants-options",
         title: "Variants & options",
         description:
@@ -2086,6 +2213,7 @@ export default function ProductManagementUI() {
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-5">
+
             <div className="pb-4 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">
                 Variant Builder
@@ -2384,6 +2512,8 @@ export default function ProductManagementUI() {
       variantAxes,
       categoryAttributeSchema,
       error,
+      commonImageUrl,
+      commonImagesUploading,
     ],
   );
 

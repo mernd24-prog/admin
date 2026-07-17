@@ -212,6 +212,7 @@ export const ENDPOINTS = {
     sellerPayoutsExport: "/sellers/commissions/payouts/export",
     myCommissions: "/sellers/commissions/my-commissions",
     myPayouts: "/sellers/commissions/my-payouts",
+    myWallet: "/sellers/commissions/my-wallet",
     myPayoutsExport: "/sellers/commissions/my-payouts/export",
     mySettlements: "/sellers/commissions/my-settlements",
     mySettlementsExport: "/sellers/commissions/my-settlements/export",

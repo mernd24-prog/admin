@@ -23,6 +23,7 @@
     "isDisable": false,
     "isApproved": false,
     "markAsFeatured": false,
+    "commonImages": [],
     "isDealProduct": false,
     "dealBadge": "Today's Deal",
     "dealSource": "admin_direct",
@@ -41,7 +42,7 @@
         "resolution": "refund_or_replacement",
         "requiresImages": false,
         "inspectionRequired": true,
-        "shippingPaidBy": "platform",
+        "shippingPaidBy": "seller",
         "restockingFee": 0
       }
     },

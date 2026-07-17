@@ -287,8 +287,6 @@ const buildSellerSettlements = (items = []) =>
         const taxAmount = money(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount, itemTax.tax_amount));
         const platformFee = money(firstDefined(item.platform_fee_amount, item.platformFeeAmount, pricing.platformFeeAmount));
         const commissionFee = money(firstDefined(pricing.commissionFee, pricing.commission_fee, platformFee));
-        const fixedFee = money(firstDefined(pricing.fixedFee, pricing.fixed_fee));
-        const closingFee = money(firstDefined(pricing.closingFee, pricing.closing_fee));
         const commissionPercent = money(firstDefined(pricing.commissionPercent, pricing.commission_percent));
 
         acc.grossSales += lineTotal;
@@ -296,8 +294,6 @@ const buildSellerSettlements = (items = []) =>
         acc.taxCollected += taxAmount;
         acc.platformFee += platformFee;
         acc.commissionFee += commissionFee;
-        acc.fixedFee += fixedFee;
-        acc.closingFee += closingFee;
         if (commissionPercent > 0) acc.commissionRates.add(commissionPercent);
         return acc;
       },
@@ -307,8 +303,6 @@ const buildSellerSettlements = (items = []) =>
         taxCollected: 0,
         platformFee: 0,
         commissionFee: 0,
-        fixedFee: 0,
-        closingFee: 0,
         commissionRates: new Set(),
       },
     );
@@ -333,8 +327,6 @@ const normalizeSellerSettlement = (seller = {}) => ({
   commissionFee: money(firstDefined(seller.platformFeeAmount, seller.commissionAmount, seller.commissionFee, seller.platform_fee_amount, 0)),
   variableCommissionFee: money(firstDefined(seller.commissionFeeAmount, seller.commission_fee_amount, 0)),
   platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
-  fixedFee: money(firstDefined(seller.fixedFeeAmount, seller.fixedFee, seller.fixed_fee_amount, seller.fixed_fee, 0)),
-  closingFee: money(firstDefined(seller.closingFeeAmount, seller.closingFee, seller.closing_fee_amount, seller.closing_fee, 0)),
   sellerDeliveryCharge: money(firstDefined(seller.sellerDeliveryChargeAmount, seller.seller_delivery_charge_amount, seller.deliveryChargeAmount, seller.delivery_charge_amount, 0)),
   shippingReimbursement: money(firstDefined(seller.shippingReimbursementAmount, seller.shipping_reimbursement_amount, 0)),
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
@@ -440,7 +432,7 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const { isSeller, isAdmin, isSuperAdmin, role } = usePermission();
+  const { can, isSeller, isAdmin, isSuperAdmin, role } = usePermission();
   const canOpenAdminProfiles = !isSeller;
 
   const [state, setState] = useState({
@@ -510,6 +502,14 @@ const OrderSummary = () => {
 
   const order = state.orderInfo || {};
   const orderId = getOrderId(order);
+  const relationActions = [
+    { label: "Payments", module: "payments", path: "/app/payments" },
+    { label: "Shipments", module: "delivery", path: "/app/shipment-tracking" },
+    { label: "Returns", module: "returns", path: "/app/returns" },
+    { label: "Cancellations", module: "cancellations", path: "/app/cancellations" },
+    { label: "Tax Invoices", module: "tax-invoices", path: "/app/tax-invoices" },
+    { label: "Credit Notes", module: "credit-notes", path: "/app/credit-notes" },
+  ].filter((action) => can(action.module, "view"));
   const orderNumber = firstDefined(order.order_number, order.orderNumber, order.order_no, orderId);
   const shippingAddress = normalizeJson(firstDefined(order.shipping_address, order.shippingAddress), {});
   const taxBreakup = normalizeJson(firstDefined(order.tax_breakup, order.taxBreakup), {});
@@ -969,24 +969,16 @@ const OrderSummary = () => {
           className="mt-4"
           actions={(
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/payments?orderId=${encodeURIComponent(orderId)}`)}>
-                Payments
-              </button>
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`)}>
-                Shipments
-              </button>
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/returns?orderId=${encodeURIComponent(orderId)}`)}>
-                Returns
-              </button>
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/cancellations?orderId=${encodeURIComponent(orderId)}`)}>
-                Cancellations
-              </button>
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/tax-invoices?orderId=${encodeURIComponent(orderId)}`)}>
-                Tax Invoices
-              </button>
-              <button type="button" className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]" onClick={() => navigate(`/app/credit-notes?orderId=${encodeURIComponent(orderId)}`)}>
-                Credit Notes
-              </button>
+              {relationActions.map((action) => (
+                <button
+                  key={action.path}
+                  type="button"
+                  className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]"
+                  onClick={() => navigate(`${action.path}?orderId=${encodeURIComponent(orderId)}`)}
+                >
+                  {action.label}
+                </button>
+              ))}
             </div>
           )}
         >
@@ -1075,15 +1067,7 @@ const OrderSummary = () => {
                         { label: "Created", value: formatDate(firstDefined(shipment.created_at, shipment.createdAt)) },
                         { label: "Events", value: Array.isArray(shipment.trackingEvents) ? shipment.trackingEvents.length : 0 },
                       ]}
-                      action={(
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-[#2f6fed]"
-                          onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&shipmentId=${encodeURIComponent(firstDefined(shipment.id, shipment._id, ""))}`)}
-                        >
-                          Manage Tracking, Agent, OTP, E-way
-                        </button>
-                      )}
+ 
                     />
                   ))}
                 </div>
@@ -1203,8 +1187,6 @@ const OrderSummary = () => {
                       </span>
                     </div>
                     <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Percentage commission part")}</span><span>{formatMoney(seller.variableCommissionFee)}</span></div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Fixed fee part")}</span><span>{formatMoney(seller.fixedFee)}</span></div>
-                    <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Closing fee part")}</span><span>{formatMoney(seller.closingFee)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Platform fee GST")}</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Customer shipping collected")}</span><span>{formatMoney(seller.sellerDeliveryCharge)}</span></div>
                     <div className="flex justify-between"><span>{formatLabel("Shipping reimbursement")}</span><span>{formatMoney(seller.shippingReimbursement)}</span></div>

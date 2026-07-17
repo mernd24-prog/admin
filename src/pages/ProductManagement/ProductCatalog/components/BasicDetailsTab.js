@@ -806,6 +806,55 @@ export default function BasicDetailsTab({
                 />
               </>
             )} */}
+            <div className="md:col-span-2 rounded-lg border border-[var(--admin-line)] bg-white p-4 shadow-sm">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-900">Warranty information</h4>
+                <p className="mt-1 text-xs text-gray-500">Describe warranty coverage, exclusions, claim rules, required documents, and support instructions.</p>
+              </div>
+              <div className="mb-4 grid gap-4 md:grid-cols-2">
+                <Input
+                  labelName="Warranty Period"
+                  name="warranty.period"
+                  type="number"
+                  min={0}
+                  value={formData.warranty?.period ?? ''}
+                  onChange={(event) => handleNestedChange('warranty.period', event.target.value)}
+                  placeholder="Example: 12"
+                />
+                <FilterSelect
+                  label="Warranty Unit"
+                  value={warrantyUnits.options.find((option) => option.value === formData.warranty?.periodUnit) || null}
+                  onChange={(option) => handleNestedChange('warranty.periodUnit', option?.value || '')}
+                  options={warrantyUnits.options}
+                  placeholder="Select warranty unit"
+                  isLoading={warrantyUnits.loading}
+                  isClearable
+                />
+                <Input
+                  labelName="Warranty Provider"
+                  name="warranty.provider"
+                  value={formData.warranty?.provider || ''}
+                  onChange={(event) => handleNestedChange('warranty.provider', event.target.value)}
+                  placeholder="Seller, manufacturer, or service partner"
+                />
+                <Input
+                  labelName="Warranty Type"
+                  name="warranty.type"
+                  value={formData.warranty?.type || ''}
+                  onChange={(event) => handleNestedChange('warranty.type', event.target.value)}
+                  placeholder="Example: Manufacturer warranty"
+                />
+              </div>
+              <TextEditor
+                label="Warranty description and rules"
+                value={formData.warranty?.terms || ''}
+                onChange={(content) => handleNestedChange('warranty.terms', content)}
+                 height="220px"
+             className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+                placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
+              />
+            </div>
+
             <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-900">Product Return Policy</h4>
@@ -846,13 +895,17 @@ export default function BasicDetailsTab({
                   labelName="Return Shipping Paid By"
                   name="warranty.returnPolicy.shippingPaidBy"
                   type="select"
-                  value={formData.warranty?.returnPolicy?.shippingPaidBy || 'platform'}
-                  onChange={(option) => handleNestedChange('warranty.returnPolicy.shippingPaidBy', option?.value || 'platform')}
-                  options={[
-                    { value: 'platform', label: 'Platform' },
-                    { value: 'seller', label: 'Seller' },
-                    { value: 'customer', label: 'Customer' },
-                  ]}
+                  disabled={isSellerPanelUser}
+                  value={isSellerPanelUser ? 'seller' : (formData.warranty?.returnPolicy?.shippingPaidBy || 'seller')}
+                  onChange={(option) => handleNestedChange('warranty.returnPolicy.shippingPaidBy', option?.value || 'seller')}
+                  options={isSellerPanelUser
+                    ? [{ value: 'seller', label: 'Seller' }]
+                    : [
+                        { value: 'platform', label: 'Platform' },
+                        { value: 'seller', label: 'Seller' },
+                        { value: 'customer', label: 'Customer' },
+                      ]}
+                  helperText={isSellerPanelUser ? 'Seller handles delivery and return shipping.' : undefined}
                 />
                 <Input
                   labelName="Require Return Images"

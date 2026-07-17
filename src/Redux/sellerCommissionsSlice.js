@@ -102,6 +102,14 @@ export const getSellerWalletSummary = createApiThunkPrivate(
   { transformParams: pickQuery(["organizationId", "fromDate", "toDate"]) }
 );
 
+export const getMySellerWalletSummary = createApiThunkPrivate(
+  "sellerCommissions/getMySellerWalletSummary",
+  ENDPOINTS.payouts.myWallet,
+  "GET",
+  true,
+  { transformParams: withSelectedOrganization(["fromDate", "toDate", "limit", "offset"]) }
+);
+
 export const getPayoutOperationsQueue = createApiThunkPrivate(
   "sellerCommissions/getPayoutOperationsQueue",
   ENDPOINTS.payouts.operationsQueue,
@@ -221,6 +229,7 @@ const sellerCommissionsSlice = createSlice({
     createExtraReducersForThunk(builder, getAdminSellerPayouts, "adminPayoutsData");
     createExtraReducersForThunk(builder, getSellerSettlements, "settlementsData");
     createExtraReducersForThunk(builder, getSellerWalletSummary, "walletSummaryData");
+    createExtraReducersForThunk(builder, getMySellerWalletSummary, "walletSummaryData");
     createExtraReducersForThunk(builder, getPayoutOperationsQueue, "payoutOperationsQueueData");
     createExtraReducersForThunk(builder, getNegativeBalances, "negativeBalancesData");
     createExtraReducersForThunk(builder, calculateSellerCommission, "calculateCommissionData");

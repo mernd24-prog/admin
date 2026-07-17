@@ -691,7 +691,7 @@ const VariantBuilder = ({
                         )}
                       </div>
 
-                      {imageCount < MAX_VARIANT_IMAGES && (
+                      {/* {imageCount < MAX_VARIANT_IMAGES && (
                         <div className="flex gap-2">
                           <SmallInput
                             type="text"
@@ -699,7 +699,7 @@ const VariantBuilder = ({
                             onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); addVariantImageUrl(idx, e.target.value); e.target.value = ''; } }}
                           />
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 )}

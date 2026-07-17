@@ -212,7 +212,7 @@ const returnWindowLabel = (deadline) => {
   return `${days} days remaining`;
 };
 
-const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, showSellerColumn = true) => [
+const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, showSellerColumn = true, showBuyerColumn = true) => [
   {
     key: "order_number",
     label: "Order #",
@@ -240,7 +240,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
       );
     },
   },
-  {
+  ...(showBuyerColumn ? [{
     key: "buyer_id",
     label: "Buyer",
     render: (v, row) => {
@@ -269,7 +269,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
         <div className="text-left">{buyerContent}</div>
       );
     },
-  },
+  }] : []),
   ...(showSellerColumn ? [{
     key: "seller",
     label: "Seller / Org",
@@ -407,7 +407,7 @@ const getListPayload = (selector = {}) => {
 const Orders = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isSeller } = usePermission();
+  const { isSeller, isAdmin } = usePermission();
   const selector = useSelector((state) => state.order);
   const list = useListPage({
     defaultPageSize: 20,
@@ -435,7 +435,7 @@ const Orders = () => {
   );
 
   useEffect(() => {
-    if (!buyerIds.length) {
+    if (!isAdmin || !buyerIds.length) {
       setBuyerDirectory({});
       return;
     }
@@ -465,7 +465,7 @@ const Orders = () => {
     return () => {
       active = false;
     };
-  }, [buyerIds]);
+  }, [buyerIds, isAdmin]);
 
   const displayItems = useMemo(
     () =>
@@ -483,8 +483,8 @@ const Orders = () => {
   );
 
   const baseColumns = useMemo(
-    () => createColumns(navigate, !isSeller, !isSeller, !isSeller),
-    [isSeller, navigate],
+    () => createColumns(navigate, isAdmin, !isSeller, !isSeller, isAdmin),
+    [isAdmin, isSeller, navigate],
   );
 
   useEffect(() => {
@@ -519,8 +519,12 @@ const Orders = () => {
   ]);
 
   const filterFields = useMemo(
-    () => (isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS),
-    [isSeller],
+    () => FILTER_FIELDS.filter((field) => {
+      if (field.key === "buyerId" && !isAdmin) return false;
+      if (field.key === "sellerId" && isSeller) return false;
+      return true;
+    }),
+    [isAdmin, isSeller],
   );
 
   const columns = [
@@ -602,7 +606,7 @@ const Orders = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
-        searchPlaceholder="Search by order number or buyer…"
+        searchPlaceholder={isAdmin ? "Search by order number or buyer…" : "Search by order number…"}
         emptyText="No orders found."
         emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
         requiredModule="orders"

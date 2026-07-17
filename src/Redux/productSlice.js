@@ -113,6 +113,7 @@ const toProductBody = (payload = {}) => {
         ...(Array.isArray(payload.collectionIds) ? { collectionIds: payload.collectionIds } : {}),
         stock: Number(payload.stock || payload.quantity || 0),
         images: normalizeImageList(payload.images),
+        commonImages: normalizeImageList(payload.commonImages),
         videos: Array.isArray(payload.videos) ? payload.videos : [],
         documents: Array.isArray(payload.documents) ? payload.documents : [],
         tags: Array.isArray(payload.tags) ? payload.tags : [],
@@ -177,6 +178,9 @@ const toProductPatchBody = (payload = {}) => {
     if (source.collectionIds !== undefined && Array.isArray(source.collectionIds)) body.collectionIds = source.collectionIds;
     if (source.stock !== undefined || source.quantity !== undefined) body.stock = Number(source.stock || source.quantity || 0);
     if (source.images !== undefined && Array.isArray(source.images)) body.images = normalizeImageList(source.images);
+    if (source.commonImages !== undefined && Array.isArray(source.commonImages)) {
+        body.commonImages = normalizeImageList(source.commonImages);
+    }
     if (source.videos !== undefined && Array.isArray(source.videos)) body.videos = source.videos;
     if (source.documents !== undefined && Array.isArray(source.documents)) body.documents = source.documents;
     if (source.tags !== undefined && Array.isArray(source.tags)) body.tags = source.tags;

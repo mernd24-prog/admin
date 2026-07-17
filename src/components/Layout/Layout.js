@@ -260,6 +260,9 @@ const CodConfig = React.lazy(
 const SellerPayouts = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
 );
+const SellerWallet = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/SellerWallet"),
+);
 const PayoutOpsQueue = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/PayoutOpsQueue"),
 );
@@ -570,6 +573,7 @@ function Layout() {
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
       { path: "/seller-finance", render: () => <SellerFinance /> },
+      { path: "/seller-wallet", render: () => <SellerWallet /> },
       { path: "/seller-cod-collections", render: () => <SellerCodCollections /> },
       { path: "/commission-rules", redirectTo: "/app/platform-commission" },
       { path: "/platform-fee-config", redirectTo: "/app/platform-commission" },

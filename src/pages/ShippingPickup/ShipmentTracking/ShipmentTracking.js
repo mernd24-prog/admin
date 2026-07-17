@@ -31,8 +31,8 @@ const STATUS_OPTIONS = [
   "damaged",
 ];
 const FULFILLMENT_STATUS_OPTIONS = [
-  { value: "initiated", label: "Packed" },
-  { value: "in_transit", label: "Shipped" },
+  { value: "initiated", label: "Ready to Ship" },
+  { value: "in_transit", label: "In Transit" },
   { value: "delivered", label: "Delivered" },
   { value: "failed", label: "Failed delivery" },
   { value: "rto", label: "Return to origin" },
@@ -56,7 +56,9 @@ const unwrapList = (payload = {}) => {
 };
 const unwrapResult = (payload = {}) => payload?.data?.data || payload?.data || payload || {};
 
-const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
+const displayStatus = (value = "") => String(value || "N/A")
+  .replace(/_/g, " ")
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
 const shipmentStepLabel = (value = "") =>
   FULFILLMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label || displayStatus(value);
 const getTrackingActionOptions = (currentStatus = "initiated") => {
@@ -127,6 +129,7 @@ const ShipmentTracking = () => {
   const [detailModal, setDetailModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [trackingAction, setTrackingAction] = useState({ status: "in_transit", note: "", location: "", courierName: "", awbNumber: "", trackingUrl: "", shippedAt: "" });
+  const [trackingErrors, setTrackingErrors] = useState({});
   const trackingActionOptions = useMemo(
     () => getTrackingActionOptions(selectedShipment?.status || "initiated"),
     [selectedShipment?.status],
@@ -191,7 +194,34 @@ const ShipmentTracking = () => {
 
   const handleTrackingStatus = useCallback(async () => {
     if (!selectedShipment?.id) return;
+    const nextErrors = {};
+    const location = trackingAction.location.trim();
+    const note = trackingAction.note.trim();
+    const trackingUrl = trackingAction.trackingUrl.trim();
+    if (trackingAction.status === "delivered" && !location) nextErrors.location = "Delivery location is required.";
+    if (location && (/^\d+$/.test(location) || location.length < 3)) nextErrors.location = "Enter a readable location, not only numbers.";
+    if (["failed", "rto", "cancelled"].includes(trackingAction.status) && note.length < 3) nextErrors.note = "Add a reason of at least 3 characters.";
+    if (trackingAction.status === "in_transit") {
+      if (!trackingAction.courierName.trim()) nextErrors.courierName = "Courier or delivery method is required.";
+      if (!trackingAction.awbNumber.trim()) nextErrors.awbNumber = "Tracking reference is required.";
+      if (!trackingAction.shippedAt) nextErrors.shippedAt = "Shipment time is required.";
+    }
+    if (trackingUrl) {
+      try {
+        const parsedUrl = new URL(trackingUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("Invalid protocol");
+      } catch {
+        nextErrors.trackingUrl = "Enter a valid http:// or https:// tracking URL.";
+      }
+    }
+    if (trackingAction.shippedAt && new Date(trackingAction.shippedAt).getTime() > Date.now()) nextErrors.shippedAt = "Shipment time cannot be in the future.";
+    if (Object.keys(nextErrors).length) {
+      setTrackingErrors(nextErrors);
+      toast.error("Please correct the highlighted delivery details.");
+      return;
+    }
     try {
+      setTrackingErrors({});
       setLoading(true);
       await dispatch(addShipmentTracking({
         shipmentId: selectedShipment.id,
@@ -205,7 +235,7 @@ const ShipmentTracking = () => {
         trackingUrl: trackingAction.trackingUrl,
         shippedAt: trackingAction.shippedAt || undefined,
       })).unwrap();
-      toast.success(`Shipment marked ${shipmentStepLabel(trackingAction.status).toLowerCase()}. Order listing and customer tracking are now updated.`);
+      toast.success(`Shipment status updated to ${shipmentStepLabel(trackingAction.status)}.`);
       await refreshSelectedShipment(selectedShipment.id);
     } catch (requestError) {
       toast.error(requestError?.message || requestError || "Failed to update shipment status");
@@ -244,7 +274,7 @@ const ShipmentTracking = () => {
         label: "Type",
         render: (value, row) => <StatusBadge status={displayStatus(value || row.direction || "forward")} dot />,
       },
-      { key: "courier_name", label: "Courier", sortable: true, render: (value) => value || "Manual" },
+      { key: "courier_name", label: "Delivery Method", sortable: true, render: (value) => value || "Seller delivery" },
       {
         key: "status",
         label: "Status",
@@ -340,49 +370,59 @@ const ShipmentTracking = () => {
             <div><strong>Shipment type:</strong> {displayStatus(selectedShipment?.shipment_type || selectedShipment?.direction || "forward")}</div>
           </div>
           <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
-            <div className="font-semibold text-gray-800">Seller delivery actions</div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[160px_1fr_1fr_auto]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-gray-800">Seller delivery action</div>
+                <p className="mt-0.5 text-xs text-gray-500">Select the next valid shipment stage. Only relevant details are requested.</p>
+              </div>
+              <StatusBadge status={selectedShipment?.status || "initiated"} dot />
+            </div>
+            {trackingActionOptions.length > 0 ? <div className="mt-4 space-y-4">
+              <div className="grid gap-1.5 md:max-w-xs">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Next status</label>
               <select
-                className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                className="rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800"
                 value={trackingAction.status}
-                onChange={(event) => setTrackingAction((prev) => ({ ...prev, status: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered"}
+                onChange={(event) => {
+                  setTrackingErrors({});
+                  setTrackingAction((prev) => ({ ...prev, status: event.target.value }));
+                }}
               >
-                {trackingActionOptions.length ? trackingActionOptions.map((option) => (
+                {trackingActionOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
-                )) : (
-                  <option value={selectedShipment?.status || "initiated"}>{shipmentStepLabel(selectedShipment?.status || "initiated")}</option>
-                )}
+                ))}
               </select>
-              <input
-                className="rounded-md border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Location"
-                value={trackingAction.location}
-                onChange={(event) => setTrackingAction((prev) => ({ ...prev, location: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered"}
-              />
-              <input
-                className="rounded-md border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Note"
-                value={trackingAction.note}
-                onChange={(event) => setTrackingAction((prev) => ({ ...prev, note: event.target.value }))}
-                disabled={selectedShipment?.status === "delivered"}
-              />
-              <ActionButton onClick={handleTrackingStatus} disabled={selectedShipment?.status === "delivered" || !trackingActionOptions.length}>
-                Update
-              </ActionButton>
+              </div>
+
+              {["in_transit", "delivered", "failed", "rto"].includes(trackingAction.status) && <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-gray-600">Location {trackingAction.status === "delivered" && <span className="text-red-500">Required</span>}
+                  <input className={`rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`} placeholder="Example: Pune distribution centre" value={trackingAction.location} onChange={(event) => setTrackingAction((prev) => ({ ...prev, location: event.target.value }))} />
+                  {trackingErrors.location && <span className="font-normal text-red-600">{trackingErrors.location}</span>}
+                </label>
+                <label className="grid gap-1.5 text-xs font-semibold text-gray-600">Note {['failed', 'rto'].includes(trackingAction.status) && <span className="text-red-500">Required</span>}
+                  <textarea className={`min-h-10 rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`} placeholder={['failed', 'rto'].includes(trackingAction.status) ? "Explain the reason" : "Optional delivery update"} value={trackingAction.note} onChange={(event) => setTrackingAction((prev) => ({ ...prev, note: event.target.value }))} />
+                  {trackingErrors.note && <span className="font-normal text-red-600">{trackingErrors.note}</span>}
+                </label>
+              </div>}
+
+              {trackingAction.status === "cancelled" && <label className="grid gap-1.5 text-xs font-semibold text-gray-600">Cancellation reason <span className="text-red-500">Required</span>
+                <textarea className={`rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`} value={trackingAction.note} onChange={(event) => setTrackingAction((prev) => ({ ...prev, note: event.target.value }))} />
+                {trackingErrors.note && <span className="font-normal text-red-600">{trackingErrors.note}</span>}
+              </label>}
+
+              {trackingAction.status === "in_transit" && <div className="rounded-lg border border-gray-200 bg-white p-3">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Dispatch details</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="grid gap-1 text-xs text-gray-500">Courier / delivery method <span className="text-red-500">Required</span><input className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`} placeholder="Example: Seller delivery" value={trackingAction.courierName} onChange={(event) => setTrackingAction((prev) => ({ ...prev, courierName: event.target.value }))} />{trackingErrors.courierName && <span className="text-red-600">{trackingErrors.courierName}</span>}</label>
+                  <label className="grid gap-1 text-xs text-gray-500">AWB / tracking reference <span className="text-red-500">Required</span><input className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`} value={trackingAction.awbNumber} onChange={(event) => setTrackingAction((prev) => ({ ...prev, awbNumber: event.target.value }))} />{trackingErrors.awbNumber && <span className="text-red-600">{trackingErrors.awbNumber}</span>}</label>
+                  <label className="grid gap-1 text-xs text-gray-500">Tracking URL<input className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`} type="url" placeholder="https://..." value={trackingAction.trackingUrl} onChange={(event) => setTrackingAction((prev) => ({ ...prev, trackingUrl: event.target.value }))} />{trackingErrors.trackingUrl && <span className="text-red-600">{trackingErrors.trackingUrl}</span>}</label>
+                  <label className="grid gap-1 text-xs text-gray-500">Shipped at <span className="text-red-500">Required</span><input className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`} type="datetime-local" max={moment().format("YYYY-MM-DDTHH:mm")} value={trackingAction.shippedAt} onChange={(event) => setTrackingAction((prev) => ({ ...prev, shippedAt: event.target.value }))} />{trackingErrors.shippedAt && <span className="text-red-600">{trackingErrors.shippedAt}</span>}</label>
+                </div>
+              </div>}
+
+              <div className="flex justify-end"><ActionButton onClick={handleTrackingStatus}>Update shipment status</ActionButton></div>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input
-                className="rounded-md border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Courier name"
-                value={trackingAction.courierName}
-                onChange={(event) => setTrackingAction((prev) => ({ ...prev, courierName: event.target.value }))}
-              />
-              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" placeholder="AWB / tracking number" value={trackingAction.awbNumber} onChange={(event) => setTrackingAction((prev) => ({ ...prev, awbNumber: event.target.value }))} />
-              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" placeholder="Tracking URL" value={trackingAction.trackingUrl} onChange={(event) => setTrackingAction((prev) => ({ ...prev, trackingUrl: event.target.value }))} />
-              <input className="rounded-md border border-gray-200 px-3 py-2 text-sm" type="datetime-local" value={trackingAction.shippedAt} onChange={(event) => setTrackingAction((prev) => ({ ...prev, shippedAt: event.target.value }))} />
-            </div>
+            : <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">This shipment is <strong>{shipmentStepLabel(selectedShipment?.status)}</strong>. No further seller action is currently required.</div>}
           </div>
           <div className="rounded-lg border border-gray-100 p-4">
             <div className="font-semibold text-gray-800">Delivery address</div>
@@ -407,15 +447,15 @@ const ShipmentTracking = () => {
           </div>
           <div className="border-t pt-3">
             <strong>Tracking timeline</strong>
-            <div className="mt-2 space-y-2">
+            <div className="mt-3 space-y-3">
               {(selectedShipment?.trackingEvents || []).map((event) => (
-                <div key={event.id} className="border-l-2 border-blue-200 pl-3 py-1">
-                  <div className="font-medium capitalize">{displayStatus(event.status)}</div>
-                  <div className="text-xs text-gray-500">
-                    {event.event_time ? moment(event.event_time).format("DD-MM-YYYY HH:mm") : "N/A"}
-                    {event.location ? ` · ${event.location}` : ""}
+                <div key={event.id} className="relative rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-semibold text-gray-800">{shipmentStepLabel(event.status)}</div>
+                    <time className="text-xs text-gray-500">{event.event_time ? moment(event.event_time).format("DD MMM YYYY, hh:mm A") : "Time not available"}</time>
                   </div>
-                  {event.note && <div className="text-xs text-gray-600 mt-1">{event.note}</div>}
+                  {event.location && <div className="mt-2 text-xs text-gray-600"><span className="font-semibold">Location:</span> {event.location}</div>}
+                  {event.note && <div className="mt-1 whitespace-pre-wrap text-xs text-gray-600"><span className="font-semibold">Note:</span> {event.note}</div>}
                 </div>
               ))}
               {!selectedShipment?.trackingEvents?.length && <div className="text-xs text-gray-500">No tracking events found.</div>}

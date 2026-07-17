@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdDownload, MdVisibility } from "react-icons/md";
+import { MdDownload, MdReceiptLong, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -57,7 +57,7 @@ const SellerPayouts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const filterFields = useMemo(
     () => isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS,
     [isSeller],
@@ -85,15 +85,15 @@ const SellerPayouts = () => {
 
   useEffect(() => { fetchPayouts(); }, [fetchPayouts]);
 
-  const downloadFile = useCallback(async (endpoint, params, filename) => {
+  const downloadFile = useCallback(async (endpoint, params, filename, id = endpoint) => {
     try {
-      setDownloading(true);
+      setDownloadingId(id);
       await downloadApiFile(endpoint, params, { filename, format: params?.format });
       toast.success("Download started");
     } catch (downloadError) {
       toast.error(downloadError?.message || "Unable to download file");
     } finally {
-      setDownloading(false);
+      setDownloadingId(null);
     }
   }, []);
 
@@ -129,11 +129,16 @@ const SellerPayouts = () => {
                 isSeller ? ENDPOINTS.payouts.myPayoutsExport : ENDPOINTS.payouts.sellerPayoutsExport,
                 { format: "csv" },
                 "seller-payouts.csv",
+                "payouts-csv",
               )}
-              disabled={downloading}
-              
+              disabled={downloadingId === "payouts-csv"}
             >
-              <MdDownload size={16} /> Export
+              {downloadingId === "payouts-csv" ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+              ) : (
+                <MdDownload size={16} />
+              )}
+              Export
             </button>
           </div>
         )}
@@ -163,64 +168,99 @@ const SellerPayouts = () => {
       />
 
       {isSeller && (
-        <section className="rounded-lg border border-gray-200 bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">Settlement Statements</h2>
-              <p className="text-xs text-gray-500">Download the payout slip generated from commissions, payouts, and settlements.</p>
+        <section className="admin-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
+                <MdReceiptLong size={18} />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--admin-ink)]">Settlement Statements</h2>
+                <p className="text-xs text-[var(--admin-muted)]">Download the payout slip generated from commissions, payouts, and settlements.</p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => downloadFile(ENDPOINTS.payouts.mySettlementsExport, { format: "csv" }, "seller-settlements.csv")}
-              disabled={downloading}
-              className="admin-btn-secondary"
+              onClick={() => downloadFile(ENDPOINTS.payouts.mySettlementsExport, { format: "csv" }, "seller-settlements.csv", "settlements-csv")}
+              disabled={downloadingId === "settlements-csv"}
+              className="admin-btn-secondary shrink-0"
             >
-              <MdDownload size={16} /> Export
+              {downloadingId === "settlements-csv" ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+              ) : (
+                <MdDownload size={16} />
+              )}
+              Export
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 text-sm">
-              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
+            <table className="min-w-full text-left text-sm">
+              <thead className="admin-table-head text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
                 <tr>
-                  <th className="px-4 py-3">Settlement</th>
+                  <th className="px-5 py-3">Settlement</th>
                   <th className="px-4 py-3">Payout</th>
                   <th className="px-4 py-3">Gross</th>
                   <th className="px-4 py-3">Commission</th>
                   <th className="px-4 py-3">GST</th>
                   <th className="px-4 py-3">Net</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Statement</th>
+                  <th className="px-4 py-3">Paid</th>
+                  <th className="px-4 py-3 text-right">Statement</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {settlementsPayload.list.length ? settlementsPayload.list.map((row) => (
-                  <tr key={row.id}>
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{String(row.id || "").slice(0, 8) || "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{money(valueOf(row, "gross_amount", "grossAmount"), row.currency)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(valueOf(row, "net_amount", "netAmount"), row.currency)}</td>
-                    <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status || "pending"} dot /></td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <button
-                        type="button"
-                        title="Download statement"
-                        onClick={() => downloadFile(
-                          ENDPOINTS.payouts.mySettlementStatement(row.id),
-                          { format: "pdf" },
-                          `settlement-${row.id}.pdf`,
-                        )}
-                        disabled={downloading}
-                        className="admin-btn-secondary !px-2 !py-1"
-                      >
-                        <MdDownload size={15} /> PDF
-                      </button>
-                    </td>
-                  </tr>
-                )) : (
+              <tbody>
+                {settlementsPayload.list.length ? settlementsPayload.list.map((row) => {
+                  const isDownloading = downloadingId === row.id;
+                  return (
+                    <tr key={row.id} className="border-b border-[var(--admin-line)] last:border-0 hover:bg-[var(--admin-surface-soft)]">
+                      <td className="whitespace-nowrap px-5 py-3">
+                        <span title={row.id} className="rounded bg-[var(--admin-canvas)] px-1.5 py-0.5 font-mono text-xs text-[var(--admin-ink)]">
+                          #{String(row.id || "").slice(0, 8) || "—"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span title={valueOf(row, "payout_id", "payoutId")} className="rounded bg-[var(--admin-canvas)] px-1.5 py-0.5 font-mono text-xs text-[var(--admin-ink)]">
+                          #{String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">{money(valueOf(row, "gross_amount", "grossAmount"), row.currency)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(valueOf(row, "net_amount", "netAmount"), row.currency)}</td>
+                      <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status || "pending"} dot /></td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--admin-muted)]">{fmt(valueOf(row, "settlement_date", "settlementDate") ?? row.created_at, true)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          title="Download statement"
+                          onClick={() => downloadFile(
+                            ENDPOINTS.payouts.mySettlementStatement(row.id),
+                            { format: "pdf" },
+                            `settlement-${row.id}.pdf`,
+                            row.id,
+                          )}
+                          disabled={isDownloading}
+                          className="admin-btn-secondary !min-h-0 !px-2.5 !py-1.5 !text-xs"
+                        >
+                          {isDownloading ? (
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+                          ) : (
+                            <MdDownload size={14} />
+                          )}
+                          PDF
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-gray-500">No settlement statements found</td>
+                    <td colSpan={9} className="px-5 py-10 text-center">
+                      <div className="flex flex-col items-center gap-2 text-[var(--admin-muted)]">
+                        <MdReceiptLong size={28} className="text-[var(--admin-line-strong)]" />
+                        <span className="text-sm">No settlement statements yet</span>
+                        <span className="text-xs">Statements appear here once a payout for this period is completed.</span>
+                      </div>
+                    </td>
                   </tr>
                 )}
               </tbody>

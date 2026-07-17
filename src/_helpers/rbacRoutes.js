@@ -618,7 +618,7 @@ const ROUTE_MODULES = [
   [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
-  [["/seller-finance", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
+  [["/seller-finance", "/seller-wallet", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller-payouts"], ["sellers/commissions"]],
 
   // Commerce Settings
