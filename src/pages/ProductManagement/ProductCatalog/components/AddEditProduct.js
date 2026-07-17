@@ -345,14 +345,8 @@ export default function ProductManagementUI() {
   };
 
   const scrollToFirstValidationError = (errors, attempt = 0) => {
-    console.log("errors: ", errors);
     const firstField = Object.keys(errors || {})[0];
     if (!firstField || typeof document === "undefined") return;
-    console.log("First Field:", firstField);
-    console.log(
-      "Found:",
-      document.querySelector(`[data-error-field="${firstField}"]`),
-    );
 
     const sectionId = FIELD_TO_SECTION[firstField] || "basic-details";
     if (activeTab !== sectionId) setActiveTab(sectionId);
@@ -375,7 +369,6 @@ export default function ProductManagementUI() {
         }
         const target =
           field?.closest?.(".admin-field") || field || refs[sectionId]?.current;
-        console.log("Scrolling to:", target);
         if (target?.scrollIntoView) {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -1081,7 +1074,6 @@ export default function ProductManagementUI() {
       .replace(/<[^>]*>/g, "")
       .replace(/&nbsp;/g, " ")
       .trim();
-    console.log("plainDescription: ", plainDescription);
 
     if (!plainDescription) {
       newErrors.description = "Description is required.";
@@ -1893,8 +1885,6 @@ export default function ProductManagementUI() {
   ]);
 
   const handleProductDetailChange = (field, content) => {
-    console.log("Field:", field);
-    console.log("Content:", content);
     setFormData((prev) => ({
       ...prev,
       [field]: content,
