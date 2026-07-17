@@ -1,34 +1,50 @@
-import 'react-quill/dist/quill.snow.css';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'sonner';
+import "react-quill/dist/quill.snow.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 // Components
-import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
-import Input from '../../../../components/Atoms/Input/Input';
-import Loader from '../../../../components/Loader/Loader';
-import useDropdownOptions from '../../../../hooks/useDropdownOptions';
-import PermissionGuard from '../../../../components/Atoms/PermissionGuard/PermissionGuard';
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import Input from "../../../../components/Atoms/Input/Input";
+import Loader from "../../../../components/Loader/Loader";
+import useDropdownOptions from "../../../../hooks/useDropdownOptions";
+import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 
 // Modals
-import AddCategoryModal from './Modals/AddCategoryModal';
+import AddCategoryModal from "./Modals/AddCategoryModal";
 
 // Redux Actions
-import { createBrand, createCategory, createHsn, getMyBrandSubmissions, resubmitBrandForApproval, submitBrandForApproval } from '../../../../Redux/productSlice';
+import {
+  createBrand,
+  createCategory,
+  createHsn,
+  getMyBrandSubmissions,
+  resubmitBrandForApproval,
+  submitBrandForApproval,
+} from "../../../../Redux/productSlice";
 
-import { transformArray, uploadFile } from '../../../../_helpers/globalFunctions';
-import AddHsnModal from './Modals/AddHsnModal';
-import { extractRole, getStoredRole, getStoredUser, normalizeRole } from '../../../../_helpers/authStorage';
-import { isSellerPanel } from '../../../../_helpers/panelConfig';
-import { TextEditor } from '../../../../components/Atoms/FormInput/TextEditor';
+import {
+  transformArray,
+  uploadFile,
+} from "../../../../_helpers/globalFunctions";
+import AddHsnModal from "./Modals/AddHsnModal";
+import {
+  extractRole,
+  getStoredRole,
+  getStoredUser,
+  normalizeRole,
+} from "../../../../_helpers/authStorage";
+import { isSellerPanel } from "../../../../_helpers/panelConfig";
+import { TextEditor } from "../../../../components/Atoms/FormInput/TextEditor";
 
 const INITIAL_FORM_CATEGORY = {
-  categoryName: '',
-  bannerUrl: '',
-  iconUrl: '',
+  categoryName: "",
+  bannerUrl: "",
+  iconUrl: "",
   parentCategory: null,
   isPublish: true,
-  isDashboardVisible: false, priority: "0"
+  isDashboardVisible: false,
+  priority: "0",
 };
 
 const INITIAL_FORM_HSN = {
@@ -38,20 +54,28 @@ const INITIAL_FORM_HSN = {
   SGST: "",
   additionalTax: "",
   description: "",
-  isDisable: false
-}
+  isDisable: false,
+};
 
-const SELLER_PANEL_ROLES = new Set(['seller', 'seller-admin', 'seller-sub-admin']);
+const SELLER_PANEL_ROLES = new Set([
+  "seller",
+  "seller-admin",
+  "seller-sub-admin",
+]);
 
 const getErrorMessage = (error, fallback) =>
-  typeof error === 'string'
+  typeof error === "string"
     ? error
-    : error?.message || error?.error?.message || error?.data?.message || error?.response?.data?.message || fallback;
+    : error?.message ||
+      error?.error?.message ||
+      error?.data?.message ||
+      error?.response?.data?.message ||
+      fallback;
 
 const getSessionUser = () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(window.sessionStorage.getItem('EcomAdmin') || 'null');
+    return JSON.parse(window.sessionStorage.getItem("EcomAdmin") || "null");
   } catch {
     return null;
   }
@@ -68,45 +92,69 @@ export default function BasicDetailsTab({
   handleSelectChange,
   errors,
   fetchAllData,
-  allCategories, API_CALL_OBJECT, hsnCodeList, sellerList = [], organizationList = [], userData,
+  allCategories,
+  API_CALL_OBJECT,
+  hsnCodeList,
+  sellerList = [],
+  organizationList = [],
+  userData,
   hasVariantPricing = false,
   handleInputReactQuillChange,
 }) {
   const dispatch = useDispatch();
-  const selector = useSelector(state => state);
-  const warrantyUnits = useDropdownOptions('warranty-units');
-  const warrantyTemplatesFromMaster = useDropdownOptions('warranty-templates');
-  const userRole = normalizeRole(extractRole(
-    userData,
-    userData?.user,
-    userData?.data,
-    getSessionUser(),
-    getSessionUser()?.user,
-    getStoredUser(),
-    { role: getStoredRole() },
-  ));
+  const selector = useSelector((state) => state);
+  const warrantyUnits = useDropdownOptions("warranty-units");
+  const warrantyTemplatesFromMaster = useDropdownOptions("warranty-templates");
+  const userRole = normalizeRole(
+    extractRole(
+      userData,
+      userData?.user,
+      userData?.data,
+      getSessionUser(),
+      getSessionUser()?.user,
+      getStoredUser(),
+      { role: getStoredRole() },
+    ),
+  );
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
- 
   const modifiedSellerList = sellerList.length
     ? sellerList
-    : transformArray(selector?.store?.getAllSellerListData?.data?.data?.list || [])
+    : transformArray(
+        selector?.store?.getAllSellerListData?.data?.data?.list || [],
+      );
   const selectedCategoryOption = useMemo(() => {
-    const currentCategory = String(formData.category_id || formData.categoryId || formData.category || formData.category_key || '');
+    const currentCategory = String(
+      formData.category_id ||
+        formData.categoryId ||
+        formData.category ||
+        formData.category_key ||
+        "",
+    );
     if (!currentCategory) return null;
     return (
-      formattedCategoryList.find((opt) =>
-        String(opt.value) === currentCategory || String(opt.categoryKey || '') === currentCategory
+      formattedCategoryList.find(
+        (opt) =>
+          String(opt.value) === currentCategory ||
+          String(opt.categoryKey || "") === currentCategory,
       ) || null
     );
-  }, [formattedCategoryList, formData.category_id, formData.categoryId, formData.category, formData.category_key]);
+  }, [
+    formattedCategoryList,
+    formData.category_id,
+    formData.categoryId,
+    formData.category,
+    formData.category_key,
+  ]);
 
   const selectedHsnOption = useMemo(() => {
-    const currentHsn = String(formData.hsn_code || formData.hsnCode || '');
+    const currentHsn = String(formData.hsn_code || formData.hsnCode || "");
     if (!currentHsn) return null;
     return (
-      hsnCodeList.find((opt) =>
-        String(opt.value) === currentHsn || String(opt.code || '') === currentHsn
+      hsnCodeList.find(
+        (opt) =>
+          String(opt.value) === currentHsn ||
+          String(opt.code || "") === currentHsn,
       ) || null
     );
   }, [hsnCodeList, formData.hsn_code, formData.hsnCode]);
@@ -134,64 +182,90 @@ export default function BasicDetailsTab({
   const categoryParentMap = useMemo(() => {
     const map = new Map();
     flatCategories.forEach((c) => {
-      const key = String(c.categoryKey || c._id || '');
+      const key = String(c.categoryKey || c._id || "");
       if (key && c.parentKey) map.set(key, String(c.parentKey));
     });
     return map;
   }, [flatCategories]);
 
-  const getCategoryAncestors = useCallback((key) => {
-    const chain = [];
-    let cur = key;
-    const seen = new Set();
-    while (cur && !seen.has(cur)) {
-      chain.push(cur);
-      seen.add(cur);
-      cur = categoryParentMap.get(cur) || null;
-    }
-    return chain;
-  }, [categoryParentMap]);
+  const getCategoryAncestors = useCallback(
+    (key) => {
+      const chain = [];
+      let cur = key;
+      const seen = new Set();
+      while (cur && !seen.has(cur)) {
+        chain.push(cur);
+        seen.add(cur);
+        cur = categoryParentMap.get(cur) || null;
+      }
+      return chain;
+    },
+    [categoryParentMap],
+  );
 
   // Intercept category selection so we know it was a user action (not initial load)
-  const handleCategoryChange = useCallback((option) => {
-    userChangedCategoryRef.current = true;
-    setHsnSuggestion(null);
-    handleSelectChange(option, 'CATEGORY_ID');
-  }, [handleSelectChange]);
+  const handleCategoryChange = useCallback(
+    (option) => {
+      userChangedCategoryRef.current = true;
+      setHsnSuggestion(null);
+      handleSelectChange(option, "CATEGORY_ID");
+    },
+    [handleSelectChange],
+  );
 
   // When category changes (user-triggered), compute HSN suggestion.
   // Platform/admin owns HSN assignment; product form never auto-applies it.
   useEffect(() => {
     if (!userChangedCategoryRef.current) return;
-    const categoryKey = String(formData?.category_id || formData?.categoryId || formData?.category || formData?.category_key || '');
-    if (!categoryKey || !Array.isArray(hsnCodeList) || !hsnCodeList.length) return;
+    const categoryKey = String(
+      formData?.category_id ||
+        formData?.categoryId ||
+        formData?.category ||
+        formData?.category_key ||
+        "",
+    );
+    if (!categoryKey || !Array.isArray(hsnCodeList) || !hsnCodeList.length)
+      return;
 
     const ancestors = getCategoryAncestors(categoryKey);
-    const match = ancestors.reduce((found, ancestor) =>
-      found || hsnCodeList.find((o) => o.hsnCategory === ancestor) || null, null);
+    const match = ancestors.reduce(
+      (found, ancestor) =>
+        found || hsnCodeList.find((o) => o.hsnCategory === ancestor) || null,
+      null,
+    );
 
     if (!match) {
-      setHsnSuggestion({ type: 'none' });
+      setHsnSuggestion({ type: "none" });
       return;
     }
 
-    setHsnSuggestion({ type: 'suggest', option: match });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData?.category_id, formData?.categoryId, formData?.category, formData?.category_key]);
+    setHsnSuggestion({ type: "suggest", option: match });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formData?.category_id,
+    formData?.categoryId,
+    formData?.category,
+    formData?.category_key,
+  ]);
 
   // ───────────────────────────────────────────────────────────────────────
 
   const [isCategoryModal, setIsCategoryModal] = useState(false);
-  const [isHsnAddModal, setIsHsnAddModal] = useState(false)
+  const [isHsnAddModal, setIsHsnAddModal] = useState(false);
   const [isBrandModal, setIsBrandModal] = useState(false);
-  const [brandSubmission, setBrandSubmission] = useState({ name: '', logo: '', thumbnails: '', description: '' });
+  const [brandSubmission, setBrandSubmission] = useState({
+    name: "",
+    logo: "",
+    thumbnails: "",
+    description: "",
+  });
   const [myBrandSubmissions, setMyBrandSubmissions] = useState([]);
   const [brandSubmitting, setBrandSubmitting] = useState(false);
   const [brandLogoUploading, setBrandLogoUploading] = useState(false);
 
   const [formErrors, setFormErrors] = useState({});
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
-  const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN)
+  const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomWarranty, setIsCustomWarranty] = useState(false);
@@ -201,13 +275,17 @@ export default function BasicDetailsTab({
     try {
       const response = await dispatch(getMyBrandSubmissions()).unwrap();
       const data = response?.data;
-      setMyBrandSubmissions(Array.isArray(data) ? data : (data?.list || data?.items || []));
+      setMyBrandSubmissions(
+        Array.isArray(data) ? data : data?.list || data?.items || [],
+      );
     } catch {
       // Requests are optional to editing a product, so they must not block it.
     }
   }, [dispatch, isSellerPanelUser]);
 
-  useEffect(() => { loadMyBrandSubmissions(); }, [loadMyBrandSubmissions]);
+  useEffect(() => {
+    loadMyBrandSubmissions();
+  }, [loadMyBrandSubmissions]);
 
   useEffect(() => {
     if (!isSellerPanelUser || !fetchAllData) return undefined;
@@ -217,27 +295,30 @@ export default function BasicDetailsTab({
 
   const handleBrandLogoUpload = async (event) => {
     const file = event.target.files?.[0];
-    event.target.value = '';
+    event.target.value = "";
     if (!file) return;
 
-    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
-    const extension = file.name?.split('.').pop()?.toLowerCase();
-    if (!allowedTypes.includes(file.type) && !['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
-      toast.error('Only JPG, PNG, or WEBP images allowed');
+    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
+    const extension = file.name?.split(".").pop()?.toLowerCase();
+    if (
+      !allowedTypes.includes(file.type) &&
+      !["png", "jpg", "jpeg", "webp"].includes(extension)
+    ) {
+      toast.error("Only JPG, PNG, or WEBP images allowed");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Brand logo must be 5MB or less');
+      toast.error("Brand logo must be 5MB or less");
       return;
     }
 
     setBrandLogoUploading(true);
     try {
-      const logoUrl = await uploadFile(file, 'BRANDS');
+      const logoUrl = await uploadFile(file, "BRANDS");
       setBrandSubmission((current) => ({ ...current, logo: logoUrl }));
-      toast.success('Brand logo uploaded');
+      toast.success("Brand logo uploaded");
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to upload brand logo'));
+      toast.error(getErrorMessage(error, "Failed to upload brand logo"));
     } finally {
       setBrandLogoUploading(false);
     }
@@ -245,52 +326,91 @@ export default function BasicDetailsTab({
 
   const submitBrandRequest = async (event) => {
     event.preventDefault();
-    if (!brandSubmission.name.trim()) return toast.error('Brand name is required');
-    if (brandLogoUploading) return toast.error('Please wait for logo upload to finish');
+    if (!brandSubmission.name.trim())
+      return toast.error("Brand name is required");
+    if (brandLogoUploading)
+      return toast.error("Please wait for logo upload to finish");
     setBrandSubmitting(true);
     try {
       if (isSellerPanelUser) {
-        await dispatch(brandSubmission._id
-          ? resubmitBrandForApproval({ ...brandSubmission, _id: brandSubmission._id })
-          : submitBrandForApproval(brandSubmission)).unwrap();
+        await dispatch(
+          brandSubmission._id
+            ? resubmitBrandForApproval({
+                ...brandSubmission,
+                _id: brandSubmission._id,
+              })
+            : submitBrandForApproval(brandSubmission),
+        ).unwrap();
         const brandName = brandSubmission.name.trim();
         setMyBrandSubmissions((current) => [
-          { ...brandSubmission, name: brandName, approvalStatus: 'pending' },
-          ...current.filter((brand) => String(brand._id || '') !== String(brandSubmission._id || '')),
+          { ...brandSubmission, name: brandName, approvalStatus: "pending" },
+          ...current.filter(
+            (brand) =>
+              String(brand._id || "") !== String(brandSubmission._id || ""),
+          ),
         ]);
-        handleSelectChange({ value: brandName, label: brandName }, 'BRAND_ID');
-        toast.success(brandSubmission._id ? 'Brand resubmitted for approval' : 'Brand submitted for approval');
+        handleSelectChange({ value: brandName, label: brandName }, "BRAND_ID");
+        toast.success(
+          brandSubmission._id
+            ? "Brand resubmitted for approval"
+            : "Brand submitted for approval",
+        );
       } else {
-        await dispatch(createBrand({ ...brandSubmission, active: true })).unwrap();
-        handleSelectChange({ value: brandSubmission.name.trim(), label: brandSubmission.name.trim() }, 'BRAND_ID');
-        toast.success('Brand created and selected');
+        await dispatch(
+          createBrand({ ...brandSubmission, active: true }),
+        ).unwrap();
+        handleSelectChange(
+          {
+            value: brandSubmission.name.trim(),
+            label: brandSubmission.name.trim(),
+          },
+          "BRAND_ID",
+        );
+        toast.success("Brand created and selected");
       }
-      setBrandSubmission({ name: '', logo: '', thumbnails: '', description: '' });
+      setBrandSubmission({
+        name: "",
+        logo: "",
+        thumbnails: "",
+        description: "",
+      });
       setIsBrandModal(false);
       loadMyBrandSubmissions();
       fetchAllData?.();
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Could not submit brand'));
+      toast.error(getErrorMessage(error, "Could not submit brand"));
     } finally {
       setBrandSubmitting(false);
     }
   };
 
   const brandOptions = useMemo(() => {
-    const approvedNames = new Set((formattedBrandList || []).map((brand) => String(brand.value || '').toLowerCase()));
+    const approvedNames = new Set(
+      (formattedBrandList || []).map((brand) =>
+        String(brand.value || "").toLowerCase(),
+      ),
+    );
     const ownPendingBrands = isSellerPanelUser
       ? myBrandSubmissions
-        .filter((brand) => brand.approvalStatus === 'pending' && !approvedNames.has(String(brand.name || '').toLowerCase()))
-        .map((brand) => ({
-          value: brand.name,
-          label: `${brand.name} (Pending approval)`,
-          brandName: brand.name,
-          isPendingBrand: true,
-        }))
+          .filter(
+            (brand) =>
+              brand.approvalStatus === "pending" &&
+              !approvedNames.has(String(brand.name || "").toLowerCase()),
+          )
+          .map((brand) => ({
+            value: brand.name,
+            label: `${brand.name} (Pending approval)`,
+            brandName: brand.name,
+            isPendingBrand: true,
+          }))
       : [];
 
     return [
-      { value: '__add_new_brand__', label: '+ Add New Brand', isAddBrand: true },
+      {
+        value: "__add_new_brand__",
+        label: "+ Add New Brand",
+        isAddBrand: true,
+      },
       ...ownPendingBrands,
       ...(formattedBrandList || []),
     ];
@@ -298,39 +418,62 @@ export default function BasicDetailsTab({
 
   const handleBrandSelect = (option) => {
     if (option?.isAddBrand) {
-      setBrandSubmission({ name: '', logo: '', thumbnails: '', description: '' });
+      setBrandSubmission({
+        name: "",
+        logo: "",
+        thumbnails: "",
+        description: "",
+      });
       setIsBrandModal(true);
       return;
     }
     handleSelectChange(
       option?.brandName ? { ...option, label: option.brandName } : option,
-      'BRAND_ID',
+      "BRAND_ID",
     );
   };
 
-  const warrantyOptions = useMemo(() => (
-    warrantyTemplatesFromMaster.options.length > 0
-      ? warrantyTemplatesFromMaster.options
-      : (formattedWarrantyList || [])
-  ), [formattedWarrantyList, warrantyTemplatesFromMaster.options]);
+  const warrantyOptions = useMemo(
+    () =>
+      warrantyTemplatesFromMaster.options.length > 0
+        ? warrantyTemplatesFromMaster.options
+        : formattedWarrantyList || [],
+    [formattedWarrantyList, warrantyTemplatesFromMaster.options],
+  );
 
   const selectedWarrantyOption = useMemo(() => {
-    const currentValue = `${String(formData.warranty?.period ?? '')}:${String(formData.warranty?.periodUnit || '')}`;
-    return warrantyOptions.find((opt) => String(opt.value) === currentValue) || null;
-  }, [warrantyOptions, formData.warranty?.period, formData.warranty?.periodUnit]);
+    const currentValue = `${String(formData.warranty?.period ?? "")}:${String(formData.warranty?.periodUnit || "")}`;
+    return (
+      warrantyOptions.find((opt) => String(opt.value) === currentValue) || null
+    );
+  }, [
+    warrantyOptions,
+    formData.warranty?.period,
+    formData.warranty?.periodUnit,
+  ]);
   const hasUnmatchedWarranty = Boolean(
     (formData.warranty?.period || formData.warranty?.periodUnit) &&
-    !selectedWarrantyOption
+    !selectedWarrantyOption,
   );
   const showCustomWarranty = isCustomWarranty || hasUnmatchedWarranty;
 
   const handleWarrantyTemplateChange = (option) => {
-    const durationValue = option?.durationValue ?? option?.meta?.durationValue ?? String(option?.value || '').split(':')[0] ?? '';
-    const durationUnit = option?.durationUnit ?? option?.meta?.durationUnit ?? String(option?.value || '').split(':')[1] ?? '';
+    const durationValue =
+      option?.durationValue ??
+      option?.meta?.durationValue ??
+      String(option?.value || "").split(":")[0] ??
+      "";
+    const durationUnit =
+      option?.durationUnit ??
+      option?.meta?.durationUnit ??
+      String(option?.value || "").split(":")[1] ??
+      "";
 
     setIsCustomWarranty(false);
-    handleChange({ target: { name: 'warranty.period', value: durationValue } });
-    handleChange({ target: { name: 'warranty.periodUnit', value: durationUnit } });
+    handleChange({ target: { name: "warranty.period", value: durationValue } });
+    handleChange({
+      target: { name: "warranty.periodUnit", value: durationUnit },
+    });
   };
 
   const handleCustomWarrantyToggle = (event) => {
@@ -339,50 +482,52 @@ export default function BasicDetailsTab({
 
     if (checked) {
       if (!formData.warranty?.periodUnit) {
-        handleChange({ target: { name: 'warranty.periodUnit', value: 'months' } });
+        handleChange({
+          target: { name: "warranty.periodUnit", value: "months" },
+        });
       }
       return;
     }
 
     if (!selectedWarrantyOption) {
-      handleChange({ target: { name: 'warranty.period', value: '' } });
-      handleChange({ target: { name: 'warranty.periodUnit', value: '' } });
+      handleChange({ target: { name: "warranty.period", value: "" } });
+      handleChange({ target: { name: "warranty.periodUnit", value: "" } });
     }
   };
 
   const handleInputCategoryChange = (e) => {
     const { name, value } = e.target;
-    setCategoryForm(prev => ({ ...prev, [name]: value }));
+    setCategoryForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleHsnInputChange = (e) => {
     const { name, value } = e.target;
-    setIsHsnFormValue(prev => ({ ...prev, [name]: value }));
-    setFormErrors({})
-  }
+    setIsHsnFormValue((prev) => ({ ...prev, [name]: value }));
+    setFormErrors({});
+  };
 
   const handleFileUploadCategory = async (file, fieldName) => {
     if (!file) return;
     try {
       setIsLoading(true);
-      const uploadedImageUrl = await uploadFile(file, 'THUMBNAILS');
-      setCategoryForm(prev => ({ ...prev, [fieldName]: uploadedImageUrl }));
-      toast.success('Image uploaded successfully');
+      const uploadedImageUrl = await uploadFile(file, "THUMBNAILS");
+      setCategoryForm((prev) => ({ ...prev, [fieldName]: uploadedImageUrl }));
+      toast.success("Image uploaded successfully");
     } catch (error) {
-      toast.error(error?.message || 'Failed to upload image');
+      toast.error(error?.message || "Failed to upload image");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSelectCategoryChange = (selectedOption, name) => {
-    setCategoryForm(prev => ({ ...prev, [name]: selectedOption }));
+    setCategoryForm((prev) => ({ ...prev, [name]: selectedOption }));
   };
   const handleDashboardVisible = () => {
     setCategoryForm((prev) => ({
       ...prev,
       isDashboardVisible: !prev?.isDashboardVisible,
-      priority: !prev?.isDashboardVisible ? prev.priority : 0
+      priority: !prev?.isDashboardVisible ? prev.priority : 0,
     }));
   };
 
@@ -391,16 +536,20 @@ export default function BasicDetailsTab({
     if (!Array.isArray(allCategories) || !allCategories.length) return options;
 
     const hasNested = allCategories.some(
-      (item) => Array.isArray(item?.subcategories) || Array.isArray(item?.subCategories),
+      (item) =>
+        Array.isArray(item?.subcategories) ||
+        Array.isArray(item?.subCategories),
     );
     if (hasNested) {
-      const addOptions = (categories, prefix = '', depth = 1) => {
+      const addOptions = (categories, prefix = "", depth = 1) => {
         if (!Array.isArray(categories)) return;
         categories.forEach((category) => {
-          const categoryName = category.name || category.title || category.categoryKey;
+          const categoryName =
+            category.name || category.title || category.categoryKey;
           const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
           options.push({ value: category.categoryKey || category._id, label });
-          const children = category.subcategories || category.subCategories || [];
+          const children =
+            category.subcategories || category.subCategories || [];
           if (depth < 2 && children.length) {
             addOptions(children, label, depth + 1);
           }
@@ -412,21 +561,28 @@ export default function BasicDetailsTab({
 
     const byParent = new Map();
     allCategories.forEach((category) => {
-      const parent = category?.parentKey ? String(category.parentKey) : '__root__';
+      const parent = category?.parentKey
+        ? String(category.parentKey)
+        : "__root__";
       if (!byParent.has(parent)) byParent.set(parent, []);
       byParent.get(parent).push(category);
     });
 
-    const walk = (parent = '__root__', prefix = '', depth = 1) => {
+    const walk = (parent = "__root__", prefix = "", depth = 1) => {
       const children = byParent.get(parent) || [];
       children
         .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
         .forEach((category) => {
-          const categoryName = category.name || category.title || category.categoryKey;
+          const categoryName =
+            category.name || category.title || category.categoryKey;
           const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
           options.push({ value: category.categoryKey || category._id, label });
           if (depth < 2) {
-            walk(String(category.categoryKey || category._id), label, depth + 1);
+            walk(
+              String(category.categoryKey || category._id),
+              label,
+              depth + 1,
+            );
           }
         });
     };
@@ -436,7 +592,8 @@ export default function BasicDetailsTab({
 
   const handleCategorySubmit = async () => {
     try {
-      const type = categoryForm.parentCategory?.value !== "ROOT" ? "CHILD" : "ROOT";
+      const type =
+        categoryForm.parentCategory?.value !== "ROOT" ? "CHILD" : "ROOT";
       const reqData = {
         name: categoryForm.categoryName,
         bannerUrl: categoryForm.bannerUrl,
@@ -444,23 +601,23 @@ export default function BasicDetailsTab({
         type,
         isDisable: true,
         isDashboardVisible: categoryForm?.isDashboardVisible,
-        priority: categoryForm?.priority
+        priority: categoryForm?.priority,
       };
 
       if (type === "CHILD") {
         reqData.parentKey = categoryForm.parentCategory.value;
         reqData.level = 1;
       }
-      setIsLoading(true)
+      setIsLoading(true);
       const res = await dispatch(createCategory(reqData)).unwrap();
       toast.success(res.message || "Category created successfully");
       setIsCategoryModal(false);
       setCategoryForm(INITIAL_FORM_CATEGORY);
-      fetchAllData([API_CALL_OBJECT["Category List"]])
+      fetchAllData([API_CALL_OBJECT["Category List"]]);
     } catch (error) {
       toast.error(error?.message || "Failed to create category");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
@@ -472,50 +629,59 @@ export default function BasicDetailsTab({
       CGST: Number(hsnFormValues.CGST),
       SGST: Number(hsnFormValues.SGST),
       additionalTax: Number(hsnFormValues.additionalTax),
-      description: hsnFormValues.description?.trim() || '',
-      active: true
-
-    }
+      description: hsnFormValues.description?.trim() || "",
+      active: true,
+    };
     try {
-      await dispatch(createHsn(basePayload)).unwrap()
-      toast.success('HSN Code created successfully')
+      await dispatch(createHsn(basePayload)).unwrap();
+      toast.success("HSN Code created successfully");
       setIsHsnAddModal(false);
       setIsHsnFormValue(INITIAL_FORM_HSN);
       setFormErrors({});
-      fetchAllData([API_CALL_OBJECT["Hsn code list"]])
+      fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
     } catch (error) {
-      toast.error(error?.message || 'Failed to save HSN Code')
+      toast.error(error?.message || "Failed to save HSN Code");
     }
-
-  }
+  };
 
   const validateCategoryForm = () => {
     const newErrors = {};
-    if (!categoryForm.categoryName) newErrors.categoryName = "Category name is required";
+    if (!categoryForm.categoryName)
+      newErrors.categoryName = "Category name is required";
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateHsnForm = () => {
     const newErrors = {};
-    const hasRate = (value) => value !== "" && value !== null && value !== undefined;
+    const hasRate = (value) =>
+      value !== "" && value !== null && value !== undefined;
 
     if (!hsnFormValues.code) {
       newErrors.code = "Code is required";
     }
     if (!hasRate(hsnFormValues.IGST)) {
       newErrors.IGST = "IGST is required";
-    } else if (Number(hsnFormValues.IGST) < 0 || Number(hsnFormValues.IGST) > 100) {
+    } else if (
+      Number(hsnFormValues.IGST) < 0 ||
+      Number(hsnFormValues.IGST) > 100
+    ) {
       newErrors.IGST = "IGST must be between 0 and 100";
     }
     if (!hasRate(hsnFormValues.CGST)) {
       newErrors.CGST = "CGST is required";
-    } else if (Number(hsnFormValues.CGST) < 0 || Number(hsnFormValues.CGST) > 100) {
+    } else if (
+      Number(hsnFormValues.CGST) < 0 ||
+      Number(hsnFormValues.CGST) > 100
+    ) {
       newErrors.CGST = "CGST must be between 0 and 100";
     }
     if (!hasRate(hsnFormValues.SGST)) {
       newErrors.SGST = "SGST is required";
-    } else if (Number(hsnFormValues.SGST) < 0 || Number(hsnFormValues.SGST) > 100) {
+    } else if (
+      Number(hsnFormValues.SGST) < 0 ||
+      Number(hsnFormValues.SGST) > 100
+    ) {
       newErrors.SGST = "SGST must be between 0 and 100";
     }
     if (!hsnFormValues.description) {
@@ -523,16 +689,19 @@ export default function BasicDetailsTab({
     } else if (hsnFormValues.description.length < 3) {
       newErrors.description = "Description must be at least 3 characters";
     } else if (hsnFormValues.description.length > 100) {
-      newErrors.description = "Description must be less than or equal to 100 characters";
+      newErrors.description =
+        "Description must be less than or equal to 100 characters";
     }
 
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-
   const toTitleCase = (str) =>
-    str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+    str.replace(
+      /\w\S*/g,
+      (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase(),
+    );
 
   const handleNameBlur = (e) => {
     const { name, value } = e.target;
@@ -559,8 +728,12 @@ export default function BasicDetailsTab({
                 <FilterSelect
                   label="Seller"
                   name="sellerId"
-                  value={modifiedSellerList.find(opt => opt.value === formData.sellerId) || null}
-                  onChange={(e) => handleSelectChange(e, 'SELLER_ID')}
+                  value={
+                    modifiedSellerList.find(
+                      (opt) => opt.value === formData.sellerId,
+                    ) || null
+                  }
+                  onChange={(e) => handleSelectChange(e, "SELLER_ID")}
                   options={modifiedSellerList || []}
                   error={errors?.sellerId}
                   placeholder="Select Seller"
@@ -573,8 +746,14 @@ export default function BasicDetailsTab({
                 <FilterSelect
                   label="Legal Organization"
                   name="organizationId"
-                  value={organizationList.find((opt) => String(opt.value) === String(formData.organizationId || '')) || null}
-                  onChange={(e) => handleSelectChange(e, 'ORGANIZATION_ID')}
+                  value={
+                    organizationList.find(
+                      (opt) =>
+                        String(opt.value) ===
+                        String(formData.organizationId || ""),
+                    ) || null
+                  }
+                  onChange={(e) => handleSelectChange(e, "ORGANIZATION_ID")}
                   options={organizationList || []}
                   error={errors?.organizationId}
                   placeholder="Select Organization"
@@ -582,7 +761,9 @@ export default function BasicDetailsTab({
                 />
               </div>
             )}
-            <div className={`${userRole !== 'seller-sub-admin' ? "col-span-1" : "col-span-2"}`}>
+            <div
+              className={`${userRole !== "seller-sub-admin" ? "col-span-1" : "col-span-2"}`}
+            >
               <Input
                 labelName="Product Name"
                 name="name"
@@ -598,7 +779,11 @@ export default function BasicDetailsTab({
               <FilterSelect
                 label="Brand"
                 name="brand"
-                value={brandOptions.find((opt) => String(opt.value) === String(formData.brand || '')) || null}
+                value={
+                  brandOptions.find(
+                    (opt) => String(opt.value) === String(formData.brand || ""),
+                  ) || null
+                }
                 onChange={handleBrandSelect}
                 options={brandOptions}
                 placeholder="Select Brand"
@@ -640,7 +825,10 @@ export default function BasicDetailsTab({
                     label="HSN Code"
                     name="hsn_code"
                     value={selectedHsnOption}
-                    onChange={(e) => { setHsnSuggestion(null); handleSelectChange(e, 'hsn_code'); }}
+                    onChange={(e) => {
+                      setHsnSuggestion(null);
+                      handleSelectChange(e, "hsn_code");
+                    }}
                     options={hsnCodeList || []}
                     error={errors?.hsn_code}
                     placeholder="Search by code or description…"
@@ -658,27 +846,40 @@ export default function BasicDetailsTab({
               </div>
 
               {/* Suggestion: category changed, HSN kept until explicitly applied */}
-              {hsnSuggestion?.type === 'suggest' && (
+              {hsnSuggestion?.type === "suggest" && (
                 <div className="mt-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-500 text-xs mt-0.5 flex-shrink-0">ℹ</span>
+                    <span className="text-blue-500 text-xs mt-0.5 flex-shrink-0">
+                      ℹ
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-blue-800">HSN suggestion for this category</p>
+                      <p className="text-xs font-semibold text-blue-800">
+                        HSN suggestion for this category
+                      </p>
                       <p className="text-xs text-blue-700 mt-0.5 truncate">
                         {hsnSuggestion.option.code}
-                        {hsnSuggestion.option.description ? ` — ${hsnSuggestion.option.description}` : ''}
+                        {hsnSuggestion.option.description
+                          ? ` — ${hsnSuggestion.option.description}`
+                          : ""}
                         {` (${hsnSuggestion.option.gstRate}% GST)`}
                       </p>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0 mt-0.5">
-                      <button type="button"
-                        onClick={() => { handleSelectChange(hsnSuggestion.option, 'hsn_code'); setHsnSuggestion(null); }}
-                        className="rounded-md bg-[var(--admin-blue)] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSelectChange(hsnSuggestion.option, "hsn_code");
+                          setHsnSuggestion(null);
+                        }}
+                        className="rounded-md bg-[var(--admin-blue)] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90 transition-opacity"
+                      >
                         Apply
                       </button>
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => setHsnSuggestion(null)}
-                        className="rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-100 transition-colors">
+                        className="rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-100 transition-colors"
+                      >
                         Dismiss
                       </button>
                     </div>
@@ -687,16 +888,25 @@ export default function BasicDetailsTab({
               )}
 
               {/* No HSN mapping for selected category */}
-              {hsnSuggestion?.type === 'none' && (
+              {hsnSuggestion?.type === "none" && (
                 <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                  <span className="text-amber-500 text-xs flex-shrink-0">⚠</span>
-                  <p className="text-xs text-amber-700 flex-1">No HSN mapping found for this category. Please select manually.</p>
-                  <button type="button" onClick={() => setHsnSuggestion(null)}
-                    className="text-amber-400 hover:text-amber-700 text-base leading-none flex-shrink-0">×</button>
+                  <span className="text-amber-500 text-xs flex-shrink-0">
+                    ⚠
+                  </span>
+                  <p className="text-xs text-amber-700 flex-1">
+                    No HSN mapping found for this category. Please select
+                    manually.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setHsnSuggestion(null)}
+                    className="text-amber-400 hover:text-amber-700 text-base leading-none flex-shrink-0"
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </div>
-
 
             {/* <Input
               labelName="SKU"
@@ -710,12 +920,37 @@ export default function BasicDetailsTab({
             /> */}
             <FilterSelect
               label="Product Family Code"
-              value={(formattedProductFamilyList || []).find((opt) => String(opt.value) === String(formData.productFamilyCode || '')) || null}
-              onChange={(e) => handleSelectChange(e, 'PRODUCT_FAMILY')}
+              value={
+                (formattedProductFamilyList || []).find(
+                  (opt) =>
+                    String(opt.value) ===
+                    String(formData.productFamilyCode || ""),
+                ) || null
+              }
+              onChange={(e) => handleSelectChange(e, "PRODUCT_FAMILY")}
               options={formattedProductFamilyList || []}
               placeholder="Select family code"
               error={errors?.productFamilyCode}
             />
+
+            <div
+              data-error-field="description"
+              name="description"
+              className="md:col-span-2"
+            >
+              <TextEditor
+                label="Description"
+                value={formData.description || ""}
+                onChange={(content) =>
+                  handleInputReactQuillChange?.("description", content)
+                }
+                required={true}
+                placeholder="Enter detailed product description"
+                error={errors?.description}
+                height="220px"
+                className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+              />
+            </div>
             {/* {!hasVariantPricing && (
               <>
                 <Input
@@ -752,7 +987,7 @@ export default function BasicDetailsTab({
                 />
               </>
             )} */}
-           
+
             {/* {!showCustomWarranty && (
               <div className="space-y-1">
                 <FilterSelect
@@ -808,8 +1043,13 @@ export default function BasicDetailsTab({
             )} */}
             <div className="md:col-span-2 rounded-lg border border-[var(--admin-line)] bg-white p-4 shadow-sm">
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">Warranty information</h4>
-                <p className="mt-1 text-xs text-gray-500">Describe warranty coverage, exclusions, claim rules, required documents, and support instructions.</p>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Warranty information
+                </h4>
+                <p className="mt-1 text-xs text-gray-500">
+                  Describe warranty coverage, exclusions, claim rules, required
+                  documents, and support instructions.
+                </p>
               </div>
               <div className="mb-4 grid gap-4 md:grid-cols-2">
                 <Input
@@ -817,14 +1057,26 @@ export default function BasicDetailsTab({
                   name="warranty.period"
                   type="number"
                   min={0}
-                  value={formData.warranty?.period ?? ''}
-                  onChange={(event) => handleNestedChange('warranty.period', event.target.value)}
+                  value={formData.warranty?.period ?? ""}
+                  onChange={(event) =>
+                    handleNestedChange("warranty.period", event.target.value)
+                  }
                   placeholder="Example: 12"
                 />
                 <FilterSelect
                   label="Warranty Unit"
-                  value={warrantyUnits.options.find((option) => option.value === formData.warranty?.periodUnit) || null}
-                  onChange={(option) => handleNestedChange('warranty.periodUnit', option?.value || '')}
+                  value={
+                    warrantyUnits.options.find(
+                      (option) =>
+                        option.value === formData.warranty?.periodUnit,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleNestedChange(
+                      "warranty.periodUnit",
+                      option?.value || "",
+                    )
+                  }
                   options={warrantyUnits.options}
                   placeholder="Select warranty unit"
                   isLoading={warrantyUnits.loading}
@@ -833,40 +1085,60 @@ export default function BasicDetailsTab({
                 <Input
                   labelName="Warranty Provider"
                   name="warranty.provider"
-                  value={formData.warranty?.provider || ''}
-                  onChange={(event) => handleNestedChange('warranty.provider', event.target.value)}
+                  value={formData.warranty?.provider || ""}
+                  onChange={(event) =>
+                    handleNestedChange("warranty.provider", event.target.value)
+                  }
                   placeholder="Seller, manufacturer, or service partner"
                 />
                 <Input
                   labelName="Warranty Type"
                   name="warranty.type"
-                  value={formData.warranty?.type || ''}
-                  onChange={(event) => handleNestedChange('warranty.type', event.target.value)}
+                  value={formData.warranty?.type || ""}
+                  onChange={(event) =>
+                    handleNestedChange("warranty.type", event.target.value)
+                  }
                   placeholder="Example: Manufacturer warranty"
                 />
               </div>
               <TextEditor
                 label="Warranty description and rules"
-                value={formData.warranty?.terms || ''}
-                onChange={(content) => handleNestedChange('warranty.terms', content)}
-                 height="220px"
-             className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+                value={formData.warranty?.terms || ""}
+                onChange={(content) =>
+                  handleNestedChange("warranty.terms", content)
+                }
+                height="220px"
+                className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                 placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
               />
             </div>
 
             <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">Product Return Policy</h4>
-                <p className="mt-1 text-xs text-gray-500">This policy is snapshotted on each order item and cannot be changed for existing orders.</p>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Product Return Policy
+                </h4>
+                <p className="mt-1 text-xs text-gray-500">
+                  This policy is snapshotted on each order item and cannot be
+                  changed for existing orders.
+                </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Input
                   labelName="Returnable"
                   name="warranty.returnPolicy.returnable"
                   type="switch"
-                  value={formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true}
-                  onChange={(event) => handleNestedChange('warranty.returnPolicy.returnable', event.target.checked)}
+                  value={
+                    formData.warranty?.returnPolicy?.returnable ??
+                    formData.warranty?.returnPolicy?.eligible ??
+                    true
+                  }
+                  onChange={(event) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.returnable",
+                      event.target.checked,
+                    )
+                  }
                 />
                 <Input
                   labelName="Return Window Days"
@@ -874,21 +1146,49 @@ export default function BasicDetailsTab({
                   type="number"
                   min={0}
                   max={365}
-                  disabled={(formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true) === false}
-                  value={(formData.warranty?.returnPolicy?.returnable ?? formData.warranty?.returnPolicy?.eligible ?? true) === false ? 0 : (formData.warranty?.returnPolicy?.returnWindowDays ?? formData.warranty?.returnPolicy?.days ?? 7)}
-                  onChange={(event) => handleNestedChange('warranty.returnPolicy.returnWindowDays', event.target.value)}
+                  disabled={
+                    (formData.warranty?.returnPolicy?.returnable ??
+                      formData.warranty?.returnPolicy?.eligible ??
+                      true) === false
+                  }
+                  value={
+                    (formData.warranty?.returnPolicy?.returnable ??
+                      formData.warranty?.returnPolicy?.eligible ??
+                      true) === false
+                      ? 0
+                      : (formData.warranty?.returnPolicy?.returnWindowDays ??
+                        formData.warranty?.returnPolicy?.days ??
+                        7)
+                  }
+                  onChange={(event) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.returnWindowDays",
+                      event.target.value,
+                    )
+                  }
                   helperText="Starts from the item delivery timestamp."
                 />
                 <Input
                   labelName="Allowed Resolution"
                   name="warranty.returnPolicy.resolution"
                   type="select"
-                  value={formData.warranty?.returnPolicy?.resolution || 'refund_or_replacement'}
-                  onChange={(option) => handleNestedChange('warranty.returnPolicy.resolution', option?.value || 'refund_or_replacement')}
+                  value={
+                    formData.warranty?.returnPolicy?.resolution ||
+                    "refund_or_replacement"
+                  }
+                  onChange={(option) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.resolution",
+                      option?.value || "refund_or_replacement",
+                    )
+                  }
                   options={[
-                    { value: 'refund_or_replacement', label: 'Refund or replacement' },
-                    { value: 'refund', label: 'Refund only' },
-                    { value: 'replacement', label: 'Replacement only' },
+                    {
+                      value: "refund_or_replacement",
+                      label: "Refund or replacement",
+                    },
+                    { value: "refund", label: "Refund only" },
+                    { value: "replacement", label: "Replacement only" },
                   ]}
                 />
                 <Input
@@ -896,49 +1196,67 @@ export default function BasicDetailsTab({
                   name="warranty.returnPolicy.shippingPaidBy"
                   type="select"
                   disabled={isSellerPanelUser}
-                  value={isSellerPanelUser ? 'seller' : (formData.warranty?.returnPolicy?.shippingPaidBy || 'seller')}
-                  onChange={(option) => handleNestedChange('warranty.returnPolicy.shippingPaidBy', option?.value || 'seller')}
-                  options={isSellerPanelUser
-                    ? [{ value: 'seller', label: 'Seller' }]
-                    : [
-                        { value: 'platform', label: 'Platform' },
-                        { value: 'seller', label: 'Seller' },
-                        { value: 'customer', label: 'Customer' },
-                      ]}
-                  helperText={isSellerPanelUser ? 'Seller handles delivery and return shipping.' : undefined}
+                  value={
+                    isSellerPanelUser
+                      ? "seller"
+                      : formData.warranty?.returnPolicy?.shippingPaidBy ||
+                        "seller"
+                  }
+                  onChange={(option) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.shippingPaidBy",
+                      option?.value || "seller",
+                    )
+                  }
+                  options={
+                    isSellerPanelUser
+                      ? [{ value: "seller", label: "Seller" }]
+                      : [
+                          { value: "platform", label: "Platform" },
+                          { value: "seller", label: "Seller" },
+                          { value: "customer", label: "Customer" },
+                        ]
+                  }
+                  helperText={
+                    isSellerPanelUser
+                      ? "Seller handles delivery and return shipping."
+                      : undefined
+                  }
                 />
                 <Input
                   labelName="Require Return Images"
                   name="warranty.returnPolicy.requiresImages"
                   type="switch"
-                  value={Boolean(formData.warranty?.returnPolicy?.requiresImages)}
-                  onChange={(event) => handleNestedChange('warranty.returnPolicy.requiresImages', event.target.checked)}
+                  value={Boolean(
+                    formData.warranty?.returnPolicy?.requiresImages,
+                  )}
+                  onChange={(event) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.requiresImages",
+                      event.target.checked,
+                    )
+                  }
                 />
                 <Input
                   labelName="Require Inspection / QC"
                   name="warranty.returnPolicy.inspectionRequired"
                   type="switch"
-                  value={formData.warranty?.returnPolicy?.inspectionRequired !== false}
-                  onChange={(event) => handleNestedChange('warranty.returnPolicy.inspectionRequired', event.target.checked)}
+                  value={
+                    formData.warranty?.returnPolicy?.inspectionRequired !==
+                    false
+                  }
+                  onChange={(event) =>
+                    handleNestedChange(
+                      "warranty.returnPolicy.inspectionRequired",
+                      event.target.checked,
+                    )
+                  }
                 />
               </div>
             </div>
           </div>
-<div data-error-field="description" name="description" className="md:col-span-2">
-          <TextEditor
-            label="Description"
-            value={formData.description || ''}
-            onChange={(content) => handleInputReactQuillChange?.('description', content)}
-            required={true}
-            placeholder="Enter detailed product description"   
-            error={errors?.description}
-            height="220px"
-             className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-          />
-          </div>
         </div>
       </div>
- 
 
       <AddCategoryModal
         isOpen={isCategoryModal}
@@ -946,41 +1264,66 @@ export default function BasicDetailsTab({
         handleFileUpload={handleFileUploadCategory}
         handleChange={handleInputCategoryChange}
         parentCategories={createSelectOptions}
-        handleCloseModal={() => { setIsCategoryModal(false); setCategoryForm(INITIAL_FORM_CATEGORY) }}
+        handleCloseModal={() => {
+          setIsCategoryModal(false);
+          setCategoryForm(INITIAL_FORM_CATEGORY);
+        }}
         handleSubmit={() => validateCategoryForm() && handleCategorySubmit()}
         handleSelectChange={handleSelectCategoryChange}
         handleDashboardVisible={handleDashboardVisible}
       />
 
-      <AddHsnModal isOpen={isHsnAddModal} formData={hsnFormValues}
-        resetForm={() => { setIsHsnAddModal(false); setIsHsnFormValue(INITIAL_FORM_HSN); setFormErrors({}) }}
-        handleInputChange={handleHsnInputChange} handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
-        errors={formErrors} />
+      <AddHsnModal
+        isOpen={isHsnAddModal}
+        formData={hsnFormValues}
+        resetForm={() => {
+          setIsHsnAddModal(false);
+          setIsHsnFormValue(INITIAL_FORM_HSN);
+          setFormErrors({});
+        }}
+        handleInputChange={handleHsnInputChange}
+        handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
+        errors={formErrors}
+      />
 
       {isBrandModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <form onSubmit={submitBrandRequest} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <form
+            onSubmit={submitBrandRequest}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+          >
             <h2 className="mb-2 text-lg font-bold text-[var(--admin-navy)]">
-              {brandSubmission._id ? 'Resubmit Brand' : 'Add New Brand'}
+              {brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
             </h2>
             <p className="mb-4 text-sm text-gray-600">
               {isSellerPanelUser
-                ? 'New brands require admin approval before they can be used on products.'
-                : 'This brand will be created as active and selected for this product.'}
+                ? "New brands require admin approval before they can be used on products."
+                : "This brand will be created as active and selected for this product."}
             </p>
             <input
               value={brandSubmission.name}
-              onChange={(event) => setBrandSubmission((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) =>
+                setBrandSubmission((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
               placeholder="Brand name"
               className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               maxLength={200}
               required
             />
             <div className="mb-3">
-              <label className="mb-1.5 block text-xs font-semibold text-gray-600">Brand logo (optional)</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                Brand logo (optional)
+              </label>
               <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-2">
                 {brandSubmission.logo ? (
-                  <img src={brandSubmission.logo} alt="Brand logo preview" className="h-10 w-10 rounded-md border border-gray-200 object-contain" />
+                  <img
+                    src={brandSubmission.logo}
+                    alt="Brand logo preview"
+                    className="h-10 w-10 rounded-md border border-gray-200 object-contain"
+                  />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-gray-400">
                     Logo
@@ -995,38 +1338,78 @@ export default function BasicDetailsTab({
                     className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-[var(--admin-navy)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
                   />
                   <p className="mt-1 text-[11px] text-gray-400">
-                    {brandLogoUploading ? 'Uploading logo...' : 'JPG, PNG, or WEBP up to 5MB'}
+                    {brandLogoUploading
+                      ? "Uploading logo..."
+                      : "JPG, PNG, or WEBP up to 5MB"}
                   </p>
                 </div>
               </div>
             </div>
             <textarea
               value={brandSubmission.description}
-              onChange={(event) => setBrandSubmission((current) => ({ ...current, description: event.target.value }))}
+              onChange={(event) =>
+                setBrandSubmission((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
               placeholder="Brand details (optional)"
               className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               rows={3}
               maxLength={1000}
             />
             <div className="flex justify-end gap-3">
-              <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setIsBrandModal(false)}>Cancel</button>
-              <button type="submit" disabled={brandSubmitting || brandLogoUploading} className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60">
-                {brandSubmitting ? 'Saving…' : brandLogoUploading ? 'Uploading…' : brandSubmission._id ? 'Resubmit' : isSellerPanelUser ? 'Submit for Approval' : 'Create Brand'}
+              <button
+                type="button"
+                className="rounded-lg border px-4 py-2 text-sm"
+                onClick={() => setIsBrandModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={brandSubmitting || brandLogoUploading}
+                className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60"
+              >
+                {brandSubmitting
+                  ? "Saving…"
+                  : brandLogoUploading
+                    ? "Uploading…"
+                    : brandSubmission._id
+                      ? "Resubmit"
+                      : isSellerPanelUser
+                        ? "Submit for Approval"
+                        : "Create Brand"}
               </button>
             </div>
-            {myBrandSubmissions.filter((brand) => brand.approvalStatus === 'rejected').length > 0 && (
+            {myBrandSubmissions.filter(
+              (brand) => brand.approvalStatus === "rejected",
+            ).length > 0 && (
               <div className="mt-5 border-t pt-4">
-                <p className="mb-2 text-xs font-semibold text-gray-600">Rejected submissions</p>
-                {myBrandSubmissions.filter((brand) => brand.approvalStatus === 'rejected').map((brand) => (
-                  <button
-                    key={brand._id}
-                    type="button"
-                    className="mb-2 w-full rounded-md bg-red-50 p-2 text-left text-xs text-red-700"
-                    onClick={() => setBrandSubmission({ _id: brand._id, name: brand.name || '', logo: brand.logo || '', thumbnails: brand.thumbnails || '', description: brand.description || '' })}
-                  >
-                    <span className="font-semibold">{brand.name}</span>: {brand.rejectionReason || 'Needs changes'}
-                  </button>
-                ))}
+                <p className="mb-2 text-xs font-semibold text-gray-600">
+                  Rejected submissions
+                </p>
+                {myBrandSubmissions
+                  .filter((brand) => brand.approvalStatus === "rejected")
+                  .map((brand) => (
+                    <button
+                      key={brand._id}
+                      type="button"
+                      className="mb-2 w-full rounded-md bg-red-50 p-2 text-left text-xs text-red-700"
+                      onClick={() =>
+                        setBrandSubmission({
+                          _id: brand._id,
+                          name: brand.name || "",
+                          logo: brand.logo || "",
+                          thumbnails: brand.thumbnails || "",
+                          description: brand.description || "",
+                        })
+                      }
+                    >
+                      <span className="font-semibold">{brand.name}</span>:{" "}
+                      {brand.rejectionReason || "Needs changes"}
+                    </button>
+                  ))}
               </div>
             )}
           </form>
