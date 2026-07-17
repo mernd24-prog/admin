@@ -319,6 +319,8 @@ export default function ProductManagementUI() {
 
   const refs = {
     "basic-details": useRef(null),
+    "product-details": useRef(null),
+    "common-images": useRef(null),
     "product-type": useRef(null),
     "variants-options": useRef(null),
     shipping: useRef(null),
@@ -343,14 +345,8 @@ export default function ProductManagementUI() {
   };
 
   const scrollToFirstValidationError = (errors, attempt = 0) => {
-    console.log("errors: ", errors);
     const firstField = Object.keys(errors || {})[0];
     if (!firstField || typeof document === "undefined") return;
-    console.log("First Field:", firstField);
-    console.log(
-      "Found:",
-      document.querySelector(`[data-error-field="${firstField}"]`),
-    );
 
     const sectionId = FIELD_TO_SECTION[firstField] || "basic-details";
     if (activeTab !== sectionId) setActiveTab(sectionId);
@@ -373,7 +369,6 @@ export default function ProductManagementUI() {
         }
         const target =
           field?.closest?.(".admin-field") || field || refs[sectionId]?.current;
-        console.log("Scrolling to:", target);
         if (target?.scrollIntoView) {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -1079,7 +1074,6 @@ export default function ProductManagementUI() {
       .replace(/<[^>]*>/g, "")
       .replace(/&nbsp;/g, " ")
       .trim();
-    console.log("plainDescription: ", plainDescription);
 
     if (!plainDescription) {
       newErrors.description = "Description is required.";
@@ -1891,8 +1885,6 @@ export default function ProductManagementUI() {
   ]);
 
   const handleProductDetailChange = (field, content) => {
-    console.log("Field:", field);
-    console.log("Content:", content);
     setFormData((prev) => ({
       ...prev,
       [field]: content,
@@ -2083,7 +2075,7 @@ export default function ProductManagementUI() {
         description: "Manage category-based product attributes.",
         icon: <GrDocument />,
         component: (
-          <div className="space-y-4">
+          <div ref={refs["product-details"]} className="space-y-4">
             {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
@@ -2249,14 +2241,14 @@ export default function ProductManagementUI() {
       },
       {
         id: "common-images",
-        title: "Common Images",
+        title: "Catalog Images",
         description: "Images shown across every product variant.",
         icon: <BsMenuApp />,
         component: (
-          <section className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm">
+          <section ref={refs["common-images"]} className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm">
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">Common product images</h3>
+                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">Catalog images</h3>
                   <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
                     {(formData.commonImages || []).length}/{MAX_COMMON_PRODUCT_IMAGES}
                   </span>
@@ -2269,7 +2261,7 @@ export default function ProductManagementUI() {
               <div className="flex flex-wrap gap-3">
                 {(formData.commonImages || []).map((image, imageIndex) => (
                   <div key={`${image}-${imageIndex}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                    <img src={image} alt={`Common product ${imageIndex + 1}`} className="h-full w-full object-contain p-1" />
+                    <img src={image} alt={`Catalog image ${imageIndex + 1}`} className="h-full w-full object-contain p-1" />
                     {imageIndex === 0 && (
                       <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">Cover</span>
                     )}
@@ -2277,7 +2269,7 @@ export default function ProductManagementUI() {
                       type="button"
                       onClick={() => removeCommonProductImage(imageIndex)}
                       className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
-                      aria-label={`Remove common product image ${imageIndex + 1}`}
+                      aria-label={`Remove catalog image ${imageIndex + 1}`}
                     >
                       ×
                     </button>

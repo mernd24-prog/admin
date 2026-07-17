@@ -986,7 +986,7 @@ const ProductCatalog = () => {
       <Loader loading={loading} />
       <PageHeader
         title={sellerView ? "Seller Products" : "Product Catalog"}
-        subtitle={sellerView ? "Manage your available products" : "Manage all products in the catalog"}
+        subtitle={sellerView ? "Manage your available products by viewing, updating, and organizing." : "Manage all products in the catalog"}
         breadcrumbs={[
           { label: sellerView ? "Seller Catalog" : "Catalog Management" },
           { label: "Seller Products" },
