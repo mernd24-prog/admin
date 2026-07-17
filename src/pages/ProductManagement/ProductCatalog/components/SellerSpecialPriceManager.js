@@ -216,6 +216,8 @@ const SellerSpecialPriceManager = () => {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [importInfo, setImportInfo] = useState("");
+  const [importSuccess, setImportSuccess] = useState("");
   const fileInputRef = useRef(null);
 
   const sellerContext = useMemo(() => getSellerContext(), []);
@@ -266,6 +268,18 @@ const SellerSpecialPriceManager = () => {
     loadProducts();
   }, [loadProducts]);
 
+  useEffect(() => {
+    if (!importSuccess) return undefined;
+    const timer = window.setTimeout(() => setImportSuccess(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [importSuccess]);
+
+  useEffect(() => {
+    if (!importInfo) return undefined;
+    const timer = window.setTimeout(() => setImportInfo(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [importInfo]);
+
   const pendingCount = useMemo(
     () => rows.filter((row) => getRowFlags(row).isPending).length,
     [rows],
@@ -293,6 +307,8 @@ const SellerSpecialPriceManager = () => {
 
   const handleRowChange = useCallback((rowId, value) => {
     setImportError("");
+    setImportInfo("");
+    setImportSuccess("");
     setRows((current) =>
       current.map((row) => {
         if (row.id === rowId) {
@@ -434,6 +450,8 @@ const SellerSpecialPriceManager = () => {
     try {
       setImporting(true);
       setImportError("");
+      setImportInfo("");
+      setImportSuccess("");
       const imported = await parseImportFile(file);
       if (!imported.length) {
         throw new Error("The selected file did not contain any rows");
@@ -567,13 +585,33 @@ const SellerSpecialPriceManager = () => {
         return;
       }
 
-      await persistRows(nextRows, importedUpdates.keys(), { showToast: false });
+      const importChangeCount = nextRows.filter(
+        (row) => importedUpdates.has(row.id) && getRowFlags(row).isPending,
+      ).length;
+      if (importChangeCount === 0) {
+        setImportInfo(
+          "Import file uploaded successfully, but there are no new special price changes to save.",
+        );
+        setImportError("");
+        return;
+      }
+
+      const savedCount = await persistRows(nextRows, importedUpdates.keys(), {
+        showToast: false,
+      });
+      if (savedCount > 0) {
+        setImportSuccess(
+          `Imported and updated ${savedCount} special price ${savedCount > 1 ? "entries" : "entry"} successfully.`,
+        );
+      }
     } catch (error) {
       const message = getErrorMessage(
         error,
         "Failed to import special price Excel",
       );
       setImportError(message);
+      setImportInfo("");
+      setImportSuccess("");
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -768,6 +806,40 @@ const SellerSpecialPriceManager = () => {
             aria-label="Close import issue"
             className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
             onClick={() => setImportError("")}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
+      {importInfo ? (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+          <div>
+            <p className="font-semibold">Import info</p>
+            <p className="mt-1 whitespace-pre-wrap">{importInfo}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close import info"
+            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+            onClick={() => setImportInfo("")}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
+      {importSuccess ? (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div>
+            <p className="font-semibold">Import successful</p>
+            <p className="mt-1 whitespace-pre-wrap">{importSuccess}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close import success"
+            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            onClick={() => setImportSuccess("")}
           >
             ×
           </button>
