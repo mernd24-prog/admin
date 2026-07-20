@@ -23,28 +23,53 @@ const STATES = [
   "draft", "issued", "cancelled", "amended",
 ];
 
-const FILTER_FIELDS = [
-  { key: "search", type: "text", label: "Search", width: "w-56" },
-  {
-    key: "sellerId",
-    type: "asyncDropdown",
-    label: "Seller",
-    width: "w-52",
-    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
-  },
-  {
-    key: "buyerId",
-    type: "asyncDropdown",
-    label: "Buyer",
-    width: "w-52",
-    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
-  },
-  { key: "organizationId", type: "text", label: "Organization ID", width: "w-52" },
-  { key: "state", type: "select", label: "State", options: STATES.map((v) => ({ value: v, label: v })) },
-  { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
-];
+const isSeller = isSellerPanel();
+
+const FILTER_FIELDS = isSellerPanel()
+  ? [
+      { key: "fromDate", type: "date", label: "From" },
+      { key: "toDate", type: "date", label: "To" },
+    ]
+  : [
+      { key: "search", type: "text", label: "Search", width: "w-56" },
+      {
+        key: "sellerId",
+        type: "asyncDropdown",
+        label: "Seller",
+        width: "w-52",
+        load: (search) =>
+          dropdownApi.getSellers({
+            keyWord: search,
+            searchFields: "full_name,email,businessName",
+          }),
+      },
+      {
+        key: "buyerId",
+        type: "asyncDropdown",
+        label: "Buyer",
+        width: "w-52",
+        load: (search) =>
+          dropdownApi.getBuyers({
+            keyWord: search,
+            searchFields: "full_name,email",
+          }),
+      },
+      {
+        key: "organizationId",
+        type: "text",
+        label: "Organization ID",
+        width: "w-52",
+      },
+      {
+        key: "state",
+        type: "select",
+        label: "State",
+        options: STATES.map((v) => ({ value: v, label: v })),
+      },
+      { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
+      { key: "fromDate", type: "date", label: "From" },
+      { key: "toDate", type: "date", label: "To" },
+    ];
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -231,8 +256,6 @@ const TaxInvoices = () => {
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
@@ -248,6 +271,12 @@ const TaxInvoices = () => {
           total={payload.total}
           listPage={list}
           emptyMessage="No tax invoices found"
+           filterBar={
+            <FilterBar
+              filters={FILTER_FIELDS}
+              listPage={list}
+              loading={false}
+            />}
         />
       )}
 

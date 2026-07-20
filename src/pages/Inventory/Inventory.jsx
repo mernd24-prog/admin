@@ -19,16 +19,16 @@ const FILTERS = [
       { value: "out_of_stock", label: "Out of Stock" },
     ],
   },
-  {
-    key: "variantStatus",
-    type: "select",
-    label: "Variant Status",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
-      { value: "out_of_stock", label: "Out Of Stock" },
-    ],
-  },
+  // {
+  //   key: "variantStatus",
+  //   type: "select",
+  //   label: "Variant Status",
+  //   options: [
+  //     { value: "active", label: "Active" },
+  //     { value: "inactive", label: "Inactive" },
+  //     { value: "out_of_stock", label: "Out Of Stock" },
+  //   ],
+  // },
   {
     key: "status",
     type: "select",
@@ -533,7 +533,7 @@ const Inventory = () => {
         subtitle="Product-level inventory list with variant stock managed inside each product"
         count={productRows.length}
          breadcrumbs={[
-          { label: sellerView ? "Seller Inventory" : "Inventory" },
+          { label: sellerView ? "Inventory" : "Inventory" },
           { label: "Inventory" },
         ]}
       />
@@ -550,7 +550,7 @@ const Inventory = () => {
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
         onRefresh={refresh}
-        searchPlaceholder="Search product, variant, or SKU"
+        searchPlaceholder="Search product or SKU"
         filterBar={<FilterBar filters={FILTERS} listPage={list} loading={false} />}
         bulkActionBar={
           <BulkActionBar

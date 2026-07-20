@@ -237,11 +237,8 @@ const Cancellations = () => {
       <PageHeader
         title="Cancellations"
         subtitle="Manage order cancellations and refunds"
-        breadcrumbs={[{ label: isSeller ? "Seller Orders" : "Returns & Cancellations" }, { label: "Cancellations" }]}
-      />
-
-      <FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />
-
+        breadcrumbs={[{ label: isSeller ? "Orders" : "Returns & Cancellations" }, { label: "Cancellations" }]}
+      />   
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
@@ -257,6 +254,8 @@ const Cancellations = () => {
           total={payload.total}
           listPage={list}
           emptyMessage="No cancellations found"
+          filterBar={<FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />
+}
         />
       )}
 

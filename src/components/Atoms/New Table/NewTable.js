@@ -380,7 +380,7 @@ export default function SearchComponent({
                   label={`Category`}
                   value={filters.category}
                   options={categoryOptions}
-                  isSearchable={false}
+                  isSearchable={true}
                   onChange={(option) => handleFilterChange("category", option)}
                 />
               </div>

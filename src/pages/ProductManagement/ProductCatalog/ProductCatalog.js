@@ -985,11 +985,11 @@ const ProductCatalog = () => {
     <div className="overflow-x-auto overflow-y-auto">
       <Loader loading={loading} />
       <PageHeader
-        title={sellerView ? "Seller Products" : "Product Catalog"}
+        title={sellerView ? "Products" : "Product Catalog"}
         subtitle={sellerView ? "Manage your available products by viewing, updating, and organizing." : "Manage all products in the catalog"}
         breadcrumbs={[
-          { label: sellerView ? "Seller Catalog" : "Catalog Management" },
-          { label: "Seller Products" },
+          { label: sellerView ? "Catalog" : "Catalog Management" },
+          { label: "Products" },
         ]}
         actions={
           <>
@@ -1005,7 +1005,7 @@ const ProductCatalog = () => {
       />
       <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
         <section className="border-b border-[var(--admin-line)]">
-          <SearchComponent
+          <SearchComponent  
             selectedRow={selectedRow}
             setSelectedRow={setSelectedRow}
             filters={filters}

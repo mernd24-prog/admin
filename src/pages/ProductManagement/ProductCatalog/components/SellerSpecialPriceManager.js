@@ -752,18 +752,18 @@ const SellerSpecialPriceManager = () => {
   );
 
   return (
-    <div className="p-4 md:p-6">
+    <div>
       <Loader
         loading={saving || importing}
         label={importing ? "Importing special prices..." : "Saving special prices..."}
       />
       <PageHeader
-        title={sellerView ? "Seller Special Price Management" : "Special Price Management"}
+        title={sellerView ? "Special Price Management" : "Special Price Management"}
         subtitle="Update variant-wise special prices, export a template, edit it in Excel, and import the updated values back here."
         count={total}
         breadcrumbs={[
-          { label: sellerView ? "Seller Catalog" : "Product Management" },
-          { label: sellerView ? "Seller Special Price Management" : "Special Price Management" },
+          { label: sellerView ? "Catalog" : "Product Management" },
+          { label: sellerView ? "Special Price Management" : "Special Price Management" },
         ]}
         actions={
           <>

@@ -363,16 +363,16 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
     label: "Order Status",
     render: (v) => <StatusBadge status={v} />,
   },
-  {
-    key: "fulfillment_status",
-    label: "Fulfilment",
-    render: (v, row) => (
-      <StatusBadge
-        status={firstDefined(v, row.fulfilmentStatus, row.fulfillmentStatus, row.status)}
-        dot
-      />
-    ),
-  },
+  // {
+  //   key: "fulfillment_status",
+  //   label: "Fulfilment",
+  //   render: (v, row) => (
+  //     <StatusBadge
+  //       status={firstDefined(v, row.fulfilmentStatus, row.fulfillmentStatus, row.status)}
+  //       dot
+  //     />
+  //   ),
+  // },
   {
     key: "payment_status",
     label: "Payment",
@@ -588,8 +588,8 @@ const Orders = () => {
         title="Orders List"
         subtitle="Manage and track all customer orders"
         breadcrumbs={[
-          { label: isSeller ? "Seller Orders" : "Orders Management" },
-          { label: "Seller Orders List" },
+          { label: isSeller ? "Orders" : "Orders Management" },
+          { label: "Orders List" },
         ]}
       />
 

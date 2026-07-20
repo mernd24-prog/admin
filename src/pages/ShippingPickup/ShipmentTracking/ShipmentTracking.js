@@ -105,9 +105,49 @@ const ActionButton = ({
   );
 };
 
-const FILTER_FIELDS = [
+const ShipmentTracking = () => {
+  const dispatch = useDispatch();
+  const { isSeller } = usePermission();
+  const selector = useSelector((state) => state.delivery);
+  const shipmentPayload = unwrapList(selector.shipmentsData);
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+    defaultFilters: {
+      orderId: getInitialQuery("orderId"),
+      sellerId: getInitialQuery("sellerId"),
+      search: initialShipmentId,
+    },
+  });
+  const { toQueryParams } = list;
+
+  const FILTER_FIELDS = isSeller ? [
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
-  { key: "returnId", type: "text", label: "Return #", width: "w-44" },
+ 
+  {
+    key: "shipmentType",
+    type: "select",
+    label: "Type",
+    options: [
+      { value: "forward", label: "Forward" },
+      { value: "return", label: "Return" },
+    ],
+  },
+   {
+    key: "status",
+    type: "select",
+    label: "Status",
+    options: STATUS_OPTIONS.map((value) => ({
+      value,
+      label: shipmentStepLabel(value),
+    })),
+  },
+  { key: "fromDate", type: "date", label: "From" },
+  { key: "toDate", type: "date", label: "To" },
+]: [
+  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  { key: "returnId", type: "text", label: "Return #", width: "w-44" },   
   {
     key: "shipmentType",
     type: "select",
@@ -151,23 +191,6 @@ const FILTER_FIELDS = [
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
 ];
-
-const ShipmentTracking = () => {
-  const dispatch = useDispatch();
-  const { isSeller } = usePermission();
-  const selector = useSelector((state) => state.delivery);
-  const shipmentPayload = unwrapList(selector.shipmentsData);
-  const list = useListPage({
-    defaultPageSize: 20,
-    defaultSortKey: "created_at",
-    defaultSortDir: "desc",
-    defaultFilters: {
-      orderId: getInitialQuery("orderId"),
-      sellerId: getInitialQuery("sellerId"),
-      search: initialShipmentId,
-    },
-  });
-  const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -485,8 +508,8 @@ const ShipmentTracking = () => {
         title="Shipments"
         subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details"
         breadcrumbs={[
-          { label: "Shipping & Fulfilment" },
-          { label: "Shipments" },
+          { label: "Shipping" },
+          { label: "Shipments Tracking" },
         ]}
       />
 
