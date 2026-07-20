@@ -520,7 +520,7 @@ const ProductReviews = () => {
         title="Product Reviews"
         subtitle="Manage and moderate customer product reviews"
         breadcrumbs={[
-          { label: sellerView ? "Seller Catalog" : "Orders Management" },
+          { label: sellerView ? "Catalog" : "Orders Management" },
           { label: "Product Reviews" },
         ]}
         actions={!isSellerPanelUser ? (

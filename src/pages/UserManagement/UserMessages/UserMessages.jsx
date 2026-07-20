@@ -18,6 +18,8 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "../../../utils/toast";
 import { useListPage } from "../../../hooks/useListPage";
+import { useDispatch } from "react-redux";
+import { setNotificationsSeenAt } from "../../../Redux/notificationsSlice";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -227,6 +229,11 @@ const UserMessages = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(setNotificationsSeenAt(Date.now()));
+  }, [dispatch]);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -301,7 +308,7 @@ const UserMessages = () => {
       <PageHeader
         title="Notifications"
         subtitle={isSeller ? "View your notifications" : "Send and manage user notifications"}
-        breadcrumbs={[{ label: isSeller ? "Seller Marketing" : "User Management" }, { label: "Notifications" }]}
+        breadcrumbs={[{ label: isSeller ? "Marketing" : "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex items-center gap-2">
             {!isSeller && (

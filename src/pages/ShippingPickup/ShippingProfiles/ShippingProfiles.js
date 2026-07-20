@@ -1297,7 +1297,7 @@ export default function ShippingProfiles() {
         subtitle={isSeller
           ? "Manage reusable delivery rules for your products"
           : "Manage reusable seller delivery configurations"}
-        breadcrumbs={[{ label: isSeller ? "Seller Shipping" : "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
+        breadcrumbs={[{ label: isSeller ? "Shipping" : "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canCreateProfile && (

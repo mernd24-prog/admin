@@ -513,7 +513,7 @@ const Returns = () => {
       <PageHeader
         title="Returns & Refunds"
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle"
-        breadcrumbs={[{ label: isSeller ? "Seller Orders" : "Returns & Cancellations" }, { label: "Returns & Refunds" }]}
+        breadcrumbs={[{ label: isSeller ? "Orders" : "Returns & Cancellations" }, { label: "Returns & Refunds" }]}
       />
 
       <DataTable

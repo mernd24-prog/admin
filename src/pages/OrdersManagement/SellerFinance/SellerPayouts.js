@@ -118,9 +118,9 @@ const SellerPayouts = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Seller Payouts"
+        title="My Payouts"
         subtitle={isSeller ? "See how every payout was calculated and when it was paid." : "Calculated seller payouts. Use Payout Operations to approve or complete them."}
-        breadcrumbs={[{ label: "Seller Finance & Payouts" }, { label: "Payouts" }]}
+        breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Payouts" }]}
         actions={(
           <div className="flex flex-wrap gap-2">
             <button
@@ -147,8 +147,7 @@ const SellerPayouts = () => {
       <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
         Payout amounts come from delivered orders and their checkout fee snapshots. They cannot be typed manually.
       </div>
-
-      <FilterBar filters={filterFields} values={list.filters} onChange={list.setFilter} onClear={list.clearFilters} loading={loading} activeCount={list.activeFilterCount} />
+     
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       <DataTable
         columns={columns}
@@ -165,6 +164,7 @@ const SellerPayouts = () => {
         sortDir={list.sortDir}
         searchPlaceholder="Search seller or payment reference"
         emptyText="No calculated payouts found"
+        filterBar={ <FilterBar filters={filterFields} values={list.filters} onChange={list.setFilter} onClear={list.clearFilters} loading={loading} activeCount={list.activeFilterCount} />}
       />
 
       {isSeller && (

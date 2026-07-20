@@ -14,7 +14,7 @@ import { getProfile, logout } from "../../Redux/userSlice";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { getMyNotifications } from "../../Redux/notificationsSlice";
+import { getMyNotifications, setNotificationsSeenAt } from "../../Redux/notificationsSlice";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
 import {
   getSelectedSellerOrganizationId,
@@ -171,14 +171,9 @@ export default function Header({
     notificationsPayload?.data?.notifications ||
     [];
 
-  const [notificationsSeenAt, setNotificationsSeenAt] = useState(() => {
-    try {
-      const saved = localStorage.getItem("notificationsSeenAt");
-      return saved ? Number(saved) : 0;
-    } catch (err) {
-      return 0;
-    }
-  });
+const notificationsSeenAt = useSelector(
+  (state) => state.notifications.notificationsSeenAt
+);
 
   useEffect(() => {
     // Load notifications on header mount
@@ -386,12 +381,8 @@ export default function Header({
                 type="button"
                 aria-label="Notifications"
                 onClick={() => {
-                  try {
-                    const now = Date.now();
-                    localStorage.setItem("notificationsSeenAt", String(now));
-                    setNotificationsSeenAt(now);
-                  } catch (err) {}
-                  navigate("/app/notifications");
+                 dispatch(setNotificationsSeenAt(Date.now()));
+                 navigate("/app/notifications");
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >

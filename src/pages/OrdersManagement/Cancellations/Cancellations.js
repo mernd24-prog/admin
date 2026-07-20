@@ -324,6 +324,8 @@ const Cancellations = () => {
           total={payload.total}
           listPage={list}
           emptyMessage="No cancellations found"
+          filterBar={<FilterBar fields={isSeller ? FILTER_FIELDS.filter((field) => field.key !== "buyerId") : FILTER_FIELDS} listPage={list} />
+}
         />
       )}
 

@@ -57,9 +57,9 @@ export default function SellerWallet() {
     <div>
       <Loader loading={loading} />
       <PageHeader
-        title="Seller Wallet"
+        title="Wallet"
         subtitle="Track receivables, holds, payout processing, adjustments, and released earnings."
-        breadcrumbs={[{ label: "Seller Finance" }, { label: "Wallet" }]}
+        breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Wallet" }]}
         actions={<button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={load}><MdRefresh /> Refresh</button>}
       />
 
