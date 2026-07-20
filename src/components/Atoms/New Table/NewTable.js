@@ -5,6 +5,7 @@ import SearchInput from "../SearchInput/SearchInput";
 import FilterSelect from "../FilterSelect/FilterSelect";
 import { IoIosArrowDown } from "react-icons/io";
 import { MdFilterList, MdOutlineDeleteOutline } from "react-icons/md";
+import { DateRangeFilter } from "../../Shared/FilterBar";
 // import FormInput from '../FormInput/FormInput';
 import Input from "../Input/Input";
 import selectJson from "../../../_helpers/SelectJson.json";
@@ -322,9 +323,15 @@ export default function SearchComponent({
                 × Clear filters
               </button>
             </div>
-            <div className={`flex min-w-0 flex-1 items-center gap-x-3 gap-y-4 text-xs flex-wrap`}>
+            <div
+              className={
+                compactFilterBar
+                  ? `grid w-full min-w-0 items-start gap-x-3 gap-y-4 text-xs ${filterGridClassName}`
+                  : "flex min-w-0 flex-1 items-center gap-x-3 gap-y-4 text-xs flex-wrap"
+              }
+            >
             {isBrand && (
-              <div className="shrink-0">
+              <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                 <FilterSelect
                   label={`Brand`}
                   value={filters.brand}
@@ -336,7 +343,7 @@ export default function SearchComponent({
             )}
 
             {isProduct && (
-              <div className="shrink-0">
+              <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                 <FilterSelect
                   label={productLabel ? productLabel : `Product`}
                   value={filters.product}
@@ -375,7 +382,7 @@ export default function SearchComponent({
             )}
 
             {isCategory && (
-              <div>
+              <div className={compactFilterBar ? "min-w-0" : undefined}>
                 <FilterSelect
                   label={`Category`}
                   value={filters.category}
@@ -387,7 +394,7 @@ export default function SearchComponent({
             )}
 
             {isActivationStatus && (
-              <div>
+              <div className={compactFilterBar ? "min-w-0" : undefined}>
                 <FilterSelect
                   label={
                     activationStatus ? activationStatus : `Activation status`
@@ -403,7 +410,7 @@ export default function SearchComponent({
             )}
 
             {isApprovalOptions && (
-              <div>
+              <div className={compactFilterBar ? "min-w-0" : undefined}>
                 <FilterSelect
                   label={approvalStatus ? approvalStatus : "Approval Status"}
                   value={filters.approvalStatus}
@@ -417,7 +424,7 @@ export default function SearchComponent({
             )}
 
             {isProductType && (
-              <div>
+              <div className={compactFilterBar ? "min-w-0" : undefined}>
                 <FilterSelect
                   label={`Product type`}
                   value={filters.productType}
@@ -430,7 +437,26 @@ export default function SearchComponent({
               </div>
             )}
 
-            {dateFrom && (
+            {dateFrom && dateTo && (
+              <div className={compactFilterBar ? "min-w-0" : "min-w-40"}>
+                <DateRangeFilter
+                  field={{
+                    label: "Date Range",
+                    startKey: "dateFrom",
+                    endKey: "dateTo",
+                    width: "w-full",
+                    wrapperClassName: "admin-field",
+                    labelClassName: "admin-label",
+                    placeholder: "All Date Range",
+                    disableFuture: true,
+                  }}
+                  values={filters}
+                  onChange={handleFilterChange}
+                />
+              </div>
+            )}
+
+            {dateFrom && !dateTo && (
               <div>
                 <label className="admin-label">
                   Date from
@@ -450,7 +476,7 @@ export default function SearchComponent({
               </div>
             )}
 
-            {dateTo && (
+            {dateTo && !dateFrom && (
               <div>
                 <label className="admin-label">
                   To (Date)

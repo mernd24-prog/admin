@@ -32,6 +32,32 @@ const normalizeOrderStatus = (status) => {
     return aliases[status] || status;
 };
 
+const isUuid = (value = "") =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+
+const toCancellationListParams = (params = {}) => {
+    const limit = Number(params.limit || params.pageSize || params.size || 20);
+    const page = Number(params.page || 1);
+    const orderInput = String(params.orderId || params.order_id || "").trim();
+    const searchParts = [
+        params.search,
+        params.keyWord,
+        orderInput && !isUuid(orderInput) ? orderInput : "",
+    ].filter(Boolean);
+    return {
+        ...(orderInput && isUuid(orderInput) ? { orderId: orderInput } : {}),
+        ...(params.buyerId ? { buyerId: params.buyerId } : {}),
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.refundStatus ? { refundStatus: params.refundStatus } : {}),
+        ...(params.scope ? { scope: params.scope } : {}),
+        ...(params.fromDate ? { fromDate: params.fromDate } : {}),
+        ...(params.toDate ? { toDate: params.toDate } : {}),
+        ...(searchParts.length ? { search: searchParts.join(" ") } : {}),
+        limit,
+        offset: params.offset !== undefined ? Number(params.offset) : Math.max(page - 1, 0) * limit,
+    };
+};
+
 const initialState = {
     getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
     orderCancelData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
@@ -68,7 +94,9 @@ export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => END
 export const addOrderNote = createApiThunkPrivate('addOrderNote', (payload) => ENDPOINTS.orders.notes(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ note: payload.note || "", visibility: payload.visibility || "internal" }),
 })
-export const getCancellationList = createApiThunkPrivate('getCancellationList', ENDPOINTS.cancellations.list, 'GET', true)
+export const getCancellationList = createApiThunkPrivate('getCancellationList', ENDPOINTS.cancellations.list, 'GET', true, {
+    transformParams: toCancellationListParams,
+})
 export const retryCancellation = createApiThunkPrivate('retryCancellation', (payload) => ENDPOINTS.cancellations.retry(payload.cancellationId || payload.id), 'POST', false, {
     transformBody: (payload = {}) => ({ note: payload.note || "" }),
 })

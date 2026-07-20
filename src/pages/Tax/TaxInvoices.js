@@ -122,8 +122,8 @@ const TaxInvoices = () => {
       setDownloadingId(invoiceId);
       await downloadApiFile(
         ENDPOINTS.tax.invoiceDownload(invoiceId),
-        { format: "pdf" },
-        { filename: `${pick(row, "invoiceNumber", "invoice_number") || invoiceId}.pdf`, format: "pdf" },
+        { format: "html" },
+        { filename: `${pick(row, "invoiceNumber", "invoice_number") || invoiceId}.html`, format: "html" },
       );
       toast.success("Download started");
     } catch (downloadError) {
