@@ -18,6 +18,7 @@ import {
   getShipment,
   getShipments,
 } from "../../../Redux/deliverySlice";
+import { cancelSellerOrder } from "../../../Redux/sellerOrdersSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
@@ -41,12 +42,12 @@ const FULFILLMENT_STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 const FULFILLMENT_TRANSITIONS = {
-  initiated: ["in_transit", "failed", "cancelled"],
-  manifested: ["in_transit", "failed", "cancelled"],
-  picked_up: ["in_transit", "failed", "rto", "cancelled"],
-  in_transit: ["delivered", "failed", "rto", "cancelled"],
-  out_for_delivery: ["delivered", "failed", "rto", "cancelled"],
-  failed: ["in_transit", "rto", "cancelled"],
+  initiated: ["in_transit", "failed"],
+  manifested: ["in_transit", "failed"],
+  picked_up: ["in_transit", "failed", "rto"],
+  in_transit: ["delivered", "failed", "rto"],
+  out_for_delivery: ["delivered", "failed", "rto"],
+  failed: ["in_transit", "rto"],
 };
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -74,7 +75,7 @@ const shipmentStepLabel = (value = "") =>
 const getTrackingActionOptions = (currentStatus = "initiated") => {
   const nextStatuses = FULFILLMENT_TRANSITIONS[currentStatus] || [];
   return FULFILLMENT_STATUS_OPTIONS.filter((option) =>
-    nextStatuses.includes(option.value),
+    nextStatuses.includes(option.value) && option.value !== "cancelled",
   );
 };
 const getDefaultTrackingStatus = (currentStatus = "initiated") =>
@@ -190,6 +191,12 @@ const ShipmentTracking = () => {
     shippedAt: "",
   });
   const [trackingErrors, setTrackingErrors] = useState({});
+  const [cancellationAction, setCancellationAction] = useState({
+    open: false,
+    reasonCode: "seller_unavailable",
+    reason: "",
+  });
+  const [lastCancellation, setLastCancellation] = useState(null);
   const trackingActionOptions = useMemo(
     () => getTrackingActionOptions(selectedShipment?.status || "initiated"),
     [selectedShipment?.status],
@@ -299,8 +306,6 @@ const ShipmentTracking = () => {
     const location = trackingAction.location.trim();
     const note = trackingAction.note.trim();
     const trackingUrl = trackingAction.trackingUrl.trim();
-    if (trackingAction.status === "delivered" && !location)
-      nextErrors.location = "Delivery location is required.";
     if (location && (/^\d+$/.test(location) || location.length < 3))
       nextErrors.location = "Enter a readable location, not only numbers.";
     if (
@@ -367,6 +372,51 @@ const ShipmentTracking = () => {
       setLoading(false);
     }
   }, [dispatch, refreshSelectedShipment, selectedShipment?.id, trackingAction]);
+
+  const handleSellerCancellation = useCallback(async () => {
+    if (!selectedShipment?.order_id) return;
+    const reason = cancellationAction.reason.trim();
+    if (reason.length < 3) {
+      toast.error("Enter a cancellation reason of at least 3 characters.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await dispatch(
+        cancelSellerOrder({
+          orderId: selectedShipment.order_id,
+          reasonCode: cancellationAction.reasonCode,
+          reason,
+          refundMethod: "auto",
+        }),
+      ).unwrap();
+      const cancellation = unwrapResult(response);
+      setLastCancellation(cancellation);
+      setCancellationAction({
+        open: false,
+        reasonCode: "seller_unavailable",
+        reason: "",
+      });
+      toast.success(
+        cancellation?.refund_status === "manual_review"
+          ? "Items cancelled. Customer refund is awaiting admin review."
+          : "Seller items cancelled successfully.",
+      );
+      await refreshSelectedShipment(selectedShipment.id);
+    } catch (requestError) {
+      toast.error(
+        requestError?.message || requestError || "Failed to cancel seller items",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    cancellationAction,
+    dispatch,
+    refreshSelectedShipment,
+    selectedShipment?.id,
+    selectedShipment?.order_id,
+  ]);
   const navigate = useNavigate();
   const columns = useMemo(() => {
     const baseColumns = [
@@ -608,7 +658,7 @@ const ShipmentTracking = () => {
               )}
             </div>
           </div>
-          <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+          <div className="min-w-0 overflow-hidden rounded-lg border border-blue-100 bg-blue-50/40 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="font-semibold text-gray-800">
@@ -624,14 +674,36 @@ const ShipmentTracking = () => {
                 dot
               />
             </div>
+            {lastCancellation &&
+              String(lastCancellation.order_id || lastCancellation.orderId) ===
+                String(selectedShipment?.order_id) && (
+                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                  <div className="font-semibold">Seller items cancelled</div>
+                  <div className="mt-1 text-xs">
+                    Inventory processing: {displayStatus(lastCancellation.inventory_status)}
+                    {" · "}Customer refund: {displayStatus(lastCancellation.refund_status)}
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-2 text-xs font-semibold text-green-800 underline"
+                    onClick={() =>
+                      navigate(
+                        `/app/cancellations?orderId=${encodeURIComponent(selectedShipment.order_id)}`,
+                      )
+                    }
+                  >
+                    View cancellation
+                  </button>
+                </div>
+              )}
             {trackingActionOptions.length > 0 ? (
               <div className="mt-4 space-y-4">
-                <div className="grid gap-1.5 md:max-w-xs">
+                <div className="grid min-w-0 gap-1.5 md:max-w-xs">
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Next status
                   </label>
                   <select
-                    className="rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800"
+                    className="min-w-0 w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800"
                     value={trackingAction.status}
                     onChange={(event) => {
                       setTrackingErrors({});
@@ -652,40 +724,54 @@ const ShipmentTracking = () => {
                 {["in_transit", "delivered", "failed", "rto"].includes(
                   trackingAction.status,
                 ) && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
-                      Location{" "}
-                      {trackingAction.status === "delivered" && (
-                        <span className="text-red-500">Required</span>
-                      )}
-                      <input
-                        className={`rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`}
-                        placeholder="Example: Pune distribution centre"
-                        value={trackingAction.location}
-                        onChange={(event) =>
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            location: event.target.value,
-                          }))
-                        }
-                      />
-                      {trackingErrors.location && (
-                        <span className="font-normal text-red-600">
-                          {trackingErrors.location}
+                  <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-4">
+                    {trackingAction.status !== "delivered" && (
+                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
+                        <span>
+                          Checkpoint location{" "}
+                          <span className="font-normal text-gray-400">
+                            (optional)
+                          </span>
                         </span>
-                      )}
-                    </label>
-                    <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
-                      Note{" "}
-                      {["failed", "rto"].includes(trackingAction.status) && (
-                        <span className="text-red-500">Required</span>
-                      )}
+                        <input
+                          className={`min-w-0 w-full rounded-md border bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`}
+                          placeholder="Hub, city, or delivery area"
+                          value={trackingAction.location}
+                          onChange={(event) =>
+                            setTrackingAction((prev) => ({
+                              ...prev,
+                              location: event.target.value,
+                            }))
+                          }
+                        />
+                        {trackingErrors.location && (
+                          <span className="font-normal text-red-600">
+                            {trackingErrors.location}
+                          </span>
+                        )}
+                      </label>
+                    )}
+                    <label
+                      className={`grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600 ${trackingAction.status === "delivered" ? "col-span-full" : ""}`}
+                    >
+                      <span>
+                        Note{" "}
+                        {["failed", "rto"].includes(trackingAction.status) ? (
+                          <span className="text-red-500">Required</span>
+                        ) : (
+                          <span className="font-normal text-gray-400">
+                            (optional)
+                          </span>
+                        )}
+                      </span>
                       <textarea
-                        className={`min-h-10 rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`}
+                        className={`min-h-20 min-w-0 w-full resize-y rounded-md border bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`}
                         placeholder={
                           ["failed", "rto"].includes(trackingAction.status)
                             ? "Explain the reason"
-                            : "Optional delivery update"
+                            : trackingAction.status === "delivered"
+                              ? "Add delivery details, recipient name, or proof reference"
+                              : "Add an update for this checkpoint"
                         }
                         value={trackingAction.note}
                         onChange={(event) =>
@@ -704,39 +790,17 @@ const ShipmentTracking = () => {
                   </div>
                 )}
 
-                {trackingAction.status === "cancelled" && (
-                  <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
-                    Cancellation reason{" "}
-                    <span className="text-red-500">Required</span>
-                    <textarea
-                      className={`rounded-md border bg-white px-3 py-2.5 text-sm font-normal ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`}
-                      value={trackingAction.note}
-                      onChange={(event) =>
-                        setTrackingAction((prev) => ({
-                          ...prev,
-                          note: event.target.value,
-                        }))
-                      }
-                    />
-                    {trackingErrors.note && (
-                      <span className="font-normal text-red-600">
-                        {trackingErrors.note}
-                      </span>
-                    )}
-                  </label>
-                )}
-
                 {trackingAction.status === "in_transit" && (
                   <div className="rounded-lg border border-gray-200 bg-white p-3">
                     <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Dispatch details
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <label className="grid gap-1 text-xs text-gray-500">
+                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-3">
+                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         Courier / delivery method{" "}
                         <span className="text-red-500">Required</span>
                         <input
-                          className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
                           placeholder="Example: Seller delivery"
                           value={trackingAction.courierName}
                           onChange={(event) =>
@@ -752,11 +816,11 @@ const ShipmentTracking = () => {
                           </span>
                         )}
                       </label>
-                      <label className="grid gap-1 text-xs text-gray-500">
+                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         AWB / tracking reference{" "}
                         <span className="text-red-500">Required</span>
                         <input
-                          className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`}
                           value={trackingAction.awbNumber}
                           onChange={(event) =>
                             setTrackingAction((prev) => ({
@@ -771,10 +835,10 @@ const ShipmentTracking = () => {
                           </span>
                         )}
                       </label>
-                      <label className="grid gap-1 text-xs text-gray-500">
+                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         Tracking URL
                         <input
-                          className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`}
                           type="url"
                           placeholder="https://..."
                           value={trackingAction.trackingUrl}
@@ -791,11 +855,11 @@ const ShipmentTracking = () => {
                           </span>
                         )}
                       </label>
-                      <label className="grid gap-1 text-xs text-gray-500">
+                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         Shipped at{" "}
                         <span className="text-red-500">Required</span>
                         <input
-                          className={`rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full max-w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
                           type="datetime-local"
                           max={moment().format("YYYY-MM-DDTHH:mm")}
                           value={trackingAction.shippedAt}
@@ -817,16 +881,65 @@ const ShipmentTracking = () => {
                 )}
 
                 <div className="flex justify-end">
-                  <ActionButton onClick={handleTrackingStatus}>
-                    Update shipment status
-                  </ActionButton>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {isSeller &&
+                      ["initiated", "manifested", "failed"].includes(
+                        selectedShipment?.status,
+                      ) && (
+                        <button
+                          type="button"
+                          className="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          onClick={() =>
+                            setCancellationAction((prev) => ({
+                              ...prev,
+                              open: true,
+                            }))
+                          }
+                        >
+                          Cancel seller items
+                        </button>
+                      )}
+                    <ActionButton onClick={handleTrackingStatus}>
+                      Update shipment status
+                    </ActionButton>
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                This shipment is{" "}
-                <strong>{shipmentStepLabel(selectedShipment?.status)}</strong>.
-                No further seller action is currently required.
+                {isSeller &&
+                selectedShipment?.status === "cancelled" &&
+                String(lastCancellation?.order_id || lastCancellation?.orderId || "") !==
+                  String(selectedShipment?.order_id || "") ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-amber-800">
+                        Cancellation processing is not confirmed
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Complete the cancellation workflow to release inventory and create the customer refund review.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                      onClick={() =>
+                        setCancellationAction((prev) => ({
+                          ...prev,
+                          open: true,
+                        }))
+                      }
+                    >
+                      Complete cancellation
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    This shipment is{" "}
+                    <strong>{shipmentStepLabel(selectedShipment?.status)}</strong>.
+                    No further seller action is currently required.
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -896,6 +1009,82 @@ const ShipmentTracking = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </DefaultModal>
+
+      <DefaultModal
+        isOpen={cancellationAction.open}
+        onClose={() =>
+          setCancellationAction({
+            open: false,
+            reasonCode: "seller_unavailable",
+            reason: "",
+          })
+        }
+        title="Cancel seller items"
+        isButtonView={false}
+      >
+        <div className="space-y-4 p-1 text-sm">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
+            This cancels only your active items in this order. Inventory will be
+            released and any customer refund will be sent to admin review.
+          </div>
+          <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
+            Reason category
+            <select
+              className="rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-normal text-gray-800"
+              value={cancellationAction.reasonCode}
+              onChange={(event) =>
+                setCancellationAction((prev) => ({
+                  ...prev,
+                  reasonCode: event.target.value,
+                }))
+              }
+            >
+              <option value="seller_unavailable">Item unavailable</option>
+              <option value="inventory_unavailable">Inventory unavailable</option>
+              <option value="pricing_issue">Pricing issue</option>
+              <option value="delivery_delay">Unable to deliver on time</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
+            Cancellation reason <span className="text-red-500">Required</span>
+            <textarea
+              className="min-h-24 resize-y rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500"
+              placeholder="Explain why these items cannot be fulfilled"
+              value={cancellationAction.reason}
+              onChange={(event) =>
+                setCancellationAction((prev) => ({
+                  ...prev,
+                  reason: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+              onClick={() =>
+                setCancellationAction({
+                  open: false,
+                  reasonCode: "seller_unavailable",
+                  reason: "",
+                })
+              }
+            >
+              Keep shipment
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              disabled={loading || cancellationAction.reason.trim().length < 3}
+              onClick={handleSellerCancellation}
+            >
+              {loading ? "Cancelling..." : "Confirm cancellation"}
+            </button>
           </div>
         </div>
       </DefaultModal>

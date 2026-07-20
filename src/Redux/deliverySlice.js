@@ -9,9 +9,6 @@ const initialState = {
   shipmentData: {},
   createShipmentData: {},
   trackingEventData: {},
-  getOrderEwayBillData: {},
-  createOrderEwayBillData: {},
-  updateEwayBillStatusData: {},
   // Shipping Profiles
   shippingProfilesData: {},
   shippingProfileData: {},
@@ -81,28 +78,6 @@ export const addShipmentTracking = createApiThunkPrivate(
   "POST",
   false,
   { transformBody: (payload = {}) => omitPayload(payload, ["shipmentId", "id"]) }
-);
-
-export const getSellerOrderEwayBill = createApiThunkPrivate(
-  "delivery/getSellerOrderEwayBill",
-  (payload) => ENDPOINTS.delivery.orderEwayBill(payload?.orderId || payload?.id),
-  "GET"
-);
-
-export const createSellerOrderEwayBill = createApiThunkPrivate(
-  "delivery/createSellerOrderEwayBill",
-  (payload) => ENDPOINTS.delivery.orderEwayBill(payload?.orderId || payload?.id),
-  "POST",
-  false,
-  { transformBody: (payload = {}) => omitPayload(payload, ["orderId", "ewayBillId", "id"]) }
-);
-
-export const updateSellerEwayBillStatus = createApiThunkPrivate(
-  "delivery/updateSellerEwayBillStatus",
-  (payload) => ENDPOINTS.delivery.ewayBillStatus(payload?.ewayBillId || payload?.id),
-  "PATCH",
-  false,
-  { transformBody: (payload = {}) => omitPayload(payload, ["ewayBillId", "id"]) }
 );
 
 // ── Shipping Profiles ──────────────────────────────────────────────────────
@@ -201,9 +176,6 @@ const deliverySlice = createSlice({
     createExtraReducersForThunk(builder, getShipment, "shipmentData");
     createExtraReducersForThunk(builder, createShipment, "createShipmentData");
     createExtraReducersForThunk(builder, addShipmentTracking, "trackingEventData");
-    createExtraReducersForThunk(builder, getSellerOrderEwayBill, "getOrderEwayBillData");
-    createExtraReducersForThunk(builder, createSellerOrderEwayBill, "createOrderEwayBillData");
-    createExtraReducersForThunk(builder, updateSellerEwayBillStatus, "updateEwayBillStatusData");
     createExtraReducersForThunk(builder, getShippingProfiles, "shippingProfilesData");
     createExtraReducersForThunk(builder, createShippingProfile, "createShippingProfileData");
     createExtraReducersForThunk(builder, getShippingProfile, "shippingProfileData");

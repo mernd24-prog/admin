@@ -41,7 +41,6 @@ const ALLOWED_TRANSITIONS = {
   refunded:        ["fulfilled"],
 };
 
-const SELLER_ALLOWED_NEXT = new Set(["on_hold"]);
 const ADMIN_ORDER_ROLES = new Set(["super-admin", "admin", "sub-admin", "super_admin", "sub_admin"]);
 const ORDER_STATUS_VALUES = [...new Set([
   ...Object.keys(ALLOWED_TRANSITIONS),
@@ -567,7 +566,6 @@ const OrderSummary = () => {
   const walletTransactions = Array.isArray(relations.walletTransactions) ? relations.walletTransactions : [];
   const cancellations = Array.isArray(relations.cancellations) ? relations.cancellations : [];
   const invoice = relations.invoice || relations.taxInvoice || null;
-  const eWayBill = relations.eWayBill || relations.ewayBill || null;
   const returns = Array.isArray(state.returns) ? state.returns : [];
   const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items, relations)), [items, relations]);
   const sellerSettlements = useMemo(() => {
@@ -603,6 +601,7 @@ const OrderSummary = () => {
 
   // Build role-aware status options filtered to valid next transitions from current status
   const statusOptions = useMemo(() => {
+    if (isSeller) return [];
     const currentStatus = normalizeStatusKey(firstDefined(order.status, order.order_status));
     const backendTransitions = orderTransitionOptionsOf(order)
       .map(transitionStatusOf)
@@ -616,7 +615,6 @@ const OrderSummary = () => {
     const filteredNext = validNext
       .filter((s) => {
         if (isAdminOrderManager) return true;
-        if (isSeller) return SELLER_ALLOWED_NEXT.has(s);
         return true;
       });
     const fallbackNext = ORDER_STATUS_VALUES.filter((status) => status !== currentStatus);
@@ -736,33 +734,36 @@ const OrderSummary = () => {
                 <FaFile /> Shipments
               </button>
             )}
-            {/* Sellers see the button based on role + available transitions; admins need status_change permission */}
-            {statusOptions.length > 0 && ((isSeller) ? (
-              <button
-                type="button"
-
-                onClick={openStatusModal}
-              >
-                <FaFile /> Update Status
-              </button>
-            ) : (
+            {!isSeller && statusOptions.length > 0 && (
               <PermissionGuard module="orders" action="status_change" hide>
                 <button
                   type="button"
-
                   onClick={openStatusModal}
                 >
-                  <FaFile /> Status
+                  <FaFile /> Administrative Override
                 </button>
               </PermissionGuard>
-            ))}
+            )}
             </>
           )}
         />
 
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-          <MetricCard label="Customer Payable" value={formatMoney(customerPayableAmount)} tone="dark" />
-          <MetricCard label="Customer Total" value={formatMoney(customerTotalAmount)} tone="blue" />
+          {isSeller ? (
+            <>
+              <MetricCard label="Product Total" value={formatMoney(subtotalAmount)} tone="dark" />
+              <MetricCard
+                label="Payment Collection"
+                value={String(firstDefined(order.payment_provider, order.paymentProvider, "")).toLowerCase() === "cod" ? "COD" : "Prepaid"}
+                tone="blue"
+              />
+            </>
+          ) : (
+            <>
+              <MetricCard label="Customer Payable" value={formatMoney(customerPayableAmount)} tone="dark" />
+              <MetricCard label="Customer Total" value={formatMoney(customerTotalAmount)} tone="blue" />
+            </>
+          )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
           <MetricCard label="Delivery Status" value={<StatusBadge status={firstDefined(order.delivery_status, order.deliveryStatus)} dot />} />
           <MetricCard label="Shipment Status" value={shipmentSummary} tone="blue" />
@@ -889,22 +890,29 @@ const OrderSummary = () => {
           </Panel>
 
           <aside className="space-y-4">
-            <Panel title="Order Summary">
+            <Panel title={isSeller ? "Seller Order Summary" : "Order Summary"}>
               <InfoRow label="Order Date" value={order.created_at ? moment(order.created_at).format("DD MMM YYYY HH:mm") : "N/A"} />
               <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
               <InfoRow label="Return Eligible Until" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery verification"} />
-              <InfoRow label="Payment Method" value={displayStatus(firstDefined(order.payment_provider, order.paymentProvider))} />
+              <InfoRow
+                label={isSeller ? "Payment Collection" : "Payment Method"}
+                value={isSeller
+                  ? (String(firstDefined(order.payment_provider, order.paymentProvider, "")).toLowerCase() === "cod" ? "COD" : "Prepaid")
+                  : displayStatus(firstDefined(order.payment_provider, order.paymentProvider))}
+              />
               <InfoRow label="Product Total" value={formatMoney(subtotalAmount)} />
-              {deliveryChargeAmount > 0 && <InfoRow label="Delivery Charge" value={formatMoney(deliveryChargeAmount)} />}
-              {customerPlatformFeeAmount > 0 && <InfoRow label="Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
-              {customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
-              {taxPayableAmount > 0 && <InfoRow label="Additional GST" value={formatMoney(taxPayableAmount)} />}
-              {codChargeAmount > 0 && <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />}
-              {discountAmount > 0 && <InfoRow label={discountLabel} value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />}
-              {walletDiscountAmount > 0 && <InfoRow label="Wallet Deduction" value={<span className="text-[#2ea84a]">-{formatMoney(walletDiscountAmount)}</span>} />}
-              <div className="mt-2 border-t border-[#efe6cd] pt-2">
-                <InfoRow label="Customer Payable" value={formatMoney(customerPayableAmount)} strong />
-              </div>
+              {!isSeller && deliveryChargeAmount > 0 && <InfoRow label="Delivery Charge" value={formatMoney(deliveryChargeAmount)} />}
+              {!isSeller && customerPlatformFeeAmount > 0 && <InfoRow label="Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
+              {!isSeller && customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
+              {!isSeller && taxPayableAmount > 0 && <InfoRow label="Additional GST" value={formatMoney(taxPayableAmount)} />}
+              {!isSeller && codChargeAmount > 0 && <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />}
+              {!isSeller && discountAmount > 0 && <InfoRow label={discountLabel} value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />}
+              {!isSeller && walletDiscountAmount > 0 && <InfoRow label="Wallet Deduction" value={<span className="text-[#2ea84a]">-{formatMoney(walletDiscountAmount)}</span>} />}
+              {!isSeller && (
+                <div className="mt-2 border-t border-[#efe6cd] pt-2">
+                  <InfoRow label="Customer Payable" value={formatMoney(customerPayableAmount)} strong />
+                </div>
+              )}
               {taxIncludedAmount > 0 && <InfoRow label="Includes GST" value={formatMoney(taxIncludedAmount)} />}
             </Panel>
           </aside>
@@ -1091,8 +1099,8 @@ const OrderSummary = () => {
             </div>
 
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Tax & Delivery Docs</h3>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
+              <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Tax Documents</h3>
+              <div className="grid grid-cols-1 gap-3">
                 {invoice ? (
                   <RelatedCard
                     title={firstDefined(invoice.invoice_number, invoice.invoiceNumber, "Tax invoice")}
@@ -1105,18 +1113,6 @@ const OrderSummary = () => {
                     ]}
                   />
                 ) : <EmptyState>No invoice found</EmptyState>}
-                {eWayBill ? (
-                  <RelatedCard
-                    title={firstDefined(eWayBill.eway_bill_number, eWayBill.ewayBillNumber, "E-way bill")}
-                    subtitle="E-way bill"
-                    status={firstDefined(eWayBill.status, "created")}
-                    rows={[
-                      { label: "Vehicle", value: firstDefined(eWayBill.vehicle_number, eWayBill.vehicleNumber, "Not added") },
-                      { label: "Valid Till", value: formatDate(firstDefined(eWayBill.valid_till, eWayBill.validTill)) },
-                      { label: "Created", value: formatDate(firstDefined(eWayBill.created_at, eWayBill.createdAt)) },
-                    ]}
-                  />
-                ) : <EmptyState>No E-Way Bill Found</EmptyState>}
               </div>
             </div>
 
@@ -1251,8 +1247,11 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Order Status Change" onSubmit={handleStatusSubmit} loading={state.isLoading}>
+      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Administrative Status Override" onSubmit={handleStatusSubmit} loading={state.isLoading}>
         <div className="space-y-4">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Use this only for exceptional order corrections. Delivery changes must be made through Shipment Management.
+          </div>
           <FilterSelect
             options={statusOptions}
             value={statusOptions.find((opt) => opt.value === formData.status) || null}

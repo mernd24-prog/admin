@@ -295,8 +295,6 @@ export const ENDPOINTS = {
     shipments: "/delivery/shipments",
     shipment: (shipmentId) => `/delivery/shipments/${shipmentId}`,
     shipmentTracking: (shipmentId) => `/delivery/shipments/${shipmentId}/tracking`,
-    orderEwayBill: (orderId) => `/delivery/orders/${orderId}/eway-bill`,
-    ewayBillStatus: (ewayBillId) => `/delivery/eway-bills/${ewayBillId}/status`,
   },
   shippingProfiles: {
     list: "/shipping-profiles",

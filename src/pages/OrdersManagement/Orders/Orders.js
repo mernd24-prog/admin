@@ -182,8 +182,6 @@ const shipmentStatusOf = (row = {}) => {
     row.deliveryStatus,
     row.shipmentStatus,
     row.shipment_status,
-    row.relations?.eWayBill?.status,
-    row.relations?.eWayBill?.delivery_status,
   );
 };
 

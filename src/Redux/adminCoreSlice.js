@@ -58,9 +58,6 @@ const initialState = {
   taxDocumentDispatchesData: {},
   retryTaxDocumentDispatchData: {},
   deliveryServiceabilityData: {},
-  orderEwayBillData: {},
-  createOrderEwayBillData: {},
-  updateEwayBillStatusData: {},
   realtimeAnalyticsData: {},
   adminMarketplaceAnalyticsData: {},
   returnsAnalyticsData: {},
@@ -561,9 +558,6 @@ export const dispatchTaxCreditNote = createApiThunkPrivate("adminCore/dispatchTa
 export const getTaxDocumentDispatches = createApiThunkPrivate("adminCore/getTaxDocumentDispatches", ENDPOINTS.tax.documentDispatches, "GET", true, { transformParams: pickQuery(["documentType", "status", "channel", "search", "fromDate", "toDate", "limit", "offset"]) });
 export const retryTaxDocumentDispatch = createApiThunkPrivate("adminCore/retryTaxDocumentDispatch", (payload) => ENDPOINTS.tax.documentDispatchRetry(payload.dispatchId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["note"]) });
 export const getDeliveryServiceability = createApiThunkPrivate("adminCore/getDeliveryServiceability", ENDPOINTS.delivery.serviceability, "GET");
-export const getOrderEwayBill = createApiThunkPrivate("adminCore/getOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "GET");
-export const createOrderEwayBill = createApiThunkPrivate("adminCore/createOrderEwayBill", (payload) => ENDPOINTS.delivery.orderEwayBill(payload.orderId), "POST", false, { transformBody: (payload = {}) => omitPayload(payload, ["orderId", "id"]) });
-export const updateEwayBillStatus = createApiThunkPrivate("adminCore/updateEwayBillStatus", (payload) => ENDPOINTS.delivery.ewayBillStatus(payload.ewayBillId), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["ewayBillId", "id"]) });
 
 export const getRealtimeAnalytics = createApiThunkPrivate("adminCore/getRealtimeAnalytics", ENDPOINTS.analytics.realtime, "GET", true, { transformParams: pickQuery(["hours"]) });
 export const getAdminMarketplaceAnalytics = createApiThunkPrivate("adminCore/getAdminMarketplaceAnalytics", ENDPOINTS.analytics.adminDashboard, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "granularity"]) });
@@ -747,9 +741,6 @@ const adminCoreSlice = createSlice({
       [getTaxDocumentDispatches, "taxDocumentDispatchesData"],
       [retryTaxDocumentDispatch, "retryTaxDocumentDispatchData"],
       [getDeliveryServiceability, "deliveryServiceabilityData"],
-      [getOrderEwayBill, "orderEwayBillData"],
-      [createOrderEwayBill, "createOrderEwayBillData"],
-      [updateEwayBillStatus, "updateEwayBillStatusData"],
       [getRealtimeAnalytics, "realtimeAnalyticsData"],
       [getAdminMarketplaceAnalytics, "adminMarketplaceAnalyticsData"],
       [getReturnsAnalytics, "returnsAnalyticsData"],
