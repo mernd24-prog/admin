@@ -65,6 +65,17 @@ const isBlankFilterValue = (value) => {
   );
 };
 
+const END_DATE_KEYS = new Set(['todate', 'enddate', 'dateto', 'createdto']);
+
+const isDateOnlyValue = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+
+const toInclusiveEndOfDay = (key, value) => {
+  if (!END_DATE_KEYS.has(String(key || '').toLowerCase()) || !isDateOnlyValue(value)) {
+    return value;
+  }
+  return `${value}T23:59:59.999`;
+};
+
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_PAGE':
@@ -197,9 +208,9 @@ export function useListPage(opts = {}) {
       if (isBlankFilterValue(normalizedValue)) continue;
       if (value && typeof value === 'object' && ('startDate' in value || 'endDate' in value)) {
         if (value.startDate) params[`${key}_start`] = value.startDate;
-        if (value.endDate)   params[`${key}_end`]   = value.endDate;
+        if (value.endDate)   params[`${key}_end`]   = toInclusiveEndOfDay('endDate', value.endDate);
       } else {
-        params[key] = normalizedValue;
+        params[key] = toInclusiveEndOfDay(key, normalizedValue);
       }
     }
     return params;

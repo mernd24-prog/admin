@@ -75,7 +75,7 @@ export const getSellerFinanceSummary = createApiThunkPrivate(
   ENDPOINTS.payouts.summary,
   "GET",
   true,
-  { transformParams: withSelectedOrganization(["sellerId", "fromDate", "toDate"]) }
+  { transformParams: withSelectedOrganization(["sellerId", "organizationId", "status", "search", "fromDate", "toDate"]) }
 );
 
 export const getAdminSellerCommissions = createApiThunkPrivate(

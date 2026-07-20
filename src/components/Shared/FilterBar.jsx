@@ -146,6 +146,360 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
   );
 };
 
+const RANGE_PAIRS = [
+  ['fromDate', 'toDate'],
+  ['startDate', 'endDate'],
+  ['dateFrom', 'dateTo'],
+];
+const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const monthFormatter = new Intl.DateTimeFormat('en-IN', {
+  month: 'long',
+  year: 'numeric',
+});
+
+const normalizeKey = (key = '') => String(key).trim().toLowerCase();
+
+const toInputDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseInputDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const addMonths = (date, amount) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + amount, 1);
+  return next;
+};
+
+const buildCalendarDays = (viewDate) => {
+  const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return {
+      date,
+      value: toInputDate(date),
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === viewDate.getMonth(),
+    };
+  });
+};
+
+const isBetweenDates = (value, start, end) =>
+  Boolean(start && end && value >= start && value <= end);
+
+const formatDateLabel = (value) => {
+  if (!value) return '';
+  const date = parseInputDate(value);
+  if (!date || Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const isDateRangeStart = (field, nextField) => {
+  if (!field || !nextField || field.type !== 'date' || nextField.type !== 'date') {
+    return null;
+  }
+
+  return RANGE_PAIRS.find(
+    ([startKey, endKey]) =>
+      normalizeKey(field.key) === normalizeKey(startKey) &&
+      normalizeKey(nextField.key) === normalizeKey(endKey),
+  ) || null;
+};
+
+const resolveDateRangeLabel = (startField = {}, endField = {}) => {
+  if (startField.rangeLabel) return startField.rangeLabel;
+  if (endField.rangeLabel) return endField.rangeLabel;
+
+  const labels = [startField.label, endField.label]
+    .filter(Boolean)
+    .map((label) => String(label).trim().toLowerCase());
+
+  if (
+    labels.length === 2 &&
+    labels.some((label) => ['from', 'from date'].includes(label)) &&
+    labels.some((label) => ['to', 'to date'].includes(label))
+  ) {
+    return 'Date Range';
+  }
+
+  return startField.label && endField.label
+    ? `${startField.label} - ${endField.label}`
+    : 'Date Range';
+};
+
+const GoldDateRangeCalendar = ({
+  dates,
+  viewDate,
+  onViewDateChange,
+  onSelectDate,
+  onApply,
+  onCancel,
+  onClear,
+  onToday,
+  loading,
+  maxDate,
+}) => {
+  const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
+  const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
+
+  return (
+    <div className="w-full rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, -1))}
+          disabled={loading}
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <div className="text-center">
+          <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+            {monthFormatter.format(viewDate)}
+          </h2>
+          <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+            Select start and end date
+          </p>
+        </div>
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, 1))}
+          disabled={loading}
+          aria-label="Next month"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
+        {WEEKDAY_LABELS.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day) => {
+          const isStart = day.value === dates.fromDate;
+          const isEnd = day.value === dates.toDate;
+          const isSelected = isStart || isEnd;
+          const isInRange = isBetweenDates(day.value, dates.fromDate, dates.toDate);
+          const isDisabled = Boolean(maxDate && day.value > maxDate);
+          return (
+            <button
+              key={day.value}
+              type="button"
+              className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
+                isSelected
+                  ? 'bg-[var(--admin-gold)] text-white shadow-sm'
+                  : isInRange
+                    ? 'bg-[#fff3cc] text-[var(--admin-gold-dark)]'
+                    : day.isCurrentMonth
+                      ? 'text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]'
+                      : 'text-slate-300 hover:bg-slate-50'
+              } disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
+              onClick={() => onSelectDate(day.value)}
+              disabled={loading || isDisabled}
+            >
+              {day.day}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 rounded border border-[#f1dfad] bg-[#fffaf0] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
+        {dates.fromDate ? formatDateLabel(dates.fromDate) : 'Start date'} - {dates.toDate ? formatDateLabel(dates.toDate) : 'End date'}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex min-h-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onToday}
+            disabled={loading}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-8 items-center justify-center rounded border border-red-100 bg-white px-3 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onClear}
+            disabled={loading || (!dates.fromDate && !dates.toDate)}
+          >
+            Clear
+          </button>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={!hasCompleteRange || loading}
+            onClick={onApply}
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const DateRangeFilter = ({ field, value, onChange, values }) => {
+  const id = useId();
+  const startKey = field.startKey || 'startDate';
+  const endKey = field.endKey || 'endDate';
+  const startValue = values?.[startKey] ?? value?.startDate ?? '';
+  const endValue = values?.[endKey] ?? value?.endDate ?? '';
+  const today = new Date().toISOString().split('T')[0];
+  const maxDate = field.disableFuture ? today : field.maxDate;
+  const [open, setOpen] = useState(false);
+  const [draftDates, setDraftDates] = useState({
+    fromDate: startValue,
+    toDate: endValue,
+  });
+  const [viewDate, setViewDate] = useState(() => parseInputDate(startValue) || new Date());
+
+  useEffect(() => {
+    if (open) return;
+    setDraftDates({ fromDate: startValue, toDate: endValue });
+  }, [endValue, open, startValue]);
+
+  const displayLabel =
+    startValue && endValue
+      ? `${formatDateLabel(startValue)} - ${formatDateLabel(endValue)}`
+      : field.placeholder || `All ${field.label || 'Date Range'}`;
+
+  const applyRange = () => {
+    if (!draftDates.fromDate || !draftDates.toDate) return;
+    const nextDates = draftDates.fromDate <= draftDates.toDate
+      ? draftDates
+      : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
+    onChange(startKey, nextDates.fromDate);
+    onChange(endKey, nextDates.toDate);
+    setOpen(false);
+  };
+
+  const clearRange = () => {
+    setDraftDates({ fromDate: '', toDate: '' });
+    onChange(startKey, '');
+    onChange(endKey, '');
+    setOpen(false);
+  };
+
+  const selectToday = () => {
+    const todayValue = toInputDate(new Date());
+    setDraftDates({ fromDate: todayValue, toDate: todayValue });
+    setViewDate(new Date());
+  };
+
+  const selectDate = (valueToSelect) => {
+    const selectedDate = parseInputDate(valueToSelect);
+    if (!selectedDate) return;
+    setViewDate(selectedDate);
+    setDraftDates((current) => {
+      if (!current.fromDate || current.toDate) {
+        return { fromDate: valueToSelect, toDate: '' };
+      }
+      if (valueToSelect < current.fromDate) {
+        return { fromDate: valueToSelect, toDate: current.fromDate };
+      }
+      return { ...current, toDate: valueToSelect };
+    });
+  };
+
+  const openPicker = () => {
+    setDraftDates({ fromDate: startValue, toDate: endValue });
+    setViewDate(parseInputDate(startValue || endValue) || new Date());
+    setOpen(true);
+  };
+
+  return (
+    <div className={`flex min-w-0 flex-col gap-1 ${field.wrapperClassName || ''} ${field.width || 'w-full'}`}>
+      {field.label && (
+        <label
+          htmlFor={id}
+          className={field.labelClassName || "text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"}
+        >
+          {field.label}
+        </label>
+      )}
+      <button
+        id={id}
+        type="button"
+        onClick={openPicker}
+        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${field.inputClassName || ''} ${
+          startValue && endValue ? 'text-[var(--admin-ink)]' : 'text-gray-400'
+        }`}
+      >
+        <span className="min-w-0 truncate">{displayLabel}</span>
+        <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+          <div className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+                  Select Date Range
+                </h2>
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  Filter data will update after apply.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+                onClick={() => setOpen(false)}
+                aria-label="Close date range picker"
+              >
+                ×
+              </button>
+            </div>
+            <GoldDateRangeCalendar
+              dates={draftDates}
+              viewDate={viewDate}
+              onViewDateChange={setViewDate}
+              onSelectDate={selectDate}
+              onApply={applyRange}
+              onCancel={() => setOpen(false)}
+              onClear={clearRange}
+              onToday={selectToday}
+              maxDate={maxDate}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─────────────── FilterField ─────────────── */
 const FilterField = ({ field, value, onChange, values }) => {
   const id = useId();
@@ -234,41 +588,7 @@ const FilterField = ({ field, value, onChange, values }) => {
   }
 
   if (field.type === 'daterange') {
-    const today = new Date().toISOString().split("T")[0];
-    const maxDate = field.disableFuture ? today : field.maxDate;
-    return (
-      <div className={`flex min-w-0 flex-col gap-1 ${field.width || 'w-full sm:col-span-2 lg:col-span-2'}`}>
-        {field.label && (
-          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
-            {field.label}
-          </span>
-        )}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
-          <input
-            type="date"
-            value={value?.startDate ?? ''}
-            max={maxDate}
-            onChange={(e) =>
-              onChange(field.key, { ...value, startDate: e.target.value })
-            }
-            placeholder="From"
-            className="admin-input min-h-9 w-full text-sm"
-          />
-          <span className="text-gray-400 text-xs">–</span>
-          <input
-            type="date"
-            value={value?.endDate ?? ''}
-            min={value?.startDate || undefined}
-            max={maxDate}
-            onChange={(e) =>
-              onChange(field.key, { ...value, endDate: e.target.value })
-            }
-            placeholder="To"
-            className="admin-input min-h-9 w-full text-sm"
-          />
-        </div>
-      </div>
-    );
+    return <DateRangeFilter field={field} value={value} onChange={onChange} values={values} />;
   }
 
   return null;
@@ -302,18 +622,50 @@ const FilterBar = ({
   const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
 
   const normalizedFilters = useMemo(
-    () =>
-      resolvedFilters.map((field) => {
-        if (field.type !== 'date') return field;
+    () => {
+      const nextFilters = [];
+
+      for (let index = 0; index < resolvedFilters.length; index += 1) {
+        const field = resolvedFilters[index];
+        const nextField = resolvedFilters[index + 1];
+        const rangePair = isDateRangeStart(field, nextField);
+
+        if (rangePair) {
+          const [startKey, endKey] = rangePair;
+          nextFilters.push({
+            ...field,
+            key: `${startKey}__${endKey}`,
+            type: 'daterange',
+            label: resolveDateRangeLabel(field, nextField),
+            startKey: field.key || startKey,
+            endKey: nextField.key || endKey,
+            minDate: field.minDate,
+            maxDate: nextField.maxDate ?? field.maxDate,
+            disableFuture: field.disableFuture ?? nextField.disableFuture ?? true,
+            width: field.rangeWidth || nextField.rangeWidth || field.width || nextField.width || 'w-full',
+          });
+          index += 1;
+          continue;
+        }
+
+        if (field.type !== 'date') {
+          nextFilters.push(field);
+          continue;
+        }
         const lowerKey = String(field.key || '').toLowerCase();
         if (lowerKey === 'from' || lowerKey === 'startdate') {
-          return { ...field, key: 'startDate' };
+          nextFilters.push({ ...field, key: 'startDate' });
+          continue;
         }
         if (lowerKey === 'to' || lowerKey === 'enddate') {
-          return { ...field, key: 'endDate' };
+          nextFilters.push({ ...field, key: 'endDate' });
+          continue;
         }
-        return field;
-      }),
+        nextFilters.push(field);
+      }
+
+      return nextFilters;
+    },
     [resolvedFilters],
   );
 
