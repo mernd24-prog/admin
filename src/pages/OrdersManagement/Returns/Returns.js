@@ -147,10 +147,21 @@ const Returns = () => {
   const { isSeller } = usePermission();
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminReturnsData);
-  const filterFields = useMemo(
-    () => isSeller ? FILTER_FIELDS.filter((field) => field.key !== "sellerId") : FILTER_FIELDS,
-    [isSeller],
-  );
+const filterFields = useMemo(
+  () =>
+    isSeller
+      ? FILTER_FIELDS.filter(
+          (field) =>
+            ![
+              "sellerId",
+              "buyerId",
+              "refundStatus",
+              "shipmentStatus",
+            ].includes(field.key)
+        )
+      : FILTER_FIELDS,
+  [isSeller]
+);
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",

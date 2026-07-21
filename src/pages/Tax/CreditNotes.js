@@ -24,7 +24,7 @@ import { ENDPOINTS } from "../../_helpers/endpoints";
 const REF_TYPES = ["return", "cancellation", "refund", "manual"];
 
 const FILTER_FIELDS = [
-  { key: "search", type: "text", label: "Search", width: "w-56" },
+  // { key: "search", type: "text", label: "Search", width: "w-56" },
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
   { key: "organizationId", type: "text", label: "Organization ID", width: "w-52" },
   { key: "buyerId", type: "asyncDropdown", label: "Buyer", load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }) },
@@ -215,7 +215,7 @@ const CreditNotes = () => {
     },
     {
       key: "_actions",
-      label: "",
+      label: "Actions",
       render: (_, row) => (
         <div className="flex gap-1">
           <button onClick={() => setDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
