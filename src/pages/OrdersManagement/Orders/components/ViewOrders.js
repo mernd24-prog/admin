@@ -337,6 +337,7 @@ const normalizeSellerSettlement = (seller = {}) => ({
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
   shippingPolicy: firstDefined(seller.shippingPolicy, seller.shipping_policy, ""),
   refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
+  adjustmentAmount: money(firstDefined(seller.adjustmentAmount, seller.adjustment_amount, 0)),
   gstTcsRate: money(firstDefined(seller.gstTcsRate, seller.gst_tcs_rate, 0)),
   gstTcsAmount: money(firstDefined(seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
   incomeTaxTdsRate: money(firstDefined(seller.incomeTaxTdsRate, seller.income_tax_tds_rate, 0)),
@@ -349,6 +350,8 @@ const normalizeSellerSettlement = (seller = {}) => ({
   payoutMethod: firstDefined(seller.payoutMethod, seller.payment_method, ""),
   payoutProcessedAt: firstDefined(seller.payoutProcessedAt, seller.processed_at, ""),
   commissionRates: Array.isArray(seller.commissionRates) ? seller.commissionRates : [],
+  commissionBreakdown: Array.isArray(seller.commissionBreakdown) ? seller.commissionBreakdown : [],
+  commissionIds: Array.isArray(seller.commissionIds) ? seller.commissionIds : [],
 });
 
 const Panel = ({ title, children, actions, className = "" }) => (
@@ -865,7 +868,19 @@ const OrderSummary = () => {
                           SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
                         </div>
                       </div>
-                      <div className="md:col-span-2"><StatusBadge status={item.cancellation_status || order.status} size="sm" dot /></div>
+                      <div className="md:col-span-2">
+                        <StatusBadge
+                          status={firstDefined(
+                            item.cancellation_status,
+                            item.delivery_status,
+                            item.deliveryStatus,
+                            packageStatus,
+                            order.status,
+                          )}
+                          size="sm"
+                          dot
+                        />
+                      </div>
                       <div className="font-medium text-[#202337] md:col-span-1 md:text-center">
                         {Number(item.quantity || 0)}
                         {Number(item.cancelled_quantity || 0) > 0 && <div className="text-xs text-red-600">-{Number(item.cancelled_quantity)} cancelled</div>}
@@ -1188,6 +1203,8 @@ const OrderSummary = () => {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between"><span>Product Total</span><span>{formatMoney(seller.grossSales)}</span></div>
+                    <div className="flex justify-between text-[#65718b]"><span>Seller payout base</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
+                    {seller.taxCollected > 0 && <div className="flex justify-between text-xs text-[#65718b]"><span>Product GST (included; seller tax liability)</span><span>{formatMoney(seller.taxCollected)}</span></div>}
                     <div className="flex justify-between">
                       <span>Platform Commission</span>
                       <span>
@@ -1195,6 +1212,16 @@ const OrderSummary = () => {
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
+                    {seller.commissionBreakdown.length > 1 && (
+                      <div className="ml-3 space-y-1 rounded-md bg-[#f8faff] px-2 py-1.5 text-xs text-[#65718b]">
+                        {seller.commissionBreakdown.map((entry) => (
+                          <div key={entry.rate} className="flex justify-between">
+                            <span>Commission at {percent(entry.rate)}</span>
+                            <span>-{formatMoney(entry.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {seller.platformFeeTax > 0 && <div className="flex justify-between"><span>GST on Commission</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>}
                     {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping Reimbursement</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
                     {seller.shippingDeduction > 0 && <div className="flex justify-between"><span>Shipping Deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>}
@@ -1202,6 +1229,7 @@ const OrderSummary = () => {
                       <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Shipping policy")}</span><span>{formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
                     )}
                     {seller.refundAmount > 0 && <div className="flex justify-between"><span>Refund Adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>}
+                    {seller.adjustmentAmount !== 0 && <div className="flex justify-between"><span>Payout Adjustment / Recovery</span><span>{seller.adjustmentAmount > 0 ? "+" : "-"}{formatMoney(Math.abs(seller.adjustmentAmount))}</span></div>}
                     {seller.gstTcsAmount > 0 && <div className="flex justify-between"><span>GST TCS ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsAmount)}</span></div>}
                     {seller.incomeTaxTdsAmount > 0 && <div className="flex justify-between"><span>Income-tax TDS ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsAmount)}</span></div>}
                     <div className="mt-2 flex justify-between border-t border-[#efe6cd] pt-2 font-semibold"><span>Final Seller Payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
@@ -1212,6 +1240,7 @@ const OrderSummary = () => {
                         {seller.payoutMethod && <span className="ml-2">Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
                         {seller.payoutReference && <span className="ml-2">Bank ref: {seller.payoutReference}</span>}
                         {seller.payoutProcessedAt && <span className="ml-2">Paid: {formatDate(seller.payoutProcessedAt)}</span>}
+                        {seller.commissionIds.length > 0 && <span className="ml-2">Item commission records: {seller.commissionIds.length}</span>}
                       </div>
                     )}
                     <div className="flex justify-between border-t border-[#efe6cd] pt-2 font-medium"><span>Net seller payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
