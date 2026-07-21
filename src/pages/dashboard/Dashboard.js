@@ -689,7 +689,7 @@ export default function Dashboard() {
 
         {customPickerOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
-            <div className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl">
+            <div className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-[var(--admin-ink)]">

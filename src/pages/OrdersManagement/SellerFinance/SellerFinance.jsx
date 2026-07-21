@@ -727,7 +727,7 @@ const SellerFinance = () => {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
                 <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
-                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{decision.reason}</td>
+                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{formatLabel(decision.reason)}</td>
                 {!isSeller && (
                   <td className="whitespace-nowrap px-4 py-3">
                     {decision.allowed ? (

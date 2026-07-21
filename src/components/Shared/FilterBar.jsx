@@ -461,41 +461,45 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
         <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
-          <div className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-                  Select Date Range
-                </h2>
-                <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  Filter data will update after apply.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
-                onClick={() => setOpen(false)}
-                aria-label="Close date range picker"
-              >
-                ×
-              </button>
-            </div>
-            <GoldDateRangeCalendar
-              dates={draftDates}
-              viewDate={viewDate}
-              onViewDateChange={setViewDate}
-              onSelectDate={selectDate}
-              onApply={applyRange}
-              onCancel={() => setOpen(false)}
-              onClear={clearRange}
-              onToday={selectToday}
-              maxDate={maxDate}
-            />
-          </div>
+     {open && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
+    onClick={() => setOpen(false)}
+  >
+    <div className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+            Select Date Range
+          </h2>
+          <p className="mt-1 text-xs text-[var(--admin-muted)]">
+            Filter data will update after apply.
+          </p>
         </div>
-      )}
+        <button
+          type="button"
+          className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+          onClick={() => setOpen(false)}
+          aria-label="Close date range picker"
+        >
+          ×
+        </button>
+      </div>
+      <GoldDateRangeCalendar
+        dates={draftDates}
+        viewDate={viewDate}
+        onViewDateChange={setViewDate}
+        onSelectDate={selectDate}
+        onApply={applyRange}
+        onCancel={() => setOpen(false)}
+        onClear={clearRange}
+        onToday={selectToday}
+        maxDate={maxDate}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 };
