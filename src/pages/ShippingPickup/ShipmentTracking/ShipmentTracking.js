@@ -144,8 +144,8 @@ const ShipmentTracking = () => {
       label: shipmentStepLabel(value),
     })),
   },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
+  // { key: "fromDate", type: "date", label: "From" },
+  // { key: "toDate", type: "date", label: "To" },
 ]: [
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
   { key: "returnId", type: "text", label: "Return #", width: "w-44" },   

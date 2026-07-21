@@ -7,7 +7,7 @@ import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { useListPage } from "../../hooks/useListPage";
 import { toast } from "../../utils/toast";
-
+const isSeller = isSellerPanel()
 const FILTERS = [
   {
     key: "stockStatus",
@@ -19,16 +19,16 @@ const FILTERS = [
       { value: "out_of_stock", label: "Out of Stock" },
     ],
   },
-  // {
-  //   key: "variantStatus",
-  //   type: "select",
-  //   label: "Variant Status",
-  //   options: [
-  //     { value: "active", label: "Active" },
-  //     { value: "inactive", label: "Inactive" },
-  //     { value: "out_of_stock", label: "Out Of Stock" },
-  //   ],
-  // },
+  {
+    key: "variantStatus",
+    type: "select",
+    label: "Variant Status",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+      { value: "out_of_stock", label: "Out Of Stock" },
+    ],
+  },
   {
     key: "status",
     type: "select",
@@ -332,10 +332,12 @@ const Inventory = () => {
     setError("");
     try {
       const params = toQueryParams();
-      const response = await axiosProvider.get(ENDPOINTS.inventory.variants, { params });
-      const nextRows = getRowsFromResponse(response);
-      setRows(nextRows);
-      setTotal(getTotalFromResponse(response, nextRows.length));
+  const response = await axiosProvider.get(ENDPOINTS.inventory.variants, {params});
+
+const nextRows = getRowsFromResponse(response);
+
+setRows(nextRows);
+setTotal(response.data?.meta?.productTotal ?? nextRows.length);
     } catch (err) {
       setError(err?.message || "Unable to load inventory");
       setRows([]);
@@ -389,6 +391,11 @@ const Inventory = () => {
     () => selectedProductRows.flatMap((row) => row.variants || []),
     [selectedProductRows],
   );
+
+  const filterFields = useMemo(
+  () => (isSeller ? [] : FILTERS),
+  [isSeller]
+);
 
   const adjustRows = async (target, payload) => {
     const targetRows = Array.isArray(target?.rows) ? target.rows : [target];
@@ -526,6 +533,7 @@ const Inventory = () => {
     );
   }
 
+
   return (
     <div>
       <PageHeader
@@ -551,7 +559,7 @@ const Inventory = () => {
         onSelectionChange={list.setSelectedKeys}
         onRefresh={refresh}
         searchPlaceholder="Search product or SKU"
-        filterBar={<FilterBar filters={FILTERS} listPage={list} loading={false} />}
+        filterBar={<FilterBar filters={filterFields} listPage={list} loading={false} />}
         bulkActionBar={
           <BulkActionBar
             selectedCount={list.selectedCount}
