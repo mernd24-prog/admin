@@ -56,7 +56,11 @@ const ACTION_TITLES = {
   refund: "Process Refund",
   retry_refund: "Retry Refund",
   sync_refund: "Sync Provider Refund",
-  replace: "Create Replacement",
+  replacement_request: "Request Replacement",
+  replacement_approve: "Approve Replacement",
+  replacement_ship: "Ship Replacement",
+  replacement_deliver: "Confirm Replacement Delivery",
+  replacement_complete: "Complete Replacement",
   close: "Close Return",
 };
 
@@ -105,12 +109,13 @@ const EMPTY_ACTION = {
   method: "auto",
   walletAmount: "",
   providerAmount: "",
-  replacementOrderId: "",
-  replacementShipmentId: "",
   itemActions: [],
 };
 
-const ADMIN_ONLY_RETURN_ACTIONS = new Set(["approve", "reject", "refund", "retry_refund", "sync_refund"]);
+const ADMIN_ONLY_RETURN_ACTIONS = new Set([
+  "reject", "refund", "retry_refund", "sync_refund",
+  "replacement_approve", "replacement_deliver", "replacement_complete",
+]);
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -242,7 +247,7 @@ const Returns = () => {
 
   const validateAction = () => {
     if (!returnId(action.returnRequest)) return "Return ID is missing";
-    if (["approve", "refund", "retry_refund"].includes(action.type) && Number(action.refundAmount || 0) <= 0) {
+    if (((!isSeller && action.type === "approve") || ["refund", "retry_refund"].includes(action.type)) && Number(action.refundAmount || 0) <= 0) {
       return "Refund amount must be greater than zero";
     }
     if (action.type === "reject" && !action.reason.trim()) return "Rejection reason is required";
@@ -250,8 +255,8 @@ const Returns = () => {
     if (action.type === "schedule" && action.mode === "reverse_pickup" && !action.provider.trim()) return "Shipping provider is required";
     if (action.type === "tracking" && !action.shipmentStatus) return "Shipment status is required";
     if (["approve", "receive", "qc"].includes(action.type) && !action.itemActions.length) return "Return items are missing";
-    if (action.type === "replace" && !action.replacementOrderId.trim() && !action.replacementShipmentId.trim()) {
-      return "Replacement order or shipment reference is required";
+    if (action.type === "replacement_ship" && (!action.courierName.trim() || !action.trackingNumber.trim())) {
+      return "Courier and tracking/AWB are required";
     }
     if (action.type === "close" && !action.reason.trim() && !action.note.trim()) return "Close reason or note is required";
     return "";
@@ -298,8 +303,7 @@ const Returns = () => {
       expectedDeliveryAt: action.expectedDeliveryAt || undefined,
       status: action.shipmentStatus,
       location: action.location,
-      replacementOrderId: action.replacementOrderId,
-      replacementShipmentId: action.replacementShipmentId,
+      action: action.type.startsWith("replacement_") ? action.type.replace("replacement_", "") : undefined,
       items: action.type === "approve"
         ? action.itemActions.map((item) => ({
             orderItemId: item.orderItemId,
@@ -336,7 +340,11 @@ const Returns = () => {
       refund: refundReturn,
       retry_refund: retryReturnRefund,
       sync_refund: syncReturnRefund,
-      replace: replaceReturn,
+      replacement_request: replaceReturn,
+      replacement_approve: replaceReturn,
+      replacement_ship: replaceReturn,
+      replacement_deliver: replaceReturn,
+      replacement_complete: replaceReturn,
       close: closeReturn,
     };
     const actionCreator = actionMap[action.type];
@@ -429,18 +437,22 @@ const Returns = () => {
               <MdVisibility size={15} /> View
             </button>
           </PermissionGuard>
-          {!isSeller && row.status === "requested" && (
+          {row.status === "requested" && (
             <>
-              <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-                <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
-                  <MdCheckCircle size={15} /> Approve
-                </button>
-              </PermissionGuard>
-              <PermissionGuard module="returns" action={ACTIONS.REJECT} hide>
-                <button type="button" className="admin-table-action-btn danger" onClick={() => openAction("reject", row)}>
-                  <MdClose size={15} /> Reject
-                </button>
-              </PermissionGuard>
+              {(!isSeller || ["replacement", "exchange"].includes(row.resolution)) && (
+                <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
+                  <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
+                    <MdCheckCircle size={15} /> {isSeller ? "Approve Exchange" : "Approve"}
+                  </button>
+                </PermissionGuard>
+              )}
+              {!isSeller && (
+                <PermissionGuard module="returns" action={ACTIONS.REJECT} hide>
+                  <button type="button" className="admin-table-action-btn danger" onClick={() => openAction("reject", row)}>
+                    <MdClose size={15} /> Reject
+                  </button>
+                </PermissionGuard>
+              )}
             </>
           )}
           {["approved", "pickup_failed"].includes(row.status) && (
@@ -478,10 +490,32 @@ const Returns = () => {
                   </button>
                 </PermissionGuard>
               )}
-              <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
-                <button type="button" className="admin-table-action-btn" onClick={() => openAction("replace", row)}>Replace</button>
-              </PermissionGuard>
+              {(!isSeller || ["replacement", "exchange"].includes(row.resolution)) && (
+                <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
+                  <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_request", row)}>Request Replacement</button>
+                </PermissionGuard>
+              )}
             </>
+          )}
+          {!isSeller && row.status === "replacement_requested" && (
+            <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_approve", row)}>Approve Replacement</button>
+            </PermissionGuard>
+          )}
+          {row.status === "replacement_created" && (
+            <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_ship", row)}>Ship Replacement</button>
+            </PermissionGuard>
+          )}
+          {!isSeller && row.status === "replacement_shipped" && (
+            <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_deliver", row)}>Confirm Delivery</button>
+            </PermissionGuard>
+          )}
+          {!isSeller && row.status === "replacement_delivered" && (
+            <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
+              <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_complete", row)}>Complete</button>
+            </PermissionGuard>
           )}
           {!isSeller && row.status === "refund_failed" && (
             <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
@@ -650,7 +684,7 @@ const Returns = () => {
         loading={loading}
       >
         <div className="space-y-3">
-          {["approve", "refund", "retry_refund"].includes(action.type) && (
+          {((!isSeller && action.type === "approve") || ["refund", "retry_refund"].includes(action.type)) && (
             <Input labelName="Refund Amount" type="number" min="0" value={action.refundAmount} onChange={(event) => setAction((prev) => ({ ...prev, refundAmount: event.target.value }))} required />
           )}
           {["refund", "retry_refund"].includes(action.type) && (
@@ -751,10 +785,10 @@ const Returns = () => {
               ))}
             </div>
           )}
-          {action.type === "replace" && (
+          {action.type === "replacement_ship" && (
             <>
-              <Input labelName="Replacement Order ID" value={action.replacementOrderId} onChange={(event) => setAction((prev) => ({ ...prev, replacementOrderId: event.target.value }))} />
-              <Input labelName="Replacement Shipment ID" value={action.replacementShipmentId} onChange={(event) => setAction((prev) => ({ ...prev, replacementShipmentId: event.target.value }))} />
+              <Input labelName="Courier" value={action.courierName} onChange={(event) => setAction((prev) => ({ ...prev, courierName: event.target.value }))} required />
+              <Input labelName="Tracking / AWB" value={action.trackingNumber} onChange={(event) => setAction((prev) => ({ ...prev, trackingNumber: event.target.value }))} required />
             </>
           )}
           <Input type="textarea" labelName="Note" value={action.note} onChange={(event) => setAction((prev) => ({ ...prev, note: event.target.value }))} />

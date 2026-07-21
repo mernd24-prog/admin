@@ -96,7 +96,11 @@ export const RETURN_STATUSES = [
   "refund_failed",
   "partially_refunded",
   "refunded",
+  "replacement_requested",
   "replacement_pending",
+  "replacement_created",
+  "replacement_shipped",
+  "replacement_delivered",
   "replaced",
   "closed",
 ];
