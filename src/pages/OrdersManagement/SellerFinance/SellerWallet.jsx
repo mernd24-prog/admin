@@ -6,7 +6,7 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
-import { formatCurrency, formatDateTime } from "../../../utils/formatters";
+import { formatCurrency, formatDateTime, formatLabel } from "../../../utils/formatters";
 import { toast } from "sonner";
 
 const unwrap = (value = {}) => value?.data?.data || value?.data || {};
@@ -74,14 +74,14 @@ export default function SellerWallet() {
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <div><h2 className="font-semibold text-gray-900">Receivable ledger</h2><p className="text-xs text-gray-500">Order-level movement from pending to payout.</p></div>
+            <div><h2 className="text-[18px] font-medium text-gray-900">Receivable ledger</h2><p className="text-xs text-gray-500">Order-level movement from pending to payout.</p></div>
             <span className="text-xs text-gray-500">{wallet.total || items.length} entries</span>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100 text-sm">
               <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500"><tr><th className="px-4 py-3">Order</th><th className="px-4 py-3">Net receivable</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Reason / release</th><th className="px-4 py-3">Updated</th></tr></thead>
               <tbody className="divide-y divide-gray-100">
-                {items.map((item) => <tr key={item.commissionId} className="hover:bg-gray-50"><td className="px-4 py-3"><button type="button" className="font-mono text-xs font-semibold text-blue-700 hover:underline" onClick={() => navigate(`/app/orders/view/${item.orderId}`)}>{String(item.orderId || "—").slice(0, 12)}</button></td><td className="px-4 py-3 font-semibold">{money(item.netAmount, item.currency || currency)}</td><td className="px-4 py-3"><StatusBadge status={item.releaseStatus || item.status} dot /></td><td className="px-4 py-3"><div className="max-w-xs text-xs text-gray-600">{item.releaseReason || label(item.releaseStatus)}</div>{item.eligibleAt && <div className="mt-1 text-[11px] text-gray-400">Eligible {formatDateTime(item.eligibleAt)}</div>}</td><td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updatedAt || item.createdAt)}</td></tr>)}
+                {items.map((item) => <tr key={item.commissionId} className="hover:bg-gray-50"><td className="px-4 py-3"><button type="button" className="font-mono text-xs font-semibold text-blue-700 hover:underline" onClick={() => navigate(`/app/orders/view/${item.orderId}`)}>{String(item.orderId || "—").slice(0, 12)}</button></td><td className="px-4 py-3 font-semibold">{money(item.netAmount, item.currency || currency)}</td><td className="px-4 py-3"><StatusBadge status={item.releaseStatus || item.status} dot /></td><td className="px-4 py-3"><div className="max-w-xs text-xs text-gray-600">{formatLabel(item.releaseReason || label(item.releaseStatus))}</div>{item.eligibleAt && <div className="mt-1 text-[11px] text-gray-400">Eligible {formatDateTime(item.eligibleAt)}</div>}</td><td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updatedAt || item.createdAt)}</td></tr>)}
                 {!items.length && <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-500">No seller wallet entries yet.</td></tr>}
               </tbody>
             </table>
@@ -89,9 +89,9 @@ export default function SellerWallet() {
         </section>
 
         <aside className="space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="font-semibold text-gray-900">Payout readiness</h2><div className={`mt-3 rounded-lg p-3 text-sm ${wallet.canRequestPayout ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}><strong>{wallet.canRequestPayout ? "Ready for payout" : "Not yet eligible"}</strong><p className="mt-1 text-xs">{wallet.canRequestPayout ? "The available balance meets the payout policy." : wallet.minimumPayoutShortfall > 0 ? `${money(wallet.minimumPayoutShortfall, currency)} more is needed to meet the minimum payout.` : "Wait for pending or held amounts to become available."}</p></div><button type="button" className="admin-btn mt-4 w-full" onClick={() => navigate("/app/seller-payouts")}>View payouts</button></div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="font-semibold text-gray-900">Adjustments</h2><p className="mt-2 text-2xl font-bold text-gray-900">{money(balances.refundAdjustmentBalance, currency)}</p><p className="mt-1 text-xs text-gray-500">Refunds, chargebacks, corrections, and negative balance recovery.</p></div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="font-semibold text-gray-900">Total open balance</h2><p className="mt-2 text-2xl font-bold text-gray-900">{money(balances.totalOpenBalance, currency)}</p><p className="mt-1 text-xs text-gray-500">Pending, available, processing, and held receivables.</p></div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="text-[18px] font-medium text-gray-900">Payout readiness</h2><div className={`mt-3 rounded-lg p-3 text-sm ${wallet.canRequestPayout ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}><strong>{wallet.canRequestPayout ? "Ready for payout" : "Not yet eligible"}</strong><p className="mt-1 text-xs">{wallet.canRequestPayout ? "The available balance meets the payout policy." : wallet.minimumPayoutShortfall > 0 ? `${money(wallet.minimumPayoutShortfall, currency)} more is needed to meet the minimum payout.` : "Wait for pending or held amounts to become available."}</p></div><button type="button" className="admin-btn mt-4 w-full" onClick={() => navigate("/app/seller-payouts")}>View payouts</button></div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="text-[18px] font-medium text-gray-900">Adjustments</h2><p className="mt-2 font-medium text-gray-900">{money(balances.refundAdjustmentBalance, currency)}</p><p className="mt-1 text-xs text-gray-500">Refunds, chargebacks, corrections, and negative balance recovery.</p></div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="text-[18px] font-medium text-gray-900">Total open balance</h2><p className="mt-2 font-medium text-gray-900">{money(balances.totalOpenBalance, currency)}</p><p className="mt-1 text-xs text-gray-500">Pending, available, processing, and held receivables.</p></div>
         </aside>
       </div>
     </div>
