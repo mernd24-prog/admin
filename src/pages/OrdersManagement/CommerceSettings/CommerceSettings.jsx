@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  MdCheckCircle,
+  // MdCheckCircle,
   MdRefresh,
   MdSave,
   MdStorefront,
@@ -77,11 +77,11 @@ const option = (value, label) => ({ value, label });
 const joinList = (value) => (Array.isArray(value) ? value.join(", ") : String(value || ""));
 const splitList = (value) => String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 const nullableNumber = (value) => (value === "" || value === null || value === undefined ? null : Number(value));
-const optionLabel = (item = {}) =>
-  item.label || item.name || item.title || item.zipCode || item.pincode || item.code || String(item.value || "");
-const optionValue = (item = {}) =>
-  String(item.rawValue || item.zipCode || item.pincode || item.name || item.label || item.value || item.id || item._id || "").trim();
-const optionParentId = (item = {}) => item.id || item._id || item.value || "";
+// const optionLabel = (item = {}) =>
+//   item.label || item.name || item.title || item.zipCode || item.pincode || item.code || String(item.value || "");
+// const optionValue = (item = {}) =>
+//   String(item.rawValue || item.zipCode || item.pincode || item.name || item.label || item.value || item.id || item._id || "").trim();
+// const optionParentId = (item = {}) => item.id || item._id || item.value || "";
 
 const mergeSettings = (data = {}) => ({
   ...DEFAULT_SETTINGS,
@@ -132,108 +132,108 @@ const ToggleField = ({ label, checked, onChange, hint }) => (
   </label>
 );
 
-const OptionMultiSelect = ({
-  value = [],
-  onChange,
-  options = [],
-  placeholder = "Select values...",
-  searchPlaceholder = "Search...",
-  emptyText = "No options found",
-  disabled = false,
-  loading = false,
-  getValue = optionValue,
-}) => {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef(null);
+// const OptionMultiSelect = ({
+//   value = [],
+//   onChange,
+//   options = [],
+//   placeholder = "Select values...",
+//   searchPlaceholder = "Search...",
+//   emptyText = "No options found",
+//   disabled = false,
+//   loading = false,
+//   getValue = optionValue,
+// }) => {
+//   const [open, setOpen] = useState(false);
+//   const [search, setSearch] = useState("");
+//   const ref = useRef(null);
 
-  useEffect(() => {
-    const handler = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+//   useEffect(() => {
+//     const handler = (event) => {
+//       if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+//     };
+//     document.addEventListener("mousedown", handler);
+//     return () => document.removeEventListener("mousedown", handler);
+//   }, []);
 
-  const selectedValues = Array.isArray(value) ? value : [];
-  const filteredOptions = options.filter((item) =>
-    optionLabel(item).toLowerCase().includes(search.toLowerCase()),
-  );
+//   const selectedValues = Array.isArray(value) ? value : [];
+//   const filteredOptions = options.filter((item) =>
+//     optionLabel(item).toLowerCase().includes(search.toLowerCase()),
+//   );
 
-  const toggleOption = (item) => {
-    const selectedValue = getValue(item);
-    if (!selectedValue) return;
-    if (selectedValues.includes(selectedValue)) {
-      onChange(selectedValues.filter((current) => current !== selectedValue));
-      return;
-    }
-    onChange([...selectedValues, selectedValue]);
-  };
+//   const toggleOption = (item) => {
+//     const selectedValue = getValue(item);
+//     if (!selectedValue) return;
+//     if (selectedValues.includes(selectedValue)) {
+//       onChange(selectedValues.filter((current) => current !== selectedValue));
+//       return;
+//     }
+//     onChange([...selectedValues, selectedValue]);
+//   };
 
-  return (
-    <div ref={ref} className="relative">
-      <div
-        className={`admin-input flex min-h-[42px] flex-wrap gap-1.5 ${disabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : "cursor-pointer bg-white"}`}
-        onClick={() => {
-          if (!disabled) setOpen((current) => !current);
-        }}
-      >
-        {!selectedValues.length ? <span className="text-sm text-gray-400">{placeholder}</span> : null}
-        {selectedValues.map((item) => (
-          <span key={item} className="inline-flex max-w-full items-center gap-1 rounded-full bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]">
-            <span className="truncate">{item}</span>
-            <button
-              type="button"
-              className="leading-none hover:text-red-500"
-              onClick={(event) => {
-                event.stopPropagation();
-                onChange(selectedValues.filter((current) => current !== item));
-              }}
-            >
-              x
-            </button>
-          </span>
-        ))}
-      </div>
-      {open && !disabled ? (
-        <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          <div className="sticky top-0 border-b bg-white p-2">
-            <input
-              className="admin-input py-1 text-sm"
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-              autoFocus
-            />
-          </div>
-          {loading ? <div className="px-3 py-4 text-center text-sm text-gray-400">Loading...</div> : null}
-          {!loading && filteredOptions.map((item) => {
-            const selectedValue = getValue(item);
-            const selected = selectedValues.includes(selectedValue);
-            return (
-              <button
-                key={optionParentId(item) || selectedValue}
-                type="button"
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${selected ? "font-medium text-[var(--admin-blue)]" : "text-gray-700"}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleOption(item);
-                }}
-              >
-                <span className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]" : "border-gray-300"}`}>
-                  {selected ? <MdCheckCircle className="text-xs text-white" /> : null}
-                </span>
-                {optionLabel(item)}
-              </button>
-            );
-          })}
-          {!loading && !filteredOptions.length ? <div className="px-3 py-4 text-center text-sm text-gray-400">{emptyText}</div> : null}
-        </div>
-      ) : null}
-    </div>
-  );
-};
+//   return (
+//     <div ref={ref} className="relative">
+//       <div
+//         className={`admin-input flex min-h-[42px] flex-wrap gap-1.5 ${disabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : "cursor-pointer bg-white"}`}
+//         onClick={() => {
+//           if (!disabled) setOpen((current) => !current);
+//         }}
+//       >
+//         {!selectedValues.length ? <span className="text-sm text-gray-400">{placeholder}</span> : null}
+//         {selectedValues.map((item) => (
+//           <span key={item} className="inline-flex max-w-full items-center gap-1 rounded-full bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]">
+//             <span className="truncate">{item}</span>
+//             <button
+//               type="button"
+//               className="leading-none hover:text-red-500"
+//               onClick={(event) => {
+//                 event.stopPropagation();
+//                 onChange(selectedValues.filter((current) => current !== item));
+//               }}
+//             >
+//               x
+//             </button>
+//           </span>
+//         ))}
+//       </div>
+//       {open && !disabled ? (
+//         <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+//           <div className="sticky top-0 border-b bg-white p-2">
+//             <input
+//               className="admin-input py-1 text-sm"
+//               placeholder={searchPlaceholder}
+//               value={search}
+//               onChange={(event) => setSearch(event.target.value)}
+//               onClick={(event) => event.stopPropagation()}
+//               autoFocus
+//             />
+//           </div>
+//           {loading ? <div className="px-3 py-4 text-center text-sm text-gray-400">Loading...</div> : null}
+//           {!loading && filteredOptions.map((item) => {
+//             const selectedValue = getValue(item);
+//             const selected = selectedValues.includes(selectedValue);
+//             return (
+//               <button
+//                 key={optionParentId(item) || selectedValue}
+//                 type="button"
+//                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${selected ? "font-medium text-[var(--admin-blue)]" : "text-gray-700"}`}
+//                 onClick={(event) => {
+//                   event.stopPropagation();
+//                   toggleOption(item);
+//                 }}
+//               >
+//                 <span className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]" : "border-gray-300"}`}>
+//                   {selected ? <MdCheckCircle className="text-xs text-white" /> : null}
+//                 </span>
+//                 {optionLabel(item)}
+//               </button>
+//             );
+//           })}
+//           {!loading && !filteredOptions.length ? <div className="px-3 py-4 text-center text-sm text-gray-400">{emptyText}</div> : null}
+//         </div>
+//       ) : null}
+//     </div>
+//   );
+// };
 
 const Section = ({ title, icon: Icon = MdStorefront, children, action }) => (
   <section className="admin-card p-5">

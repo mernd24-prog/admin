@@ -623,7 +623,8 @@ const FilterBar = ({
     }
     listPage?.clearSearch?.();
   }, [listPage, onClear]);
-  const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
+  // const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
+  
 
   const normalizedFilters = useMemo(
     () => {
@@ -672,6 +673,22 @@ const FilterBar = ({
     },
     [resolvedFilters],
   );
+
+  const resolvedActiveCount = useMemo(() => {
+  return normalizedFilters.reduce((count, field) => {
+    const value = resolvedValues[field.key];
+
+    if (
+      value !== "" &&
+      value !== null &&
+      value !== undefined
+    ) {
+      return count + 1;
+    }
+
+    return count;
+  }, 0);
+}, [normalizedFilters, resolvedValues]);
 
   if (!normalizedFilters.length) return null;
 

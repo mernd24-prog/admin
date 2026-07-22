@@ -4,7 +4,7 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
+import { MdDownload, MdVisibility } from "react-icons/md";
 import Loader from "../../components/Loader/Loader";
 import {
   DataTable,
@@ -23,7 +23,7 @@ const STATES = [
   "draft", "issued", "cancelled", "amended",
 ];
 
-const isSeller = isSellerPanel();
+// const isSeller = isSellerPanel();
 
 const FILTER_FIELDS = isSellerPanel()
   ? [

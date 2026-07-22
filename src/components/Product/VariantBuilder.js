@@ -169,12 +169,12 @@ const VariantBuilder = ({
   };
   const removeVariantImage = (vIdx, imgIdx) =>
     updateVariant(vIdx, 'images', variants[vIdx].images.filter((_, i) => i !== imgIdx));
-  const addVariantImageUrl = (idx, url) => {
-    if (!url.trim()) return;
-    const current = variants[idx]?.images || [];
-    if (current.length >= MAX_VARIANT_IMAGES) { toast.error(`Maximum ${MAX_VARIANT_IMAGES} images per variant`); return; }
-    updateVariant(idx, 'images', [...current, url.trim()]);
-  };
+  // const addVariantImageUrl = (idx, url) => {
+  //   if (!url.trim()) return;
+  //   const current = variants[idx]?.images || [];
+  //   if (current.length >= MAX_VARIANT_IMAGES) { toast.error(`Maximum ${MAX_VARIANT_IMAGES} images per variant`); return; }
+  //   updateVariant(idx, 'images', [...current, url.trim()]);
+  // };
 
   const handleVariantDragStart = (idx) => { dragVariantIdx.current = idx; };
   const handleVariantDragOver = (e, idx) => {

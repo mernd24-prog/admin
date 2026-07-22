@@ -3,10 +3,10 @@ import Button from "../../../../components/Atoms/buttons/button";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 
 export default function ProductSettingsPanel({ handleSaveSubmit, formData, handleToggleProductSetting, saving = false }) {
-  const codEnabled =
-    formData?.shipping?.codAvailable !== undefined
-      ? Boolean(formData.shipping.codAvailable)
-      : Boolean(formData?.cod);
+  // const codEnabled =
+  //   formData?.shipping?.codAvailable !== undefined
+  //     ? Boolean(formData.shipping.codAvailable)
+  //     : Boolean(formData?.cod);
   const freeShippingEnabled = Boolean(formData?.shipping?.freeShipping);
 
   return (

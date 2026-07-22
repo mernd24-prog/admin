@@ -14,7 +14,10 @@ import { getProfile, logout } from "../../Redux/userSlice";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { getMyNotifications, setNotificationsSeenAt } from "../../Redux/notificationsSlice";
+import {
+  getMyNotifications,
+  setNotificationsSeenAt,
+} from "../../Redux/notificationsSlice";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
 import {
   getSelectedSellerOrganizationId,
@@ -23,7 +26,10 @@ import {
 import Tooltip from "../Atoms/tooltip/Tooltip";
 
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
-const REVIEW_LOCKED_APPROVAL_STATUSES = new Set(["pending_review", "resubmitted"]);
+const REVIEW_LOCKED_APPROVAL_STATUSES = new Set([
+  "pending_review",
+  "resubmitted",
+]);
 const REVIEW_LOCKED_KYC_STATUSES = new Set(["submitted", "under_review"]);
 const REVIEW_LOCKED_BANK_STATUSES = new Set(["submitted"]);
 
@@ -65,11 +71,9 @@ const hasCompleteReviewDetails = (item = {}) => {
 
 const isOrganizationUnderReview = (item = {}) =>
   hasCompleteReviewDetails(item) &&
-  (
-    REVIEW_LOCKED_APPROVAL_STATUSES.has(String(item.approvalStatus || "")) ||
+  (REVIEW_LOCKED_APPROVAL_STATUSES.has(String(item.approvalStatus || "")) ||
     REVIEW_LOCKED_KYC_STATUSES.has(String(item.kycStatus || "")) ||
-    REVIEW_LOCKED_BANK_STATUSES.has(String(item.bankVerificationStatus || ""))
-  );
+    REVIEW_LOCKED_BANK_STATUSES.has(String(item.bankVerificationStatus || "")));
 
 const getIncompleteOrganizationRoute = (item = {}) => {
   if (isOrganizationUnderReview(item)) return AUTH_ROUTES.SELLER_STATUS_PENDING;
@@ -159,10 +163,14 @@ export default function Header({
   const [, setIncompleteOrgs] = useState([]);
   const [showIncompletePopup, setShowIncompletePopup] = useState(false);
   const [pendingIncompleteOrg] = useState(null);
-  const [, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
+  const [, setSelectedOrganizationIdState] = useState(
+    getSelectedSellerOrganizationId(),
+  );
   const [avatarFailed, setAvatarFailed] = useState(false);
   const avatarUrl = getAvatarUrl(userData);
-  const notificationsSelector = useSelector((state) => state.notifications || {});
+  const notificationsSelector = useSelector(
+    (state) => state.notifications || {},
+  );
   const notificationsPayload = notificationsSelector.notificationsData || {};
   const notificationsList =
     notificationsPayload?.data?.list ||
@@ -171,9 +179,9 @@ export default function Header({
     notificationsPayload?.data?.notifications ||
     [];
 
-const notificationsSeenAt = useSelector(
-  (state) => state.notifications.notificationsSeenAt
-);
+  const notificationsSeenAt = useSelector(
+    (state) => state.notifications.notificationsSeenAt,
+  );
 
   useEffect(() => {
     // Load notifications on header mount
@@ -191,19 +199,23 @@ const notificationsSeenAt = useSelector(
     return true;
   };
 
-  const unreadExists = (() => {
+  const unreadCount = (() => {
     try {
-      if (!Array.isArray(notificationsList)) return false;
-      return notificationsList.some((n) => {
+      if (!Array.isArray(notificationsList)) return 0;
+
+      return notificationsList.filter((n) => {
         const created = n.createdAt || n.created_at || n.time || n.date || 0;
         const createdTs = created ? Number(new Date(created)) : 0;
+
         const isUnread = isNotificationUnread(n);
         if (!isUnread) return false;
+
         if (!notificationsSeenAt) return true;
+
         return createdTs > notificationsSeenAt;
-      });
+      }).length;
     } catch (err) {
-      return false;
+      return 0;
     }
   })();
 
@@ -233,9 +245,15 @@ const notificationsSeenAt = useSelector(
         event?.detail?.organizationId || getSelectedSellerOrganizationId(),
       );
     };
-    window.addEventListener("seller:organizationChanged", handleOrganizationChanged);
+    window.addEventListener(
+      "seller:organizationChanged",
+      handleOrganizationChanged,
+    );
     return () => {
-      window.removeEventListener("seller:organizationChanged", handleOrganizationChanged);
+      window.removeEventListener(
+        "seller:organizationChanged",
+        handleOrganizationChanged,
+      );
     };
   }, []);
 
@@ -250,16 +268,18 @@ const notificationsSeenAt = useSelector(
     apiRequest("GET", ENDPOINTS.sellers.myOrganizations, { limit: 100 })
       .then((response) => {
         if (!active) return;
-        const data = response?.data?.data || response?.normalized?.data || response?.data || {};
+        const data =
+          response?.data?.data ||
+          response?.normalized?.data ||
+          response?.data ||
+          {};
         const allOrgs = data.organizations || data.items || data.list || [];
         const isApprovedOrg = (item) =>
           item.canSell === true ||
-          (
-            ["approved", "active"].includes(item.approvalStatus) &&
+          (["approved", "active"].includes(item.approvalStatus) &&
             item.kycStatus === "verified" &&
             item.bankVerificationStatus === "verified" &&
-            !["blocked", "rejected"].includes(String(item.goLiveStatus || ""))
-          );
+            !["blocked", "rejected"].includes(String(item.goLiveStatus || "")));
         const approvedOrgs = allOrgs.filter(isApprovedOrg);
         const incomplete = allOrgs.filter((item) => !isApprovedOrg(item));
         setOrganizations(approvedOrgs);
@@ -268,14 +288,19 @@ const notificationsSeenAt = useSelector(
         // Redirect when no organization is approved; submitted orgs stay on status.
         if (approvedOrgs.length === 0 && incomplete.length > 0) {
           if (!currentPath.startsWith("/seller/")) {
-            navigate(getIncompleteOrganizationRoute(incomplete[0]), { replace: true });
+            navigate(getIncompleteOrganizationRoute(incomplete[0]), {
+              replace: true,
+            });
           }
           return;
         }
 
         const stored = getSelectedSellerOrganizationId();
-        const existing = approvedOrgs.some((item) => String(item.id || item.organizationId) === stored);
-        const fallback = approvedOrgs.find((item) => item.isDefault) || approvedOrgs[0];
+        const existing = approvedOrgs.some(
+          (item) => String(item.id || item.organizationId) === stored,
+        );
+        const fallback =
+          approvedOrgs.find((item) => item.isDefault) || approvedOrgs[0];
         const nextId = existing
           ? stored
           : String(fallback?.id || fallback?.organizationId || "");
@@ -289,7 +314,9 @@ const notificationsSeenAt = useSelector(
         }
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [userData?.role, currentPath, navigate]);
 
   const handleLogout = () => {
@@ -381,14 +408,16 @@ const notificationsSeenAt = useSelector(
                 type="button"
                 aria-label="Notifications"
                 onClick={() => {
-                 dispatch(setNotificationsSeenAt(Date.now()));
-                 navigate("/app/notifications");
+                  dispatch(setNotificationsSeenAt(Date.now()));
+                  navigate("/app/notifications");
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >
                 <MdOutlineNotificationsNone size={18} />
-                {unreadExists && (
-                  <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--admin-danger)]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-medium leading-none text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
                 )}
               </button>
             </Tooltip>
@@ -520,13 +549,18 @@ const notificationsSeenAt = useSelector(
           >
             <div className="mb-1 flex items-center gap-2 text-amber-500">
               <MdInfoOutline className="text-xl" />
-              <h3 className="text-sm font-bold text-[var(--admin-ink)]">Setup Incomplete</h3>
+              <h3 className="text-sm font-bold text-[var(--admin-ink)]">
+                Setup Incomplete
+              </h3>
             </div>
             <p className="mt-2 text-xs text-[var(--admin-muted)]">
               <strong className="font-semibold text-[var(--admin-ink)]">
-                {pendingIncompleteOrg.storeDisplayName || pendingIncompleteOrg.legalBusinessName || "This organization"}
+                {pendingIncompleteOrg.storeDisplayName ||
+                  pendingIncompleteOrg.legalBusinessName ||
+                  "This organization"}
               </strong>{" "}
-              has pending setup. Complete the onboarding to activate this organization.
+              has pending setup. Complete the onboarding to activate this
+              organization.
             </p>
             <div className="mt-5 flex gap-3">
               <button
@@ -534,10 +568,14 @@ const notificationsSeenAt = useSelector(
                 className="flex-1 rounded-md bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--admin-navy)] focus:outline-none"
                 onClick={() => {
                   setShowIncompletePopup(false);
-                  navigate(getIncompleteOrganizationRoute(pendingIncompleteOrg));
+                  navigate(
+                    getIncompleteOrganizationRoute(pendingIncompleteOrg),
+                  );
                 }}
               >
-                {isOrganizationUnderReview(pendingIncompleteOrg) ? "View Status" : "Complete Setup"}
+                {isOrganizationUnderReview(pendingIncompleteOrg)
+                  ? "View Status"
+                  : "Complete Setup"}
               </button>
               <button
                 type="button"

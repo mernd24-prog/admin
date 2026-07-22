@@ -18,7 +18,7 @@ import {
 import {
   DataTable,
   PageHeader,
-  FilterBar,
+  // FilterBar,
 } from "../../../../components/Shared";
 import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
@@ -114,18 +114,18 @@ const getRowFlags = (row) => {
   };
 };
 
-const PRICE_STATUS_FILTER_FIELDS = [
-  {
-    key: "priceStatus",
-    type: "select",
-    label: "Price Status",
-    options: [
-      { value: "pending", label: "Pending Changes" },
-      { value: "conflict", label: "Price Conflicts" },
-      { value: "zero", label: "Zero Selling Price" },
-    ],
-  },
-];
+// const PRICE_STATUS_FILTER_FIELDS = [
+//   {
+//     key: "priceStatus",
+//     type: "select",
+//     label: "Price Status",
+//     options: [
+//       { value: "pending", label: "Pending Changes" },
+//       { value: "conflict", label: "Price Conflicts" },
+//       { value: "zero", label: "Zero Selling Price" },
+//     ],
+//   },
+// ];
 
 const getSellerContext = () => {
   try {

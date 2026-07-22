@@ -533,7 +533,7 @@ const ShipmentTracking = () => {
       },
       {
         key: "actions",
-        label: "Actions",
+        label: "Action",
         render: (_, row) => (
           <div className="flex items-center gap-2">
             <ActionButton

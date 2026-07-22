@@ -7,7 +7,6 @@ import {
   MdClose,
   MdDownload,
   MdPayments,
-  MdRefresh,
   MdSearch,
 } from "react-icons/md";
 import {
@@ -271,7 +270,7 @@ const SellerFinance = () => {
       payouts: { paidAmount },
     };
   }, [adminSummary, commissions, isSeller, payouts]);
-  const loading = financeState.loading;
+  // const loading = financeState.loading;
 
   const sellerOverview = useMemo(() => {
     const grouped = new Map();
