@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdInventory2, MdOpenInNew, MdRefresh, MdRemove, MdSave } from "react-icons/md";
+import { MdAdd, MdInventory2, MdOpenInNew, MdRemove, MdSave } from "react-icons/md";
 import { useNavigate, useParams } from "react-router-dom";
 import { BulkActionBar, ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -206,13 +206,13 @@ const getRowsFromResponse = (response) => {
   return [];
 };
 
-const getTotalFromResponse = (response, fallback = 0) =>
-  Number(
-    response?.data?.meta?.pagination?.totalItems ??
-      response?.data?.meta?.total ??
-      response?.data?.total ??
-      fallback,
-  );
+// const getTotalFromResponse = (response, fallback = 0) =>
+//   Number(
+//     response?.data?.meta?.pagination?.totalItems ??
+//       response?.data?.meta?.total ??
+//       response?.data?.total ??
+//       fallback,
+//   );
 
 const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
   const [form, setForm] = useState({

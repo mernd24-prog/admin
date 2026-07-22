@@ -29,6 +29,8 @@ const INVOICE_TYPES = [
   { value: "order_customer", label: "Order Receipt" },
 ];
 
+// const isSeller = isSellerPanel();
+
 const FILTER_FIELDS = isSellerPanel()
   ? [
       { key: "invoiceType", type: "select", label: "Document Type", options: INVOICE_TYPES },

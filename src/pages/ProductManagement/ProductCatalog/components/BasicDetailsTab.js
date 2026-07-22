@@ -268,7 +268,7 @@ export default function BasicDetailsTab({
   const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isCustomWarranty, setIsCustomWarranty] = useState(false);
+  // const [isCustomWarranty, setIsCustomWarranty] = useState(false);
 
   const loadMyBrandSubmissions = useCallback(async () => {
     if (!isSellerPanelUser) return;
@@ -451,49 +451,49 @@ export default function BasicDetailsTab({
     formData.warranty?.period,
     formData.warranty?.periodUnit,
   ]);
-  const hasUnmatchedWarranty = Boolean(
-    (formData.warranty?.period || formData.warranty?.periodUnit) &&
-    !selectedWarrantyOption,
-  );
-  const showCustomWarranty = isCustomWarranty || hasUnmatchedWarranty;
+  // const hasUnmatchedWarranty = Boolean(
+  //   (formData.warranty?.period || formData.warranty?.periodUnit) &&
+  //   !selectedWarrantyOption,
+  // );
+  // const showCustomWarranty = isCustomWarranty || hasUnmatchedWarranty;
 
-  const handleWarrantyTemplateChange = (option) => {
-    const durationValue =
-      option?.durationValue ??
-      option?.meta?.durationValue ??
-      String(option?.value || "").split(":")[0] ??
-      "";
-    const durationUnit =
-      option?.durationUnit ??
-      option?.meta?.durationUnit ??
-      String(option?.value || "").split(":")[1] ??
-      "";
+  // const handleWarrantyTemplateChange = (option) => {
+  //   const durationValue =
+  //     option?.durationValue ??
+  //     option?.meta?.durationValue ??
+  //     String(option?.value || "").split(":")[0] ??
+  //     "";
+  //   const durationUnit =
+  //     option?.durationUnit ??
+  //     option?.meta?.durationUnit ??
+  //     String(option?.value || "").split(":")[1] ??
+  //     "";
 
-    setIsCustomWarranty(false);
-    handleChange({ target: { name: "warranty.period", value: durationValue } });
-    handleChange({
-      target: { name: "warranty.periodUnit", value: durationUnit },
-    });
-  };
+  //   setIsCustomWarranty(false);
+  //   handleChange({ target: { name: "warranty.period", value: durationValue } });
+  //   handleChange({
+  //     target: { name: "warranty.periodUnit", value: durationUnit },
+  //   });
+  // };
 
-  const handleCustomWarrantyToggle = (event) => {
-    const checked = event.target.checked;
-    setIsCustomWarranty(checked);
+  // const handleCustomWarrantyToggle = (event) => {
+  //   const checked = event.target.checked;
+  //   setIsCustomWarranty(checked);
 
-    if (checked) {
-      if (!formData.warranty?.periodUnit) {
-        handleChange({
-          target: { name: "warranty.periodUnit", value: "months" },
-        });
-      }
-      return;
-    }
+  //   if (checked) {
+  //     if (!formData.warranty?.periodUnit) {
+  //       handleChange({
+  //         target: { name: "warranty.periodUnit", value: "months" },
+  //       });
+  //     }
+  //     return;
+  //   }
 
-    if (!selectedWarrantyOption) {
-      handleChange({ target: { name: "warranty.period", value: "" } });
-      handleChange({ target: { name: "warranty.periodUnit", value: "" } });
-    }
-  };
+  //   if (!selectedWarrantyOption) {
+  //     handleChange({ target: { name: "warranty.period", value: "" } });
+  //     handleChange({ target: { name: "warranty.periodUnit", value: "" } });
+  //   }
+  // };
 
   const handleInputCategoryChange = (e) => {
     const { name, value } = e.target;

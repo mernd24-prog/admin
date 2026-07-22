@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MdNotifications,
-  MdRefresh,
   MdSend,
   MdVisibility,
 } from "react-icons/md";
@@ -193,7 +192,7 @@ const UserMessages = () => {
         : BASE_COLUMNS),
       {
         key: "_actions",
-        label: "Actions",
+        label: "Action",
         render: (_, row) => {
           const detailRoute = getNotificationDetailRoute(row);
           if (!detailRoute) return null;

@@ -90,21 +90,21 @@ const getSessionUser = () => {
     return null;
   }
 };
-const DEAL_BADGE_OPTIONS = [
-  "Today's Deal",
-  "Flash Sale",
-  "Hot Deal",
-  "Limited Offer",
-  "Best Deal",
-  "Festival Offer",
-  "Mega Sale",
-];
-const DEAL_SOURCE_OPTIONS = [
-  { value: "admin_direct", label: "Admin Direct" },
-  { value: "seller_request", label: "Seller Request" },
-  { value: "marketing_campaign", label: "Marketing Campaign" },
-  { value: "seasonal_campaign", label: "Seasonal Campaign" },
-];
+// const DEAL_BADGE_OPTIONS = [
+//   "Today's Deal",
+//   "Flash Sale",
+//   "Hot Deal",
+//   "Limited Offer",
+//   "Best Deal",
+//   "Festival Offer",
+//   "Mega Sale",
+// ];
+// const DEAL_SOURCE_OPTIONS = [
+//   { value: "admin_direct", label: "Admin Direct" },
+//   { value: "seller_request", label: "Seller Request" },
+//   { value: "marketing_campaign", label: "Marketing Campaign" },
+//   { value: "seasonal_campaign", label: "Seasonal Campaign" },
+// ];
 
 const hasValue = (value) =>
   value !== undefined && value !== null && value !== "";
@@ -2011,20 +2011,20 @@ export default function ProductManagementUI() {
     }
   };
 
-  const addCommonProductImageUrl = () => {
-    const url = commonImageUrl.trim();
-    const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
-    if (!url) return;
-    if (current.length >= MAX_COMMON_PRODUCT_IMAGES) {
-      toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
-      return;
-    }
-    setFormData((previous) => ({
-      ...previous,
-      commonImages: [...(previous.commonImages || []), url],
-    }));
-    setCommonImageUrl("");
-  };
+  // const addCommonProductImageUrl = () => {
+  //   const url = commonImageUrl.trim();
+  //   const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
+  //   if (!url) return;
+  //   if (current.length >= MAX_COMMON_PRODUCT_IMAGES) {
+  //     toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
+  //     return;
+  //   }
+  //   setFormData((previous) => ({
+  //     ...previous,
+  //     commonImages: [...(previous.commonImages || []), url],
+  //   }));
+  //   setCommonImageUrl("");
+  // };
 
   const removeCommonProductImage = (imageIndex) => {
     setFormData((previous) => ({
@@ -2627,36 +2627,36 @@ export default function ProductManagementUI() {
     ],
   );
 
-  const flowReadiness = useMemo(() => {
-    const items = [
-      {
-        label: "Categories",
-        count: createSelectOptions?.length || 0,
-        route: "/app/categories",
-      },
-      {
-        label: "Attributes (selected category)",
-        count: categoryAttributeSchema?.length || 0,
-        route: "/app/categories",
-      },
-      {
-        label: "Brands",
-        count: formattedData?.brandList?.length || 0,
-        route: "/app/brands",
-      },
-      {
-        label: "HSN Codes",
-        count: formattedData?.hsnCodeList?.length || 0,
-        route: "/app/hsn-code",
-      },
-      {
-        label: "Warranty Templates",
-        count: formattedData?.warrantyTemplateList?.length || 0,
-        route: "/app/warranty",
-      },
-    ];
-    return items;
-  }, [createSelectOptions, categoryAttributeSchema, formattedData]);
+  // const flowReadiness = useMemo(() => {
+  //   const items = [
+  //     {
+  //       label: "Categories",
+  //       count: createSelectOptions?.length || 0,
+  //       route: "/app/categories",
+  //     },
+  //     {
+  //       label: "Attributes (selected category)",
+  //       count: categoryAttributeSchema?.length || 0,
+  //       route: "/app/categories",
+  //     },
+  //     {
+  //       label: "Brands",
+  //       count: formattedData?.brandList?.length || 0,
+  //       route: "/app/brands",
+  //     },
+  //     {
+  //       label: "HSN Codes",
+  //       count: formattedData?.hsnCodeList?.length || 0,
+  //       route: "/app/hsn-code",
+  //     },
+  //     {
+  //       label: "Warranty Templates",
+  //       count: formattedData?.warrantyTemplateList?.length || 0,
+  //       route: "/app/warranty",
+  //     },
+  //   ];
+  //   return items;
+  // }, [createSelectOptions, categoryAttributeSchema, formattedData]);
 
   const flowGateErrors = useMemo(() => {
     const blockers = [];

@@ -3,35 +3,35 @@ export const PANEL_MODES = {
   SELLER: "seller",
 };
 
-const normalizeMode = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase();
+// const normalizeMode = (value) =>
+//   String(value || "")
+//     .trim()
+//     .toLowerCase();
 
-const resolvePanelMode = (value) => {
-  const mode = normalizeMode(value);
-  if (["seller", "sellers", "seller-panel", "seller_panel"].includes(mode)) {
-    return PANEL_MODES.SELLER;
-  }
-  if (["admin", "administrator", "admin-panel", "admin_panel"].includes(mode)) {
-    return PANEL_MODES.ADMIN;
-  }
-  return "";
-};
+// const resolvePanelMode = (value) => {
+//   const mode = normalizeMode(value);
+//   if (["seller", "sellers", "seller-panel", "seller_panel"].includes(mode)) {
+//     return PANEL_MODES.SELLER;
+//   }
+//   if (["admin", "administrator", "admin-panel", "admin_panel"].includes(mode)) {
+//     return PANEL_MODES.ADMIN;
+//   }
+//   return "";
+// };
 
-const detectModeFromRuntime = () => {
-  if (typeof window === "undefined") {
-    return "";
-  }
+// const detectModeFromRuntime = () => {
+//   if (typeof window === "undefined") {
+//     return "";
+//   }
 
-  const host = normalizeMode(window.location.hostname);
-  const path = normalizeMode(window.location.pathname);
-  if (host.includes("seller") || path.startsWith("/seller")) {
-    return PANEL_MODES.SELLER;
-  }
+//   const host = normalizeMode(window.location.hostname);
+//   const path = normalizeMode(window.location.pathname);
+//   if (host.includes("seller") || path.startsWith("/seller")) {
+//     return PANEL_MODES.SELLER;
+//   }
 
-  return "";
-};
+//   return "";
+// };
 
 const configuredMode =
   // resolvePanelMode(process.env.REACT_APP_PANEL_MODE) ||

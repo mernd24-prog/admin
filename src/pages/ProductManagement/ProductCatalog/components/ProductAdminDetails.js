@@ -14,7 +14,7 @@ import {
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
-import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
+// import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { getProductImages, normalizeImageList } from "../../../../_helpers/productMedia";
 import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
 import { formatLabel } from "../../../../utils/formatters";
@@ -38,12 +38,12 @@ const Row = ({ label, value }) => (
   </div>
 );
 
-const CHECKLIST_LABELS = {
-  titleVerified: "Title & Description",
-  categoryVerified: "Category",
-  complianceVerified: "Compliance",
-  mediaVerified: "Media / Images",
-};
+// const CHECKLIST_LABELS = {
+//   titleVerified: "Title & Description",
+//   categoryVerified: "Category",
+//   complianceVerified: "Compliance",
+//   mediaVerified: "Media / Images",
+// };
 
 const refToLabel = (value) => {
   if (!value) return null;
@@ -66,11 +66,11 @@ const getSliceData = (sliceData) => {
   return data;
 };
 
-const formatRevisionValue = (value) => {
-  if (value === undefined || value === null || value === "") return "N/A";
-  if (typeof value === "object") return JSON.stringify(value, null, 2);
-  return String(value);
-};
+// const formatRevisionValue = (value) => {
+//   if (value === undefined || value === null || value === "") return "N/A";
+//   if (typeof value === "object") return JSON.stringify(value, null, 2);
+//   return String(value);
+// };
 
 const toNumberOrNull = (value) => {
   if (value === undefined || value === null || value === "") return null;
@@ -90,31 +90,31 @@ const getDefaultVariant = (product = {}) => {
     null;
 };
 
-const getEffectivePrice = (product = {}) => {
-  const defaultVariant = getDefaultVariant(product);
-  return hasVariants(product)
-    ? toNumberOrNull(defaultVariant?.price ?? defaultVariant?.salePrice)
-    : toNumberOrNull(product?.price ?? product?.salePrice);
-};
+// const getEffectivePrice = (product = {}) => {
+//   const defaultVariant = getDefaultVariant(product);
+//   return hasVariants(product)
+//     ? toNumberOrNull(defaultVariant?.price ?? defaultVariant?.salePrice)
+//     : toNumberOrNull(product?.price ?? product?.salePrice);
+// };
 
-const getEffectiveMrp = (product = {}) => {
-  const defaultVariant = getDefaultVariant(product);
-  return hasVariants(product)
-    ? toNumberOrNull(defaultVariant?.mrp ?? defaultVariant?.price)
-    : toNumberOrNull(product?.mrp ?? product?.price);
-};
+// const getEffectiveMrp = (product = {}) => {
+//   const defaultVariant = getDefaultVariant(product);
+//   return hasVariants(product)
+//     ? toNumberOrNull(defaultVariant?.mrp ?? defaultVariant?.price)
+//     : toNumberOrNull(product?.mrp ?? product?.price);
+// };
 
-const getEffectiveStock = (product = {}) => {
-  const defaultVariant = getDefaultVariant(product);
-  return hasVariants(product)
-    ? toNumberOrNull(defaultVariant?.stock)
-    : toNumberOrNull(product?.stock);
-};
+// const getEffectiveStock = (product = {}) => {
+//   const defaultVariant = getDefaultVariant(product);
+//   return hasVariants(product)
+//     ? toNumberOrNull(defaultVariant?.stock)
+//     : toNumberOrNull(product?.stock);
+// };
 
-const formatMoney = (value) => {
-  const amount = toNumberOrNull(value);
-  return amount === null ? null : `₹${amount.toLocaleString("en-IN")}`;
-};
+// const formatMoney = (value) => {
+//   const amount = toNumberOrNull(value);
+//   return amount === null ? null : `₹${amount.toLocaleString("en-IN")}`;
+// };
 
 const ProductAdminDetails = () => {
   const { id } = useParams();
@@ -135,9 +135,9 @@ const ProductAdminDetails = () => {
     product.pendingRevision ||
     revisions.find((revision) => revision.status === "pending") ||
     null;
-  const statusHistory = Array.isArray(product.statusHistory)
-    ? [...product.statusHistory].reverse()
-    : [];
+  // const statusHistory = Array.isArray(product.statusHistory)
+  //   ? [...product.statusHistory].reverse()
+  //   : [];
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -158,7 +158,7 @@ const ProductAdminDetails = () => {
     product.attributes instanceof Map
       ? Object.fromEntries(product.attributes)
       : product.attributes || {};
-  const productImages = getProductImages(product);
+  // const productImages = getProductImages(product);
 
   const getVariantImage = (variant = {}) => {
     const imgs = normalizeImageList(
@@ -182,9 +182,9 @@ const ProductAdminDetails = () => {
       variant?.thumbnail,
       variant?.media?.images,
     );
-  const effectivePrice = getEffectivePrice(product);
-  const effectiveMrp = getEffectiveMrp(product);
-  const effectiveStock = getEffectiveStock(product);
+  // const effectivePrice = getEffectivePrice(product);
+  // const effectiveMrp = getEffectiveMrp(product);
+  // const effectiveStock = getEffectiveStock(product);
   const sellerDisplayName =
     product.sellerName ||
     product.seller?.displayName ||

@@ -31,8 +31,6 @@ function NetworkDetector(ComposedComponent) {
       };
     }, []);
 
-    // console.log("isDisconnected  ", isDisconnected);
-
     return (
       <div>
         {isDisconnected && (

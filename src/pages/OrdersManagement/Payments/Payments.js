@@ -3,7 +3,7 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdCheckCircle, MdRefresh, MdSettings, MdVisibility, MdCancel } from "react-icons/md";
+import { MdCheckCircle, MdSettings, MdVisibility, MdCancel } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";

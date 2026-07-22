@@ -546,7 +546,7 @@ const Orders = () => {
     },
     {
       key: "_actions",
-      label: "Actions",
+      label: "Action",
       render: (_, row) => (
         <div className="flex flex-wrap items-center gap-2">
           <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>

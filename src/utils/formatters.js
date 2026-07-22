@@ -83,11 +83,17 @@ export function formatLabel(value, fallback = "Not available") {
     return fallback;
   }
 
-  return String(value)
+  const text = String(value).trim();
+
+  // Preserve emails and URLs
+  if (/@/.test(text) || /^https?:\/\//i.test(text) || /^www\./i.test(text)) {
+    return text;
+  }
+
+  return text
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/_+/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 /**

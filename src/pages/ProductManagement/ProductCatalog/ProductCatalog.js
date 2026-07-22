@@ -904,7 +904,7 @@ const ProductCatalog = () => {
       },
       {
         key: "actions",
-        label: "Action",
+        label: "Actions",
         // headerClassName: "min-w-[360px]",
         // cellClassName: "min-w-[360px]",
         render: (_, product) => (
