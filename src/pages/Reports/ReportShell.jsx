@@ -1,14 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  Area,
-  AreaChart,
   Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
-  LabelList,
-  Pie,
-  PieChart,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -17,6 +12,7 @@ import {
 import {
   MdAccountBalanceWallet,
   MdAssignmentReturn,
+  MdCalendarToday,
   MdCurrencyRupee,
   MdFileDownload,
   MdInbox,
@@ -38,17 +34,15 @@ import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 
-const RANGE_OPTIONS = ["Today", "Last 7 days", "Last 30 days", "Last 90 days"];
-const CHART_COLORS = [
-  "var(--admin-navy)",
-  "var(--admin-gold)",
-  "var(--admin-danger)",
-  "var(--admin-navy-dark)",
-  "var(--admin-gold-dark)",
-  "var(--admin-line-strong)",
-];
-const CHART_GRID_COLOR = "var(--admin-line)";
+const CHART_GRID_COLOR = "#e9dfc9";
+const REPORT_GOLD = "#d6a323";
+const REPORT_GOLD_DARK = "#b98514";
 const SELLER_REPORT_CRUMB = "My Reports";
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const monthFormatter = new Intl.DateTimeFormat("en-IN", {
+  month: "long",
+  year: "numeric",
+});
 
 const STAT_ICON_BY_LABEL = {
   "Total Revenue": MdCurrencyRupee,
@@ -92,12 +86,55 @@ const formatDayLabel = (value) => {
   if (!date || Number.isNaN(date.getTime())) return "Selected";
   return date.toLocaleDateString("en-IN", { weekday: "short" });
 };
-const titleize = (value = "") =>
-  String(value || "unknown")
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+const toIsoDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
-const toIsoDate = (date) => date.toISOString().slice(0, 10);
+const parseInputDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const addMonths = (date, amount) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + amount, 1);
+  return next;
+};
+
+const buildCalendarDays = (viewDate) => {
+  const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return {
+      date,
+      value: toIsoDate(date),
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === viewDate.getMonth(),
+    };
+  });
+};
+
+const isBetweenDates = (value, start, end) =>
+  Boolean(start && end && value >= start && value <= end);
+
+const formatDateLabel = (value) => {
+  const date = parseInputDate(value);
+  if (!date || Number.isNaN(date.getTime())) return value || "";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const rangeToDates = (range) => {
   const to = new Date();
@@ -116,35 +153,12 @@ const listFrom = (value) => {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.list)) return value.list;
   if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.products)) return value.products;
   if (Array.isArray(value?.data)) return value.data;
   return [];
 };
 
-const statusRows = (bucket = {}) =>
-  Object.entries(bucket?.byStatus || {}).map(([status, row]) => ({
-    status: titleize(status),
-    count: asNumber(row?.count),
-    amount: asNumber(row?.netAmount ?? row?.grossAmount),
-  }));
-
 const fetchJson = async (endpoint, params = {}) => unwrapData(await axiosPrivate.get(endpoint, { params }));
-
-const MetricTooltip = ({ active, payload, label, valueFormatter = formatNumber }) => {
-  if (!active || !payload?.length) return null;
-  const row = payload[0]?.payload || {};
-  const metric = payload[0];
-
-  return (
-    <div className="max-w-[280px] rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
-      <p className="line-clamp-2 text-[12px] font-bold leading-5 text-[var(--admin-navy)]">
-        {row.title || row.sellerName || label}
-      </p>
-      <p className="mt-1 text-[12px] font-semibold text-[var(--admin-muted)]">
-        {titleize(metric.name)}: <span className="text-[var(--admin-ink)]">{valueFormatter(metric.value)}</span>
-      </p>
-    </div>
-  );
-};
 
 const useReportFilters = (defaultRange = "Last 30 days") => {
   const initial = rangeToDates(defaultRange);
@@ -169,6 +183,12 @@ const useReportFilters = (defaultRange = "Last 30 days") => {
     setToDate(value);
   };
 
+  const setCustomDateRange = (nextFromDate, nextToDate) => {
+    setRange("Custom");
+    setFromDate(nextFromDate);
+    setToDate(nextToDate);
+  };
+
   return {
     range,
     fromDate,
@@ -176,6 +196,7 @@ const useReportFilters = (defaultRange = "Last 30 days") => {
     setRange: setPresetRange,
     setFromDate: setCustomFromDate,
     setToDate: setCustomToDate,
+    setDateRange: setCustomDateRange,
   };
 };
 
@@ -213,15 +234,15 @@ const StatCard = ({ label, value, sub, loading }) => {
       {loading ? (
         <StatCardSkeletonLoader />
       ) : (
-        <div className="group relative flex h-full min-h-[108px] overflow-hidden rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-[var(--admin-shadow)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-strong)]">
+        <div className="group relative flex h-full min-h-[98px] overflow-hidden rounded-lg border border-[var(--admin-line)] bg-gradient-to-br from-white to-[var(--admin-gold-soft)]/45 p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.06)] transition duration-200 hover:border-[var(--admin-gold)] hover:shadow-[var(--admin-shadow)]">
           <span className="absolute inset-y-0 left-0 w-1 bg-[var(--admin-gold)]" />
-          <span className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--admin-line)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)] transition group-hover:border-[var(--admin-gold)] group-hover:bg-[var(--admin-gold)]">
-            <Icon size={20} />
+          <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-md border border-[#ead8a9] bg-white text-[var(--admin-navy)] transition group-hover:bg-[var(--admin-gold-soft)]">
+            <Icon size={18} />
           </span>
-          <div className="relative flex min-w-0 flex-col justify-between pr-12">
-            <p className="text-[12px] font-semibold text-[var(--admin-ink)]">{label}</p>
-            <p className="mt-2 truncate text-[24px] font-extrabold leading-7 text-[var(--admin-navy)]">{value}</p>
-            {sub && <p className="mt-3 text-[11px] font-medium capitalize text-[var(--admin-muted)]">{sub}</p>}
+          <div className="relative flex min-w-0 flex-col justify-between pr-11">
+            <p className="text-[11px] font-bold text-[var(--admin-ink)]">{label}</p>
+            <p className="mt-1.5 truncate text-[20px] font-extrabold leading-6 text-[var(--admin-navy)]">{value}</p>
+            {sub && <p className="mt-2 text-[10.5px] font-medium capitalize text-[var(--admin-muted)]">{sub}</p>}
           </div>
         </div>
       )}
@@ -233,13 +254,13 @@ const EmptyPanel = ({
   title = "No data found",
   text = "No data returned for this period.",
 }) => (
-  <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-surface-soft)] p-6 text-center">
+  <div className="flex min-h-[190px] items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-surface-soft)] p-5 text-center">
     <div className="max-w-sm">
-      <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-[var(--admin-gold)] shadow-sm">
-        <MdInbox size={24} />
+      <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
+        <MdInbox size={21} />
       </span>
-      <h4 className="mt-4 text-sm font-bold text-[var(--admin-navy)]">{title}</h4>
-      <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{text}</p>
+      <h4 className="mt-3 text-[13px] font-bold text-[var(--admin-navy)]">{title}</h4>
+      <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">{text}</p>
     </div>
   </div>
 );
@@ -247,12 +268,12 @@ const EmptyPanel = ({
 const ReportLoadingContext = createContext(false);
 
 const PanelSkeleton = ({ rows = 6 }) => (
-  <div className="min-h-[220px] animate-pulse space-y-4 rounded-lg bg-white py-2">
+  <div className="min-h-[190px] animate-pulse space-y-3 rounded-lg bg-white py-2">
     {Array.from({ length: rows }).map((_, index) => (
       <div key={index} className="flex items-center gap-3">
-        <div className="h-4 w-1/4 rounded bg-[var(--admin-surface-soft)]" />
+        <div className="h-4 w-1/4 rounded bg-[var(--admin-gold-soft)]" />
         <div
-          className="h-4 rounded bg-[var(--admin-surface-soft)]"
+          className="h-4 rounded bg-[var(--admin-gold-soft)]"
           style={{ width: `${70 - (index % 3) * 12}%` }}
         />
       </div>
@@ -260,29 +281,14 @@ const PanelSkeleton = ({ rows = 6 }) => (
   </div>
 );
 
-const ChartPanel = ({ title, data = [], children }) => {
-  const loading = useContext(ReportLoadingContext);
-  return (
-    <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[var(--admin-shadow)]">
-      <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-4">
-        <span className="h-8 w-1 rounded-full bg-[var(--admin-gold)]" />
-        <h3 className="text-[15px] font-bold text-[var(--admin-navy)]">{title}</h3>
-      </div>
-      <div className="min-h-[280px] bg-white p-5">
-        {loading ? <PanelSkeleton /> : data.length ? children : <EmptyPanel title="No chart data" text="There is no chart data for the selected date range." />}
-      </div>
-    </div>
-  );
-};
-
 const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, emptyText }) => {
   const loading = useContext(ReportLoadingContext);
   const navigate = useNavigate();
   return (
-    <div className="admin-card overflow-hidden shadow-[var(--admin-shadow)]">
-    <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-4">
-      <span className="h-8 w-1 rounded-full bg-[var(--admin-gold)]" />
-      <h3 className="text-[15px] font-bold text-[var(--admin-navy)]">{title}</h3>
+    <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[0_10px_28px_rgba(31,27,95,0.06)]">
+    <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3.5">
+      <span className="h-6 w-1 rounded-full bg-[var(--admin-gold)]" />
+      <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">{title}</h3>
     </div>
     {loading ? (
       <div className="p-5"><PanelSkeleton /></div>
@@ -292,7 +298,7 @@ const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, e
           <thead className="admin-table-head">
             <tr>
               {columns.map((column) => (
-                <th key={column.key} className="px-4 py-3 text-left text-xs font-semibold text-[var(--admin-navy)]">
+                <th key={column.key} className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
                   {column.label}
                 </th>
               ))}
@@ -309,7 +315,7 @@ const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, e
                 className={getRowLink?.(row) ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]" : ""}
               >
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-3 text-sm font-medium text-[var(--admin-ink)]">
+                  <td key={column.key} className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]">
                     {column.render ? column.render(row[column.key], row) : row[column.key]}
                   </td>
                 ))}
@@ -330,6 +336,182 @@ const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, e
   );
 };
 
+const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
+  const [draftDates, setDraftDates] = useState({
+    fromDate: filters?.fromDate || "",
+    toDate: filters?.toDate || "",
+  });
+  const [viewDate, setViewDate] = useState(() =>
+    parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
+  );
+  const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
+  const today = toIsoDate(new Date());
+  const hasCompleteRange = Boolean(draftDates.fromDate && draftDates.toDate);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraftDates({ fromDate: filters?.fromDate || "", toDate: filters?.toDate || "" });
+    setViewDate(parseInputDate(filters?.fromDate || filters?.toDate) || new Date());
+  }, [filters?.fromDate, filters?.toDate, open]);
+
+  if (!open) return null;
+
+  const selectDate = (value) => {
+    const selectedDate = parseInputDate(value);
+    if (!selectedDate) return;
+    setViewDate(selectedDate);
+    setDraftDates((current) => {
+      if (!current.fromDate || current.toDate) return { fromDate: value, toDate: "" };
+      if (value < current.fromDate) return { fromDate: value, toDate: current.fromDate };
+      return { ...current, toDate: value };
+    });
+  };
+
+  const applyRange = () => {
+    if (!hasCompleteRange) return;
+    const nextDates = draftDates.fromDate <= draftDates.toDate
+      ? draftDates
+      : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
+    filters.setDateRange(nextDates.fromDate, nextDates.toDate);
+    onClose();
+  };
+
+  const selectToday = () => {
+    setDraftDates({ fromDate: today, toDate: today });
+    setViewDate(new Date());
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-[390px] rounded-lg bg-white p-4 shadow-[0_22px_70px_rgba(31,27,95,0.22)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-[var(--admin-ink)]">Select Date Range</h2>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">Report data will update after apply.</p>
+          </div>
+          <button
+            type="button"
+            className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+            onClick={onClose}
+            disabled={loading}
+            aria-label="Close date range picker"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-none">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#ffe8a8]"
+              onClick={() => setViewDate(addMonths(viewDate, -1))}
+              disabled={loading}
+              aria-label="Previous month"
+            >
+              {"<"}
+            </button>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-[var(--admin-ink)]">{monthFormatter.format(viewDate)}</h3>
+              <p className="text-[11px] font-medium text-[var(--admin-muted)]">Select start and end date</p>
+            </div>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#ffe8a8]"
+              onClick={() => setViewDate(addMonths(viewDate, 1))}
+              disabled={loading}
+              aria-label="Next month"
+            >
+              {">"}
+            </button>
+          </div>
+
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
+            {WEEKDAY_LABELS.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day) => {
+              const isStart = day.value === draftDates.fromDate;
+              const isEnd = day.value === draftDates.toDate;
+              const isSelected = isStart || isEnd;
+              const isInRange = isBetweenDates(day.value, draftDates.fromDate, draftDates.toDate);
+              const isDisabled = day.value > today;
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
+                    isSelected
+                      ? "bg-[var(--admin-gold)] text-white shadow-sm"
+                      : isInRange
+                        ? "bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]"
+                        : day.isCurrentMonth
+                          ? "text-[var(--admin-ink)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)]"
+                          : "text-slate-300 hover:bg-slate-50"
+                  } disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
+                  onClick={() => selectDate(day.value)}
+                  disabled={loading || isDisabled}
+                >
+                  {day.day}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 rounded border border-[#ead8a9] bg-[var(--admin-gold-soft)] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
+            {draftDates.fromDate ? formatDateLabel(draftDates.fromDate) : "Start date"} - {draftDates.toDate ? formatDateLabel(draftDates.toDate) : "End date"}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex min-h-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#ffe8a8] disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={selectToday}
+                disabled={loading}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-8 items-center justify-center rounded border border-red-100 bg-white px-3 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setDraftDates({ fromDate: "", toDate: "" })}
+                disabled={loading || (!draftDates.fromDate && !draftDates.toDate)}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#ffe8a8] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={!hasCompleteRange || loading}
+                onClick={applyRange}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ReportShell = ({
   title,
   subtitle,
@@ -341,8 +523,13 @@ export const ReportShell = ({
   onRefresh,
   exportEndpoint,
   exportFilename,
+  showFilters = true,
 }) => {
   const [exporting, setExporting] = useState(false);
+  const [dateModalOpen, setDateModalOpen] = useState(false);
+  const dateRangeLabel = filters?.fromDate && filters?.toDate
+    ? `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`
+    : "Select date range";
 
   const handleExport = async () => {
     if (!exportEndpoint) return;
@@ -376,49 +563,36 @@ export const ReportShell = ({
         }
       />
 
-      <section className="admin-card mb-5 p-4 shadow-[var(--admin-shadow)]">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] xl:items-end">
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[var(--admin-muted)]">Date range</span>
-            <select
-              value={filters.range}
-              onChange={(event) => filters.setRange(event.target.value)}
-              className="admin-input w-full"
-            >
-              {RANGE_OPTIONS.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-              {filters.range === "Custom" && <option>Custom</option>}
-            </select>
-          </label>
+      <ReportDateRangeModal
+        open={dateModalOpen}
+        filters={filters}
+        loading={loading}
+        onClose={() => setDateModalOpen(false)}
+      />
 
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[var(--admin-muted)]">From date</span>
-            <input
-              type="date"
-              value={filters.fromDate}
-              max={filters.toDate}
-              onChange={(event) => filters.setFromDate(event.target.value)}
-              className="admin-input w-full"
-            />
-          </label>
-
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[var(--admin-muted)]">To date</span>
-            <input
-              type="date"
-              value={filters.toDate}
-              min={filters.fromDate}
-              onChange={(event) => filters.setToDate(event.target.value)}
-              className="admin-input w-full"
-            />
-          </label>
+      <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          {showFilters ? (
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-bold uppercase text-[var(--admin-muted)]">Filter</span>
+              <button
+                type="button"
+                onClick={() => setDateModalOpen(true)}
+                className="inline-flex min-h-9 max-w-full items-center justify-center gap-2 rounded border border-[var(--admin-gold)] bg-[var(--admin-gold)] px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[var(--admin-gold-dark)]"
+              >
+                <MdCalendarToday size={15} />
+                <span className="truncate">{dateRangeLabel}</span>
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs font-medium text-[var(--admin-muted)]">Showing current report data.</p>
+          )}
 
           <button
             type="button"
             onClick={onRefresh}
             disabled={loading}
-            className="admin-btn-secondary w-full justify-center sm:w-auto xl:min-w-[112px] mb-1.5"
+            className="admin-btn-secondary w-full justify-center sm:w-auto xl:min-w-[112px]"
           >
             <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
             {loading ? "Refreshing" : "Refresh"}
@@ -426,7 +600,7 @@ export const ReportShell = ({
         </div>
       </section>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} loading={loading} />
         ))}
@@ -452,21 +626,103 @@ const useMarketplaceAnalytics = () => {
   return { filters, ...report };
 };
 
-const orderStatusRowsFromRecentOrders = (recentOrders = []) => {
-  const buckets = listFrom(recentOrders).reduce((lookup, order) => {
-    const status = titleize(order.status || "unknown");
-    lookup[status] = (lookup[status] || 0) + 1;
-    return lookup;
-  }, {});
-  return Object.entries(buckets).map(([status, count]) => ({ status, count }));
+const getOrderRevenue = (order = {}) =>
+  asNumber(
+    order.sellerAmount ??
+      order.seller_amount ??
+      order.sellerOrderTotal ??
+      order.seller_order_total ??
+      order.totalAmount ??
+      order.total_amount ??
+      order.payableAmount ??
+      order.payable_amount ??
+      order.amount ??
+      order.total,
+  );
+
+const normalizePerformanceSource = (source = []) =>
+  listFrom(source)
+    .map((item, index) => {
+      const orders = asNumber(
+        item.orders ??
+          item.orderCount ??
+          item.totalOrders ??
+          item.value ??
+          item.count ??
+          item.total,
+      );
+      const revenue = asNumber(
+        item.revenue ??
+          item.gmv ??
+          item.gmvAmount ??
+          item.totalRevenue ??
+          item.totalSalesAmount ??
+          item.amount,
+      );
+      return {
+        label: item.label || item.name || item.date || item.day || `Point ${index + 1}`,
+        orders,
+        revenue,
+        averageOrderValue: asNumber(item.averageOrderValue ?? item.aov ?? (orders ? revenue / orders : 0)),
+      };
+    })
+    .filter((row) => row.orders > 0 || row.revenue > 0);
+
+const productRowsFromAnalytics = (products = []) =>
+  listFrom(products).map((product, index) => ({
+    id: product._id || product.id,
+    title: product.title || product.name || "Untitled",
+    label: truncateLabel(product.title || product.name || `Product ${index + 1}`, 18),
+    purchases: asNumber(product.analytics?.purchases ?? product.purchases ?? product.unitsSold),
+    revenue: asNumber(product.analytics?.revenue ?? product.revenue),
+  }));
+
+const productTotalsFromRows = (rows = []) => ({
+  purchases: rows.reduce((sum, row) => sum + asNumber(row.purchases), 0),
+  revenue: rows.reduce((sum, row) => sum + asNumber(row.revenue), 0),
+});
+
+const analyticsSnapshotRows = ({ orders = {}, returns = {}, payouts = {}, productTotals = {} }) => {
+  const orderRevenue = asNumber(orders.gmvAmount ?? orders.totalSalesAmount);
+  const orderCount = asNumber(orders.orderCount);
+  const productRevenue = asNumber(productTotals.revenue);
+  const productPurchases = asNumber(productTotals.purchases);
+  const pendingPayout = asNumber(payouts.byStatus?.pending?.netAmount);
+  const pendingPayoutCount = asNumber(payouts.byStatus?.pending?.count);
+
+  return [
+    {
+      label: "Product Revenue",
+      amount: productRevenue,
+      count: productPurchases,
+    },
+    {
+      label: "Orders",
+      amount: orderRevenue,
+      count: orderCount,
+    },
+    {
+      label: "Returns",
+      amount: asNumber(returns.refundAmount),
+      count: asNumber(returns.returnCount),
+    },
+    {
+      label: "Pending Payouts",
+      amount: pendingPayout,
+      count: pendingPayoutCount,
+    },
+  ];
 };
 
-const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {} }) => {
+const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {}, performance = [] }) => {
+  const performanceRows = normalizePerformanceSource(performance);
+  if (performanceRows.length) return performanceRows;
+
   const grouped = listFrom(recentOrders).reduce((lookup, order) => {
-    const key = formatDayLabel(order.createdAt);
+    const key = formatDayLabel(order.createdAt ?? order.created_at ?? order.date);
     const current = lookup[key] || { label: key, orders: 0, revenue: 0 };
     current.orders += 1;
-    current.revenue += asNumber(order.sellerAmount ?? order.totalAmount ?? order.amount);
+    current.revenue += getOrderRevenue(order);
     lookup[key] = current;
     return lookup;
   }, {});
@@ -479,7 +735,15 @@ const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {} }) => {
   if (rows.length) return rows.reverse();
 
   const orderCount = asNumber(orders.orderCount);
-  const revenue = asNumber(orders.gmvAmount ?? orders.totalSalesAmount);
+  const revenue = asNumber(
+    orders.gmvAmount ??
+      orders.totalSalesAmount ??
+      orders.totalRevenue ??
+      orders.revenue ??
+      orders.payableAmount,
+  );
+  if (!orderCount && !revenue) return [];
+
   return [{
     label: "Selected",
     orders: orderCount,
@@ -488,156 +752,141 @@ const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {} }) => {
   }];
 };
 
-const SummaryDonut = ({ title, rows = [], totalLabel = "Total" }) => {
-  const total = rows.reduce((sum, row) => sum + asNumber(row.count), 0);
-  const donutRows = rows.filter((row) => asNumber(row.count) > 0);
+const PerformanceOverview = ({
+  title = "Sales Trend",
+  rows = [],
+  barKey = "revenue",
+  lineKey = "orders",
+  barLabel = "Revenue",
+  lineLabel = "Orders",
+  barFormatter = formatCurrency,
+  lineFormatter = formatNumber,
+  includeZeroRows = false,
+}) => {
+  const loading = useContext(ReportLoadingContext);
+  const chartRows = includeZeroRows
+    ? rows
+    : rows.filter((row) => asNumber(row[barKey]) > 0 || asNumber(row[lineKey]) > 0);
+  const composedRows = chartRows.map((row) => ({
+    ...row,
+    barValue: asNumber(row[barKey]),
+    lineValue: asNumber(row[lineKey]),
+  }));
+  const barSize = composedRows.length <= 4 ? 24 : 30;
 
   return (
-    <ChartPanel title={title} data={donutRows}>
-      <div className="grid min-h-[240px] gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
-        <div className="relative h-[220px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={donutRows}
-                dataKey="count"
-                nameKey="status"
-                innerRadius={58}
-                outerRadius={82}
-                paddingAngle={2}
-              >
-                {donutRows.map((_, index) => (
-                  <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatNumber(value)} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-extrabold text-[var(--admin-navy)]">{formatNumber(total)}</span>
-            <span className="text-xs font-medium text-[var(--admin-muted)]">{totalLabel}</span>
-          </div>
+    <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--admin-line)] pb-3.5">
+        <div>
+          <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">{title}</h3>
+          <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
         </div>
-        <div className="space-y-3">
-          {donutRows.map((row, index) => {
-            const count = asNumber(row.count);
-            const percentage = total ? Math.round((count / total) * 100) : 0;
-            return (
-              <div key={row.status} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--admin-muted)]">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                  />
-                  <span className="truncate">{row.status}</span>
-                </span>
-                <span className="shrink-0 font-bold text-[var(--admin-ink)]">
-                  {formatNumber(count)} ({percentage}%)
-                </span>
-              </div>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-[var(--admin-muted)]">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+            {barLabel}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
+            {lineLabel}
+          </span>
         </div>
       </div>
-    </ChartPanel>
-  );
-};
-
-const PerformanceOverview = ({ rows = [] }) => {
-  const loading = useContext(ReportLoadingContext);
-  const chartRows = rows.filter(
-    (row) => asNumber(row.orders) > 0 || asNumber(row.revenue) > 0 || asNumber(row.averageOrderValue) > 0,
-  );
-  const maxValue = Math.max(
-    ...chartRows.flatMap((row) => [
-      asNumber(row.orders),
-      asNumber(row.revenue),
-      asNumber(row.averageOrderValue),
-    ]),
-    0,
-  );
-
-  return (
-    <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-5 shadow-[var(--admin-shadow)]">
-      <h3 className="text-[18px] font-bold text-[var(--admin-ink)]">Performance Overview</h3>
-      <div className="mt-5 border-t border-[var(--admin-line)] pt-5">
+      <div className="mt-4">
         {loading ? (
-          <PanelSkeleton />
-        ) : chartRows.length ? (
-          <>
-            <div className="mb-4 flex flex-wrap items-center gap-6 text-[12px] font-medium text-[var(--admin-muted)]">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
-                Order
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
-                Revenue
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
-                Average Order Value
-              </span>
+          <div className="min-h-[300px] animate-pulse">
+            <div className="mb-4 grid h-[255px] grid-cols-8 items-end gap-4 border-b border-l border-[var(--admin-line)] px-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="flex h-full items-end">
+                  <div
+                    className="w-full rounded-t bg-[var(--admin-gold-soft)]"
+                    style={{ height: `${32 + (index % 5) * 12}%` }}
+                  />
+                </div>
+              ))}
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={chartRows} margin={{ left: 0, right: 12, top: 6, bottom: 0 }}>
+            <div className="mx-auto h-4 w-44 rounded bg-[var(--admin-gold-soft)]" />
+          </div>
+        ) : composedRows.length ? (
+          <div className="w-full">
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={composedRows} margin={{ left: 4, right: 8, top: 18, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="performanceRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--admin-gold)" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="var(--admin-gold)" stopOpacity={0.04} />
-                  </linearGradient>
-                  <linearGradient id="performanceAverage" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--admin-navy)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--admin-navy)" stopOpacity={0.04} />
+                  <linearGradient id="reportRevenueBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={REPORT_GOLD} stopOpacity={0.96} />
+                    <stop offset="100%" stopColor={REPORT_GOLD_DARK} stopOpacity={0.96} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke={CHART_GRID_COLOR} />
+                <CartesianGrid stroke={CHART_GRID_COLOR} strokeDasharray="0" />
                 <XAxis
                   dataKey="label"
+                  interval={0}
                   tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
-                  axisLine={{ stroke: "var(--admin-line-strong)" }}
+                  axisLine={{ stroke: "#e9dfc9" }}
                   tickLine={false}
                 />
                 <YAxis
-                  domain={[0, Math.max(1, maxValue)]}
+                  yAxisId="left"
                   tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
-                  tickFormatter={(value) => formatNumber(value)}
+                  tickFormatter={barFormatter}
                   axisLine={false}
                   tickLine={false}
+                  width={72}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
+                  tickFormatter={lineFormatter}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
                 />
                 <Tooltip
-                  formatter={(value, name) => [
-                    name === "revenue" || name === "averageOrderValue" ? formatCurrency(value) : formatNumber(value),
-                    titleize(name),
-                  ]}
+                  cursor={{ fill: "rgba(214, 163, 35, 0.08)" }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
+                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">{label}</p>
+                        <div className="mt-2 space-y-1">
+                          {payload.map((item) => {
+                            const isBar = item.dataKey === "barValue";
+                            return (
+                              <p key={item.dataKey} className="text-[12px] font-semibold text-[var(--admin-muted)]">
+                                {isBar ? barLabel : lineLabel}:{" "}
+                                <span className="text-[var(--admin-ink)]">
+                                  {isBar ? barFormatter(item.value) : lineFormatter(item.value)}
+                                </span>
+                              </p>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="orders"
-                  stroke="var(--admin-success)"
-                  fill="transparent"
-                  strokeWidth={2}
-                  dot={false}
+                <Bar
+                  yAxisId="left"
+                  dataKey="barValue"
+                  stackId="growth"
+                  fill="url(#reportRevenueBar)"
+                  radius={[5, 5, 0, 0]}
+                  barSize={barSize}
+                  minPointSize={includeZeroRows ? 4 : 0}
                 />
-                <Area
+                <Line
+                  yAxisId="right"
                   type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--admin-gold)"
-                  fill="url(#performanceRevenue)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="averageOrderValue"
+                  dataKey="lineValue"
                   stroke="var(--admin-navy)"
-                  fill="url(#performanceAverage)"
-                  strokeWidth={2}
-                  dot={false}
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
+                  activeDot={{ r: 6, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
                 />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
-          </>
+          </div>
         ) : (
           <EmptyPanel title="No chart data" text="There is no performance data for the selected date range." />
         )}
@@ -646,84 +895,158 @@ const PerformanceOverview = ({ rows = [] }) => {
   );
 };
 
-const HorizontalMetricChart = ({
-  title,
-  rows = [],
-  dataKey,
-  labelKey = "chartLabel",
-  valueFormatter = formatNumber,
-  barColor = "var(--admin-navy)",
-}) => {
-  const chartRows = rows
-    .filter((row) => asNumber(row[dataKey]) > 0)
-    .slice(0, 8);
-  const maxValue = Math.max(...chartRows.map((row) => asNumber(row[dataKey])), 0);
+const SummaryColumnChart = ({ title, items = [] }) => {
+  const loading = useContext(ReportLoadingContext);
+  const chartOrder = [
+    "Delivered",
+    "Refunds",
+    "Returns",
+    "Return Requests",
+    "Pending Payouts",
+    "Orders",
+    "Purchases",
+    "Revenue",
+  ];
+  const orderedItems = [...items].sort((a, b) => {
+    const aIndex = chartOrder.indexOf(a.label);
+    const bIndex = chartOrder.indexOf(b.label);
+    const safeAIndex = aIndex === -1 ? chartOrder.length : aIndex;
+    const safeBIndex = bIndex === -1 ? chartOrder.length : bIndex;
+    return safeAIndex - safeBIndex;
+  });
+  const maxValue = Math.max(...orderedItems.map((item) => asNumber(item.value)), 0);
+  const chartRows = orderedItems.map((item) => {
+    const value = asNumber(item.value);
+    return {
+      ...item,
+      rawValue: value,
+      chartValue: value > 0 && maxValue ? Math.max(18, Math.round((value / maxValue) * 100)) : 0,
+    };
+  });
 
   return (
-    <ChartPanel title={title} data={chartRows}>
-      <ResponsiveContainer width="100%" height={Math.max(260, chartRows.length * 54)}>
-        <BarChart
-          data={chartRows}
-          layout="vertical"
-          barCategoryGap={18}
-          margin={{ left: 16, right: 48, top: 8, bottom: 8 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} />
-          <XAxis
-            type="number"
-            allowDecimals={false}
-            domain={[0, Math.max(1, maxValue)]}
-            tickCount={Math.min(5, Math.max(2, maxValue + 1))}
-            tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
-            axisLine={{ stroke: "var(--admin-line-strong)" }}
-            tickLine={false}
-          />
-          <YAxis
-            type="category"
-            dataKey={labelKey}
-            width={160}
-            tick={{ fontSize: 11, fill: "var(--admin-ink)" }}
-            tickLine={false}
-            axisLine={{ stroke: "var(--admin-line-strong)" }}
-          />
-          <Tooltip
-            cursor={{ fill: "var(--admin-surface-soft)" }}
-            content={<MetricTooltip valueFormatter={valueFormatter} />}
-          />
-          <Bar dataKey={dataKey} fill={barColor} radius={[0, 5, 5, 0]} barSize={30}>
-            <LabelList
-              dataKey={dataKey}
-              position="right"
-              formatter={valueFormatter}
-              className="fill-[var(--admin-navy)] text-[11px] font-bold"
-            />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartPanel>
+    <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
+      <div className="border-b border-[var(--admin-line)] pb-3.5">
+        <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">{title}</h3>
+        <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
+      </div>
+
+      {loading ? (
+        <div className="mt-4 min-h-[260px] animate-pulse rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
+          <div className="grid h-[220px] grid-cols-4 items-end gap-8 border-b border-l border-[var(--admin-line)] px-6">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex h-full flex-col items-center justify-end gap-3">
+                <div className="h-4 w-24 rounded bg-[var(--admin-gold-soft)]" />
+                <div className="w-8 rounded-t bg-[var(--admin-gold-soft)]" style={{ height: `${70 + index * 28}px` }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : chartRows.length ? (
+        <div className="mt-4 min-h-[260px] rounded-lg border border-[var(--admin-line)] bg-white p-3">
+          <div className="h-[255px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartRows} margin={{ left: 8, right: 8, top: 18, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="summaryReportBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={REPORT_GOLD} stopOpacity={0.98} />
+                    <stop offset="100%" stopColor={REPORT_GOLD_DARK} stopOpacity={0.98} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={CHART_GRID_COLOR} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  interval={0}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: "var(--admin-muted)" }}
+                  axisLine={{ stroke: "#e9dfc9" }}
+                  tickLine={false}
+                />
+                <YAxis domain={[0, 100]} hide />
+                <Tooltip
+                  cursor={{ fill: "rgba(214, 163, 35, 0.08)" }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const row = payload[0]?.payload;
+                    return (
+                      <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
+                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">{label}</p>
+                        <p className="mt-1 text-[13px] font-extrabold text-[var(--admin-ink)]">{row?.displayValue}</p>
+                        {row?.sub && <p className="mt-1 text-[11px] font-semibold text-[var(--admin-muted)]">{row.sub}</p>}
+                      </div>
+                    );
+                  }}
+                />
+                <Bar
+                  dataKey="chartValue"
+                  fill="url(#summaryReportBar)"
+                  radius={[5, 5, 0, 0]}
+                  barSize={28}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="chartValue"
+                  stroke="var(--admin-navy)"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
+                  activeDot={{ r: 6, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-6">
+          <EmptyPanel title="No chart data" text="There is no report data for the selected date range." />
+        </div>
+      )}
+    </div>
   );
 };
 
 export const SalesReport = () => {
-  const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
   const sellerView = isSellerPanel();
+  const filters = useReportFilters();
+  const loadData = useCallback(async ({ fromDate, toDate }) => {
+    const dashboard = await fetchJson(
+      sellerView ? ENDPOINTS.analytics.sellerDashboard : ENDPOINTS.analytics.adminDashboard,
+      { fromDate, toDate },
+    );
+    if (!sellerView) return dashboard;
+    const topProducts = await fetchJson(ENDPOINTS.products.analyticsTop, {
+      limit: 10,
+      metric: "purchases",
+      fromDate,
+      toDate,
+    });
+    return { ...dashboard, topProducts: listFrom(topProducts) };
+  }, [sellerView]);
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const orders = data.orders || {};
-  const payments = data.payments || {};
   const returns = data.returns || {};
-  const orderStatusRows = sellerView
-    ? orderStatusRowsFromRecentOrders(data.recentOrders)
-    : listFrom(orders.statusBreakdown);
-  const paymentRows = statusRows(payments);
   const performanceRows = performanceRowsFromAnalytics({
     recentOrders: data.recentOrders,
     orders,
+    performance: data.orderPerformance || data.ordersPerformance || data.salesTrend,
   });
+  const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
+  const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
+  const useProductFallback = sellerView && !performanceRows.length && fallbackProductRows.some((row) => row.revenue > 0 || row.purchases > 0);
+  const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
+  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.purchases);
+  const refundAmount = asNumber(returns.refundAmount);
+  const deliveredOrders = asNumber(orders.deliveredOrders);
+  const salesSummaryItems = [
+    { label: "Revenue", value: totalRevenue, displayValue: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics" : "Selected range" },
+    { label: useProductFallback ? "Purchases" : "Orders", value: totalOrders, displayValue: formatNumber(totalOrders), sub: useProductFallback ? "Product units" : "All statuses" },
+    { label: "Delivered", value: deliveredOrders, displayValue: formatNumber(deliveredOrders), sub: "Completed orders" },
+    { label: "Refunds", value: refundAmount, displayValue: formatCurrency(refundAmount), sub: "Return refunds" },
+  ];
 
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
-    { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
-    { label: "Delivered Orders", value: formatNumber(orders.deliveredOrders), sub: "Completed fulfilment" },
-    { label: "Refund Amount", value: formatCurrency(returns.refundAmount), sub: "Return refunds" },
+    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
+    { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
+    { label: "Delivered Orders", value: formatNumber(deliveredOrders), sub: "Completed fulfilment" },
+    { label: "Refund Amount", value: formatCurrency(refundAmount), sub: "Return refunds" },
   ];
 
   return (
@@ -739,11 +1062,7 @@ export const SalesReport = () => {
       exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.orders}
       exportFilename={sellerView ? null : "sales-report.csv"}
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <PerformanceOverview rows={performanceRows} />
-        <SummaryDonut title="Order Status" rows={orderStatusRows} totalLabel="Total Orders" />
-        {!sellerView && <SummaryDonut title="Payment Status" rows={paymentRows} totalLabel="Payments" />}
-      </div>
+      <SummaryColumnChart title="Sales Report Summary" items={salesSummaryItems} />
     </ReportShell>
   );
 };
@@ -752,28 +1071,53 @@ export const ProductAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
   const loadData = useCallback(async ({ fromDate, toDate }) => {
-    const [topProducts, inventoryStats] = await Promise.all([
+    const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
       fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases", fromDate, toDate }),
       fetchJson(ENDPOINTS.products.inventoryStats),
+      fetchJson(ENDPOINTS.products.listForPanel, { limit: 100, includeAllStatuses: true }).catch(() => []),
     ]);
-    return { topProducts: listFrom(topProducts), inventoryStats };
+    return { topProducts: listFrom(topProducts), inventoryStats, catalogProducts: listFrom(catalogProducts) };
   }, []);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const products = listFrom(data.topProducts);
+  const catalogProducts = listFrom(data.catalogProducts);
   const inventory = data.inventoryStats || {};
-  const purchaseTotal = products.reduce((sum, product) => sum + asNumber(product.analytics?.purchases), 0);
-  const revenueTotal = products.reduce((sum, product) => sum + asNumber(product.analytics?.revenue), 0);
+  const analyticsById = new Map(products.map((product) => [String(product._id || product.id || product.productId), product]));
+  const displayProducts = catalogProducts.length ? catalogProducts.map((product) => {
+    const analyticsProduct = analyticsById.get(String(product._id || product.id || product.productId)) || product;
+    return { ...product, analytics: analyticsProduct.analytics || product.analytics || {} };
+  }) : products;
 
-  const rows = products.map((product) => ({
-    id: product._id || product.id,
+  const baseRows = displayProducts.map((product) => ({
+    id: product._id || product.id || product.productId,
     title: product.title || product.name || "Untitled",
+    label: truncateLabel(product.title || product.name || "Untitled", 18),
     chartLabel: truncateLabel(product.title || product.name || "Untitled", 26),
-    sku: product.sku || "-",
-    price: formatCurrency(product.price),
+    sku: product.sku || product.skuCode || "-",
+    price: formatCurrency(product.price || product.sellingPrice || product.salePrice),
     purchases: asNumber(product.analytics?.purchases),
     revenue: asNumber(product.analytics?.revenue),
     views: asNumber(product.analytics?.views),
   }));
+  const totalProductsCount = asNumber(inventory.totalProducts);
+  const rows = totalProductsCount > baseRows.length
+    ? [
+      ...baseRows,
+      ...Array.from({ length: totalProductsCount - baseRows.length }, (_, index) => ({
+        id: `missing-product-${index + 1}`,
+        title: `Product ${baseRows.length + index + 1}`,
+        label: `Product ${baseRows.length + index + 1}`,
+        chartLabel: `Product ${baseRows.length + index + 1}`,
+        sku: "-",
+        price: formatCurrency(0),
+        purchases: 0,
+        revenue: 0,
+        views: 0,
+      })),
+    ]
+    : baseRows;
+  const purchaseTotal = rows.reduce((sum, product) => sum + asNumber(product.purchases), 0);
+  const revenueTotal = rows.reduce((sum, product) => sum + asNumber(product.revenue), 0);
 
   const stats = [
     { label: "Total Products", value: formatNumber(inventory.totalProducts), sub: "Current catalog" },
@@ -796,11 +1140,16 @@ export const ProductAnalytics = () => {
       exportFilename={sellerView ? null : "product-analytics.csv"}
     >
       <div className="space-y-4">
-        <HorizontalMetricChart
-          title="Top Products by Purchases"
+        <PerformanceOverview
+          title="Top Product Growth"
           rows={rows}
-          dataKey="purchases"
-          barColor="var(--admin-navy)"
+          barKey="revenue"
+          lineKey="purchases"
+          barLabel="Revenue"
+          lineLabel="Purchases"
+          barFormatter={formatCurrency}
+          lineFormatter={formatNumber}
+          includeZeroRows
         />
         <ReportTable
           title="Top Product Details"
@@ -843,15 +1192,10 @@ export const InventoryAnalytics = () => {
   }, []);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const statsData = data.stats || {};
-  const stockRows = [
-    { status: "Total Stock", count: asNumber(statsData.totalStock) },
-    { status: "Reserved", count: asNumber(statsData.totalReserved) },
-    { status: "Low Stock", count: asNumber(statsData.lowStockCount) },
-    { status: "Out of Stock", count: asNumber(statsData.outOfStockCount) },
-  ];
   const lowStockRows = listFrom(data.lowStock).map((product) => ({
     id: product._id || product.id,
     title: product.title || product.name || "Untitled",
+    label: truncateLabel(product.title || product.name || "Untitled", 18),
     sku: product.sku || "-",
     stock: asNumber(product.stock),
     reservedStock: asNumber(product.reservedStock),
@@ -877,9 +1221,19 @@ export const InventoryAnalytics = () => {
       onRefresh={refresh}
       exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.inventory}
       exportFilename={sellerView ? null : "inventory-report.csv"}
+      showFilters={false}
     >
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SummaryDonut title="Stock Health" rows={stockRows} totalLabel="Units" />
+      <div className="space-y-4">
+        <PerformanceOverview
+          title="Inventory Stock Growth"
+          rows={lowStockRows}
+          barKey="stock"
+          lineKey="availableStock"
+          barLabel="Stock"
+          lineLabel="Available"
+          barFormatter={formatNumber}
+          lineFormatter={formatNumber}
+        />
         <ReportTable
           title={sellerView ? "Inventory Products" : "Low Stock Products"}
           rows={lowStockRows}
@@ -911,6 +1265,7 @@ export const SellerAnalytics = () => {
   const rows = sellers.map((seller) => ({
     sellerId: seller.sellerId,
     sellerName: seller.sellerName || seller.sellerId,
+    label: truncateLabel(seller.sellerName || seller.sellerId, 18),
     chartLabel: truncateLabel(seller.sellerName || seller.sellerId, 26),
     orderCount: asNumber(seller.orderCount),
     deliveredOrders: asNumber(seller.deliveredOrders),
@@ -941,12 +1296,15 @@ export const SellerAnalytics = () => {
       exportFilename="seller-analytics.csv"
     >
       <div className="space-y-4">
-        <HorizontalMetricChart
+        <PerformanceOverview
           title="Top Sellers by GMV"
           rows={rows}
-          dataKey="gmvAmount"
-          valueFormatter={formatCurrency}
-          barColor="var(--admin-navy)"
+          barKey="gmvAmount"
+          lineKey="orderCount"
+          barLabel="GMV"
+          lineLabel="Orders"
+          barFormatter={formatCurrency}
+          lineFormatter={formatNumber}
         />
         <ReportTable
           title="Seller Scorecard"
@@ -987,28 +1345,55 @@ export const AnalyticsDashboard = () => {
   const orders = marketplace.orders || {};
   const returns = marketplace.returns || {};
   const payouts = marketplace.payouts || {};
-  const orderStatusRows = sellerView
-    ? orderStatusRowsFromRecentOrders(marketplace.recentOrders)
-    : listFrom(orders.statusBreakdown);
   const performanceRows = performanceRowsFromAnalytics({
     recentOrders: marketplace.recentOrders,
     orders,
+    performance: marketplace.orderPerformance || marketplace.ordersPerformance || marketplace.salesTrend,
   });
-  const sellerRows = listFrom(marketplace.sellerPerformance).map((seller) => ({
-    sellerName: seller.sellerName || seller.sellerId,
-    chartLabel: truncateLabel(seller.sellerName || seller.sellerId, 26),
-    gmvAmount: asNumber(seller.gmvAmount),
-  }));
-  const productRows = listFrom(data.topProducts).map((product) => ({
-    title: product.title || product.name || "Untitled",
-    chartLabel: truncateLabel(product.title || product.name || "Untitled", 24),
-    purchases: asNumber(product.analytics?.purchases),
-  }));
+  const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
+  const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
+  const useProductFallback = sellerView && !performanceRows.length && fallbackProductRows.some((row) => row.revenue > 0 || row.purchases > 0);
+  const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
+  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.purchases);
+  const returnCount = asNumber(returns.returnCount);
+  const pendingPayout = asNumber(payouts.byStatus?.pending?.netAmount);
+  const snapshotRows = analyticsSnapshotRows({
+    orders,
+    returns,
+    payouts,
+    productTotals: useProductFallback ? fallbackProductTotals : {},
+  });
+  const analyticsSummaryItems = [
+    {
+      label: "Revenue",
+      value: totalRevenue,
+      displayValue: formatCurrency(totalRevenue),
+      sub: useProductFallback ? "Product analytics" : "Seller sales",
+    },
+    {
+      label: "Orders",
+      value: totalOrders,
+      displayValue: formatNumber(totalOrders),
+      sub: useProductFallback ? "Product purchases" : "All statuses",
+    },
+    {
+      label: "Returns",
+      value: returnCount,
+      displayValue: formatNumber(returnCount),
+      sub: "Return requests",
+    },
+    {
+      label: "Pending Payouts",
+      value: pendingPayout,
+      displayValue: formatCurrency(pendingPayout),
+      sub: "Seller settlements",
+    },
+  ];
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(orders.gmvAmount ?? orders.totalSalesAmount), sub: "GMV in selected range" },
-    { label: "Total Orders", value: formatNumber(orders.orderCount), sub: "All order statuses" },
-    { label: "Return Requests", value: formatNumber(returns.returnCount), sub: "Return workflow" },
-    { label: "Pending Payouts", value: formatCurrency(payouts.byStatus?.pending?.netAmount), sub: "Seller settlements" },
+    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
+    { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
+    { label: "Return Requests", value: formatNumber(returnCount), sub: "Return workflow" },
+    { label: "Pending Payouts", value: formatCurrency(pendingPayout), sub: "Seller settlements" },
   ];
 
   return (
@@ -1022,30 +1407,15 @@ export const AnalyticsDashboard = () => {
       filters={filters}
       onRefresh={refresh}
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <PerformanceOverview rows={performanceRows} />
-        <SummaryDonut title="Order Status" rows={orderStatusRows} totalLabel="Total Orders" />
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {!sellerView && (
-          <HorizontalMetricChart
-            title="Top Sellers by GMV"
-            rows={sellerRows}
-            dataKey="gmvAmount"
-            valueFormatter={formatCurrency}
-            barColor="var(--admin-gold)"
-          />
-        )}
-        <div className={sellerView ? "xl:col-span-2" : ""}>
-          <HorizontalMetricChart
-            title="Top Products by Purchases"
-            rows={productRows}
-            dataKey="purchases"
-            barColor="var(--admin-navy)"
-          />
-        </div>
-      </div>
+      <SummaryColumnChart
+        title={sellerView ? "Seller Analytics Snapshot" : "Marketplace Analytics Snapshot"}
+        items={analyticsSummaryItems.length ? analyticsSummaryItems : snapshotRows.map((row) => ({
+          label: row.label,
+          value: row.amount || row.count,
+          displayValue: row.amount ? formatCurrency(row.amount) : formatNumber(row.count),
+          sub: row.amount ? "Amount" : "Count",
+        }))}
+      />
     </ReportShell>
   );
 };

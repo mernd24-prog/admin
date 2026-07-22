@@ -70,6 +70,48 @@ const payoutDecision = (row = {}) => {
   return { allowed: false, label: "Not Yet", reason: row.releaseReason ? formatLabel(row.releaseReason) : "Waiting for eligibility" };
 };
 
+const commissionStatusMatches = (row = {}, statusFilter = "") => {
+  const filter = String(statusFilter || "").toLowerCase();
+  if (!filter) return true;
+
+  const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+  const releaseReason = String(row.releaseReason || row.release_reason || "").toLowerCase();
+  const hasPayout = Boolean(row.payout_id || row.payoutId);
+
+  if (filter === "return_window_open") {
+    return releaseReason === "waiting_for_item_return_window" || status === "return_window_open";
+  }
+  if (filter === "pending") {
+    return !hasPayout && !["eligible", "available", "held", "blocked", "on_hold", "released", "paid", "completed", "failed", "cancelled"].includes(status);
+  }
+  if (filter === "eligible") return ["eligible", "available"].includes(status) && !hasPayout;
+  if (filter === "held") return ["held", "blocked", "on_hold"].includes(status);
+  if (filter === "released") return ["released", "paid", "completed"].includes(status) || hasPayout;
+  return status === filter;
+};
+
+const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
+  const needle = String(search || "").trim().toLowerCase();
+  if (!needle) return true;
+  const sellerId = row.seller_id || row.sellerId;
+  const haystack = [
+    row.id,
+    row.order_id,
+    row.orderId,
+    row.orderNumber,
+    row.order_number,
+    row.payout_id,
+    row.payoutId,
+    row.sellerName,
+    row.seller?.displayName,
+    row.seller?.businessName,
+    sellerId,
+    sellerLabel(sellerId, sellerOptions),
+    organizationName(row),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(needle);
+};
+
 const MetricCard = ({ label, value, hint }) => (
   <div className="rounded-lg border border-[#E6E6E6] bg-white p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-[#65718b]">{label}</p>
@@ -241,6 +283,10 @@ const SellerFinance = () => {
   const payouts = listOf(isSeller ? financeState.myPayoutsData?.data : financeState.adminPayoutsData?.data);
   const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
   const adminSummary = unwrap(financeState.financeSummaryData?.data);
+  const visibleCommissions = useMemo(() => commissions.filter((row) =>
+    commissionStatusMatches(row, filters.status) &&
+    commissionSearchMatches(row, filters.search, sellerOptions)
+  ), [commissions, filters.search, filters.status, sellerOptions]);
   const summary = useMemo(() => {
     if (!isSeller) return adminSummary;
     const totals = commissions.reduce(
@@ -714,7 +760,7 @@ const SellerFinance = () => {
           headings={["Order", "Delivered", "Return Window Starts", "Return Window Ends", "Net Payable", "Can Payout?", "Reason", ...(!isSeller ? ["Action"] : [])]}
           emptyText="No order payout records found for this seller"
         >
-          {commissions.length ? commissions.map((row) => {
+          {visibleCommissions.length ? visibleCommissions.map((row) => {
             const decision = payoutDecision(row);
             return (
               <tr key={`eligibility-${row.id}`}>
@@ -763,7 +809,7 @@ const SellerFinance = () => {
           ]}
           emptyText="No commissions found"
         >
-          {commissions.length ? commissions.map((row) => (
+          {visibleCommissions.length ? visibleCommissions.map((row) => (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}

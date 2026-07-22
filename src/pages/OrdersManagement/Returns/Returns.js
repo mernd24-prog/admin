@@ -141,6 +141,45 @@ const buyerContact = (row = {}) => row?.buyerEmail || row?.buyer?.email || row?.
 const orderNumber = (row = {}) => row?.orderNumber || row?.order_number || row?.order?.orderNumber || row?.order?.order_number;
 const sellerName = (item = {}, row = {}) => item?.sellerName || personName(item?.seller) ||
   row?.sellerName || personName(row?.seller);
+const returnSearchText = (row = {}) => [
+  returnId(row),
+  row.returnNumber,
+  row.return_number,
+  row.rmaNumber,
+  row.rma_number,
+  row.orderId,
+  row.order_id,
+  orderNumber(row),
+  buyerName(row),
+  buyerContact(row),
+  row.trackingNumber,
+  row.tracking_number,
+  row.reverseShipment?.trackingNumber,
+  row.reverseShipment?.tracking_number,
+  row.reverseShipment?.awbNumber,
+  row.reverseShipment?.awb_number,
+  row.reverseShipment?.shipment?.awb_number,
+  row.reverseShipment?.shipment?.tracking_number,
+].filter(Boolean).join(" ").toLowerCase();
+
+const returnMatchesSearch = (row = {}, search = "") => {
+  const needle = String(search || "").trim().toLowerCase();
+  if (!needle) return true;
+  return returnSearchText(row).includes(needle);
+};
+
+const returnMatchesFilters = (row = {}, filters = {}) => {
+  const orderNeedle = String(filters.orderId || "").trim().toLowerCase();
+  if (orderNeedle && !returnSearchText(row).includes(orderNeedle)) return false;
+
+  const status = String(filters.status || "").toLowerCase();
+  if (status && status !== "all" && String(row.status || "").toLowerCase() !== status) return false;
+
+  const reason = String(filters.reason || "").toLowerCase();
+  if (reason && reason !== "all" && String(row.reason || "").toLowerCase() !== reason) return false;
+
+  return true;
+};
 
 const Returns = () => {
   const dispatch = useDispatch();
@@ -175,15 +214,26 @@ const filterFields = useMemo(
   const [detailReturn, setDetailReturn] = useState(null);
   const [action, setAction] = useState(EMPTY_ACTION);
   const [confirmAction, setConfirmAction] = useState({ open: false });
+  const visibleReturns = useMemo(
+    () => payload.list.filter((row) =>
+      returnMatchesSearch(row, list.search) &&
+      returnMatchesFilters(row, list.filters)
+    ),
+    [list.filters, list.search, payload.list],
+  );
 
   const fetchReturns = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const params = toQueryParams();
+      const hasLocalSearch = Boolean(params.search || params.orderId);
+      delete params.search;
+      delete params.orderId;
       await dispatch(getAdminReturns({
         ...params,
-        offset: (params.page - 1) * params.limit,
+        limit: hasLocalSearch ? 200 : params.limit,
+        offset: hasLocalSearch ? 0 : (params.page - 1) * params.limit,
       })).unwrap();
     } catch (requestError) {
       const message = requestError?.message || requestError || "Failed to load returns";
@@ -563,9 +613,9 @@ const filterFields = useMemo(
 
       <DataTable
         columns={columns}
-        data={payload.list}
+        data={visibleReturns}
         loading={loading}
-        totalCount={payload.total || payload.list.length}
+        totalCount={list.search || list.activeFilterCount ? visibleReturns.length : (payload.total || payload.list.length)}
         page={list.page}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
@@ -590,7 +640,7 @@ const filterFields = useMemo(
         requiredModule="returns"
         tableContainerClassName="overflow-x-auto overscroll-x-contain"
         tableClassName="min-w-[1480px]"
-        exportConfig={{ filename: "returns-refunds", columns, data: payload.list }}
+        exportConfig={{ filename: "returns-refunds", columns, data: visibleReturns }}
       />
 
       <DefaultModal isOpen={Boolean(detailReturn)} onClose={() => setDetailReturn(null)} title="Return Detail" isButtonView={false} width="640px">
