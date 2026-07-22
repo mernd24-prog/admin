@@ -53,6 +53,8 @@ const normalizeCouponRecord = (coupon = {}) => ({
   max_discount_value: firstDefined(coupon?.max_discount_value, coupon?.maxDiscountAmount, ""),
   uses_per_coupon: firstDefined(coupon?.uses_per_coupon, coupon?.usageLimit, ""),
   uses_per_customer: firstDefined(coupon?.uses_per_customer, coupon?.usesPerCustomer, ""),
+  funding_type: firstDefined(coupon?.funding_type, coupon?.fundingType, "marketplace"),
+  seller_funding_percent: firstDefined(coupon?.seller_funding_percent, coupon?.sellerFundingPercent, 0),
   valid_from: firstDefined(coupon?.valid_from, coupon?.startsAt),
   valid_to: firstDefined(coupon?.valid_to, coupon?.expiresAt),
   isDisable: typeof coupon?.isDisable === "boolean" ? coupon.isDisable : coupon?.active === false,
@@ -76,6 +78,12 @@ const toCouponApiPayload = (data) => ({
   maxDiscountAmount: toNumber(data?.max_discount_value, null),
   usageLimit: toNumber(data?.uses_per_coupon, null),
   usesPerCustomer: toNumber(data?.uses_per_customer, null),
+  fundingType: data?.funding_type || "marketplace",
+  sellerFundingPercent: data?.funding_type === "seller"
+    ? 100
+    : data?.funding_type === "shared"
+      ? toNumber(data?.seller_funding_percent, 0)
+      : 0,
   startsAt: data?.valid_from || null,
   expiresAt: data?.valid_to || null,
   active: !data?.isDisable,
@@ -133,6 +141,18 @@ const COLUMNS = [
     },
   },
   {
+    key: "funding_type",
+    label: "Funded By",
+    render: (v, row) => (
+      <span className="text-sm capitalize text-gray-600">
+        {(v || "marketplace").replace(/_/g, " ")}
+        {(v === "shared" || row.fundingType === "shared")
+          ? ` (${Number(row.seller_funding_percent ?? row.sellerFundingPercent ?? 0)}% seller)`
+          : ""}
+      </span>
+    ),
+  },
+  {
     key: "valid_from",
     label: "From",
     sortable: true,
@@ -158,7 +178,8 @@ const COLUMNS = [
 const EMPTY_FORM = {
   title: "", code: "", description: "", valid_from: "", valid_to: "",
   type: "percentage", value: "", min_order_value: "", max_discount_value: "",
-  uses_per_coupon: "", uses_per_customer: "", _id: null, isDisable: false,
+  uses_per_coupon: "", uses_per_customer: "", funding_type: "marketplace",
+  seller_funding_percent: 0, _id: null, isDisable: false,
 };
 
 const DiscountCoupons = () => {
@@ -239,6 +260,9 @@ const DiscountCoupons = () => {
     if (formData.max_discount_value === "") errs.max_discount_value = "Max discount is required";
     if (formData.uses_per_coupon === "") errs.uses_per_coupon = "Uses per coupon is required";
     if (formData.uses_per_customer === "") errs.uses_per_customer = "Uses per customer is required";
+    if (formData.funding_type === "shared" && (
+      Number(formData.seller_funding_percent) <= 0 || Number(formData.seller_funding_percent) >= 100
+    )) errs.seller_funding_percent = "Shared funding must be between 1% and 99%";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -320,6 +344,8 @@ const DiscountCoupons = () => {
             max_discount_value: c.max_discount_value,
             uses_per_coupon: c.uses_per_coupon,
             uses_per_customer: c.uses_per_customer,
+            funding_type: c.funding_type,
+            seller_funding_percent: c.seller_funding_percent,
             valid_from: toDateInputValue(c.valid_from),
             valid_to: toDateInputValue(c.valid_to),
             isDisable: c.isDisable,
@@ -425,6 +451,20 @@ const DiscountCoupons = () => {
               <div className="grid grid-cols-2 gap-4">
                 <FormInput label="Min Order Value (₹)" name="min_order_value" type="number" value={formData.min_order_value} onChange={handleInputChange} error={errors.min_order_value} min="0" required />
                 <FormInput label="Max Discount Cap (₹)" name="max_discount_value" type="number" value={formData.max_discount_value} onChange={handleInputChange} error={errors.max_discount_value} min="0" required />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Discount Funded By</label>
+                  <select name="funding_type" value={formData.funding_type} onChange={handleInputChange} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]">
+                    <option value="marketplace">Marketplace</option>
+                    <option value="seller">Seller</option>
+                    <option value="shared">Marketplace and seller</option>
+                  </select>
+                </div>
+                {formData.funding_type === "shared" && (
+                  <FormInput label="Seller Share (%)" name="seller_funding_percent" type="number" value={formData.seller_funding_percent} onChange={handleInputChange} error={errors.seller_funding_percent} min="1" max="99" required />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

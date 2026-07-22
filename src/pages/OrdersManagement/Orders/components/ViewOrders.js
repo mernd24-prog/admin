@@ -330,18 +330,33 @@ const normalizeSellerSettlement = (seller = {}) => ({
   taxCollected: money(firstDefined(seller.taxAmount, seller.taxCollected, seller.tax_amount, 0)),
   sellerPayoutBase: money(firstDefined(seller.sellerPayoutBaseAmount, seller.seller_payout_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
   commissionFee: money(firstDefined(seller.platformFeeAmount, seller.commissionAmount, seller.commissionFee, seller.platform_fee_amount, 0)),
+  commissionReversal: money(firstDefined(seller.commissionReversalAmount, seller.commission_reversal_amount, 0)),
+  netCommissionFee: money(firstDefined(seller.netPlatformCommissionAmount, seller.net_platform_commission_amount, seller.platformFeeAmount, seller.commissionAmount, 0)),
   variableCommissionFee: money(firstDefined(seller.commissionFeeAmount, seller.commission_fee_amount, 0)),
   platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
+  commissionTaxReversal: money(firstDefined(seller.commissionTaxReversalAmount, seller.commission_tax_reversal_amount, 0)),
+  netCommissionTax: money(firstDefined(seller.netCommissionTaxAmount, seller.net_commission_tax_amount, seller.platformFeeTaxAmount, seller.commissionTaxAmount, 0)),
+  discountAmount: money(firstDefined(seller.discountAmount, seller.discount_amount, 0)),
+  sellerFundedDiscount: money(firstDefined(seller.sellerFundedDiscountAmount, seller.seller_funded_discount_amount, 0)),
+  marketplaceFundedDiscount: money(firstDefined(seller.marketplaceFundedDiscountAmount, seller.marketplace_funded_discount_amount, 0)),
   sellerDeliveryCharge: money(firstDefined(seller.sellerDeliveryChargeAmount, seller.seller_delivery_charge_amount, seller.deliveryChargeAmount, seller.delivery_charge_amount, 0)),
   shippingReimbursement: money(firstDefined(seller.shippingReimbursementAmount, seller.shipping_reimbursement_amount, 0)),
   shippingDeduction: money(firstDefined(seller.shippingDeductionAmount, seller.shipping_deduction_amount, 0)),
   shippingPolicy: firstDefined(seller.shippingPolicy, seller.shipping_policy, ""),
   refundAmount: money(firstDefined(seller.refundAmount, seller.refund_amount, 0)),
+  sellerPayoutBaseReversal: money(firstDefined(seller.sellerPayoutBaseReversalAmount, seller.seller_payout_base_reversal_amount, seller.refundAmount, seller.refund_amount, 0)),
   adjustmentAmount: money(firstDefined(seller.adjustmentAmount, seller.adjustment_amount, 0)),
   gstTcsRate: money(firstDefined(seller.gstTcsRate, seller.gst_tcs_rate, 0)),
   gstTcsAmount: money(firstDefined(seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
+  gstTcsTaxableBase: money(firstDefined(seller.gstTcsTaxableBaseAmount, seller.gst_tcs_taxable_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
+  gstTcsReversal: money(firstDefined(seller.gstTcsReversalAmount, seller.gst_tcs_reversal_amount, 0)),
+  netGstTcsAmount: money(firstDefined(seller.netGstTcsAmount, seller.net_gst_tcs_amount, seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
+  gstTcsTaxableBaseReversal: money(firstDefined(seller.gstTcsTaxableBaseReversalAmount, seller.gst_tcs_taxable_base_reversal_amount, 0)),
+  netGstTcsTaxableBase: money(firstDefined(seller.netGstTcsTaxableBaseAmount, seller.net_gst_tcs_taxable_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
   incomeTaxTdsRate: money(firstDefined(seller.incomeTaxTdsRate, seller.income_tax_tds_rate, 0)),
   incomeTaxTdsAmount: money(firstDefined(seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
+  incomeTaxTdsReversal: money(firstDefined(seller.incomeTaxTdsReversalAmount, seller.income_tax_tds_reversal_amount, 0)),
+  netIncomeTaxTdsAmount: money(firstDefined(seller.netIncomeTaxTdsAmount, seller.net_income_tax_tds_amount, seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
   sellerPayout: money(firstDefined(seller.sellerPayoutAmount, seller.sellerPayout, seller.seller_payout_amount, 0)),
   commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
   payoutStatus: firstDefined(seller.payoutStatus, seller.payout_status, ""),
@@ -1205,13 +1220,20 @@ const OrderSummary = () => {
                     <div className="flex justify-between"><span>Product Total</span><span>{formatMoney(seller.grossSales)}</span></div>
                     <div className="flex justify-between text-[#65718b]"><span>Seller payout base</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
                     {seller.taxCollected > 0 && <div className="flex justify-between text-xs text-[#65718b]"><span>Product GST (included; seller tax liability)</span><span>{formatMoney(seller.taxCollected)}</span></div>}
+                    {seller.discountAmount > 0 && <div className="flex justify-between text-[#65718b]"><span>Customer Discount</span><span>-{formatMoney(seller.discountAmount)}</span></div>}
+                    {seller.marketplaceFundedDiscount > 0 && <div className="flex justify-between text-xs text-[#21812C]"><span>Marketplace-funded reimbursement</span><span>+{formatMoney(seller.marketplaceFundedDiscount)}</span></div>}
+                    {seller.sellerFundedDiscount > 0 && <div className="flex justify-between text-xs text-[#A35B00]"><span>Seller-funded discount impact</span><span>-{formatMoney(seller.sellerFundedDiscount)}</span></div>}
                     <div className="flex justify-between">
-                      <span>Platform Commission</span>
+                      <span>{seller.commissionReversal > 0 ? "Net Platform Commission" : "Platform Commission"}</span>
                       <span>
-                        -{formatMoney(seller.commissionFee)}
+                        -{formatMoney(seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee)}
                         {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
                       </span>
                     </div>
+                    {seller.commissionReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+                      <div className="flex justify-between"><span>Original commission</span><span>{formatMoney(seller.commissionFee)}</span></div>
+                      <div className="flex justify-between text-[#21812C]"><span>Reversed for refunded item</span><span>-{formatMoney(seller.commissionReversal)}</span></div>
+                    </div>}
                     {seller.commissionBreakdown.length > 1 && (
                       <div className="ml-3 space-y-1 rounded-md bg-[#f8faff] px-2 py-1.5 text-xs text-[#65718b]">
                         {seller.commissionBreakdown.map((entry) => (
@@ -1222,16 +1244,30 @@ const OrderSummary = () => {
                         ))}
                       </div>
                     )}
-                    {seller.platformFeeTax > 0 && <div className="flex justify-between"><span>GST on Commission</span><span>-{formatMoney(seller.platformFeeTax)}</span></div>}
+                    {seller.platformFeeTax > 0 && <div className="flex justify-between"><span>{seller.commissionTaxReversal > 0 ? "Net GST on Commission" : "GST on Commission"}</span><span>-{formatMoney(seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax)}</span></div>}
+                    {seller.commissionTaxReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+                      <div className="flex justify-between"><span>Original commission GST</span><span>{formatMoney(seller.platformFeeTax)}</span></div>
+                      <div className="flex justify-between text-[#21812C]"><span>Reversed through credit note</span><span>-{formatMoney(seller.commissionTaxReversal)}</span></div>
+                    </div>}
                     {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping Reimbursement</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
                     {seller.shippingDeduction > 0 && <div className="flex justify-between"><span>Shipping Deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>}
                     {seller.shippingPolicy && (
                       <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Shipping policy")}</span><span>{formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
                     )}
-                    {seller.refundAmount > 0 && <div className="flex justify-between"><span>Refund Adjustment</span><span>-{formatMoney(seller.refundAmount)}</span></div>}
+                    {seller.refundAmount > 0 && <>
+                      <div className="flex justify-between"><span>Refunded item payout-base reversal</span><span>-{formatMoney(seller.sellerPayoutBaseReversal)}</span></div>
+                      <div className="ml-3 text-xs text-[#65718b]">The returned item's commission and statutory deductions are reversed above, so this row uses its corresponding payout base. It is not the customer's full refund.</div>
+                    </>}
                     {seller.adjustmentAmount !== 0 && <div className="flex justify-between"><span>Payout Adjustment / Recovery</span><span>{seller.adjustmentAmount > 0 ? "+" : "-"}{formatMoney(Math.abs(seller.adjustmentAmount))}</span></div>}
-                    {seller.gstTcsAmount > 0 && <div className="flex justify-between"><span>GST TCS ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsAmount)}</span></div>}
-                    {seller.incomeTaxTdsAmount > 0 && <div className="flex justify-between"><span>Income-tax TDS ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsAmount)}</span></div>}
+                    {seller.gstTcsAmount > 0 && <>
+                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS taxable base" : "GST TCS taxable base"}</span><span>{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.taxableSales)}</span></div>
+                      <div className="flex justify-between"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS" : "GST TCS"} ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount)}</span></div>
+                      {seller.gstTcsReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+                        <div className="flex justify-between"><span>Original TCS / taxable base</span><span>{formatMoney(seller.gstTcsAmount)} / {formatMoney(seller.gstTcsTaxableBase)}</span></div>
+                        <div className="flex justify-between text-[#21812C]"><span>Returned TCS / taxable base reversed</span><span>-{formatMoney(seller.gstTcsReversal)} / -{formatMoney(seller.gstTcsTaxableBaseReversal)}</span></div>
+                      </div>}
+                    </>}
+                    {seller.incomeTaxTdsAmount > 0 && <div className="flex justify-between"><span>{seller.incomeTaxTdsReversal > 0 ? "Net Income-tax TDS" : "Income-tax TDS"} ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}</span></div>}
                     <div className="mt-2 flex justify-between border-t border-[#efe6cd] pt-2 font-semibold"><span>Final Seller Payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
                     {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">

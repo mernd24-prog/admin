@@ -92,6 +92,7 @@ export const RETURN_STATUSES = [
   "qc_passed",
   "qc_failed",
   "qc_completed",
+  "qc_failure_upheld",
   "refund_pending",
   "refund_failed",
   "partially_refunded",

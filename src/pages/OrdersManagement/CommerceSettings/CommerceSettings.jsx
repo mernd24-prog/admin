@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   platformFees: {
     customerFeeType: "fixed",
     customerFeeValue: 0,
+    customerFeeTaxRate: 0,
     sellerCommissionType: "percentage",
     sellerCommissionValue: 0,
     gstRate: 18,
@@ -394,6 +395,7 @@ export default function CommerceSettings() {
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField label="Fee Type" value={settings.platformFees.customerFeeType} onChange={(value) => patchSettings("platformFees", { customerFeeType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
           <InputField label="Fee Value" type="number" min="0" value={settings.platformFees.customerFeeValue} onChange={(value) => patchSettings("platformFees", { customerFeeValue: value })} hint="Added to the customer-facing order total." />
+          <InputField label="Customer Fee GST Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.platformFees.customerFeeTaxRate} onChange={(value) => patchSettings("platformFees", { customerFeeTaxRate: value })} hint="Creates a separate marketplace-to-customer fee tax invoice when greater than zero." />
         </div>
       </Section>
       <Section title="Payment Settings">

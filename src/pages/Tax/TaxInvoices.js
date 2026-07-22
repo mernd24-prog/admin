@@ -4,7 +4,7 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdDownload, MdRefresh, MdVisibility } from "react-icons/md";
+import { MdDownload, MdVisibility } from "react-icons/md";
 import Loader from "../../components/Loader/Loader";
 import {
   DataTable,
@@ -22,16 +22,22 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 const STATES = [
   "draft", "issued", "cancelled", "amended",
 ];
-
-const isSeller = isSellerPanel();
+const INVOICE_TYPES = [
+  { value: "seller_customer", label: "Seller → Customer" },
+  { value: "platform_commission", label: "Platform → Seller" },
+  { value: "platform_customer_fee", label: "Platform → Customer Fee" },
+  { value: "order_customer", label: "Order Receipt" },
+];
 
 const FILTER_FIELDS = isSellerPanel()
   ? [
+      { key: "invoiceType", type: "select", label: "Document Type", options: INVOICE_TYPES },
       { key: "fromDate", type: "date", label: "From" },
       { key: "toDate", type: "date", label: "To" },
     ]
   : [
       { key: "search", type: "text", label: "Search", width: "w-56" },
+      { key: "invoiceType", type: "select", label: "Document Type", options: INVOICE_TYPES },
       {
         key: "sellerId",
         type: "asyncDropdown",
@@ -92,6 +98,35 @@ const shortId = (value = "") => {
   const text = String(value || "");
   return text.length > 12 ? `${text.slice(0, 8)}...${text.slice(-4)}` : text || "—";
 };
+const invoiceMetadata = (row = {}) => {
+  if (!row.metadata || typeof row.metadata !== "string") return row.metadata || {};
+  try { return JSON.parse(row.metadata); } catch { return {}; }
+};
+const invoiceReconciliation = (row = {}) => {
+  const total = Number(row.totalAmount ?? row.total_amount ?? 0);
+  if (total <= 0) return { label: "Invalid zero value", valid: false };
+  const type = row.invoiceType || row.invoice_type;
+  const metadata = invoiceMetadata(row);
+  let calculated = total;
+  if (type === "platform_commission" && metadata.itemReferences?.length) {
+    calculated = metadata.itemReferences.reduce((sum, item) =>
+      sum + Number(item.platformFeeAmount || 0) + Number(item.platformFeeTaxAmount || 0), 0);
+  } else if (type === "seller_customer" && metadata.items?.length) {
+    calculated = metadata.items.reduce((sum, item) =>
+      sum + Number(item.taxableAmount || 0) + Number(item.taxAmount || 0), 0) +
+      Number(metadata.amounts?.deliveryChargeAmount || 0);
+  } else if (type === "order_customer") {
+    calculated = Number(metadata.amounts?.finalPayableAmount ?? total);
+  }
+  const valid = Math.abs(calculated - total) <= 0.02;
+  return { label: valid ? "Reconciled" : "Mismatch", valid };
+};
+const invoiceTypeLabel = (value) => ({
+  order_customer: "Order invoice",
+  seller_customer: "Seller → Customer",
+  platform_commission: "Platform → Seller",
+  platform_customer_fee: "Platform → Customer",
+}[value] || String(value || "Invoice").replace(/_/g, " "));
 
 const TaxInvoices = () => {
   const dispatch = useDispatch();
@@ -174,6 +209,30 @@ const TaxInvoices = () => {
       },
     },
     {
+      key: "invoiceType",
+      label: "Invoice Type",
+      sortable: true,
+      render: (v, row) => (
+        <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+          {invoiceTypeLabel(v || row.invoice_type)}
+        </span>
+      ),
+    },
+    {
+      key: "parties",
+      label: "Issued By → Recipient",
+      render: (_, row) => {
+        const type = row.invoiceType || row.invoice_type;
+        const metadata = invoiceMetadata(row);
+        const seller = metadata.organization?.legalBusinessName || metadata.organization?.storeDisplayName ||
+          metadata.seller?.legalBusinessName || metadata.seller?.businessName || metadata.seller?.displayName || "Seller";
+        const customer = metadata.buyer?.profile?.displayName || metadata.buyer?.email || "Customer";
+        const issuer = type === "seller_customer" ? seller : "Sam Global";
+        const recipient = type === "platform_commission" ? seller : customer;
+        return <span className="whitespace-nowrap text-xs text-gray-600">{issuer} → {recipient}</span>;
+      },
+    },
+    {
       key: "state",
       label: "Status",
       render: (v, row) => {
@@ -208,6 +267,18 @@ const TaxInvoices = () => {
       label: "Total",
       sortable: true,
       render: (v, row) => <span className="text-sm font-semibold">{money(v ?? row.total_amount)}</span>,
+    },
+    {
+      key: "reconciliation",
+      label: "Reconciliation",
+      render: (_, row) => {
+        const result = invoiceReconciliation(row);
+        return (
+          <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${result.valid ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+            {result.label}
+          </span>
+        );
+      },
     },
     {
       key: "issuedAt",

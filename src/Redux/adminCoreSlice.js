@@ -537,6 +537,10 @@ export const scheduleReturn = createApiThunkPrivate("adminCore/scheduleReturn", 
 export const updateReturnReverseTracking = createApiThunkPrivate("adminCore/updateReturnReverseTracking", (payload) => ENDPOINTS.returns.reverseTracking(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["shipmentId", "status", "eventTime", "location", "note", "source", "deliveryException", "rawPayload"]) });
 export const receiveReturn = createApiThunkPrivate("adminCore/receiveReturn", (payload) => ENDPOINTS.returns.receive(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["notes", "items"]) });
 export const qcReturn = createApiThunkPrivate("adminCore/qcReturn", (payload) => ENDPOINTS.returns.qc(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["passed", "condition", "notes", "items"]) });
+export const submitReturnQcEvidence = createApiThunkPrivate("adminCore/submitReturnQcEvidence", (payload) => ENDPOINTS.returns.qcEvidence(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["note", "items"]) });
+export const decideReturnQcFailure = createApiThunkPrivate("adminCore/decideReturnQcFailure", (payload) => ENDPOINTS.returns.qcDecision(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["decision", "reason", "returnToCustomerRequired", "items"]) });
+export const arrangeReturnToCustomer = createApiThunkPrivate("adminCore/arrangeReturnToCustomer", (payload) => ENDPOINTS.returns.returnToCustomer(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["courierName", "trackingNumber", "trackingUrl", "note"]) });
+export const updateReturnToCustomerTracking = createApiThunkPrivate("adminCore/updateReturnToCustomerTracking", (payload) => ENDPOINTS.returns.returnToCustomerTracking(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["status", "location", "note"]) });
 export const refundReturn = createApiThunkPrivate("adminCore/refundReturn", (payload) => ENDPOINTS.returns.refund(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["refundAmount", "referenceId", "method", "walletAmount", "providerAmount", "idempotencyKey", "note"]) });
 export const retryReturnRefund = createApiThunkPrivate("adminCore/retryReturnRefund", (payload) => ENDPOINTS.returns.retryRefund(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["refundAmount", "referenceId", "method", "walletAmount", "providerAmount", "note"]) });
 export const syncReturnRefund = createApiThunkPrivate("adminCore/syncReturnRefund", (payload) => ENDPOINTS.returns.syncRefund(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: noBody });
@@ -720,6 +724,10 @@ const adminCoreSlice = createSlice({
       [updateReturnReverseTracking, "updateReturnData"],
       [receiveReturn, "updateReturnData"],
       [qcReturn, "updateReturnData"],
+      [submitReturnQcEvidence, "updateReturnData"],
+      [decideReturnQcFailure, "updateReturnData"],
+      [arrangeReturnToCustomer, "updateReturnData"],
+      [updateReturnToCustomerTracking, "updateReturnData"],
       [refundReturn, "refundReturnData"],
       [retryReturnRefund, "refundReturnData"],
       [syncReturnRefund, "refundReturnData"],

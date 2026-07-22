@@ -27,6 +27,7 @@ import {
   getAdminSellerCommissions,
   getAdminSellerPayouts,
   getMySellerSettlements,
+  getMySellerFinanceSummary,
   getSellerCommissions,
   getSellerFinanceSummary,
   getSellerPayouts,
@@ -46,6 +47,27 @@ const money = (value) => {
   return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const recordMetadata = (row = {}) => {
+  if (row.metadata && typeof row.metadata === "object") return row.metadata;
+  try { return JSON.parse(row.metadata || "{}"); } catch { return {}; }
+};
+
+const deductionOf = (row = {}) => {
+  const metadata = recordMetadata(row);
+  const products = Array.isArray(metadata.products) ? metadata.products : [];
+  const productTotal = (key) => products.reduce((sum, product) => sum + Number(product?.[key] || 0), 0);
+  return {
+    commission: Number(row.commission_amount ?? row.commissionAmount ?? metadata.platformFeeAmount ?? 0),
+    commissionGst: Number(row.tax_amount ?? row.taxAmount ?? metadata.platformFeeTaxAmount ?? 0),
+    gstTcs: Number(metadata.gstTcsAmount || 0),
+    incomeTaxTds: Number(metadata.incomeTaxTdsAmount || 0),
+    sellerFundedDiscount: productTotal("sellerFundedDiscountAmount"),
+    shipping: Number(metadata.shippingDeductionAmount || 0),
+    refund: Number(row.refund_amount ?? row.refundAmount ?? 0),
+    adjustment: Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0),
+  };
+};
+
 const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || "Seller details unavailable";
 const organizationName = (row = {}) => {
   const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
@@ -62,6 +84,7 @@ const eligibilityCountdown = (value) => {
 };
 const payoutDecision = (row = {}) => {
   const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+  if (status === "refunded" || row.itemPayoutStatus === "refunded") return { allowed: false, label: "Refunded", reason: "Customer refund completed; this item has no seller payout" };
   if (["eligible", "available"].includes(status) && !row.payout_id) return { allowed: true, label: "Allowed", reason: "Return window closed; no active hold" };
   if (row.payout_id) return { allowed: false, label: "In Payout", reason: "Already added to a payout" };
   if (["held", "blocked", "on_hold"].includes(status)) return { allowed: false, label: "Held", reason: row.payoutHoldReason || "Return, refund, dispute, or payment hold" };
@@ -219,6 +242,7 @@ const SellerFinance = () => {
           dispatch(getSellerCommissions(sellerFilters)).unwrap(),
           dispatch(getSellerPayouts(sellerFilters)).unwrap(),
           dispatch(getMySellerSettlements({ ...sellerFilters, limit: 50 })).unwrap(),
+          dispatch(getMySellerFinanceSummary(sellerFilters)).unwrap(),
         ]);
       } else {
         await Promise.all([
@@ -242,22 +266,34 @@ const SellerFinance = () => {
   const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
   const adminSummary = unwrap(financeState.financeSummaryData?.data);
   const summary = useMemo(() => {
-    if (!isSeller) return adminSummary;
     const totals = commissions.reduce(
-      (acc, row) => ({
-        count: acc.count + 1,
-        grossAmount: acc.grossAmount + Number(row.amount || row.gross_amount || row.grossAmount || 0),
-        commissionAmount: acc.commissionAmount + Number(row.commission_amount || row.commissionAmount || 0),
-        commissionTaxAmount: acc.commissionTaxAmount + Number(row.tax_amount || row.taxAmount || 0),
-        refundAmount: acc.refundAmount + Number(row.refund_amount || row.refundAmount || 0),
-        payableAmount: acc.payableAmount + Number(row.net_amount || row.netAmount || 0),
-      }),
+      (acc, row) => {
+        const deductions = deductionOf(row);
+        return {
+          count: acc.count + 1,
+          grossAmount: acc.grossAmount + Number(row.amount || row.gross_amount || row.grossAmount || 0),
+          commissionAmount: acc.commissionAmount + deductions.commission,
+          commissionTaxAmount: acc.commissionTaxAmount + deductions.commissionGst,
+          gstTcsAmount: acc.gstTcsAmount + deductions.gstTcs,
+          incomeTaxTdsAmount: acc.incomeTaxTdsAmount + deductions.incomeTaxTds,
+          sellerFundedDiscountAmount: acc.sellerFundedDiscountAmount + deductions.sellerFundedDiscount,
+          shippingDeductionAmount: acc.shippingDeductionAmount + deductions.shipping,
+          refundAmount: acc.refundAmount + deductions.refund,
+          adjustmentAmount: acc.adjustmentAmount + deductions.adjustment,
+          payableAmount: acc.payableAmount + Number(row.net_amount || row.netAmount || 0),
+        };
+      },
       {
         count: 0,
         grossAmount: 0,
         commissionAmount: 0,
         commissionTaxAmount: 0,
+        gstTcsAmount: 0,
+        incomeTaxTdsAmount: 0,
+        sellerFundedDiscountAmount: 0,
+        shippingDeductionAmount: 0,
         refundAmount: 0,
+        adjustmentAmount: 0,
         payableAmount: 0,
       },
     );
@@ -266,9 +302,11 @@ const SellerFinance = () => {
       if (!["paid", "completed"].includes(status)) return total;
       return total + Number(row.net_amount || row.netAmount || 0);
     }, 0);
+    if (!isSeller) return adminSummary;
     return {
-      commissions: totals,
-      payouts: { paidAmount },
+      ...adminSummary,
+      commissions: { ...totals, ...(adminSummary?.commissions || {}), sellerFundedDiscountAmount: totals.sellerFundedDiscountAmount },
+      payouts: { paidAmount, ...(adminSummary?.payouts || {}) },
     };
   }, [adminSummary, commissions, isSeller, payouts]);
   const loading = financeState.loading;
@@ -312,7 +350,22 @@ const SellerFinance = () => {
     return Array.from(grouped.values()).sort((left, right) => right.eligible - left.eligible || right.pending - left.pending);
   }, [commissions, payouts, sellerOptions]);
 
-  const metrics = useMemo(() => [
+  const visibleDeductions = useMemo(() => commissions.reduce((acc, row) => {
+    const values = deductionOf(row);
+    Object.keys(acc).forEach((key) => { acc[key] += Number(values[key] || 0); });
+    return acc;
+  }, {
+    commission: 0,
+    commissionGst: 0,
+    gstTcs: 0,
+    incomeTaxTds: 0,
+    sellerFundedDiscount: 0,
+    shipping: 0,
+    refund: 0,
+    adjustment: 0,
+  }), [commissions]);
+
+  const deductionMetrics = useMemo(() => [
     {
       label: "Gross Sales",
       value: money(summary?.commissions?.grossAmount),
@@ -320,20 +373,50 @@ const SellerFinance = () => {
     },
     {
       label: "Platform Commission",
-      value: money(summary?.commissions?.commissionAmount),
-      hint: `${money(summary?.commissions?.commissionTaxAmount)} GST on commission`,
+      value: `−${money(visibleDeductions.commission)}`,
+      hint: "Marketplace service fee",
+    },
+    {
+      label: "GST on Commission",
+      value: `−${money(visibleDeductions.commissionGst)}`,
+      hint: "Tax charged on marketplace service fee",
+    },
+    {
+      label: "GST TCS Withheld",
+      value: `−${money(visibleDeductions.gstTcs)}`,
+      hint: "Statutory tax collected at source; not platform income",
+    },
+    {
+      label: "Income-tax TDS Withheld",
+      value: `−${money(visibleDeductions.incomeTaxTds)}`,
+      hint: "Statutory tax deducted at source; not platform income",
     },
     {
       label: "Refund Adjustments",
-      value: money(summary?.commissions?.refundAmount),
-      hint: "Applied against seller payable",
+      value: `−${money(visibleDeductions.refund)}`,
+      hint: "Returned or cancelled item recovery",
+    },
+    {
+      label: "Seller-funded Discount",
+      value: `−${money(visibleDeductions.sellerFundedDiscount)}`,
+      hint: "Seller's share of customer discount (already reflected in eligible value)",
+    },
+    {
+      label: "Shipping Deduction",
+      value: `−${money(visibleDeductions.shipping)}`,
+      hint: "Only applies when the shipping policy charges the seller",
+    },
+    {
+      label: "Other Adjustments",
+      value: money(visibleDeductions.adjustment),
+      hint: "Negative values reduce payout; positive values add credit",
     },
     {
       label: "Seller Payable",
       value: money(summary?.commissions?.payableAmount),
       hint: `${money(summary?.payouts?.paidAmount)} already paid`,
     },
-  ], [summary]);
+  ], [summary, visibleDeductions]);
 
   const loadOrganizationsForSeller = useCallback(async (sellerId) => {
     if (!sellerId) return [];
@@ -554,8 +637,9 @@ const SellerFinance = () => {
 
       {/* Commission Breakdown Info Banner */}
       <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
-        <strong>How commission is calculated:</strong> The configured platform commission and GST are calculated from each order item's checkout snapshot.
-        Seller receives: <em>eligible item value − platform commission − commission GST − refund adjustments</em> after that item's return window closes.
+        <strong>How seller payable is calculated:</strong> Each order item uses its checkout pricing snapshot.
+        Seller receives: <em>eligible item value − platform commission − GST on commission − GST TCS − income-tax TDS − shipping deductions − refund/recovery adjustments</em> after that item's return window closes.
+        Statutory TCS/TDS are withheld for tax reporting and are not platform revenue. Seller-funded discount is shown separately because it is already reflected in the eligible item value.
       </div>
 
       {!isSeller && filters.sellerId && (
@@ -628,8 +712,8 @@ const SellerFinance = () => {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {deductionMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
 
       <div className={`mb-4 grid grid-cols-1 gap-3 ${isSeller ? "" : "lg:grid-cols-3"}`}>
@@ -725,8 +809,8 @@ const SellerFinance = () => {
                   {row.returnWindowEndsAt ? dateTime(row.returnWindowEndsAt) : "—"}
                   {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : decision.label === "Refunded" ? "refunded" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
                 <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{formatLabel(decision.reason)}</td>
                 {!isSeller && (
                   <td className="whitespace-nowrap px-4 py-3">
@@ -754,8 +838,12 @@ const SellerFinance = () => {
             "Organization",
             "Gross",
             "Commission",
-            "GST",
+            "GST on Fee",
+            "GST TCS",
+            "Income-tax TDS",
+            "Shipping",
             "Refund Adj.",
+            "Other Adj.",
             "Net Payable",
             "Status",
             "Created",
@@ -763,7 +851,9 @@ const SellerFinance = () => {
           ]}
           emptyText="No commissions found"
         >
-          {commissions.length ? commissions.map((row) => (
+          {commissions.length ? commissions.map((row) => {
+            const deductions = deductionOf(row);
+            return (
             <tr key={row.id}>
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
@@ -771,8 +861,12 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.gstTcs)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.incomeTaxTds)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.shipping)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${Number(row.adjustment_amount || 0) < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{money(row.adjustment_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>
               <td className="whitespace-nowrap px-4 py-3">
                 <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
                 {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
@@ -800,7 +894,8 @@ const SellerFinance = () => {
                 </td>
               )}
             </tr>
-          )) : null}
+            );
+          }) : null}
         </TableShell>
 
         <TableShell
@@ -811,7 +906,9 @@ const SellerFinance = () => {
             "Period",
             "Gross",
             "Commission",
+            "GST on Fee",
             "Refund",
+            "Adjustment",
             "Net",
             "Status",
             ...(!isSeller ? ["Actions"] : []),
@@ -825,7 +922,9 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{money(row.adjustment_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.lifecycleStatus || row.status} dot /></td>
               {!isSeller && (
@@ -863,6 +962,7 @@ const SellerFinance = () => {
             "Organization",
             "Gross",
             "Commission",
+            "GST on Fee",
             "Refund",
             "Adjustment",
             "Net",
@@ -878,6 +978,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
               <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.adjustment_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount || row.amount)}</td>
