@@ -325,7 +325,7 @@ const TaxInvoices = () => {
     <div className="space-y-6">
       <PageHeader
         title="Tax Invoices"
-        subtitle="View and manage all tax invoices"
+        subtitle="View and manage all tax invoices for your orders and sales."
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
       />
 

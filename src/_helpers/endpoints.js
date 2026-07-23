@@ -52,6 +52,16 @@ export const ENDPOINTS = {
       (userId) => `/sellers/me/sub-admins/${userId}/modules`
     ),
   },
+   inventory: {
+    variants: "/inventory/variants",
+
+    product: (productId) =>
+      `/inventory/products/${productId}`,
+
+    adjustVariant: (productId, variantSku) =>
+      `/inventory/products/${productId}/variants/${variantSku}`,
+  },
+  
   sellerUsers: {
     sellers: "/admin/seller-users/sellers",
     sellerAdmins: "/admin/seller-users/seller-admins",

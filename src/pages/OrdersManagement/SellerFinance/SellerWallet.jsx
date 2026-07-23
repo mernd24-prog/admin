@@ -13,21 +13,28 @@ const unwrap = (value = {}) => value?.data?.data || value?.data || {};
 const money = (value, currency = "INR") => formatCurrency(Number(value || 0), "₹0", currency);
 const label = (value = "") => String(value || "pending").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-const BalanceCard = ({ title, value, hint, icon, tone = "blue" }) => {
-  const tones = {
-    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
-    red: "border-red-200 bg-red-50 text-red-700",
-    blue: "border-blue-200 bg-blue-50 text-blue-700",
-    purple: "border-purple-200 bg-purple-50 text-purple-700",
-  };
+const BalanceCard = ({ title, value, hint, icon }) => {
   return (
-    <div className={`rounded-xl border p-4 ${tones[tone]}`}>
+    <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
-        <div><p className="text-xs font-semibold uppercase tracking-wide opacity-75">{title}</p><p className="mt-2 text-2xl font-bold">{value}</p></div>
-        <span className="rounded-lg bg-white/70 p-2 text-xl">{icon}</span>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-text-secondary)]">
+            {title}
+          </p>
+
+          <p className="mt-2 text-xl font-bold text-[var(--admin-navy)]">
+            {value}
+          </p>
+        </div>
+
+        <span className="flex h-5 w-10 items-center justify-center rounded-lg bg-[var(--admin-primary-light)] text-[var(--admin-primary)]">
+          {icon}
+        </span>
       </div>
-      <p className="mt-2 text-xs opacity-80">{hint}</p>
+
+      <p className="mt-2 text-xs text-[var(--admin-text-secondary)]">
+        {hint}
+      </p>
     </div>
   );
 };
@@ -64,12 +71,45 @@ export default function SellerWallet() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <BalanceCard title="Available for payout" value={money(balances.availableBalance, currency)} hint={`${counts.available || 0} eligible order entries`} icon={<MdAccountBalanceWallet />} tone="green" />
-        <BalanceCard title="Pending receivable" value={money(balances.pendingBalance, currency)} hint={wallet.nextEligibleAt ? `Next release ${formatDateTime(wallet.nextEligibleAt)}` : "Waiting for delivery or return window"} icon={<MdHourglassTop />} tone="amber" />
-        <BalanceCard title="On hold" value={money(balances.blockedBalance, currency)} hint={`${counts.blocked || 0} entries under return, refund, or dispute hold`} icon={<MdLock />} tone="red" />
-        <BalanceCard title="Payout in process" value={money(balances.inProcessBalance, currency)} hint={`${wallet.payouts?.inProcessCount || 0} payout requests processing`} icon={<MdPayments />} tone="blue" />
-        <BalanceCard title="Total paid" value={money(balances.paidBalance, currency)} hint={`${wallet.payouts?.paidCount || 0} completed payouts`} icon={<MdPayments />} tone="purple" />
-      </div>
+  <BalanceCard
+    title="Available for payout"
+    value={money(balances.availableBalance, currency)}
+    hint={`${counts.available || 0} eligible order entries`}
+    icon={<MdAccountBalanceWallet size={22} />}
+  />
+
+  <BalanceCard
+    title="Pending receivable"
+    value={money(balances.pendingBalance, currency)}
+    hint={
+      wallet.nextEligibleAt
+        ? `Next release ${formatDateTime(wallet.nextEligibleAt)}`
+        : "Waiting for delivery or return window"
+    }
+    icon={<MdHourglassTop size={22} />}
+  />
+
+  <BalanceCard
+    title="On hold"
+    value={money(balances.blockedBalance, currency)}
+    hint={`${counts.blocked || 0} entries under return, refund, or dispute hold`}
+    icon={<MdLock size={22} />}
+  />
+
+  <BalanceCard
+    title="Payout in process"
+    value={money(balances.inProcessBalance, currency)}
+    hint={`${wallet.payouts?.inProcessCount || 0} payout requests processing`}
+    icon={<MdPayments size={22} />}
+  />
+
+  <BalanceCard
+    title="Total paid"
+    value={money(balances.paidBalance, currency)}
+    hint={`${wallet.payouts?.paidCount || 0} completed payouts`}
+    icon={<MdPayments size={22} />}
+  />
+</div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">

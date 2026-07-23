@@ -434,7 +434,7 @@ const Cancellations = () => {
         title="Cancellations"
         subtitle={
           isSeller
-            ? "View cancellations and settlement impact for only your products"
+            ? "View cancellations and settlement impact for only your products."
             : "Manage complete order cancellations and customer refunds"
         }
         breadcrumbs={[

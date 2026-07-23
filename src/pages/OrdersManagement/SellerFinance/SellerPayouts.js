@@ -144,9 +144,9 @@ const SellerPayouts = () => {
         )}
       />
 
-      <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+      {/* <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
         Payout amounts come from delivered orders and their checkout fee snapshots. They cannot be typed manually.
-      </div>
+      </div> */}
      
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       <DataTable

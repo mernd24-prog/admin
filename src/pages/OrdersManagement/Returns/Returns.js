@@ -739,7 +739,7 @@ const filterFields = useMemo(
       <Loader loading={loading} />
       <PageHeader
         title="Returns & Refunds"
-        subtitle="Review RMA requests, QC, refunds, and replacement lifecycle"
+        subtitle="Review RMA requests, QC, refunds, and replacement lifecycle."
         breadcrumbs={[{ label: isSeller ? "Orders" : "Returns & Cancellations" }, { label: "Returns & Refunds" }]}
       />
 
