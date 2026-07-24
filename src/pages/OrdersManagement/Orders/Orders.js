@@ -584,7 +584,7 @@ const Orders = () => {
     <div>
       <PageHeader
         title="Orders List"
-        subtitle="Manage and track all customer orders"
+        subtitle="Manage and track all customer orders."
         breadcrumbs={[
           { label: isSeller ? "Orders" : "Orders Management" },
           { label: "Orders List" },

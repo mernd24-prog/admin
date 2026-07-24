@@ -86,9 +86,22 @@ export default function SearchComponent({
   );
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
-  const activeFilterCount = Object.entries(filters || {}).filter(([key, value]) => {
-    if (key === "search") return false;
-    const filterValue = value && typeof value === "object" ? value.value : value;
+ const activeFilterCount = (() => {
+  const count = Object.entries(filters || {}).filter(([key, value]) => {
+    // Ignore search and date range keys
+    if (
+      key === "search" ||
+      key === "dateFrom" ||
+      key === "dateTo" ||
+      key === "fromDate" ||
+      key === "toDate"
+    ) {
+      return false;
+    }
+
+    const filterValue =
+      value && typeof value === "object" ? value.value : value;
+
     return (
       filterValue !== undefined &&
       filterValue !== null &&
@@ -96,6 +109,16 @@ export default function SearchComponent({
       String(filterValue).toLowerCase() !== "all"
     );
   }).length;
+
+  // Count Date Range as one filter
+  const hasDateRange =
+    filters?.dateFrom ||
+    filters?.dateTo ||
+    filters?.fromDate ||
+    filters?.toDate;
+
+  return count + (hasDateRange ? 1 : 0);
+})();
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => {

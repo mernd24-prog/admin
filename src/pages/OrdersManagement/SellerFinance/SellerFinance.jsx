@@ -8,7 +8,9 @@ import {
   MdDownload,
   MdPayments,
   MdSearch,
+  MdFilterList
 } from "react-icons/md";
+
 import {
   PageHeader,
   StatusBadge,
@@ -138,7 +140,7 @@ const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
 };
 
 const MetricCard = ({ label, value, hint }) => (
-  <div className="rounded-lg border border-[#E6E6E6] bg-white p-4">
+  <div className="rounded-lg border bg-[var(--admin-surface-soft)] border-[#E6E6E6] p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-[#65718b]">{label}</p>
     <p className="mt-2 text-xl font-semibold text-[#202337]">{value}</p>
     {hint ? <p className="mt-1 text-xs text-[#65718b]">{formatLabel(hint)}</p> : null}
@@ -437,11 +439,11 @@ const SellerFinance = () => {
       value: `−${money(visibleDeductions.gstTcs)}`,
       hint: "Statutory tax collected at source; not platform income",
     },
-    {
-      label: "Income-tax TDS Withheld",
-      value: `−${money(visibleDeductions.incomeTaxTds)}`,
-      hint: "Statutory tax deducted at source; not platform income",
-    },
+    // {
+    //   label: "Income-tax TDS Withheld",
+    //   value: `−${money(visibleDeductions.incomeTaxTds)}`,
+    //   hint: "Statutory tax deducted at source; not platform income",
+    // },
     {
       label: "Refund Adjustments",
       value: `−${money(visibleDeductions.refund)}`,
@@ -692,7 +694,7 @@ const SellerFinance = () => {
         title={isSeller ? "My Finance" : "Seller Finance"}
         subtitle={
           isSeller
-            ? "View commission deductions, settlement ledger, payout status, and downloadable statements"
+            ? "View commission deductions, settlement ledger, payout status, and downloadable statements."
             : "Commission, settlement, refund adjustment, and payout management"
         }
         breadcrumbs={[
@@ -782,81 +784,76 @@ const SellerFinance = () => {
         {deductionMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
 
-      <div className={`mb-4 grid grid-cols-1 gap-3 ${isSeller ? "" : "lg:grid-cols-3"}`}>
-        <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-            <MdSearch size={18} /> Filters
-          </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-1">
-            {!isSeller && (
-              <>
-                <select className={inputCls} value={filters.sellerId} onChange={(e) => updateFilter("sellerId", e.target.value)}>
-                  <option value="">All Sellers</option>
-                  {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-                <select className={inputCls} value={filters.organizationId} onChange={(e) => updateFilter("organizationId", e.target.value)} disabled={!filters.sellerId}>
-                  <option value="">{filters.sellerId ? "All Organizations" : "Select seller first"}</option>
-                  {organizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-              </>
-            )}
-            <input
-              className={inputCls}
-              placeholder={isSeller ? "Search order or payout..." : "Search order, seller, payout..."}
-              value={filters.search}
-              onChange={(e) => updateFilter("search", e.target.value)}
-            />
-            <select className={inputCls} value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="return_window_open">Return Window Open</option>
-              <option value="eligible">Eligible</option>
-              <option value="held">Held</option>
-              <option value="released">Released</option>
-              <option value="failed">Failed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
+     <div className="rounded-lg border border-[#E6E6E6] bg-white p-3 mb-4">
+  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
+   <MdFilterList size={16} className="text-[var(--admin-muted)]" /> Filters
+  </div>
 
-        {!isSeller && (
-          <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-              <MdCalculate size={18} /> Recalculate Order Commission
-            </div>
-            <div className="flex gap-2">
-              <select className={`${inputCls} min-w-0 flex-1`} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
-                <option value="">Select order</option>
-                {orderId && !orderOptions.some((option) => String(option.value) === String(orderId)) && (
-                  <option value={orderId}>Order #{orderId}</option>
-                )}
-                {orderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <button type="button" className="inline-flex min-h-[38px] items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-medium text-white disabled:opacity-60" onClick={handleCalculate} disabled={submitting}>
-                Run
-              </button>
-            </div>
-          </div>
-        )}
+  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+    {!isSeller && (
+      <>
+        <select
+          className={inputCls}
+          value={filters.sellerId}
+          onChange={(e) => updateFilter("sellerId", e.target.value)}
+        >
+          <option value="">All Sellers</option>
+          {sellerOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
 
-        {!isSeller && (
-          <div className="rounded-lg border border-[#E6E6E6] bg-white p-3">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-              <MdPayments size={18} /> Process Seller Payout
-            </div>
-            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md bg-[#208a3c] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => setProcessModal((prev) => ({ ...prev, open: true, sellerId: filters.sellerId || prev.sellerId, organizationId: filters.organizationId || prev.organizationId }))}
-                disabled={!filters.sellerId}
-              >
-                {filters.sellerId ? "Initiate Seller Payout" : "Select Seller First"}
-              </button>
-            </PermissionGuard>
-          </div>
-        )}
-      </div>
+        <select
+          className={inputCls}
+          value={filters.organizationId}
+          onChange={(e) =>
+            updateFilter("organizationId", e.target.value)
+          }
+          disabled={!filters.sellerId}
+        >
+          <option value="">
+            {filters.sellerId
+              ? "All Organizations"
+              : "Select seller first"}
+          </option>
+          {organizationOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </>
+    )}
+
+    <input
+      className={inputCls}
+      placeholder={
+        isSeller
+          ? "Search order or payout..."
+          : "Search order, seller, payout..."
+      }
+      value={filters.search}
+      onChange={(e) => updateFilter("search", e.target.value)}
+    />
+
+    <select
+      className={inputCls}
+      value={filters.status}
+      onChange={(e) => updateFilter("status", e.target.value)}
+    >
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="return_window_open">Return Window Open</option>
+      <option value="eligible">Eligible</option>
+      <option value="held">Held</option>
+      <option value="released">Released</option>
+      <option value="failed">Failed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+</div>
 
       <div className={`${!isSeller && !filters.sellerId ? "hidden" : "mb-4"}`}>
         <TableShell
@@ -869,8 +866,8 @@ const SellerFinance = () => {
             return (
               <tr key={`eligibility-${row.id}`}>
                 <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? dateTime(row.deliveredAt) : <span className="text-amber-700">Not delivered</span>}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? dateTime(row.returnWindowStartsAt) : "Starts after delivery"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? dateTime(row.deliveredAt) : <span className="text-amber-700">Not Delivered</span>}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? dateTime(row.returnWindowStartsAt) : "Starts After Delivery"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-xs">
                   {row.returnWindowEndsAt ? dateTime(row.returnWindowEndsAt) : "—"}
                   {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
@@ -884,7 +881,7 @@ const SellerFinance = () => {
                       <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                         <button type="button" className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white" onClick={() => handleSingleCommissionPayout(row)} disabled={submitting}>Payout This Order</button>
                       </PermissionGuard>
-                    ) : <span className="text-xs text-[#65718b]">Not allowed</span>}
+                    ) : <span className="text-xs text-[#65718b]">Not Allowed</span>}
                   </td>
                 )}
               </tr>
@@ -939,7 +936,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3">
                 <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
                 {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
-                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible on {dateTime(row.eligibleAt)}</div>}
+                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible On {dateTime(row.eligibleAt)}</div>}
               </td>
               <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
               {!isSeller && (

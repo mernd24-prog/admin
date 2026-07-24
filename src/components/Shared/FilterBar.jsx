@@ -674,14 +674,27 @@ const FilterBar = ({
     [resolvedFilters],
   );
 
-  const resolvedActiveCount = useMemo(() => {
+const resolvedActiveCount = useMemo(() => {
   return normalizedFilters.reduce((count, field) => {
+    if (field.type === "daterange") {
+      const startValue = resolvedValues[field.startKey];
+      const endValue = resolvedValues[field.endKey];
+
+      // From Date + To Date count as one filter
+      if (startValue || endValue) {
+        return count + 1;
+      }
+
+      return count;
+    }
+
     const value = resolvedValues[field.key];
 
     if (
       value !== "" &&
       value !== null &&
-      value !== undefined
+      value !== undefined &&
+      (!Array.isArray(value) || value.length > 0)
     ) {
       return count + 1;
     }

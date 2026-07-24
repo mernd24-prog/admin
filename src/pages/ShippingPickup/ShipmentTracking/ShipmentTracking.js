@@ -124,7 +124,7 @@ const ShipmentTracking = () => {
   const { toQueryParams } = list;
 
   const FILTER_FIELDS = isSeller ? [
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
  
   {
     key: "shipmentType",
@@ -556,7 +556,7 @@ const ShipmentTracking = () => {
       <Loader loading={loading} />
       <PageHeader
         title="Shipments"
-        subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details"
+        subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details."
         breadcrumbs={[
           { label: "Shipping" },
           { label: "Shipments Tracking" },

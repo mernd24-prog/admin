@@ -518,7 +518,7 @@ const ProductReviews = () => {
     <div>
       <PageHeader
         title="Product Reviews"
-        subtitle="Manage and moderate customer product reviews"
+        subtitle="Manage and moderate customer product reviews."
         breadcrumbs={[
           { label: sellerView ? "Catalog" : "Orders Management" },
           { label: "Product Reviews" },

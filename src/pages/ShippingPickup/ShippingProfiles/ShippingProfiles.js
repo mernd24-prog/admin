@@ -1295,7 +1295,7 @@ export default function ShippingProfiles() {
       <PageHeader
         title="Shipping Profiles"
         subtitle={isSeller
-          ? "Manage reusable delivery rules for your products"
+          ? "Manage reusable delivery rules for your products."
           : "Manage reusable seller delivery configurations"}
         breadcrumbs={[{ label: isSeller ? "Shipping" : "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
         actions={
@@ -1338,7 +1338,7 @@ export default function ShippingProfiles() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {templatesPayload.list.slice(0, 6).map((template) => (
-              <div key={profileId(template)} className="rounded-xl border border-gray-200 p-3">
+              <div key={profileId(template)} className="rounded-xl d border bg-[var(--admin-surface-soft)] border-gray-200 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-[var(--admin-ink)]">{template.name}</div>

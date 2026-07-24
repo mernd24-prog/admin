@@ -306,7 +306,7 @@ const UserMessages = () => {
     <div>
       <PageHeader
         title="Notifications"
-        subtitle={isSeller ? "View your notifications" : "Send and manage user notifications"}
+        subtitle={isSeller ? "View and manage all your notifications." : "Send and manage user notifications"}
         breadcrumbs={[{ label: isSeller ? "Marketing" : "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex items-center gap-2">

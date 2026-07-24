@@ -29,6 +29,7 @@ import notificationsReducer from './notificationsSlice'
 import sellerReturnsReducer from './sellerReturnsSlice'
 import sellerAnalyticsReducer from './sellerAnalyticsSlice'
 import referralCommerceReducer from './referralCommerceSlice'
+import inventoryReducer from "./inventorySlice";
 
 export const store = configureStore({
   reducer: {
@@ -63,5 +64,6 @@ export const store = configureStore({
     sellerAnalytics: sellerAnalyticsReducer,
     referralCommerce: referralCommerceReducer,
     admin: adminReducer,
+    inventory: inventoryReducer,
   },
 })

@@ -1,13 +1,40 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdInventory2, MdOpenInNew, MdRemove, MdSave } from "react-icons/md";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  MdAdd,
+  MdInventory2,
+  MdOpenInNew,
+  MdRemove,
+  MdSave,
+} from "react-icons/md";
+import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { BulkActionBar, ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../components/Shared";
-import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
-import { ENDPOINTS } from "../../_helpers/endpoints";
+import {
+  ConfirmModal,
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../components/Shared";
+import Loader from "../../components/Loader/Loader";
+import { exportToExcel, parseImportFile } from "../../_helpers/exportToCsv";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { useListPage } from "../../hooks/useListPage";
+import {
+  adjustInventory,
+  bulkUpdateInventory,
+  getInventoryDetail,
+  getInventoryList,
+} from "../../Redux/inventorySlice";
 import { toast } from "../../utils/toast";
-const isSeller = isSellerPanel()
+
+const isSeller = isSellerPanel();
+
 const FILTERS = [
   {
     key: "stockStatus",
@@ -50,15 +77,100 @@ const ADJUST_TYPES = [
 
 const STOCK_HISTORY_PAGE_SIZE = 10;
 
+const IMPORT_COLUMNS = [
+  "productId",
+  "productName",
+  "productSku",
+  "variantId",
+  "variantSku",
+  "variantName",
+  "currentStock",
+  "newStock",
+];
+
+const EDITABLE_IMPORT_COLUMN = "newStock";
+const READ_ONLY_IMPORT_COLUMNS = IMPORT_COLUMNS.filter(
+  (column) => column !== EDITABLE_IMPORT_COLUMN,
+);
+
+const getErrorMessage = (error, fallback) => {
+  if (typeof error === "string" && error.trim()) return error;
+
+  return (
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    error?.message ||
+    fallback
+  );
+};
+
+const normalizeText = (value) => String(value ?? "").trim();
+
+const normalizeNumber = (value) => {
+  if (value === "" || value === null || value === undefined) return "";
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(parsed) : normalizeText(value);
+};
+
+const buildImportValidationError = (message) =>
+  `${message} Export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`;
+
+const unwrapApiPayload = (response) =>
+  response?.data?.data ?? response?.data ?? response ?? {};
+
+const getRowsFromResponse = (response) => {
+  const payload = unwrapApiPayload(response);
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.list)) return payload.list;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+
+  return [];
+};
+
+const getTotalFromResponse = (response, fallback = 0) => {
+  const payload = unwrapApiPayload(response);
+
+  return Number(
+    response?.data?.meta?.productTotal ??
+      response?.data?.data?.meta?.productTotal ??
+      payload?.meta?.productTotal ??
+      payload?.meta?.pagination?.totalItems ??
+      payload?.total ??
+      fallback,
+  );
+};
+
+const getDetailFromResponse = (response) => {
+  const payload = unwrapApiPayload(response);
+
+  if (payload?.product || payload?.variants) return payload;
+  if (payload?.data?.product || payload?.data?.variants) {
+    return payload.data;
+  }
+
+  return null;
+};
+
 const fmtDate = (value) => {
   if (!value) return "N/A";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+  return date.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 };
 
 const numberCell = (value, className = "") => (
-  <span className={`inline-block min-w-[3ch] text-right font-mono text-sm font-semibold tabular-nums ${className}`}>
+  <span
+    className={`inline-block min-w-[3ch] text-right font-mono text-sm font-semibold tabular-nums ${className}`}
+  >
     {Number(value || 0)}
   </span>
 );
@@ -67,8 +179,12 @@ const firstImage = (row = {}) => row.image || "";
 
 const variantTitle = (row = {}) => (
   <div className="min-w-[160px]">
-    <p className="font-semibold text-[var(--admin-ink)]">{row.variantName || "Default variant"}</p>
-    <p className="text-xs text-[var(--admin-muted)]">{row.variantSku || "No SKU"}</p>
+    <p className="font-semibold text-[var(--admin-ink)]">
+      {row.variantName || "Default variant"}
+    </p>
+    <p className="text-xs text-[var(--admin-muted)]">
+      {row.variantSku || row.sku || "No SKU"}
+    </p>
   </div>
 );
 
@@ -76,18 +192,30 @@ const productTitle = (row = {}) => (
   <div className="flex min-w-[220px] max-w-[52vw] items-center gap-3 xl:w-[560px]">
     <div className="h-11 w-11 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
       {firstImage(row) ? (
-        <img src={firstImage(row)} alt={row.productName || "Variant"} className="h-full w-full object-cover" />
+        <img
+          src={firstImage(row)}
+          alt={row.productName || "Variant"}
+          className="h-full w-full object-cover"
+        />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
           <MdInventory2 size={20} />
         </div>
       )}
     </div>
+
     <div className="min-w-0">
-      <p className="truncate font-semibold text-[var(--admin-ink)]" title={row.productName || "Untitled product"}>
+      <p
+        className="truncate font-semibold text-[var(--admin-ink)]"
+        title={row.productName || "Untitled product"}
+      >
         {row.productName || "Untitled product"}
       </p>
-      <p className="truncate text-xs text-[var(--admin-muted)]">{row.productSku || "No product SKU"}</p>
+
+      <p className="truncate text-xs text-[var(--admin-muted)]">
+        {row.productSku || "No product SKU"}
+      </p>
+
       {row.variantCount > 0 && (
         <p className="text-xs text-[var(--admin-muted)]">
           {`${row.variantCount} Variant${row.variantCount === 1 ? "" : "s"}`}
@@ -111,12 +239,24 @@ const productStatusOf = (variants = []) => {
     .flatMap((variant) => [variant.status, variant.stockStatus])
     .filter(Boolean)
     .map((status) => String(status).toLowerCase());
-  if (statuses.includes("out_of_stock") || variants.every((variant) => Number(variant.availableStock || 0) <= 0)) {
+
+  if (
+    statuses.includes("out_of_stock") ||
+    variants.every((variant) => Number(variant.availableStock || 0) <= 0)
+  ) {
     return "out_of_stock";
   }
+
   if (statuses.includes("low_stock")) return "low_stock";
-  if (statuses.length && statuses.every((status) => status === "inactive")) return "inactive";
-  if (statuses.includes("pending_approval")) return "pending_approval";
+
+  if (statuses.length && statuses.every((status) => status === "inactive")) {
+    return "inactive";
+  }
+
+  if (statuses.includes("pending_approval")) {
+    return "pending_approval";
+  }
+
   return statuses.find(Boolean) || "active";
 };
 
@@ -147,6 +287,7 @@ const groupInventoryByProduct = (variantRows = []) => {
 
   return Array.from(groups.values()).map((group) => {
     const variants = group.variants || [];
+
     return {
       ...group,
       variantCount: variants.length,
@@ -171,11 +312,16 @@ const variantSummary = (row = {}) => {
 
 const looksLikeId = (value = "") =>
   /^[a-f0-9]{24}$/i.test(String(value)) ||
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value));
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    String(value),
+  );
 
 const sellerLabel = (row = {}) => {
   const seller = row.seller && typeof row.seller === "object" ? row.seller : {};
-  const organization = row.organizationSnapshot || row.organization_snapshot || {};
+
+  const organization =
+    row.organizationSnapshot || row.organization_snapshot || {};
+
   const label =
     row.sellerName ||
     row.seller_name ||
@@ -197,22 +343,74 @@ const sellerLabel = (row = {}) => {
   return label && !looksLikeId(label) ? label : "Seller details unavailable";
 };
 
-const getRowsFromResponse = (response) => {
-  const payload = response?.data || {};
-  const data = payload.data;
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(payload.items)) return payload.items;
-  return [];
+const prepareDetailVariants = (variants = [], product = {}) =>
+  variants.map((variant, index) => {
+    const currentStock = Number(variant.currentStock ?? variant.stock ?? 0);
+
+    return {
+      ...variant,
+      id:
+        variant.id ||
+        variant._id ||
+        `${product.id || product._id || product.productId}-${variant.variantSku || variant.sku || index}`,
+      productId:
+        variant.productId ||
+        variant.product_id ||
+        product.id ||
+        product._id ||
+        product.productId ||
+        "",
+      productName: variant.productName || product.name || product.title || "",
+      productSku: variant.productSku || product.sku || "",
+      variantId:
+        variant.variantId ||
+        variant.variant_id ||
+        variant._id ||
+        variant.id ||
+        "",
+      variantSku: variant.variantSku || variant.sku || "",
+      variantName:
+        variant.variantName ||
+        variant.variantTitle ||
+        variant.title ||
+        variant.name ||
+        "Default variant",
+      originalStock: currentStock,
+      currentStock,
+    };
+  });
+
+const isPendingStock = (row = {}) =>
+  Number(row.currentStock) !== Number(row.originalStock);
+
+const getVariantIdentity = (row = {}) =>
+  [
+    normalizeText(row.productId),
+    normalizeText(row.variantId),
+    normalizeText(row.variantSku),
+  ].join("::");
+
+const getExpectedImportValue = (row, column) => {
+  const values = {
+    productId: row.productId,
+    productName: row.productName,
+    productSku: row.productSku,
+    variantId: row.variantId,
+    variantSku: row.variantSku,
+    variantName: row.variantName,
+    currentStock: row.originalStock,
+  };
+
+  return values[column];
 };
 
-// const getTotalFromResponse = (response, fallback = 0) =>
-//   Number(
-//     response?.data?.meta?.pagination?.totalItems ??
-//       response?.data?.meta?.total ??
-//       response?.data?.total ??
-//       fallback,
-//   );
+const importValuesMatch = (actual, expected, column) => {
+  if (column === "currentStock") {
+    return normalizeNumber(actual) === normalizeNumber(expected);
+  }
+
+  return normalizeText(actual) === normalizeText(expected);
+};
 
 const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
   const [form, setForm] = useState({
@@ -224,6 +422,7 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
 
   useEffect(() => {
     if (!open) return;
+
     setForm({
       adjustmentType: "set",
       quantity: target?.currentStock ?? target?.stock ?? "",
@@ -234,10 +433,12 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
 
   const submit = () => {
     const quantity = Number(form.quantity);
+
     if (!Number.isFinite(quantity) || quantity < 0) {
       toast.error("Stock quantity must be a non-negative number");
       return;
     }
+
     onConfirm({
       adjustmentType: form.adjustmentType,
       quantity,
@@ -246,13 +447,11 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
     });
   };
 
-  const isBulk = Array.isArray(target?.rows);
-
   return (
     <ConfirmModal
       open={open}
-      title={isBulk ? "Bulk Adjust Inventory" : "Adjust Variant Inventory"}
-      message={isBulk ? `${target?.rows?.length || 0} variants selected` : `${target?.productName || ""} · ${target?.variantName || ""}`}
+      title="Adjust Variant Inventory"
+      message={`${target?.productName || ""} · ${target?.variantName || ""}`}
       confirmLabel="Update Stock"
       variant="info"
       loading={loading}
@@ -265,7 +464,12 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
             <button
               key={value}
               type="button"
-              onClick={() => setForm((prev) => ({ ...prev, adjustmentType: value }))}
+              onClick={() =>
+                setForm((previous) => ({
+                  ...previous,
+                  adjustmentType: value,
+                }))
+              }
               className={`flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-semibold transition ${
                 form.adjustmentType === value
                   ? "border-[var(--admin-blue)] bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]"
@@ -277,31 +481,58 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
             </button>
           ))}
         </div>
+
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">Quantity</span>
+          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
+            Quantity
+          </span>
+
           <input
             type="number"
             min={0}
             value={form.quantity}
-            onChange={(event) => setForm((prev) => ({ ...prev, quantity: event.target.value }))}
+            onChange={(event) =>
+              setForm((previous) => ({
+                ...previous,
+                quantity: event.target.value,
+              }))
+            }
             className="admin-input"
             placeholder="0"
           />
         </label>
+
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">Reason</span>
+          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
+            Reason
+          </span>
+
           <input
             value={form.reason}
-            onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
+            onChange={(event) =>
+              setForm((previous) => ({
+                ...previous,
+                reason: event.target.value,
+              }))
+            }
             className="admin-input"
             placeholder="Cycle count, restock, damage, correction"
           />
         </label>
+
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">Note</span>
+          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
+            Note
+          </span>
+
           <textarea
             value={form.note}
-            onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+            onChange={(event) =>
+              setForm((previous) => ({
+                ...previous,
+                note: event.target.value,
+              }))
+            }
             className="admin-input min-h-[72px]"
             placeholder="Optional internal note"
           />
@@ -312,202 +543,829 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
 };
 
 const Inventory = () => {
+  const dispatch = useDispatch();
   const { productId } = useParams();
   const navigate = useNavigate();
-  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "updatedAt" });
+
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "updatedAt",
+  });
+
   const adminPanel = !isSellerPanel();
+  const sellerView = isSellerPanel();
   const { toQueryParams } = list;
+
+  const fileInputRef = useRef(null);
+
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const [detail, setDetail] = useState(null);
+  const [detailRows, setDetailRows] = useState([]);
+
   const [adjustTarget, setAdjustTarget] = useState(null);
   const [adjusting, setAdjusting] = useState(false);
+
   const [historyPage, setHistoryPage] = useState(1);
+
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importInfo, setImportInfo] = useState("");
+  const [importSuccess, setImportSuccess] = useState("");
 
   const fetchList = useCallback(async () => {
     if (productId) return;
+
     setLoading(true);
     setError("");
+
     try {
-      const params = toQueryParams();
-  const response = await axiosProvider.get(ENDPOINTS.inventory.variants, {params});
+      const response = await dispatch(
+        getInventoryList(toQueryParams()),
+      ).unwrap();
 
-const nextRows = getRowsFromResponse(response);
+      const nextRows = getRowsFromResponse(response);
 
-setRows(nextRows);
-setTotal(response.data?.meta?.productTotal ?? nextRows.length);
-    } catch (err) {
-      setError(err?.message || "Unable to load inventory");
+      setRows(nextRows);
+      setTotal(getTotalFromResponse(response, nextRows.length));
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Unable to load inventory"));
       setRows([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [productId, toQueryParams]);
+  }, [dispatch, productId, toQueryParams]);
 
   const fetchDetail = useCallback(async () => {
     if (!productId) return;
+
     setLoading(true);
     setError("");
+
     try {
-      const response = await axiosProvider.get(ENDPOINTS.inventory.product(productId));
-      setDetail(response?.data?.data || null);
-    } catch (err) {
-      setError(err?.message || "Unable to load product inventory");
+      const response = await dispatch(
+        getInventoryDetail({ productId }),
+      ).unwrap();
+
+      const nextDetail = getDetailFromResponse(response);
+      const product = nextDetail?.product || {};
+      const variants = Array.isArray(nextDetail?.variants)
+        ? nextDetail.variants
+        : [];
+
+      setDetail(nextDetail);
+      setDetailRows(prepareDetailVariants(variants, product));
+    } catch (requestError) {
+      setError(
+        getErrorMessage(requestError, "Unable to load product inventory"),
+      );
       setDetail(null);
+      setDetailRows([]);
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [dispatch, productId]);
 
   useEffect(() => {
     if (productId) fetchDetail();
     else fetchList();
   }, [fetchDetail, fetchList, productId]);
 
-  const refresh = () => (productId ? fetchDetail() : fetchList());
-
-  const detailVariants = detail?.variants || [];
-  const transactions = useMemo(() => detail?.transactions?.items || [], [detail?.transactions?.items]);
-  const pagedTransactions = useMemo(() => {
-    const offset = (historyPage - 1) * STOCK_HISTORY_PAGE_SIZE;
-    return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
-  }, [historyPage, transactions]);
-  const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
-  const listTableLoading = loading && productRows.length === 0;
-
   useEffect(() => {
     setHistoryPage(1);
+    setImportError("");
+    setImportInfo("");
+    setImportSuccess("");
   }, [productId]);
 
-  const selectedProductRows = useMemo(
-    () => productRows.filter((row) => list.selectedKeys.includes(row.id)),
-    [list.selectedKeys, productRows],
+  useEffect(() => {
+    if (!importSuccess) return undefined;
+
+    const timer = window.setTimeout(() => setImportSuccess(""), 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [importSuccess]);
+
+  useEffect(() => {
+    if (!importInfo) return undefined;
+
+    const timer = window.setTimeout(() => setImportInfo(""), 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [importInfo]);
+
+  const refresh = useCallback(
+    () => (productId ? fetchDetail() : fetchList()),
+    [fetchDetail, fetchList, productId],
   );
 
-  const selectedVariantRows = useMemo(
-    () => selectedProductRows.flatMap((row) => row.variants || []),
-    [selectedProductRows],
+  const transactions = useMemo(
+    () => detail?.transactions?.items || [],
+    [detail?.transactions?.items],
   );
 
-  const filterFields = useMemo(
-  () => (isSeller ? [] : FILTERS),
-  [isSeller]
-);
+  const pagedTransactions = useMemo(() => {
+    const offset = (historyPage - 1) * STOCK_HISTORY_PAGE_SIZE;
+
+    return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
+  }, [historyPage, transactions]);
+
+  const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
+
+  const listTableLoading = loading && productRows.length === 0;
+
+  const filterFields = useMemo(() => (isSeller ? [] : FILTERS), []);
+
+  const pendingCount = useMemo(
+    () => detailRows.filter(isPendingStock).length,
+    [detailRows],
+  );
+
+  const canSave = pendingCount > 0 && !saving && !importing && !loading;
+
+  const handleStockChange = useCallback((rowId, value) => {
+    setImportError("");
+    setImportInfo("");
+    setImportSuccess("");
+
+    setDetailRows((current) =>
+      current.map((row) => {
+        if (row.id !== rowId) return row;
+
+        if (value === "") {
+          return {
+            ...row,
+            currentStock: "",
+          };
+        }
+
+        const parsed = Number(value);
+
+        return {
+          ...row,
+          currentStock: Number.isFinite(parsed) ? parsed : value,
+        };
+      }),
+    );
+  }, []);
+
+  const persistDetailRows = useCallback(
+    async (
+      nextRows = detailRows,
+      allowedRowIds = null,
+      { showToast = true } = {},
+    ) => {
+      const allowedIds = allowedRowIds ? new Set(allowedRowIds) : null;
+
+      const changedRows = nextRows.filter(
+        (row) => (!allowedIds || allowedIds.has(row.id)) && isPendingStock(row),
+      );
+
+      if (!changedRows.length) {
+        const message = "No valid inventory changes to save";
+
+        if (showToast) toast.info(message);
+        else setImportInfo(message);
+
+        return 0;
+      }
+
+      const invalidRow = changedRows.find(
+        (row) =>
+          !Number.isInteger(Number(row.currentStock)) ||
+          Number(row.currentStock) < 0,
+      );
+
+      if (invalidRow) {
+        const message = `${invalidRow.variantName || "Variant"} stock must be a non-negative whole number.`;
+
+        if (showToast) toast.error(message);
+        else setImportError(message);
+
+        return 0;
+      }
+
+      try {
+        await dispatch(
+          bulkUpdateInventory({
+            productId,
+            updates: changedRows.map((row) => ({
+              variantSku: row.variantSku,
+              adjustmentType: "set",
+              quantity: Number(row.currentStock),
+              reason: "Inventory Excel update",
+              note: "Stock updated through inventory manager",
+            })),
+          }),
+        ).unwrap();
+
+        setDetailRows((current) =>
+          current.map((row) => {
+            const matching = changedRows.find((item) => item.id === row.id);
+
+            if (!matching) return row;
+
+            return {
+              ...row,
+              originalStock: Number(matching.currentStock),
+              currentStock: Number(matching.currentStock),
+            };
+          }),
+        );
+
+        setImportError("");
+
+        if (showToast) {
+          toast.success(
+            `Updated ${changedRows.length} inventory ${
+              changedRows.length === 1 ? "entry" : "entries"
+            }`,
+          );
+        }
+
+        return changedRows.length;
+      } catch (requestError) {
+        const message = getErrorMessage(
+          requestError,
+          "Unable to save inventory changes",
+        );
+
+        setImportError(message);
+
+        if (showToast) toast.error(message);
+
+        return 0;
+      }
+    },
+    [detailRows, dispatch],
+  );
+
+  const handleSave = async () => {
+    setSaving(true);
+
+    try {
+      await persistDetailRows(detailRows);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (!detailRows.length) {
+      toast.info("No inventory variants available to export");
+      return;
+    }
+
+    const exportRows = detailRows.map((row) => ({
+      productId: row.productId,
+      productName: row.productName,
+      productSku: row.productSku,
+      variantId: row.variantId,
+      variantSku: row.variantSku,
+      variantName: row.variantName,
+      currentStock: row.originalStock,
+      newStock: row.currentStock,
+    }));
+
+    exportToExcel(exportRows, {
+      filename: `${normalizeText(detail?.product?.sku || "product")}-inventory-template.xlsx`,
+      sheetName: "Product Inventory",
+      columns: IMPORT_COLUMNS.map((key) => ({
+        label: key,
+        key,
+      })),
+    });
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setImportError("");
+      setImportInfo("");
+      setImportSuccess("");
+
+      const imported = await parseImportFile(file);
+
+      if (!imported.length) {
+        throw new Error("The selected file did not contain any rows");
+      }
+
+      const importedColumns = Object.keys(imported[0] || {});
+
+      const missingColumns = IMPORT_COLUMNS.filter(
+        (column) => !importedColumns.includes(column),
+      );
+
+      const unknownColumns = importedColumns.filter(
+        (column) => !IMPORT_COLUMNS.includes(column),
+      );
+
+      if (missingColumns.length) {
+        throw new Error(
+          buildImportValidationError(
+            `Missing required column(s): ${missingColumns.join(", ")}.`,
+          ),
+        );
+      }
+
+      if (unknownColumns.length) {
+        throw new Error(
+          buildImportValidationError(
+            `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
+          ),
+        );
+      }
+
+      const catalogByIdentity = new Map(
+        detailRows.map((row) => [getVariantIdentity(row), row]),
+      );
+
+      const catalogByProductAndSku = new Map(
+        detailRows.map((row) => [
+          `${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`,
+          row,
+        ]),
+      );
+
+      const importedUpdates = new Map();
+
+      imported.forEach((item, index) => {
+        const rowNumber = index + 2;
+
+        const productIdValue = normalizeText(item.productId);
+        const variantIdValue = normalizeText(item.variantId);
+        const variantSkuValue = normalizeText(item.variantSku);
+
+        if (!productIdValue || (!variantIdValue && !variantSkuValue)) {
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: productId and variantId/variantSku are required.`,
+            ),
+          );
+        }
+
+        const identity = [productIdValue, variantIdValue, variantSkuValue].join(
+          "::",
+        );
+
+        const fallbackIdentity = `${productIdValue}::${variantSkuValue}`;
+
+        const catalogRow = variantIdValue
+          ? catalogByIdentity.get(identity)
+          : catalogByProductAndSku.get(fallbackIdentity);
+
+        if (!catalogRow) {
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
+            ),
+          );
+        }
+
+        if (importedUpdates.has(catalogRow.id)) {
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: duplicate product or variant row found.`,
+            ),
+          );
+        }
+
+        const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter(
+          (column) =>
+            !importValuesMatch(
+              item[column],
+              getExpectedImportValue(catalogRow, column),
+              column,
+            ),
+        );
+
+        if (editedColumns.length) {
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: ${editedColumns.join(", ")} cannot be changed.`,
+            ),
+          );
+        }
+
+        const newStock = Number(item.newStock);
+
+        if (!Number.isInteger(newStock) || newStock < 0) {
+          throw new Error(
+            `Row ${rowNumber}: newStock must be a non-negative whole number.`,
+          );
+        }
+
+        importedUpdates.set(catalogRow.id, newStock);
+      });
+
+      const nextRows = detailRows.map((row) =>
+        importedUpdates.has(row.id)
+          ? {
+              ...row,
+              currentStock: importedUpdates.get(row.id),
+            }
+          : row,
+      );
+
+      setDetailRows(nextRows);
+
+      const changedCount = nextRows.filter(
+        (row) => importedUpdates.has(row.id) && isPendingStock(row),
+      ).length;
+
+      if (!changedCount) {
+        setImportInfo(
+          "The file was imported successfully, but there are no new stock changes to save.",
+        );
+        return;
+      }
+
+      setImportSuccess(
+        `${changedCount} inventory ${
+          changedCount === 1 ? "change is" : "changes are"
+        } ready to save.`,
+      );
+    } catch (importErrorValue) {
+      setImportError(
+        getErrorMessage(importErrorValue, "Failed to import inventory Excel"),
+      );
+      setImportInfo("");
+      setImportSuccess("");
+    } finally {
+      setImporting(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const adjustRows = async (target, payload) => {
-    const targetRows = Array.isArray(target?.rows) ? target.rows : [target];
     setAdjusting(true);
+
     try {
-      await Promise.all(targetRows.map((row) =>
-        axiosProvider.patch(ENDPOINTS.inventory.adjustVariant(row.productId, row.variantSku), payload),
-      ));
-      toast.success(targetRows.length > 1 ? "Selected variant stock updated" : "Variant stock updated");
+      await dispatch(
+        adjustInventory({
+          productId: target.productId,
+          variantSku: target.variantSku,
+          ...payload,
+        }),
+      ).unwrap();
+
+      toast.success("Variant stock updated");
       setAdjustTarget(null);
-      list.clearSelection();
-      refresh();
-    } catch (err) {
-      toast.error(err?.message || "Unable to update inventory");
+      await refresh();
+    } catch (requestError) {
+      toast.error(getErrorMessage(requestError, "Unable to update inventory"));
     } finally {
       setAdjusting(false);
     }
   };
 
-  const baseColumns = [
-    {
-    key: "productName",
-    label: "Product",
-    sortable: true,
-    render: (_, row) => (
-      <button
-        type="button"
-        className="text-left hover:underline"
-        onClick={(e) => {
-          e.stopPropagation();
-
-          const productIdValue = row?.productId || row?.product_id || row?.id;
-
-          if (productIdValue) {
-            navigate(`/app/product-catalog/view/${productIdValue}`);
-          }
-        }}
-      >
-        {productTitle(row)}
-      </button>
-    ),
-  },
-    { key: "variantName", label: "Variant", render: (_, row) => variantTitle(row) },
-    { key: "sku", label: "SKU", render: (value) => <span className="font-mono text-xs">{value || "N/A"}</span> },
-    { key: "currentStock", label: "Current", sortable: true, render: (value) => numberCell(value) },
-    { key: "reservedStock", label: "Reserved", render: (value) => numberCell(value, "text-amber-600") },
-    { key: "availableStock", label: "Available", render: (value) => numberCell(value, Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700") },
-    { key: "status", label: "Status", render: (value) => <StatusBadge status={value} dot /> },
-  ];
-
   const listColumns = [
-    { key: "productName", label: "Product", sortable: true, render: (_, row) => productTitle(row) },
-    { key: "variants", label: "Variants", render: (_, row) => variantSummary(row) },
-    { key: "currentStock", label: "Current", sortable: true, render: (value) => numberCell(value) },
-    { key: "reservedStock", label: "Reserved", render: (value) => numberCell(value, "text-amber-600") },
-    { key: "availableStock", label: "Available", render: (value) => numberCell(value, Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700") },
-    { key: "status", label: "Status", render: (value) => <StatusBadge status={value} dot /> },
-    ...(adminPanel ? [{ key: "seller", label: "Seller", render: (_, row) => sellerLabel(row) }] : []),
-    { key: "lastUpdated", label: "Last Updated", sortable: true, render: fmtDate },
+    {
+      key: "productName",
+      label: "Product",
+      sortable: true,
+      render: (_, row) => productTitle(row),
+    },
+    {
+      key: "variants",
+      label: "Variants",
+      render: (_, row) => variantSummary(row),
+    },
+    {
+      key: "currentStock",
+      label: "Current",
+      sortable: true,
+      render: (value) => numberCell(value),
+    },
+    {
+      key: "reservedStock",
+      label: "Reserved",
+      render: (value) => numberCell(value, "text-amber-600"),
+    },
+    {
+      key: "availableStock",
+      label: "Available",
+      render: (value) =>
+        numberCell(
+          value,
+          Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700",
+        ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value) => <StatusBadge status={value} dot />,
+    },
+    ...(adminPanel
+      ? [
+          {
+            key: "seller",
+            label: "Seller",
+            render: (_, row) => sellerLabel(row),
+          },
+        ]
+      : []),
+    {
+      key: "lastUpdated",
+      label: "Last Updated",
+      sortable: true,
+      render: fmtDate,
+    },
   ];
+
+  const detailColumns = useMemo(
+    () => [
+      {
+        key: "productName",
+        label: "Product",
+        sortable: true,
+        render: (_, row) => (
+          <button
+            type="button"
+            className="text-left hover:underline"
+            onClick={(event) => {
+              event.stopPropagation();
+
+              if (row.productId) {
+                navigate(`/app/product-catalog/view/${row.productId}`);
+              }
+            }}
+          >
+            {productTitle(row)}
+          </button>
+        ),
+      },
+      {
+        key: "variantName",
+        label: "Variant",
+        render: (_, row) => variantTitle(row),
+      },
+      {
+        key: "variantSku",
+        label: "SKU",
+        render: (value) => (
+          <span className="font-mono text-xs">{value || "N/A"}</span>
+        ),
+      },
+      {
+        key: "originalStock",
+        label: "Current Stock",
+        render: (value) => numberCell(value),
+      },
+      {
+        key: "reservedStock",
+        label: "Reserved",
+        render: (value) => numberCell(value, "text-amber-600"),
+      },
+      {
+        key: "availableStock",
+        label: "Available",
+        render: (value) =>
+          numberCell(
+            value,
+            Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700",
+          ),
+      },
+      {
+        key: "currentStock",
+        label: "New Stock",
+        render: (_, row) => {
+          const hasError =
+            row.currentStock === "" ||
+            !Number.isInteger(Number(row.currentStock)) ||
+            Number(row.currentStock) < 0;
+
+          return (
+            <input
+              type="number"
+              min={0}
+              step={1}
+              className={`w-28 rounded-lg border px-2 py-1.5 text-sm ${
+                hasError
+                  ? "border-red-300 bg-red-50 text-red-800"
+                  : "border-[var(--admin-line)]"
+              }`}
+              value={row.currentStock}
+              onChange={(event) =>
+                handleStockChange(row.id, event.target.value)
+              }
+            />
+          );
+        },
+      },
+      {
+        key: "changeStatus",
+        label: "Change Status",
+        render: (_, row) =>
+          isPendingStock(row) ? (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+              ⟳ Pending
+            </span>
+          ) : (
+            <span className="text-xs text-[var(--admin-muted)]">N/A</span>
+          ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (value) => <StatusBadge status={value} dot />,
+      },
+      {
+        key: "lastUpdated",
+        label: "Last Updated",
+        render: fmtDate,
+      },
+    ],
+    [handleStockChange, navigate],
+  );
 
   const transactionColumns = [
-    { key: "createdAt", label: "Date", render: fmtDate },
-    { key: "variantSku", label: "Variant SKU", render: (value) => <span className="font-mono text-xs">{value || "N/A"}</span> },
-    { key: "type", label: "Type", render: (value) => <StatusBadge status={value} /> },
-    { key: "quantity", label: "Change", render: (value) => numberCell(value, Number(value || 0) < 0 ? "text-red-600" : "text-emerald-700") },
-    { key: "actorRole", label: "Actor" },
-    { key: "metadata", label: "Reason", render: (value) => value?.reason || value?.note || "N/A" },
+    {
+      key: "createdAt",
+      label: "Date",
+      render: fmtDate,
+    },
+    {
+      key: "variantSku",
+      label: "Variant SKU",
+      render: (value) => (
+        <span className="font-mono text-xs">{value || "N/A"}</span>
+      ),
+    },
+    {
+      key: "type",
+      label: "Type",
+      render: (value) => <StatusBadge status={value} />,
+    },
+    {
+      key: "quantity",
+      label: "Change",
+      render: (value) =>
+        numberCell(
+          value,
+          Number(value || 0) < 0 ? "text-red-600" : "text-emerald-700",
+        ),
+    },
+    {
+      key: "actorRole",
+      label: "Actor",
+    },
+    {
+      key: "metadata",
+      label: "Reason",
+      render: (value) => value?.reason || value?.note || "N/A",
+    },
   ];
 
-  const sellerView = isSellerPanel();
   if (productId) {
     const product = detail?.product || {};
+
     return (
       <div>
-        <PageHeader
-          title="Product Inventory"
-          subtitle={product.name || "Variant-wise stock and history"}
-          backPath="/app/inventory"
-          status={product.status}
+        <Loader
+          loading={saving || importing}
+          label={importing ? "Importing inventory..." : "Saving inventory..."}
         />
 
-        <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <PageHeader
+          title="Product Inventory"
+          subtitle="Update variant-wise stock, export a template, edit it in Excel, and import the updated values."
+          backPath="/app/inventory"
+          status={product.status}
+          actions={
+            sellerView ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={loading || !detailRows.length}
+                >
+                  Export Excel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing || saving}
+                >
+                  {importing ? "Importing…" : "Import Excel"}
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  className="hidden"
+                  onChange={handleImport}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!canSave}
+                  title={
+                    pendingCount
+                      ? "Save inventory changes"
+                      : "No changes to save"
+                  }
+                  className="disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
+                >
+                  {saving
+                    ? "Saving…"
+                    : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+                </button>
+              </>
+            ) : null
+          }
+        />
+
+        {importError ? (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className="font-semibold">Import issue</p>
+            <p className="mt-1 whitespace-pre-wrap">{importError}</p>
+          </div>
+        ) : null}
+
+        {importInfo ? (
+          <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            <p className="font-semibold">Import info</p>
+            <p className="mt-1 whitespace-pre-wrap">{importInfo}</p>
+          </div>
+        ) : null}
+
+        {importSuccess ? (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <p className="font-semibold">Import successful</p>
+            <p className="mt-1 whitespace-pre-wrap">{importSuccess}</p>
+          </div>
+        ) : null}
+
+        <div className="mb-4">
           <div className="admin-card flex items-center gap-4 p-4">
             <div className="h-16 w-16 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
-              {product.image ? <img src={product.image} alt={product.name} className="h-full w-full object-cover" /> : null}
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : null}
             </div>
+
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-[var(--admin-ink)]">{product.name || "Untitled product"}</p>
-              <p className="text-xs text-[var(--admin-muted)]">SKU: {product.sku || "N/A"}</p>
-              {adminPanel && <p className="text-xs text-[var(--admin-muted)]">Seller: {product.seller || "N/A"}</p>}
+              <p className="truncate text-base font-semibold text-[var(--admin-ink)]">
+                {product.name || "Untitled product"}
+              </p>
+
+              <p className="text-xs text-[var(--admin-muted)]">
+                SKU: {product.sku || "N/A"}
+              </p>
+
+              {adminPanel && (
+                <p className="text-xs text-[var(--admin-muted)]">
+                  Seller: {product.seller || "N/A"}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         <DataTable
-          columns={[...baseColumns, { key: "lastUpdated", label: "Last Updated", render: fmtDate }]}
-          data={detailVariants}
+          columns={detailColumns}
+          data={detailRows}
           loading={loading}
           error={error}
-          totalCount={detailVariants.length}
+          totalCount={detailRows.length}
           rowKey="id"
           searchPlaceholder="Search variants"
           onRefresh={refresh}
           emptyText="No variants found"
           rowActions={(row) => [
-            { label: "Adjust Inventory", icon: <MdInventory2 />, onClick: () => setAdjustTarget(row) },
+            {
+              label: "Adjust Inventory",
+              icon: <MdInventory2 />,
+              onClick: () => setAdjustTarget(row),
+            },
           ]}
         />
 
         <div className="mt-5">
-          <PageHeader title="Stock History" subtitle="Complete movement log for this product's variants" />
+          <PageHeader
+            title="Stock History"
+            subtitle="Complete movement log for this product's variants"
+          />
+
           <DataTable
             columns={transactionColumns}
             data={pagedTransactions}
@@ -533,15 +1391,16 @@ setTotal(response.data?.meta?.productTotal ?? nextRows.length);
     );
   }
 
-
   return (
     <div>
       <PageHeader
         title="Inventory"
-        subtitle="Product-level inventory list with variant stock managed inside each product"
-        count={productRows.length}
-         breadcrumbs={[
-          { label: sellerView ? "Inventory" : "Inventory" },
+        subtitle="View product-level inventory and manage variant stock inside each product."
+        count={total}
+        breadcrumbs={[
+          {
+            label: sellerView ? "Inventory" : "Inventory Management",
+          },
           { label: "Inventory" },
         ]}
       />
@@ -554,36 +1413,22 @@ setTotal(response.data?.meta?.productTotal ?? nextRows.length);
         totalCount={total}
         listPage={list}
         rowKey="id"
-        selectable
-        selectedKeys={list.selectedKeys}
-        onSelectionChange={list.setSelectedKeys}
         onRefresh={refresh}
         searchPlaceholder="Search product or SKU"
-        filterBar={<FilterBar filters={filterFields} listPage={list} loading={false} />}
-        bulkActionBar={
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={productRows.length}
-            onClear={list.clearSelection}
-            module="inventory"
-            actions={[
-              {
-                label: "Bulk Adjust Variants",
-                action: "adjust",
-                icon: <MdInventory2 />,
-                variant: "primary",
-                disabled: selectedVariantRows.length === 0,
-                onClick: () => setAdjustTarget({ rows: selectedVariantRows }),
-              },
-            ]}
-          />
+        filterBar={
+          <FilterBar filters={filterFields} listPage={list} loading={false} />
         }
         emptyText="No inventory products found"
         onRowClick={(row) => navigate(`/app/inventory/${row.productId}`)}
         rowActions={(row) => {
           const variants = row.variants || [];
+
           return [
-            { label: "View Product Inventory", icon: <MdOpenInNew />, onClick: () => navigate(`/app/inventory/${row.productId}`) },
+            {
+              label: "View Product Inventory",
+              icon: <MdOpenInNew />,
+              onClick: () => navigate(`/app/inventory/${row.productId}`),
+            },
             {
               label: "Quick Adjust",
               icon: <MdInventory2 />,

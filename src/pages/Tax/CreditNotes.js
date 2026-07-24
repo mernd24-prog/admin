@@ -239,7 +239,7 @@ const CreditNotes = () => {
     <div className="space-y-6">
       <PageHeader
         title="Credit Notes"
-        subtitle="Tax credit notes for returns and cancellations"
+        subtitle="Tax credit notes for returns and cancellations."
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Credit Notes" }]}
         actions={
           <div className="flex gap-2">
@@ -257,9 +257,9 @@ const CreditNotes = () => {
         }
       />
 
-      {error && (
+      {/* {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
-      )}
+      )} */}
 
       {loading ? (
         <Loader />

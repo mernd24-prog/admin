@@ -980,6 +980,15 @@ const ProductCatalog = () => {
       navigate,
     ],
   );
+const products = apiRes?.list || [];
+
+const selectedProducts = products.filter((product) => {
+  const productId = product?._id || product?.id;
+  return selectedRow.includes(productId);
+});
+
+const exportData =
+selectedRow.length > 0 ? selectedProducts : products;
 
   return (
     <div className="overflow-x-auto overflow-y-auto">
@@ -994,7 +1003,7 @@ const ProductCatalog = () => {
         actions={
           <>
             <ExportButton
-              data={apiRes?.list || []}
+              data={exportData}
               filename="products"
               columns={PRODUCT_EXPORT_COLUMNS}
               requiredModule="products"
@@ -1003,7 +1012,7 @@ const ProductCatalog = () => {
           </>
         }
       />
-      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border  border-[var(--admin-line)] bg-white shadow-sm">
         <section className="border-b border-[var(--admin-line)]">
           <SearchComponent  
             selectedRow={selectedRow}

@@ -1052,7 +1052,7 @@ export const SalesReport = () => {
   return (
     <ReportShell
       title={sellerView ? "Sales Report" : "Sales Reports"}
-      subtitle={sellerView ? "Revenue and order status for your seller account" : "Revenue, order status, payments, and refunds from live marketplace analytics"}
+      subtitle={sellerView ? "Revenue and order status for your seller account." : "Revenue, order status, payments, and refunds from live marketplace analytics"}
       breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Sales Report" : "Sales Reports" }]}
       stats={stats}
       loading={loading}
@@ -1129,7 +1129,7 @@ export const ProductAnalytics = () => {
   return (
     <ReportShell
       title={sellerView ? "Product Report" : "Product Analytics"}
-      subtitle={sellerView ? "Top-selling products and catalog health for your seller account" : "Top-selling products and current catalog health from product analytics APIs"}
+      subtitle={sellerView ? "Top-selling products and catalog health for your seller account." : "Top-selling products and current catalog health from product analytics APIs"}
       breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Product Report" : "Product Analytics" }]}
       stats={stats}
       loading={loading}
@@ -1212,7 +1212,7 @@ export const InventoryAnalytics = () => {
   return (
     <ReportShell
       title={sellerView ? "Inventory Report" : "Inventory Analytics"}
-      subtitle={sellerView ? "Current stock health and low-stock products for your seller account" : "Current stock health and low-stock products from inventory APIs"}
+      subtitle={sellerView ? "Current stock health and low-stock products for your seller account." : "Current stock health and low-stock products from inventory APIs"}
       breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Inventory Report" : "Inventory Analytics" }]}
       stats={stats}
       loading={loading}
@@ -1399,7 +1399,7 @@ export const AnalyticsDashboard = () => {
   return (
     <ReportShell
       title="Analytics Dashboard"
-      subtitle={sellerView ? "Live seller metrics for orders, returns, products, inventory, and wallet activity" : "Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"}
+      subtitle={sellerView ? "Live seller metrics for orders, returns, products, inventory, and wallet activity." : "Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"}
       breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
       stats={stats}
       loading={loading}
