@@ -124,7 +124,7 @@ const ShipmentTracking = () => {
   const { toQueryParams } = list;
 
   const FILTER_FIELDS = isSeller ? [
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
  
   {
     key: "shipmentType",

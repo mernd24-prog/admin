@@ -19,7 +19,7 @@ export default function Cards({
     <Component
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`relative flex h-full min-h-[92px] w-full min-w-0 overflow-hidden rounded-[10px] border border-[#f0c86f] bg-white px-4 py-3 text-left shadow-none ${
+      className={`relative flex h-full min-h-[92px] w-full min-w-0 overflow-hidden rounded-[10px] border border-[#f0c86f] bg-[#FFFDF8] px-4 py-3 text-left shadow-none ${
         onClick
           ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] focus:ring-offset-2"
           : ""

@@ -52,7 +52,7 @@ const Field = ({ label: fieldLabel, value, mono = false }) => (
 const AmountCard = ({ label: cardLabel, value, tone = "default" }) => {
   const toneClass = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-600" : "text-gray-950";
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border  border-gray-200 bg-[#FFFDF8] p-4">
       <p className="text-xs font-medium uppercase text-gray-500">{cardLabel}</p>
       <p className={`mt-2 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
@@ -172,7 +172,7 @@ const TaxInvoiceDetail = () => {
         )}
       />
 
-      <section className="rounded-lg border border-gray-200 bg-white p-5">
+      <section className="rounded-lg border border-gray-200 bg-[#FFFDF8] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-mono text-sm font-semibold text-gray-950">{pick(invoice, "invoiceNumber", "invoice_number") || "—"}</p>

@@ -329,11 +329,11 @@ const TaxInvoices = () => {
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
       />
 
-      {error && (
+      {/* {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
         </div>
-      )}
+      )} */}
 
       {loading ? (
         <Loader />
@@ -343,6 +343,7 @@ const TaxInvoices = () => {
           data={payload.list}
           total={payload.total}
           listPage={list}
+          searchPlaceholder="Search Invoice or Order..."
           emptyMessage="No tax invoices found"
            filterBar={
             <FilterBar

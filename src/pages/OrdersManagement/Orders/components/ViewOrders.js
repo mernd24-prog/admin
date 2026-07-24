@@ -769,11 +769,10 @@ const OrderSummary = () => {
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           {isSeller ? (
             <>
-              <MetricCard label="Product Total" value={formatMoney(subtotalAmount)} tone="dark" />
+              <MetricCard label="Product Total" value={formatMoney(subtotalAmount)} />
               <MetricCard
                 label="Payment Collection"
                 value={String(firstDefined(order.payment_provider, order.paymentProvider, "")).toLowerCase() === "cod" ? "COD" : "Prepaid"}
-                tone="blue"
               />
             </>
           ) : (
@@ -784,7 +783,7 @@ const OrderSummary = () => {
           )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
           <MetricCard label="Delivery Status" value={<StatusBadge status={firstDefined(order.delivery_status, order.deliveryStatus)} dot />} />
-          <MetricCard label="Shipment Status" value={shipmentSummary} tone="blue" />
+          <MetricCard label="Shipment Status" value={shipmentSummary}/>
           <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
 
