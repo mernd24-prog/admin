@@ -40,11 +40,9 @@ const initialState = {
   rejectReturnData: {},
   updateReturnData: {},
   refundReturnData: {},
-  adminPayoutsData: {},
   walletTransactionsData: {},
   adminsData: {},
   createAdminData: {},
-  createAdminPayoutData: {},
   taxReportsData: {},
   taxInvoicesData: {},
   taxInvoiceData: {},
@@ -195,37 +193,6 @@ const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "userId", "acti
 const listOrderQueryKeys = ["status", "sellerId", "fromDate", "toDate", "limit", "offset"];
 const moderationQueueQueryKeys = ["status", "category", "page", "limit"];
 const updateModerationKeys = ["status", "rejectionReason", "checklist"];
-
-const toAdminPayoutBody = (payload = {}) => ({
-  ...(firstDefined(payload.sellerId, payload.seller_id) ? { sellerId: firstDefined(payload.sellerId, payload.seller_id) } : {}),
-  ...(firstDefined(payload.periodStart, payload.period_start, payload.fromDate, payload.startDate)
-    ? { periodStart: firstDefined(payload.periodStart, payload.period_start, payload.fromDate, payload.startDate) }
-    : {}),
-  ...(firstDefined(payload.periodEnd, payload.period_end, payload.toDate, payload.endDate)
-    ? { periodEnd: firstDefined(payload.periodEnd, payload.period_end, payload.toDate, payload.endDate) }
-    : {}),
-  ...(toNum(firstDefined(payload.grossAmount, payload.gross_amount, payload.amount)) !== undefined
-    ? { grossAmount: toNum(firstDefined(payload.grossAmount, payload.gross_amount, payload.amount)) }
-    : {}),
-  ...(toNum(firstDefined(payload.commissionAmount, payload.commission_amount)) !== undefined
-    ? { commissionAmount: toNum(firstDefined(payload.commissionAmount, payload.commission_amount)) }
-    : {}),
-  ...(toNum(firstDefined(payload.processingFeeAmount, payload.processing_fee_amount)) !== undefined
-    ? { processingFeeAmount: toNum(firstDefined(payload.processingFeeAmount, payload.processing_fee_amount)) }
-    : {}),
-  ...(toNum(firstDefined(payload.taxWithheldAmount, payload.tax_withheld_amount)) !== undefined
-    ? { taxWithheldAmount: toNum(firstDefined(payload.taxWithheldAmount, payload.tax_withheld_amount)) }
-    : {}),
-  ...(toNum(firstDefined(payload.netPayoutAmount, payload.net_payout_amount)) !== undefined
-    ? { netPayoutAmount: toNum(firstDefined(payload.netPayoutAmount, payload.net_payout_amount)) }
-    : {}),
-  ...(firstDefined(payload.currency, payload.currencyCode) ? { currency: firstDefined(payload.currency, payload.currencyCode) } : {}),
-  ...(payload.status ? { status: payload.status } : {}),
-  ...(firstDefined(payload.scheduledAt, payload.scheduled_at)
-    ? { scheduledAt: firstDefined(payload.scheduledAt, payload.scheduled_at) }
-    : {}),
-  ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
-});
 
 const toApiKeyBody = (payload = {}) => ({
   ...(firstDefined(payload.ownerId, payload.owner_id) ? { ownerId: firstDefined(payload.ownerId, payload.owner_id) } : {}),
@@ -546,8 +513,6 @@ export const retryReturnRefund = createApiThunkPrivate("adminCore/retryReturnRef
 export const syncReturnRefund = createApiThunkPrivate("adminCore/syncReturnRefund", (payload) => ENDPOINTS.returns.syncRefund(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: noBody });
 export const replaceReturn = createApiThunkPrivate("adminCore/replaceReturn", (payload) => ENDPOINTS.returns.replacement(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["action", "provider", "courierName", "awbNumber", "trackingNumber", "shippingMode", "packageSnapshot", "pickupAddressSnapshot", "metadata", "note"]) });
 export const closeReturn = createApiThunkPrivate("adminCore/closeReturn", (payload) => ENDPOINTS.returns.close(payload.returnId || payload.id || payload._id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reason", "note"]) });
-export const getAdminPayouts = createApiThunkPrivate("adminCore/getAdminPayouts", ENDPOINTS.payouts.admin, "GET", true, { transformParams: pickQuery(["sellerId", "status", "fromDate", "toDate", "limit", "offset"]) });
-export const createAdminPayout = createApiThunkPrivate("adminCore/createAdminPayout", ENDPOINTS.payouts.admin, "POST", false, { transformBody: toAdminPayoutBody });
 export const getWalletTransactions = createApiThunkPrivate("adminCore/getWalletTransactions", ENDPOINTS.wallets.adminTransactions, "GET", true, { transformParams: pickQuery(["userId", "type", "status", "referenceType", "referenceId", "search", "fromDate", "toDate", "limit", "offset"]) });
 export const getTaxReports = createApiThunkPrivate("adminCore/getTaxReports", ENDPOINTS.tax.reports, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "taxComponent", "organizationId", "format", "limit", "offset"]) });
 export const createTaxInvoice = createApiThunkPrivate("adminCore/createTaxInvoice", (payload) => ENDPOINTS.tax.adminInvoice(payload.orderId), "POST", false, { transformBody: noBody });
@@ -733,8 +698,6 @@ const adminCoreSlice = createSlice({
       [syncReturnRefund, "refundReturnData"],
       [replaceReturn, "updateReturnData"],
       [closeReturn, "updateReturnData"],
-      [getAdminPayouts, "adminPayoutsData"],
-      [createAdminPayout, "createAdminPayoutData"],
       [getWalletTransactions, "walletTransactionsData"],
       [getTaxReports, "taxReportsData"],
       [getTaxInvoices, "taxInvoicesData"],

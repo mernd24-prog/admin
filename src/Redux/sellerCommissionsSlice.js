@@ -8,6 +8,7 @@ const initialState = {
   myPayoutsData: {},
   mySettlementsData: {},
   financeSummaryData: {},
+  promotionLedgerData: {},
   adminCommissionsData: {},
   adminPayoutsData: {},
   settlementsData: {},
@@ -84,6 +85,22 @@ export const getMySellerFinanceSummary = createApiThunkPrivate(
   "GET",
   true,
   { transformParams: withSelectedOrganization(["status", "search", "fromDate", "toDate"]) }
+);
+
+export const getPromotionFundingLedger = createApiThunkPrivate(
+  "sellerCommissions/getPromotionFundingLedger",
+  ENDPOINTS.payouts.promotionLedger,
+  "GET",
+  true,
+  { transformParams: pickQuery(["sellerId", "organizationId", "orderId", "fundingType", "search", "fromDate", "toDate", "limit", "offset"]) }
+);
+
+export const getMyPromotionFundingLedger = createApiThunkPrivate(
+  "sellerCommissions/getMyPromotionFundingLedger",
+  ENDPOINTS.payouts.myPromotionLedger,
+  "GET",
+  true,
+  { transformParams: withSelectedOrganization(["orderId", "fundingType", "search", "fromDate", "toDate", "limit", "offset"]) }
 );
 
 export const getAdminSellerCommissions = createApiThunkPrivate(
@@ -234,6 +251,8 @@ const sellerCommissionsSlice = createSlice({
     createExtraReducersForThunk(builder, getMySellerSettlements, "mySettlementsData");
     createExtraReducersForThunk(builder, getSellerFinanceSummary, "financeSummaryData");
     createExtraReducersForThunk(builder, getMySellerFinanceSummary, "financeSummaryData");
+    createExtraReducersForThunk(builder, getPromotionFundingLedger, "promotionLedgerData");
+    createExtraReducersForThunk(builder, getMyPromotionFundingLedger, "promotionLedgerData");
     createExtraReducersForThunk(builder, getAdminSellerCommissions, "adminCommissionsData");
     createExtraReducersForThunk(builder, getAdminSellerPayouts, "adminPayoutsData");
     createExtraReducersForThunk(builder, getSellerSettlements, "settlementsData");

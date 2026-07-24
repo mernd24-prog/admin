@@ -460,7 +460,11 @@ const DiscountCoupons = () => {
                     <option value="marketplace">Marketplace</option>
                     <option value="seller">Seller</option>
                     <option value="shared">Marketplace and seller</option>
+                    <option value="payment_partner">Payment partner / bank</option>
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Marketplace or partner funding does not reduce the seller tax invoice. It is recorded as a contribution toward payment.
+                  </p>
                 </div>
                 {formData.funding_type === "shared" && (
                   <FormInput label="Seller Share (%)" name="seller_funding_percent" type="number" value={formData.seller_funding_percent} onChange={handleInputChange} error={errors.seller_funding_percent} min="1" max="99" required />

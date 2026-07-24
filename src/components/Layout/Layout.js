@@ -101,6 +101,9 @@ const Returns = React.lazy(
 const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
 );
+const PromotionFundingLedger = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/PromotionFundingLedger"),
+);
 const SellerCodCollections = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerCodCollections"),
 );
@@ -573,6 +576,7 @@ function Layout() {
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
       { path: "/seller-finance", render: () => <SellerFinance /> },
+      { path: "/promotion-funding-ledger", render: () => <PromotionFundingLedger /> },
       { path: "/seller-wallet", render: () => <SellerWallet /> },
       { path: "/seller-cod-collections", render: () => <SellerCodCollections /> },
       { path: "/commission-rules", redirectTo: "/app/platform-commission" },

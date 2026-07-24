@@ -61,7 +61,10 @@ const deductionOf = (row = {}) => {
     gstTcs: Number(metadata.gstTcsAmount || 0),
     incomeTaxTds: Number(metadata.incomeTaxTdsAmount || 0),
     sellerFundedDiscount: productTotal("sellerFundedDiscountAmount"),
+    marketplaceFundedDiscount: productTotal("marketplaceFundedDiscountAmount"),
+    paymentPartnerFundedDiscount: productTotal("paymentPartnerFundedDiscountAmount"),
     shipping: Number(metadata.shippingDeductionAmount || 0),
+    shippingCredit: Number(metadata.shippingReimbursementAmount || 0),
     refund: Number(row.refund_amount ?? row.refundAmount ?? 0),
     adjustment: Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0),
   };
@@ -405,7 +408,10 @@ const SellerFinance = () => {
     gstTcs: 0,
     incomeTaxTds: 0,
     sellerFundedDiscount: 0,
+    marketplaceFundedDiscount: 0,
+    paymentPartnerFundedDiscount: 0,
     shipping: 0,
+    shippingCredit: 0,
     refund: 0,
     adjustment: 0,
   }), [commissions]);
@@ -445,6 +451,21 @@ const SellerFinance = () => {
       label: "Seller-funded Discount",
       value: `−${money(visibleDeductions.sellerFundedDiscount)}`,
       hint: "Seller's share of customer discount (already reflected in eligible value)",
+    },
+    {
+      label: "Marketplace Promotion Contribution",
+      value: `+${money(visibleDeductions.marketplaceFundedDiscount)}`,
+      hint: "Paid by the marketplace toward seller invoices; not a seller deduction",
+    },
+    {
+      label: "Payment Partner Contribution",
+      value: `+${money(visibleDeductions.paymentPartnerFundedDiscount)}`,
+      hint: "Paid by a bank or payment partner; not a seller deduction",
+    },
+    {
+      label: "Shipping Collected from Customer",
+      value: `+${money(visibleDeductions.shippingCredit)}`,
+      hint: "Collected by the marketplace and included in this seller's settlement",
     },
     {
       label: "Shipping Deduction",
@@ -683,7 +704,7 @@ const SellerFinance = () => {
       {/* Commission Breakdown Info Banner */}
       <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
         <strong>How seller payable is calculated:</strong> Each order item uses its checkout pricing snapshot.
-        Seller receives: <em>eligible item value − platform commission − GST on commission − GST TCS − income-tax TDS − shipping deductions − refund/recovery adjustments</em> after that item's return window closes.
+        Seller receives: <em>eligible item value + customer shipping allocated to the seller − platform commission − GST on commission − GST TCS − income-tax TDS − shipping deductions − refund/recovery adjustments</em> after that item's return window closes.
         Statutory TCS/TDS are withheld for tax reporting and are not platform revenue. Seller-funded discount is shown separately because it is already reflected in the eligible item value.
       </div>
 
@@ -908,7 +929,10 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.gstTcs)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.incomeTaxTds)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.shipping)}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${deductions.shippingCredit > deductions.shipping ? "text-[#208a3c]" : "text-[#d92d20]"}`}>
+                {deductions.shippingCredit > deductions.shipping ? "+" : "−"}
+                {money(Math.abs(deductions.shippingCredit - deductions.shipping))}
+              </td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
               <td className={`whitespace-nowrap px-4 py-3 ${Number(row.adjustment_amount || 0) < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{money(row.adjustment_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>

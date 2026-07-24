@@ -348,12 +348,13 @@ const normalizeSellerSettlement = (seller = {}) => ({
   adjustmentAmount: money(firstDefined(seller.adjustmentAmount, seller.adjustment_amount, 0)),
   gstTcsRate: money(firstDefined(seller.gstTcsRate, seller.gst_tcs_rate, 0)),
   gstTcsAmount: money(firstDefined(seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
-  gstTcsTaxableBase: money(firstDefined(seller.gstTcsTaxableBaseAmount, seller.gst_tcs_taxable_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
+  gstTcsTaxableBase: money(firstDefined(seller.gstTcsTaxableAmount, seller.gstTcsTaxableBaseAmount, seller.gst_tcs_taxable_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
   gstTcsReversal: money(firstDefined(seller.gstTcsReversalAmount, seller.gst_tcs_reversal_amount, 0)),
   netGstTcsAmount: money(firstDefined(seller.netGstTcsAmount, seller.net_gst_tcs_amount, seller.gstTcsAmount, seller.gst_tcs_amount, 0)),
   gstTcsTaxableBaseReversal: money(firstDefined(seller.gstTcsTaxableBaseReversalAmount, seller.gst_tcs_taxable_base_reversal_amount, 0)),
   netGstTcsTaxableBase: money(firstDefined(seller.netGstTcsTaxableBaseAmount, seller.net_gst_tcs_taxable_base_amount, seller.taxableAmount, seller.taxableSales, 0)),
   incomeTaxTdsRate: money(firstDefined(seller.incomeTaxTdsRate, seller.income_tax_tds_rate, 0)),
+  incomeTaxTdsTaxableBase: money(firstDefined(seller.incomeTaxTdsTaxableAmount, seller.incomeTaxTdsTaxableBaseAmount, seller.income_tax_tds_taxable_base_amount, seller.grossSalesAmount, seller.grossSales, 0)),
   incomeTaxTdsAmount: money(firstDefined(seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
   incomeTaxTdsReversal: money(firstDefined(seller.incomeTaxTdsReversalAmount, seller.income_tax_tds_reversal_amount, 0)),
   netIncomeTaxTdsAmount: money(firstDefined(seller.netIncomeTaxTdsAmount, seller.net_income_tax_tds_amount, seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
@@ -1249,10 +1250,10 @@ const OrderSummary = () => {
                       <div className="flex justify-between"><span>Original commission GST</span><span>{formatMoney(seller.platformFeeTax)}</span></div>
                       <div className="flex justify-between text-[#21812C]"><span>Reversed through credit note</span><span>-{formatMoney(seller.commissionTaxReversal)}</span></div>
                     </div>}
-                    {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping Reimbursement</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
+                    {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping collected from customer</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
                     {seller.shippingDeduction > 0 && <div className="flex justify-between"><span>Shipping Deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>}
                     {seller.shippingPolicy && (
-                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{formatLabel("Shipping policy")}</span><span>{formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
+                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Shipping settlement</span><span>{seller.shippingPolicy === "reimburse_seller" ? "Included in seller payout" : formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
                     )}
                     {seller.refundAmount > 0 && <>
                       <div className="flex justify-between"><span>Refunded item payout-base reversal</span><span>-{formatMoney(seller.sellerPayoutBaseReversal)}</span></div>
@@ -1260,14 +1261,17 @@ const OrderSummary = () => {
                     </>}
                     {seller.adjustmentAmount !== 0 && <div className="flex justify-between"><span>Payout Adjustment / Recovery</span><span>{seller.adjustmentAmount > 0 ? "+" : "-"}{formatMoney(Math.abs(seller.adjustmentAmount))}</span></div>}
                     {seller.gstTcsAmount > 0 && <>
-                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS taxable base" : "GST TCS taxable base"}</span><span>{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.taxableSales)}</span></div>
+                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS taxable base" : "GST TCS taxable base"}</span><span>{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}</span></div>
                       <div className="flex justify-between"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS" : "GST TCS"} ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount)}</span></div>
                       {seller.gstTcsReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
                         <div className="flex justify-between"><span>Original TCS / taxable base</span><span>{formatMoney(seller.gstTcsAmount)} / {formatMoney(seller.gstTcsTaxableBase)}</span></div>
                         <div className="flex justify-between text-[#21812C]"><span>Returned TCS / taxable base reversed</span><span>-{formatMoney(seller.gstTcsReversal)} / -{formatMoney(seller.gstTcsTaxableBaseReversal)}</span></div>
                       </div>}
                     </>}
-                    {seller.incomeTaxTdsAmount > 0 && <div className="flex justify-between"><span>{seller.incomeTaxTdsReversal > 0 ? "Net Income-tax TDS" : "Income-tax TDS"} ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}</span></div>}
+                    {seller.incomeTaxTdsAmount > 0 && <>
+                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Income-tax TDS gross base</span><span>{formatMoney(seller.incomeTaxTdsTaxableBase)}</span></div>
+                      <div className="flex justify-between"><span>{seller.incomeTaxTdsReversal > 0 ? "Net Income-tax TDS" : "Income-tax TDS"} ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}</span></div>
+                    </>}
                     <div className="mt-2 flex justify-between border-t border-[#efe6cd] pt-2 font-semibold"><span>Final Seller Payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
                     {(seller.commissionStatus || seller.payoutStatus) && (
                       <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">

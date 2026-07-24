@@ -199,6 +199,21 @@ const TaxInvoiceDetail = () => {
         <AmountCard label="Total" value={money(pick(invoice, "totalAmount", "total_amount") ?? amountMeta.finalPayableAmount, currency)} tone="green" />
       </section>
 
+      {invoiceType === "seller_customer" && (
+        <section className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+          <h2 className="text-sm font-semibold text-gray-900">Invoice payment allocation</h2>
+          <p className="mt-1 text-xs text-gray-600">
+            Marketplace and payment-partner promotions pay part of this seller invoice; they do not reduce its taxable value.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <AmountCard label="Seller-funded discount" value={money(amountMeta.sellerFundedDiscountAmount, currency)} />
+            <AmountCard label="Paid by customer" value={money(amountMeta.customerPaidTowardInvoiceAmount, currency)} />
+            <AmountCard label="Marketplace contribution" value={money(amountMeta.marketplaceFundedDiscountAmount, currency)} tone="green" />
+            <AmountCard label="Payment partner contribution" value={money(amountMeta.paymentPartnerFundedDiscountAmount, currency)} tone="green" />
+          </div>
+        </section>
+      )}
+
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Tax Breakup</h2>
@@ -221,7 +236,8 @@ const TaxInvoiceDetail = () => {
                 <th className="px-4 py-3">Item</th>
                 <th className="px-4 py-3">{invoiceType === "platform_commission" ? "SAC" : "HSN"}</th>
                 <th className="px-4 py-3">Qty</th>
-                {invoiceType === "seller_customer" && <th className="px-4 py-3">Discount</th>}
+                {invoiceType === "seller_customer" && <th className="px-4 py-3">Customer Promotion</th>}
+                {invoiceType === "seller_customer" && <th className="px-4 py-3">Paid by Platform / Partner</th>}
                 <th className="px-4 py-3">Taxable</th>
                 <th className="px-4 py-3">Tax</th>
                 <th className="px-4 py-3">Total</th>
@@ -238,7 +254,12 @@ const TaxInvoiceDetail = () => {
                   </td>
                   <td className="px-4 py-3">{item.hsnCode || "—"}</td>
                   <td className="px-4 py-3">{item.quantity || "—"}</td>
-                  {invoiceType === "seller_customer" && <td className="px-4 py-3">{money(item.discountAmount, currency)}</td>}
+                  {invoiceType === "seller_customer" && <td className="px-4 py-3">{money(item.customerDiscountAmount, currency)}</td>}
+                  {invoiceType === "seller_customer" && <td className="px-4 py-3">{money(
+                    Number(item.marketplaceFundedDiscountAmount || 0) +
+                    Number(item.paymentPartnerFundedDiscountAmount || 0),
+                    currency,
+                  )}</td>}
                   <td className="px-4 py-3">{money(item.taxableAmount, currency)}</td>
                   <td className="px-4 py-3">{money(item.taxAmount, currency)}</td>
                   <td className="px-4 py-3">{money(
@@ -248,7 +269,7 @@ const TaxInvoiceDetail = () => {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={invoiceType === "seller_customer" ? 7 : 6} className="px-4 py-6 text-center text-gray-500">No line items available</td>
+                  <td colSpan={invoiceType === "seller_customer" ? 8 : 6} className="px-4 py-6 text-center text-gray-500">No line items available</td>
                 </tr>
               )}
             </tbody>

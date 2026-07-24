@@ -204,7 +204,6 @@ export const ENDPOINTS = {
     warehouseStatus: "/admin/inventory/warehouses/status",
   },
   payouts: {
-    admin: "/admin/payouts",
     summary: "/sellers/commissions/summary",
     commissions: "/sellers/commissions",
     commissionsExport: "/sellers/commissions/export",
@@ -212,6 +211,8 @@ export const ENDPOINTS = {
     sellerPayoutsExport: "/sellers/commissions/payouts/export",
     myCommissions: "/sellers/commissions/my-commissions",
     mySummary: "/sellers/commissions/my-summary",
+    myPromotionLedger: "/sellers/commissions/my-promotion-ledger",
+    promotionLedger: "/sellers/commissions/promotion-ledger",
     myPayouts: "/sellers/commissions/my-payouts",
     myWallet: "/sellers/commissions/my-wallet",
     myPayoutsExport: "/sellers/commissions/my-payouts/export",

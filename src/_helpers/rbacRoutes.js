@@ -430,6 +430,8 @@ export const MODULE_DEFAULT_ROUTES = {
   "seller-management":"seller-users",
   "my-organizations": "my-organizations",
   "sellers/commissions":"seller-finance",
+  "promotion-funding-ledger": "promotion-funding-ledger",
+  "seller-promotion-funding-ledger": "promotion-funding-ledger",
   "seller-cod-collections": "seller-cod-collections",
   commission:           "platform-commission",
   "commission-rules":   "platform-commission",
@@ -618,7 +620,7 @@ const ROUTE_MODULES = [
   [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
-  [["/seller-finance", "/seller-wallet", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
+  [["/seller-finance", "/promotion-funding-ledger", "/seller-wallet", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
   [["/seller-payouts"], ["sellers/commissions"]],
 
   // Commerce Settings

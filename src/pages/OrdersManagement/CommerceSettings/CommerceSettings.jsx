@@ -62,7 +62,7 @@ const DEFAULT_SETTINGS = {
     payoutSchedule: "manual",
     payoutManualApprovalRequired: true,
     minimumPayoutAmount: 0,
-    shippingPolicy: "not_in_seller_payout",
+    shippingPolicy: "reimburse_seller",
     gstTcsEnabled: false,
     gstTcsRate: 0.5,
     incomeTaxTdsEnabled: false,
@@ -395,7 +395,7 @@ export default function CommerceSettings() {
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField label="Fee Type" value={settings.platformFees.customerFeeType} onChange={(value) => patchSettings("platformFees", { customerFeeType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
           <InputField label="Fee Value" type="number" min="0" value={settings.platformFees.customerFeeValue} onChange={(value) => patchSettings("platformFees", { customerFeeValue: value })} hint="Added to the customer-facing order total." />
-          <InputField label="Customer Fee GST Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.platformFees.customerFeeTaxRate} onChange={(value) => patchSettings("platformFees", { customerFeeTaxRate: value })} hint="Creates a separate marketplace-to-customer fee tax invoice when greater than zero." />
+          <InputField label="Customer Fee GST Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.platformFees.customerFeeTaxRate} onChange={(value) => patchSettings("platformFees", { customerFeeTaxRate: value })} hint="A separate marketplace-to-customer platform fee invoice is issued whenever the fee is charged; GST is shown when this rate is greater than zero." />
         </div>
       </Section>
       <Section title="Payment Settings">
@@ -417,7 +417,7 @@ export default function CommerceSettings() {
       <Section title="Payout Calculation">
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField label="Seller Payout Base" value={settings.finance.sellerPayoutBase} onChange={(value) => patchSettings("finance", { sellerPayoutBase: value })} options={[option("gross_customer_price", "Gross customer price"), option("taxable_ex_gst", "Taxable ex GST")]} />
-          <SelectField label="Shipping In Payout" value={settings.finance.shippingPolicy} onChange={(value) => patchSettings("finance", { shippingPolicy: value })} options={[option("not_in_seller_payout", "Not in seller payout"), option("reimburse_seller", "Reimburse seller"), option("deduct_from_seller", "Deduct from seller")]} />
+          <SelectField label="Shipping Settlement" value={settings.finance.shippingPolicy} onChange={(value) => patchSettings("finance", { shippingPolicy: value })} options={[option("reimburse_seller", "Customer shipping credited to seller"), option("not_in_seller_payout", "Platform fulfils and retains shipping"), option("deduct_from_seller", "Shipping charged to seller")]} />
         </div>
       </Section>
       <Section title="Seller Statutory Deductions">
