@@ -285,13 +285,12 @@ const ProductReviews = () => {
   }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
 
   const handleToggleStatus = async (review) => {
-    if (isSellerPanelUser) return;
     const reviewId = review._id || review.id;
     const current = review.status || "pending";
     const newStatus = current === "published" ? "hidden" : "published";
     setToggleLoadingId(reviewId);
     try {
-      await dispatch(updateProductReview({ reviewId, status: newStatus })).unwrap();
+      await dispatch(updateProductReview({ reviewId, status: newStatus, sellerScope: isSellerPanelUser })).unwrap();
       toast.success("Review status updated");
       fetchReviews();
     } catch (err) {
@@ -445,9 +444,9 @@ const ProductReviews = () => {
       render: (v, row) => (
         <button
           onClick={() => handleToggleStatus(row)}
-          disabled={isSellerPanelUser || toggleLoadingId === (row._id || row.id)}
+          disabled={toggleLoadingId === (row._id || row.id)}
           className="disabled:opacity-50"
-          title={isSellerPanelUser ? "Review status" : "Click to toggle published/hidden"}
+          title="Click to toggle published/hidden"
         >
           <StatusBadge status={v || "pending"} dot variant={STATUS_COLOR[v] || "default"} />
         </button>
