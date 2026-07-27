@@ -135,6 +135,24 @@ const extractList = (payload) => {
 
 const getItemKey = (item = {}) => firstDefined(item.id, item._id, `${item.product_id}-${item.variant_sku}`);
 
+const getReturnItemTitle = (item = {}) => {
+  const snapshot = normalizeJson(firstDefined(item.productSnapshot, item.product_snapshot), {});
+  return firstDefined(
+    item.productTitle,
+    item.product_title,
+    item.productName,
+    item.product_name,
+    item.title,
+    snapshot.title,
+    item.productId,
+    item.product_id,
+    "Returned item",
+  );
+};
+
+const getReturnItemQuantity = (item = {}) =>
+  Number(firstDefined(item.approvedQuantity, item.approved_quantity, item.requestedQuantity, item.requested_quantity, item.quantity, 1));
+
 const getItemTaxLabel = (tax = {}, item = {}) => {
   const gstRate = firstDefined(tax.gstRate, item.gst_rate, item.gstRate, 0);
   const cessRate = firstDefined(tax.cessRate, item.cess_rate, item.cessRate, 0);
@@ -391,6 +409,26 @@ const InfoRow = ({ label, value, strong = false }) => (
   </div>
 );
 
+const PayoutRow = ({ label, value, note, tone = "default", small = false, className = "" }) => {
+  const toneClass = {
+    default: "text-[#202337]",
+    muted: "text-[#65718b]",
+    credit: "text-[#21812C]",
+    debit: "text-[#202337]",
+    warning: "text-[#A35B00]",
+  }[tone] || "text-[#202337]";
+
+  return (
+    <div className={`flex items-start justify-between gap-3 ${small ? "text-xs" : "text-sm"} ${toneClass} ${className}`}>
+      <span className="min-w-0 pr-2">
+        {label}
+        {note && <span className="block text-xs font-normal text-[#65718b]">{note}</span>}
+      </span>
+      <span className="shrink-0 text-right font-medium">{value}</span>
+    </div>
+  );
+};
+
 const DetailLink = ({ children, onClick, className = "" }) => (
   <button
     type="button"
@@ -429,7 +467,7 @@ const EmptyState = ({ children }) => (
     {children}
   </div>
 );
-const RelatedCard = ({ title, subtitle, status, rows = [], action }) => (
+const RelatedCard = ({ title, subtitle, status, rows = [], action, children }) => (
   <div className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
     <div className="mb-3 flex items-start justify-between gap-3">
       <div>
@@ -452,6 +490,8 @@ const RelatedCard = ({ title, subtitle, status, rows = [], action }) => (
         <InfoRow key={row.label} label={row.label} value={row.value} />
       ))}
     </div>
+
+    {children && <div className="mt-3">{children}</div>}
 
     {action && <div className="mt-3">{action}</div>}
   </div>
@@ -742,7 +782,7 @@ const OrderSummary = () => {
 
                 onClick={() => setState((prev) => ({ ...prev, noteModal: true }))}
               >
-                <FaRegNoteSticky /> Note
+                  <FaRegNoteSticky /> Add Note
               </button>
             </PermissionGuard>
             {orderId && (
@@ -750,7 +790,7 @@ const OrderSummary = () => {
                 type="button"
                 onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`)}
               >
-                <FaFile /> Shipments
+                <FaFile /> Manage Shipments
               </button>
             )}
             {!isSeller && statusOptions.length > 0 && (
@@ -759,7 +799,7 @@ const OrderSummary = () => {
                   type="button"
                   onClick={openStatusModal}
                 >
-                  <FaFile /> Administrative Override
+                  <FaFile /> Update Status
                 </button>
               </PermissionGuard>
             )}
@@ -767,7 +807,7 @@ const OrderSummary = () => {
           )}
         />
 
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {isSeller ? (
             <>
               <MetricCard label="Product Total" value={formatMoney(subtotalAmount)} />
@@ -778,13 +818,12 @@ const OrderSummary = () => {
             </>
           ) : (
             <>
-              <MetricCard label="Customer Payable" value={formatMoney(customerPayableAmount)} tone="dark" />
-              <MetricCard label="Customer Total" value={formatMoney(customerTotalAmount)} tone="blue" />
+              <MetricCard label="Customer Paid / Payable" value={formatMoney(customerPayableAmount)} tone="dark" />
             </>
           )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
-          <MetricCard label="Delivery Status" value={<StatusBadge status={firstDefined(order.delivery_status, order.deliveryStatus)} dot />} />
-          <MetricCard label="Shipment Status" value={shipmentSummary}/>
+          <MetricCard label="Order Status" value={<StatusBadge status={order.status} dot />} />
+          <MetricCard label="Shipment" value={shipmentSummary}/>
           <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
 
@@ -856,10 +895,10 @@ const OrderSummary = () => {
                 </div>
                 <div className="hidden grid-cols-12 gap-3 border-b border-[#e6ebf7] bg-[#eef2fb] px-4 py-2 text-xs font-semibold uppercase text-[#65718b] md:grid">
                   <span className="col-span-5">Product</span>
-                  <span className="col-span-2">Status</span>
                   <span className="col-span-1 text-center">Qty</span>
-                  <span className="col-span-2 text-right">Unit Price</span>
-                  <span className="col-span-2 text-right">Line Total</span>
+                  <span className="col-span-2">Item status</span>
+                  <span className="col-span-2 text-right">Price</span>
+                  <span className="col-span-2 text-right">Total</span>
                 </div>
                 {group.items.map((item) => {
                   const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
@@ -883,6 +922,10 @@ const OrderSummary = () => {
                           SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
                         </div>
                       </div>
+                      <div className="font-medium text-[#202337] md:col-span-1 md:text-center">
+                        {Number(item.quantity || 0)}
+                        {Number(item.cancelled_quantity || 0) > 0 && <div className="text-xs text-red-600">{Number(item.cancelled_quantity)} cancelled</div>}
+                      </div>
                       <div className="md:col-span-2">
                         <StatusBadge
                           status={firstDefined(
@@ -896,18 +939,11 @@ const OrderSummary = () => {
                           dot
                         />
                       </div>
-                      <div className="font-medium text-[#202337] md:col-span-1 md:text-center">
-                        {Number(item.quantity || 0)}
-                        {Number(item.cancelled_quantity || 0) > 0 && <div className="text-xs text-red-600">-{Number(item.cancelled_quantity)} cancelled</div>}
-                      </div>
                       <div className="font-medium text-[#202337] md:col-span-2 md:text-right">{formatMoney(firstDefined(item.unit_price, item.unitPrice))}</div>
                       <div className="md:col-span-2 md:text-right">
                         <div className="font-semibold text-[#202337]">{formatMoney(firstDefined(item.line_total, item.lineTotal))}</div>
                         <div className="text-xs text-[#65718b]">
-                          Tax {formatMoney(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount))} ({getItemTaxLabel(itemTax, item)})
-                        </div>
-                        <div className="text-xs text-[#65718b]">
-                          Taxable {formatMoney(firstDefined(itemTax.taxableAmount, itemTax.taxable_amount, item.line_total, item.lineTotal))}
+                          GST included: {formatMoney(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount))} · {getItemTaxLabel(itemTax, item)}
                         </div>
                       </div>
                     </div>
@@ -920,21 +956,29 @@ const OrderSummary = () => {
           </Panel>
 
           <aside className="space-y-4">
-            <Panel title={isSeller ? "Seller Order Summary" : "Order Summary"}>
+            <Panel title={isSeller ? "Seller Order Summary" : "Customer Payment Breakup"}>
               <InfoRow label="Order Date" value={order.created_at ? moment(order.created_at).format("DD MMM YYYY HH:mm") : "N/A"} />
               <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
-              <InfoRow label="Return Eligible Until" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery verification"} />
+              <InfoRow label="Return Window" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery"} />
               <InfoRow
                 label={isSeller ? "Payment Collection" : "Payment Method"}
                 value={isSeller
                   ? (String(firstDefined(order.payment_provider, order.paymentProvider, "")).toLowerCase() === "cod" ? "COD" : "Prepaid")
                   : displayStatus(firstDefined(order.payment_provider, order.paymentProvider))}
               />
-              <InfoRow label="Product Total" value={formatMoney(subtotalAmount)} />
-              {!isSeller && deliveryChargeAmount > 0 && <InfoRow label="Delivery Charge" value={formatMoney(deliveryChargeAmount)} />}
+              <InfoRow
+                label="Product Total"
+                value={(
+                  <span>
+                    {formatMoney(subtotalAmount)}
+                    {taxIncludedAmount > 0 && <span className="block text-xs font-normal text-[#65718b]">Includes GST {formatMoney(taxIncludedAmount)}</span>}
+                  </span>
+                )}
+              />
+              {!isSeller && deliveryChargeAmount > 0 && <InfoRow label="Shipping Charge" value={formatMoney(deliveryChargeAmount)} />}
               {!isSeller && customerPlatformFeeAmount > 0 && <InfoRow label="Platform Fee" value={formatMoney(customerPlatformFeeAmount)} />}
-              {!isSeller && customerPlatformFeeTaxAmount > 0 && <InfoRow label="Platform Fee GST" value={formatMoney(customerPlatformFeeTaxAmount)} />}
-              {!isSeller && taxPayableAmount > 0 && <InfoRow label="Additional GST" value={formatMoney(taxPayableAmount)} />}
+              {!isSeller && customerPlatformFeeTaxAmount > 0 && <InfoRow label="GST on Platform Fee" value={formatMoney(customerPlatformFeeTaxAmount)} />}
+              {!isSeller && taxPayableAmount > 0 && <InfoRow label="GST Added at Checkout" value={formatMoney(taxPayableAmount)} />}
               {!isSeller && codChargeAmount > 0 && <InfoRow label="COD Charge" value={formatMoney(codChargeAmount)} />}
               {!isSeller && discountAmount > 0 && <InfoRow label={discountLabel} value={<span className="text-[#2ea84a]">-{formatMoney(discountAmount)}</span>} />}
               {!isSeller && walletDiscountAmount > 0 && <InfoRow label="Wallet Deduction" value={<span className="text-[#2ea84a]">-{formatMoney(walletDiscountAmount)}</span>} />}
@@ -943,25 +987,43 @@ const OrderSummary = () => {
                   <InfoRow label="Customer Payable" value={formatMoney(customerPayableAmount)} strong />
                 </div>
               )}
-              {taxIncludedAmount > 0 && <InfoRow label="Includes GST" value={formatMoney(taxIncludedAmount)} />}
             </Panel>
           </aside>
         </div>
 
         <div className="mt-4 space-y-4">
-          <Panel title="Tax Breakup">
-            <div className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
-              <InfoRow label="Product Value Before GST" value={formatMoney(taxBreakup.taxableAmount)} />
-              <InfoRow label="GST Rate" value={orderTaxRates.length ? orderTaxRates.map(percent).join(", ") : "N/A"} />
-              {money(taxBreakup.cgstAmount) > 0 && <InfoRow label={`CGST ${orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.cgstAmount)} />}
-              {money(taxBreakup.sgstAmount) > 0 && <InfoRow label={`SGST ${orderTaxRates.length === 1 ? percent(orderTaxRates[0] / 2) : ""}`} value={formatMoney(taxBreakup.sgstAmount)} />}
-              {money(taxBreakup.igstAmount) > 0 && <InfoRow label={`IGST ${orderTaxRates.map(percent).join(", ")}`} value={formatMoney(taxBreakup.igstAmount)} />}
-              {money(taxBreakup.cessAmount) > 0 && <InfoRow label="Cess" value={formatMoney(taxBreakup.cessAmount)} />}
-              <InfoRow label={taxPayableAmount > 0 ? "Total GST" : "GST Included in Product Total"} value={formatMoney(firstDefined(order.tax_amount, order.taxAmount, taxBreakup.totalTaxAmount, taxIncludedAmount))} />
-              {taxBreakup.taxMode && <InfoRow label="Tax Pricing" value={taxPayableAmount > 0 ? "Added at checkout" : "Included in product price"} />}
+          <Panel title="GST Summary">
+            <div className="rounded-md bg-[#f8faff] p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-[#202337]">
+                    {taxPayableAmount > 0 ? "GST charged separately" : "GST is included in product prices"}
+                  </div>
+                  <div className="mt-1 text-xs text-[#65718b]">
+                    Rates: {orderTaxRates.length ? orderTaxRates.map(percent).join(", ") : "N/A"}
+                    {money(taxBreakup.taxableAmount) > 0 ? ` · Taxable value: ${formatMoney(taxBreakup.taxableAmount)}` : ""}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-[#202337]">
+                    {formatMoney(firstDefined(order.tax_amount, order.taxAmount, taxBreakup.totalTaxAmount, taxIncludedAmount))}
+                  </div>
+                  <div className="text-xs text-[#65718b]">Total GST</div>
+                </div>
+              </div>
+              {(money(taxBreakup.cgstAmount) > 0 || money(taxBreakup.sgstAmount) > 0 || money(taxBreakup.igstAmount) > 0 || money(taxBreakup.cessAmount) > 0) && (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
+                  {money(taxBreakup.cgstAmount) > 0 && <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">CGST: {formatMoney(taxBreakup.cgstAmount)}</span>}
+                  {money(taxBreakup.sgstAmount) > 0 && <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">SGST: {formatMoney(taxBreakup.sgstAmount)}</span>}
+                  {money(taxBreakup.igstAmount) > 0 && <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">IGST: {formatMoney(taxBreakup.igstAmount)}</span>}
+                  {money(taxBreakup.cessAmount) > 0 && <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">Cess: {formatMoney(taxBreakup.cessAmount)}</span>}
+                </div>
+              )}
             </div>
             {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
-                <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#efe6cd] pt-3 md:grid-cols-2">
+              <div className="mt-3">
+                <div className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Item-wise GST</div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {taxBreakup.items.map((taxItem, index) => {
                   const taxProductId = firstDefined(taxItem.productId, taxItem.product_id);
                   const orderItem = items.find(
@@ -970,34 +1032,34 @@ const OrderSummary = () => {
                   const productSnapshot = normalizeJson(firstDefined(orderItem.product_snapshot, orderItem.productSnapshot), {});
                   const productId = firstDefined(taxProductId, orderItem.product_id, orderItem.productId, productSnapshot.id, productSnapshot._id);
                   const productTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, productId, `Item ${index + 1}`);
+                  const itemGstAmount = money(taxItem.taxAmount) + money(taxItem.cessAmount);
                   return (
-                    <div key={`${productId || "tax"}-${index}`} className="rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
-                      {productId ? (
-                        <DetailLink
-                          onClick={() => navigate(`/app/product-catalog/view/${productId}`)}
-                          className="text-xs font-semibold"
-                        >
-                          {productTitle}
-                        </DetailLink>
-                      ) : (
-                        <div className="font-semibold text-[#202337]">{productTitle}</div>
-                      )}
-                      <div className="flex justify-between gap-2">
-                        <span>{getItemTaxLabel(taxItem, orderItem)}</span>
-                        <span>{formatMoney(money(taxItem.taxAmount) + money(taxItem.cessAmount))}</span>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <span>Taxable base</span>
-                        <span>{formatMoney(taxItem.taxableAmount)}</span>
+                    <div key={`${productId || "tax"}-${index}`} className="rounded-md border border-[#e6ebf7] bg-white p-3 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {productId ? (
+                            <DetailLink
+                              onClick={() => navigate(`/app/product-catalog/view/${productId}`)}
+                              className="text-xs font-semibold"
+                            >
+                              {productTitle}
+                            </DetailLink>
+                          ) : (
+                            <div className="font-semibold text-[#202337]">{productTitle}</div>
+                          )}
+                          <div className="mt-1 text-[#65718b]">{getItemTaxLabel(taxItem, orderItem)} · Base {formatMoney(taxItem.taxableAmount)}</div>
+                        </div>
+                        <div className="shrink-0 text-right font-semibold text-[#202337]">{formatMoney(itemGstAmount)}</div>
                       </div>
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </Panel>
 
-          <Panel title="Buyer & Shipping">
+          <Panel title="Customer & Delivery Address">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(220px,320px)_1fr]">
               <div>
                 <InfoRow
@@ -1012,14 +1074,15 @@ const OrderSummary = () => {
                 <InfoRow label="Phone" value={firstDefined(buyer.phone, shippingAddress.phone, "Not available")} />
               </div>
               <div className="rounded-md bg-[#f8faff] p-3 text-sm leading-6 text-[#202337]">
-                {[shippingAddress.line1, shippingAddress.line2, shippingAddress.city, shippingAddress.state, shippingAddress.postalCode, shippingAddress.country].filter(Boolean).join(", ") || "N/A"}
+                <div className="mb-1 text-xs font-semibold uppercase text-[#65718b]">Delivery address</div>
+                <div>{[shippingAddress.line1, shippingAddress.line2, shippingAddress.city, shippingAddress.state, shippingAddress.postalCode, shippingAddress.country].filter(Boolean).join(", ") || "N/A"}</div>
               </div>
             </div>
           </Panel>
         </div>
 
         <Panel
-          title="Order Relations"
+          title="Related Records"
           className="mt-4"
           actions={(
             <div className="flex flex-wrap gap-2">
@@ -1030,7 +1093,7 @@ const OrderSummary = () => {
                   className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]"
                   onClick={() => navigate(`${action.path}?orderId=${encodeURIComponent(orderId)}`)}
                 >
-                  {action.label}
+                  Open {action.label}
                 </button>
               ))}
             </div>
@@ -1129,7 +1192,7 @@ const OrderSummary = () => {
             </div>
 
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Tax Documents</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Invoices & Tax Documents</h3>
               <div className="grid grid-cols-1 gap-3">
                 {invoice ? (
                   <RelatedCard
@@ -1152,17 +1215,53 @@ const OrderSummary = () => {
                 {returns.length ? (
                   <div className="space-y-3">
                     {returns.map((returnRequest) => (
-                      <RelatedCard
-                        key={returnRequest.id || returnRequest._id}
-                        title="Return request"
-                        subtitle={displayStatus(returnRequest.reason)}
-                        status={returnRequest.status}
-                        rows={[
-                          { label: "Refund", value: formatMoney(firstDefined(returnRequest.refundAmount, returnRequest.refundBreakup?.totalRefundAmount)) },
-                          { label: "Items", value: Array.isArray(returnRequest.items) ? returnRequest.items.length : 0 },
-                          { label: "Requested", value: formatDate(firstDefined(returnRequest.createdAt, returnRequest.created_at)) },
-                        ]}
-                      />
+                      (() => {
+                        const creditNoteId = firstDefined(
+                          returnRequest.creditNoteId,
+                          returnRequest.credit_note_id,
+                          returnRequest.refund?.creditNoteId,
+                          returnRequest.refund?.credit_note_id,
+                        );
+                        return (
+                          <RelatedCard
+                            key={returnRequest.id || returnRequest._id}
+                            title="Return request"
+                            subtitle={displayStatus(returnRequest.reason)}
+                            status={returnRequest.status}
+                            rows={[
+                              { label: "Refund", value: formatMoney(firstDefined(returnRequest.refundAmount, returnRequest.refundBreakup?.totalRefundAmount)) },
+                              { label: "Returned items", value: Array.isArray(returnRequest.items) ? returnRequest.items.length : 0 },
+                              { label: "Payout impact", value: "Only returned item payout is held/reversed" },
+                              { label: "Reverse invoice", value: creditNoteId ? "Generated" : "Pending refund" },
+                              { label: "Requested", value: formatDate(firstDefined(returnRequest.createdAt, returnRequest.created_at)) },
+                            ]}
+                            action={creditNoteId ? (
+                              <button type="button" className="text-xs font-medium text-[#2f6fed]" onClick={() => navigate(`/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`)}>
+                                Open reverse invoice / credit note
+                              </button>
+                            ) : null}
+                          >
+                            {Array.isArray(returnRequest.items) && returnRequest.items.length > 0 && (
+                              <div className="space-y-2 rounded-md bg-[#fffaf0] p-2 text-xs">
+                                <div className="font-semibold uppercase text-[#65718b]">Returned item-wise impact</div>
+                                {returnRequest.items.map((item, index) => (
+                                  <div key={firstDefined(item.orderItemId, item.order_item_id, item.productId, item.product_id, index)} className="flex items-start justify-between gap-3 border-t border-[#efe6cd] pt-2 first:border-t-0 first:pt-0">
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-[#202337]">{getReturnItemTitle(item)}</div>
+                                      <div className="text-[#65718b]">
+                                        Qty {getReturnItemQuantity(item)} · Payout for this item only is affected
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-right font-semibold text-[#202337]">
+                                      {formatMoney(firstDefined(item.refundAmount, item.refund_amount, item.eligibleRefundAmount, item.eligible_refund_amount, 0))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </RelatedCard>
+                        );
+                      })()
                     ))}
                   </div>
                 ) : <EmptyState>No Return Requests Found</EmptyState>}
@@ -1216,21 +1315,47 @@ const OrderSummary = () => {
                       <div className="text-xs text-[#65718b]">seller payout</div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between"><span>Product Total</span><span>{formatMoney(seller.grossSales)}</span></div>
-                    <div className="flex justify-between text-[#65718b]"><span>Seller payout base</span><span>{formatMoney(seller.sellerPayoutBase)}</span></div>
-                    {seller.taxCollected > 0 && <div className="flex justify-between text-xs text-[#65718b]"><span>Product GST (included; seller tax liability)</span><span>{formatMoney(seller.taxCollected)}</span></div>}
-                    {seller.discountAmount > 0 && <div className="flex justify-between text-[#65718b]"><span>Customer Discount</span><span>-{formatMoney(seller.discountAmount)}</span></div>}
-                    {seller.marketplaceFundedDiscount > 0 && <div className="flex justify-between text-xs text-[#21812C]"><span>Marketplace-funded reimbursement</span><span>+{formatMoney(seller.marketplaceFundedDiscount)}</span></div>}
-                    {seller.sellerFundedDiscount > 0 && <div className="flex justify-between text-xs text-[#A35B00]"><span>Seller-funded discount impact</span><span>-{formatMoney(seller.sellerFundedDiscount)}</span></div>}
-                    <div className="flex justify-between">
-                      <span>{seller.commissionReversal > 0 ? "Net Platform Commission" : "Platform Commission"}</span>
-                      <span>
-                        -{formatMoney(seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee)}
-                        {seller.commissionRates.length ? ` (${seller.commissionRates.map(percent).join(", ")})` : ""}
-                      </span>
+                  <div className="space-y-3">
+                    <div className="rounded-md bg-[#f8fff9] px-3 py-2">
+                      <div className="mb-2 text-xs font-semibold text-[#21812C]">Seller gets</div>
+                      <div className="space-y-2">
+                        <PayoutRow
+                          label="Product amount"
+                          note={seller.taxCollected > 0 ? `Includes product GST ${formatMoney(seller.taxCollected)}` : ""}
+                          value={formatMoney(seller.sellerPayoutBase || seller.grossSales)}
+                        />
+                        {seller.shippingReimbursement > 0 && (
+                          <PayoutRow
+                            label="Shipping collected from customer"
+                            note="Collected by platform, paid to seller"
+                            value={`+${formatMoney(seller.shippingReimbursement)}`}
+                            tone="credit"
+                          />
+                        )}
+                        {seller.marketplaceFundedDiscount > 0 && (
+                          <PayoutRow
+                            label="Marketplace discount"
+                            note="Customer got discount, marketplace reimburses seller"
+                            value={`+${formatMoney(seller.marketplaceFundedDiscount)}`}
+                            tone="credit"
+                            small
+                          />
+                        )}
+                      </div>
                     </div>
-                    {seller.commissionReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+
+                    {(seller.discountAmount > 0 || seller.sellerFundedDiscount > 0 || seller.commissionFee > 0 || seller.platformFeeTax > 0 || seller.shippingDeduction > 0 || seller.refundAmount > 0 || seller.adjustmentAmount !== 0 || seller.gstTcsAmount > 0 || seller.incomeTaxTdsAmount > 0) && (
+                      <div className="rounded-md bg-[#fffaf8] px-3 py-2">
+                        <div className="mb-2 text-xs font-semibold text-[#A35B00]">Less</div>
+                        <div className="space-y-2">
+                          {seller.sellerFundedDiscount > 0 && <PayoutRow label="Seller-funded discount" value={`-${formatMoney(seller.sellerFundedDiscount)}`} tone="warning" />}
+                          {seller.discountAmount > 0 && seller.marketplaceFundedDiscount <= 0 && <PayoutRow label="Customer discount" value={`-${formatMoney(seller.discountAmount)}`} tone="muted" />}
+                          <PayoutRow
+                            label="Platform commission"
+                            note={seller.commissionRates.length ? seller.commissionRates.map(percent).join(", ") : ""}
+                            value={`-${formatMoney(seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee)}`}
+                          />
+                    {seller.commissionReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
                       <div className="flex justify-between"><span>Original commission</span><span>{formatMoney(seller.commissionFee)}</span></div>
                       <div className="flex justify-between text-[#21812C]"><span>Reversed for refunded item</span><span>-{formatMoney(seller.commissionReversal)}</span></div>
                     </div>}
@@ -1244,45 +1369,45 @@ const OrderSummary = () => {
                         ))}
                       </div>
                     )}
-                    {seller.platformFeeTax > 0 && <div className="flex justify-between"><span>{seller.commissionTaxReversal > 0 ? "Net GST on Commission" : "GST on Commission"}</span><span>-{formatMoney(seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax)}</span></div>}
-                    {seller.commissionTaxReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+                          {seller.platformFeeTax > 0 && <PayoutRow label="GST on commission" value={`-${formatMoney(seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax)}`} />}
+                    {seller.commissionTaxReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
                       <div className="flex justify-between"><span>Original commission GST</span><span>{formatMoney(seller.platformFeeTax)}</span></div>
                       <div className="flex justify-between text-[#21812C]"><span>Reversed through credit note</span><span>-{formatMoney(seller.commissionTaxReversal)}</span></div>
                     </div>}
-                    {seller.shippingReimbursement > 0 && <div className="flex justify-between"><span>Shipping collected from customer</span><span>+{formatMoney(seller.shippingReimbursement)}</span></div>}
-                    {seller.shippingDeduction > 0 && <div className="flex justify-between"><span>Shipping Deduction</span><span>-{formatMoney(seller.shippingDeduction)}</span></div>}
-                    {seller.shippingPolicy && (
-                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Shipping settlement</span><span>{seller.shippingPolicy === "reimburse_seller" ? "Included in seller payout" : formatLabel(displayStatus(seller.shippingPolicy))}</span></div>
-                    )}
+                          {seller.shippingDeduction > 0 && <PayoutRow label="Shipping deduction" value={`-${formatMoney(seller.shippingDeduction)}`} />}
                     {seller.refundAmount > 0 && <>
-                      <div className="flex justify-between"><span>Refunded item payout-base reversal</span><span>-{formatMoney(seller.sellerPayoutBaseReversal)}</span></div>
-                      <div className="ml-3 text-xs text-[#65718b]">The returned item's commission and statutory deductions are reversed above, so this row uses its corresponding payout base. It is not the customer's full refund.</div>
+                            <PayoutRow label="Returned item recovery" value={`-${formatMoney(seller.sellerPayoutBaseReversal)}`} />
+                      <div className="text-xs text-[#65718b]">This is the seller payout part reversed for the returned item.</div>
                     </>}
-                    {seller.adjustmentAmount !== 0 && <div className="flex justify-between"><span>Payout Adjustment / Recovery</span><span>{seller.adjustmentAmount > 0 ? "+" : "-"}{formatMoney(Math.abs(seller.adjustmentAmount))}</span></div>}
+                          {seller.adjustmentAmount !== 0 && <PayoutRow label="Payout adjustment / recovery" value={`${seller.adjustmentAmount > 0 ? "+" : "-"}${formatMoney(Math.abs(seller.adjustmentAmount))}`} />}
                     {seller.gstTcsAmount > 0 && <>
-                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS taxable base" : "GST TCS taxable base"}</span><span>{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}</span></div>
-                      <div className="flex justify-between"><span>{seller.gstTcsReversal > 0 ? "Net GST TCS" : "GST TCS"} ({percent(seller.gstTcsRate)})</span><span>-{formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount)}</span></div>
-                      {seller.gstTcsReversal > 0 && <div className="ml-3 space-y-1 text-xs text-[#65718b]">
+                            <PayoutRow label={`GST TCS (${percent(seller.gstTcsRate)})`} note={`Base: ${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}`} value={`-${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount)}`} />
+                      {seller.gstTcsReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
                         <div className="flex justify-between"><span>Original TCS / taxable base</span><span>{formatMoney(seller.gstTcsAmount)} / {formatMoney(seller.gstTcsTaxableBase)}</span></div>
                         <div className="flex justify-between text-[#21812C]"><span>Returned TCS / taxable base reversed</span><span>-{formatMoney(seller.gstTcsReversal)} / -{formatMoney(seller.gstTcsTaxableBaseReversal)}</span></div>
                       </div>}
                     </>}
                     {seller.incomeTaxTdsAmount > 0 && <>
-                      <div className="ml-3 flex justify-between text-xs text-[#65718b]"><span>Income-tax TDS gross base</span><span>{formatMoney(seller.incomeTaxTdsTaxableBase)}</span></div>
-                      <div className="flex justify-between"><span>{seller.incomeTaxTdsReversal > 0 ? "Net Income-tax TDS" : "Income-tax TDS"} ({percent(seller.incomeTaxTdsRate)})</span><span>-{formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}</span></div>
+                            <PayoutRow label={`Income-tax TDS (${percent(seller.incomeTaxTdsRate)})`} note={`Base: ${formatMoney(seller.incomeTaxTdsTaxableBase)}`} value={`-${formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}`} />
                     </>}
-                    <div className="mt-2 flex justify-between border-t border-[#efe6cd] pt-2 font-semibold"><span>Final Seller Payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
-                    {(seller.commissionStatus || seller.payoutStatus) && (
-                      <div className="rounded-md bg-[#f8faff] px-2 py-1 text-xs text-[#65718b]">
-                        {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}
-                        {seller.payoutStatus && <span className="ml-2">Payout: {formatLabel(displayStatus(seller.payoutStatus))}</span>}
-                        {seller.payoutMethod && <span className="ml-2">Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
-                        {seller.payoutReference && <span className="ml-2">Bank ref: {seller.payoutReference}</span>}
-                        {seller.payoutProcessedAt && <span className="ml-2">Paid: {formatDate(seller.payoutProcessedAt)}</span>}
-                        {seller.commissionIds.length > 0 && <span className="ml-2">Item commission records: {seller.commissionIds.length}</span>}
+                        </div>
                       </div>
                     )}
-                    <div className="flex justify-between border-t border-[#efe6cd] pt-2 font-medium"><span>Net seller payout</span><span>{formatMoney(seller.sellerPayout)}</span></div>
+
+                    <div className="flex justify-between rounded-md bg-[#fff9ea] px-3 py-3 text-base font-semibold text-[#202337]">
+                      <span>Net seller payout</span>
+                      <span>{formatMoney(seller.sellerPayout)}</span>
+                    </div>
+                    {(seller.commissionStatus || seller.payoutStatus) && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-[#f8faff] px-3 py-2 text-xs text-[#65718b]">
+                        {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}
+                        {seller.payoutStatus && <span>Payout: {formatLabel(displayStatus(seller.payoutStatus))}</span>}
+                        {seller.payoutMethod && <span>Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
+                        {seller.payoutReference && <span>Bank ref: {seller.payoutReference}</span>}
+                        {seller.payoutProcessedAt && <span>Paid: {formatDate(seller.payoutProcessedAt)}</span>}
+                        {seller.commissionIds.length > 0 && <span>Item commission records: {seller.commissionIds.length}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1294,14 +1419,28 @@ const OrderSummary = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Panel title="Timeline" className="mt-4">
-            {timeline.length ? timeline.map((entry) => (
-              <div key={entry.id} className="relative border-l border-[#dce5ff] pb-4 pl-4 text-sm last:pb-0">
-                <span className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-[#2f6fed]" />
-                <div className="font-semibold capitalize text-[#202337]">{formatLabel(displayStatus(entry.to_status || entry.toStatus))}</div>
-                <div className="text-[#65718b]">{formatLabel(entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A")} · {formatLabel(entry.actor_role || "system")}</div>
-                {entry.reason && <div className="text-[#65718b] mt-1">{formatLabel(entry.reason)}</div>}
+            {timeline.length ? (
+              <div className="space-y-2">
+                {timeline.map((entry) => {
+                  const statusLabel = formatLabel(displayStatus(entry.to_status || entry.toStatus));
+                  const reasonLabel = entry.reason ? formatLabel(entry.reason) : "";
+                  return (
+                    <div key={entry.id} className="rounded-md border border-[#e6ebf7] bg-white px-3 py-2 text-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold capitalize text-[#202337]">{statusLabel}</div>
+                          {reasonLabel && <div className="mt-0.5 text-xs text-[#65718b]">{reasonLabel}</div>}
+                        </div>
+                        <div className="text-right text-xs text-[#65718b]">
+                          <div>{entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A"}</div>
+                          <div>{formatLabel(entry.actor_role || "system")}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )) : <EmptyState>No timeline yet</EmptyState>}
+            ) : <EmptyState>No timeline yet</EmptyState>}
           </Panel>
 
           <Panel title="Notes" className="mt-4">

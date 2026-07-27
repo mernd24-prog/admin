@@ -378,7 +378,7 @@ const filterFields = useMemo(
 
   const validateAction = () => {
     if (!returnId(action.returnRequest)) return "Return ID is missing";
-    if (((!isSeller && action.type === "approve") || ["refund", "retry_refund"].includes(action.type)) && Number(action.refundAmount || 0) <= 0) {
+    if (["refund", "retry_refund"].includes(action.type) && Number(action.refundAmount || 0) <= 0) {
       return "Refund amount must be greater than zero";
     }
     if (action.type === "reject" && !action.reason.trim()) return "Rejection reason is required";
@@ -599,13 +599,11 @@ const filterFields = useMemo(
           </PermissionGuard>
           {row.status === "requested" && (
             <>
-              {isSeller && (
-                <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
-                  <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
-                    <MdCheckCircle size={15} /> Accept Return
-                  </button>
-                </PermissionGuard>
-              )}
+              <PermissionGuard module="returns" action={ACTIONS.APPROVE} hide>
+                <button type="button" className="admin-table-action-btn" onClick={() => openAction("approve", row)}>
+                  <MdCheckCircle size={15} /> {isSeller ? "Accept Return" : "Approve Return"}
+                </button>
+              </PermissionGuard>
               {!isSeller && (
                 <PermissionGuard module="returns" action={ACTIONS.REJECT} hide>
                   <button type="button" className="admin-table-action-btn danger" onClick={() => openAction("reject", row)}>
@@ -615,33 +613,33 @@ const filterFields = useMemo(
               )}
             </>
           )}
-          {isSeller && ["approved", "pickup_failed"].includes(row.status) && (
+          {["approved", "pickup_failed"].includes(row.status) && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("schedule", row)}>
                 <MdLocalShipping size={15} /> Arrange Pickup
               </button>
             </PermissionGuard>
           )}
-          {isSeller && ["reverse_pickup_scheduled", "pickup_failed", "in_reverse_transit"].includes(row.status) && row.reverseShipment?.shipmentId && (
+          {["reverse_pickup_scheduled", "pickup_failed", "in_reverse_transit"].includes(row.status) && row.reverseShipment?.shipmentId && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("tracking", row)}>
                 <MdLocalShipping size={15} /> Tracking
               </button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "shipped_back" && (
+          {row.status === "shipped_back" && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("receive", row)}>
                 <MdAssignmentReturn size={15} /> Confirm Receipt
               </button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "received" && (
+          {row.status === "received" && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("qc", row)}>Record QC</button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "qc_failed" && row.qcReview?.status === "evidence_requested" && (
+          {row.status === "qc_failed" && row.qcReview?.status === "evidence_requested" && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("qc_evidence", row)}>Submit Evidence</button>
             </PermissionGuard>
@@ -651,12 +649,12 @@ const filterFields = useMemo(
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("qc_decision", row)}>Review QC</button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "qc_failure_upheld" && row.returnToCustomer?.required !== false && !row.returnToCustomer?.trackingNumber && (
+          {row.status === "qc_failure_upheld" && row.returnToCustomer?.required !== false && !row.returnToCustomer?.trackingNumber && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("return_customer", row)}>Return to Customer</button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "qc_failure_upheld" && row.returnToCustomer?.trackingNumber && (
+          {row.status === "qc_failure_upheld" && row.returnToCustomer?.trackingNumber && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("return_customer_tracking", row)}>Customer Shipment</button>
             </PermissionGuard>
@@ -682,7 +680,7 @@ const filterFields = useMemo(
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_approve", row)}>Approve Replacement</button>
             </PermissionGuard>
           )}
-          {isSeller && row.status === "replacement_created" && (
+          {row.status === "replacement_created" && (
             <PermissionGuard module="returns" action={ACTIONS.UPDATE} hide>
               <button type="button" className="admin-table-action-btn" onClick={() => openAction("replacement_ship", row)}>Ship Replacement</button>
             </PermissionGuard>

@@ -47,6 +47,22 @@ const DEFAULT_SETTINGS = {
     defaultWindowDays: 7,
     allowSellerOverrides: false,
     maxSellerOverrideDays: 7,
+    refundPolicy: {
+      shipping: {
+        fullCancellation: true,
+        sellerCancellation: true,
+        rtoDeliveryFailed: true,
+        customerReturn: false,
+        partialReturn: false,
+      },
+      platformFee: {
+        fullCancellation: true,
+        sellerCancellation: true,
+        rtoDeliveryFailed: false,
+        customerReturn: false,
+        partialReturn: false,
+      },
+    },
   },
   shippingDefaults: {
     defaultCharge: 0,
@@ -96,7 +112,20 @@ const mergeSettings = (data = {}) => ({
   payments: { ...DEFAULT_SETTINGS.payments, ...(data.payments || {}) },
   wallet: { ...DEFAULT_SETTINGS.wallet, ...(data.wallet || {}) },
   cod: { ...DEFAULT_SETTINGS.cod, ...(data.cod || {}) },
-  returns: { ...DEFAULT_SETTINGS.returns, ...(data.returns || {}) },
+  returns: {
+    ...DEFAULT_SETTINGS.returns,
+    ...(data.returns || {}),
+    refundPolicy: {
+      shipping: {
+        ...DEFAULT_SETTINGS.returns.refundPolicy.shipping,
+        ...(data.returns?.refundPolicy?.shipping || {}),
+      },
+      platformFee: {
+        ...DEFAULT_SETTINGS.returns.refundPolicy.platformFee,
+        ...(data.returns?.refundPolicy?.platformFee || {}),
+      },
+    },
+  },
   shippingDefaults: { ...DEFAULT_SETTINGS.shippingDefaults, ...(data.shippingDefaults || {}) },
   finance: { ...DEFAULT_SETTINGS.finance, ...(data.finance || {}) },
 });
@@ -131,6 +160,26 @@ const ToggleField = ({ label, checked, onChange, hint }) => (
     </span>
     <input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)} />
   </label>
+);
+
+const RefundOption = ({ label, checked, onChange }) => (
+  <label className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}>
+    <span>{label}</span>
+    <input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)} />
+  </label>
+);
+
+const RefundScenario = ({ title, hint, shipping, platformFee, onShippingChange, onPlatformFeeChange }) => (
+  <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="mb-3">
+      <div className="text-sm font-semibold text-gray-900">{title}</div>
+      <div className="mt-1 text-xs text-gray-500">{hint}</div>
+    </div>
+    <div className="grid gap-2 sm:grid-cols-2">
+      <RefundOption label="Refund shipping" checked={shipping} onChange={onShippingChange} />
+      <RefundOption label="Refund platform fee" checked={platformFee} onChange={onPlatformFeeChange} />
+    </div>
+  </div>
 );
 
 // const OptionMultiSelect = ({
@@ -265,6 +314,22 @@ export default function CommerceSettings() {
     setSettings((current) => ({ ...current, [section]: { ...(current[section] || {}), ...patch } }));
   };
 
+  const patchRefundPolicy = (component, key, value) => {
+    setSettings((current) => ({
+      ...current,
+      returns: {
+        ...(current.returns || {}),
+        refundPolicy: {
+          ...(current.returns?.refundPolicy || {}),
+          [component]: {
+            ...(current.returns?.refundPolicy?.[component] || {}),
+            [key]: value,
+          },
+        },
+      },
+    }));
+  };
+
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
@@ -380,6 +445,32 @@ export default function CommerceSettings() {
           {settings.returns.allowSellerOverrides && <InputField label="Maximum Seller Override (Days)" type="number" min="1" max="60" value={settings.returns.maxSellerOverrideDays} onChange={(value) => patchSettings("returns", { maxSellerOverrideDays: value })} />}
           <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
             The delivered date and this policy are snapshotted per order item. Each item becomes payout-eligible only after its return deadline closes.
+          </div>
+        </div>
+      </Section>
+      <Section title="Refund Policy">
+        <div className="space-y-3">
+          <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+            Product amount is refunded from the cancelled or returned items. Use these options only for extra charges collected from the customer.
+          </div>
+          <div className="grid gap-3">
+            {[
+              ["fullCancellation", "Full order cancellation", "Customer cancels the complete order before fulfilment."],
+              ["sellerCancellation", "Seller cancels / out of stock", "Seller cannot fulfil the item or order."],
+              ["rtoDeliveryFailed", "RTO / delivery failed", "Courier returns the shipment or delivery fails."],
+              ["customerReturn", "Customer return after delivery", "Customer returns delivered products."],
+              ["partialReturn", "Partial item return", "Only some products from the order are returned."],
+            ].map(([key, title, hint]) => (
+              <RefundScenario
+                key={key}
+                title={title}
+                hint={hint}
+                shipping={settings.returns.refundPolicy?.shipping?.[key]}
+                platformFee={settings.returns.refundPolicy?.platformFee?.[key]}
+                onShippingChange={(value) => patchRefundPolicy("shipping", key, value)}
+                onPlatformFeeChange={(value) => patchRefundPolicy("platformFee", key, value)}
+              />
+            ))}
           </div>
         </div>
       </Section>
