@@ -234,6 +234,7 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
  *   onRowClick       {(row) => void}
  *   rowClassName     {string | (row) => string}
  *   rowActions       {(row) => Array<{label, icon?, onClick, danger?, disabled?, hidden?}>}
+ *   showSerialNumber {boolean}
  */
 const DataTable = ({
   columns = [],
@@ -273,12 +274,20 @@ const DataTable = ({
   onRowClick,
   rowClassName = "",
   rowActions,
+  showSerialNumber = true,
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [hasMounted, setHasMounted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
   const safeColumns = Array.isArray(columns) ? columns : [];
+  const hasSerialColumn = safeColumns.some((column) => {
+    const key = String(column?.key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const label = String(column?.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return ["sno", "srno", "serial", "serialnumber"].includes(key) ||
+      ["sno", "srno", "serial", "serialnumber"].includes(label);
+  });
+  const shouldShowSerialNumber = showSerialNumber && !hasSerialColumn;
   const resolvedTotalCount = Number(totalCount ?? total ?? safeData.length);
   const resolvedPage = Number(listPage?.page ?? page ?? 1);
   const resolvedPageSize = Number(listPage?.pageSize ?? pageSize ?? 20);
@@ -359,7 +368,11 @@ const DataTable = ({
     );
   };
 
-  const colCount = safeColumns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
+  const colCount =
+    safeColumns.length +
+    (shouldShowSerialNumber ? 1 : 0) +
+    (selectable ? 1 : 0) +
+    (rowActions ? 1 : 0);
 
   const tools = (
     <>
@@ -431,6 +444,11 @@ const DataTable = ({
                     checked={allSelected}
                     onChange={(event) => toggleAll(event.target.checked)}
                   />
+                </th>
+              )}
+              {shouldShowSerialNumber && (
+                <th className="w-16 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] whitespace-nowrap">
+                  S.No
                 </th>
               )}
               {safeColumns.map((col, columnIndex) => (
@@ -531,6 +549,11 @@ const DataTable = ({
                           toggleRow(getKey(row, index), event.target.checked)
                         }
                       />
+                    </td>
+                  )}
+                  {shouldShowSerialNumber && (
+                    <td className="w-16 px-4 py-3 align-middle font-medium text-[var(--admin-muted)]">
+                      {(resolvedPage - 1) * resolvedPageSize + index + 1}.
                     </td>
                   )}
                   {safeColumns.map((col, columnIndex) => (

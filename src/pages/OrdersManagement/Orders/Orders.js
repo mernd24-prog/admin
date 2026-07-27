@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "../../../utils/toast";
-import { formatDateTime, formatCurrency } from "../../../utils/formatters";
+import {
+  formatCurrency,
+  formatDateTime12Hour,
+} from "../../../utils/formatters";
 import {
   ORDER_STATUS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
@@ -233,7 +236,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
       const date = firstDefined(v, row.created_at);
       return (
         <span className="text-gray-500 text-sm">
-          {formatDateTime(date)}
+          {formatDateTime12Hour(date)}
         </span>
       );
     },
@@ -539,7 +542,7 @@ const Orders = () => {
           <div>
             <StatusBadge status={payout.latestDeadline ? "pending" : "waiting"} dot />
             <div className="mt-1 text-[11px] text-gray-500">{returnWindowLabel(payout.latestDeadline)}</div>
-            {payout.latestDeadline && <div className="text-[11px] text-gray-400">Until {formatDateTime(payout.latestDeadline)}</div>}
+            {payout.latestDeadline && <div className="text-[11px] text-gray-400">Until {formatDateTime12Hour(payout.latestDeadline)}</div>}
           </div>
         );
       },

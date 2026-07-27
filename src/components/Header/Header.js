@@ -16,6 +16,7 @@ import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import {
   getMyNotifications,
+  isNotificationUnread,
   setNotificationsSeenAt,
 } from "../../Redux/notificationsSlice";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
@@ -157,6 +158,12 @@ export default function Header({
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const isNotificationsPage =
+    currentPath === "/app/notifications" ||
+    currentPath.startsWith("/app/notifications/");
+  const [suppressNotificationBadge, setSuppressNotificationBadge] = useState(
+    isNotificationsPage,
+  );
   const [headerTitle, setHeaderTitle] = useState("");
   const [userData, setUserData] = useState({});
   const [, setOrganizations] = useState([]);
@@ -182,38 +189,29 @@ export default function Header({
   const notificationsSeenAt = useSelector(
     (state) => state.notifications.notificationsSeenAt,
   );
+  const readNotificationIds = useSelector(
+    (state) => state.notifications.readNotificationIds || [],
+  );
 
   useEffect(() => {
-    // Load notifications on header mount
-    dispatch(getMyNotifications({ page: 1, size: 20 })).catch(() => {});
+    const loadNotifications = () =>
+      dispatch(getMyNotifications({ page: 1, limit: 20 })).catch(() => {});
+    loadNotifications();
+    const intervalId = window.setInterval(loadNotifications, 15_000);
+    return () => window.clearInterval(intervalId);
   }, [dispatch]);
-
-  const isNotificationUnread = (n = {}) => {
-    // Try common fields to detect unread status
-    if (typeof n.unread === "boolean") return n.unread === true;
-    if (typeof n.isUnread === "boolean") return n.isUnread === true;
-    if (typeof n.is_read === "boolean") return n.is_read === false;
-    if (typeof n.read === "boolean") return n.read === false;
-    if (n.readAt || n.read_at || n.viewedAt || n.viewed_at) return false;
-    // fallback: assume notifications with a createdAt and newer than seen time are unread
-    return true;
-  };
 
   const unreadCount = (() => {
     try {
       if (!Array.isArray(notificationsList)) return 0;
 
-      return notificationsList.filter((n) => {
-        const created = n.createdAt || n.created_at || n.time || n.date || 0;
-        const createdTs = created ? Number(new Date(created)) : 0;
-
-        const isUnread = isNotificationUnread(n);
-        if (!isUnread) return false;
-
-        if (!notificationsSeenAt) return true;
-
-        return createdTs > notificationsSeenAt;
-      }).length;
+      return notificationsList.filter((notification) =>
+        isNotificationUnread(
+          notification,
+          readNotificationIds,
+          notificationsSeenAt,
+        )
+      ).length;
     } catch (err) {
       return 0;
     }
@@ -233,6 +231,10 @@ export default function Header({
     fetchUserData();
     setHeaderTitle(getHeaderTitle(currentPath, moduleName));
   }, [fetchUserData, moduleName, currentPath]);
+
+  useEffect(() => {
+    setSuppressNotificationBadge(isNotificationsPage);
+  }, [isNotificationsPage]);
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -408,13 +410,16 @@ export default function Header({
                 type="button"
                 aria-label="Notifications"
                 onClick={() => {
+                  setSuppressNotificationBadge(true);
                   dispatch(setNotificationsSeenAt(Date.now()));
                   navigate("/app/notifications");
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >
                 <MdOutlineNotificationsNone size={18} />
-                {unreadCount > 0 && (
+                {!isNotificationsPage &&
+                  !suppressNotificationBadge &&
+                  unreadCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-medium leading-none text-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>

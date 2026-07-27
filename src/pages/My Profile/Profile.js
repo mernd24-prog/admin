@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BsCamera, BsCheck, BsSave } from "react-icons/bs";
+import { BsCamera, BsSave } from "react-icons/bs";
 import { FiEdit3 } from "react-icons/fi";
 import { PiX } from "react-icons/pi";
 import { useDispatch } from "react-redux";
@@ -193,7 +193,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -333,9 +332,7 @@ const Profile = () => {
           new CustomEvent("profile:updated", { detail: res.data }),
         );
       }
-      setShowSuccess(true);
       setIsEditing(false);
-      toast.success("Profile Update Successfully");
     } catch (error) {
       console.log(error);
       toast.error(error?.message || "Error updating profile");
@@ -377,13 +374,6 @@ const Profile = () => {
   return (
     <div className="admin-page">
       <Loader loading={loading} />
-      {showSuccess && (
-        <div className="fixed right-4 top-20 z-50 flex items-center gap-2 rounded-md bg-emerald-600 px-5 py-3 text-sm text-white shadow-lg">
-          <BsCheck className="h-4 w-4" />
-          <span>Profile updated successfully!</span>
-        </div>
-      )}
-
       <div className="mb-7">
         <PageHeader
           title={isSeller ? "Seller Profile" : "My Profile"}

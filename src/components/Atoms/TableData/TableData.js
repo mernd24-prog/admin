@@ -166,6 +166,7 @@ const TableData = ({
   totalData,
   totalSize,
   currentPage,
+  pageSize,
   onPageChange,
   loading = false,
   sortableColumns = [],
@@ -177,10 +178,21 @@ const TableData = ({
   stickyHeader = true,
   actions,
   onRefresh,
+  showSerialNumber = true,
 }) => {
   const [hasMounted, setHasMounted] = useState(false);
+  const hasSerialHeading = tableHeadings.some((heading) => {
+    const value = String(heading?.props?.children ?? heading)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    return ["sno", "srno", "serial", "serialnumber"].includes(value);
+  });
+  const shouldShowSerialNumber = showSerialNumber && !hasSerialHeading;
+  const resolvedCurrentPage = Number(currentPage || 1);
+  const resolvedPageSize = Number(pageSize || totalSize || data?.length || 10);
   const visibleColumnCount =
     tableHeadings.length +
+    (shouldShowSerialNumber ? 1 : 0) +
     (isHeaderCheckbox ? 1 : 0) +
     (showExtraHeading ? Math.max(0, 10 - tableHeadings.length) : 0);
   const totalRecords = totalData ?? data?.length ?? 0;
@@ -211,7 +223,7 @@ const TableData = ({
         <div className="w-full">
           {showLoading ? (
             <TableSkeletonLoader
-              columns={tableHeadings.length}
+              columns={visibleColumnCount}
               rows={totalSize || 10}
             />
           ) : error ? (
@@ -235,6 +247,11 @@ const TableData = ({
                             checked={allRowsSelected}
                             onChange={handleHeaderCheckboxChange}
                           />
+                        </th>
+                      )}
+                      {shouldShowSerialNumber && (
+                        <th className="w-16 px-4 py-3 text-left font-semibold text-[var(--admin-navy)] whitespace-nowrap">
+                          S.No
                         </th>
                       )}
                       {tableHeadings.map((heading, index) => {
@@ -311,6 +328,21 @@ const TableData = ({
                         }
                         className="border-b border-[#f0e8dc] last:border-0 transition-colors hover:bg-[var(--admin-surface-soft)]"
                       >
+                        {isHeaderCheckbox &&
+                          row &&
+                          Array.isArray(row) &&
+                          row.length > 0 && (
+                            <td className="w-12 px-4 py-3 align-middle">
+                              <div className="flex justify-start">{row[0]}</div>
+                            </td>
+                          )}
+                        {shouldShowSerialNumber && (
+                          <td className="w-16 px-4 py-3 align-middle font-medium text-[var(--admin-muted)]">
+                            {(resolvedCurrentPage - 1) * resolvedPageSize +
+                              rowIndex +
+                              1}.
+                          </td>
+                        )}
                         {row && Array.isArray(row) && row.length > 0 ? (
                           row.map((cell, cellIndex) => {
                             const headingIndex = isHeaderCheckbox
@@ -326,16 +358,7 @@ const TableData = ({
                             );
 
                             if (isCheckboxCell) {
-                              return (
-                                <td
-                                  key={`cell-${rowIndex}-${cellIndex}`}
-                                  className="w-12 px-4 py-3 align-middle"
-                                >
-                                  <div className="flex justify-start">
-                                    {cell}
-                                  </div>
-                                </td>
-                              );
+                              return null;
                             }
 
                             return (
@@ -382,7 +405,10 @@ const TableData = ({
                   >
                     <div className="flex items-center justify-between border-b border-[var(--admin-line)] bg-[var(--admin-table-head)] px-4 py-3">
                       <span className="text-xs font-semibold text-[var(--admin-navy)]">
-                        Record {rowIndex + 1}
+                        Record{" "}
+                        {(resolvedCurrentPage - 1) * resolvedPageSize +
+                          rowIndex +
+                          1}
                       </span>
                     </div>
                     {row && Array.isArray(row) && row.length > 0 ? (
