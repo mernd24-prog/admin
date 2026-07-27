@@ -452,6 +452,7 @@ export const ENDPOINTS = {
     productReviews: byPanel("/admin/platform/product-reviews", "/sellers/me/product-reviews"),
     sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
+    sellerProductReview: (reviewId) => `/sellers/me/product-reviews/${reviewId}`,
     createProductReview: "/admin/platform/product-reviews",
     productReviewsBulkAction: "/admin/platform/product-reviews/bulk-action",
   },

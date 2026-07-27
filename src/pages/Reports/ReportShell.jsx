@@ -54,6 +54,8 @@ const STAT_ICON_BY_LABEL = {
   "Total Products": MdInventory,
   "Top Product Purchases": MdShoppingCart,
   "Top Product Revenue": MdCurrencyRupee,
+  "Product Views": MdTrendingUp,
+  "Cart Adds": MdShoppingCart,
   "Out of Stock": MdWarehouse,
   "Total Stock": MdWarehouse,
   "Reserved Stock": MdInventory,
@@ -153,6 +155,9 @@ const listFrom = (value) => {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.list)) return value.list;
   if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.rows)) return value.rows;
+  if (Array.isArray(value?.results)) return value.results;
+  if (Array.isArray(value?.entries)) return value.entries;
   if (Array.isArray(value?.products)) return value.products;
   if (Array.isArray(value?.data)) return value.data;
   return [];
@@ -675,12 +680,38 @@ const productRowsFromAnalytics = (products = []) =>
     label: truncateLabel(product.title || product.name || `Product ${index + 1}`, 18),
     purchases: asNumber(product.analytics?.purchases ?? product.purchases ?? product.unitsSold),
     revenue: asNumber(product.analytics?.revenue ?? product.revenue),
+    orderCount: asNumber(product.analytics?.orderCount ?? product.orderCount),
+    views: asNumber(product.analytics?.views ?? product.views),
+    uniqueViews: asNumber(product.analytics?.uniqueViews ?? product.uniqueViews),
+    impressions: asNumber(product.analytics?.impressions ?? product.impressions),
+    cartAdds: asNumber(product.analytics?.cartAdds ?? product.cartAdds),
+    wishlistAdds: asNumber(product.analytics?.wishlistAdds ?? product.wishlistAdds),
+    conversionRate: asNumber(product.analytics?.conversionRate ?? product.conversionRate),
   }));
 
 const productTotalsFromRows = (rows = []) => ({
   purchases: rows.reduce((sum, row) => sum + asNumber(row.purchases), 0),
   revenue: rows.reduce((sum, row) => sum + asNumber(row.revenue), 0),
+  orderCount: rows.reduce((sum, row) => sum + asNumber(row.orderCount), 0),
+  views: rows.reduce((sum, row) => sum + asNumber(row.views), 0),
+  uniqueViews: rows.reduce((sum, row) => sum + asNumber(row.uniqueViews), 0),
+  impressions: rows.reduce((sum, row) => sum + asNumber(row.impressions), 0),
+  cartAdds: rows.reduce((sum, row) => sum + asNumber(row.cartAdds), 0),
+  wishlistAdds: rows.reduce((sum, row) => sum + asNumber(row.wishlistAdds), 0),
+  productCount: rows.length,
 });
+
+const hasProductActivity = (rows = []) =>
+  rows.some((row) =>
+    asNumber(row.revenue) > 0 ||
+    asNumber(row.purchases) > 0 ||
+    asNumber(row.orderCount) > 0 ||
+    asNumber(row.views) > 0 ||
+    asNumber(row.uniqueViews) > 0 ||
+    asNumber(row.impressions) > 0 ||
+    asNumber(row.cartAdds) > 0 ||
+    asNumber(row.wishlistAdds) > 0,
+  );
 
 const analyticsSnapshotRows = ({ orders = {}, returns = {}, payouts = {}, productTotals = {} }) => {
   const orderRevenue = asNumber(orders.gmvAmount ?? orders.totalSalesAmount);
@@ -1030,22 +1061,25 @@ export const SalesReport = () => {
   });
   const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
   const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
-  const useProductFallback = sellerView && !performanceRows.length && fallbackProductRows.some((row) => row.revenue > 0 || row.purchases > 0);
+  const useProductFallback = sellerView && !performanceRows.length && hasProductActivity(fallbackProductRows);
   const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
-  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.purchases);
+  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.orderCount || fallbackProductTotals.purchases);
+  const totalProductViews = asNumber(fallbackProductTotals.views || fallbackProductTotals.impressions);
   const refundAmount = asNumber(returns.refundAmount);
   const deliveredOrders = asNumber(orders.deliveredOrders);
   const salesSummaryItems = [
     { label: "Revenue", value: totalRevenue, displayValue: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics" : "Selected range" },
     { label: useProductFallback ? "Purchases" : "Orders", value: totalOrders, displayValue: formatNumber(totalOrders), sub: useProductFallback ? "Product units" : "All statuses" },
-    { label: "Delivered", value: deliveredOrders, displayValue: formatNumber(deliveredOrders), sub: "Completed orders" },
+    useProductFallback
+      ? { label: "Views", value: totalProductViews, displayValue: formatNumber(totalProductViews), sub: "Product activity" }
+      : { label: "Delivered", value: deliveredOrders, displayValue: formatNumber(deliveredOrders), sub: "Completed orders" },
     { label: "Refunds", value: refundAmount, displayValue: formatCurrency(refundAmount), sub: "Return refunds" },
   ];
 
   const stats = [
     { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
     { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
-    { label: "Delivered Orders", value: formatNumber(deliveredOrders), sub: "Completed fulfilment" },
+    { label: useProductFallback ? "Product Views" : "Delivered Orders", value: formatNumber(useProductFallback ? totalProductViews : deliveredOrders), sub: useProductFallback ? "Tracked product views" : "Completed fulfilment" },
     { label: "Refund Amount", value: formatCurrency(refundAmount), sub: "Return refunds" },
   ];
 
@@ -1072,12 +1106,12 @@ export const ProductAnalytics = () => {
   const sellerView = isSellerPanel();
   const loadData = useCallback(async ({ fromDate, toDate }) => {
     const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
-      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: "purchases", fromDate, toDate }),
+      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: sellerView ? "views" : "purchases", fromDate, toDate }),
       fetchJson(ENDPOINTS.products.inventoryStats),
       fetchJson(ENDPOINTS.products.listForPanel, { limit: 100, includeAllStatuses: true }).catch(() => []),
     ]);
     return { topProducts: listFrom(topProducts), inventoryStats, catalogProducts: listFrom(catalogProducts) };
-  }, []);
+  }, [sellerView]);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const products = listFrom(data.topProducts);
   const catalogProducts = listFrom(data.catalogProducts);
@@ -1098,6 +1132,11 @@ export const ProductAnalytics = () => {
     purchases: asNumber(product.analytics?.purchases),
     revenue: asNumber(product.analytics?.revenue),
     views: asNumber(product.analytics?.views),
+    uniqueViews: asNumber(product.analytics?.uniqueViews),
+    cartAdds: asNumber(product.analytics?.cartAdds),
+    wishlistAdds: asNumber(product.analytics?.wishlistAdds),
+    orderCount: asNumber(product.analytics?.orderCount),
+    conversionRate: asNumber(product.analytics?.conversionRate),
   }));
   const totalProductsCount = asNumber(inventory.totalProducts);
   const rows = totalProductsCount > baseRows.length
@@ -1118,11 +1157,13 @@ export const ProductAnalytics = () => {
     : baseRows;
   const purchaseTotal = rows.reduce((sum, product) => sum + asNumber(product.purchases), 0);
   const revenueTotal = rows.reduce((sum, product) => sum + asNumber(product.revenue), 0);
+  const viewsTotal = rows.reduce((sum, product) => sum + asNumber(product.views), 0);
+  const cartAddTotal = rows.reduce((sum, product) => sum + asNumber(product.cartAdds), 0);
 
   const stats = [
     { label: "Total Products", value: formatNumber(inventory.totalProducts), sub: "Current catalog" },
-    { label: "Top Product Purchases", value: formatNumber(purchaseTotal), sub: "Top 10 products" },
-    { label: "Top Product Revenue", value: formatCurrency(revenueTotal), sub: "Tracked product analytics" },
+    { label: sellerView ? "Product Views" : "Top Product Purchases", value: formatNumber(sellerView ? viewsTotal : purchaseTotal), sub: sellerView ? "Filtered product activity" : "Top 10 products" },
+    { label: sellerView ? "Cart Adds" : "Top Product Revenue", value: sellerView ? formatNumber(cartAddTotal) : formatCurrency(revenueTotal), sub: sellerView ? "Tracked product analytics" : "Tracked product analytics" },
     { label: "Out of Stock", value: formatNumber(inventory.outOfStockCount), sub: "Current inventory" },
   ];
 
@@ -1144,9 +1185,9 @@ export const ProductAnalytics = () => {
           title="Top Product Growth"
           rows={rows}
           barKey="revenue"
-          lineKey="purchases"
+          lineKey={sellerView ? "views" : "purchases"}
           barLabel="Revenue"
-          lineLabel="Purchases"
+          lineLabel={sellerView ? "Views" : "Purchases"}
           barFormatter={formatCurrency}
           lineFormatter={formatNumber}
           includeZeroRows
@@ -1165,6 +1206,10 @@ export const ProductAnalytics = () => {
             { key: "purchases", label: "Purchases", render: (value) => formatNumber(value) },
             { key: "revenue", label: "Revenue", render: (value) => formatCurrency(value) },
             { key: "views", label: "Views", render: (value) => formatNumber(value) },
+            ...(sellerView ? [
+              { key: "cartAdds", label: "Cart Adds", render: (value) => formatNumber(value) },
+              { key: "wishlistAdds", label: "Wishlist", render: (value) => formatNumber(value) },
+            ] : []),
           ]}
           getRowLink={(row) => row.id ? `/app/product-catalog/view/${row.id}` : null}
         />
@@ -1352,9 +1397,10 @@ export const AnalyticsDashboard = () => {
   });
   const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
   const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
-  const useProductFallback = sellerView && !performanceRows.length && fallbackProductRows.some((row) => row.revenue > 0 || row.purchases > 0);
+  const useProductFallback = sellerView && !performanceRows.length && hasProductActivity(fallbackProductRows);
   const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
-  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.purchases);
+  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.orderCount || fallbackProductTotals.purchases);
+  const totalProductViews = asNumber(fallbackProductTotals.views || fallbackProductTotals.impressions);
   const returnCount = asNumber(returns.returnCount);
   const pendingPayout = asNumber(payouts.byStatus?.pending?.netAmount);
   const snapshotRows = analyticsSnapshotRows({
@@ -1371,10 +1417,10 @@ export const AnalyticsDashboard = () => {
       sub: useProductFallback ? "Product analytics" : "Seller sales",
     },
     {
-      label: "Orders",
-      value: totalOrders,
-      displayValue: formatNumber(totalOrders),
-      sub: useProductFallback ? "Product purchases" : "All statuses",
+      label: useProductFallback ? "Views" : "Orders",
+      value: useProductFallback && !totalOrders ? totalProductViews : totalOrders,
+      displayValue: formatNumber(useProductFallback && !totalOrders ? totalProductViews : totalOrders),
+      sub: useProductFallback && !totalOrders ? "Product activity" : useProductFallback ? "Product purchases" : "All statuses",
     },
     {
       label: "Returns",
@@ -1392,7 +1438,7 @@ export const AnalyticsDashboard = () => {
   const stats = [
     { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
     { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
-    { label: "Return Requests", value: formatNumber(returnCount), sub: "Return workflow" },
+    { label: useProductFallback ? "Product Views" : "Return Requests", value: formatNumber(useProductFallback ? totalProductViews : returnCount), sub: useProductFallback ? "Tracked product views" : "Return workflow" },
     { label: "Pending Payouts", value: formatCurrency(pendingPayout), sub: "Seller settlements" },
   ];
 

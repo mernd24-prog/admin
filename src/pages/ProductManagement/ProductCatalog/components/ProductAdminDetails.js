@@ -1099,7 +1099,7 @@ const ProductAdminDetails = () => {
                 },
                 {
                   label: "Wishlists",
-                  value: (product.analytics.wishlists || 0).toLocaleString(
+                  value: (product.analytics.wishlistAdds || 0).toLocaleString(
                     "en-IN",
                   ),
                 },

@@ -502,11 +502,11 @@ const Profile = () => {
                 value={formData.phone}
                 className="md:col-span-6"
               />
-              <DetailField
+              {/* <DetailField
                 label="Primary Contact Name"
                 value={sellerProfile.primaryContactName}
                 className="md:col-span-6"
-              />
+              /> */}
               <DetailField
                 label="First Name"
                 value={profile.firstName}
@@ -530,16 +530,16 @@ const Profile = () => {
             title="Account Information"
           >
             <FieldGrid>
-              <DetailField
+              {/* <DetailField
                 label="User ID"
                 value={formData._id || formData.id}
                 className="md:col-span-6"
-              />
-              <DetailField
+              /> */}
+              {/* <DetailField
                 label="Role"
                 value={formData.role}
                 className="md:col-span-3"
-              />
+              /> */}
               <DetailField
                 label="Account Status"
                 value={formData.accountStatus}
@@ -550,21 +550,21 @@ const Profile = () => {
                 value={formData.referralCode}
                 className="md:col-span-6"
               />
-              <DetailField
+              {/* <DetailField
                 label="Hierarchy Level"
                 value={formData.hierarchyLevel}
                 className="md:col-span-3"
-              />
-              <DetailField
+              /> */}
+              {/* <DetailField
                 label="Email Verified"
                 value={formData.emailVerified}
                 className="md:col-span-3"
-              />
-              <DetailField
+              /> */}
+              {/* <DetailField
                 label="Created At"
                 value={formatDate(formData.createdAt)}
                 className="md:col-span-6"
-              />
+              /> */}
               <DetailField
                 label="Updated At"
                 value={formatDate(formData.updatedAt)}
@@ -592,31 +592,31 @@ const Profile = () => {
                 }
                 className="md:col-span-6"
               />
-              <DetailField
+              {/* <DetailField
                 label="Allowed Modules Count"
                 value={allowedModules.length}
                 className="md:col-span-3"
-              />
+              /> */}
               <DetailField
                 label="Active Sessions"
                 value={refreshSessions.length}
                 className="md:col-span-3"
               />
-              <DetailField
+              {/* <DetailField
                 label="Latest Session Provider"
                 value={latestSession.provider}
                 className="md:col-span-6"
-              />
-              <DetailField
+              /> */}
+              {/* <DetailField
                 label="Latest Platform"
                 value={latestSession.platform}
                 className="md:col-span-3"
-              />
-              <DetailField
+              /> */}
+              {/* <DetailField
                 label="Latest IP Address"
                 value={latestSession.ipAddress}
                 className="md:col-span-3"
-              />
+              /> */}
               <DetailField
                 label="Latest Used At"
                 value={formatDate(latestSession.lastUsedAt)}
@@ -629,7 +629,7 @@ const Profile = () => {
               />
             </FieldGrid>
 
-            <div>
+            {/* <div>
               <label className="admin-label">Allowed Modules</label>
               <div className="min-h-[40px] rounded-[6px] border border-[#dad7ea] bg-[#faf8ff]/70 px-3 py-2">
                 {allowedModules.length ? (
@@ -649,7 +649,7 @@ const Profile = () => {
                   </span>
                 )}
               </div>
-            </div>
+            </div> */}
           </ProfileSection>
 
           {isSeller && (
@@ -678,11 +678,11 @@ const Profile = () => {
                   value={sellerSettings.ndrResponseHours}
                   className="md:col-span-3"
                 />
-                <DetailField
+                {/* <DetailField
                   label="Shipping Modes"
                   value={sellerSettings.shippingModes}
                   className="md:col-span-3"
-                />
+                /> */}
               </FieldGrid>
             </ProfileSection>
           )}
@@ -768,36 +768,36 @@ const Profile = () => {
                   value={sellerProfile.onboardingStatus}
                   className="md:col-span-3"
                 />
-                <DetailField
+                {/* <DetailField
                   label="Profile Completed"
                   value={sellerProfile.profileCompleted}
                   className="md:col-span-6"
-                />
-                <DetailField
+                /> */}
+                {/* <DetailField
                   label="Rejection Reason"
                   value={sellerProfile.rejectionReason}
                   className="md:col-span-6"
-                />
-                <DetailField
+                /> */}
+                {/* <DetailField
                   label="Verified By"
                   value={sellerProfile.verifiedBy}
                   className="md:col-span-6"
-                />
-                <DetailField
+                /> */}
+                {/* <DetailField
                   label="Verified At"
                   value={formatDate(sellerProfile.verifiedAt)}
                   className="md:col-span-6"
-                />
-                <DetailField
+                /> */}
+                {/* <DetailField
                   label="Go Live Approved By"
                   value={sellerProfile.goLiveApprovedBy}
                   className="md:col-span-6"
-                />
-                <DetailField
+                /> */}
+                {/* <DetailField
                   label="Go Live Approved At"
                   value={formatDate(sellerProfile.goLiveApprovedAt)}
                   className="md:col-span-6"
-                />
+                /> */}
               </FieldGrid>
             </ProfileSection>
           )}
@@ -828,11 +828,11 @@ const Profile = () => {
                   value={onboardingChecklist.bankLinked}
                   className="md:col-span-6"
                 />
-                <DetailField
+                {/* <DetailField
                   label="First Product Published"
                   value={onboardingChecklist.firstProductPublished}
                   className="md:col-span-6"
-                />
+                /> */}
               </FieldGrid>
             </ProfileSection>
           )}
@@ -865,11 +865,11 @@ const Profile = () => {
                   value={bankDetails.branchName}
                   className="md:col-span-3"
                 />
-                <DetailField
+                {/* <DetailField
                   label="Bank Rejection Reason"
                   value={sellerProfile.bankRejectionReason}
                   className="md:col-span-12"
-                />
+                /> */}
               </FieldGrid>
             </ProfileSection>
           )}
@@ -896,7 +896,7 @@ const Profile = () => {
             </ProfileSection>
           )}
 
-          <ProfileSection number={nextSectionNumber()} title="Saved Addresses">
+          {/* <ProfileSection number={nextSectionNumber()} title="Saved Addresses">
             {addresses.length ? (
               <div className="space-y-4">
                 {addresses.map((address, index) => (
@@ -912,7 +912,7 @@ const Profile = () => {
                 No addresses saved.
               </div>
             )}
-          </ProfileSection>
+          </ProfileSection> */}
 
           {isEditing && (
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
