@@ -1074,11 +1074,11 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {order.customerName ||
+                        {formatLabel(order.customerName||
                           order.customer ||
                           order.buyer_id ||
                           order.buyerId ||
-                          "-"}
+                          "-")}
                       </td>
                       <td className="px-4 py-3">
                         {formatDate(

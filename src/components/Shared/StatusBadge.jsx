@@ -27,6 +27,8 @@ const VARIANTS = {
   banned:        'bg-red-100 text-red-800',
   verified:      'bg-emerald-100 text-emerald-700',
   unverified:    'bg-yellow-100 text-yellow-700',
+  seen:          'bg-green-50 text-green-700 border-green-100',
+  unseen:        'bg-blue-50 text-blue-700 border-blue-100',
   // ── KYC / Bank ───────────────────────────────────────────────────────────
   under_review:  'bg-yellow-100 text-yellow-700',
   submitted:     'bg-blue-100 text-blue-700',
@@ -88,6 +90,8 @@ const DOT_COLORS = {
   active:         'bg-green-500',
   enabled:        'bg-green-500',
   verified:       'bg-emerald-500',
+  seen:           'bg-green-500',
+  unseen:         'bg-blue-500',
   approved:       'bg-green-500',
   published:      'bg-green-500',
   completed:      'bg-green-500',

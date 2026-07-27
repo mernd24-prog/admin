@@ -297,6 +297,9 @@ const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, e
         <table className="w-full text-sm">
           <thead className="admin-table-head">
             <tr>
+              <th className="w-16 px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
+                S.No
+              </th>
               {columns.map((column) => (
                 <th key={column.key} className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
                   {column.label}
@@ -314,6 +317,9 @@ const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, e
                 }}
                 className={getRowLink?.(row) ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]" : ""}
               >
+                <td className="w-16 px-4 py-2.5 text-xs font-medium text-[var(--admin-muted)]">
+                  {index + 1}.
+                </td>
                 {columns.map((column) => (
                   <td key={column.key} className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]">
                     {column.render ? column.render(row[column.key], row) : row[column.key]}

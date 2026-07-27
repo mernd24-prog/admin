@@ -104,6 +104,7 @@ const PromotionFundingLedger = () => {
           <table className="min-w-full divide-y divide-gray-100 text-sm">
             <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
               <tr>
+                <th className="px-4 py-3">S.No</th>
                 <th className="px-4 py-3">Order / Item</th>
                 {!sellerMode && <th className="px-4 py-3">Seller</th>}
                 <th className="px-4 py-3">Funding</th>
@@ -117,8 +118,11 @@ const PromotionFundingLedger = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <tr key={row.id}>
+                  <td className="px-4 py-3 text-gray-500">
+                    {Number(filters.offset || 0) + index + 1}.
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-mono text-xs font-semibold">{row.orderNumber || row.orderId}</div>
                     <div className="mt-1 font-medium text-gray-900">{row.productTitle || "Order item"}</div>
@@ -142,7 +146,7 @@ const PromotionFundingLedger = () => {
                 </tr>
               ))}
               {!rows.length && (
-                <tr><td colSpan={sellerMode ? 9 : 10} className="px-4 py-10 text-center text-gray-500">
+                <tr><td colSpan={sellerMode ? 10 : 11} className="px-4 py-10 text-center text-gray-500">
                   {loading ? "Loading promotion entries…" : "No funded discounts found."}
                 </td></tr>
               )}

@@ -35,7 +35,10 @@ import {
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
-import { formatLabel } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+} from "../../../utils/formatters";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -78,7 +81,6 @@ const organizationName = (row = {}) => {
   return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || "Default organization";
 };
 
-const dateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
 const eligibilityCountdown = (value) => {
   if (!value) return "Waiting for delivery";
   const remaining = new Date(value).getTime() - Date.now();
@@ -168,33 +170,50 @@ const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) =
   );
 };
 
-const TableShell = ({ title, headings, children, emptyText }) => (
-  <section className="rounded-lg border border-[#E6E6E6] bg-white">
-    <div className="border-b border-[#E6E6E6] px-4 py-3">
-      <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
-    </div>
-    <div className="overflow-auto">
-      <table className="min-w-full divide-y divide-[#EEF1F6] text-sm">
-        <thead className="bg-[#f8faff] text-left text-xs font-semibold uppercase text-[#65718b]">
-          <tr>
-            {headings.map((heading) => (
-              <th key={heading} className="whitespace-nowrap px-4 py-3">{heading}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#EEF1F6] text-[#202337]">
-          {children || (
+const TableShell = ({ title, headings, children, emptyText }) => {
+  const rows = React.Children.toArray(children);
+
+  return (
+    <section className="rounded-lg border border-[#E6E6E6] bg-white ">
+      <div className="border-b border-[#E6E6E6] px-4 py-3">
+        <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
+      </div>
+      <div className="overflow-auto">
+        <table className="min-w-full divide-y divide-[#EEF1F6] text-sm">
+          <thead className="bg-[#f8faff] text-left text-xs font-semibold uppercase text-[#65718b]">
             <tr>
-              <td className="px-4 py-6 text-center text-[#65718b]" colSpan={headings.length}>
-                {emptyText}
-              </td>
+              <th className="whitespace-nowrap px-4 py-3">S.No</th>
+              {headings.map((heading) => (
+                <th key={heading} className="whitespace-nowrap px-4 py-3">{heading}</th>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </section>
-);
+          </thead>
+          <tbody className="divide-y divide-[#EEF1F6] text-[#202337]">
+            {rows.length ? rows.map((row, index) =>
+              React.cloneElement(
+                row,
+                undefined,
+                <td
+                  key="serial-number"
+                  className="whitespace-nowrap px-4 py-3 text-[#65718b]"
+                >
+                  {index + 1}.
+                </td>,
+                row.props.children,
+              )
+            ) : (
+              <tr>
+                <td className="px-4 py-6 text-center text-[#65718b]" colSpan={headings.length + 1}>
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
 
 const ModalOverlay = ({ isOpen, onClose, title, children, onSubmit, submitting }) => {
   if (!isOpen) return null;
@@ -755,7 +774,7 @@ const SellerFinance = () => {
                 <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="eligible" dot /> <span className="ml-1">{seller.eligible}</span></td>
                 <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="held" dot /> <span className="ml-1">{seller.held}</span></td>
                 <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="released" dot /> <span className="ml-1">{seller.released}</span></td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">{seller.nextEligibleAt ? dateTime(seller.nextEligibleAt) : "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">{seller.nextEligibleAt ? formatDateTime12Hour(seller.nextEligibleAt, "—") : "—"}</td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <button
                     type="button"
@@ -866,10 +885,10 @@ const SellerFinance = () => {
             return (
               <tr key={`eligibility-${row.id}`}>
                 <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? dateTime(row.deliveredAt) : <span className="text-amber-700">Not Delivered</span>}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? dateTime(row.returnWindowStartsAt) : "Starts After Delivery"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? formatDateTime12Hour(row.deliveredAt, "-") : <span className="text-amber-700">Not Delivered</span>}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? formatDateTime12Hour(row.returnWindowStartsAt, "-") : "Starts After Delivery"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-xs">
-                  {row.returnWindowEndsAt ? dateTime(row.returnWindowEndsAt) : "—"}
+                  {row.returnWindowEndsAt ? formatDateTime12Hour(row.returnWindowEndsAt, "—") : "—"}
                   {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>
@@ -936,9 +955,9 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3">
                 <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
                 {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
-                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible On {dateTime(row.eligibleAt)}</div>}
+                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible On {formatDateTime12Hour(row.eligibleAt, "—")}</div>}
               </td>
-              <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(row.created_at, "-")}</td>
               {!isSeller && (
                 <td className="whitespace-nowrap px-4 py-3">
                   {["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) && !row.payout_id ? (
@@ -1049,7 +1068,7 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.adjustment_amount)}</td>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount || row.amount)}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
-              <td className="whitespace-nowrap px-4 py-3">{dateTime(row.created_at)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(row.created_at, "-")}</td>
               <td className="whitespace-nowrap px-4 py-3">
                 <PermissionGuard module="sellers/commissions" action={ACTIONS.VIEW} hide>
                   <button

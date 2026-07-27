@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  MdMarkEmailRead,
   MdNotifications,
   MdSend,
   MdVisibility,
@@ -17,8 +18,12 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "../../../utils/toast";
 import { useListPage } from "../../../hooks/useListPage";
-import { useDispatch } from "react-redux";
-import { setNotificationsSeenAt } from "../../../Redux/notificationsSlice";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  isNotificationUnread,
+  markNotificationRead,
+  setNotificationsSeenAt,
+} from "../../../Redux/notificationsSlice";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -185,35 +190,91 @@ const EMPTY_FORM = {
 const UserMessages = () => {
   const { isSeller } = usePermission();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const readNotificationIds = useSelector(
+    (state) => state.notifications.readNotificationIds || [],
+  );
+  const notificationReadBaselineAt = useSelector(
+    (state) => state.notifications.notificationReadBaselineAt || 0,
+  );
+  const markAsSeen = useCallback(
+    (notification) => dispatch(markNotificationRead(notification)),
+    [dispatch],
+  );
   const columns = useMemo(
-    () => [
-      ...(isSeller
-        ? BASE_COLUMNS.filter((column) => column.key !== "userId")
-        : BASE_COLUMNS),
-      {
-        key: "_actions",
-        label: "Action",
-        render: (_, row) => {
-          const detailRoute = getNotificationDetailRoute(row);
-          if (!detailRoute) return null;
-          return (
-            <button
-              type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-              title="View detail"
-              aria-label="View notification detail"
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(detailRoute);
-              }}
-            >
-              <MdVisibility size={18} />
-            </button>
-          );
+    () => {
+      const baseColumns = (
+        isSeller
+          ? BASE_COLUMNS.filter((column) => column.key !== "userId")
+          : BASE_COLUMNS
+      ).map((column) => {
+        if (column.key !== "channel") return column;
+        return {
+          ...column,
+          render: (value, row) => {
+            const unread = isNotificationUnread(
+              row,
+              readNotificationIds,
+              notificationReadBaselineAt,
+            );
+            return (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="rounded-full bg-[#F4F1ED] px-2 py-0.5 text-xs font-medium capitalize text-[var(--admin-navy)]">
+                  {String(value || "in_app").replace(/_/g, " ")}
+                </span>
+                <span
+                  className={`h-2 w-2 flex-none rounded-full ${
+                    unread
+                      ? "bg-[var(--admin-navy)] shadow-[0_0_0_3px_rgba(31,27,95,0.12)]"
+                      : "bg-transparent"
+                  }`}
+                  aria-label={unread ? "Unseen notification" : undefined}
+                />
+              </span>
+            );
+          },
+        };
+      });
+
+      return [
+        ...baseColumns,
+        {
+          key: "_actions",
+          label: "Action",
+          render: (_, row) => {
+            const detailRoute = getNotificationDetailRoute(row);
+            const unread = isNotificationUnread(
+              row,
+              readNotificationIds,
+              notificationReadBaselineAt,
+            );
+            if (!detailRoute && !unread) return null;
+            return (
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+                title={detailRoute ? "View detail" : "Mark as seen"}
+                aria-label={detailRoute ? "View notification detail" : "Mark notification as seen"}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  markAsSeen(row);
+                  if (detailRoute) navigate(detailRoute);
+                }}
+              >
+                {detailRoute ? <MdVisibility size={18} /> : <MdMarkEmailRead size={18} />}
+              </button>
+            );
+          },
         },
-      },
+      ];
+    },
+    [
+      isSeller,
+      markAsSeen,
+      navigate,
+      notificationReadBaselineAt,
+      readNotificationIds,
     ],
-    [isSeller, navigate],
   );
   const list = useListPage({
     defaultPageSize: 20,
@@ -228,15 +289,16 @@ const UserMessages = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
-  const dispatch = useDispatch();
 
   useEffect(() => {
     dispatch(setNotificationsSeenAt(Date.now()));
   }, [dispatch]);
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const params = toQueryParams();
       const endpoint = isSeller
@@ -251,24 +313,37 @@ const UserMessages = () => {
         },
       });
       const data = res?.data?.data;
-      const items = Array.isArray(data) ? data : data?.items || [];
+      const items = Array.isArray(data)
+        ? data
+        : data?.items || data?.list || data?.notifications || [];
       const totalCount = Number(
         res?.data?.pagination?.total ?? res?.data?.meta?.total ?? items.length,
       );
       setNotifications(items);
       setTotal(totalCount);
+      dispatch(setNotificationsSeenAt(Date.now()));
     } catch (err) {
       const msg =
         err?.response?.data?.message || "Failed to load notifications";
-      setError(msg);
-      toast.error(msg);
+      if (!silent) {
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [isSeller, toQueryParams]);
+  }, [dispatch, isSeller, toQueryParams]);
 
   useEffect(() => {
     fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => fetchNotifications({ silent: true }),
+      15_000,
+    );
+    return () => window.clearInterval(intervalId);
   }, [fetchNotifications]);
 
   const handleSend = async () => {
@@ -343,6 +418,15 @@ const UserMessages = () => {
         emptyText="No notifications sent yet."
         emptyIcon={<MdNotifications size={40} className="text-gray-200" />}
         requiredModule="notifications"
+        rowClassName={(row) =>
+          isNotificationUnread(
+            row,
+            readNotificationIds,
+            notificationReadBaselineAt,
+          )
+            ? "bg-blue-50/40 font-semibold"
+            : ""
+        }
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}

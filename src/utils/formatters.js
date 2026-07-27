@@ -39,6 +39,27 @@ export function formatDateTime(value, fallback = "Not available") {
 }
 
 /**
+ * Format a date-time value to "DD/MM/YYYY, HH:MM:SS AM/PM".
+ * Returns the provided fallback when the value is falsy or invalid.
+ */
+export function formatDateTime12Hour(value, fallback = "Not available") {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return fallback;
+
+  return date
+    .toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .replace(/\b(am|pm)\b/i, (period) => period.toUpperCase());
+}
+
+/**
  * Format a date value to a relative label if recent ("Today", "Yesterday"),
  * otherwise falls back to formatDate.
  */
