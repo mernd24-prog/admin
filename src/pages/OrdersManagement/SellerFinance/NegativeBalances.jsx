@@ -87,6 +87,13 @@ const unwrapList = (payload = {}) => {
   };
 };
 
+const valueOf = (row = {}, ...keys) => {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+  }
+  return 0;
+};
+
 const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
 const settlementId = (row) => row?._id || row?.id || row?.settlementId;
 
@@ -243,7 +250,7 @@ const NegativeBalances = () => {
         label: "Negative Amount",
         sortable: true,
         render: (value, row) =>
-          money(value || row.balance || row.net_amount || row.amount),
+          money(valueOf({ value, ...row }, "value", "balance", "net_amount", "netAmount", "amount")),
       },
       {
         key: "resolvedAmount",
@@ -262,7 +269,7 @@ const NegativeBalances = () => {
         label: "Created",
         sortable: true,
         render: (value, row) => {
-          const createdAt = value || row.created_at;
+          const createdAt = valueOf({ value, ...row }, "value", "created_at", "createdAt");
           return formatDateTime12Hour(createdAt, "N/A");
         },
       },

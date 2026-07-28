@@ -103,31 +103,28 @@ const invoiceMetadata = (row = {}) => {
   if (!row.metadata || typeof row.metadata !== "string") return row.metadata || {};
   try { return JSON.parse(row.metadata); } catch { return {}; }
 };
-const invoiceReconciliation = (row = {}) => {
-  const total = Number(row.totalAmount ?? row.total_amount ?? 0);
-  if (total <= 0) return { label: "Invalid zero value", valid: false };
+const invoiceTypeLabel = (value) => ({
+  order_customer: "Order receipt",
+  seller_customer: "Product tax invoice",
+  platform_commission: "Platform commission invoice",
+  platform_customer_fee: "Customer platform fee invoice",
+}[value] || String(value || "Invoice").replace(/_/g, " "));
+
+const invoicePurpose = (row = {}) => {
   const type = row.invoiceType || row.invoice_type;
   const metadata = invoiceMetadata(row);
-  let calculated = total;
-  if (type === "platform_commission" && metadata.itemReferences?.length) {
-    calculated = metadata.itemReferences.reduce((sum, item) =>
-      sum + Number(item.platformFeeAmount || 0) + Number(item.platformFeeTaxAmount || 0), 0);
-  } else if (type === "seller_customer" && metadata.items?.length) {
-    calculated = metadata.items.reduce((sum, item) =>
-      sum + Number(item.taxableAmount || 0) + Number(item.taxAmount || 0), 0) +
-      Number(metadata.amounts?.deliveryChargeAmount || 0);
-  } else if (type === "order_customer") {
-    calculated = Number(metadata.amounts?.finalPayableAmount ?? total);
+  const amounts = metadata.amounts || {};
+  if (type === "seller_customer") {
+    const discount = Number(amounts.marketplaceFundedDiscountAmount || amounts.discountAmount || 0);
+    return discount > 0
+      ? "Seller product invoice. Customer discount/payment split may be shown separately."
+      : "Seller product invoice issued to the customer.";
   }
-  const valid = Math.abs(calculated - total) <= 0.02;
-  return { label: valid ? "Reconciled" : "Mismatch", valid };
+  if (type === "platform_commission") return "Platform service charge billed to seller.";
+  if (type === "platform_customer_fee") return "Platform fee billed to customer.";
+  if (type === "order_customer") return "Customer payment receipt. Not a seller tax invoice.";
+  return "Tax document";
 };
-const invoiceTypeLabel = (value) => ({
-  order_customer: "Order invoice",
-  seller_customer: "Seller → Customer",
-  platform_commission: "Platform → Seller",
-  platform_customer_fee: "Platform → Customer",
-}[value] || String(value || "Invoice").replace(/_/g, " "));
 
 const TaxInvoices = () => {
   const dispatch = useDispatch();
@@ -197,7 +194,7 @@ const TaxInvoices = () => {
   const COLUMNS = useMemo(() => [
     {
       key: "invoiceNumber",
-      label: "Invoice #",
+      label: "Document No.",
       sortable: true,
       render: (v, row) => <span className="font-mono text-sm font-medium">{v || row.invoice_number || "—"}</span>,
     },
@@ -211,17 +208,20 @@ const TaxInvoices = () => {
     },
     {
       key: "invoiceType",
-      label: "Invoice Type",
+      label: "Document",
       sortable: true,
       render: (v, row) => (
-        <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-          {invoiceTypeLabel(v || row.invoice_type)}
-        </span>
+        <div className="min-w-[180px]">
+          <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+            {invoiceTypeLabel(v || row.invoice_type)}
+          </span>
+          <div className="mt-1 text-xs text-gray-500">{invoicePurpose(row)}</div>
+        </div>
       ),
     },
     {
       key: "parties",
-      label: "Issued By → Recipient",
+      label: "From / To",
       render: (_, row) => {
         const type = row.invoiceType || row.invoice_type;
         const metadata = invoiceMetadata(row);
@@ -230,7 +230,12 @@ const TaxInvoices = () => {
         const customer = metadata.buyer?.profile?.displayName || metadata.buyer?.email || "Customer";
         const issuer = type === "seller_customer" ? seller : "Sam Global";
         const recipient = type === "platform_commission" ? seller : customer;
-        return <span className="whitespace-nowrap text-xs text-gray-600">{issuer} → {recipient}</span>;
+        return (
+          <div className="min-w-[220px] text-xs text-gray-600">
+            <div><span className="font-semibold text-gray-800">From:</span> {issuer}</div>
+            <div><span className="font-semibold text-gray-800">To:</span> {recipient}</div>
+          </div>
+        );
       },
     },
     {
@@ -253,7 +258,7 @@ const TaxInvoices = () => {
     },
     {
       key: "taxableAmount",
-      label: "Taxable Amt",
+      label: "Taxable",
       sortable: true,
       render: (v, row) => <span className="text-sm">{money(v ?? row.taxable_amount)}</span>,
     },
@@ -268,18 +273,6 @@ const TaxInvoices = () => {
       label: "Total",
       sortable: true,
       render: (v, row) => <span className="text-sm font-semibold">{money(v ?? row.total_amount)}</span>,
-    },
-    {
-      key: "reconciliation",
-      label: "Reconciliation",
-      render: (_, row) => {
-        const result = invoiceReconciliation(row);
-        return (
-          <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${result.valid ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-            {result.label}
-          </span>
-        );
-      },
     },
     {
       key: "issuedAt",
@@ -323,9 +316,11 @@ const TaxInvoices = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tax Invoices"
-        subtitle="View and manage all tax invoices for your orders and sales."
-        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Invoices" }]}
+        title={isSellerPanel() ? "Invoice Documents" : "Tax Invoices"}
+        subtitle={isSellerPanel()
+          ? "Download product invoices, platform commission invoices, and customer fee documents linked to your orders."
+          : "View and manage tax invoices for orders, sellers, customers, and platform services."}
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: isSellerPanel() ? "Invoice Documents" : "Tax Invoices" }]}
       />
 
       {/* {error && (

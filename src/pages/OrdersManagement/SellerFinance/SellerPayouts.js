@@ -41,10 +41,26 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const valueOf = (row, snake, camel) => row?.[snake] ?? row?.[camel];
+const valueOf = (row, ...keys) => {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+  }
+  return 0;
+};
 const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (value, currency = "INR") => `${currency} ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const sellerName = (row = {}) => row.sellerName || row.seller?.displayName || row.seller?.businessName || row.seller?.email || "Seller";
+const jsonOf = (value) => {
+  if (value && typeof value === "object") return value;
+  try { return JSON.parse(value || "{}"); } catch { return {}; }
+};
+const breakdownOf = (row = {}) => jsonOf(row.metadata).financialBreakdown || jsonOf(row.metadata);
+const signedMoney = (value, currency = "INR") => {
+  const numeric = Number(value || 0);
+  if (numeric > 0) return `+${money(numeric, currency)}`;
+  if (numeric < 0) return `-${money(Math.abs(numeric), currency)}`;
+  return money(0, currency);
+};
 
 const getInitialPayoutFilters = () => {
   const params = new URLSearchParams(window.location.search);
@@ -117,9 +133,18 @@ const SellerPayouts = () => {
         <div><div className="font-medium text-gray-800">{sellerName(row)}</div>{row.seller?.email && <div className="text-xs text-gray-400">{row.seller.email}</div>}</div>
       ) }] : []),
       { key: "status", label: "Status", sortable: true, render: (value) => <StatusBadge status={value || "pending"} dot /> },
-      { key: "total_amount", label: "Gross", render: (value, row) => money(value ?? row.totalAmount, row.currency) },
-      { key: "commission_amount", label: "Platform fee", render: (value, row) => <span className="text-red-600">-{money(value ?? row.commissionAmount, row.currency)}</span> },
-      { key: "tax_amount", label: "Fee GST", render: (value, row) => <span className="text-red-600">-{money(value ?? row.taxAmount, row.currency)}</span> },
+      { key: "total_amount", label: "Seller receivable", render: (value, row) => money(value ?? row.totalAmount, row.currency) },
+      { key: "commission_amount", label: "Platform commission", render: (value, row) => <span className="text-red-600">-{money(value ?? row.commissionAmount, row.currency)}</span> },
+      { key: "tax_amount", label: "GST on commission", render: (value, row) => <span className="text-red-600">-{money(value ?? row.taxAmount, row.currency)}</span> },
+      { key: "tax_withheld", label: "TCS/TDS", render: (_, row) => {
+        const breakdown = breakdownOf(row);
+        return <span className="text-red-600">-{money(Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0), row.currency)}</span>;
+      } },
+      { key: "shipping_net", label: "Shipping net", render: (_, row) => {
+        const breakdown = breakdownOf(row);
+        const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
+        return <span className={shippingNet >= 0 ? "text-green-700" : "text-red-600"}>{signedMoney(shippingNet, row.currency)}</span>;
+      } },
       { key: "refund_amount", label: "Refunds", render: (value, row) => <span className="text-red-600">-{money(value ?? row.refundAmount, row.currency)}</span> },
       { key: "net_amount", label: "Net payout", render: (value, row) => <span className="font-semibold text-green-700">{money(value ?? row.netAmount, row.currency)}</span> },
       { key: "period_start", label: "Period", render: (value, row) => <span className="text-xs text-gray-500">{fmt(value ?? row.periodStart)} – {fmt(valueOf(row, "period_end", "periodEnd"))}</span> },
@@ -213,9 +238,11 @@ const SellerPayouts = () => {
                 <tr>
                   <th className="px-5 py-3">Settlement</th>
                   <th className="px-4 py-3">Payout</th>
-                  <th className="px-4 py-3">Gross</th>
-                  <th className="px-4 py-3">Commission</th>
-                  <th className="px-4 py-3">GST</th>
+                  <th className="px-4 py-3">Seller Receivable</th>
+                  <th className="px-4 py-3">Platform Commission</th>
+                  <th className="px-4 py-3">GST on Commission</th>
+                  <th className="px-4 py-3">TCS/TDS</th>
+                  <th className="px-4 py-3">Shipping Net</th>
                   <th className="px-4 py-3">Net</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Paid</th>
@@ -225,6 +252,9 @@ const SellerPayouts = () => {
               <tbody>
                 {settlementsPayload.list.length ? settlementsPayload.list.map((row) => {
                   const isDownloading = downloadingId === row.id;
+                  const breakdown = breakdownOf(row);
+                  const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
+                  const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
                   return (
                     <tr key={row.id} className="border-b border-[var(--admin-line)] last:border-0 hover:bg-[var(--admin-surface-soft)]">
                       <td className="whitespace-nowrap px-5 py-3">
@@ -240,6 +270,8 @@ const SellerPayouts = () => {
                       <td className="whitespace-nowrap px-4 py-3">{money(valueOf(row, "gross_amount", "grossAmount"), row.currency)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-red-600">-{money(taxWithheld, row.currency)}</td>
+                      <td className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-green-700" : "text-red-600"}`}>{signedMoney(shippingNet, row.currency)}</td>
                       <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(valueOf(row, "net_amount", "netAmount"), row.currency)}</td>
                       <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status || "pending"} dot /></td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--admin-muted)]">{fmt(valueOf(row, "settlement_date", "settlementDate") ?? row.created_at, true)}</td>
@@ -268,7 +300,7 @@ const SellerPayouts = () => {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={9} className="px-5 py-10 text-center">
+                    <td colSpan={11} className="px-5 py-10 text-center">
                       <div className="flex flex-col items-center gap-2 text-[var(--admin-muted)]">
                         <MdReceiptLong size={28} className="text-[var(--admin-line-strong)]" />
                         <span className="text-sm">No settlement statements yet</span>
@@ -291,19 +323,30 @@ const SellerPayouts = () => {
       >
         {detail && (
           <div className="space-y-4 p-2 text-sm">
+            {(() => {
+              const breakdown = breakdownOf(detail);
+              const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
+              const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
+              return (
+                <>
             <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
               <div className="font-semibold text-gray-800">{sellerName(detail)}</div>
               <div className="mt-1"><StatusBadge status={detail.status || "pending"} dot /></div>
               <div className="mt-2 text-gray-600">Earning period: {fmt(valueOf(detail, "period_start", "periodStart"))} – {fmt(valueOf(detail, "period_end", "periodEnd"))}</div>
             </div>
             <div className="space-y-2 rounded-lg border border-gray-100 p-4">
-              <div className="flex justify-between"><span>Gross seller sales</span><span>{money(valueOf(detail, "total_amount", "totalAmount"), detail.currency)}</span></div>
-              <div className="flex justify-between"><span>Platform fee</span><span className="text-red-600">-{money(valueOf(detail, "commission_amount", "commissionAmount"), detail.currency)}</span></div>
-              <div className="flex justify-between"><span>GST on platform fee</span><span className="text-red-600">-{money(valueOf(detail, "tax_amount", "taxAmount"), detail.currency)}</span></div>
+              <div className="flex justify-between"><span>Seller receivable</span><span>{money(valueOf(detail, "total_amount", "totalAmount"), detail.currency)}</span></div>
+              <div className="flex justify-between"><span>Platform commission</span><span className="text-red-600">-{money(valueOf(detail, "commission_amount", "commissionAmount"), detail.currency)}</span></div>
+              <div className="flex justify-between"><span>GST on commission</span><span className="text-red-600">-{money(valueOf(detail, "tax_amount", "taxAmount"), detail.currency)}</span></div>
+              <div className="flex justify-between"><span>GST TCS / income-tax TDS</span><span className="text-red-600">-{money(taxWithheld, detail.currency)}</span></div>
+              <div className="flex justify-between"><span>Shipping collected / reimbursed</span><span className={shippingNet >= 0 ? "text-green-700" : "text-red-600"}>{signedMoney(shippingNet, detail.currency)}</span></div>
               <div className="flex justify-between"><span>Refund adjustments</span><span className="text-red-600">-{money(valueOf(detail, "refund_amount", "refundAmount"), detail.currency)}</span></div>
-              <div className="flex justify-between"><span>Other adjustments</span><span>{money(valueOf(detail, "adjustment_amount", "adjustmentAmount"), detail.currency)}</span></div>
+              <div className="flex justify-between"><span>Other adjustments</span><span>{signedMoney(valueOf(detail, "adjustment_amount", "adjustmentAmount"), detail.currency)}</span></div>
               <div className="flex justify-between border-t pt-2 text-base font-semibold"><span>Net payout</span><span className="text-green-700">{money(valueOf(detail, "net_amount", "netAmount"), detail.currency)}</span></div>
             </div>
+                </>
+              );
+            })()}
             <div className="grid grid-cols-1 gap-2 rounded-lg border border-gray-100 p-4 md:grid-cols-2">
               <div><strong>Payment method:</strong> {String(valueOf(detail, "payment_method", "paymentMethod") || "Not selected").replace(/_/g, " ")}</div>
               <div><strong>Payment reference:</strong> {valueOf(detail, "payment_reference", "paymentReference") || "Not paid yet"}</div>

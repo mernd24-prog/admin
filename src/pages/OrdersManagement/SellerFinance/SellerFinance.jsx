@@ -89,6 +89,20 @@ const organizationName = (row = {}) => {
   const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
   return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || "Default organization";
 };
+const valueOf = (row = {}, ...keys) => {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+  }
+  return 0;
+};
+const rowMoney = (row = {}, ...keys) => Number(valueOf(row, ...keys) || 0);
+const financialBreakdown = (row = {}) => recordMetadata(row).financialBreakdown || recordMetadata(row);
+const signedMoney = (value, currency, positivePrefix = "+") => {
+  const numeric = Number(value || 0);
+  if (numeric > 0) return `${positivePrefix}${money(numeric)}`;
+  if (numeric < 0) return `−${money(Math.abs(numeric))}`;
+  return money(0, currency);
+};
 
 const eligibilityCountdown = (value) => {
   if (!value) return "Waiting for delivery";
@@ -367,7 +381,7 @@ const SellerFinance = () => {
         const deductions = deductionOf(row);
         return {
           count: acc.count + 1,
-          grossAmount: acc.grossAmount + Number(row.amount || row.gross_amount || row.grossAmount || 0),
+          grossAmount: acc.grossAmount + rowMoney(row, "amount", "gross_amount", "grossAmount"),
           commissionAmount: acc.commissionAmount + deductions.commission,
           commissionTaxAmount: acc.commissionTaxAmount + deductions.commissionGst,
           gstTcsAmount: acc.gstTcsAmount + deductions.gstTcs,
@@ -376,7 +390,7 @@ const SellerFinance = () => {
           shippingDeductionAmount: acc.shippingDeductionAmount + deductions.shipping,
           refundAmount: acc.refundAmount + deductions.refund,
           adjustmentAmount: acc.adjustmentAmount + deductions.adjustment,
-          payableAmount: acc.payableAmount + Number(row.net_amount || row.netAmount || 0),
+          payableAmount: acc.payableAmount + rowMoney(row, "net_amount", "netAmount"),
         };
       },
       {
@@ -396,7 +410,7 @@ const SellerFinance = () => {
     const paidAmount = payouts.reduce((total, row) => {
       const status = String(row.status || "").toLowerCase();
       if (!["paid", "completed"].includes(status)) return total;
-      return total + Number(row.net_amount || row.netAmount || 0);
+      return total + rowMoney(row, "net_amount", "netAmount");
     }, 0);
     if (!isSeller) return adminSummary;
     return {
@@ -422,8 +436,8 @@ const SellerFinance = () => {
         released: 0,
         nextEligibleAt: null,
       };
-      current.gross += Number(row.amount || 0);
-      current.payable += Number(row.net_amount || row.netAmount || 0);
+      current.gross += rowMoney(row, "amount", "gross_amount", "grossAmount");
+      current.payable += rowMoney(row, "net_amount", "netAmount");
       const lifecycle = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
       if (["available", "eligible"].includes(lifecycle)) current.eligible += 1;
       else if (["held", "blocked", "on_hold"].includes(lifecycle)) current.held += 1;
@@ -646,7 +660,7 @@ const SellerFinance = () => {
         label: commission.orderNumber || commission.order_number || String(id).slice(-8),
         amount: 0,
       };
-      current.amount += Number(commission.net_amount || commission.netAmount || 0);
+      current.amount += rowMoney(commission, "net_amount", "netAmount");
       orders.set(String(id), current);
     });
     return Array.from(orders.values());
@@ -918,7 +932,7 @@ const SellerFinance = () => {
                   {row.returnWindowEndsAt ? formatDateTime12Hour(row.returnWindowEndsAt, "—") : "—"}
                   {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}</td>
                 <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : decision.label === "Refunded" ? "refunded" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
                 <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{formatLabel(decision.reason)}</td>
                 {!isSeller && (
@@ -940,17 +954,17 @@ const SellerFinance = () => {
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">Advanced financial breakdown and payout history</summary>
         <div className="grid grid-cols-1 gap-4 border-t border-[#E6E6E6] p-4 xl:grid-cols-2">
         <TableShell
-          title="Seller Commissions"
+          title="Seller Commission / Item Settlement Lines"
           headings={[
             "Order",
             ...(!isSeller ? ["Seller"] : []),
             "Organization",
-            "Gross",
-            "Commission",
-            "GST on Fee",
+            "Seller Receivable",
+            "Platform Commission",
+            "GST on Commission",
             "GST TCS",
             "Income-tax TDS",
-            "Shipping",
+            "Shipping Net",
             "Refund Adj.",
             "Other Adj.",
             "Net Payable",
@@ -967,24 +981,24 @@ const SellerFinance = () => {
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "amount", "gross_amount", "grossAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.commission)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.commissionGst)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.gstTcs)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.incomeTaxTds)}</td>
               <td className={`whitespace-nowrap px-4 py-3 ${deductions.shippingCredit > deductions.shipping ? "text-[#208a3c]" : "text-[#d92d20]"}`}>
                 {deductions.shippingCredit > deductions.shipping ? "+" : "−"}
                 {money(Math.abs(deductions.shippingCredit - deductions.shipping))}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${Number(row.adjustment_amount || 0) < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{money(row.adjustment_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(Number(row.net_amount || 0), 0))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.refund)}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${deductions.adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(deductions.adjustment)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}</td>
               <td className="whitespace-nowrap px-4 py-3">
                 <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
                 {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
                 {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible On {formatDateTime12Hour(row.eligibleAt, "—")}</div>}
               </td>
-              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(row.created_at, "-")}</td>
+              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(valueOf(row, "created_at", "createdAt"), "-")}</td>
               {!isSeller && (
                 <td className="whitespace-nowrap px-4 py-3">
                   {["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) && !row.payout_id ? (
@@ -1016,9 +1030,11 @@ const SellerFinance = () => {
             ...(!isSeller ? ["Seller"] : []),
             "Organization",
             "Period",
-            "Gross",
-            "Commission",
-            "GST on Fee",
+            "Seller Receivable",
+            "Platform Commission",
+            "GST on Commission",
+            "TCS/TDS",
+            "Shipping Net",
             "Refund",
             "Adjustment",
             "Net",
@@ -1027,17 +1043,24 @@ const SellerFinance = () => {
           ]}
           emptyText="No payouts found"
         >
-          {payouts.length ? payouts.map((row) => (
+          {payouts.length ? payouts.map((row) => {
+            const breakdown = financialBreakdown(row);
+            const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
+            const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
+            const adjustment = rowMoney(row, "adjustment_amount", "adjustmentAmount");
+            return (
             <tr key={row.id}>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{row.period_start} – {row.period_end}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.total_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.adjustment_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">{valueOf(row, "period_start", "periodStart") || "—"} – {valueOf(row, "period_end", "periodEnd") || "—"}</td>
+              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "total_amount", "totalAmount", "gross_amount", "grossAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "commission_amount", "commissionAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "tax_amount", "taxAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(taxWithheld)}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}>{signedMoney(shippingNet)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "refund_amount", "refundAmount"))}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(adjustment)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(rowMoney(row, "net_amount", "netAmount"))}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.lifecycleStatus || row.status} dot /></td>
               {!isSeller && (
                 <td className="whitespace-nowrap px-4 py-3">
@@ -1062,7 +1085,8 @@ const SellerFinance = () => {
                 </td>
               )}
             </tr>
-          )) : null}
+            );
+          }) : null}
         </TableShell>
       </div>
 
@@ -1072,9 +1096,11 @@ const SellerFinance = () => {
           headings={[
             ...(!isSeller ? ["Seller"] : []),
             "Organization",
-            "Gross",
-            "Commission",
-            "GST on Fee",
+            "Seller Receivable",
+            "Platform Commission",
+            "GST on Commission",
+            "TCS/TDS",
+            "Shipping Net",
             "Refund",
             "Adjustment",
             "Net",
@@ -1084,18 +1110,25 @@ const SellerFinance = () => {
           ]}
           emptyText="No settlements found"
         >
-          {settlements.length ? settlements.map((row) => (
+          {settlements.length ? settlements.map((row) => {
+            const breakdown = financialBreakdown(row);
+            const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
+            const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
+            const adjustment = rowMoney(row, "adjustment_amount", "adjustmentAmount");
+            return (
             <tr key={row.id}>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(row.gross_amount || row.amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.commission_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.tax_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.refund_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(row.adjustment_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(row.net_amount || row.amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "gross_amount", "grossAmount", "amount", "total_amount", "totalAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "commission_amount", "commissionAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "tax_amount", "taxAmount"))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(taxWithheld)}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}>{signedMoney(shippingNet)}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "refund_amount", "refundAmount"))}</td>
+              <td className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(adjustment)}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(rowMoney(row, "net_amount", "netAmount", "amount"))}</td>
               <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
-              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(row.created_at, "-")}</td>
+              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(valueOf(row, "created_at", "createdAt"), "-")}</td>
               <td className="whitespace-nowrap px-4 py-3">
                 <PermissionGuard module="sellers/commissions" action={ACTIONS.VIEW} hide>
                   <button
@@ -1116,7 +1149,8 @@ const SellerFinance = () => {
                 </PermissionGuard>
               </td>
             </tr>
-          )) : null}
+            );
+          }) : null}
         </TableShell>
       </div>
       </details>

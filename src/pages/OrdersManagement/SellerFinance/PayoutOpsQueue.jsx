@@ -127,6 +127,12 @@ const unwrapList = (payload = {}) => {
 
 const display = (value = "") =>
   String(value || "N/A").replace(/_/g, " ");
+const valueOf = (row = {}, ...keys) => {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+  }
+  return 0;
+};
 const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
 const payoutId = (row) => row?._id || row?.id || row?.payoutId;
 
@@ -307,7 +313,7 @@ const PayoutOpsQueue = () => {
         key: "amount",
         label: "Amount",
         sortable: true,
-        render: (_, row) => money(row.net_amount || row.amount),
+        render: (_, row) => money(valueOf(row, "net_amount", "netAmount", "amount")),
       },
       {
         key: "status",
@@ -319,14 +325,17 @@ const PayoutOpsQueue = () => {
         key: "paymentMethod",
         label: "Method",
         sortable: false,
-        render: (_, row) => row.paymentMethod || row.payment_method ? display(row.paymentMethod || row.payment_method) : "—",
+        render: (_, row) => {
+          const method = valueOf(row, "paymentMethod", "payment_method");
+          return method ? display(method) : "—";
+        },
       },
       {
         key: "createdAt",
         label: "Created",
         sortable: true,
         render: (value, row) => {
-          const createdAt = value || row.created_at;
+          const createdAt = value || valueOf(row, "created_at", "createdAt");
           return formatDateTime12Hour(createdAt, "N/A");
         },
       },
@@ -487,7 +496,7 @@ const PayoutOpsQueue = () => {
           {action.payout && (
             <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700">
               <div><strong>Seller:</strong> {action.payout.sellerName || action.payout.seller?.displayName || "Seller"}</div>
-              <div><strong>Net amount:</strong> {money(action.payout.net_amount || action.payout.amount)}</div>
+              <div><strong>Net amount:</strong> {money(valueOf(action.payout, "net_amount", "netAmount", "amount"))}</div>
               <div><strong>Current status:</strong> {display(action.payout.status)}</div>
             </div>
           )}
