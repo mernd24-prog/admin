@@ -8,12 +8,21 @@ import {
   MdDownload,
   MdPayments,
   MdSearch,
-  MdFilterList
+  MdFilterList,
+  MdAccountBalance,
+  MdLocalOffer,
+  MdLocalShipping,
+  MdPercent,
+  MdReceiptLong,
+  MdShoppingCart,
+  MdUndo,
+  MdWallet,
 } from "react-icons/md";
 
 import {
   PageHeader,
   StatusBadge,
+  SummaryCard,
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -141,13 +150,31 @@ const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
   return haystack.includes(needle);
 };
 
-const MetricCard = ({ label, value, hint }) => (
-  <div className="rounded-lg border bg-[var(--admin-surface-soft)] border-[#E6E6E6] p-4">
-    <p className="text-xs font-medium uppercase tracking-wide text-[#65718b]">{label}</p>
-    <p className="mt-2 text-xl font-semibold text-[#202337]">{value}</p>
-    {hint ? <p className="mt-1 text-xs text-[#65718b]">{formatLabel(hint)}</p> : null}
-  </div>
-);
+const MetricCard = ({ label, value, hint }) => {
+  const Icon = {
+    "Gross Sales": MdShoppingCart,
+    "Platform Commission": MdPercent,
+    "GST on Commission": MdReceiptLong,
+    "GST TCS Withheld": MdAccountBalance,
+    "Refund Adjustments": MdUndo,
+    "Seller-funded Discount": MdLocalOffer,
+    "Marketplace Promotion Contribution": MdLocalOffer,
+    "Payment Partner Contribution": MdAccountBalance,
+    "Shipping Collected from Customer": MdLocalShipping,
+    "Shipping Deduction": MdLocalShipping,
+    "Other Adjustments": MdCalculate,
+    "Seller Payable": MdWallet,
+  }[label] || MdPayments;
+
+  return (
+    <SummaryCard
+      title={label}
+      value={value}
+      description={hint ? formatLabel(hint) : null}
+      // icon={<Icon size={18} />}
+    />
+  );
+};
 
 const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) => {
   const toneClass = {

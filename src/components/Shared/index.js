@@ -7,4 +7,5 @@ export { default as StepperForm }         from './StepperForm';
 export { default as NeedHelpCard }        from './NeedHelpCard';
 export { default as BulkActionBar }       from './BulkActionBar';
 export { default as FilterBar }           from './FilterBar';
+export { default as SummaryCard }          from './SummaryCard';
 export { ExportButton, ImportButton }     from './TableTools';

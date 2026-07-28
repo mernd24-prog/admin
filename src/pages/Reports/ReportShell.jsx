@@ -27,8 +27,7 @@ import {
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { StatCardSkeletonLoader } from "../../components/Loader/SkeletonLoader";
-import { PageHeader } from "../../components/Shared";
+import { PageHeader, SummaryCard } from "../../components/Shared";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -229,30 +228,6 @@ const useApiReport = (loadData, filters) => {
   }, [refresh]);
 
   return { data, loading, error, refresh };
-};
-
-const StatCard = ({ label, value, sub, loading }) => {
-  const Icon = STAT_ICON_BY_LABEL[label] || MdTrendingUp;
-
-  return (
-    <div className="h-full">
-      {loading ? (
-        <StatCardSkeletonLoader />
-      ) : (
-        <div className="group relative flex h-full min-h-[98px] overflow-hidden rounded-lg border border-[var(--admin-line)] bg-gradient-to-br from-white to-[var(--admin-gold-soft)]/45 p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.06)] transition duration-200 hover:border-[var(--admin-gold)] hover:shadow-[var(--admin-shadow)]">
-          <span className="absolute inset-y-0 left-0 w-1 bg-[var(--admin-gold)]" />
-          <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-md border border-[#ead8a9] bg-white text-[var(--admin-navy)] transition group-hover:bg-[var(--admin-gold-soft)]">
-            <Icon size={18} />
-          </span>
-          <div className="relative flex min-w-0 flex-col justify-between pr-11">
-            <p className="text-[11px] font-bold text-[var(--admin-ink)]">{label}</p>
-            <p className="mt-1.5 truncate text-[20px] font-extrabold leading-6 text-[var(--admin-navy)]">{value}</p>
-            {sub && <p className="mt-2 text-[10.5px] font-medium capitalize text-[var(--admin-muted)]">{sub}</p>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 };
 
 const EmptyPanel = ({
@@ -612,9 +587,20 @@ export const ReportShell = ({
       </section>
 
       <div className="mb-5 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} loading={loading} />
-        ))}
+        {stats.map((stat) => {
+          const Icon = STAT_ICON_BY_LABEL[stat.label] || MdTrendingUp;
+
+          return (
+            <SummaryCard
+              key={stat.label}
+              title={stat.label}
+              value={stat.value}
+              description={stat.sub}
+              icon={<Icon size={18} />}
+              loading={loading}
+            />
+          );
+        })}
       </div>
 
       <ReportLoadingContext.Provider value={loading}>

@@ -1,6 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaFile, FaRegNoteSticky } from "react-icons/fa6";
+import {
+  MdCheckCircle,
+  MdCurrencyRupee,
+  MdInventory2,
+  MdLocalShipping,
+  MdPayments,
+  MdShoppingCart,
+} from "react-icons/md";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -14,6 +22,7 @@ import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
+import SummaryCard from "../../../../components/Shared/SummaryCard";
 
 import { usePermission } from "../../../../_helpers/usePermission";
 import {
@@ -442,13 +451,6 @@ const DetailLink = ({ children, onClick, className = "" }) => (
 );
 
 const MetricCard = ({ label, value, tone = "default" }) => {
-  const toneClass = {
-    default: "bg-[#fffdf8] border-[#eadfbd]",
-    dark: "bg-[#fff9ea] border-[#eadfbd]",
-    green: "bg-[#effbf4] border-[#cfeedd]",
-    blue: "bg-[#f3f6ff] border-[#dce5ff]",
-  }[tone] || "bg-[#fffdf8] border-[#eadfbd]";
-
   const valueClass = {
     default: "text-[#202337]",
     dark: "text-[#1f4fc9]",
@@ -456,11 +458,23 @@ const MetricCard = ({ label, value, tone = "default" }) => {
     blue: "text-[#1f4fc9]",
   }[tone] || "text-[#202337]";
 
+  const Icon = {
+    "Product Total": MdCurrencyRupee,
+    "Customer Paid / Payable": MdCurrencyRupee,
+    "Payment Collection": MdPayments,
+    "Payment Status": MdCheckCircle,
+    "Order Status": MdInventory2,
+    Shipment: MdLocalShipping,
+    Items: MdShoppingCart,
+  }[label] || MdInventory2;
+
   return (
-    <div className={`rounded-lg border p-4 shadow-[0_1px_3px_rgba(31,41,55,0.05)] ${toneClass}`}>
-      <p className="text-xs font-medium text-[#65718b]">{label}</p>
-      <p className={`mt-2 text-xl font-semibold ${valueClass}`}>{value}</p>
-    </div>
+    <SummaryCard
+      title={label}
+      value={value}
+      icon={<Icon size={18} />}
+      valueClassName={valueClass}
+    />
   );
 };
 
