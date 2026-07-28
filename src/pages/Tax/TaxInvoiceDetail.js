@@ -2,9 +2,21 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { MdArrowBack, MdDownload } from "react-icons/md";
+import {
+  MdAccountBalance,
+  MdArrowBack,
+  MdDownload,
+  MdLocalOffer,
+  MdPayments,
+  MdPercent,
+  MdReceiptLong,
+} from "react-icons/md";
 import Loader from "../../components/Loader/Loader";
-import { PageHeader, StatusBadge } from "../../components/Shared";
+import {
+  PageHeader,
+  StatusBadge,
+  SummaryCard,
+} from "../../components/Shared";
 import { getTaxInvoice } from "../../Redux/adminCoreSlice";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -51,11 +63,27 @@ const Field = ({ label: fieldLabel, value, mono = false }) => (
 
 const AmountCard = ({ label: cardLabel, value, tone = "default" }) => {
   const toneClass = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-600" : "text-gray-950";
+  const Icon = {
+    "Taxable Amount": MdReceiptLong,
+    "GST / Tax": MdPercent,
+    TCS: MdAccountBalance,
+    Total: MdPayments,
+    CGST: MdPercent,
+    SGST: MdPercent,
+    IGST: MdPercent,
+    "Seller-funded discount": MdLocalOffer,
+    "Paid by customer": MdPayments,
+    "Marketplace contribution": MdLocalOffer,
+    "Payment partner contribution": MdAccountBalance,
+  }[cardLabel] || MdReceiptLong;
+
   return (
-    <div className="rounded-lg border  border-gray-200 bg-[#FFFDF8] p-4">
-      <p className="text-xs font-medium uppercase text-gray-500">{cardLabel}</p>
-      <p className={`mt-2 text-lg font-semibold ${toneClass}`}>{value}</p>
-    </div>
+    <SummaryCard
+      title={cardLabel}
+      value={value}
+      icon={<Icon size={18} />}
+      valueClassName={toneClass}
+    />
   );
 };
 

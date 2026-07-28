@@ -1,7 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import {
+  MdAccountBalance,
+  MdLocalOffer,
+  MdPayments,
+  MdStorefront,
+  MdUndo,
+} from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
+import SummaryCard from "../../../components/Shared/SummaryCard";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import {
   getMyPromotionFundingLedger,
@@ -43,15 +51,15 @@ const PromotionFundingLedger = () => {
   useEffect(() => { load(); }, [load]);
 
   const cards = [
-    ["Customer discounts", totals.customerDiscountAmount, "Total promotion shown to customers"],
-    ["Marketplace contribution", totals.marketplaceContributionAmount, "Platform-funded seller invoice payment"],
-    ["Payment partner contribution", totals.paymentPartnerContributionAmount, "Bank/payment-partner-funded payment"],
-    ["Contribution reversals", totals.reversalAmount, "Reversed for refunded items"],
-    ["Net contribution", totals.netPlatformContributionAmount, "Still payable or already settled"],
+    ["Customer discounts", totals.customerDiscountAmount, "Total promotion shown to customers", MdLocalOffer],
+    ["Marketplace contribution", totals.marketplaceContributionAmount, "Platform-funded seller invoice payment", MdStorefront],
+    ["Payment partner contribution", totals.paymentPartnerContributionAmount, "Bank/payment-partner-funded payment", MdAccountBalance],
+    ["Contribution reversals", totals.reversalAmount, "Reversed for refunded items", MdUndo],
+    ["Net contribution", totals.netPlatformContributionAmount, "Still payable or already settled", MdPayments],
   ];
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="space-y-5">
       <PageHeader
         title="Promotion Funding Ledger"
         subtitle="Item-level proof of who funded each discount and how it reached the seller invoice."
@@ -67,12 +75,14 @@ const PromotionFundingLedger = () => {
       </div>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {cards.map(([label, value, hint]) => (
-          <div key={label} className="rounded-lg border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-gray-500">{label}</p>
-            <p className="mt-2 text-xl font-bold text-gray-950">{money(value)}</p>
-            <p className="mt-1 text-xs text-gray-500">{hint}</p>
-          </div>
+        {cards.map(([label, value, hint, Icon]) => (
+          <SummaryCard
+            key={label}
+            title={label}
+            value={money(value)}
+            description={hint}
+            icon={<Icon size={18} />}
+          />
         ))}
       </section>
 

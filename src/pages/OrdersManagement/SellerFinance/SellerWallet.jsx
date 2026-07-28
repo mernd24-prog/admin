@@ -5,6 +5,7 @@ import { MdAccountBalanceWallet, MdHourglassTop, MdLock, MdPayments, MdRefresh }
 import PageHeader from "../../../components/Shared/PageHeader";
 import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
+import SummaryCard from "../../../components/Shared/SummaryCard";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import { formatCurrency, formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import { toast } from "sonner";
@@ -12,32 +13,6 @@ import { toast } from "sonner";
 const unwrap = (value = {}) => value?.data?.data || value?.data || {};
 const money = (value, currency = "INR") => formatCurrency(Number(value || 0), "₹0", currency);
 const label = (value = "") => String(value || "pending").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-
-const BalanceCard = ({ title, value, hint, icon }) => {
-  return (
-    <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-text-secondary)]">
-            {title}
-          </p>
-
-          <p className="mt-2 text-xl font-bold text-[var(--admin-navy)]">
-            {value}
-          </p>
-        </div>
-
-        <span className="flex h-5 w-10 items-center justify-center rounded-lg bg-[var(--admin-primary-light)] text-[var(--admin-primary)]">
-          {icon}
-        </span>
-      </div>
-
-      <p className="mt-2 text-xs text-[var(--admin-text-secondary)]">
-        {hint}
-      </p>
-    </div>
-  );
-};
 
 export default function SellerWallet() {
   const dispatch = useDispatch();
@@ -71,17 +46,17 @@ export default function SellerWallet() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-  <BalanceCard
+  <SummaryCard
     title="Available for payout"
     value={money(balances.availableBalance, currency)}
-    hint={`${counts.available || 0} eligible order entries`}
+    description={`${counts.available || 0} eligible order entries`}
     icon={<MdAccountBalanceWallet size={22} />}
   />
 
-  <BalanceCard
+  <SummaryCard
     title="Pending receivable"
     value={money(balances.pendingBalance, currency)}
-    hint={
+    description={
       wallet.nextEligibleAt
         ? `Next release ${formatDateTime12Hour(wallet.nextEligibleAt)}`
         : "Waiting for delivery or return window"
@@ -89,24 +64,24 @@ export default function SellerWallet() {
     icon={<MdHourglassTop size={22} />}
   />
 
-  <BalanceCard
+  <SummaryCard
     title="On hold"
     value={money(balances.blockedBalance, currency)}
-    hint={`${counts.blocked || 0} entries under return, refund, or dispute hold`}
+    description={`${counts.blocked || 0} entries under return, refund, or dispute hold`}
     icon={<MdLock size={22} />}
   />
 
-  <BalanceCard
+  <SummaryCard
     title="Payout in process"
     value={money(balances.inProcessBalance, currency)}
-    hint={`${wallet.payouts?.inProcessCount || 0} payout requests processing`}
+    description={`${wallet.payouts?.inProcessCount || 0} payout requests processing`}
     icon={<MdPayments size={22} />}
   />
 
-  <BalanceCard
+  <SummaryCard
     title="Total paid"
     value={money(balances.paidBalance, currency)}
-    hint={`${wallet.payouts?.paidCount || 0} completed payouts`}
+    description={`${wallet.payouts?.paidCount || 0} completed payouts`}
     icon={<MdPayments size={22} />}
   />
 </div>

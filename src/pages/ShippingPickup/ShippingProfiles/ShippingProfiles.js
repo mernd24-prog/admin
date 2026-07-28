@@ -19,6 +19,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  SummaryCard,
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { getStoredUser } from "../../../_helpers/authStorage";
@@ -1338,39 +1339,41 @@ export default function ShippingProfiles() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {templatesPayload.list.slice(0, 6).map((template) => (
-              <div key={profileId(template)} className="rounded-xl d border bg-[var(--admin-surface-soft)] border-gray-200 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-[var(--admin-ink)]">{template.name}</div>
-                    <div className="mt-0.5 text-xs text-[var(--admin-muted)]">{template.description || "Reusable admin template"}</div>
-                  </div>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                    v{template.version || 1}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--admin-muted)]">
-                  <span>{methodLabel(template.shippingMethod)}</span>
-                  <span>•</span>
-                  <span>{modeLabel(template.serviceabilityMode)}</span>
-                  <span>•</span>
-                  <span>{formatMoney(template.shippingCharge)}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" className="admin-btn-secondary text-xs" onClick={() => openClone(template)}>
-                    Copy to Seller
-                  </button>
-                  {!isSeller && (
-                    <>
-                      <button type="button" className="admin-btn-secondary text-xs" onClick={() => openTemplateEdit(template)}>
-                        Edit Template
+              <SummaryCard
+                key={profileId(template)}
+                title={template.name}
+                description={template.description || "Reusable admin template"}
+                // icon={<MdLocalShipping size={18} />}
+                badge={`v${template.version || 1}`}
+                titleClassName="text-[16px] leading-5"
+                descriptionClassName="text-[12px] leading-[18px]"
+                footer={
+                  <>
+                    <div className="flex flex-wrap gap-2 text-xs text-[var(--admin-muted)]">
+                      <span>{methodLabel(template.shippingMethod)}</span>
+                      <span>•</span>
+                      <span>{modeLabel(template.serviceabilityMode)}</span>
+                      <span>•</span>
+                      <span>{formatMoney(template.shippingCharge)}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" className="admin-btn-secondary text-xs" onClick={() => openClone(template)}>
+                        Copy to Seller
                       </button>
-                      <button type="button" className="text-xs font-semibold text-red-500 hover:underline" onClick={() => setDeleteTemplateTarget(template)}>
-                        Archive
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+                      {!isSeller && (
+                        <>
+                          <button type="button" className="admin-btn-secondary text-xs" onClick={() => openTemplateEdit(template)}>
+                            Edit Template
+                          </button>
+                          <button type="button" className="text-xs font-semibold text-red-500 hover:underline" onClick={() => setDeleteTemplateTarget(template)}>
+                            Archive
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </>
+                }
+              />
             ))}
           </div>
         )}
