@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdDownload, MdReceiptLong, MdVisibility } from "react-icons/md";
@@ -16,6 +15,7 @@ import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const STATUSES = ["pending", "processing", "approved", "on_hold", "completed", "failed", "cancelled"];
 const FILTER_FIELDS = [
@@ -42,7 +42,7 @@ const unwrapList = (payload = {}) => {
 };
 
 const valueOf = (row, snake, camel) => row?.[snake] ?? row?.[camel];
-const fmt = (value, withTime = false) => value ? moment(value).format(withTime ? "DD MMM YYYY HH:mm" : "DD MMM YYYY") : "—";
+const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (value, currency = "INR") => `${currency} ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const sellerName = (row = {}) => row.sellerName || row.seller?.displayName || row.seller?.businessName || row.seller?.email || "Seller";
 

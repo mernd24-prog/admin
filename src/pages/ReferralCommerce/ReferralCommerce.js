@@ -42,6 +42,7 @@ import {
   updateReferralInfluencerStatus,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const tabs = [
   { key: "overview", label: "Overview" },
@@ -137,7 +138,7 @@ const formatCoins = (value) => `${Number(value || 0).toLocaleString("en-IN", {
   maximumFractionDigits: 2,
 })} coins`;
 
-const formatDate = (value) => (value ? new Date(value).toLocaleString() : "-");
+const formatDate = (value) => formatDateTime12Hour(value, "-");
 
 const humanize = (value) => String(value || "").replace(/_/g, " ");
 const optionList = (options = [], fallbackValues = []) =>

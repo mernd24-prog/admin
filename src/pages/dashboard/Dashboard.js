@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { getDashboardOverview } from "../../Redux/adminCoreSlice";
 import Cards from "../../components/Cards/Cards";
-import { formatLabel } from "../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
@@ -964,6 +964,7 @@ export default function Dashboard() {
             <table className="w-full text-left">
               <thead className="admin-table-head font-inter text-[12px]">
                 <tr>
+                  <th className=" px-4 py-3 font-semibold">S. No.</th>
                   <th className="px-5 py-3  font-semibold">Product</th>
                   <th className="px-4 py-3 font-semibold">Units Sold</th>
                   <th className="px-4 py-3 font-semibold">Revenue</th>
@@ -971,7 +972,7 @@ export default function Dashboard() {
               </thead>
               <tbody className="text-[12px] text-slate-600">
                 {topProducts.length === 0 && (
-                  <EmptyTableRow colSpan={3}>
+                  <EmptyTableRow colSpan={4}>
                     No top products available.
                   </EmptyTableRow>
                 )}
@@ -984,6 +985,9 @@ export default function Dashboard() {
                       key={productId || index}
                       className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
                     >
+                      <td className="px-4 py-3 text-start tabular-nums">
+                        {index + 1}.
+                      </td>
                       <td className="px-5 py-3 font-medium text-slate-700">
                         {productId ? (
                           <Link
@@ -1028,6 +1032,7 @@ export default function Dashboard() {
             <table className="w-full text-left">
               <thead className="admin-table-head  font-inter text-[12px]">
                 <tr>
+                  <th className="px-4 py-3 font-semibold">S. No.</th>
                   <th className="px-4 py-3 font-semibold">Order ID</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>
                   <th className="px-4 py-3 font-semibold">Date</th>
@@ -1037,7 +1042,7 @@ export default function Dashboard() {
               </thead>
               <tbody className="text-[12px] text-slate-600">
                 {recentOrders.length === 0 && (
-                  <EmptyTableRow colSpan={5}>
+                  <EmptyTableRow colSpan={6}>
                     No recent orders available.
                   </EmptyTableRow>
                 )}
@@ -1060,6 +1065,9 @@ export default function Dashboard() {
                       key={orderId || index}
                       className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
                     >
+                      <td className="px-4 py-3 text-start tabular-nums">
+                        {index + 1}.
+                      </td>
                       <td className="px-4 py-3 font-medium">
                         {orderId ? (
                           <Link
@@ -1081,7 +1089,7 @@ export default function Dashboard() {
                           "-")}
                       </td>
                       <td className="px-4 py-3">
-                        {formatDate(
+                        {formatDateTime12Hour(
                           order.created_at || order.createdAt || order.date,
                         )}
                       </td>

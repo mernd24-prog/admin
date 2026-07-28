@@ -17,7 +17,10 @@ import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 // import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { getProductImages, normalizeImageList } from "../../../../_helpers/productMedia";
 import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
-import { formatLabel } from "../../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+} from "../../../../utils/formatters";
 import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 
 const formatDisplayValue = (value) => {
@@ -415,19 +418,11 @@ const ProductAdminDetails = () => {
             />
             <Row
               label="Created At"
-              value={
-                product.createdAt
-                  ? new Date(product.createdAt).toLocaleString()
-                  : null
-              }
+              value={formatDateTime12Hour(product.createdAt)}
             />
             <Row
               label="Approved At"
-              value={
-                product.approvedAt
-                  ? new Date(product.approvedAt).toLocaleString()
-                  : null
-              }
+              value={formatDateTime12Hour(product.approvedAt)}
             />
           </div>
         </section>
@@ -480,9 +475,7 @@ const ProductAdminDetails = () => {
                 </h2>
                 <p className="text-xs text-gray-500">
                   Base version {pendingRevision.baseVersion || "N/A"} submitted{" "}
-                  {pendingRevision.submittedAt
-                    ? new Date(pendingRevision.submittedAt).toLocaleString()
-                    : "N/A"}
+                  {formatDateTime12Hour(pendingRevision.submittedAt, "N/A")}
                 </p>
               </div>
               {needsReview && (
@@ -532,19 +525,11 @@ const ProductAdminDetails = () => {
               <Row label="Reviewed By" value={product.moderation?.reviewedBy} />
               <Row
                 label="Reviewed At"
-                value={
-                  product.moderation?.reviewedAt
-                    ? new Date(product.moderation.reviewedAt).toLocaleString()
-                    : null
-                }
+                value={formatDateTime12Hour(product.moderation?.reviewedAt)}
               />
               <Row
                 label="Submitted At"
-                value={
-                  product.moderation?.submittedAt
-                    ? new Date(product.moderation.submittedAt).toLocaleString()
-                    : null
-                }
+                value={formatDateTime12Hour(product.moderation?.submittedAt)}
               />
               {product.moderation?.rejectionReason && (
                 <Row
@@ -629,9 +614,10 @@ const ProductAdminDetails = () => {
                       </td>
                       <td className="p-3">{formatLabel(entry.actorRole) || formatLabel(entry.actor) || formatLabel(entry.actorId , "N/A")}</td>
                       <td className="p-3">
-                        {entry.createdAt || entry.at
-                          ? new Date(entry.createdAt || entry.at).toLocaleString()
-                          : "N/A"}
+                        {formatDateTime12Hour(
+                          entry.createdAt || entry.at,
+                          "N/A",
+                        )}
                       </td>
                     </tr>
                   ))}

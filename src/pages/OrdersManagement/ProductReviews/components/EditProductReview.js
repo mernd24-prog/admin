@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { MdOutlineClose, MdStar, MdStarBorder } from "react-icons/md";
 import { updateProductReview } from "../../../../Redux/adminCoreSlice";
 import MultiImageUpload from "../../../../components/Atoms/ImageGallery/MultiImageUpload";
+import { formatDateTime12Hour } from "../../../../utils/formatters";
 
 const STATUSES = [
   { value: "published", label: "Published" },
@@ -121,11 +122,7 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
 
   if (!isOpen || !reviewData) return null;
 
-  const reviewDate = reviewData?.createdAt
-    ? new Date(reviewData.createdAt).toLocaleDateString("en-GB", {
-        day: "2-digit", month: "short", year: "numeric",
-      })
-    : "—";
+  const reviewDate = formatDateTime12Hour(reviewData?.createdAt, "—");
 
   return (
     <>

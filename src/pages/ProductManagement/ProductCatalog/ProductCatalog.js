@@ -41,6 +41,7 @@ import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import { getPrimaryProductImage, getProductImages } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 // import { GoDesktopDownload } from "react-icons/go";
 
 const INITIAL_FILTERS = {
@@ -388,18 +389,6 @@ const ProductCatalog = () => {
     setGalleryOpen(true);
   }, []);
 
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } catch (err) {
-      toast.error(err || "Error formatting date:");
-      return dateString || "N/A";
-    }
-  };
   const closeStatusConfirmation = () => {
     if (loading) return;
     setStatusConfirmation({
@@ -886,7 +875,7 @@ const ProductCatalog = () => {
         key: "createdAt",
         label: "Created On",
         sortable: true,
-        render: (value) => formatDate(value),
+        render: (value) => formatDateTime12Hour(value),
       },
       {
         key: "active",
@@ -967,7 +956,6 @@ const ProductCatalog = () => {
     [
       canReviewProduct,
       canToggleProduct,
-      formatDate,
       handleApproveToggle,
       handleArchiveProduct,
       handleDelete,

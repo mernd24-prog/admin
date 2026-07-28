@@ -7,11 +7,11 @@ import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import {
   categoryLabel,
-  formatDateTime,
   getPaginationTotal,
   SELLER_QUERY_CATEGORIES,
   statusLabel,
 } from "./supportUtils";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const initialForm = {
   category: "",
@@ -130,7 +130,7 @@ const SellerHelpSupport = () => {
       },
     },
     { key: "status", label: "Status", render: (value) => <StatusBadge status={value} label={statusLabel(value)} dot /> },
-    { key: "createdAt", label: "Created Date", render: (value) => formatDateTime(value) },
+    { key: "createdAt", label: "Created Date", render: (value) => formatDateTime12Hour(value) },
     {
       key: "_actions",
       label: "Actions",
@@ -287,9 +287,9 @@ const SellerHelpSupport = () => {
               <Info label="Query ID" value={selectedQuery.queryId || "N/A"} />
               <Info label="Status" value={statusLabel(selectedQuery.status)} />
               <Info label="Category" value={categoryLabel(selectedQuery.category)} />
-              <Info label="Created" value={formatDateTime(selectedQuery.createdAt)} />
-              <Info label="Updated" value={formatDateTime(selectedQuery.updatedAt)} />
-              <Info label="Resolved" value={formatDateTime(selectedQuery.resolvedAt)} />
+              <Info label="Created" value={formatDateTime12Hour(selectedQuery.createdAt)} />
+              <Info label="Updated" value={formatDateTime12Hour(selectedQuery.updatedAt)} />
+              <Info label="Resolved" value={formatDateTime12Hour(selectedQuery.resolvedAt)} />
             </div>
 
             <div>

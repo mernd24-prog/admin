@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +19,7 @@ import {
 } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -392,7 +392,7 @@ const ProductModerationQueue = () => {
       key:      "createdAt",
       label:    "Submitted",
       sortable: true,
-      render:   (value) => value ? moment(value).format("DD-MM-YYYY HH:mm") : "—",
+      render:   (value) => formatDateTime12Hour(value, "—"),
     },
     {
       key:    "actions",

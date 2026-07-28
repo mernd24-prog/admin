@@ -24,6 +24,7 @@ import { getAllZipCodeList } from "../../../Redux/zipCodeSlice";
 import { toast } from "sonner";
 import Loader from "../../../components/Loader/Loader";
 import CustomCheckbox from "../../../components/Atoms/Checkbox/Checkbox";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 import { transformArray } from "../../../_helpers/globalFunctions";
 import moment from "moment-timezone";
 import DefaultMiddleModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
@@ -540,7 +541,7 @@ const Store = () => {
         {`${formatMillisTo12Hour(shop?.open_time)} - ${formatMillisTo12Hour(shop?.close_time)}`}
       </span>,
       <span key={`created-${index}`}>
-        {shop?.createdAt ? new Date(shop.createdAt).toLocaleDateString() : "-"}
+        {formatDateTime12Hour(shop?.createdAt, "-")}
       </span>,
       <ToggleButton
         key={`toggle-${index}`}

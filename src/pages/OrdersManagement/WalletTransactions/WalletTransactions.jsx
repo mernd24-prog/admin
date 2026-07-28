@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh } from "react-icons/md";
@@ -15,6 +14,7 @@ import {
 import { getWalletTransactions } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const TRANSACTION_TYPES = ["credit", "debit"];
 const TRANSACTION_STATUSES = ["held", "completed", "released"];
@@ -59,7 +59,7 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const fmt = (d) => (d ? moment(d).format("DD MMM YYYY, h:mm A") : "—");
+const fmt = (value) => formatDateTime12Hour(value, "—");
 
 const typeColorClass = (v) => {
   const c = TYPE_COLOR[v];

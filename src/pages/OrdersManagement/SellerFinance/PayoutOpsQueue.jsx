@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
@@ -27,6 +26,7 @@ import {
 } from "../../../Redux/sellerCommissionsSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const PAYOUT_STATUSES = [
   "pending",
@@ -327,7 +327,7 @@ const PayoutOpsQueue = () => {
         sortable: true,
         render: (value, row) => {
           const createdAt = value || row.created_at;
-          return createdAt ? moment(createdAt).format("DD-MM-YYYY HH:mm") : "N/A";
+          return formatDateTime12Hour(createdAt, "N/A");
         },
       },
       {

@@ -22,6 +22,7 @@ import { cancelSellerOrder } from "../../../Redux/sellerOrdersSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -529,7 +530,7 @@ const ShipmentTracking = () => {
         key: "expected_delivery_at",
         label: "Expected",
         sortable: true,
-        render: (value) => (value ? moment(value).format("DD-MM-YYYY") : "N/A"),
+        render: (value) => formatDateTime12Hour(value, "N/A"),
       },
       {
         key: "actions",
@@ -664,9 +665,10 @@ const ShipmentTracking = () => {
             </div>
             <div>
               <strong>Shipment date:</strong>{" "}
-              {selectedShipment?.shipped_at
-                ? moment(selectedShipment.shipped_at).format("DD-MM-YYYY HH:mm")
-                : "Not shipped"}
+              {formatDateTime12Hour(
+                selectedShipment?.shipped_at,
+                "Not shipped",
+              )}
             </div>
             <div>
               <strong>Payment collection:</strong>{" "}
@@ -1006,11 +1008,10 @@ const ShipmentTracking = () => {
                       {shipmentStepLabel(event.status)}
                     </div>
                     <time className="text-xs text-gray-500">
-                      {event.event_time
-                        ? moment(event.event_time).format(
-                            "DD MMM YYYY, hh:mm A",
-                          )
-                        : "Time not available"}
+                      {formatDateTime12Hour(
+                        event.event_time,
+                        "Time not available",
+                      )}
                     </time>
                   </div>
                   {event.location && (

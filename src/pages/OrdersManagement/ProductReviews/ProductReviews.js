@@ -22,6 +22,7 @@ import EditProductReview from "./components/EditProductReview";
 import AddProductReview from "./components/AddProductReview";
 import { useListPage } from "../../../hooks/useListPage";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
@@ -137,15 +138,7 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
   if (!review) return null;
   const productName = getProductName(review) || "Product not found";
   const createdByName = getCreatedByName(review, sellerView);
-  const reviewDate = review.createdAt
-    ? new Date(review.createdAt).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
+  const reviewDate = formatDateTime12Hour(review.createdAt, "—");
 
   return (
     <>
@@ -467,7 +460,7 @@ const ProductReviews = () => {
       sortable: true,
       render: (v) => (
         <span className="text-xs text-gray-400">
-          {v ? new Date(v).toLocaleDateString("en-GB") : "—"}
+          {formatDateTime12Hour(v, "—")}
         </span>
       ),
     },

@@ -23,6 +23,7 @@ import {
   getDiscountCoupons,
   softDeleteDiscountCoupons,
 } from "../../../Redux/promotionsSlice";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 // ── Utility helpers ────────────────────────────────────────────────────────────
 const normalizeCouponType = (type) => (type === "flat" ? "fixed" : type);
@@ -156,12 +157,12 @@ const COLUMNS = [
     key: "valid_from",
     label: "From",
     sortable: true,
-    render: (v) => <span className="text-xs text-gray-500">{v ? moment(v).format("DD/MM/YYYY") : "—"}</span>,
+    render: (v) => <span className="text-xs text-gray-500">{formatDateTime12Hour(v, "—")}</span>,
   },
   {
     key: "valid_to",
     label: "To",
-    render: (v) => <span className="text-xs text-gray-500">{v ? moment(v).format("DD/MM/YYYY") : "—"}</span>,
+    render: (v) => <span className="text-xs text-gray-500">{formatDateTime12Hour(v, "—")}</span>,
   },
   {
     key: "_validity",

@@ -24,6 +24,7 @@ import {
   markNotificationRead,
   setNotificationsSeenAt,
 } from "../../../Redux/notificationsSlice";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -173,7 +174,7 @@ const BASE_COLUMNS = [
     sortable: true,
     render: (v) => (
       <span className="text-xs text-gray-400">
-        {v ? new Date(v).toLocaleString() : "—"}
+        {v ? formatDateTime12Hour(new Date(v)) : "—"}
       </span>
     ),
   },

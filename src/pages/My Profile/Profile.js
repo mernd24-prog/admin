@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { uploadFile } from "../../_helpers/globalFunctions";
 import Loader from "../../components/Loader/Loader";
 import { PageHeader } from "../../components/Shared";
+import {
+  formatDate as formatDateOnly,
+  formatDateTime12Hour,
+} from "../../utils/formatters";
 
 const profileToForm = (user = {}) => {
   const profile = user.profile || {};
@@ -25,16 +29,8 @@ const profileToForm = (user = {}) => {
 };
 
 const formatDate = (value, withTime = true) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleString(
-    "en-IN",
-    withTime
-      ? { dateStyle: "medium", timeStyle: "short" }
-      : { dateStyle: "medium" },
-  );
+  if (withTime) return formatDateTime12Hour(value, "-");
+  return formatDateOnly(value, "-");
 };
 
 const formatValue = (value) => {

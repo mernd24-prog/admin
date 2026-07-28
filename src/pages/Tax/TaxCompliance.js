@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdReceiptLong, MdVisibility } from "react-icons/md";
@@ -20,6 +19,7 @@ import {
 } from "../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../utils/formatters";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 
 const FILTER_FIELDS = [
@@ -202,7 +202,7 @@ const TaxCompliance = () => {
     { key: "sgst_amount", label: "SGST", render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "igst_amount", label: "IGST", render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "total_amount", label: "Total", sortable: true, render: (value) => <span className="font-mono text-sm font-medium">₹ {money(value)}</span> },
-    { key: "issued_at", label: "Issued", sortable: true, render: (value) => <span className="text-xs text-gray-500">{value ? moment(value).format("DD-MM-YYYY HH:mm") : "N/A"}</span> },
+    { key: "issued_at", label: "Issued", sortable: true, render: (value) => <span className="text-xs text-gray-500">{formatDateTime12Hour(value, "N/A")}</span> },
     {
       key: "actions",
       label: "Actions",
@@ -222,7 +222,7 @@ const TaxCompliance = () => {
     { key: "taxable_amount", label: "Taxable", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "tax_amount", label: "Tax", sortable: true, render: (value) => <span className="font-mono text-xs">₹ {money(value)}</span> },
     { key: "total_amount", label: "Total", sortable: true, render: (value) => <span className="font-mono text-sm font-medium">₹ {money(value)}</span> },
-    { key: "issued_at", label: "Issued", sortable: true, render: (value) => <span className="text-xs text-gray-500">{value ? moment(value).format("DD-MM-YYYY HH:mm") : "N/A"}</span> },
+    { key: "issued_at", label: "Issued", sortable: true, render: (value) => <span className="text-xs text-gray-500">{formatDateTime12Hour(value, "N/A")}</span> },
     {
       key: "actions",
       label: "Actions",

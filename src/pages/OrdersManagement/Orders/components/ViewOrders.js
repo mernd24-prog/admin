@@ -4,7 +4,6 @@ import { FaFile, FaRegNoteSticky } from "react-icons/fa6";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import moment from "moment";
 import { getAdminReturns } from "../../../../Redux/adminCoreSlice";
 import { addOrderNote, getOrderInfo, orderCancel, updateOrderStatus } from "../../../../Redux/orderSlice";
 import { getProfile } from "../../../../Redux/userSlice";
@@ -17,7 +16,10 @@ import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 
 import { usePermission } from "../../../../_helpers/usePermission";
-import { formatLabel } from "../../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+} from "../../../../utils/formatters";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
@@ -125,7 +127,7 @@ const getOrderId = (order = {}) => firstDefined(order.id, order._id, order.order
 
 const formatMoney = (value) => `₹ ${money(value).toFixed(2)}`;
 
-const formatDate = (value) => value ? moment(value).format("DD MMM YYYY HH:mm") : "N/A";
+const formatDate = (value) => formatDateTime12Hour(value, "N/A");
 
 const extractList = (payload) => {
   const root = payload?.data?.data || payload?.data || {};
@@ -957,9 +959,9 @@ const OrderSummary = () => {
 
           <aside className="space-y-4">
             <Panel title={isSeller ? "Seller Order Summary" : "Customer Payment Breakup"}>
-              <InfoRow label="Order Date" value={order.created_at ? moment(order.created_at).format("DD MMM YYYY HH:mm") : "N/A"} />
+              <InfoRow label="Order Date" value={formatDate(order.created_at)} />
               <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
-              <InfoRow label="Return Window" value={firstDefined(order.return_eligible_until, order.returnEligibleUntil) ? moment(firstDefined(order.return_eligible_until, order.returnEligibleUntil)).format("DD MMM YYYY HH:mm") : "Starts after delivery"} />
+              <InfoRow label="Return Window" value={formatDateTime12Hour(firstDefined(order.return_eligible_until, order.returnEligibleUntil), "Starts after delivery")} />
               <InfoRow
                 label={isSeller ? "Payment Collection" : "Payment Method"}
                 value={isSeller
@@ -1432,7 +1434,7 @@ const OrderSummary = () => {
                           {reasonLabel && <div className="mt-0.5 text-xs text-[#65718b]">{reasonLabel}</div>}
                         </div>
                         <div className="text-right text-xs text-[#65718b]">
-                          <div>{entry.created_at ? moment(entry.created_at).format("DD MMM YYYY HH:mm") : "N/A"}</div>
+                          <div>{formatDate(entry.created_at)}</div>
                           <div>{formatLabel(entry.actor_role || "system")}</div>
                         </div>
                       </div>
@@ -1447,7 +1449,7 @@ const OrderSummary = () => {
             {notes.length ? notes.map((note) => (
               <div key={note.id} className="mb-3 rounded-lg border border-[#eadfbd] bg-white p-3 text-sm last:mb-0">
                 <div className="text-[#202337] leading-6">{note.note}</div>
-                <div className="text-xs text-[#65718b] mt-1">{formatLabel(note.actor_role || "system")} · {formatLabel(note.visibility)} · {formatLabel(note.created_at ? moment(note.created_at).format("DD MMM YYYY HH:mm") : "N/A")}</div>
+                <div className="text-xs text-[#65718b] mt-1">{formatLabel(note.actor_role || "system")} · {formatLabel(note.visibility)} · {formatDate(note.created_at)}</div>
               </div>
             )) : <EmptyState>{formatLabel("No notes yet")}</EmptyState>}
           </Panel>

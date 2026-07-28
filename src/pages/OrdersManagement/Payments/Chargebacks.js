@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdRefresh, MdVisibility } from "react-icons/md";
@@ -13,6 +12,7 @@ import {
 } from "../../../components/Shared";
 import { getChargebacks } from "../../../Redux/adminCoreSlice";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const STATUSES = ["open", "under_review", "won", "lost", "cancelled", "expired"];
 
@@ -40,7 +40,7 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
+const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
 const display = (v = "") => String(v || "—").replace(/_/g, " ");
 

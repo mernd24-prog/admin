@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdSubscriptions } from "react-icons/md";
@@ -14,6 +13,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const PAYMENT_STATUSES = [
   "initiated",
@@ -62,9 +62,7 @@ const COLUMNS = [
     sortable: true,
     render: (v, row) => (
       <span className="text-xs text-gray-500">
-        {firstDefined(v, row.created_at)
-          ? moment(firstDefined(v, row.created_at)).format("DD MMM YYYY HH:mm")
-          : "N/A"}
+        {formatDateTime12Hour(firstDefined(v, row.created_at), "N/A")}
       </span>
     ),
   },

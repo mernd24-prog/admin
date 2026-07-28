@@ -38,6 +38,7 @@ import FormInput from "../../components/Atoms/FormInput/FormInput";
 import { ActionButtons } from "../../components/Atoms/TableActionButton/TableActionButton";
 import StatusPopup from "../../components/Atoms/PopupData/StatusPopup";
 import { PageHeader } from "../../components/Shared";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const PAGE_SIZE = 10;
 const emptyForm = {
@@ -104,12 +105,7 @@ const getRoleLabel = (role = "") =>
     ? "Seller Admin"
     : "Sub-Seller";
 
-const formatDate = (value) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString();
-};
+const formatDate = (value) => formatDateTime12Hour(value, "-");
 
 const formatCurrency = (value, currency = "INR") => {
   const amount = Number(value || 0);

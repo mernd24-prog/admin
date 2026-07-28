@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +23,7 @@ import { useListPage } from "../../../hooks/useListPage";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const PROVIDERS = [
   "razorpay",
@@ -199,7 +199,7 @@ const Payments = () => {
       key: "created_at",
       label: "Date",
       sortable: true,
-      render: (value) => value ? moment(value).format("DD-MM-YYYY HH:mm") : "N/A",
+      render: (value) => formatDateTime12Hour(value, "N/A"),
     },
     {
       key: "actions",
@@ -283,7 +283,7 @@ const Payments = () => {
             <div><strong>Status:</strong> {display(detailPayment?.status)}</div>
             <div><strong>Amount:</strong> {detailPayment?.currency || "INR"} {money(detailPayment?.amount)}</div>
             <div><strong>Verification:</strong> {display(detailPayment?.verification_method || "not verified")}</div>
-            <div><strong>Created:</strong> {detailPayment?.created_at ? moment(detailPayment.created_at).format("DD-MM-YYYY HH:mm") : "N/A"}</div>
+            <div><strong>Created:</strong> {formatDateTime12Hour(detailPayment?.created_at, "N/A")}</div>
           </div>
           {(detailPayment?.provider_payment_id || detailPayment?.transaction_reference) && (
             <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-800">

@@ -14,6 +14,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { toast } from "../../../utils/toast";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const FILTER_FIELDS = [
   {
@@ -45,7 +46,7 @@ const FILTER_FIELDS = [
   { key: "updatedTo", type: "date", label: "Updated To", width: "w-40" },
 ];
 
-const formatDate = (value) => (value ? new Date(value).toLocaleString() : "-");
+const formatDate = (value) => formatDateTime12Hour(value, "-");
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,

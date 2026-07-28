@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdCheckCircle, MdRefresh, MdVisibility } from "react-icons/md";
@@ -11,6 +10,7 @@ import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../
 import { getDealPayouts, generateDealPayout, processDealPayout } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const PAYOUT_STATUSES = ["generated", "processing", "paid", "failed", "cancelled"];
@@ -38,7 +38,7 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
+const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
 
 const DealPayouts = () => {

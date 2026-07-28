@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -9,6 +8,7 @@ import { PageHeader, StatusBadge } from "../../components/Shared";
 import { getTaxInvoice } from "../../Redux/adminCoreSlice";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
@@ -20,7 +20,7 @@ const pick = (row = {}, ...keys) => {
 const unwrap = (payload = {}) => payload?.data?.data || payload?.data || payload || {};
 const money = (value, currency = "INR") =>
   `${currency} ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const date = (value) => (value ? moment(value).format("DD MMM YYYY, hh:mm A") : "—");
+const date = (value) => formatDateTime12Hour(value, "—");
 const label = (value = "") => String(value || "—").replace(/_/g, " ");
 
 const invoiceCopy = {

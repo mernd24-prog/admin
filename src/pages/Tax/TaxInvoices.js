@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +17,7 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const STATES = [
   "draft", "issued", "cancelled", "amended",
@@ -88,7 +88,6 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
@@ -286,7 +285,7 @@ const TaxInvoices = () => {
       key: "issuedAt",
       label: "Issued",
       sortable: true,
-      render: (v, row) => <span className="text-xs text-gray-500">{fmt(v ?? row.issueDate ?? row.issued_at)}</span>,
+      render: (v, row) => <span className="text-xs text-gray-500">{formatDateTime12Hour(v ?? row.issueDate ?? row.issued_at)}</span>,
     },
     {
       key: "_actions",

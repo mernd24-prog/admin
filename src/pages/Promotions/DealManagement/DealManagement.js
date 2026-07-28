@@ -48,6 +48,7 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { axiosPrivate } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { isAdminPanel, isSellerPanel } from "../../../_helpers/panelConfig";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const DEAL_TYPES = [
   { value: "fixed_price", label: "Fixed Deal Price" },
@@ -166,8 +167,8 @@ const display = (value = "") =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
-const fmtDate = (value) => (value ? moment(value).format("DD MMM YYYY") : "—");
-const fmtDateTime = (value) => (value ? moment(value).format("DD MMM YYYY, hh:mm A") : "—");
+const fmtDate = (value) => formatDateTime12Hour(value, "—");
+const fmtDateTime = (value) => formatDateTime12Hour(value, "—");
 const money = (value) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",

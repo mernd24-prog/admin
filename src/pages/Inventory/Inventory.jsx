@@ -31,6 +31,7 @@ import {
   getInventoryDetail,
   getInventoryList,
 } from "../../Redux/inventorySlice";
+import { formatDateTime12Hour } from "../../utils/formatters";
 import { toast } from "../../utils/toast";
 
 const isSeller = isSellerPanel();
@@ -153,18 +154,6 @@ const getDetailFromResponse = (response) => {
   }
 
   return null;
-};
-
-const fmtDate = (value) => {
-  if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-
-  return date.toLocaleString("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 };
 
 const numberCell = (value, className = "") => (
@@ -1080,7 +1069,7 @@ const Inventory = () => {
       key: "lastUpdated",
       label: "Last Updated",
       sortable: true,
-      render: fmtDate,
+      render: (value) => formatDateTime12Hour(value, "N/A"),
     },
   ];
 
@@ -1184,7 +1173,7 @@ const Inventory = () => {
       {
         key: "lastUpdated",
         label: "Last Updated",
-        render: fmtDate,
+        render: (value) => formatDateTime12Hour(value, "N/A"),
       },
     ],
     [handleStockChange, navigate],
@@ -1194,7 +1183,7 @@ const Inventory = () => {
     {
       key: "createdAt",
       label: "Date",
-      render: fmtDate,
+      render: (value) => formatDateTime12Hour(value, "N/A"),
     },
     {
       key: "variantSku",

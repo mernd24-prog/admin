@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "../../../utils/toast";
-import { formatLabel, formatDateTime, formatCurrency } from "../../../utils/formatters";
+import { formatLabel, formatCurrency, formatDateTime12Hour } from "../../../utils/formatters";
 import {
   RETURN_STATUS_OPTIONS,
   RETURN_REASON_OPTIONS,
@@ -583,7 +583,7 @@ const filterFields = useMemo(
       key: "createdAt",
       label: "Requested",
       sortable: true,
-      render: (value) => formatDateTime(value),
+      render: (value) => formatDateTime12Hour(value),
     },
     {
       key: "actions",
@@ -812,7 +812,7 @@ const filterFields = useMemo(
             <div className="font-semibold text-gray-700 mb-2">Eligibility &amp; Reverse Shipping</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
               <div>Window: {detailReturn?.policySnapshot?.returnWindowDays ? `${detailReturn.policySnapshot.returnWindowDays} days` : "Not available"}</div>
-              <div>Eligible Until: {formatDateTime(detailReturn?.policySnapshot?.eligibleUntil)}</div>
+              <div>Eligible Until: {formatDateTime12Hour(detailReturn?.policySnapshot?.eligibleUntil)}</div>
               <div>AWB: {detailReturn?.reverseShipment?.awbNumber || detailReturn?.reverseShipment?.shipment?.awb_number || "Not assigned"}</div>
               <div>Courier: {detailReturn?.reverseShipment?.courierName || detailReturn?.reverseShipment?.provider || "Not assigned"}</div>
               <div>Tracking: {detailReturn?.reverseShipment?.trackingNumber || detailReturn?.reverseShipment?.shipment?.tracking_number || detailReturn?.trackingNumber || "Not available"}</div>
@@ -837,7 +837,7 @@ const filterFields = useMemo(
                       Seller: {sellerLabel || "Not assigned"} · SKU: {item.variantSku || item.productSku || "Not available"}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Return window: {itemReturnWindow ? `${itemReturnWindow} days` : "Not available"} · Eligible until: {formatDateTime(itemEligibleUntil)}
+                      Return window: {itemReturnWindow ? `${itemReturnWindow} days` : "Not available"} · Eligible until: {formatDateTime12Hour(itemEligibleUntil)}
                     </div>
                     <div className="text-xs text-gray-500">
                       Images: {requiresImages ? "Required" : "Optional"} · Inspection: {inspectionRequired === false ? "Not required" : "Required"}
@@ -869,7 +869,7 @@ const filterFields = useMemo(
               <div className="font-semibold text-amber-900 mb-2">QC review</div>
               <div className="space-y-1 text-xs text-amber-900">
                 <div>Status: {display(detailReturn.qcReview.status)}</div>
-                <div>Dispute deadline: {formatDateTime(detailReturn.qcReview.disputeDeadline)}</div>
+                <div>Dispute deadline: {formatDateTime12Hour(detailReturn.qcReview.disputeDeadline)}</div>
                 {detailReturn.qcReview.customerDispute?.reason && <div>Customer dispute: {detailReturn.qcReview.customerDispute.reason}</div>}
                 {detailReturn.qcReview.evidenceRequestReason && <div>Evidence requested: {detailReturn.qcReview.evidenceRequestReason}</div>}
                 {detailReturn.qcReview.adminDecision && <div>Decision: {display(detailReturn.qcReview.adminDecision)} — {detailReturn.qcReview.decisionReason}</div>}
@@ -895,7 +895,7 @@ const filterFields = useMemo(
               {(detailReturn?.timeline || []).map((item, index) => (
                 <div key={`${item.status}-${index}`} className="rounded border border-gray-100 p-3">
                   <div className="font-medium capitalize">{display(item.status)}</div>
-                  <div className="text-xs text-gray-500">{formatDateTime(item.at)} · {display(item.actorRole)}</div>
+                  <div className="text-xs text-gray-500">{formatDateTime12Hour(item.at)} · {display(item.actorRole)}</div>
                   {item.reason && <div className="text-xs text-gray-600 mt-1">Reason: {item.reason}</div>}
                   {item.note && <div className="text-xs text-gray-600 mt-1">{item.note}</div>}
                 </div>
