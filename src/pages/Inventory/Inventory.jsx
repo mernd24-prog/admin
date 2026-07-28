@@ -78,6 +78,15 @@ const ADJUST_TYPES = [
 
 const STOCK_HISTORY_PAGE_SIZE = 10;
 
+const getInitialInventoryFilters = () => {
+  const params = new URLSearchParams(window.location.search);
+  return ["stockStatus", "variantStatus", "status"].reduce((filters, key) => {
+    const value = params.get(key);
+    if (value) filters[key] = value;
+    return filters;
+  }, {});
+};
+
 const IMPORT_COLUMNS = [
   "productId",
   "productName",
@@ -539,6 +548,7 @@ const Inventory = () => {
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "updatedAt",
+    defaultFilters: getInitialInventoryFilters(),
   });
 
   const adminPanel = !isSellerPanel();

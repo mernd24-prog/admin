@@ -431,6 +431,32 @@ const PayoutRow = ({ label, value, note, tone = "default", small = false, classN
   );
 };
 
+const PayoutSection = ({ title, subtitle, tone = "default", children }) => {
+  const toneClass = {
+    earn: "bg-[#f6fff8] border-[#d9f1df] text-[#21812C]",
+    deduct: "bg-[#fffaf8] border-[#f0ded3] text-[#A35B00]",
+    refund: "bg-[#fff8ea] border-[#eadfbd] text-[#8A5A00]",
+    tax: "bg-[#f8faff] border-[#dde6ff] text-[#1f4fc9]",
+    default: "bg-[#fffdf8] border-[#eadfbd] text-[#202337]",
+  }[tone] || "bg-[#fffdf8] border-[#eadfbd] text-[#202337]";
+
+  return (
+    <div className={`rounded-lg border px-3 py-3 ${toneClass}`}>
+      <div className="mb-2">
+        <div className="text-xs font-bold uppercase tracking-wide">{title}</div>
+        {subtitle && <div className="mt-0.5 text-xs font-normal text-[#65718b]">{subtitle}</div>}
+      </div>
+      <div className="space-y-2 text-[#202337]">{children}</div>
+    </div>
+  );
+};
+
+const PayoutFormula = ({ children }) => (
+  <div className="rounded-lg border border-[#eadfbd] bg-[#fffdf8] px-3 py-2 text-xs leading-5 text-[#65718b]">
+    {children}
+  </div>
+);
+
 const DetailLink = ({ children, onClick, className = "" }) => (
   <button
     type="button"
@@ -1299,120 +1325,201 @@ const OrderSummary = () => {
         <Panel title="Seller Commission & Payout" className="mt-4">
           {sellerSettlements.length ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {sellerSettlements.map((seller) => (
-                <div key={`${seller.sellerId}-${seller.organizationId || "default"}`} className="rounded-lg border border-[#eadfbd] bg-white p-4 text-sm">
-                  <div className="flex justify-between gap-2 mb-3">
-                    <div>
-                      {seller.sellerId && canOpenAdminProfiles ? (
-                        <DetailLink onClick={() => navigate(`/app/seller/view/${seller.sellerId}`)} className="font-semibold">
-                          {seller.sellerName}
-                        </DetailLink>
-                      ) : (
-                        <span className="font-semibold text-[#202337]">{seller.sellerName}</span>
-                      )}
-                      {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
+              {sellerSettlements.map((seller) => {
+                const productPayable = seller.sellerPayoutBase || seller.grossSales;
+                const netCommission = seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee;
+                const netCommissionTax = seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax;
+                const netGstTcs = seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount;
+                const netIncomeTaxTds = seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount;
+                const hasRefundAdjustment = seller.sellerPayoutBaseReversal > 0 || seller.commissionReversal > 0 || seller.commissionTaxReversal > 0 || seller.gstTcsReversal > 0 || seller.incomeTaxTdsReversal > 0;
+
+                return (
+                  <div key={`${seller.sellerId}-${seller.organizationId || "default"}`} className="rounded-xl border border-[#eadfbd] bg-white p-4 text-sm shadow-[0_1px_4px_rgba(31,41,55,0.05)]">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        {seller.sellerId && canOpenAdminProfiles ? (
+                          <DetailLink onClick={() => navigate(`/app/seller/view/${seller.sellerId}`)} className="font-semibold">
+                            {seller.sellerName}
+                          </DetailLink>
+                        ) : (
+                          <span className="font-semibold text-[#202337]">{seller.sellerName}</span>
+                        )}
+                        {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
+                        {hasRefundAdjustment && (
+                          <div className="mt-2 inline-flex rounded-full bg-[#fff3d6] px-2.5 py-1 text-xs font-semibold text-[#8A5A00]">
+                            Payout adjusted because an item was refunded
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-[#f8faff] px-3 py-2 text-right">
+                        <div className="text-xs text-[#65718b]">Amount payable to seller</div>
+                        <div className="text-lg font-bold text-[#1f4fc9]">{formatMoney(seller.sellerPayout)}</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-[#1f4fc9]">{formatMoney(seller.sellerPayout)}</div>
-                      <div className="text-xs text-[#65718b]">seller payout</div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="rounded-md bg-[#f8fff9] px-3 py-2">
-                      <div className="mb-2 text-xs font-semibold text-[#21812C]">Seller gets</div>
-                      <div className="space-y-2">
+
+                    <div className="space-y-3">
+                      <PayoutFormula>
+                        Seller payout = seller earnings − platform charges − refund recovery − tax withholding.
+                      </PayoutFormula>
+
+                      <PayoutSection
+                        title="1. Seller earnings"
+                        subtitle="Money collected from the customer for this seller."
+                        tone="earn"
+                      >
                         <PayoutRow
                           label="Product amount"
-                          note={seller.taxCollected > 0 ? `Includes product GST ${formatMoney(seller.taxCollected)}` : ""}
-                          value={formatMoney(seller.sellerPayoutBase || seller.grossSales)}
+                          note={seller.taxCollected > 0 ? `Product GST included: ${formatMoney(seller.taxCollected)}` : ""}
+                          value={formatMoney(productPayable)}
                         />
                         {seller.shippingReimbursement > 0 && (
                           <PayoutRow
-                            label="Shipping collected from customer"
-                            note="Collected by platform, paid to seller"
+                            label="Shipping collected for seller"
+                            note="Platform collected this online and adds it to seller payout."
                             value={`+${formatMoney(seller.shippingReimbursement)}`}
                             tone="credit"
                           />
                         )}
                         {seller.marketplaceFundedDiscount > 0 && (
                           <PayoutRow
-                            label="Marketplace discount"
-                            note="Customer got discount, marketplace reimburses seller"
+                            label="Marketplace-funded discount reimbursement"
+                            note="Customer received a discount; marketplace pays this back to seller."
                             value={`+${formatMoney(seller.marketplaceFundedDiscount)}`}
                             tone="credit"
-                            small
                           />
                         )}
-                      </div>
-                    </div>
+                      </PayoutSection>
 
-                    {(seller.discountAmount > 0 || seller.sellerFundedDiscount > 0 || seller.commissionFee > 0 || seller.platformFeeTax > 0 || seller.shippingDeduction > 0 || seller.refundAmount > 0 || seller.adjustmentAmount !== 0 || seller.gstTcsAmount > 0 || seller.incomeTaxTdsAmount > 0) && (
-                      <div className="rounded-md bg-[#fffaf8] px-3 py-2">
-                        <div className="mb-2 text-xs font-semibold text-[#A35B00]">Less</div>
-                        <div className="space-y-2">
+                      {(seller.sellerFundedDiscount > 0 || seller.discountAmount > 0 || seller.commissionFee > 0 || seller.platformFeeTax > 0 || seller.shippingDeduction > 0) && (
+                        <PayoutSection
+                          title="2. Platform charges"
+                          subtitle="Charges kept by platform as per marketplace agreement."
+                          tone="deduct"
+                        >
                           {seller.sellerFundedDiscount > 0 && <PayoutRow label="Seller-funded discount" value={`-${formatMoney(seller.sellerFundedDiscount)}`} tone="warning" />}
                           {seller.discountAmount > 0 && seller.marketplaceFundedDiscount <= 0 && <PayoutRow label="Customer discount" value={`-${formatMoney(seller.discountAmount)}`} tone="muted" />}
-                          <PayoutRow
-                            label="Platform commission"
-                            note={seller.commissionRates.length ? seller.commissionRates.map(percent).join(", ") : ""}
-                            value={`-${formatMoney(seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee)}`}
-                          />
-                    {seller.commissionReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
-                      <div className="flex justify-between"><span>Original commission</span><span>{formatMoney(seller.commissionFee)}</span></div>
-                      <div className="flex justify-between text-[#21812C]"><span>Reversed for refunded item</span><span>-{formatMoney(seller.commissionReversal)}</span></div>
-                    </div>}
-                    {seller.commissionBreakdown.length > 1 && (
-                      <div className="ml-3 space-y-1 rounded-md bg-[#f8faff] px-2 py-1.5 text-xs text-[#65718b]">
-                        {seller.commissionBreakdown.map((entry) => (
-                          <div key={entry.rate} className="flex justify-between">
-                            <span>Commission at {percent(entry.rate)}</span>
-                            <span>-{formatMoney(entry.amount)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                          {seller.platformFeeTax > 0 && <PayoutRow label="GST on commission" value={`-${formatMoney(seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax)}`} />}
-                    {seller.commissionTaxReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
-                      <div className="flex justify-between"><span>Original commission GST</span><span>{formatMoney(seller.platformFeeTax)}</span></div>
-                      <div className="flex justify-between text-[#21812C]"><span>Reversed through credit note</span><span>-{formatMoney(seller.commissionTaxReversal)}</span></div>
-                    </div>}
+                          {seller.commissionFee > 0 && (
+                            <PayoutRow
+                              label="Net platform commission"
+                              note={seller.commissionRates.length ? `Rate: ${seller.commissionRates.map(percent).join(", ")}` : ""}
+                              value={`-${formatMoney(netCommission)}`}
+                            />
+                          )}
+                          {seller.platformFeeTax > 0 && (
+                            <PayoutRow
+                              label="GST on net commission"
+                              value={`-${formatMoney(netCommissionTax)}`}
+                            />
+                          )}
                           {seller.shippingDeduction > 0 && <PayoutRow label="Shipping deduction" value={`-${formatMoney(seller.shippingDeduction)}`} />}
-                    {seller.refundAmount > 0 && <>
-                            <PayoutRow label="Returned item recovery" value={`-${formatMoney(seller.sellerPayoutBaseReversal)}`} />
-                      <div className="text-xs text-[#65718b]">This is the seller payout part reversed for the returned item.</div>
-                    </>}
-                          {seller.adjustmentAmount !== 0 && <PayoutRow label="Payout adjustment / recovery" value={`${seller.adjustmentAmount > 0 ? "+" : "-"}${formatMoney(Math.abs(seller.adjustmentAmount))}`} />}
-                    {seller.gstTcsAmount > 0 && <>
-                            <PayoutRow label={`GST TCS (${percent(seller.gstTcsRate)})`} note={`Base: ${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}`} value={`-${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsAmount : seller.gstTcsAmount)}`} />
-                      {seller.gstTcsReversal > 0 && <div className="space-y-1 text-xs text-[#65718b]">
-                        <div className="flex justify-between"><span>Original TCS / taxable base</span><span>{formatMoney(seller.gstTcsAmount)} / {formatMoney(seller.gstTcsTaxableBase)}</span></div>
-                        <div className="flex justify-between text-[#21812C]"><span>Returned TCS / taxable base reversed</span><span>-{formatMoney(seller.gstTcsReversal)} / -{formatMoney(seller.gstTcsTaxableBaseReversal)}</span></div>
-                      </div>}
-                    </>}
-                    {seller.incomeTaxTdsAmount > 0 && <>
-                            <PayoutRow label={`Income-tax TDS (${percent(seller.incomeTaxTdsRate)})`} note={`Base: ${formatMoney(seller.incomeTaxTdsTaxableBase)}`} value={`-${formatMoney(seller.incomeTaxTdsReversal > 0 ? seller.netIncomeTaxTdsAmount : seller.incomeTaxTdsAmount)}`} />
-                    </>}
-                        </div>
-                      </div>
-                    )}
+                          {seller.commissionBreakdown.length > 1 && (
+                            <div className="space-y-1 rounded-md bg-white px-2 py-1.5 text-xs text-[#65718b]">
+                              {seller.commissionBreakdown.map((entry) => (
+                                <div key={entry.rate} className="flex justify-between">
+                                  <span>Commission at {percent(entry.rate)}</span>
+                                  <span>-{formatMoney(entry.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </PayoutSection>
+                      )}
 
-                    <div className="flex justify-between rounded-md bg-[#fff9ea] px-3 py-3 text-base font-semibold text-[#202337]">
-                      <span>Net seller payout</span>
-                      <span>{formatMoney(seller.sellerPayout)}</span>
-                    </div>
-                    {(seller.commissionStatus || seller.payoutStatus) && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-[#f8faff] px-3 py-2 text-xs text-[#65718b]">
-                        {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}
-                        {seller.payoutStatus && <span>Payout: {formatLabel(displayStatus(seller.payoutStatus))}</span>}
-                        {seller.payoutMethod && <span>Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
-                        {seller.payoutReference && <span>Bank ref: {seller.payoutReference}</span>}
-                        {seller.payoutProcessedAt && <span>Paid: {formatDate(seller.payoutProcessedAt)}</span>}
-                        {seller.commissionIds.length > 0 && <span>Item commission records: {seller.commissionIds.length}</span>}
+                      {hasRefundAdjustment && (
+                        <PayoutSection
+                          title="3. Refund adjustment"
+                          subtitle="Only the returned/refunded item is reversed. Delivered items remain payable."
+                          tone="refund"
+                        >
+                          {seller.sellerPayoutBaseReversal > 0 && (
+                            <PayoutRow
+                              label="Returned item amount recovered"
+                              note="This removes the seller payout of the refunded item."
+                              value={`-${formatMoney(seller.sellerPayoutBaseReversal)}`}
+                            />
+                          )}
+                          {seller.commissionReversal > 0 && (
+                            <PayoutRow
+                              label="Commission reversed for returned item"
+                              note={`Original: ${formatMoney(seller.commissionFee)}`}
+                              value={`+${formatMoney(seller.commissionReversal)}`}
+                              tone="credit"
+                            />
+                          )}
+                          {seller.commissionTaxReversal > 0 && (
+                            <PayoutRow
+                              label="GST on commission reversed"
+                              note={`Original GST on commission: ${formatMoney(seller.platformFeeTax)}`}
+                              value={`+${formatMoney(seller.commissionTaxReversal)}`}
+                              tone="credit"
+                            />
+                          )}
+                          {seller.gstTcsReversal > 0 && (
+                            <PayoutRow
+                              label="GST TCS reversed for returned item"
+                              note={`Returned taxable base: ${formatMoney(seller.gstTcsTaxableBaseReversal)}`}
+                              value={`+${formatMoney(seller.gstTcsReversal)}`}
+                              tone="credit"
+                            />
+                          )}
+                          {seller.incomeTaxTdsReversal > 0 && (
+                            <PayoutRow
+                              label="Income-tax TDS reversed"
+                              value={`+${formatMoney(seller.incomeTaxTdsReversal)}`}
+                              tone="credit"
+                            />
+                          )}
+                        </PayoutSection>
+                      )}
+
+                      {(seller.gstTcsAmount > 0 || seller.incomeTaxTdsAmount > 0) && (
+                        <PayoutSection
+                          title="4. Tax withholding"
+                          subtitle="Final withholding after refund reversals."
+                          tone="tax"
+                        >
+                          {seller.gstTcsAmount > 0 && (
+                            <PayoutRow
+                              label={`GST TCS (${percent(seller.gstTcsRate)})`}
+                              note={`Final base: ${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}`}
+                              value={`-${formatMoney(netGstTcs)}`}
+                            />
+                          )}
+                          {seller.incomeTaxTdsAmount > 0 && (
+                            <PayoutRow
+                              label={`Income-tax TDS (${percent(seller.incomeTaxTdsRate)})`}
+                              note={`Base: ${formatMoney(seller.incomeTaxTdsTaxableBase)}`}
+                              value={`-${formatMoney(netIncomeTaxTds)}`}
+                            />
+                          )}
+                          {seller.adjustmentAmount !== 0 && (
+                            <PayoutRow
+                              label="Other payout adjustment"
+                              value={`${seller.adjustmentAmount > 0 ? "+" : "-"}${formatMoney(Math.abs(seller.adjustmentAmount))}`}
+                              tone={seller.adjustmentAmount > 0 ? "credit" : "warning"}
+                            />
+                          )}
+                        </PayoutSection>
+                      )}
+
+                      <div className="flex items-center justify-between rounded-lg bg-[#fff9ea] px-3 py-3 text-base font-bold text-[#202337]">
+                        <span>Final seller payout</span>
+                        <span>{formatMoney(seller.sellerPayout)}</span>
                       </div>
-                    )}
+                      {(seller.commissionStatus || seller.payoutStatus) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-[#f8faff] px-3 py-2 text-xs text-[#65718b]">
+                          {seller.commissionStatus && <span>Commission: {formatLabel(displayStatus(seller.commissionStatus))}</span>}
+                          {seller.payoutStatus && <span>Payout: {formatLabel(displayStatus(seller.payoutStatus))}</span>}
+                          {seller.payoutMethod && <span>Method: {formatLabel(displayStatus(seller.payoutMethod))}</span>}
+                          {seller.payoutReference && <span>Bank ref: {seller.payoutReference}</span>}
+                          {seller.payoutProcessedAt && <span>Paid: {formatDate(seller.payoutProcessedAt)}</span>}
+                          {seller.commissionIds.length > 0 && <span>Item records: {seller.commissionIds.length}</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <EmptyState>No seller settlement data found</EmptyState>

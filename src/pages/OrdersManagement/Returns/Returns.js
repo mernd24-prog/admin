@@ -267,7 +267,13 @@ const filterFields = useMemo(
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
-    defaultFilters: { orderId: getInitialQuery("orderId") },
+    defaultFilters: {
+      orderId: getInitialQuery("orderId"),
+      status: getInitialQuery("status"),
+      reason: getInitialQuery("reason"),
+      fromDate: getInitialQuery("fromDate"),
+      toDate: getInitialQuery("toDate"),
+    },
   });
   const { toQueryParams } = list;
 

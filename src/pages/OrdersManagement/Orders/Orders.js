@@ -84,6 +84,15 @@ const orderIdOf = (order = {}) =>
 
 const formatMoney = (value) => formatCurrency(value, "—");
 
+const getInitialQueryFilters = () => {
+  const params = new URLSearchParams(window.location.search);
+  return ["status", "paymentStatus", "deliveryStatus", "buyerId", "sellerId", "fromDate", "toDate"].reduce((filters, key) => {
+    const value = params.get(key);
+    if (value) filters[key] = value;
+    return filters;
+  }, {});
+};
+
 const normalizeJson = (value, fallback = {}) => {
   if (!value) return fallback;
   if (typeof value === "object") return value;
@@ -414,6 +423,7 @@ const Orders = () => {
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
+    defaultFilters: getInitialQueryFilters(),
   });
   const { toQueryParams } = list;
 

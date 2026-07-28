@@ -61,6 +61,12 @@ const FILTER_FIELDS = [
 ];
 
 const getInitialQuery = (key) => new URLSearchParams(window.location.search).get(key) || "";
+const getInitialPaymentFilters = () =>
+  ["orderId", "buyerId", "provider", "status", "fromDate", "toDate"].reduce((filters, key) => {
+    const value = getInitialQuery(key);
+    if (value) filters[key] = value;
+    return filters;
+  }, {});
 
 const Payments = () => {
   const dispatch = useDispatch();
@@ -71,7 +77,7 @@ const Payments = () => {
     defaultPageSize: 20,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
-    defaultFilters: { orderId: getInitialQuery("orderId") },
+    defaultFilters: getInitialPaymentFilters(),
   });
   const { toQueryParams } = list;
 

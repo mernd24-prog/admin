@@ -46,13 +46,27 @@ const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (value, currency = "INR") => `${currency} ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const sellerName = (row = {}) => row.sellerName || row.seller?.displayName || row.seller?.businessName || row.seller?.email || "Seller";
 
+const getInitialPayoutFilters = () => {
+  const params = new URLSearchParams(window.location.search);
+  return ["sellerId", "status", "fromDate", "toDate"].reduce((filters, key) => {
+    const value = params.get(key);
+    if (value) filters[key] = value;
+    return filters;
+  }, {});
+};
+
 const SellerPayouts = () => {
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const finance = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(isSeller ? finance.myPayoutsData : finance.adminPayoutsData);
   const settlementsPayload = unwrapList(finance.mySettlementsData);
-  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "created_at", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+    defaultFilters: getInitialPayoutFilters(),
+  });
   const { toQueryParams } = list;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

@@ -148,6 +148,17 @@ const formatRangeLabel = ({ fromDate, toDate } = {}) => {
   return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
 };
 
+const withQuery = (path, params = {}) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, String(value));
+    }
+  });
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+};
+
 const statusStyle = (status = "") => {
   const nextStatus = String(status).toLowerCase();
   if (
@@ -467,7 +478,10 @@ export default function Dashboard() {
         iconBg: "#04258633",
         iconColor: "#0f4bb3",
         label: "Total Orders",
-        route: "/app/orders",
+        route: withQuery("/app/orders", {
+          fromDate: dateFilters.fromDate,
+          toDate: dateFilters.toDate,
+        }),
         value: formatNumber(sellerMetrics.totalOrders ?? commerce.totalOrders),
         helper: "vs last month",
         trend: formatTrend(trends.totalOrders),
@@ -478,7 +492,10 @@ export default function Dashboard() {
         iconBg: "#cce8c9",
         iconColor: "#1d9b50",
         label: "Total Revenue ( GMV )",
-        route: "/app/payments",
+        route: withQuery("/app/payments", {
+          fromDate: dateFilters.fromDate,
+          toDate: dateFilters.toDate,
+        }),
         value: formatCurrency(sellerMetrics.gmv ?? commerce.gmv),
         helper: "vs last month",
         trend: formatTrend(trends.gmv),
@@ -489,7 +506,7 @@ export default function Dashboard() {
         iconBg: "#e3d4ff",
         iconColor: "#8d5cf6",
         label: "Orders Today",
-        route: "/app/orders",
+        route: withQuery("/app/orders", getRangeDates("today")),
         value: formatNumber(
           sellerMetrics.ordersToday ??
             commerce.ordersToday ??
@@ -502,7 +519,10 @@ export default function Dashboard() {
         iconBg: "#ffe5b5",
         iconColor: "#f5a300",
         label: "Units Sold",
-        route: "/app/inventory",
+        route: withQuery("/app/inventory", {
+          fromDate: dateFilters.fromDate,
+          toDate: dateFilters.toDate,
+        }),
         value: formatNumber(
           sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold,
         ),
@@ -513,7 +533,7 @@ export default function Dashboard() {
         iconBg: "#ffd4d2",
         iconColor: "#ff4b55",
         label: "Pending Payouts",
-        route: "/app/seller-payouts",
+        route: withQuery("/app/seller-payouts", { status: "pending" }),
         value: formatCurrency(
           sellerMetrics.pendingPayouts ??
             payouts.pendingAmount ??
@@ -527,7 +547,10 @@ export default function Dashboard() {
         iconBg: "#bfeee8",
         iconColor: "#16b8af",
         label: "Returned Orders",
-        route: "/app/returns",
+        route: withQuery("/app/returns", {
+          fromDate: dateFilters.fromDate,
+          toDate: dateFilters.toDate,
+        }),
         value: formatNumber(
           sellerMetrics.returnedOrders ??
             commerce.returnedOrders ??
@@ -538,7 +561,7 @@ export default function Dashboard() {
         trendNegative: isNegativeTrend(trends.returnedOrders),
       },
     ];
-  }, [overview]);
+  }, [dateFilters.fromDate, dateFilters.toDate, overview]);
 
   const recentOrders = useMemo(
     () => (Array.isArray(overview?.recentOrders) ? overview.recentOrders : []),
