@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import {
@@ -10,6 +10,7 @@ import {
 } from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
+import DataTable from "../../../components/Shared/DataTable";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import {
   getMyPromotionFundingLedger,
@@ -35,6 +36,83 @@ const PromotionFundingLedger = () => {
   const totals = payload?.totals || {};
   const [filters, setFilters] = useState({ search: "", fundingType: "", limit: 50, offset: 0 });
   const [loading, setLoading] = useState(false);
+  const columns = useMemo(() => [
+    {
+      key: "orderId",
+      label: "Order / Item",
+      render: (value, row) => (
+        <div>
+          <div className="font-mono text-xs font-semibold">{row.orderNumber || value}</div>
+          <div className="mt-1 font-medium text-gray-900">{row.productTitle || "Order item"}</div>
+          <div className="text-xs text-gray-500">{row.productSku || "No SKU"} · Qty {row.quantity}</div>
+        </div>
+      ),
+    },
+    ...(!sellerMode ? [{
+      key: "sellerId",
+      label: "Seller",
+      cellClassName: "font-mono text-xs",
+    }] : []),
+    {
+      key: "fundingType",
+      label: "Funding",
+      cellClassName: "capitalize",
+      render: (value) => String(value || "").replace(/_/g, " "),
+    },
+    {
+      key: "customerDiscountAmount",
+      label: "Customer Discount",
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      render: (value, row) => money(value, row.currency),
+    },
+    {
+      key: "sellerFundedDiscountAmount",
+      label: "Seller-funded",
+      headerClassName: "text-right",
+      cellClassName: "text-right text-amber-700",
+      render: (value, row) => money(value, row.currency),
+    },
+    {
+      key: "marketplaceContributionAmount",
+      label: "Platform / Partner",
+      headerClassName: "text-right",
+      cellClassName: "text-right text-blue-700",
+      render: (value, row) => money(
+        Number(value || 0) + Number(row.paymentPartnerContributionAmount || 0),
+        row.currency,
+      ),
+    },
+    {
+      key: "reversalAmount",
+      label: "Reversed",
+      headerClassName: "text-right",
+      cellClassName: "text-right text-red-700",
+      render: (value, row) => money(value, row.currency),
+    },
+    {
+      key: "netPlatformContributionAmount",
+      label: "Net Contribution",
+      headerClassName: "text-right",
+      cellClassName: "text-right font-semibold text-green-700",
+      render: (value, row) => money(value, row.currency),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value) => (
+        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass[value] || statusClass.reserved}`}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "payoutId",
+      label: "Payout",
+      cellClassName: "font-mono text-xs",
+      render: (value) => value || "Not batched",
+    },
+  ], [sellerMode]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,8 +164,18 @@ const PromotionFundingLedger = () => {
         ))}
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="grid gap-3 border-b border-gray-100 p-4 md:grid-cols-[1fr_240px_auto]">
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={loading}
+        totalCount={rows.length}
+        page={Math.floor(Number(filters.offset || 0) / Number(filters.limit || 50)) + 1}
+        pageSize={Number(filters.limit || 50)}
+        rowKey="id"
+        emptyText="No funded discounts found."
+        onRefresh={load}
+        filterBar={(
+          <div className="grid gap-3 border-b border-gray-100 p-4 md:grid-cols-[1fr_240px]">
           <input
             className="admin-input"
             placeholder="Search order, product, or SKU"
@@ -105,65 +193,9 @@ const PromotionFundingLedger = () => {
             <option value="shared">Shared</option>
             <option value="payment_partner">Payment partner</option>
           </select>
-          <button type="button" className="admin-btn-secondary" onClick={load} disabled={loading}>
-            {loading ? "Loading…" : "Refresh"}
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">S.No</th>
-                <th className="px-4 py-3">Order / Item</th>
-                {!sellerMode && <th className="px-4 py-3">Seller</th>}
-                <th className="px-4 py-3">Funding</th>
-                <th className="px-4 py-3 text-right">Customer Discount</th>
-                <th className="px-4 py-3 text-right">Seller-funded</th>
-                <th className="px-4 py-3 text-right">Platform / Partner</th>
-                <th className="px-4 py-3 text-right">Reversed</th>
-                <th className="px-4 py-3 text-right">Net Contribution</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Payout</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rows.map((row, index) => (
-                <tr key={row.id}>
-                  <td className="px-4 py-3 text-gray-500">
-                    {Number(filters.offset || 0) + index + 1}.
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-mono text-xs font-semibold">{row.orderNumber || row.orderId}</div>
-                    <div className="mt-1 font-medium text-gray-900">{row.productTitle || "Order item"}</div>
-                    <div className="text-xs text-gray-500">{row.productSku || "No SKU"} · Qty {row.quantity}</div>
-                  </td>
-                  {!sellerMode && <td className="px-4 py-3 font-mono text-xs">{row.sellerId}</td>}
-                  <td className="px-4 py-3 capitalize">{String(row.fundingType || "").replace(/_/g, " ")}</td>
-                  <td className="px-4 py-3 text-right">{money(row.customerDiscountAmount, row.currency)}</td>
-                  <td className="px-4 py-3 text-right text-amber-700">{money(row.sellerFundedDiscountAmount, row.currency)}</td>
-                  <td className="px-4 py-3 text-right text-blue-700">
-                    {money(Number(row.marketplaceContributionAmount || 0) + Number(row.paymentPartnerContributionAmount || 0), row.currency)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-red-700">{money(row.reversalAmount, row.currency)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">{money(row.netPlatformContributionAmount, row.currency)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass[row.status] || statusClass.reserved}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.payoutId || "Not batched"}</td>
-                </tr>
-              ))}
-              {!rows.length && (
-                <tr><td colSpan={sellerMode ? 10 : 11} className="px-4 py-10 text-center text-gray-500">
-                  {loading ? "Loading promotion entries…" : "No funded discounts found."}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          </div>
+        )}
+      />
     </div>
   );
 };

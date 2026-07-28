@@ -12,9 +12,10 @@ import {
 import {
   MdAccountBalanceWallet,
   MdAssignmentReturn,
-  MdCalendarToday,
+  MdArrowDropDown,
   MdCurrencyRupee,
   MdFileDownload,
+  MdFilterList,
   MdInbox,
   MdInventory,
   MdLocalShipping,
@@ -576,33 +577,57 @@ export const ReportShell = ({
       />
 
       <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          {showFilters ? (
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-bold uppercase text-[var(--admin-muted)]">Filter</span>
+        {showFilters ? (
+          <>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--admin-muted)]">
+              <MdFilterList size={15} />
+              Filters
+            </div>
+
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex w-full min-w-0 flex-col gap-1 sm:max-w-sm">
+                <label
+                  htmlFor="report-date-range"
+                  className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+                >
+                  Date Range
+                </label>
+                <button
+                  id="report-date-range"
+                  type="button"
+                  onClick={() => setDateModalOpen(true)}
+                  className="admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none text-[var(--admin-ink)]"
+                >
+                  <span className="min-w-0 truncate">{dateRangeLabel}</span>
+                  <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setDateModalOpen(true)}
-                className="inline-flex min-h-9 max-w-full items-center justify-center gap-2 rounded border border-[var(--admin-gold)] bg-[var(--admin-gold)] px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[var(--admin-gold-dark)]"
+                onClick={onRefresh}
+                disabled={loading}
+                className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
               >
-                <MdCalendarToday size={15} />
-                <span className="truncate">{dateRangeLabel}</span>
+                <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
+                {loading ? "Refreshing" : "Refresh"}
               </button>
             </div>
-          ) : (
+          </>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-medium text-[var(--admin-muted)]">Showing current report data.</p>
-          )}
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            className="admin-btn-secondary w-full justify-center sm:w-auto xl:min-w-[112px]"
-          >
-            <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
-            {loading ? "Refreshing" : "Refresh"}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
+            >
+              <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
+              {loading ? "Refreshing" : "Refresh"}
+            </button>
+          </div>
+        )}
       </section>
 
       <div className="mb-5 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -1252,17 +1277,24 @@ export const ProductAnalytics = () => {
 export const InventoryAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async ({ fromDate, toDate }) => {
+    const dateParams = { fromDate, toDate };
     if (isSellerPanel()) {
       const [stats, products] = await Promise.all([
-        fetchJson(ENDPOINTS.products.inventoryStats),
-        fetchJson(ENDPOINTS.products.listForPanel, { limit: 10, page: 1, sortBy: "stock", sortDir: "asc" }),
+        fetchJson(ENDPOINTS.products.inventoryStats, dateParams),
+        fetchJson(ENDPOINTS.products.listForPanel, {
+          ...dateParams,
+          limit: 10,
+          page: 1,
+          sortBy: "stock",
+          sortDir: "asc",
+        }),
       ]);
       return { stats, lowStock: listFrom(products) };
     }
     const [stats, lowStock] = await Promise.all([
-      fetchJson(ENDPOINTS.inventory.stats),
-      fetchJson(ENDPOINTS.inventory.lowStock, { limit: 10, page: 1 }),
+      fetchJson(ENDPOINTS.inventory.stats, dateParams),
+      fetchJson(ENDPOINTS.inventory.lowStock, { ...dateParams, limit: 10, page: 1 }),
     ]);
     return { stats, lowStock: listFrom(lowStock) };
   }, []);
@@ -1297,7 +1329,6 @@ export const InventoryAnalytics = () => {
       onRefresh={refresh}
       exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.inventory}
       exportFilename={sellerView ? null : "inventory-report.csv"}
-      showFilters={false}
     >
       <div className="space-y-4">
         <PerformanceOverview
