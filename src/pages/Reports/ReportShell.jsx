@@ -149,6 +149,20 @@ const rangeToDates = (range) => {
   return { fromDate: toIsoDate(from), toDate: toIsoDate(to) };
 };
 
+const queryDateRange = () => {
+  if (typeof window === "undefined") return null;
+
+  const params = new URLSearchParams(window.location.search);
+  const fromDate = params.get("fromDate");
+  const toDate = params.get("toDate");
+
+  if (!parseInputDate(fromDate) || !parseInputDate(toDate)) return null;
+
+  return fromDate <= toDate
+    ? { fromDate, toDate }
+    : { fromDate: toDate, toDate: fromDate };
+};
+
 const unwrapData = (response) => response?.data?.data ?? response?.data ?? response ?? {};
 const listFrom = (value) => {
   if (Array.isArray(value)) return value;
@@ -165,8 +179,13 @@ const listFrom = (value) => {
 const fetchJson = async (endpoint, params = {}) => unwrapData(await axiosPrivate.get(endpoint, { params }));
 
 const useReportFilters = (defaultRange = "Last 30 days") => {
-  const initial = rangeToDates(defaultRange);
-  const [range, setRange] = useState(defaultRange);
+  const [initial] = useState(() => {
+    const datesFromQuery = queryDateRange();
+    return datesFromQuery
+      ? { range: "Custom", ...datesFromQuery }
+      : { range: defaultRange, ...rangeToDates(defaultRange) };
+  });
+  const [range, setRange] = useState(initial.range);
   const [fromDate, setFromDate] = useState(initial.fromDate);
   const [toDate, setToDate] = useState(initial.toDate);
 
@@ -1030,48 +1049,68 @@ export const SalesReport = () => {
   const sellerView = isSellerPanel();
   const filters = useReportFilters();
   const loadData = useCallback(async ({ fromDate, toDate }) => {
-    const dashboard = await fetchJson(
+    const analyticsDashboard = await fetchJson(
       sellerView ? ENDPOINTS.analytics.sellerDashboard : ENDPOINTS.analytics.adminDashboard,
       { fromDate, toDate },
     );
-    if (!sellerView) return dashboard;
-    const topProducts = await fetchJson(ENDPOINTS.products.analyticsTop, {
-      limit: 10,
-      metric: "purchases",
-      fromDate,
-      toDate,
-    });
-    return { ...dashboard, topProducts: listFrom(topProducts) };
+    if (!sellerView) return analyticsDashboard;
+
+    const [dashboardOverview, topProducts] = await Promise.all([
+      fetchJson(ENDPOINTS.dashboard.overview, { fromDate, toDate }),
+      fetchJson(ENDPOINTS.products.analyticsTop, {
+        limit: 10,
+        metric: "purchases",
+        fromDate,
+        toDate,
+      }),
+    ]);
+
+    return {
+      ...analyticsDashboard,
+      dashboardOverview,
+      topProducts: listFrom(topProducts),
+    };
   }, [sellerView]);
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
+  const dashboardOverview = data.dashboardOverview || {};
+  const dashboardMetrics = dashboardOverview.metrics || {};
+  const dashboardCommerce = dashboardOverview.commerce || {};
   const orders = data.orders || {};
-  const returns = data.returns || {};
-  const performanceRows = performanceRowsFromAnalytics({
-    recentOrders: data.recentOrders,
-    orders,
-    performance: data.orderPerformance || data.ordersPerformance || data.salesTrend,
-  });
+  const returns = data.returns || dashboardOverview.returns || {};
   const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
   const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
-  const useProductFallback = sellerView && !performanceRows.length && hasProductActivity(fallbackProductRows);
-  const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
-  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.orderCount || fallbackProductTotals.purchases);
+  const totalRevenue = asNumber(
+    dashboardMetrics.gmv ??
+      dashboardCommerce.gmv ??
+      orders.gmvAmount ??
+      orders.totalSalesAmount ??
+      fallbackProductTotals.revenue,
+  );
+  const totalOrders = asNumber(
+    dashboardMetrics.totalOrders ??
+      dashboardCommerce.totalOrders ??
+      orders.orderCount,
+  );
   const totalProductViews = asNumber(fallbackProductTotals.views || fallbackProductTotals.impressions);
   const refundAmount = asNumber(returns.refundAmount);
-  const deliveredOrders = asNumber(orders.deliveredOrders);
+  const deliveredOrders = asNumber(
+    dashboardMetrics.deliveredOrders ??
+      dashboardCommerce.deliveredOrders ??
+      orders.deliveredOrders,
+  );
   const salesSummaryItems = [
-    { label: "Revenue", value: totalRevenue, displayValue: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics" : "Selected range" },
-    { label: useProductFallback ? "Purchases" : "Orders", value: totalOrders, displayValue: formatNumber(totalOrders), sub: useProductFallback ? "Product units" : "All statuses" },
-    useProductFallback
+    { label: "Revenue", value: totalRevenue, displayValue: formatCurrency(totalRevenue), sub: "Selected range" },
+    { label: "Orders", value: totalOrders, displayValue: formatNumber(totalOrders), sub: "All statuses" },
+    sellerView
       ? { label: "Views", value: totalProductViews, displayValue: formatNumber(totalProductViews), sub: "Product activity" }
       : { label: "Delivered", value: deliveredOrders, displayValue: formatNumber(deliveredOrders), sub: "Completed orders" },
     { label: "Refunds", value: refundAmount, displayValue: formatCurrency(refundAmount), sub: "Return refunds" },
   ];
 
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
-    { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
-    { label: useProductFallback ? "Product Views" : "Delivered Orders", value: formatNumber(useProductFallback ? totalProductViews : deliveredOrders), sub: useProductFallback ? "Tracked product views" : "Completed fulfilment" },
+    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: "GMV in selected range" },
+    { label: "Total Orders", value: formatNumber(totalOrders), sub: "All order statuses" },
+    { label: sellerView ? "Product Views" : "Delivered Orders", value: formatNumber(sellerView ? totalProductViews : deliveredOrders), sub: sellerView ? "Tracked product views" : "Completed fulfilment" },
     { label: "Refund Amount", value: formatCurrency(refundAmount), sub: "Return refunds" },
   ];
 
