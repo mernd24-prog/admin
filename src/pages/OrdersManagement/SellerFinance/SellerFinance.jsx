@@ -23,6 +23,7 @@ import {
   PageHeader,
   StatusBadge,
   SummaryCard,
+  DataTable,
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -199,45 +200,41 @@ const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) =
 
 const TableShell = ({ title, headings, children, emptyText }) => {
   const rows = React.Children.toArray(children);
+  const data = rows.map((row, index) => ({
+    id: row.key || `${title}-${index}`,
+    cells: React.Children.toArray(row.props.children),
+    rowClassName: row.props.className || "",
+  }));
+  const columns = headings.map((heading, index) => ({
+    key: `column-${index}`,
+    label: heading,
+    render: (_, record) => {
+      const cell = record.cells[index];
+      if (!React.isValidElement(cell)) return cell;
+
+      const className = String(cell.props.className || "")
+        .replace(/\b(?:px|py|p)-\d+(?:\.\d+)?\b/g, "")
+        .trim();
+
+      return <div className={className}>{cell.props.children}</div>;
+    },
+  }));
 
   return (
     <section className="rounded-lg border border-[#E6E6E6] bg-white ">
       <div className="border-b border-[#E6E6E6] px-4 py-3">
         <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
       </div>
-      <div className="overflow-auto">
-        <table className="min-w-full divide-y divide-[#EEF1F6] text-sm">
-          <thead className="bg-[#f8faff] text-left text-xs font-semibold uppercase text-[#65718b]">
-            <tr>
-              <th className="whitespace-nowrap px-4 py-3">S.No</th>
-              {headings.map((heading) => (
-                <th key={heading} className="whitespace-nowrap px-4 py-3">{heading}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEF1F6] text-[#202337]">
-            {rows.length ? rows.map((row, index) =>
-              React.cloneElement(
-                row,
-                undefined,
-                <td
-                  key="serial-number"
-                  className="whitespace-nowrap px-4 py-3 text-[#65718b]"
-                >
-                  {index + 1}.
-                </td>,
-                row.props.children,
-              )
-            ) : (
-              <tr>
-                <td className="px-4 py-6 text-center text-[#65718b]" colSpan={headings.length + 1}>
-                  {emptyText}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data}
+        totalCount={data.length}
+        pageSize={Math.max(data.length, 1)}
+        rowKey="id"
+        rowClassName={(record) => record.rowClassName}
+        emptyText={emptyText}
+        cardClassName="overflow-hidden"
+      />
     </section>
   );
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { MdAccountBalanceWallet, MdHourglassTop, MdLock, MdPayments, MdRefresh } from "react-icons/md";
@@ -6,6 +6,7 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
+import DataTable from "../../../components/Shared/DataTable";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import { formatCurrency, formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import { toast } from "sonner";
@@ -24,6 +25,54 @@ export default function SellerWallet() {
   const currency = wallet.currency || "INR";
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const loading = Boolean(walletState.loading);
+  const ledgerColumns = useMemo(() => [
+    {
+      key: "orderId",
+      label: "Order",
+      render: (value) => (
+        <button
+          type="button"
+          className="font-mono text-xs font-semibold text-blue-700 hover:underline"
+          onClick={() => navigate(`/app/orders/view/${value}`)}
+        >
+          {String(value || "—").slice(0, 12)}
+        </button>
+      ),
+    },
+    {
+      key: "netAmount",
+      label: "Net receivable",
+      cellClassName: "font-semibold",
+      render: (value, item) => money(value, item.currency || currency),
+    },
+    {
+      key: "releaseStatus",
+      label: "Status",
+      render: (value, item) => <StatusBadge status={value || item.status} dot />,
+    },
+    {
+      key: "releaseReason",
+      label: "Reason / release",
+      render: (value, item) => (
+        <div>
+          <div className="max-w-xs text-xs text-gray-600">
+            {formatLabel(value || label(item.releaseStatus))}
+          </div>
+          {item.eligibleAt && (
+            <div className="mt-1 text-[11px] text-gray-400">
+              Eligible {formatDateTime12Hour(item.eligibleAt)}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "updatedAt",
+      label: "Updated",
+      cellClassName: "whitespace-nowrap text-xs text-gray-500",
+      render: (value, item) => formatDateTime12Hour(value || item.createdAt),
+    },
+  ], [currency, navigate]);
 
   const load = useCallback(async () => {
     try {
@@ -92,15 +141,16 @@ export default function SellerWallet() {
             <div><h2 className="text-[18px] font-medium text-gray-900">Receivable ledger</h2><p className="text-xs text-gray-500">Order-level movement from pending to payout.</p></div>
             <span className="text-xs text-gray-500">{wallet.total || items.length} entries</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 text-sm">
-              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500"><tr><th className="px-4 py-3">S.No</th><th className="px-4 py-3">Order</th><th className="px-4 py-3">Net receivable</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Reason / release</th><th className="px-4 py-3">Updated</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
-                {items.map((item, index) => <tr key={item.commissionId} className="hover:bg-gray-50"><td className="px-4 py-3 text-gray-500">{index + 1}.</td><td className="px-4 py-3"><button type="button" className="font-mono text-xs font-semibold text-blue-700 hover:underline" onClick={() => navigate(`/app/orders/view/${item.orderId}`)}>{String(item.orderId || "—").slice(0, 12)}</button></td><td className="px-4 py-3 font-semibold">{money(item.netAmount, item.currency || currency)}</td><td className="px-4 py-3"><StatusBadge status={item.releaseStatus || item.status} dot /></td><td className="px-4 py-3"><div className="max-w-xs text-xs text-gray-600">{formatLabel(item.releaseReason || label(item.releaseStatus))}</div>{item.eligibleAt && <div className="mt-1 text-[11px] text-gray-400">Eligible {formatDateTime12Hour(item.eligibleAt)}</div>}</td><td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">{formatDateTime12Hour(item.updatedAt || item.createdAt)}</td></tr>)}
-                {!items.length && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-500">No seller wallet entries yet.</td></tr>}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={ledgerColumns}
+            data={items}
+            loading={loading}
+            totalCount={items.length}
+            pageSize={Math.max(items.length, 1)}
+            rowKey={(item) => item.commissionId || item.orderId}
+            emptyText="No seller wallet entries yet."
+            cardClassName="overflow-hidden"
+          />
         </section>
 
         <aside className="space-y-4">
