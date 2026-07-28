@@ -492,7 +492,7 @@ export default function Dashboard() {
         iconBg: "#cce8c9",
         iconColor: "#1d9b50",
         label: "Total Revenue ( GMV )",
-        route: withQuery("/app/payments", {
+        route: withQuery("/app/reports-sales", {
           fromDate: dateFilters.fromDate,
           toDate: dateFilters.toDate,
         }),
@@ -519,7 +519,7 @@ export default function Dashboard() {
         iconBg: "#ffe5b5",
         iconColor: "#f5a300",
         label: "Units Sold",
-        route: withQuery("/app/inventory", {
+        route: withQuery("/app/reports-products", {
           fromDate: dateFilters.fromDate,
           toDate: dateFilters.toDate,
         }),
@@ -564,9 +564,12 @@ export default function Dashboard() {
   }, [dateFilters.fromDate, dateFilters.toDate, overview]);
 
   const recentOrders = useMemo(
-    () => (Array.isArray(overview?.recentOrders) ? overview.recentOrders : []),
-    [overview],
-  );
+  () =>
+    Array.isArray(overview?.recentOrders)
+      ? overview.recentOrders.slice(0, 5)
+      : [],
+  [overview],
+);
 
   const performanceData = useMemo(() => {
     const source =
@@ -609,15 +612,15 @@ export default function Dashboard() {
     }));
   }, [overview, recentOrders]);
 
-  const topProducts = useMemo(
-    () =>
-      Array.isArray(overview?.topProducts)
-        ? overview.topProducts.filter((product) =>
-            Boolean(product?.name || product?.title),
-          )
-        : [],
-    [overview],
-  );
+ const topProducts = useMemo(
+  () =>
+    Array.isArray(overview?.topProducts)
+      ? overview.topProducts
+          .filter((product) => Boolean(product?.name || product?.title))
+          .slice(0, 5)
+      : [],
+  [overview],
+);
   const topProductChartData = useMemo(
     () =>
       topProducts.slice(0, 8).map((product) => ({
