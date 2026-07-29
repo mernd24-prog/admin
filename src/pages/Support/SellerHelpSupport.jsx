@@ -277,7 +277,6 @@ const SellerHelpSupport = () => {
         onClose={() => setSelectedQuery(null)}
         title={selectedQuery?.queryId ? `Query ${selectedQuery.queryId}` : "Query Details"}
         isButtonView={false}
-        width="620px"
       >
         {detailLoading ? (
           <div className="py-10 text-center text-sm text-[var(--admin-muted)]">Loading query details...</div>

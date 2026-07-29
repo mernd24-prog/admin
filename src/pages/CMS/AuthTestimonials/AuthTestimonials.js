@@ -332,7 +332,6 @@ const AuthTestimonials = () => {
         loading={submitting || uploadingAvatar}
         title={formData.recordSlug ? "Edit Auth Testimonial" : "Add Auth Testimonial"}
         submitButtonText={formData.recordSlug ? "Update" : "Create"}
-        width="560px"
       >
         <div className="space-y-4">
           <Field label="Reviewer Name" error={errors.name}>

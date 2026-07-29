@@ -1015,7 +1015,17 @@ const SellerFinance = () => {
             <tr key={row.id}>
               {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
               <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{valueOf(row, "period_start", "periodStart") || "—"} – {valueOf(row, "period_end", "periodEnd") || "—"}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs">
+                {formatDateTime12Hour(
+                  valueOf(row, "period_start", "periodStart"),
+                  "—",
+                )}{" "}
+                –{" "}
+                {formatDateTime12Hour(
+                  valueOf(row, "period_end", "periodEnd"),
+                  "—",
+                )}
+              </td>
               <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "total_amount", "totalAmount", "gross_amount", "grossAmount"))}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "commission_amount", "commissionAmount"))}</td>
               <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "tax_amount", "taxAmount"))}</td>
