@@ -1137,7 +1137,7 @@ const DealManagement = () => {
         </div>
       </DefaultModal>
 
-      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Product Detail" isButtonView={false} width="560px">
+      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Product Detail" isButtonView={false}>
         {!detail && detailLoading ? (
           <div className="flex min-h-[260px] items-center justify-center">
             <Loader />

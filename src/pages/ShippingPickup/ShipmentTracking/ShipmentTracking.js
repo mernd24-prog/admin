@@ -4,7 +4,16 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdLocalShipping } from "react-icons/md";
+import {
+  MdInventory2,
+  MdLocalShipping,
+  MdLocationOn,
+  MdOpenInNew,
+  MdPayments,
+  MdPerson,
+  MdStorefront,
+  MdTimeline,
+} from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
@@ -41,6 +50,14 @@ const FULFILLMENT_STATUS_OPTIONS = [
   { value: "failed", label: "Failed delivery" },
   { value: "rto", label: "Return to origin" },
   { value: "cancelled", label: "Cancelled" },
+];
+const DELIVERY_METHOD_OPTIONS = [
+  { value: "manual", label: "Manual / Seller Delivery" },
+  { value: "Local Same Day", label: "Local Same Day" },
+  { value: "Prepaid Heavy and High Value", label: "Prepaid Heavy and High Value" },
+  { value: "Express Metro", label: "Express Metro" },
+  { value: "Standard All India", label: "Standard All India" },
+  { value: "Ecom Express", label: "Ecom Express" },
 ];
 const FULFILLMENT_TRANSITIONS = {
   initiated: ["in_transit", "failed"],
@@ -106,6 +123,34 @@ const ActionButton = ({
     </button>
   );
 };
+
+const ShipmentFact = ({ icon, label, children }) => (
+  <div className="flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 bg-white p-3">
+    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+      {icon}
+    </span>
+    <div className="min-w-0">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        {label}
+      </div>
+      <div className="mt-0.5 break-words text-sm font-medium text-gray-800">
+        {children || "—"}
+      </div>
+    </div>
+  </div>
+);
+
+const FieldError = ({ message }) => (
+  <span
+    className={`h-4 truncate text-[11px] font-normal leading-4 text-red-600 ${
+      message ? "visible" : "invisible"
+    }`}
+    role={message ? "alert" : undefined}
+    title={message || undefined}
+  >
+    {message || "Validation message"}
+  </span>
+);
 
 const ShipmentTracking = () => {
   const dispatch = useDispatch();
@@ -340,8 +385,18 @@ const ShipmentTracking = () => {
     if (trackingAction.status === "in_transit") {
       if (!trackingAction.courierName.trim())
         nextErrors.courierName = "Courier or delivery method is required.";
-      if (!trackingAction.awbNumber.trim())
+      if (!trackingAction.awbNumber.trim()) {
         nextErrors.awbNumber = "Tracking reference is required.";
+      } else if (
+        trackingAction.awbNumber.length < 5 ||
+        trackingAction.awbNumber.length > 50
+      ) {
+        nextErrors.awbNumber =
+          "Tracking reference must be 5–50 characters.";
+      } else if (!/^[A-Za-z0-9_/-]+$/.test(trackingAction.awbNumber)) {
+        nextErrors.awbNumber =
+          "Allowed: letters, numbers, -, _, and / only.";
+      }
       if (!trackingAction.shippedAt)
         nextErrors.shippedAt = "Shipment time is required.";
     }
@@ -362,7 +417,10 @@ const ShipmentTracking = () => {
       nextErrors.shippedAt = "Shipment time cannot be in the future.";
     if (Object.keys(nextErrors).length) {
       setTrackingErrors(nextErrors);
-      toast.error("Please correct the highlighted delivery details.");
+      toast.error(
+        "Please correct the highlighted shipment fields before updating.",
+        { id: "shipment-tracking-validation-error" },
+      );
       return;
     }
     try {
@@ -607,16 +665,25 @@ const ShipmentTracking = () => {
         title="Shipment Detail"
         isButtonView={false}
       >
-        <div className="space-y-3 text-sm">
-          <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 md:grid-cols-2">
-            <div>
-              <strong>Order:</strong> #
-              {selectedShipment?.orderNumber ||
-                selectedShipment?.order_number ||
-                "Order"}
-            </div>
-            <div>
-              <strong>Status:</strong>{" "}
+        <div className="space-y-4 text-sm">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/70">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white p-4 sm:p-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                  <MdLocalShipping size={23} />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-gray-500">
+                    Order Shipment
+                  </div>
+                  <div className="truncate text-lg font-semibold text-gray-950">
+                    #
+                    {selectedShipment?.orderNumber ||
+                      selectedShipment?.order_number ||
+                      String(selectedShipment?.order_id || "Order").slice(-8)}
+                  </div>
+                </div>
+              </div>
               <StatusBadge
                 status={shipmentStepLabel(
                   selectedShipment?.status || "initiated",
@@ -624,66 +691,74 @@ const ShipmentTracking = () => {
                 dot
               />
             </div>
-            <div>
-              <strong>Seller:</strong>{" "}
-              {selectedShipment?.sellerName ||
-                selectedShipment?.seller?.displayName ||
-                selectedShipment?.seller?.businessName ||
-                "Seller"}
+            <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
+              <ShipmentFact icon={<MdStorefront size={17} />} label="Seller">
+                {selectedShipment?.sellerName ||
+                  selectedShipment?.seller?.displayName ||
+                  selectedShipment?.seller?.businessName ||
+                  "Seller"}
+              </ShipmentFact>
+              <ShipmentFact icon={<MdPerson size={17} />} label="Customer">
+                {selectedShipment?.buyerName ||
+                  selectedShipment?.buyer?.displayName ||
+                  selectedShipment?.buyer?.email ||
+                  "Customer"}
+              </ShipmentFact>
+              <ShipmentFact icon={<MdLocalShipping size={17} />} label="Delivery">
+                <div>{selectedShipment?.courier_name || "Seller delivery"}</div>
+                <div className="mt-0.5 text-xs font-normal text-gray-500">
+                  {selectedShipment?.tracking_number ||
+                    selectedShipment?.awb_number ||
+                    "Tracking number not added"}
+                </div>
+              </ShipmentFact>
+              <ShipmentFact icon={<MdPayments size={17} />} label="Shipment">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>
+                    {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span>
+                    {displayStatus(
+                      selectedShipment?.shipment_type ||
+                        selectedShipment?.direction ||
+                        "forward",
+                    )}
+                  </span>
+                </div>
+              </ShipmentFact>
             </div>
-            <div>
-              <strong>Customer:</strong>{" "}
-              {selectedShipment?.buyerName ||
-                selectedShipment?.buyer?.displayName ||
-                selectedShipment?.buyer?.email ||
-                "Customer"}
-            </div>
-            <div>
-              <strong>Courier:</strong>{" "}
-              {selectedShipment?.courier_name || "Seller delivery"}
-            </div>
-            <div>
-              <strong>Tracking number:</strong>{" "}
-              {selectedShipment?.tracking_number ||
-                selectedShipment?.awb_number ||
-                "Not added"}
-            </div>
-            <div>
-              <strong>Tracking URL:</strong>{" "}
-              {selectedShipment?.tracking_url ? (
+            <div className="grid grid-cols-1 gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:grid-cols-2">
+              <div>
+                Shipment date:{" "}
+                <strong className="font-medium text-gray-700">
+                  {formatDateTime12Hour(
+                    selectedShipment?.shipped_at,
+                    "Not shipped",
+                  )}
+                </strong>
+              </div>
+              <div className="sm:text-right">
+                Tracking URL:{" "}
+                {selectedShipment?.tracking_url ? (
                 <a
-                  className="text-blue-600 underline"
+                  className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
                   href={selectedShipment.tracking_url}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open tracking
+                  Open live tracking <MdOpenInNew size={14} />
                 </a>
-              ) : (
-                "Not added"
-              )}
+                ) : (
+                  <strong className="font-medium text-gray-700">
+                    Not added
+                  </strong>
+                )}
+              </div>
             </div>
-            <div>
-              <strong>Shipment date:</strong>{" "}
-              {formatDateTime12Hour(
-                selectedShipment?.shipped_at,
-                "Not shipped",
-              )}
-            </div>
-            <div>
-              <strong>Payment collection:</strong>{" "}
-              {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}
-            </div>
-            <div>
-              <strong>Shipment type:</strong>{" "}
-              {displayStatus(
-                selectedShipment?.shipment_type ||
-                  selectedShipment?.direction ||
-                  "forward",
-              )}
-            </div>
-          </div>
-          <div className="min-w-0 overflow-hidden rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+          </section>
+
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/40 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="font-semibold text-gray-800">
@@ -720,15 +795,15 @@ const ShipmentTracking = () => {
                     View cancellation
                   </button>
                 </div>
-              )}
+            )}
             {trackingActionOptions.length > 0 ? (
-              <div className="mt-4 space-y-4">
-                <div className="grid min-w-0 gap-1.5 md:max-w-xs">
+              <div className="mt-4 space-y-2">
+                <div className="grid min-w-0 gap-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Next status
                   </label>
                   <select
-                    className="min-w-0 w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800"
+                    className="min-w-0 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     value={trackingAction.status}
                     onChange={(event) => {
                       setTrackingErrors({});
@@ -749,17 +824,17 @@ const ShipmentTracking = () => {
                 {["in_transit", "delivered", "failed", "rto"].includes(
                   trackingAction.status,
                 ) && (
-                  <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-4">
+                  <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] items-start gap-4">
                     {trackingAction.status !== "delivered" && (
-                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
+                      <label className="grid min-w-0 content-start gap-1.5 text-xs font-semibold text-gray-600">
                         <span>
-                          Checkpoint location{" "}
+                          Checkpoint Location{" "}
                           <span className="font-normal text-gray-400">
                             (optional)
                           </span>
                         </span>
                         <input
-                          className={`min-w-0 w-full rounded-md border bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`}
+                          className={`h-20 min-w-0 w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`}
                           placeholder="Hub, city, or delivery area"
                           value={trackingAction.location}
                           onChange={(event) =>
@@ -769,15 +844,11 @@ const ShipmentTracking = () => {
                             }))
                           }
                         />
-                        {trackingErrors.location && (
-                          <span className="font-normal text-red-600">
-                            {trackingErrors.location}
-                          </span>
-                        )}
+                        <FieldError message={trackingErrors.location} />
                       </label>
                     )}
                     <label
-                      className={`grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600 ${trackingAction.status === "delivered" ? "col-span-full" : ""}`}
+                      className={`grid min-w-0 content-start gap-1.5 text-xs font-semibold text-gray-600 ${trackingAction.status === "delivered" ? "col-span-full" : ""}`}
                     >
                       <span>
                         Note{" "}
@@ -790,7 +861,7 @@ const ShipmentTracking = () => {
                         )}
                       </span>
                       <textarea
-                        className={`min-h-20 min-w-0 w-full resize-y rounded-md border bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`}
+                        className={`min-h-20 min-w-0 w-full resize-y rounded-lg border bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.note ? "border-red-400" : "border-gray-200"}`}
                         placeholder={
                           ["failed", "rto"].includes(trackingAction.status)
                             ? "Explain the reason"
@@ -806,64 +877,95 @@ const ShipmentTracking = () => {
                           }))
                         }
                       />
-                      {trackingErrors.note && (
-                        <span className="font-normal text-red-600">
-                          {trackingErrors.note}
-                        </span>
-                      )}
+                      <FieldError message={trackingErrors.note} />
                     </label>
                   </div>
                 )}
 
                 {trackingAction.status === "in_transit" && (
-                  <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="!mt-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Dispatch details
                     </div>
-                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-3">
+                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-x-3 gap-y-1">
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        Courier / delivery method{" "}
-                        <span className="text-red-500">Required</span>
-                        <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
-                          placeholder="Example: Seller delivery"
+                        <span>
+                          Courier / Delivery Method{" "}
+                          <span className="text-red-500" aria-hidden="true">
+                            *
+                          </span>
+                        </span>
+                        <select
+                          className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
                           value={trackingAction.courierName}
-                          onChange={(event) =>
+                          required
+                          aria-required="true"
+                          aria-invalid={Boolean(trackingErrors.courierName)}
+                          onChange={(event) => {
                             setTrackingAction((prev) => ({
                               ...prev,
                               courierName: event.target.value,
-                            }))
-                          }
-                        />
-                        {trackingErrors.courierName && (
-                          <span className="text-red-600">
-                            {trackingErrors.courierName}
-                          </span>
-                        )}
+                            }));
+                            setTrackingErrors((prev) => ({
+                              ...prev,
+                              courierName: "",
+                            }));
+                          }}
+                        >
+                          <option value="">Select delivery method</option>
+                          {trackingAction.courierName &&
+                            !DELIVERY_METHOD_OPTIONS.some(
+                              (option) =>
+                                option.value === trackingAction.courierName,
+                            ) && (
+                              <option value={trackingAction.courierName}>
+                                {trackingAction.courierName}
+                              </option>
+                            )}
+                          {DELIVERY_METHOD_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <FieldError message={trackingErrors.courierName} />
                       </label>
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        AWB / tracking reference{" "}
-                        <span className="text-red-500">Required</span>
+                        <span>
+                          AWB / Tracking Reference{" "}
+                          <span className="text-red-500" aria-hidden="true">
+                            *
+                          </span>
+                        </span>
                         <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`}
                           value={trackingAction.awbNumber}
-                          onChange={(event) =>
+                          required
+                          minLength={5}
+                          maxLength={50}
+                          pattern="[A-Za-z0-9_/-]{5,50}"
+                          title="Use 5–50 letters, numbers, hyphens, underscores, or slashes. Spaces are not allowed."
+                          autoCapitalize="characters"
+                          spellCheck={false}
+                          aria-required="true"
+                          aria-invalid={Boolean(trackingErrors.awbNumber)}
+                          onChange={(event) => {
                             setTrackingAction((prev) => ({
                               ...prev,
                               awbNumber: event.target.value,
-                            }))
-                          }
+                            }));
+                            setTrackingErrors((prev) => ({
+                              ...prev,
+                              awbNumber: "",
+                            }));
+                          }}
                         />
-                        {trackingErrors.awbNumber && (
-                          <span className="text-red-600">
-                            {trackingErrors.awbNumber}
-                          </span>
-                        )}
+                        <FieldError message={trackingErrors.awbNumber} />
                       </label>
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         Tracking URL
                         <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`}
                           type="url"
                           placeholder="https://..."
                           value={trackingAction.trackingUrl}
@@ -874,46 +976,49 @@ const ShipmentTracking = () => {
                             }))
                           }
                         />
-                        {trackingErrors.trackingUrl && (
-                          <span className="text-red-600">
-                            {trackingErrors.trackingUrl}
-                          </span>
-                        )}
+                        <FieldError message={trackingErrors.trackingUrl} />
                       </label>
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        Shipped at{" "}
-                        <span className="text-red-500">Required</span>
+                        <span>
+                          Shipped At{" "}
+                          <span className="text-red-500" aria-hidden="true">
+                            *
+                          </span>
+                        </span>
                         <input
-                          className={`min-w-0 w-full max-w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full max-w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
                           type="datetime-local"
                           max={moment().format("YYYY-MM-DDTHH:mm")}
                           value={trackingAction.shippedAt}
-                          onChange={(event) =>
+                          required
+                          aria-required="true"
+                          aria-invalid={Boolean(trackingErrors.shippedAt)}
+                          onChange={(event) => {
                             setTrackingAction((prev) => ({
                               ...prev,
                               shippedAt: event.target.value,
-                            }))
-                          }
+                            }));
+                            setTrackingErrors((prev) => ({
+                              ...prev,
+                              shippedAt: "",
+                            }));
+                          }}
                         />
-                        {trackingErrors.shippedAt && (
-                          <span className="text-red-600">
-                            {trackingErrors.shippedAt}
-                          </span>
-                        )}
+                        <FieldError message={trackingErrors.shippedAt} />
                       </label>
                     </div>
                   </div>
                 )}
 
-                <div className="flex justify-end">
-                  <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex justify-end pt-2">
+                  <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
                     {isSeller &&
                       ["initiated", "manifested", "failed"].includes(
                         selectedShipment?.status,
                       ) && (
                         <button
                           type="button"
-                          className="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          className="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                           onClick={() =>
                             setCancellationAction((prev) => ({
                               ...prev,
@@ -924,9 +1029,13 @@ const ShipmentTracking = () => {
                           Cancel seller items
                         </button>
                       )}
-                    <ActionButton onClick={handleTrackingStatus}>
+                    <button
+                      type="button"
+                      className="admin-btn-primary justify-center !px-4 !py-2.5"
+                      onClick={handleTrackingStatus}
+                    >
                       Update shipment status
-                    </ActionButton>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -967,42 +1076,95 @@ const ShipmentTracking = () => {
                 )}
               </div>
             )}
+          </section>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <section className="rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                  <MdLocationOn size={18} />
+                </span>
+                <div className="font-semibold text-gray-900">
+                  Delivery address
+                </div>
+              </div>
+              {selectedShipment?.ship_to_snapshot ? (
+                <div className="mt-3 space-y-1 text-sm leading-5 text-gray-600">
+                  <div className="font-semibold text-gray-800">
+                    {selectedShipment.ship_to_snapshot.fullName ||
+                      "Customer"}
+                  </div>
+                  {selectedShipment.ship_to_snapshot.phone && (
+                    <div>{selectedShipment.ship_to_snapshot.phone}</div>
+                  )}
+                  <div>
+                    {[
+                      selectedShipment.ship_to_snapshot.line1,
+                      selectedShipment.ship_to_snapshot.line2,
+                      selectedShipment.ship_to_snapshot.city,
+                      selectedShipment.ship_to_snapshot.state,
+                      selectedShipment.ship_to_snapshot.postalCode,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "Address not available"}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 text-sm text-gray-500">
+                  Address not available
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                  <MdInventory2 size={18} />
+                </span>
+                <div className="font-semibold text-gray-900">Package</div>
+              </div>
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  Weight
+                </div>
+                <div className="mt-0.5 font-semibold text-gray-800">
+                  {selectedShipment?.package_snapshot?.weightGrams
+                    ? `${selectedShipment.package_snapshot.weightGrams} g`
+                    : "Not entered"}
+                </div>
+                <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  Dimensions
+                </div>
+                <div className="mt-0.5 font-semibold text-gray-800">
+                  {selectedShipment?.package_snapshot?.length
+                    ? `${selectedShipment.package_snapshot.length} × ${selectedShipment.package_snapshot.width || "—"} × ${selectedShipment.package_snapshot.height || "—"} ${selectedShipment.package_snapshot.unit || "cm"}`
+                    : "Not entered"}
+                </div>
+              </div>
+            </section>
           </div>
-          <div className="rounded-lg border border-gray-100 p-4">
-            <div className="font-semibold text-gray-800">Delivery address</div>
-            <div className="mt-2 text-gray-600">
-              {[
-                selectedShipment?.ship_to_snapshot?.fullName,
-                selectedShipment?.ship_to_snapshot?.phone,
-                selectedShipment?.ship_to_snapshot?.line1,
-                selectedShipment?.ship_to_snapshot?.line2,
-                selectedShipment?.ship_to_snapshot?.city,
-                selectedShipment?.ship_to_snapshot?.state,
-                selectedShipment?.ship_to_snapshot?.postalCode,
-              ]
-                .filter(Boolean)
-                .join(", ") || "Address not available"}
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                <MdTimeline size={18} />
+              </span>
+              <div>
+                <div className="font-semibold text-gray-900">
+                  Tracking timeline
+                </div>
+                <div className="text-xs text-gray-500">
+                  Shipment updates in chronological order
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-4">
-            <div className="font-semibold text-gray-800">Package</div>
-            <div className="mt-2 text-gray-600">
-              {selectedShipment?.package_snapshot?.weightGrams
-                ? `${selectedShipment.package_snapshot.weightGrams} g`
-                : "Weight not entered"}
-              {selectedShipment?.package_snapshot?.length
-                ? ` · ${selectedShipment.package_snapshot.length} × ${selectedShipment.package_snapshot.width || "-"} × ${selectedShipment.package_snapshot.height || "-"} ${selectedShipment.package_snapshot.unit || "cm"}`
-                : ""}
-            </div>
-          </div>
-          <div className="border-t pt-3">
-            <strong>Tracking timeline</strong>
-            <div className="mt-3 space-y-3">
+            <div className="mt-4">
               {(selectedShipment?.trackingEvents || []).map((event) => (
                 <div
                   key={event.id}
-                  className="relative rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                  className="relative ml-2 border-l-2 border-blue-100 pb-5 pl-6 last:border-transparent last:pb-0"
                 >
+                  <span className="absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100" />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-semibold text-gray-800">
                       {shipmentStepLabel(event.status)}
@@ -1028,12 +1190,12 @@ const ShipmentTracking = () => {
                 </div>
               ))}
               {!selectedShipment?.trackingEvents?.length && (
-                <div className="text-xs text-gray-500">
+                <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                   No tracking events found.
                 </div>
               )}
             </div>
-          </div>
+          </section>
         </div>
       </DefaultModal>
 

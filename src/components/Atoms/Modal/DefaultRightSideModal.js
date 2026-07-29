@@ -14,7 +14,7 @@ const DefaultModal = ({
     closeButtonText = "Reset",
     title,
     titleClassName = '',
-    width = "500px",
+     width = "600px",
     loading = false,
     closeOnOutsideClick = true
 }) => {

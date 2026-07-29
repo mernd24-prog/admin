@@ -73,7 +73,7 @@ const ACTION_TITLES = {
 };
 
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  { key: "orderId", type: "text", label: "Return #", width: "w-48" },
   {
     key: "buyerId",
     type: "asyncDropdown",
@@ -779,7 +779,7 @@ const filterFields = useMemo(
         exportConfig={{ filename: "returns-refunds", columns, data: visibleReturns }}
       />
 
-      <DefaultModal isOpen={Boolean(detailReturn)} onClose={() => setDetailReturn(null)} title="Return Detail" isButtonView={false} width="640px">
+      <DefaultModal isOpen={Boolean(detailReturn)} onClose={() => setDetailReturn(null)} title="Return Detail" isButtonView={false}>
         <div className="space-y-4 text-sm">
           {isSeller && sellerQcGuidance(detailReturn) && (
             <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">

@@ -152,7 +152,9 @@ const TaxInvoiceDetail = () => {
       setLoading(true);
       await dispatch(getTaxInvoice({ invoiceId })).unwrap();
     } catch (error) {
-      toast.error(error?.message || error || "Unable to load invoice");
+      toast.error(error?.message || error || "Unable to load invoice", {
+        id: `invoice-load-error-${invoiceId}`,
+      });
     } finally {
       setLoading(false);
     }

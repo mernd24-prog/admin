@@ -222,7 +222,6 @@ const AdminQueries = () => {
         submitButtonText="Update Status"
         closeButtonText="Close"
         loading={savingStatus}
-        width="620px"
       >
         {detailLoading ? (
           <div className="py-10 text-center text-sm text-[var(--admin-muted)]">Loading query details...</div>

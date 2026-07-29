@@ -1181,7 +1181,6 @@ const SellerSubAdminManagement = () => {
         onClose={() => setViewTarget(null)}
         isButtonView={false}
         title="Sub-Seller Details"
-        width="720px"
       >
         {viewTarget && (
           <div className="space-y-5">

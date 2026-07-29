@@ -314,28 +314,30 @@ const Profile = () => {
     }
   };
 
-  const handleUpdate = async () => {
-    setUpdating(true);
-    try {
-      let apiPayload = {
-        user_image: formData?.user_image,
-        full_name: formData?.full_name,
-      };
-      const res = await dispatch(updateProfile(apiPayload)).unwrap();
-      if (res?.data) {
-        setFormData(profileToForm(res.data));
-        window.dispatchEvent(
-          new CustomEvent("profile:updated", { detail: res.data }),
-        );
-      }
+ const handleUpdate = async () => {
+  setUpdating(true);
+  try {
+    const apiPayload = {
+      user_image: formData?.user_image,
+      full_name: formData?.full_name,
+    };
+    const res = await dispatch(updateProfile(apiPayload)).unwrap();
+    if (res?.data) {
+      setFormData(profileToForm(res.data));
+      window.dispatchEvent(
+        new CustomEvent("profile:updated", { detail: res.data })
+      );
+
       setIsEditing(false);
-    } catch (error) {
-      console.log(error);
-      toast.error(error?.message || "Error updating profile");
-    } finally {
-      setUpdating(false);
+      toast.success("Profile updated successfully!");
     }
-  };
+  } catch (error) {
+    console.error(error);
+    toast.error(error?.message || "Error updating profile");
+  } finally {
+    setUpdating(false);
+  }
+};
 
   const handleCancel = () => {
     setIsEditing(false);
