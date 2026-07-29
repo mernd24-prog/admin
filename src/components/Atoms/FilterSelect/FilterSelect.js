@@ -1,4 +1,3 @@
-import React from "react";
 import Select from "react-select";
 import AsyncSelect from "react-select/async";
 
@@ -9,18 +8,18 @@ const customStyles = (error) => ({
     borderColor: error
       ? "var(--admin-danger)"
       : state.isFocused
-        ? "var(--admin-blue)"
+        ? ""
         : "var(--admin-field-line)",
     boxShadow: error
       ? "0 0 0 1px var(--admin-danger)"
       : state.isFocused
-        ? "0 0 0 3px rgba(47, 107, 255, 0.11)"
+        ? ""
         : "none",
     borderRadius: "0.375rem",
     minHeight: "36px",
     cursor: "pointer",
     "&:hover": {
-      borderColor: error ? "var(--admin-danger)" : "var(--admin-blue)",
+      borderColor: error ? "var(--admin-danger)" : "",
     },
   }),
   valueContainer: (provided) => ({
@@ -85,6 +84,11 @@ const customStyles = (error) => ({
     whiteSpace: "normal",
     wordBreak: "break-word",
   }),
+  menuList: (provided) => ({
+    ...provided,
+    scrollbarColor: "#1F1B5F transparent",
+    scrollbarWidth: "thin",
+  }),
   menuPortal: (provided) => ({
     ...provided,
     zIndex: 10050,
@@ -122,10 +126,10 @@ const FilterSelect = ({
       {label && (
         <label htmlFor={inputId} className="admin-label">
           {label}
-          {required && <span className="admin-required">*</span>}
+          {required && <span className="admin-required d">*</span>}
         </label>
       )}
-      <div className="relative text-sm min-w-40">
+      <div className="relative text-sm min-w-40 ">
         <SelectComponent
           styles={customStyles(error)}
           className="capitalize"

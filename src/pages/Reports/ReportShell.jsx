@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Bar,
   CartesianGrid,
@@ -25,6 +32,9 @@ import {
   MdStorefront,
   MdTrendingUp,
   MdWarehouse,
+  MdClose,
+  MdChevronLeft,
+  MdChevronRight,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -164,7 +174,8 @@ const queryDateRange = () => {
     : { fromDate: toDate, toDate: fromDate };
 };
 
-const unwrapData = (response) => response?.data?.data ?? response?.data ?? response ?? {};
+const unwrapData = (response) =>
+  response?.data?.data ?? response?.data ?? response ?? {};
 const listFrom = (value) => {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.list)) return value.list;
@@ -177,7 +188,8 @@ const listFrom = (value) => {
   return [];
 };
 
-const fetchJson = async (endpoint, params = {}) => unwrapData(await axiosPrivate.get(endpoint, { params }));
+const fetchJson = async (endpoint, params = {}) =>
+  unwrapData(await axiosPrivate.get(endpoint, { params }));
 
 const useReportFilters = (defaultRange = "Last 30 days") => {
   const [initial] = useState(() => {
@@ -233,9 +245,12 @@ const useApiReport = (loadData, filters) => {
     try {
       setLoading(true);
       setError("");
-      setData(await loadData({ fromDate: filters.fromDate, toDate: filters.toDate }));
+      setData(
+        await loadData({ fromDate: filters.fromDate, toDate: filters.toDate }),
+      );
     } catch (err) {
-      const message = err?.response?.data?.message || err?.message || "Failed to load report";
+      const message =
+        err?.response?.data?.message || err?.message || "Failed to load report";
       setError(message);
       toast.error(message, { id: "report-load-error" });
     } finally {
@@ -259,7 +274,9 @@ const EmptyPanel = ({
       <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
         <MdInbox size={21} />
       </span>
-      <h4 className="mt-3 text-[13px] font-bold text-[var(--admin-navy)]">{title}</h4>
+      <h4 className="mt-3 text-[13px] font-bold text-[var(--admin-navy)]">
+        {title}
+      </h4>
       <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">{text}</p>
     </div>
   </div>
@@ -281,63 +298,86 @@ const PanelSkeleton = ({ rows = 6 }) => (
   </div>
 );
 
-const ReportTable = ({ title, columns = [], rows = [], getRowLink, emptyTitle, emptyText }) => {
+const ReportTable = ({
+  title,
+  columns = [],
+  rows = [],
+  getRowLink,
+  emptyTitle,
+  emptyText,
+}) => {
   const loading = useContext(ReportLoadingContext);
   const navigate = useNavigate();
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[0_10px_28px_rgba(31,27,95,0.06)]">
-    <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3.5">
-      <span className="h-6 w-1 rounded-full bg-[var(--admin-gold)]" />
-      <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">{title}</h3>
-    </div>
-    {loading ? (
-      <div className="p-5"><PanelSkeleton /></div>
-    ) : rows.length ? (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="admin-table-head">
-            <tr>
-              <th className="w-16 px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
-                S.No
-              </th>
-              {columns.map((column) => (
-                <th key={column.key} className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
-                  {column.label}
+      <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3.5">
+        <span className="h-6 w-1 rounded-full bg-[var(--admin-gold)]" />
+        <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">
+          {title}
+        </h3>
+      </div>
+      {loading ? (
+        <div className="p-5">
+          <PanelSkeleton />
+        </div>
+      ) : rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="admin-table-head">
+              <tr>
+                <th className="w-16  px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
+                  S.No
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--admin-line)]">
-            {rows.map((row, index) => (
-              <tr
-                key={row.id || row.sellerId || row.sku || index}
-                onClick={() => {
-                  const link = getRowLink?.(row);
-                  if (link) navigate(link);
-                }}
-                className={getRowLink?.(row) ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]" : ""}
-              >
-                <td className="w-16 px-4 py-2.5 text-xs font-medium text-[var(--admin-muted)]">
-                  {index + 1}.
-                </td>
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]">
-                    {column.render ? column.render(row[column.key], row) : row[column.key]}
-                  </td>
+                  <th
+                    key={column.key}
+                    className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]"
+                  >
+                    {column.label}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    ) : (
-      <div className="p-4">
-        <EmptyPanel
-          title={emptyTitle || "No rows found"}
-          text={emptyText || "No rows returned for this report."}
-        />
-      </div>
-    )}
+            </thead>
+            <tbody className="divide-y  divide-[var(--admin-line)]">
+              {rows.map((row, index) => (
+                <tr
+                  key={row.id || row.sellerId || row.sku || index}
+                  onClick={() => {
+                    const link = getRowLink?.(row);
+                    if (link) navigate(link);
+                  }}
+                  className={
+                    getRowLink?.(row)
+                      ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]"
+                      : ""
+                  }
+                >
+                  <td className="w-16 px-4 py-2.5 text-xs font-medium text-[var(--admin-muted)]">
+                    {index + 1}.
+                  </td>
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]"
+                    >
+                      {column.render
+                        ? column.render(row[column.key], row)
+                        : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="p-4">
+          <EmptyPanel
+            title={emptyTitle || "No rows found"}
+            text={emptyText || "No rows returned for this report."}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -347,8 +387,8 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
     fromDate: filters?.fromDate || "",
     toDate: filters?.toDate || "",
   });
-  const [viewDate, setViewDate] = useState(() =>
-    parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
+  const [viewDate, setViewDate] = useState(
+    () => parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
   );
   const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
   const today = toIsoDate(new Date());
@@ -356,8 +396,13 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
 
   useEffect(() => {
     if (!open) return;
-    setDraftDates({ fromDate: filters?.fromDate || "", toDate: filters?.toDate || "" });
-    setViewDate(parseInputDate(filters?.fromDate || filters?.toDate) || new Date());
+    setDraftDates({
+      fromDate: filters?.fromDate || "",
+      toDate: filters?.toDate || "",
+    });
+    setViewDate(
+      parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
+    );
   }, [filters?.fromDate, filters?.toDate, open]);
 
   if (!open) return null;
@@ -367,17 +412,20 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
     if (!selectedDate) return;
     setViewDate(selectedDate);
     setDraftDates((current) => {
-      if (!current.fromDate || current.toDate) return { fromDate: value, toDate: "" };
-      if (value < current.fromDate) return { fromDate: value, toDate: current.fromDate };
+      if (!current.fromDate || current.toDate)
+        return { fromDate: value, toDate: "" };
+      if (value < current.fromDate)
+        return { fromDate: value, toDate: current.fromDate };
       return { ...current, toDate: value };
     });
   };
 
   const applyRange = () => {
     if (!hasCompleteRange) return;
-    const nextDates = draftDates.fromDate <= draftDates.toDate
-      ? draftDates
-      : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
+    const nextDates =
+      draftDates.fromDate <= draftDates.toDate
+        ? draftDates
+        : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
     filters.setDateRange(nextDates.fromDate, nextDates.toDate);
     onClose();
   };
@@ -388,54 +436,65 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-[390px] rounded-lg bg-white p-4 shadow-[0_22px_70px_rgba(31,27,95,0.22)]"
+        className="w-full max-w-[390px] rounded-lg bg-white p-5 shadow-[0_22px_70px_rgba(31,27,95,0.22)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-[var(--admin-ink)]">Select Date Range</h2>
-            <p className="mt-1 text-xs text-[var(--admin-muted)]">Report data will update after apply.</p>
+            <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+              Select Date Range
+            </h2>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Report data will update after apply.
+            </p>
           </div>
           <button
             type="button"
-            className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200 active:scale-90"
             onClick={onClose}
             disabled={loading}
             aria-label="Close date range picker"
           >
-            x
+            <MdClose size={18} />
           </button>
         </div>
 
-        <div className="rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-none">
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="rounded-lg border border-[var(--admin-line)] bg-white p-4 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#ffe8a8]"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)] transition-all duration-200 active:scale-90 disabled:opacity-50"
               onClick={() => setViewDate(addMonths(viewDate, -1))}
               disabled={loading}
               aria-label="Previous month"
             >
-              {"<"}
+              <MdChevronLeft size={18} />
             </button>
             <div className="text-center">
-              <h3 className="text-sm font-bold text-[var(--admin-ink)]">{monthFormatter.format(viewDate)}</h3>
-              <p className="text-[11px] font-medium text-[var(--admin-muted)]">Select start and end date</p>
+              <h3 className="text-sm font-bold text-[var(--admin-navy)] tracking-tight">
+                {monthFormatter.format(viewDate)}
+              </h3>
+              <p className="text-[10px] font-semibold text-[var(--admin-muted)] uppercase tracking-wider">
+                Select start and end date
+              </p>
             </div>
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#ffe8a8]"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)] transition-all duration-200 active:scale-90 disabled:opacity-50"
               onClick={() => setViewDate(addMonths(viewDate, 1))}
               disabled={loading}
               aria-label="Next month"
             >
-              {">"}
+              <MdChevronRight size={18} />
             </button>
           </div>
 
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)] opacity-80">
             {WEEKDAY_LABELS.map((label) => (
               <span key={label}>{label}</span>
             ))}
@@ -446,21 +505,37 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
               const isStart = day.value === draftDates.fromDate;
               const isEnd = day.value === draftDates.toDate;
               const isSelected = isStart || isEnd;
-              const isInRange = isBetweenDates(day.value, draftDates.fromDate, draftDates.toDate);
+              const isInRange = isBetweenDates(
+                day.value,
+                draftDates.fromDate,
+                draftDates.toDate,
+              );
               const isDisabled = day.value > today;
+              const isToday = day.value === today;
+
+              let buttonClass = "flex h-9 w-full items-center justify-center text-xs font-semibold transition-all duration-150 ";
+              if (isStart && isEnd) {
+                buttonClass += "rounded-full bg-[var(--admin-gold)] text-white shadow-sm";
+              } else if (isStart) {
+                buttonClass += draftDates.toDate 
+                  ? "rounded-l-full bg-[var(--admin-gold)] text-white shadow-sm"
+                  : "rounded-full bg-[var(--admin-gold)] text-white shadow-sm";
+              } else if (isEnd) {
+                buttonClass += "rounded-r-full bg-[var(--admin-gold)] text-white shadow-sm";
+              } else if (isInRange) {
+                buttonClass += "bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] rounded-none";
+              } else if (day.isCurrentMonth) {
+                buttonClass += "rounded-full text-[var(--admin-ink)] enabled:hover:bg-slate-100";
+                if (isToday) buttonClass += " border border-[var(--admin-gold)] text-[var(--admin-gold-dark)] font-bold";
+              } else {
+                buttonClass += "rounded-full text-slate-300 enabled:hover:bg-slate-50";
+              }
+
               return (
                 <button
                   key={day.value}
                   type="button"
-                  className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
-                    isSelected
-                      ? "bg-[var(--admin-gold)] text-white shadow-sm"
-                      : isInRange
-                        ? "bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]"
-                        : day.isCurrentMonth
-                          ? "text-[var(--admin-ink)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)]"
-                          : "text-slate-300 hover:bg-slate-50"
-                  } disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
+                  className={`${buttonClass} disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
                   onClick={() => selectDate(day.value)}
                   disabled={loading || isDisabled}
                 >
@@ -470,15 +545,26 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
             })}
           </div>
 
-          <div className="mt-3 rounded border border-[#ead8a9] bg-[var(--admin-gold-soft)] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
-            {draftDates.fromDate ? formatDateLabel(draftDates.fromDate) : "Start date"} - {draftDates.toDate ? formatDateLabel(draftDates.toDate) : "End date"}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/30 px-3 py-1.5 text-center">
+              <span className="block text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)]">From</span>
+              <span className="text-xs font-bold text-[var(--admin-ink)]">
+                {draftDates.fromDate ? formatDateLabel(draftDates.fromDate) : "—"}
+              </span>
+            </div>
+            <div className="rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/30 px-3 py-1.5 text-center">
+              <span className="block text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)]">To</span>
+              <span className="text-xs font-bold text-[var(--admin-ink)]">
+                {draftDates.toDate ? formatDateLabel(draftDates.toDate) : "—"}
+              </span>
+            </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="mt-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex min-h-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#ffe8a8] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-semibold text-[var(--admin-navy)] hover:bg-slate-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
                 onClick={selectToday}
                 disabled={loading}
               >
@@ -486,9 +572,11 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-8 items-center justify-center rounded border border-red-100 bg-white px-3 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-red-100 bg-red-50/20 px-3 text-xs font-semibold text-red-600 hover:bg-red-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
                 onClick={() => setDraftDates({ fromDate: "", toDate: "" })}
-                disabled={loading || (!draftDates.fromDate && !draftDates.toDate)}
+                disabled={
+                  loading || (!draftDates.fromDate && !draftDates.toDate)
+                }
               >
                 Clear
               </button>
@@ -496,7 +584,7 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
                 onClick={onClose}
                 disabled={loading}
               >
@@ -504,7 +592,7 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#ffe8a8] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex h-8 min-w-[76px] items-center justify-center rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold)] px-4 text-xs font-bold text-[var(--admin-navy)] shadow-sm hover:bg-[#ffe8a8] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!hasCompleteRange || loading}
                 onClick={applyRange}
               >
@@ -533,9 +621,10 @@ export const ReportShell = ({
 }) => {
   const [exporting, setExporting] = useState(false);
   const [dateModalOpen, setDateModalOpen] = useState(false);
-  const dateRangeLabel = filters?.fromDate && filters?.toDate
-    ? `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`
-    : "Select date range";
+  const dateRangeLabel =
+    filters?.fromDate && filters?.toDate
+      ? `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`
+      : "Select date range";
 
   const handleExport = async () => {
     if (!exportEndpoint) return;
@@ -547,7 +636,8 @@ export const ReportShell = ({
         { filename: exportFilename || "report.csv", format: "csv" },
       );
     } catch (err) {
-      const message = err?.response?.data?.message || err?.message || "Export failed";
+      const message =
+        err?.response?.data?.message || err?.message || "Export failed";
       toast.error(message, { id: "report-export-error" });
     } finally {
       setExporting(false);
@@ -563,7 +653,8 @@ export const ReportShell = ({
         actions={
           exportEndpoint && (
             <button type="button" onClick={handleExport} disabled={exporting}>
-              <MdFileDownload size={16} /> {exporting ? "Exporting" : "Export CSV"}
+              <MdFileDownload size={16} />{" "}
+              {exporting ? "Exporting" : "Export CSV"}
             </button>
           )
         }
@@ -599,7 +690,10 @@ export const ReportShell = ({
                   className="admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none text-[var(--admin-ink)]"
                 >
                   <span className="min-w-0 truncate">{dateRangeLabel}</span>
-                  <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
+                  <MdArrowDropDown
+                    size={16}
+                    className="shrink-0 text-gray-400"
+                  />
                 </button>
               </div>
 
@@ -609,14 +703,19 @@ export const ReportShell = ({
                 disabled={loading}
                 className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
               >
-                <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
+                <MdRefresh
+                  className={loading ? "animate-spin" : ""}
+                  size={16}
+                />
                 {loading ? "Refreshing" : "Refresh"}
               </button>
             </div>
           </>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">Showing current report data.</p>
+            <p className="text-xs font-medium text-[var(--admin-muted)]">
+              Showing current report data.
+            </p>
             <button
               type="button"
               onClick={onRefresh}
@@ -657,10 +756,13 @@ export const ReportShell = ({
 const useMarketplaceAnalytics = () => {
   const filters = useReportFilters();
   const loadData = useCallback(
-    ({ fromDate, toDate }) => fetchJson(
-      isSellerPanel() ? ENDPOINTS.analytics.sellerDashboard : ENDPOINTS.analytics.adminDashboard,
-      { fromDate, toDate },
-    ),
+    ({ fromDate, toDate }) =>
+      fetchJson(
+        isSellerPanel()
+          ? ENDPOINTS.analytics.sellerDashboard
+          : ENDPOINTS.analytics.adminDashboard,
+        { fromDate, toDate },
+      ),
     [],
   );
   const report = useApiReport(loadData, filters);
@@ -701,10 +803,17 @@ const normalizePerformanceSource = (source = []) =>
           item.amount,
       );
       return {
-        label: item.label || item.name || item.date || item.day || `Point ${index + 1}`,
+        label:
+          item.label ||
+          item.name ||
+          item.date ||
+          item.day ||
+          `Point ${index + 1}`,
         orders,
         revenue,
-        averageOrderValue: asNumber(item.averageOrderValue ?? item.aov ?? (orders ? revenue / orders : 0)),
+        averageOrderValue: asNumber(
+          item.averageOrderValue ?? item.aov ?? (orders ? revenue / orders : 0),
+        ),
       };
     })
     .filter((row) => row.orders > 0 || row.revenue > 0);
@@ -713,16 +822,29 @@ const productRowsFromAnalytics = (products = []) =>
   listFrom(products).map((product, index) => ({
     id: product._id || product.id,
     title: product.title || product.name || "Untitled",
-    label: truncateLabel(product.title || product.name || `Product ${index + 1}`, 18),
-    purchases: asNumber(product.analytics?.purchases ?? product.purchases ?? product.unitsSold),
+    label: truncateLabel(
+      product.title || product.name || `Product ${index + 1}`,
+      18,
+    ),
+    purchases: asNumber(
+      product.analytics?.purchases ?? product.purchases ?? product.unitsSold,
+    ),
     revenue: asNumber(product.analytics?.revenue ?? product.revenue),
     orderCount: asNumber(product.analytics?.orderCount ?? product.orderCount),
     views: asNumber(product.analytics?.views ?? product.views),
-    uniqueViews: asNumber(product.analytics?.uniqueViews ?? product.uniqueViews),
-    impressions: asNumber(product.analytics?.impressions ?? product.impressions),
+    uniqueViews: asNumber(
+      product.analytics?.uniqueViews ?? product.uniqueViews,
+    ),
+    impressions: asNumber(
+      product.analytics?.impressions ?? product.impressions,
+    ),
     cartAdds: asNumber(product.analytics?.cartAdds ?? product.cartAdds),
-    wishlistAdds: asNumber(product.analytics?.wishlistAdds ?? product.wishlistAdds),
-    conversionRate: asNumber(product.analytics?.conversionRate ?? product.conversionRate),
+    wishlistAdds: asNumber(
+      product.analytics?.wishlistAdds ?? product.wishlistAdds,
+    ),
+    conversionRate: asNumber(
+      product.analytics?.conversionRate ?? product.conversionRate,
+    ),
   }));
 
 const productTotalsFromRows = (rows = []) => ({
@@ -738,18 +860,24 @@ const productTotalsFromRows = (rows = []) => ({
 });
 
 const hasProductActivity = (rows = []) =>
-  rows.some((row) =>
-    asNumber(row.revenue) > 0 ||
-    asNumber(row.purchases) > 0 ||
-    asNumber(row.orderCount) > 0 ||
-    asNumber(row.views) > 0 ||
-    asNumber(row.uniqueViews) > 0 ||
-    asNumber(row.impressions) > 0 ||
-    asNumber(row.cartAdds) > 0 ||
-    asNumber(row.wishlistAdds) > 0,
+  rows.some(
+    (row) =>
+      asNumber(row.revenue) > 0 ||
+      asNumber(row.purchases) > 0 ||
+      asNumber(row.orderCount) > 0 ||
+      asNumber(row.views) > 0 ||
+      asNumber(row.uniqueViews) > 0 ||
+      asNumber(row.impressions) > 0 ||
+      asNumber(row.cartAdds) > 0 ||
+      asNumber(row.wishlistAdds) > 0,
   );
 
-const analyticsSnapshotRows = ({ orders = {}, returns = {}, payouts = {}, productTotals = {} }) => {
+const analyticsSnapshotRows = ({
+  orders = {},
+  returns = {},
+  payouts = {},
+  productTotals = {},
+}) => {
   const orderRevenue = asNumber(orders.gmvAmount ?? orders.totalSalesAmount);
   const orderCount = asNumber(orders.orderCount);
   const productRevenue = asNumber(productTotals.revenue);
@@ -781,12 +909,18 @@ const analyticsSnapshotRows = ({ orders = {}, returns = {}, payouts = {}, produc
   ];
 };
 
-const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {}, performance = [] }) => {
+const performanceRowsFromAnalytics = ({
+  recentOrders = [],
+  orders = {},
+  performance = [],
+}) => {
   const performanceRows = normalizePerformanceSource(performance);
   if (performanceRows.length) return performanceRows;
 
   const grouped = listFrom(recentOrders).reduce((lookup, order) => {
-    const key = formatDayLabel(order.createdAt ?? order.created_at ?? order.date);
+    const key = formatDayLabel(
+      order.createdAt ?? order.created_at ?? order.date,
+    );
     const current = lookup[key] || { label: key, orders: 0, revenue: 0 };
     current.orders += 1;
     current.revenue += getOrderRevenue(order);
@@ -811,12 +945,14 @@ const performanceRowsFromAnalytics = ({ recentOrders = [], orders = {}, performa
   );
   if (!orderCount && !revenue) return [];
 
-  return [{
-    label: "Selected",
-    orders: orderCount,
-    revenue,
-    averageOrderValue: orderCount ? Math.round(revenue / orderCount) : 0,
-  }];
+  return [
+    {
+      label: "Selected",
+      orders: orderCount,
+      revenue,
+      averageOrderValue: orderCount ? Math.round(revenue / orderCount) : 0,
+    },
+  ];
 };
 
 const PerformanceOverview = ({
@@ -833,7 +969,9 @@ const PerformanceOverview = ({
   const loading = useContext(ReportLoadingContext);
   const chartRows = includeZeroRows
     ? rows
-    : rows.filter((row) => asNumber(row[barKey]) > 0 || asNumber(row[lineKey]) > 0);
+    : rows.filter(
+        (row) => asNumber(row[barKey]) > 0 || asNumber(row[lineKey]) > 0,
+      );
   const composedRows = chartRows.map((row) => ({
     ...row,
     barValue: asNumber(row[barKey]),
@@ -845,7 +983,9 @@ const PerformanceOverview = ({
     <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--admin-line)] pb-3.5">
         <div>
-          <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">{title}</h3>
+          <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
+            {title}
+          </h3>
           <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
         </div>
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-[var(--admin-muted)]">
@@ -877,11 +1017,28 @@ const PerformanceOverview = ({
         ) : composedRows.length ? (
           <div className="w-full">
             <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={composedRows} margin={{ left: 4, right: 8, top: 18, bottom: 0 }}>
+              <ComposedChart
+                data={composedRows}
+                margin={{ left: 4, right: 8, top: 18, bottom: 0 }}
+              >
                 <defs>
-                  <linearGradient id="reportRevenueBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={REPORT_GOLD} stopOpacity={0.96} />
-                    <stop offset="100%" stopColor={REPORT_GOLD_DARK} stopOpacity={0.96} />
+                  <linearGradient
+                    id="reportRevenueBar"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor={REPORT_GOLD}
+                      stopOpacity={0.96}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={REPORT_GOLD_DARK}
+                      stopOpacity={0.96}
+                    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke={CHART_GRID_COLOR} strokeDasharray="0" />
@@ -915,15 +1072,22 @@ const PerformanceOverview = ({
                     if (!active || !payload?.length) return null;
                     return (
                       <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
-                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">{label}</p>
+                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">
+                          {label}
+                        </p>
                         <div className="mt-2 space-y-1">
                           {payload.map((item) => {
                             const isBar = item.dataKey === "barValue";
                             return (
-                              <p key={item.dataKey} className="text-[12px] font-semibold text-[var(--admin-muted)]">
+                              <p
+                                key={item.dataKey}
+                                className="text-[12px] font-semibold text-[var(--admin-muted)]"
+                              >
                                 {isBar ? barLabel : lineLabel}:{" "}
                                 <span className="text-[var(--admin-ink)]">
-                                  {isBar ? barFormatter(item.value) : lineFormatter(item.value)}
+                                  {isBar
+                                    ? barFormatter(item.value)
+                                    : lineFormatter(item.value)}
                                 </span>
                               </p>
                             );
@@ -948,14 +1112,27 @@ const PerformanceOverview = ({
                   dataKey="lineValue"
                   stroke="var(--admin-navy)"
                   strokeWidth={3}
-                  dot={{ r: 4, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
-                  activeDot={{ r: 6, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
+                  dot={{
+                    r: 4,
+                    fill: "white",
+                    stroke: "var(--admin-navy)",
+                    strokeWidth: 3,
+                  }}
+                  activeDot={{
+                    r: 6,
+                    fill: "white",
+                    stroke: "var(--admin-navy)",
+                    strokeWidth: 3,
+                  }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <EmptyPanel title="No chart data" text="There is no performance data for the selected date range." />
+          <EmptyPanel
+            title="No chart data"
+            text="There is no performance data for the selected date range."
+          />
         )}
       </div>
     </div>
@@ -981,20 +1158,28 @@ const SummaryColumnChart = ({ title, items = [] }) => {
     const safeBIndex = bIndex === -1 ? chartOrder.length : bIndex;
     return safeAIndex - safeBIndex;
   });
-  const maxValue = Math.max(...orderedItems.map((item) => asNumber(item.value)), 0);
+  const maxValue = Math.max(
+    ...orderedItems.map((item) => asNumber(item.value)),
+    0,
+  );
   const chartRows = orderedItems.map((item) => {
     const value = asNumber(item.value);
     return {
       ...item,
       rawValue: value,
-      chartValue: value > 0 && maxValue ? Math.max(18, Math.round((value / maxValue) * 100)) : 0,
+      chartValue:
+        value > 0 && maxValue
+          ? Math.max(18, Math.round((value / maxValue) * 100))
+          : 0,
     };
   });
 
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
       <div className="border-b border-[var(--admin-line)] pb-3.5">
-        <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">{title}</h3>
+        <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
+          {title}
+        </h3>
         <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
       </div>
 
@@ -1002,9 +1187,15 @@ const SummaryColumnChart = ({ title, items = [] }) => {
         <div className="mt-4 min-h-[260px] animate-pulse rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
           <div className="grid h-[220px] grid-cols-4 items-end gap-8 border-b border-l border-[var(--admin-line)] px-6">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex h-full flex-col items-center justify-end gap-3">
+              <div
+                key={index}
+                className="flex h-full flex-col items-center justify-end gap-3"
+              >
                 <div className="h-4 w-24 rounded bg-[var(--admin-gold-soft)]" />
-                <div className="w-8 rounded-t bg-[var(--admin-gold-soft)]" style={{ height: `${70 + index * 28}px` }} />
+                <div
+                  className="w-8 rounded-t bg-[var(--admin-gold-soft)]"
+                  style={{ height: `${70 + index * 28}px` }}
+                />
               </div>
             ))}
           </div>
@@ -1013,18 +1204,39 @@ const SummaryColumnChart = ({ title, items = [] }) => {
         <div className="mt-4 min-h-[260px] rounded-lg border border-[var(--admin-line)] bg-white p-3">
           <div className="h-[255px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartRows} margin={{ left: 8, right: 8, top: 18, bottom: 4 }}>
+              <ComposedChart
+                data={chartRows}
+                margin={{ left: 8, right: 8, top: 18, bottom: 4 }}
+              >
                 <defs>
-                  <linearGradient id="summaryReportBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={REPORT_GOLD} stopOpacity={0.98} />
-                    <stop offset="100%" stopColor={REPORT_GOLD_DARK} stopOpacity={0.98} />
+                  <linearGradient
+                    id="summaryReportBar"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor={REPORT_GOLD}
+                      stopOpacity={0.98}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={REPORT_GOLD_DARK}
+                      stopOpacity={0.98}
+                    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke={CHART_GRID_COLOR} vertical={false} />
                 <XAxis
                   dataKey="label"
                   interval={0}
-                  tick={{ fontSize: 11, fontWeight: 700, fill: "var(--admin-muted)" }}
+                  tick={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fill: "var(--admin-muted)",
+                  }}
                   axisLine={{ stroke: "#e9dfc9" }}
                   tickLine={false}
                 />
@@ -1036,9 +1248,17 @@ const SummaryColumnChart = ({ title, items = [] }) => {
                     const row = payload[0]?.payload;
                     return (
                       <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
-                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">{label}</p>
-                        <p className="mt-1 text-[13px] font-extrabold text-[var(--admin-ink)]">{row?.displayValue}</p>
-                        {row?.sub && <p className="mt-1 text-[11px] font-semibold text-[var(--admin-muted)]">{row.sub}</p>}
+                        <p className="text-[12px] font-bold text-[var(--admin-navy)]">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-[13px] font-extrabold text-[var(--admin-ink)]">
+                          {row?.displayValue}
+                        </p>
+                        {row?.sub && (
+                          <p className="mt-1 text-[11px] font-semibold text-[var(--admin-muted)]">
+                            {row.sub}
+                          </p>
+                        )}
                       </div>
                     );
                   }}
@@ -1054,8 +1274,18 @@ const SummaryColumnChart = ({ title, items = [] }) => {
                   dataKey="chartValue"
                   stroke="var(--admin-navy)"
                   strokeWidth={3}
-                  dot={{ r: 4, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
-                  activeDot={{ r: 6, fill: "white", stroke: "var(--admin-navy)", strokeWidth: 3 }}
+                  dot={{
+                    r: 4,
+                    fill: "white",
+                    stroke: "var(--admin-navy)",
+                    strokeWidth: 3,
+                  }}
+                  activeDot={{
+                    r: 6,
+                    fill: "white",
+                    stroke: "var(--admin-navy)",
+                    strokeWidth: 3,
+                  }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -1063,7 +1293,10 @@ const SummaryColumnChart = ({ title, items = [] }) => {
         </div>
       ) : (
         <div className="mt-6">
-          <EmptyPanel title="No chart data" text="There is no report data for the selected date range." />
+          <EmptyPanel
+            title="No chart data"
+            text="There is no report data for the selected date range."
+          />
         </div>
       )}
     </div>
@@ -1073,29 +1306,34 @@ const SummaryColumnChart = ({ title, items = [] }) => {
 export const SalesReport = () => {
   const sellerView = isSellerPanel();
   const filters = useReportFilters();
-  const loadData = useCallback(async ({ fromDate, toDate }) => {
-    const analyticsDashboard = await fetchJson(
-      sellerView ? ENDPOINTS.analytics.sellerDashboard : ENDPOINTS.analytics.adminDashboard,
-      { fromDate, toDate },
-    );
-    if (!sellerView) return analyticsDashboard;
+  const loadData = useCallback(
+    async ({ fromDate, toDate }) => {
+      const analyticsDashboard = await fetchJson(
+        sellerView
+          ? ENDPOINTS.analytics.sellerDashboard
+          : ENDPOINTS.analytics.adminDashboard,
+        { fromDate, toDate },
+      );
+      if (!sellerView) return analyticsDashboard;
 
-    const [dashboardOverview, topProducts] = await Promise.all([
-      fetchJson(ENDPOINTS.dashboard.overview, { fromDate, toDate }),
-      fetchJson(ENDPOINTS.products.analyticsTop, {
-        limit: 10,
-        metric: "purchases",
-        fromDate,
-        toDate,
-      }),
-    ]);
+      const [dashboardOverview, topProducts] = await Promise.all([
+        fetchJson(ENDPOINTS.dashboard.overview, { fromDate, toDate }),
+        fetchJson(ENDPOINTS.products.analyticsTop, {
+          limit: 10,
+          metric: "purchases",
+          fromDate,
+          toDate,
+        }),
+      ]);
 
-    return {
-      ...analyticsDashboard,
-      dashboardOverview,
-      topProducts: listFrom(topProducts),
-    };
-  }, [sellerView]);
+      return {
+        ...analyticsDashboard,
+        dashboardOverview,
+        topProducts: listFrom(topProducts),
+      };
+    },
+    [sellerView],
+  );
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const dashboardOverview = data.dashboardOverview || {};
   const dashboardMetrics = dashboardOverview.metrics || {};
@@ -1116,7 +1354,9 @@ export const SalesReport = () => {
       dashboardCommerce.totalOrders ??
       orders.orderCount,
   );
-  const totalProductViews = asNumber(fallbackProductTotals.views || fallbackProductTotals.impressions);
+  const totalProductViews = asNumber(
+    fallbackProductTotals.views || fallbackProductTotals.impressions,
+  );
   const refundAmount = asNumber(returns.refundAmount);
   const deliveredOrders = asNumber(
     dashboardMetrics.deliveredOrders ??
@@ -1124,26 +1364,74 @@ export const SalesReport = () => {
       orders.deliveredOrders,
   );
   const salesSummaryItems = [
-    { label: "Revenue", value: totalRevenue, displayValue: formatCurrency(totalRevenue), sub: "Selected range" },
-    { label: "Orders", value: totalOrders, displayValue: formatNumber(totalOrders), sub: "All statuses" },
+    {
+      label: "Revenue",
+      value: totalRevenue,
+      displayValue: formatCurrency(totalRevenue),
+      sub: "Selected range",
+    },
+    {
+      label: "Orders",
+      value: totalOrders,
+      displayValue: formatNumber(totalOrders),
+      sub: "All statuses",
+    },
     sellerView
-      ? { label: "Views", value: totalProductViews, displayValue: formatNumber(totalProductViews), sub: "Product activity" }
-      : { label: "Delivered", value: deliveredOrders, displayValue: formatNumber(deliveredOrders), sub: "Completed orders" },
-    { label: "Refunds", value: refundAmount, displayValue: formatCurrency(refundAmount), sub: "Return refunds" },
+      ? {
+          label: "Views",
+          value: totalProductViews,
+          displayValue: formatNumber(totalProductViews),
+          sub: "Product activity",
+        }
+      : {
+          label: "Delivered",
+          value: deliveredOrders,
+          displayValue: formatNumber(deliveredOrders),
+          sub: "Completed orders",
+        },
+    {
+      label: "Refunds",
+      value: refundAmount,
+      displayValue: formatCurrency(refundAmount),
+      sub: "Return refunds",
+    },
   ];
 
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: "GMV in selected range" },
-    { label: "Total Orders", value: formatNumber(totalOrders), sub: "All order statuses" },
-    { label: sellerView ? "Product Views" : "Delivered Orders", value: formatNumber(sellerView ? totalProductViews : deliveredOrders), sub: sellerView ? "Tracked product views" : "Completed fulfilment" },
-    { label: "Refund Amount", value: formatCurrency(refundAmount), sub: "Return refunds" },
+    {
+      label: "Total Revenue",
+      value: formatCurrency(totalRevenue),
+      sub: "GMV in selected range",
+    },
+    {
+      label: "Total Orders",
+      value: formatNumber(totalOrders),
+      sub: "All order statuses",
+    },
+    {
+      label: sellerView ? "Product Views" : "Delivered Orders",
+      value: formatNumber(sellerView ? totalProductViews : deliveredOrders),
+      sub: sellerView ? "Tracked product views" : "Completed fulfilment",
+    },
+    {
+      label: "Refund Amount",
+      value: formatCurrency(refundAmount),
+      sub: "Return refunds",
+    },
   ];
 
   return (
     <ReportShell
       title={sellerView ? "Sales Report" : "Sales Reports"}
-      subtitle={sellerView ? "Revenue and order status for your seller account." : "Revenue, order status, payments, and refunds from live marketplace analytics"}
-      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Sales Report" : "Sales Reports" }]}
+      subtitle={
+        sellerView
+          ? "Revenue and order status for your seller account."
+          : "Revenue, order status, payments, and refunds from live marketplace analytics"
+      }
+      breadcrumbs={[
+        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
+        { label: sellerView ? "Sales Report" : "Sales Reports" },
+      ]}
       stats={stats}
       loading={loading}
       error={error}
@@ -1152,7 +1440,10 @@ export const SalesReport = () => {
       exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.orders}
       exportFilename={sellerView ? null : "sales-report.csv"}
     >
-      <SummaryColumnChart title="Sales Report Summary" items={salesSummaryItems} />
+      <SummaryColumnChart
+        title="Sales Report Summary"
+        items={salesSummaryItems}
+      />
     </ReportShell>
   );
 };
@@ -1160,23 +1451,51 @@ export const SalesReport = () => {
 export const ProductAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
-  const loadData = useCallback(async ({ fromDate, toDate }) => {
-    const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
-      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 10, metric: sellerView ? "views" : "purchases", fromDate, toDate }),
-      fetchJson(ENDPOINTS.products.inventoryStats),
-      fetchJson(ENDPOINTS.products.listForPanel, { limit: 100, includeAllStatuses: true }).catch(() => []),
-    ]);
-    return { topProducts: listFrom(topProducts), inventoryStats, catalogProducts: listFrom(catalogProducts) };
-  }, [sellerView]);
+  const loadData = useCallback(
+    async ({ fromDate, toDate }) => {
+      const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
+        fetchJson(ENDPOINTS.products.analyticsTop, {
+          limit: 10,
+          metric: sellerView ? "views" : "purchases",
+          fromDate,
+          toDate,
+        }),
+        fetchJson(ENDPOINTS.products.inventoryStats),
+        fetchJson(ENDPOINTS.products.listForPanel, {
+          limit: 100,
+          includeAllStatuses: true,
+        }).catch(() => []),
+      ]);
+      return {
+        topProducts: listFrom(topProducts),
+        inventoryStats,
+        catalogProducts: listFrom(catalogProducts),
+      };
+    },
+    [sellerView],
+  );
   const { data, loading, error, refresh } = useApiReport(loadData, filters);
   const products = listFrom(data.topProducts);
   const catalogProducts = listFrom(data.catalogProducts);
   const inventory = data.inventoryStats || {};
-  const analyticsById = new Map(products.map((product) => [String(product._id || product.id || product.productId), product]));
-  const displayProducts = catalogProducts.length ? catalogProducts.map((product) => {
-    const analyticsProduct = analyticsById.get(String(product._id || product.id || product.productId)) || product;
-    return { ...product, analytics: analyticsProduct.analytics || product.analytics || {} };
-  }) : products;
+  const analyticsById = new Map(
+    products.map((product) => [
+      String(product._id || product.id || product.productId),
+      product,
+    ]),
+  );
+  const displayProducts = catalogProducts.length
+    ? catalogProducts.map((product) => {
+        const analyticsProduct =
+          analyticsById.get(
+            String(product._id || product.id || product.productId),
+          ) || product;
+        return {
+          ...product,
+          analytics: analyticsProduct.analytics || product.analytics || {},
+        };
+      })
+    : products;
 
   const baseRows = displayProducts.map((product) => ({
     id: product._id || product.id || product.productId,
@@ -1184,7 +1503,9 @@ export const ProductAnalytics = () => {
     label: truncateLabel(product.title || product.name || "Untitled", 18),
     chartLabel: truncateLabel(product.title || product.name || "Untitled", 26),
     sku: product.sku || product.skuCode || "-",
-    price: formatCurrency(product.price || product.sellingPrice || product.salePrice),
+    price: formatCurrency(
+      product.price || product.sellingPrice || product.salePrice,
+    ),
     purchases: asNumber(product.analytics?.purchases),
     revenue: asNumber(product.analytics?.revenue),
     views: asNumber(product.analytics?.views),
@@ -1195,39 +1516,82 @@ export const ProductAnalytics = () => {
     conversionRate: asNumber(product.analytics?.conversionRate),
   }));
   const totalProductsCount = asNumber(inventory.totalProducts);
-  const rows = totalProductsCount > baseRows.length
-    ? [
-      ...baseRows,
-      ...Array.from({ length: totalProductsCount - baseRows.length }, (_, index) => ({
-        id: `missing-product-${index + 1}`,
-        title: `Product ${baseRows.length + index + 1}`,
-        label: `Product ${baseRows.length + index + 1}`,
-        chartLabel: `Product ${baseRows.length + index + 1}`,
-        sku: "-",
-        price: formatCurrency(0),
-        purchases: 0,
-        revenue: 0,
-        views: 0,
-      })),
-    ]
-    : baseRows;
-  const purchaseTotal = rows.reduce((sum, product) => sum + asNumber(product.purchases), 0);
-  const revenueTotal = rows.reduce((sum, product) => sum + asNumber(product.revenue), 0);
-  const viewsTotal = rows.reduce((sum, product) => sum + asNumber(product.views), 0);
-  const cartAddTotal = rows.reduce((sum, product) => sum + asNumber(product.cartAdds), 0);
+  const rows =
+    totalProductsCount > baseRows.length
+      ? [
+          ...baseRows,
+          ...Array.from(
+            { length: totalProductsCount - baseRows.length },
+            (_, index) => ({
+              id: `missing-product-${index + 1}`,
+              title: `Product ${baseRows.length + index + 1}`,
+              label: `Product ${baseRows.length + index + 1}`,
+              chartLabel: `Product ${baseRows.length + index + 1}`,
+              sku: "-",
+              price: formatCurrency(0),
+              purchases: 0,
+              revenue: 0,
+              views: 0,
+            }),
+          ),
+        ]
+      : baseRows;
+  const purchaseTotal = rows.reduce(
+    (sum, product) => sum + asNumber(product.purchases),
+    0,
+  );
+  const revenueTotal = rows.reduce(
+    (sum, product) => sum + asNumber(product.revenue),
+    0,
+  );
+  const viewsTotal = rows.reduce(
+    (sum, product) => sum + asNumber(product.views),
+    0,
+  );
+  const cartAddTotal = rows.reduce(
+    (sum, product) => sum + asNumber(product.cartAdds),
+    0,
+  );
 
   const stats = [
-    { label: "Total Products", value: formatNumber(inventory.totalProducts), sub: "Current catalog" },
-    { label: sellerView ? "Product Views" : "Top Product Purchases", value: formatNumber(sellerView ? viewsTotal : purchaseTotal), sub: sellerView ? "Filtered product activity" : "Top 10 products" },
-    { label: sellerView ? "Cart Adds" : "Top Product Revenue", value: sellerView ? formatNumber(cartAddTotal) : formatCurrency(revenueTotal), sub: sellerView ? "Tracked product analytics" : "Tracked product analytics" },
-    { label: "Out of Stock", value: formatNumber(inventory.outOfStockCount), sub: "Current inventory" },
+    {
+      label: "Total Products",
+      value: formatNumber(inventory.totalProducts),
+      sub: "Current catalog",
+    },
+    {
+      label: sellerView ? "Product Views" : "Top Product Purchases",
+      value: formatNumber(sellerView ? viewsTotal : purchaseTotal),
+      sub: sellerView ? "Filtered product activity" : "Top 10 products",
+    },
+    {
+      label: sellerView ? "Cart Adds" : "Top Product Revenue",
+      value: sellerView
+        ? formatNumber(cartAddTotal)
+        : formatCurrency(revenueTotal),
+      sub: sellerView
+        ? "Tracked product analytics"
+        : "Tracked product analytics",
+    },
+    {
+      label: "Out of Stock",
+      value: formatNumber(inventory.outOfStockCount),
+      sub: "Current inventory",
+    },
   ];
 
   return (
     <ReportShell
       title={sellerView ? "Product Report" : "Product Analytics"}
-      subtitle={sellerView ? "Top-selling products and catalog health for your seller account." : "Top-selling products and current catalog health from product analytics APIs"}
-      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Product Report" : "Product Analytics" }]}
+      subtitle={
+        sellerView
+          ? "Top-selling products and catalog health for your seller account."
+          : "Top-selling products and current catalog health from product analytics APIs"
+      }
+      breadcrumbs={[
+        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
+        { label: sellerView ? "Product Report" : "Product Analytics" },
+      ]}
       stats={stats}
       loading={loading}
       error={error}
@@ -1255,19 +1619,47 @@ export const ProductAnalytics = () => {
             {
               key: "title",
               label: "Product",
-              render: (value) => <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">{value}</span>,
+              render: (value) => (
+                <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
+                  {value}
+                </span>
+              ),
             },
             { key: "sku", label: "SKU" },
             { key: "price", label: "Price" },
-            { key: "purchases", label: "Purchases", render: (value) => formatNumber(value) },
-            { key: "revenue", label: "Revenue", render: (value) => formatCurrency(value) },
-            { key: "views", label: "Views", render: (value) => formatNumber(value) },
-            ...(sellerView ? [
-              { key: "cartAdds", label: "Cart Adds", render: (value) => formatNumber(value) },
-              { key: "wishlistAdds", label: "Wishlist", render: (value) => formatNumber(value) },
-            ] : []),
+            {
+              key: "purchases",
+              label: "Purchases",
+              render: (value) => formatNumber(value),
+            },
+            {
+              key: "revenue",
+              label: "Revenue",
+              render: (value) => formatCurrency(value),
+            },
+            {
+              key: "views",
+              label: "Views",
+              render: (value) => formatNumber(value),
+            },
+            ...(sellerView
+              ? [
+                  {
+                    key: "cartAdds",
+                    label: "Cart Adds",
+                    render: (value) => formatNumber(value),
+                  },
+                  {
+                    key: "wishlistAdds",
+                    label: "Wishlist",
+                    render: (value) => formatNumber(value),
+                  },
+                ]
+              : []),
           ]}
-          getRowLink={(row) => row.id ? `/app/product-catalog/view/${row.id}` : null}
+          getRowLink={(row) =>
+            row.id ? `/app/product-catalog/view/${row.id}` : null
+          }
         />
       </div>
     </ReportShell>
@@ -1294,7 +1686,11 @@ export const InventoryAnalytics = () => {
     }
     const [stats, lowStock] = await Promise.all([
       fetchJson(ENDPOINTS.inventory.stats, dateParams),
-      fetchJson(ENDPOINTS.inventory.lowStock, { ...dateParams, limit: 10, page: 1 }),
+      fetchJson(ENDPOINTS.inventory.lowStock, {
+        ...dateParams,
+        limit: 10,
+        page: 1,
+      }),
     ]);
     return { stats, lowStock: listFrom(lowStock) };
   }, []);
@@ -1307,21 +1703,47 @@ export const InventoryAnalytics = () => {
     sku: product.sku || "-",
     stock: asNumber(product.stock),
     reservedStock: asNumber(product.reservedStock),
-    availableStock: Math.max(0, asNumber(product.stock) - asNumber(product.reservedStock)),
+    availableStock: Math.max(
+      0,
+      asNumber(product.stock) - asNumber(product.reservedStock),
+    ),
   }));
 
   const stats = [
-    { label: "Total Products", value: formatNumber(statsData.totalProducts), sub: "Inventory-tracked products" },
-    { label: "Total Stock", value: formatNumber(statsData.totalStock), sub: "Units on hand" },
-    { label: "Reserved Stock", value: formatNumber(statsData.totalReserved), sub: "Allocated to orders" },
-    { label: "Low Stock Items", value: formatNumber(statsData.lowStockCount), sub: "At or below threshold" },
+    {
+      label: "Total Products",
+      value: formatNumber(statsData.totalProducts),
+      sub: "Inventory-tracked products",
+    },
+    {
+      label: "Total Stock",
+      value: formatNumber(statsData.totalStock),
+      sub: "Units on hand",
+    },
+    {
+      label: "Reserved Stock",
+      value: formatNumber(statsData.totalReserved),
+      sub: "Allocated to orders",
+    },
+    {
+      label: "Low Stock Items",
+      value: formatNumber(statsData.lowStockCount),
+      sub: "At or below threshold",
+    },
   ];
 
   return (
     <ReportShell
       title={sellerView ? "Inventory Report" : "Inventory Analytics"}
-      subtitle={sellerView ? "Current stock health and low-stock products for your seller account." : "Current stock health and low-stock products from inventory APIs"}
-      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: sellerView ? "Inventory Report" : "Inventory Analytics" }]}
+      subtitle={
+        sellerView
+          ? "Current stock health and low-stock products for your seller account."
+          : "Current stock health and low-stock products from inventory APIs"
+      }
+      breadcrumbs={[
+        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
+        { label: sellerView ? "Inventory Report" : "Inventory Analytics" },
+      ]}
       stats={stats}
       loading={loading}
       error={error}
@@ -1344,20 +1766,44 @@ export const InventoryAnalytics = () => {
         <ReportTable
           title={sellerView ? "Inventory Products" : "Low Stock Products"}
           rows={lowStockRows}
-          emptyTitle={sellerView ? "No inventory products" : "No low-stock products"}
-          emptyText={sellerView ? "No products are available in your inventory yet." : "Your inventory is healthy for the selected range. Products will appear here when available stock reaches the low-stock threshold."}
+          emptyTitle={
+            sellerView ? "No inventory products" : "No low-stock products"
+          }
+          emptyText={
+            sellerView
+              ? "No products are available in your inventory yet."
+              : "Your inventory is healthy for the selected range. Products will appear here when available stock reaches the low-stock threshold."
+          }
           columns={[
             {
               key: "title",
               label: "Product",
-              render: (value) => <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">{value}</span>,
+              render: (value) => (
+                <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
+                  {value}
+                </span>
+              ),
             },
             { key: "sku", label: "SKU" },
-            { key: "stock", label: "Stock", render: (value) => formatNumber(value) },
-            { key: "reservedStock", label: "Reserved", render: (value) => formatNumber(value) },
-            { key: "availableStock", label: "Available", render: (value) => formatNumber(value) },
+            {
+              key: "stock",
+              label: "Stock",
+              render: (value) => formatNumber(value),
+            },
+            {
+              key: "reservedStock",
+              label: "Reserved",
+              render: (value) => formatNumber(value),
+            },
+            {
+              key: "availableStock",
+              label: "Available",
+              render: (value) => formatNumber(value),
+            },
           ]}
-          getRowLink={(row) => row.id ? `/app/product-catalog/view/${row.id}` : null}
+          getRowLink={(row) =>
+            row.id ? `/app/product-catalog/view/${row.id}` : null
+          }
         />
       </div>
     </ReportShell>
@@ -1383,17 +1829,36 @@ export const SellerAnalytics = () => {
   const gmvTotal = rows.reduce((sum, row) => sum + row.gmvAmount, 0);
 
   const stats = [
-    { label: "Top Seller GMV", value: formatCurrency(gmvTotal), sub: "Visible seller rows" },
-    { label: "Platform Revenue", value: formatCurrency(finance.platformRevenueTotalAmount), sub: "Commission plus tax" },
-    { label: "Seller Payable", value: formatCurrency(finance.sellerPayableAmount), sub: "Net seller revenue" },
-    { label: "Pending Payouts", value: formatCurrency(payouts.byStatus?.pending?.netAmount), sub: "Current payout queue" },
+    {
+      label: "Top Seller GMV",
+      value: formatCurrency(gmvTotal),
+      sub: "Visible seller rows",
+    },
+    {
+      label: "Platform Revenue",
+      value: formatCurrency(finance.platformRevenueTotalAmount),
+      sub: "Commission plus tax",
+    },
+    {
+      label: "Seller Payable",
+      value: formatCurrency(finance.sellerPayableAmount),
+      sub: "Net seller revenue",
+    },
+    {
+      label: "Pending Payouts",
+      value: formatCurrency(payouts.byStatus?.pending?.netAmount),
+      sub: "Current payout queue",
+    },
   ];
 
   return (
     <ReportShell
       title="Seller Analytics"
       subtitle="Seller GMV, fulfilment, commissions, and payout exposure"
-      breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Seller Analytics" }]}
+      breadcrumbs={[
+        { label: "Reports & Analytics" },
+        { label: "Seller Analytics" },
+      ]}
       stats={stats}
       loading={loading}
       error={error}
@@ -1418,11 +1883,31 @@ export const SellerAnalytics = () => {
           rows={rows}
           columns={[
             { key: "sellerName", label: "Seller" },
-            { key: "orderCount", label: "Orders", render: (value) => formatNumber(value) },
-            { key: "deliveredOrders", label: "Delivered", render: (value) => formatNumber(value) },
-            { key: "gmvAmount", label: "GMV", render: (value) => formatCurrency(value) },
-            { key: "commissionAmount", label: "Commission", render: (value) => formatCurrency(value) },
-            { key: "deliveryRate", label: "Delivery Rate", render: (value) => `${asNumber(value)}%` },
+            {
+              key: "orderCount",
+              label: "Orders",
+              render: (value) => formatNumber(value),
+            },
+            {
+              key: "deliveredOrders",
+              label: "Delivered",
+              render: (value) => formatNumber(value),
+            },
+            {
+              key: "gmvAmount",
+              label: "GMV",
+              render: (value) => formatCurrency(value),
+            },
+            {
+              key: "commissionAmount",
+              label: "Commission",
+              render: (value) => formatCurrency(value),
+            },
+            {
+              key: "deliveryRate",
+              label: "Delivery Rate",
+              render: (value) => `${asNumber(value)}%`,
+            },
           ]}
         />
       </div>
@@ -1436,13 +1921,26 @@ export const AnalyticsDashboard = () => {
     if (isSellerPanel()) {
       const [sellerDashboard, topProducts] = await Promise.all([
         fetchJson(ENDPOINTS.analytics.sellerDashboard, { fromDate, toDate }),
-        fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases", fromDate, toDate }),
+        fetchJson(ENDPOINTS.products.analyticsTop, {
+          limit: 5,
+          metric: "purchases",
+          fromDate,
+          toDate,
+        }),
       ]);
-      return { marketplace: sellerDashboard, topProducts: listFrom(topProducts) };
+      return {
+        marketplace: sellerDashboard,
+        topProducts: listFrom(topProducts),
+      };
     }
     const [marketplace, topProducts] = await Promise.all([
       fetchJson(ENDPOINTS.analytics.adminDashboard, { fromDate, toDate }),
-      fetchJson(ENDPOINTS.products.analyticsTop, { limit: 5, metric: "purchases", fromDate, toDate }),
+      fetchJson(ENDPOINTS.products.analyticsTop, {
+        limit: 5,
+        metric: "purchases",
+        fromDate,
+        toDate,
+      }),
     ]);
     return { marketplace, topProducts: listFrom(topProducts) };
   }, []);
@@ -1455,14 +1953,29 @@ export const AnalyticsDashboard = () => {
   const performanceRows = performanceRowsFromAnalytics({
     recentOrders: marketplace.recentOrders,
     orders,
-    performance: marketplace.orderPerformance || marketplace.ordersPerformance || marketplace.salesTrend,
+    performance:
+      marketplace.orderPerformance ||
+      marketplace.ordersPerformance ||
+      marketplace.salesTrend,
   });
   const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
   const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
-  const useProductFallback = sellerView && !performanceRows.length && hasProductActivity(fallbackProductRows);
-  const totalRevenue = asNumber((orders.gmvAmount ?? orders.totalSalesAmount) || fallbackProductTotals.revenue);
-  const totalOrders = asNumber(orders.orderCount || fallbackProductTotals.orderCount || fallbackProductTotals.purchases);
-  const totalProductViews = asNumber(fallbackProductTotals.views || fallbackProductTotals.impressions);
+  const useProductFallback =
+    sellerView &&
+    !performanceRows.length &&
+    hasProductActivity(fallbackProductRows);
+  const totalRevenue = asNumber(
+    (orders.gmvAmount ?? orders.totalSalesAmount) ||
+      fallbackProductTotals.revenue,
+  );
+  const totalOrders = asNumber(
+    orders.orderCount ||
+      fallbackProductTotals.orderCount ||
+      fallbackProductTotals.purchases,
+  );
+  const totalProductViews = asNumber(
+    fallbackProductTotals.views || fallbackProductTotals.impressions,
+  );
   const returnCount = asNumber(returns.returnCount);
   const pendingPayout = asNumber(payouts.byStatus?.pending?.netAmount);
   const snapshotRows = analyticsSnapshotRows({
@@ -1480,9 +1993,17 @@ export const AnalyticsDashboard = () => {
     },
     {
       label: useProductFallback ? "Views" : "Orders",
-      value: useProductFallback && !totalOrders ? totalProductViews : totalOrders,
-      displayValue: formatNumber(useProductFallback && !totalOrders ? totalProductViews : totalOrders),
-      sub: useProductFallback && !totalOrders ? "Product activity" : useProductFallback ? "Product purchases" : "All statuses",
+      value:
+        useProductFallback && !totalOrders ? totalProductViews : totalOrders,
+      displayValue: formatNumber(
+        useProductFallback && !totalOrders ? totalProductViews : totalOrders,
+      ),
+      sub:
+        useProductFallback && !totalOrders
+          ? "Product activity"
+          : useProductFallback
+            ? "Product purchases"
+            : "All statuses",
     },
     {
       label: "Returns",
@@ -1498,17 +2019,42 @@ export const AnalyticsDashboard = () => {
     },
   ];
   const stats = [
-    { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: useProductFallback ? "Product analytics revenue" : "GMV in selected range" },
-    { label: "Total Orders", value: formatNumber(totalOrders), sub: useProductFallback ? "Product purchases" : "All order statuses" },
-    { label: useProductFallback ? "Product Views" : "Return Requests", value: formatNumber(useProductFallback ? totalProductViews : returnCount), sub: useProductFallback ? "Tracked product views" : "Return workflow" },
-    { label: "Pending Payouts", value: formatCurrency(pendingPayout), sub: "Seller settlements" },
+    {
+      label: "Total Revenue",
+      value: formatCurrency(totalRevenue),
+      sub: useProductFallback
+        ? "Product analytics revenue"
+        : "GMV in selected range",
+    },
+    {
+      label: "Total Orders",
+      value: formatNumber(totalOrders),
+      sub: useProductFallback ? "Product purchases" : "All order statuses",
+    },
+    {
+      label: useProductFallback ? "Product Views" : "Return Requests",
+      value: formatNumber(useProductFallback ? totalProductViews : returnCount),
+      sub: useProductFallback ? "Tracked product views" : "Return workflow",
+    },
+    {
+      label: "Pending Payouts",
+      value: formatCurrency(pendingPayout),
+      sub: "Seller settlements",
+    },
   ];
 
   return (
     <ReportShell
       title="Analytics Dashboard"
-      subtitle={sellerView ? "Live seller metrics for orders, returns, products, inventory, and wallet activity." : "Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"}
-      breadcrumbs={[{ label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" }, { label: "Analytics Dashboard" }]}
+      subtitle={
+        sellerView
+          ? "Live seller metrics for orders, returns, products, inventory, and wallet activity."
+          : "Live marketplace metrics for orders, returns, payouts, sellers, products, and inventory"
+      }
+      breadcrumbs={[
+        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
+        { label: "Analytics Dashboard" },
+      ]}
       stats={stats}
       loading={loading}
       error={error}
@@ -1516,13 +2062,23 @@ export const AnalyticsDashboard = () => {
       onRefresh={refresh}
     >
       <SummaryColumnChart
-        title={sellerView ? "Seller Analytics Snapshot" : "Marketplace Analytics Snapshot"}
-        items={analyticsSummaryItems.length ? analyticsSummaryItems : snapshotRows.map((row) => ({
-          label: row.label,
-          value: row.amount || row.count,
-          displayValue: row.amount ? formatCurrency(row.amount) : formatNumber(row.count),
-          sub: row.amount ? "Amount" : "Count",
-        }))}
+        title={
+          sellerView
+            ? "Seller Analytics Snapshot"
+            : "Marketplace Analytics Snapshot"
+        }
+        items={
+          analyticsSummaryItems.length
+            ? analyticsSummaryItems
+            : snapshotRows.map((row) => ({
+                label: row.label,
+                value: row.amount || row.count,
+                displayValue: row.amount
+                  ? formatCurrency(row.amount)
+                  : formatNumber(row.count),
+                sub: row.amount ? "Amount" : "Count",
+              }))
+        }
       />
     </ReportShell>
   );

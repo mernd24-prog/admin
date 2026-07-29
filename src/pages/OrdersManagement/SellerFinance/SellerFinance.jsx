@@ -25,6 +25,7 @@ import {
   SummaryCard,
   DataTable,
 } from "../../../components/Shared";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
@@ -45,10 +46,7 @@ import {
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
-import {
-  formatDateTime12Hour,
-  formatLabel,
-} from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -63,21 +61,35 @@ const money = (value) => {
 
 const recordMetadata = (row = {}) => {
   if (row.metadata && typeof row.metadata === "object") return row.metadata;
-  try { return JSON.parse(row.metadata || "{}"); } catch { return {}; }
+  try {
+    return JSON.parse(row.metadata || "{}");
+  } catch {
+    return {};
+  }
 };
 
 const deductionOf = (row = {}) => {
   const metadata = recordMetadata(row);
   const products = Array.isArray(metadata.products) ? metadata.products : [];
-  const productTotal = (key) => products.reduce((sum, product) => sum + Number(product?.[key] || 0), 0);
+  const productTotal = (key) =>
+    products.reduce((sum, product) => sum + Number(product?.[key] || 0), 0);
   return {
-    commission: Number(row.commission_amount ?? row.commissionAmount ?? metadata.platformFeeAmount ?? 0),
-    commissionGst: Number(row.tax_amount ?? row.taxAmount ?? metadata.platformFeeTaxAmount ?? 0),
+    commission: Number(
+      row.commission_amount ??
+        row.commissionAmount ??
+        metadata.platformFeeAmount ??
+        0,
+    ),
+    commissionGst: Number(
+      row.tax_amount ?? row.taxAmount ?? metadata.platformFeeTaxAmount ?? 0,
+    ),
     gstTcs: Number(metadata.gstTcsAmount || 0),
     incomeTaxTds: Number(metadata.incomeTaxTdsAmount || 0),
     sellerFundedDiscount: productTotal("sellerFundedDiscountAmount"),
     marketplaceFundedDiscount: productTotal("marketplaceFundedDiscountAmount"),
-    paymentPartnerFundedDiscount: productTotal("paymentPartnerFundedDiscountAmount"),
+    paymentPartnerFundedDiscount: productTotal(
+      "paymentPartnerFundedDiscountAmount",
+    ),
     shipping: Number(metadata.shippingDeductionAmount || 0),
     shippingCredit: Number(metadata.shippingReimbursementAmount || 0),
     refund: Number(row.refund_amount ?? row.refundAmount ?? 0),
@@ -85,19 +97,28 @@ const deductionOf = (row = {}) => {
   };
 };
 
-const sellerLabel = (id, options) => options.find((o) => o.value === id)?.label || "Seller details unavailable";
+const sellerLabel = (id, options) =>
+  options.find((o) => o.value === id)?.label || "Seller details unavailable";
 const organizationName = (row = {}) => {
   const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
-  return snapshot.storeDisplayName || snapshot.legalBusinessName || row.organizationName || row.organization_name || "Default organization";
+  return (
+    snapshot.storeDisplayName ||
+    snapshot.legalBusinessName ||
+    row.organizationName ||
+    row.organization_name ||
+    "Default organization"
+  );
 };
 const valueOf = (row = {}, ...keys) => {
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "")
+      return row[key];
   }
   return 0;
 };
 const rowMoney = (row = {}, ...keys) => Number(valueOf(row, ...keys) || 0);
-const financialBreakdown = (row = {}) => recordMetadata(row).financialBreakdown || recordMetadata(row);
+const financialBreakdown = (row = {}) =>
+  recordMetadata(row).financialBreakdown || recordMetadata(row);
 const signedMoney = (value, currency, positivePrefix = "+") => {
   const numeric = Number(value || 0);
   if (numeric > 0) return `${positivePrefix}${money(numeric)}`;
@@ -110,41 +131,103 @@ const eligibilityCountdown = (value) => {
   const remaining = new Date(value).getTime() - Date.now();
   if (remaining <= 0) return "Window closed";
   const hours = Math.ceil(remaining / 3600000);
-  return hours <= 48 ? `${hours} hour${hours === 1 ? "" : "s"} left` : `${Math.ceil(hours / 24)} days left`;
+  return hours <= 48
+    ? `${hours} hour${hours === 1 ? "" : "s"} left`
+    : `${Math.ceil(hours / 24)} days left`;
 };
 const payoutDecision = (row = {}) => {
-  const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
-  if (status === "refunded" || row.itemPayoutStatus === "refunded") return { allowed: false, label: "Refunded", reason: "Customer refund completed; this item has no seller payout" };
-  if (["eligible", "available"].includes(status) && !row.payout_id) return { allowed: true, label: "Allowed", reason: "Return window closed; no active hold" };
-  if (row.payout_id) return { allowed: false, label: "In Payout", reason: "Already added to a payout" };
-  if (["held", "blocked", "on_hold"].includes(status)) return { allowed: false, label: "Held", reason: row.payoutHoldReason || "Return, refund, dispute, or payment hold" };
-  if (row.releaseReason === "waiting_for_item_return_window") return { allowed: false, label: "Not Yet", reason: `Return window open · ${eligibilityCountdown(row.returnWindowEndsAt || row.eligibleAt)}` };
-  if (!row.deliveredAt) return { allowed: false, label: "Not Yet", reason: "Waiting for delivery" };
-  return { allowed: false, label: "Not Yet", reason: row.releaseReason ? formatLabel(row.releaseReason) : "Waiting for eligibility" };
+  const status = String(
+    row.lifecycleStatus || row.releaseStatus || row.status || "pending",
+  ).toLowerCase();
+  if (status === "refunded" || row.itemPayoutStatus === "refunded")
+    return {
+      allowed: false,
+      label: "Refunded",
+      reason: "Customer refund completed; this item has no seller payout",
+    };
+  if (["eligible", "available"].includes(status) && !row.payout_id)
+    return {
+      allowed: true,
+      label: "Allowed",
+      reason: "Return window closed; no active hold",
+    };
+  if (row.payout_id)
+    return {
+      allowed: false,
+      label: "In Payout",
+      reason: "Already added to a payout",
+    };
+  if (["held", "blocked", "on_hold"].includes(status))
+    return {
+      allowed: false,
+      label: "Held",
+      reason:
+        row.payoutHoldReason || "Return, refund, dispute, or payment hold",
+    };
+  if (row.releaseReason === "waiting_for_item_return_window")
+    return {
+      allowed: false,
+      label: "Not Yet",
+      reason: `Return window open · ${eligibilityCountdown(row.returnWindowEndsAt || row.eligibleAt)}`,
+    };
+  if (!row.deliveredAt)
+    return { allowed: false, label: "Not Yet", reason: "Waiting for delivery" };
+  return {
+    allowed: false,
+    label: "Not Yet",
+    reason: row.releaseReason
+      ? formatLabel(row.releaseReason)
+      : "Waiting for eligibility",
+  };
 };
 
 const commissionStatusMatches = (row = {}, statusFilter = "") => {
   const filter = String(statusFilter || "").toLowerCase();
   if (!filter) return true;
 
-  const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
-  const releaseReason = String(row.releaseReason || row.release_reason || "").toLowerCase();
+  const status = String(
+    row.lifecycleStatus || row.releaseStatus || row.status || "pending",
+  ).toLowerCase();
+  const releaseReason = String(
+    row.releaseReason || row.release_reason || "",
+  ).toLowerCase();
   const hasPayout = Boolean(row.payout_id || row.payoutId);
 
   if (filter === "return_window_open") {
-    return releaseReason === "waiting_for_item_return_window" || status === "return_window_open";
+    return (
+      releaseReason === "waiting_for_item_return_window" ||
+      status === "return_window_open"
+    );
   }
   if (filter === "pending") {
-    return !hasPayout && !["eligible", "available", "held", "blocked", "on_hold", "released", "paid", "completed", "failed", "cancelled"].includes(status);
+    return (
+      !hasPayout &&
+      ![
+        "eligible",
+        "available",
+        "held",
+        "blocked",
+        "on_hold",
+        "released",
+        "paid",
+        "completed",
+        "failed",
+        "cancelled",
+      ].includes(status)
+    );
   }
-  if (filter === "eligible") return ["eligible", "available"].includes(status) && !hasPayout;
+  if (filter === "eligible")
+    return ["eligible", "available"].includes(status) && !hasPayout;
   if (filter === "held") return ["held", "blocked", "on_hold"].includes(status);
-  if (filter === "released") return ["released", "paid", "completed"].includes(status) || hasPayout;
+  if (filter === "released")
+    return ["released", "paid", "completed"].includes(status) || hasPayout;
   return status === filter;
 };
 
 const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
-  const needle = String(search || "").trim().toLowerCase();
+  const needle = String(search || "")
+    .trim()
+    .toLowerCase();
   if (!needle) return true;
   const sellerId = row.seller_id || row.sellerId;
   const haystack = [
@@ -161,25 +244,29 @@ const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
     sellerId,
     sellerLabel(sellerId, sellerOptions),
     organizationName(row),
-  ].filter(Boolean).join(" ").toLowerCase();
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
   return haystack.includes(needle);
 };
 
 const MetricCard = ({ label, value, hint }) => {
-  const Icon = {
-    "Gross Sales": MdShoppingCart,
-    "Platform Commission": MdPercent,
-    "GST on Commission": MdReceiptLong,
-    "GST TCS Withheld": MdAccountBalance,
-    "Refund Adjustments": MdUndo,
-    "Seller-funded Discount": MdLocalOffer,
-    "Marketplace Promotion Contribution": MdLocalOffer,
-    "Payment Partner Contribution": MdAccountBalance,
-    "Shipping Collected from Customer": MdLocalShipping,
-    "Shipping Deduction": MdLocalShipping,
-    "Other Adjustments": MdCalculate,
-    "Seller Payable": MdWallet,
-  }[label] || MdPayments;
+  const Icon =
+    {
+      "Gross Sales": MdShoppingCart,
+      "Platform Commission": MdPercent,
+      "GST on Commission": MdReceiptLong,
+      "GST TCS Withheld": MdAccountBalance,
+      "Refund Adjustments": MdUndo,
+      "Seller-funded Discount": MdLocalOffer,
+      "Marketplace Promotion Contribution": MdLocalOffer,
+      "Payment Partner Contribution": MdAccountBalance,
+      "Shipping Collected from Customer": MdLocalShipping,
+      "Shipping Deduction": MdLocalShipping,
+      "Other Adjustments": MdCalculate,
+      "Seller Payable": MdWallet,
+    }[label] || MdPayments;
 
   return (
     <SummaryCard
@@ -191,12 +278,19 @@ const MetricCard = ({ label, value, hint }) => {
   );
 };
 
-const IconButton = ({ title, icon, onClick, disabled = false, tone = "blue" }) => {
-  const toneClass = {
-    blue: "text-[#2f6fed] hover:bg-[#f3f6ff]",
-    green: "text-[#208a3c] hover:bg-[#effbf4]",
-    red: "text-[#d92d20] hover:bg-[#fff1f0]",
-  }[tone] || "text-[#2f6fed] hover:bg-[#f3f6ff]";
+const IconButton = ({
+  title,
+  icon,
+  onClick,
+  disabled = false,
+  tone = "blue",
+}) => {
+  const toneClass =
+    {
+      blue: "text-[#2f6fed] hover:bg-[#f3f6ff]",
+      green: "text-[#208a3c] hover:bg-[#effbf4]",
+      red: "text-[#d92d20] hover:bg-[#fff1f0]",
+    }[tone] || "text-[#2f6fed] hover:bg-[#f3f6ff]";
 
   return (
     <button
@@ -253,23 +347,44 @@ const TableShell = ({ title, headings, children, emptyText }) => {
   );
 };
 
-const ModalOverlay = ({ isOpen, onClose, title, children, onSubmit, submitting }) => {
+const ModalOverlay = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  onSubmit,
+  submitting,
+}) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-md rounded-xl border border-[#E6E6E6] bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-[#E6E6E6] px-5 py-4">
           <h3 className="text-sm font-semibold text-[#202337]">{title}</h3>
-          <button type="button" onClick={onClose} className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]"
+          >
             <MdClose size={18} />
           </button>
         </div>
         <div className="px-5 py-4">{children}</div>
         <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
-          <button type="button" onClick={onClose} disabled={submitting} className="rounded-md border border-[#E6E6E6] px-4 py-2 text-sm font-medium text-[#65718b] hover:bg-[#f8faff]">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-md border border-[#E6E6E6] px-4 py-2 text-sm font-medium text-[#65718b] hover:bg-[#f8faff]"
+          >
             Cancel
           </button>
-          <button type="button" onClick={onSubmit} disabled={submitting} className="rounded-md bg-[#2f6fed] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting}
+            className="rounded-md bg-[#2f6fed] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          >
             {submitting ? "Saving..." : "Confirm"}
           </button>
         </div>
@@ -285,15 +400,37 @@ const FieldRow = ({ label, children }) => (
   </div>
 );
 
-const inputCls = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]";
+const inputCls =
+  "min-h-[38px] rounded-md border d border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]";
 
-const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "bank_transfer"];
+const PAYMENT_METHODS = [
+  "manual",
+  "neft",
+  "rtgs",
+  "imps",
+  "upi",
+  "cheque",
+  "bank_transfer",
+];
+
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "return_window_open", label: "Return Window Open" },
+  { value: "eligible", label: "Eligible" },
+  { value: "held", label: "Held" },
+  { value: "released", label: "Released" },
+  { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
+];
 
 const SellerFinance = () => {
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
-  const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialParams = useMemo(
+    () => new URLSearchParams(window.location.search),
+    [],
+  );
   const [filters, setFilters] = useState({
     sellerId: initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
@@ -305,12 +442,20 @@ const SellerFinance = () => {
   const [sellerOptions, setSellerOptions] = React.useState([]);
   const [orderOptions, setOrderOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
-  const [processOrganizationOptions, setProcessOrganizationOptions] = useState([]);
+  const [processOrganizationOptions, setProcessOrganizationOptions] = useState(
+    [],
+  );
 
   React.useEffect(() => {
     if (isSeller) return;
-    dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {});
-    dropdownApi.getOrders({ limit: 100 }).then(setOrderOptions).catch(() => {});
+    dropdownApi
+      .getSellers({ limit: 100 })
+      .then(setSellerOptions)
+      .catch(() => {});
+    dropdownApi
+      .getOrders({ limit: 100 })
+      .then(setOrderOptions)
+      .catch(() => {});
   }, [isSeller]);
 
   // Process Payout modal
@@ -328,10 +473,21 @@ const SellerFinance = () => {
   });
 
   // Complete Payout modal
-  const [completeModal, setCompleteModal] = useState({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
+  const [completeModal, setCompleteModal] = useState({
+    open: false,
+    payout: null,
+    paymentReference: "",
+    paymentMethod: "manual",
+    note: "",
+  });
 
   // Fail Payout modal
-  const [failModal, setFailModal] = useState({ open: false, payout: null, reason: "", note: "" });
+  const [failModal, setFailModal] = useState({
+    open: false,
+    payout: null,
+    reason: "",
+    note: "",
+  });
 
   const loadFinance = useCallback(async () => {
     try {
@@ -344,15 +500,25 @@ const SellerFinance = () => {
         await Promise.all([
           dispatch(getSellerCommissions(sellerFilters)).unwrap(),
           dispatch(getSellerPayouts(sellerFilters)).unwrap(),
-          dispatch(getMySellerSettlements({ ...sellerFilters, limit: 50 })).unwrap(),
+          dispatch(
+            getMySellerSettlements({ ...sellerFilters, limit: 50 }),
+          ).unwrap(),
           dispatch(getMySellerFinanceSummary(sellerFilters)).unwrap(),
         ]);
       } else {
         await Promise.all([
           dispatch(getSellerFinanceSummary(filters)).unwrap(),
-          dispatch(getAdminSellerCommissions({ ...filters, limit: 200 })).unwrap(),
+          dispatch(
+            getAdminSellerCommissions({ ...filters, limit: 200 }),
+          ).unwrap(),
           dispatch(getAdminSellerPayouts({ ...filters, limit: 200 })).unwrap(),
-          dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
+          dispatch(
+            getSellerSettlements({
+              sellerId: filters.sellerId,
+              organizationId: filters.organizationId,
+              limit: 50,
+            }),
+          ).unwrap(),
         ]);
       }
     } catch (error) {
@@ -364,30 +530,53 @@ const SellerFinance = () => {
     loadFinance();
   }, [loadFinance]);
 
-  const commissions = listOf(isSeller ? financeState.myCommissionsData?.data : financeState.adminCommissionsData?.data);
-  const payouts = listOf(isSeller ? financeState.myPayoutsData?.data : financeState.adminPayoutsData?.data);
-  const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
+  const commissions = listOf(
+    isSeller
+      ? financeState.myCommissionsData?.data
+      : financeState.adminCommissionsData?.data,
+  );
+  const payouts = listOf(
+    isSeller
+      ? financeState.myPayoutsData?.data
+      : financeState.adminPayoutsData?.data,
+  );
+  const settlements = listOf(
+    isSeller
+      ? financeState.mySettlementsData?.data
+      : financeState.settlementsData?.data,
+  );
   const adminSummary = unwrap(financeState.financeSummaryData?.data);
-  const visibleCommissions = useMemo(() => commissions.filter((row) =>
-    commissionStatusMatches(row, filters.status) &&
-    commissionSearchMatches(row, filters.search, sellerOptions)
-  ), [commissions, filters.search, filters.status, sellerOptions]);
+  const visibleCommissions = useMemo(
+    () =>
+      commissions.filter(
+        (row) =>
+          commissionStatusMatches(row, filters.status) &&
+          commissionSearchMatches(row, filters.search, sellerOptions),
+      ),
+    [commissions, filters.search, filters.status, sellerOptions],
+  );
   const summary = useMemo(() => {
     const totals = commissions.reduce(
       (acc, row) => {
         const deductions = deductionOf(row);
         return {
           count: acc.count + 1,
-          grossAmount: acc.grossAmount + rowMoney(row, "amount", "gross_amount", "grossAmount"),
+          grossAmount:
+            acc.grossAmount +
+            rowMoney(row, "amount", "gross_amount", "grossAmount"),
           commissionAmount: acc.commissionAmount + deductions.commission,
-          commissionTaxAmount: acc.commissionTaxAmount + deductions.commissionGst,
+          commissionTaxAmount:
+            acc.commissionTaxAmount + deductions.commissionGst,
           gstTcsAmount: acc.gstTcsAmount + deductions.gstTcs,
           incomeTaxTdsAmount: acc.incomeTaxTdsAmount + deductions.incomeTaxTds,
-          sellerFundedDiscountAmount: acc.sellerFundedDiscountAmount + deductions.sellerFundedDiscount,
-          shippingDeductionAmount: acc.shippingDeductionAmount + deductions.shipping,
+          sellerFundedDiscountAmount:
+            acc.sellerFundedDiscountAmount + deductions.sellerFundedDiscount,
+          shippingDeductionAmount:
+            acc.shippingDeductionAmount + deductions.shipping,
           refundAmount: acc.refundAmount + deductions.refund,
           adjustmentAmount: acc.adjustmentAmount + deductions.adjustment,
-          payableAmount: acc.payableAmount + rowMoney(row, "net_amount", "netAmount"),
+          payableAmount:
+            acc.payableAmount + rowMoney(row, "net_amount", "netAmount"),
         };
       },
       {
@@ -412,7 +601,11 @@ const SellerFinance = () => {
     if (!isSeller) return adminSummary;
     return {
       ...adminSummary,
-      commissions: { ...totals, ...(adminSummary?.commissions || {}), sellerFundedDiscountAmount: totals.sellerFundedDiscountAmount },
+      commissions: {
+        ...totals,
+        ...(adminSummary?.commissions || {}),
+        sellerFundedDiscountAmount: totals.sellerFundedDiscountAmount,
+      },
       payouts: { paidAmount, ...(adminSummary?.payouts || {}) },
     };
   }, [adminSummary, commissions, isSeller, payouts]);
@@ -424,7 +617,11 @@ const SellerFinance = () => {
       const sellerId = String(row.seller_id || row.sellerId || "unknown");
       const current = grouped.get(sellerId) || {
         sellerId,
-        sellerName: row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(sellerId, sellerOptions),
+        sellerName:
+          row.sellerName ||
+          row.seller?.displayName ||
+          row.seller?.businessName ||
+          sellerLabel(sellerId, sellerOptions),
         gross: 0,
         payable: 0,
         pending: 0,
@@ -435,13 +632,21 @@ const SellerFinance = () => {
       };
       current.gross += rowMoney(row, "amount", "gross_amount", "grossAmount");
       current.payable += rowMoney(row, "net_amount", "netAmount");
-      const lifecycle = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+      const lifecycle = String(
+        row.lifecycleStatus || row.releaseStatus || row.status || "pending",
+      ).toLowerCase();
       if (["available", "eligible"].includes(lifecycle)) current.eligible += 1;
-      else if (["held", "blocked", "on_hold"].includes(lifecycle)) current.held += 1;
-      else if (["paid", "released", "completed"].includes(lifecycle)) current.released += 1;
+      else if (["held", "blocked", "on_hold"].includes(lifecycle))
+        current.held += 1;
+      else if (["paid", "released", "completed"].includes(lifecycle))
+        current.released += 1;
       else current.pending += 1;
       const eligibleAt = row.eligibleAt || row.eligible_at;
-      if (eligibleAt && (!current.nextEligibleAt || new Date(eligibleAt) < new Date(current.nextEligibleAt))) {
+      if (
+        eligibleAt &&
+        (!current.nextEligibleAt ||
+          new Date(eligibleAt) < new Date(current.nextEligibleAt))
+      ) {
         current.nextEligibleAt = eligibleAt;
       }
       grouped.set(sellerId, current);
@@ -450,109 +655,140 @@ const SellerFinance = () => {
       const sellerId = String(row.seller_id || row.sellerId || "unknown");
       const current = grouped.get(sellerId);
       if (!current) return;
-      if (["completed", "paid"].includes(String(row.status || "").toLowerCase())) {
+      if (
+        ["completed", "paid"].includes(String(row.status || "").toLowerCase())
+      ) {
         current.released += 1;
       }
     });
-    return Array.from(grouped.values()).sort((left, right) => right.eligible - left.eligible || right.pending - left.pending);
+    return Array.from(grouped.values()).sort(
+      (left, right) =>
+        right.eligible - left.eligible || right.pending - left.pending,
+    );
   }, [commissions, payouts, sellerOptions]);
 
-  const visibleDeductions = useMemo(() => commissions.reduce((acc, row) => {
-    const values = deductionOf(row);
-    Object.keys(acc).forEach((key) => { acc[key] += Number(values[key] || 0); });
-    return acc;
-  }, {
-    commission: 0,
-    commissionGst: 0,
-    gstTcs: 0,
-    incomeTaxTds: 0,
-    sellerFundedDiscount: 0,
-    marketplaceFundedDiscount: 0,
-    paymentPartnerFundedDiscount: 0,
-    shipping: 0,
-    shippingCredit: 0,
-    refund: 0,
-    adjustment: 0,
-  }), [commissions]);
+  const visibleDeductions = useMemo(
+    () =>
+      commissions.reduce(
+        (acc, row) => {
+          const values = deductionOf(row);
+          Object.keys(acc).forEach((key) => {
+            acc[key] += Number(values[key] || 0);
+          });
+          return acc;
+        },
+        {
+          commission: 0,
+          commissionGst: 0,
+          gstTcs: 0,
+          incomeTaxTds: 0,
+          sellerFundedDiscount: 0,
+          marketplaceFundedDiscount: 0,
+          paymentPartnerFundedDiscount: 0,
+          shipping: 0,
+          shippingCredit: 0,
+          refund: 0,
+          adjustment: 0,
+        },
+      ),
+    [commissions],
+  );
 
-  const deductionMetrics = useMemo(() => [
-    {
-      label: "Gross Sales",
-      value: money(summary?.commissions?.grossAmount),
-      hint: `${summary?.commissions?.count || 0} commission rows`,
-    },
-    {
-      label: "Platform Commission",
-      value: `−${money(visibleDeductions.commission)}`,
-      hint: "Marketplace service fee",
-    },
-    {
-      label: "GST on Commission",
-      value: `−${money(visibleDeductions.commissionGst)}`,
-      hint: "Tax charged on marketplace service fee",
-    },
-    {
-      label: "GST TCS Withheld",
-      value: `−${money(visibleDeductions.gstTcs)}`,
-      hint: "Statutory tax collected at source; not platform income",
-    },
-    // {
-    //   label: "Income-tax TDS Withheld",
-    //   value: `−${money(visibleDeductions.incomeTaxTds)}`,
-    //   hint: "Statutory tax deducted at source; not platform income",
-    // },
-    {
-      label: "Refund Adjustments",
-      value: `−${money(visibleDeductions.refund)}`,
-      hint: "Returned or cancelled item recovery",
-    },
-    {
-      label: "Seller-funded Discount",
-      value: `−${money(visibleDeductions.sellerFundedDiscount)}`,
-      hint: "Seller's share of customer discount (already reflected in eligible value)",
-    },
-    {
-      label: "Marketplace Promotion Contribution",
-      value: `+${money(visibleDeductions.marketplaceFundedDiscount)}`,
-      hint: "Paid by the marketplace toward seller invoices; not a seller deduction",
-    },
-    {
-      label: "Payment Partner Contribution",
-      value: `+${money(visibleDeductions.paymentPartnerFundedDiscount)}`,
-      hint: "Paid by a bank or payment partner; not a seller deduction",
-    },
-    {
-      label: "Shipping Collected from Customer",
-      value: `+${money(visibleDeductions.shippingCredit)}`,
-      hint: "Collected by the marketplace and included in this seller's settlement",
-    },
-    {
-      label: "Shipping Deduction",
-      value: `−${money(visibleDeductions.shipping)}`,
-      hint: "Only applies when the shipping policy charges the seller",
-    },
-    {
-      label: "Other Adjustments",
-      value: money(visibleDeductions.adjustment),
-      hint: "Negative values reduce payout; positive values add credit",
-    },
-    {
-      label: "Seller Payable",
-      value: money(summary?.commissions?.payableAmount),
-      hint: `${money(summary?.payouts?.paidAmount)} already paid`,
-    },
-  ], [summary, visibleDeductions]);
+  const deductionMetrics = useMemo(
+    () => [
+      {
+        label: "Gross Sales",
+        value: money(summary?.commissions?.grossAmount),
+        hint: `${summary?.commissions?.count || 0} commission rows`,
+      },
+      {
+        label: "Platform Commission",
+        value: `−${money(visibleDeductions.commission)}`,
+        hint: "Marketplace service fee",
+      },
+      {
+        label: "GST on Commission",
+        value: `−${money(visibleDeductions.commissionGst)}`,
+        hint: "Tax charged on marketplace service fee",
+      },
+      {
+        label: "GST TCS Withheld",
+        value: `−${money(visibleDeductions.gstTcs)}`,
+        hint: "Statutory tax collected at source; not platform income",
+      },
+      // {
+      //   label: "Income-tax TDS Withheld",
+      //   value: `−${money(visibleDeductions.incomeTaxTds)}`,
+      //   hint: "Statutory tax deducted at source; not platform income",
+      // },
+      {
+        label: "Refund Adjustments",
+        value: `−${money(visibleDeductions.refund)}`,
+        hint: "Returned or cancelled item recovery",
+      },
+      {
+        label: "Seller-funded Discount",
+        value: `−${money(visibleDeductions.sellerFundedDiscount)}`,
+        hint: "Seller's share of customer discount (already reflected in eligible value)",
+      },
+      {
+        label: "Marketplace Promotion Contribution",
+        value: `+${money(visibleDeductions.marketplaceFundedDiscount)}`,
+        hint: "Paid by the marketplace toward seller invoices; not a seller deduction",
+      },
+      {
+        label: "Payment Partner Contribution",
+        value: `+${money(visibleDeductions.paymentPartnerFundedDiscount)}`,
+        hint: "Paid by a bank or payment partner; not a seller deduction",
+      },
+      {
+        label: "Shipping Collected from Customer",
+        value: `+${money(visibleDeductions.shippingCredit)}`,
+        hint: "Collected by the marketplace and included in this seller's settlement",
+      },
+      {
+        label: "Shipping Deduction",
+        value: `−${money(visibleDeductions.shipping)}`,
+        hint: "Only applies when the shipping policy charges the seller",
+      },
+      {
+        label: "Other Adjustments",
+        value: money(visibleDeductions.adjustment),
+        hint: "Negative values reduce payout; positive values add credit",
+      },
+      {
+        label: "Seller Payable",
+        value: money(summary?.commissions?.payableAmount),
+        hint: `${money(summary?.payouts?.paidAmount)} already paid`,
+      },
+    ],
+    [summary, visibleDeductions],
+  );
 
   const loadOrganizationsForSeller = useCallback(async (sellerId) => {
     if (!sellerId) return [];
-    const response = await apiRequest("GET", ENDPOINTS.sellers.organizations(sellerId), { limit: 100 });
-    const data = response?.data?.data || response?.normalized?.data || response?.data || {};
+    const response = await apiRequest(
+      "GET",
+      ENDPOINTS.sellers.organizations(sellerId),
+      { limit: 100 },
+    );
+    const data =
+      response?.data?.data ||
+      response?.normalized?.data ||
+      response?.data ||
+      {};
     const list = data.organizations || data.items || data.list || [];
-    return list.map((item) => ({
-      value: item.id || item.organizationId,
-      label: item.storeDisplayName || item.legalBusinessName || item.id || item.organizationId,
-      status: item.approvalStatus,
-    })).filter((item) => item.value);
+    return list
+      .map((item) => ({
+        value: item.id || item.organizationId,
+        label:
+          item.storeDisplayName ||
+          item.legalBusinessName ||
+          item.id ||
+          item.organizationId,
+        status: item.approvalStatus,
+      }))
+      .filter((item) => item.value);
   }, []);
 
   useEffect(() => {
@@ -561,16 +797,21 @@ const SellerFinance = () => {
       .then((options) => {
         if (!active) return;
         setOrganizationOptions(options);
-        setFilters((prev) => (
-          prev.organizationId && !options.some((option) => String(option.value) === String(prev.organizationId))
+        setFilters((prev) =>
+          prev.organizationId &&
+          !options.some(
+            (option) => String(option.value) === String(prev.organizationId),
+          )
             ? { ...prev, organizationId: "" }
-            : prev
-        ));
+            : prev,
+        );
       })
       .catch(() => {
         if (active) setOrganizationOptions([]);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [filters.sellerId, loadOrganizationsForSeller]);
 
   useEffect(() => {
@@ -579,29 +820,43 @@ const SellerFinance = () => {
       .then((options) => {
         if (!active) return;
         setProcessOrganizationOptions(options);
-        setProcessModal((prev) => (
-          prev.organizationId && !options.some((option) => String(option.value) === String(prev.organizationId))
+        setProcessModal((prev) =>
+          prev.organizationId &&
+          !options.some(
+            (option) => String(option.value) === String(prev.organizationId),
+          )
             ? { ...prev, organizationId: "" }
-            : prev
-        ));
+            : prev,
+        );
       })
       .catch(() => {
         if (active) setProcessOrganizationOptions([]);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [processModal.sellerId, loadOrganizationsForSeller]);
 
-  const updateFilter = (key, value) => setFilters((prev) => ({
-    ...prev,
-    [key]: value,
-    ...(key === "sellerId" ? { organizationId: "" } : {}),
-  }));
+  const updateFilter = (key, value) =>
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      ...(key === "sellerId" ? { organizationId: "" } : {}),
+    }));
 
   const handleCalculate = async () => {
-    if (!orderId.trim()) { toast.error("Order ID is required"); return; }
+    if (!orderId.trim()) {
+      toast.error("Order ID is required");
+      return;
+    }
     try {
       setSubmitting(true);
-      await dispatch(calculateSellerCommission({ orderId: orderId.trim(), organizationId: filters.organizationId || undefined })).unwrap();
+      await dispatch(
+        calculateSellerCommission({
+          orderId: orderId.trim(),
+          organizationId: filters.organizationId || undefined,
+        }),
+      ).unwrap();
       toast.success("Commission recalculated");
       setOrderId("");
       await loadFinance();
@@ -613,30 +868,66 @@ const SellerFinance = () => {
   };
 
   const handleProcessPayoutSubmit = async () => {
-    if (!processModal.sellerId.trim()) { toast.error("Seller ID is required"); return; }
-    const selectedCommissions = processModal.mode === "order"
-      ? commissions.filter((commission) =>
-        String(commission.order_id || commission.orderId) === String(processModal.orderId) &&
-        ["eligible", "available"].includes(String(commission.lifecycleStatus || commission.releaseStatus || "").toLowerCase()) &&
-        !commission.payout_id)
-      : [];
-    if (processModal.mode === "order" && !processModal.orderId) { toast.error("Select an eligible order"); return; }
-    if (processModal.mode === "order" && !selectedCommissions.length) { toast.error("This order has no eligible unpaid commission"); return; }
+    if (!processModal.sellerId.trim()) {
+      toast.error("Seller ID is required");
+      return;
+    }
+    const selectedCommissions =
+      processModal.mode === "order"
+        ? commissions.filter(
+            (commission) =>
+              String(commission.order_id || commission.orderId) ===
+                String(processModal.orderId) &&
+              ["eligible", "available"].includes(
+                String(
+                  commission.lifecycleStatus || commission.releaseStatus || "",
+                ).toLowerCase(),
+              ) &&
+              !commission.payout_id,
+          )
+        : [];
+    if (processModal.mode === "order" && !processModal.orderId) {
+      toast.error("Select an eligible order");
+      return;
+    }
+    if (processModal.mode === "order" && !selectedCommissions.length) {
+      toast.error("This order has no eligible unpaid commission");
+      return;
+    }
     try {
       setSubmitting(true);
       const payload = {
         sellerId: processModal.sellerId.trim(),
         organizationId: processModal.organizationId || undefined,
         paymentMethod: processModal.paymentMethod,
-        paymentReference: processModal.paymentReference.trim() || `admin_${Date.now()}`,
+        paymentReference:
+          processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
-        ...(selectedCommissions.length ? { commissionIds: selectedCommissions.map((commission) => commission.id) } : {}),
+        ...(selectedCommissions.length
+          ? {
+              commissionIds: selectedCommissions.map(
+                (commission) => commission.id,
+              ),
+            }
+          : {}),
       };
-      if (processModal.periodStart) payload.periodStart = processModal.periodStart;
+      if (processModal.periodStart)
+        payload.periodStart = processModal.periodStart;
       if (processModal.periodEnd) payload.periodEnd = processModal.periodEnd;
       await dispatch(processSellerPayouts(payload)).unwrap();
       toast.success("Payout created and sent to the approval queue");
-      setProcessModal({ open: false, mode: "order", orderId: "", sellerId: "", organizationId: "", paymentMethod: "manual", paymentReference: "", periodStart: "", periodEnd: "", note: "" });
+      setProcessModal({
+        open: false,
+        mode: "order",
+        orderId: "",
+        sellerId: "",
+        organizationId: "",
+        paymentMethod: "manual",
+        paymentReference: "",
+        periodStart: "",
+        periodEnd: "",
+        note: "",
+      });
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to process payout");
@@ -648,13 +939,22 @@ const SellerFinance = () => {
   const eligibleOrders = useMemo(() => {
     const orders = new Map();
     commissions.forEach((commission) => {
-      const lifecycle = String(commission.lifecycleStatus || commission.releaseStatus || "").toLowerCase();
-      if (!["eligible", "available"].includes(lifecycle) || commission.payout_id) return;
+      const lifecycle = String(
+        commission.lifecycleStatus || commission.releaseStatus || "",
+      ).toLowerCase();
+      if (
+        !["eligible", "available"].includes(lifecycle) ||
+        commission.payout_id
+      )
+        return;
       const id = commission.order_id || commission.orderId;
       if (!id) return;
       const current = orders.get(String(id)) || {
         id: String(id),
-        label: commission.orderNumber || commission.order_number || String(id).slice(-8),
+        label:
+          commission.orderNumber ||
+          commission.order_number ||
+          String(id).slice(-8),
         amount: 0,
       };
       current.amount += rowMoney(commission, "net_amount", "netAmount");
@@ -668,42 +968,68 @@ const SellerFinance = () => {
     if (!sellerId || !commission.id) return;
     const orderId = commission.order_id || commission.orderId;
     const commissionIds = commissions
-      .filter((row) =>
-        String(row.order_id || row.orderId) === String(orderId) &&
-        ["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) &&
-        !row.payout_id)
+      .filter(
+        (row) =>
+          String(row.order_id || row.orderId) === String(orderId) &&
+          ["eligible", "available"].includes(
+            String(
+              row.lifecycleStatus || row.releaseStatus || "",
+            ).toLowerCase(),
+          ) &&
+          !row.payout_id,
+      )
       .map((row) => row.id);
     try {
       setSubmitting(true);
-      await dispatch(processSellerPayouts({
-        sellerId,
-        organizationId: commission.organization_id || commission.organizationId || undefined,
-        commissionIds,
-        paymentMethod: "manual",
-        paymentReference: `commission_${commission.id}_${Date.now()}`,
-        note: `Single eligible commission payout for order ${commission.order_number || commission.order_id}`,
-      })).unwrap();
-      toast.success("This order's eligible amount was added to the payout approval queue");
+      await dispatch(
+        processSellerPayouts({
+          sellerId,
+          organizationId:
+            commission.organization_id ||
+            commission.organizationId ||
+            undefined,
+          commissionIds,
+          paymentMethod: "manual",
+          paymentReference: `commission_${commission.id}_${Date.now()}`,
+          note: `Single eligible commission payout for order ${commission.order_number || commission.order_id}`,
+        }),
+      ).unwrap();
+      toast.success(
+        "This order's eligible amount was added to the payout approval queue",
+      );
       await loadFinance();
     } catch (error) {
-      toast.error(error?.message || error || "Unable to initiate this commission payout");
+      toast.error(
+        error?.message || error || "Unable to initiate this commission payout",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleCompletePayoutSubmit = async () => {
-    if (!completeModal.paymentReference.trim()) { toast.error("Payment reference is required"); return; }
+    if (!completeModal.paymentReference.trim()) {
+      toast.error("Payment reference is required");
+      return;
+    }
     try {
       setSubmitting(true);
-      await dispatch(completeSellerPayout({
-        payoutId: completeModal.payout.id,
-        paymentReference: completeModal.paymentReference.trim(),
-        paymentMethod: completeModal.paymentMethod,
-        note: completeModal.note.trim() || undefined,
-      })).unwrap();
+      await dispatch(
+        completeSellerPayout({
+          payoutId: completeModal.payout.id,
+          paymentReference: completeModal.paymentReference.trim(),
+          paymentMethod: completeModal.paymentMethod,
+          note: completeModal.note.trim() || undefined,
+        }),
+      ).unwrap();
       toast.success("Payout marked as completed");
-      setCompleteModal({ open: false, payout: null, paymentReference: "", paymentMethod: "manual", note: "" });
+      setCompleteModal({
+        open: false,
+        payout: null,
+        paymentReference: "",
+        paymentMethod: "manual",
+        note: "",
+      });
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to complete payout");
@@ -713,14 +1039,19 @@ const SellerFinance = () => {
   };
 
   const handleFailPayoutSubmit = async () => {
-    if (!failModal.reason.trim()) { toast.error("Failure reason is required"); return; }
+    if (!failModal.reason.trim()) {
+      toast.error("Failure reason is required");
+      return;
+    }
     try {
       setSubmitting(true);
-      await dispatch(failSellerPayout({
-        payoutId: failModal.payout.id,
-        reason: failModal.reason.trim(),
-        note: failModal.note.trim() || undefined,
-      })).unwrap();
+      await dispatch(
+        failSellerPayout({
+          payoutId: failModal.payout.id,
+          reason: failModal.reason.trim(),
+          note: failModal.note.trim() || undefined,
+        }),
+      ).unwrap();
       toast.success("Payout released back to pending");
       setFailModal({ open: false, payout: null, reason: "", note: "" });
       await loadFinance();
@@ -755,21 +1086,35 @@ const SellerFinance = () => {
             : "Commission, settlement, refund adjustment, and payout management"
         }
         breadcrumbs={[
-          { label: isSeller ? "My Finance & Payouts" : "Seller Finance & Payouts" },
+          {
+            label: isSeller
+              ? "My Finance & Payouts"
+              : "Seller Finance & Payouts",
+          },
           { label: "Finance Summary" },
         ]}
       />
 
       {/* Commission Breakdown Info Banner */}
       <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
-        <strong>How seller payable is calculated:</strong> Each order item uses its checkout pricing snapshot.
-        Seller receives: <em>eligible item value + customer shipping allocated to the seller − platform commission − GST on commission − GST TCS − income-tax TDS − shipping deductions − refund/recovery adjustments</em> after that item's return window closes.
-        Statutory TCS/TDS are withheld for tax reporting and are not platform revenue. Seller-funded discount is shown separately because it is already reflected in the eligible item value.
+        <strong>How seller payable is calculated:</strong> Each order item uses
+        its checkout pricing snapshot. Seller receives:{" "}
+        <em>
+          eligible item value + customer shipping allocated to the seller −
+          platform commission − GST on commission − GST TCS − income-tax TDS −
+          shipping deductions − refund/recovery adjustments
+        </em>{" "}
+        after that item's return window closes. Statutory TCS/TDS are withheld
+        for tax reporting and are not platform revenue. Seller-funded discount
+        is shown separately because it is already reflected in the eligible item
+        value.
       </div>
 
       {!isSeller && filters.sellerId && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          <strong>Eligible</strong> means the item is delivered, its return window has closed, and no return, refund, dispute, or payout hold is active. Only eligible rows can be initiated individually.
+          <strong>Eligible</strong> means the item is delivered, its return
+          window has closed, and no return, refund, dispute, or payout hold is
+          active. Only eligible rows can be initiated individually.
         </div>
       )}
 
@@ -797,359 +1142,699 @@ const SellerFinance = () => {
         <div className="mb-4">
           <TableShell
             title="Seller-wise Payout Queue"
-            headings={["Seller", "Gross", "Payable", "Pending Window", "Eligible", "Held", "Released", "Next Eligible", "Action"]}
+            headings={[
+              "Seller",
+              "Gross",
+              "Payable",
+              "Pending Window",
+              "Eligible",
+              "Held",
+              "Released",
+              "Next Eligible",
+              "Action",
+            ]}
             emptyText="No seller commission records found"
           >
-            {sellerOverview.length ? sellerOverview.map((seller) => (
-              <tr key={seller.sellerId} className={String(filters.sellerId) === seller.sellerId ? "bg-blue-50" : ""}>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <div className="font-semibold text-[#202337]">{seller.sellerName}</div>
-                  <div className="font-mono text-[11px] text-[#65718b]">{seller.sellerId}</div>
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">{money(seller.gross)}</td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(seller.payable)}</td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="pending" dot /> <span className="ml-1">{seller.pending}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="eligible" dot /> <span className="ml-1">{seller.eligible}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="held" dot /> <span className="ml-1">{seller.held}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="released" dot /> <span className="ml-1">{seller.released}</span></td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">{seller.nextEligibleAt ? formatDateTime12Hour(seller.nextEligibleAt, "—") : "—"}</td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <button
-                    type="button"
-                    className="rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
-                    onClick={() => {
-                      updateFilter("sellerId", seller.sellerId);
-                      setProcessModal((prev) => ({ ...prev, sellerId: seller.sellerId, organizationId: "" }));
-                    }}
+            {sellerOverview.length
+              ? sellerOverview.map((seller) => (
+                  <tr
+                    key={seller.sellerId}
+                    className={
+                      String(filters.sellerId) === seller.sellerId
+                        ? "bg-blue-50"
+                        : ""
+                    }
                   >
-                    View Seller
-                  </button>
-                </td>
-              </tr>
-            )) : null}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="font-semibold text-[#202337]">
+                        {seller.sellerName}
+                      </div>
+                      <div className="font-mono text-[11px] text-[#65718b]">
+                        {seller.sellerId}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {money(seller.gross)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                      {money(seller.payable)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status="pending" dot />{" "}
+                      <span className="ml-1">{seller.pending}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status="eligible" dot />{" "}
+                      <span className="ml-1">{seller.eligible}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status="held" dot />{" "}
+                      <span className="ml-1">{seller.held}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status="released" dot />{" "}
+                      <span className="ml-1">{seller.released}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">
+                      {seller.nextEligibleAt
+                        ? formatDateTime12Hour(seller.nextEligibleAt, "—")
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <button
+                        type="button"
+                        className="rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
+                        onClick={() => {
+                          updateFilter("sellerId", seller.sellerId);
+                          setProcessModal((prev) => ({
+                            ...prev,
+                            sellerId: seller.sellerId,
+                            organizationId: "",
+                          }));
+                        }}
+                      >
+                        View Seller
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              : null}
           </TableShell>
         </div>
       )}
 
       {!isSeller && !filters.sellerId && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Select <strong>View Seller</strong> to inspect that seller's commissions, return-window dues, settlements, and payout actions.
+          Select <strong>View Seller</strong> to inspect that seller's
+          commissions, return-window dues, settlements, and payout actions.
         </div>
       )}
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {deductionMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+        {deductionMetrics.map((metric) => (
+          <MetricCard key={metric.label} {...metric} />
+        ))}
       </div>
 
-     <div className="rounded-lg border border-[#E6E6E6] bg-white p-3 mb-4">
-  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-   <MdFilterList size={16} className="text-[var(--admin-muted)]" /> Filters
-  </div>
+      <div className="rounded-lg border  border-[#E6E6E6] bg-white p-3 mb-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
+          <MdFilterList size={16} className="text-[var(--admin-muted)]" />{" "}
+          Filters
+        </div>
 
-  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-    {!isSeller && (
-      <>
-        <select
-          className={inputCls}
-          value={filters.sellerId}
-          onChange={(e) => updateFilter("sellerId", e.target.value)}
-        >
-          <option value="">All Sellers</option>
-          {sellerOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1  gap-2 md:grid-cols-2">
+          {!isSeller && (
+            <>
+              <FilterSelect
+                options={sellerOptions}
+                value={sellerOptions.find((opt) => String(opt.value) === String(filters.sellerId)) || null}
+                onChange={(opt) => updateFilter("sellerId", opt ? opt.value : "")}
+                placeholder="All Sellers"
+                isSearchable={true}
+                isClearable={true}
+                className="!mb-0 w-full"
+              />
 
-        <select
-          className={inputCls}
-          value={filters.organizationId}
-          onChange={(e) =>
-            updateFilter("organizationId", e.target.value)
-          }
-          disabled={!filters.sellerId}
-        >
-          <option value="">
-            {filters.sellerId
-              ? "All Organizations"
-              : "Select seller first"}
-          </option>
-          {organizationOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </>
-    )}
+              <FilterSelect
+                options={organizationOptions}
+                value={organizationOptions.find((opt) => String(opt.value) === String(filters.organizationId)) || null}
+                onChange={(opt) => updateFilter("organizationId", opt ? opt.value : "")}
+                placeholder={filters.sellerId ? "All Organizations" : "Select seller first"}
+                isDisabled={!filters.sellerId}
+                isSearchable={true}
+                isClearable={true}
+                className="!mb-0 w-full"
+              />
+            </>
+          )}
 
-    <input
-      className={inputCls}
-      placeholder={
-        isSeller
-          ? "Search order or payout..."
-          : "Search order, seller, payout..."
-      }
-      value={filters.search}
-      onChange={(e) => updateFilter("search", e.target.value)}
-    />
+          <input
+            className={inputCls}
+            placeholder={
+              isSeller
+                ? "Search order or payout..."
+                : "Search order, seller, payout..."
+            }
+            value={filters.search}
+            onChange={(e) => updateFilter("search", e.target.value)}
+          />
 
-    <select
-      className={inputCls}
-      value={filters.status}
-      onChange={(e) => updateFilter("status", e.target.value)}
-    >
-      <option value="">All Status</option>
-      <option value="pending">Pending</option>
-      <option value="return_window_open">Return Window Open</option>
-      <option value="eligible">Eligible</option>
-      <option value="held">Held</option>
-      <option value="released">Released</option>
-      <option value="failed">Failed</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
-  </div>
-</div>
+          <FilterSelect
+            options={STATUS_OPTIONS}
+            value={STATUS_OPTIONS.find((opt) => opt.value === filters.status) || null}
+            onChange={(opt) => updateFilter("status", opt ? opt.value : "")}
+            placeholder="All Status"
+            isSearchable={false}
+            isClearable={true}
+            className="!mb-0 w-full"
+          />
+        </div>
+      </div>
 
       <div className={`${!isSeller && !filters.sellerId ? "hidden" : "mb-4"}`}>
         <TableShell
           title="Order Payout Eligibility"
-          headings={["Order", "Delivered", "Return Window Starts", "Return Window Ends", "Net Payable", "Can Payout?", "Reason", ...(!isSeller ? ["Action"] : [])]}
-          emptyText="No order payout records found for this seller"
-        >
-          {visibleCommissions.length ? visibleCommissions.map((row) => {
-            const decision = payoutDecision(row);
-            return (
-              <tr key={`eligibility-${row.id}`}>
-                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.deliveredAt ? formatDateTime12Hour(row.deliveredAt, "-") : <span className="text-amber-700">Not Delivered</span>}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">{row.returnWindowStartsAt ? formatDateTime12Hour(row.returnWindowStartsAt, "-") : "Starts After Delivery"}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs">
-                  {row.returnWindowEndsAt ? formatDateTime12Hour(row.returnWindowEndsAt, "—") : "—"}
-                  {row.returnWindowEndsAt && new Date(row.returnWindowEndsAt) > new Date() && <div className="mt-1 font-semibold text-amber-700">{eligibilityCountdown(row.returnWindowEndsAt)}</div>}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}</td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={decision.allowed ? "eligible" : decision.label === "Held" ? "held" : decision.label === "Refunded" ? "refunded" : "pending"} dot /><div className="mt-1 text-xs font-semibold">{decision.label}</div></td>
-                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">{formatLabel(decision.reason)}</td>
-                {!isSeller && (
-                  <td className="whitespace-nowrap px-4 py-3">
-                    {decision.allowed ? (
-                      <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-                        <button type="button" className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white" onClick={() => handleSingleCommissionPayout(row)} disabled={submitting}>Payout This Order</button>
-                      </PermissionGuard>
-                    ) : <span className="text-xs text-[#65718b]">Not Allowed</span>}
-                  </td>
-                )}
-              </tr>
-            );
-          }) : null}
-        </TableShell>
-      </div>
-
-      <details className={`${!isSeller && !filters.sellerId ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}>
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">Advanced financial breakdown and payout history</summary>
-        <div className="grid grid-cols-1 gap-4 border-t border-[#E6E6E6] p-4 xl:grid-cols-2">
-        <TableShell
-          title="Seller Commission / Item Settlement Lines"
           headings={[
             "Order",
-            ...(!isSeller ? ["Seller"] : []),
-            "Organization",
-            "Seller Receivable",
-            "Platform Commission",
-            "GST on Commission",
-            "GST TCS",
-            "Income-tax TDS",
-            "Shipping Net",
-            "Refund Adj.",
-            "Other Adj.",
+            "Delivered",
+            "Return Window Starts",
+            "Return Window Ends",
             "Net Payable",
-            "Status",
-            "Created",
-            ...(!isSeller ? ["Payout Action"] : []),
+            "Can Payout?",
+            "Reason",
+            ...(!isSeller ? ["Action"] : []),
           ]}
-          emptyText="No commissions found"
+          emptyText="No order payout records found for this seller"
         >
-          {commissions.length ? commissions.map((row) => {
-            const deductions = deductionOf(row);
-            return (
-            <tr key={row.id}>
-              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">#{row.orderNumber || row.order_number || String(row.order_id || "").slice(-8)}</td>
-              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "amount", "gross_amount", "grossAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.commission)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.commissionGst)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.gstTcs)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.incomeTaxTds)}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${deductions.shippingCredit > deductions.shipping ? "text-[#208a3c]" : "text-[#d92d20]"}`}>
-                {deductions.shippingCredit > deductions.shipping ? "+" : "−"}
-                {money(Math.abs(deductions.shippingCredit - deductions.shipping))}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(deductions.refund)}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${deductions.adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(deductions.adjustment)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}</td>
-              <td className="whitespace-nowrap px-4 py-3">
-                <StatusBadge status={row.lifecycleStatus || row.releaseStatus || row.status} dot />
-                {row.releaseReason === "waiting_for_item_return_window" && <div className="mt-1 text-[11px] font-semibold text-amber-700">Return Window Open · {eligibilityCountdown(row.eligibleAt)}</div>}
-                {row.eligibleAt && <div className="text-[11px] text-gray-500">Eligible On {formatDateTime12Hour(row.eligibleAt, "—")}</div>}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(valueOf(row, "created_at", "createdAt"), "-")}</td>
-              {!isSeller && (
-                <td className="whitespace-nowrap px-4 py-3">
-                  {["eligible", "available"].includes(String(row.lifecycleStatus || row.releaseStatus || "").toLowerCase()) && !row.payout_id ? (
-                    <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-                      <button
-                        type="button"
-                        className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                        onClick={() => handleSingleCommissionPayout(row)}
-                        disabled={submitting}
-                      >
-                        Payout This Order
-                      </button>
-                    </PermissionGuard>
-                  ) : (
-                    <span className="text-xs text-[#65718b]">
-                      {row.payout_id ? "Already in payout" : "Wait until eligible"}
-                    </span>
-                  )}
-                </td>
-              )}
-            </tr>
-            );
-          }) : null}
-        </TableShell>
-
-        <TableShell
-          title="Seller Payouts"
-          headings={[
-            ...(!isSeller ? ["Seller"] : []),
-            "Organization",
-            "Period",
-            "Seller Receivable",
-            "Platform Commission",
-            "GST on Commission",
-            "TCS/TDS",
-            "Shipping Net",
-            "Refund",
-            "Adjustment",
-            "Net",
-            "Status",
-            ...(!isSeller ? ["Actions"] : []),
-          ]}
-          emptyText="No payouts found"
-        >
-          {payouts.length ? payouts.map((row) => {
-            const breakdown = financialBreakdown(row);
-            const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
-            const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
-            const adjustment = rowMoney(row, "adjustment_amount", "adjustmentAmount");
-            return (
-            <tr key={row.id}>
-              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{valueOf(row, "period_start", "periodStart") || "—"} – {valueOf(row, "period_end", "periodEnd") || "—"}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "total_amount", "totalAmount", "gross_amount", "grossAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "commission_amount", "commissionAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "tax_amount", "taxAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(taxWithheld)}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}>{signedMoney(shippingNet)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "refund_amount", "refundAmount"))}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(adjustment)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(rowMoney(row, "net_amount", "netAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.lifecycleStatus || row.status} dot /></td>
-              {!isSeller && (
-                <td className="whitespace-nowrap px-4 py-3">
-                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-                    <div className="flex items-center gap-1">
-                      <IconButton
-                        title="Mark payout complete — enter payment reference"
-                        tone="green"
-                        icon={<MdCheckCircle size={18} />}
-                        onClick={() => openCompleteModal(row)}
-                        disabled={row.status !== "processing"}
+          {visibleCommissions.length
+            ? visibleCommissions.map((row) => {
+                const decision = payoutDecision(row);
+                return (
+                  <tr key={`eligibility-${row.id}`}>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                      #
+                      {row.orderNumber ||
+                        row.order_number ||
+                        String(row.order_id || "").slice(-8)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs">
+                      {row.deliveredAt ? (
+                        formatDateTime12Hour(row.deliveredAt, "-")
+                      ) : (
+                        <span className="text-amber-700">Not Delivered</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs">
+                      {row.returnWindowStartsAt
+                        ? formatDateTime12Hour(row.returnWindowStartsAt, "-")
+                        : "Starts After Delivery"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs">
+                      {row.returnWindowEndsAt
+                        ? formatDateTime12Hour(row.returnWindowEndsAt, "—")
+                        : "—"}
+                      {row.returnWindowEndsAt &&
+                        new Date(row.returnWindowEndsAt) > new Date() && (
+                          <div className="mt-1 font-semibold text-amber-700">
+                            {eligibilityCountdown(row.returnWindowEndsAt)}
+                          </div>
+                        )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                      {money(
+                        Math.max(rowMoney(row, "net_amount", "netAmount"), 0),
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge
+                        status={
+                          decision.allowed
+                            ? "eligible"
+                            : decision.label === "Held"
+                              ? "held"
+                              : decision.label === "Refunded"
+                                ? "refunded"
+                                : "pending"
+                        }
+                        dot
                       />
-                      <IconButton
-                        title="Fail payout — release back to pending"
-                        tone="red"
-                        icon={<MdClose size={18} />}
-                        onClick={() => openFailModal(row)}
-                        disabled={row.status === "completed" || row.status === "failed"}
-                      />
-                    </div>
-                  </PermissionGuard>
-                </td>
-              )}
-            </tr>
-            );
-          }) : null}
-        </TableShell>
-      </div>
-
-      <div className="m-4 mt-0">
-        <TableShell
-          title="Settlement Ledger"
-          headings={[
-            ...(!isSeller ? ["Seller"] : []),
-            "Organization",
-            "Seller Receivable",
-            "Platform Commission",
-            "GST on Commission",
-            "TCS/TDS",
-            "Shipping Net",
-            "Refund",
-            "Adjustment",
-            "Net",
-            "Status",
-            "Created",
-            "Statement",
-          ]}
-          emptyText="No settlements found"
-        >
-          {settlements.length ? settlements.map((row) => {
-            const breakdown = financialBreakdown(row);
-            const shippingNet = Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0);
-            const taxWithheld = Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0);
-            const adjustment = rowMoney(row, "adjustment_amount", "adjustmentAmount");
-            return (
-            <tr key={row.id}>
-              {!isSeller && <td className="whitespace-nowrap px-4 py-3 text-xs">{row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(row.seller_id, sellerOptions)}</td>}
-              <td className="whitespace-nowrap px-4 py-3 text-xs">{organizationName(row)}</td>
-              <td className="whitespace-nowrap px-4 py-3">{money(rowMoney(row, "gross_amount", "grossAmount", "amount", "total_amount", "totalAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "commission_amount", "commissionAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "tax_amount", "taxAmount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(taxWithheld)}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}>{signedMoney(shippingNet)}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">−{money(rowMoney(row, "refund_amount", "refundAmount"))}</td>
-              <td className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}>{signedMoney(adjustment)}</td>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(rowMoney(row, "net_amount", "netAmount", "amount"))}</td>
-              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={row.status} dot /></td>
-              <td className="whitespace-nowrap px-4 py-3">{formatDateTime12Hour(valueOf(row, "created_at", "createdAt"), "-")}</td>
-              <td className="whitespace-nowrap px-4 py-3">
-                <PermissionGuard module="sellers/commissions" action={ACTIONS.VIEW} hide>
-                  <button
-                    type="button"
-                    title="Download Settlement Statement"
-                    aria-label="Download settlement statement"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#2f6fed] transition hover:bg-[#f3f6ff]"
-                    onClick={() => downloadApiFile(
-                      isSeller
-                        ? ENDPOINTS.payouts.mySettlementStatement(row.id)
-                        : ENDPOINTS.payouts.settlementStatement(row.id),
-                      {},
-                      { filename: `settlement-${row.id}.pdf`, format: "pdf" }
+                      <div className="mt-1 text-xs font-semibold">
+                        {decision.label}
+                      </div>
+                    </td>
+                    <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
+                      {formatLabel(decision.reason)}
+                    </td>
+                    {!isSeller && (
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {decision.allowed ? (
+                          <PermissionGuard
+                            module="sellers/commissions"
+                            action={ACTIONS.UPDATE}
+                            hide
+                          >
+                            <button
+                              type="button"
+                              className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
+                              onClick={() => handleSingleCommissionPayout(row)}
+                              disabled={submitting}
+                            >
+                              Payout This Order
+                            </button>
+                          </PermissionGuard>
+                        ) : (
+                          <span className="text-xs text-[#65718b]">
+                            Not Allowed
+                          </span>
+                        )}
+                      </td>
                     )}
-                  >
-                    <MdDownload size={18} />
-                  </button>
-                </PermissionGuard>
-              </td>
-            </tr>
-            );
-          }) : null}
+                  </tr>
+                );
+              })
+            : null}
         </TableShell>
       </div>
+
+      <details
+        className={`${!isSeller && !filters.sellerId ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}
+      >
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">
+          Advanced financial breakdown and payout history
+        </summary>
+        <div className="grid grid-cols-1 gap-4 border-t border-[#E6E6E6] p-4 xl:grid-cols-2">
+          <TableShell
+            title="Seller Commission / Item Settlement Lines"
+            headings={[
+              "Order",
+              ...(!isSeller ? ["Seller"] : []),
+              "Organization",
+              "Seller Receivable",
+              "Platform Commission",
+              "GST on Commission",
+              "GST TCS",
+              "Income-tax TDS",
+              "Shipping Net",
+              "Refund Adj.",
+              "Other Adj.",
+              "Net Payable",
+              "Status",
+              "Created",
+              ...(!isSeller ? ["Payout Action"] : []),
+            ]}
+            emptyText="No commissions found"
+          >
+            {commissions.length
+              ? commissions.map((row) => {
+                  const deductions = deductionOf(row);
+                  return (
+                    <tr key={row.id}>
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                        #
+                        {row.orderNumber ||
+                          row.order_number ||
+                          String(row.order_id || "").slice(-8)}
+                      </td>
+                      {!isSeller && (
+                        <td className="whitespace-nowrap px-4 py-3 text-xs">
+                          {row.sellerName ||
+                            row.seller?.displayName ||
+                            row.seller?.businessName ||
+                            sellerLabel(row.seller_id, sellerOptions)}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {organizationName(row)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {money(
+                          rowMoney(
+                            row,
+                            "amount",
+                            "gross_amount",
+                            "grossAmount",
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(deductions.commission)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(deductions.commissionGst)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(deductions.gstTcs)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(deductions.incomeTaxTds)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${deductions.shippingCredit > deductions.shipping ? "text-[#208a3c]" : "text-[#d92d20]"}`}
+                      >
+                        {deductions.shippingCredit > deductions.shipping
+                          ? "+"
+                          : "−"}
+                        {money(
+                          Math.abs(
+                            deductions.shippingCredit - deductions.shipping,
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(deductions.refund)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${deductions.adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}
+                      >
+                        {signedMoney(deductions.adjustment)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                        {money(
+                          Math.max(rowMoney(row, "net_amount", "netAmount"), 0),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <StatusBadge
+                          status={
+                            row.lifecycleStatus ||
+                            row.releaseStatus ||
+                            row.status
+                          }
+                          dot
+                        />
+                        {row.releaseReason ===
+                          "waiting_for_item_return_window" && (
+                          <div className="mt-1 text-[11px] font-semibold text-amber-700">
+                            Return Window Open ·{" "}
+                            {eligibilityCountdown(row.eligibleAt)}
+                          </div>
+                        )}
+                        {row.eligibleAt && (
+                          <div className="text-[11px] text-gray-500">
+                            Eligible On{" "}
+                            {formatDateTime12Hour(row.eligibleAt, "—")}
+                          </div>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {formatDateTime12Hour(
+                          valueOf(row, "created_at", "createdAt"),
+                          "-",
+                        )}
+                      </td>
+                      {!isSeller && (
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {["eligible", "available"].includes(
+                            String(
+                              row.lifecycleStatus || row.releaseStatus || "",
+                            ).toLowerCase(),
+                          ) && !row.payout_id ? (
+                            <PermissionGuard
+                              module="sellers/commissions"
+                              action={ACTIONS.UPDATE}
+                              hide
+                            >
+                              <button
+                                type="button"
+                                className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                                onClick={() =>
+                                  handleSingleCommissionPayout(row)
+                                }
+                                disabled={submitting}
+                              >
+                                Payout This Order
+                              </button>
+                            </PermissionGuard>
+                          ) : (
+                            <span className="text-xs text-[#65718b]">
+                              {row.payout_id
+                                ? "Already in payout"
+                                : "Wait until eligible"}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              : null}
+          </TableShell>
+
+          <TableShell
+            title="Seller Payouts"
+            headings={[
+              ...(!isSeller ? ["Seller"] : []),
+              "Organization",
+              "Period",
+              "Seller Receivable",
+              "Platform Commission",
+              "GST on Commission",
+              "TCS/TDS",
+              "Shipping Net",
+              "Refund",
+              "Adjustment",
+              "Net",
+              "Status",
+              ...(!isSeller ? ["Actions"] : []),
+            ]}
+            emptyText="No payouts found"
+          >
+            {payouts.length
+              ? payouts.map((row) => {
+                  const breakdown = financialBreakdown(row);
+                  const shippingNet =
+                    Number(breakdown.shippingReimbursementAmount || 0) -
+                    Number(breakdown.shippingDeductionAmount || 0);
+                  const taxWithheld =
+                    Number(breakdown.gstTcsAmount || 0) +
+                    Number(breakdown.incomeTaxTdsAmount || 0);
+                  const adjustment = rowMoney(
+                    row,
+                    "adjustment_amount",
+                    "adjustmentAmount",
+                  );
+                  return (
+                    <tr key={row.id}>
+                      {!isSeller && (
+                        <td className="whitespace-nowrap px-4 py-3 text-xs">
+                          {row.sellerName ||
+                            row.seller?.displayName ||
+                            row.seller?.businessName ||
+                            sellerLabel(row.seller_id, sellerOptions)}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {organizationName(row)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {valueOf(row, "period_start", "periodStart") || "—"} –{" "}
+                        {valueOf(row, "period_end", "periodEnd") || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {money(
+                          rowMoney(
+                            row,
+                            "total_amount",
+                            "totalAmount",
+                            "gross_amount",
+                            "grossAmount",
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −
+                        {money(
+                          rowMoney(
+                            row,
+                            "commission_amount",
+                            "commissionAmount",
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(rowMoney(row, "tax_amount", "taxAmount"))}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(taxWithheld)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}
+                      >
+                        {signedMoney(shippingNet)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(rowMoney(row, "refund_amount", "refundAmount"))}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}
+                      >
+                        {signedMoney(adjustment)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                        {money(rowMoney(row, "net_amount", "netAmount"))}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <StatusBadge
+                          status={row.lifecycleStatus || row.status}
+                          dot
+                        />
+                      </td>
+                      {!isSeller && (
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <PermissionGuard
+                            module="sellers/commissions"
+                            action={ACTIONS.UPDATE}
+                            hide
+                          >
+                            <div className="flex items-center gap-1">
+                              <IconButton
+                                title="Mark payout complete — enter payment reference"
+                                tone="green"
+                                icon={<MdCheckCircle size={18} />}
+                                onClick={() => openCompleteModal(row)}
+                                disabled={row.status !== "processing"}
+                              />
+                              <IconButton
+                                title="Fail payout — release back to pending"
+                                tone="red"
+                                icon={<MdClose size={18} />}
+                                onClick={() => openFailModal(row)}
+                                disabled={
+                                  row.status === "completed" ||
+                                  row.status === "failed"
+                                }
+                              />
+                            </div>
+                          </PermissionGuard>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              : null}
+          </TableShell>
+        </div>
+
+        <div className="m-4 mt-0">
+          <TableShell
+            title="Settlement Ledger"
+            headings={[
+              ...(!isSeller ? ["Seller"] : []),
+              "Organization",
+              "Seller Receivable",
+              "Platform Commission",
+              "GST on Commission",
+              "TCS/TDS",
+              "Shipping Net",
+              "Refund",
+              "Adjustment",
+              "Net",
+              "Status",
+              "Created",
+              "Statement",
+            ]}
+            emptyText="No settlements found"
+          >
+            {settlements.length
+              ? settlements.map((row) => {
+                  const breakdown = financialBreakdown(row);
+                  const shippingNet =
+                    Number(breakdown.shippingReimbursementAmount || 0) -
+                    Number(breakdown.shippingDeductionAmount || 0);
+                  const taxWithheld =
+                    Number(breakdown.gstTcsAmount || 0) +
+                    Number(breakdown.incomeTaxTdsAmount || 0);
+                  const adjustment = rowMoney(
+                    row,
+                    "adjustment_amount",
+                    "adjustmentAmount",
+                  );
+                  return (
+                    <tr key={row.id}>
+                      {!isSeller && (
+                        <td className="whitespace-nowrap px-4 py-3 text-xs">
+                          {row.sellerName ||
+                            row.seller?.displayName ||
+                            row.seller?.businessName ||
+                            sellerLabel(row.seller_id, sellerOptions)}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
+                        {organizationName(row)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {money(
+                          rowMoney(
+                            row,
+                            "gross_amount",
+                            "grossAmount",
+                            "amount",
+                            "total_amount",
+                            "totalAmount",
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −
+                        {money(
+                          rowMoney(
+                            row,
+                            "commission_amount",
+                            "commissionAmount",
+                          ),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(rowMoney(row, "tax_amount", "taxAmount"))}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(taxWithheld)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-[#208a3c]" : "text-[#d92d20]"}`}
+                      >
+                        {signedMoney(shippingNet)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
+                        −{money(rowMoney(row, "refund_amount", "refundAmount"))}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-4 py-3 ${adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}
+                      >
+                        {signedMoney(adjustment)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                        {money(
+                          rowMoney(row, "net_amount", "netAmount", "amount"),
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <StatusBadge status={row.status} dot />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {formatDateTime12Hour(
+                          valueOf(row, "created_at", "createdAt"),
+                          "-",
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <PermissionGuard
+                          module="sellers/commissions"
+                          action={ACTIONS.VIEW}
+                          hide
+                        >
+                          <button
+                            type="button"
+                            title="Download Settlement Statement"
+                            aria-label="Download settlement statement"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#2f6fed] transition hover:bg-[#f3f6ff]"
+                            onClick={() =>
+                              downloadApiFile(
+                                isSeller
+                                  ? ENDPOINTS.payouts.mySettlementStatement(
+                                      row.id,
+                                    )
+                                  : ENDPOINTS.payouts.settlementStatement(
+                                      row.id,
+                                    ),
+                                {},
+                                {
+                                  filename: `settlement-${row.id}.pdf`,
+                                  format: "pdf",
+                                },
+                              )
+                            }
+                          >
+                            <MdDownload size={18} />
+                          </button>
+                        </PermissionGuard>
+                      </td>
+                    </tr>
+                  );
+                })
+              : null}
+          </TableShell>
+        </div>
       </details>
 
       {!isSeller && (
@@ -1157,7 +1842,9 @@ const SellerFinance = () => {
           {/* Process Payout Modal */}
           <ModalOverlay
             isOpen={processModal.open}
-            onClose={() => setProcessModal((prev) => ({ ...prev, open: false }))}
+            onClose={() =>
+              setProcessModal((prev) => ({ ...prev, open: false }))
+            }
             title="Initiate Seller Payout"
             onSubmit={handleProcessPayoutSubmit}
             submitting={submitting}
@@ -1168,116 +1855,293 @@ const SellerFinance = () => {
                   <button
                     type="button"
                     className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "order" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
-                    onClick={() => setProcessModal((prev) => ({ ...prev, mode: "order" }))}
+                    onClick={() =>
+                      setProcessModal((prev) => ({ ...prev, mode: "order" }))
+                    }
                   >
                     Particular Order
                   </button>
                   <button
                     type="button"
                     className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "bulk" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
-                    onClick={() => setProcessModal((prev) => ({ ...prev, mode: "bulk", orderId: "" }))}
+                    onClick={() =>
+                      setProcessModal((prev) => ({
+                        ...prev,
+                        mode: "bulk",
+                        orderId: "",
+                      }))
+                    }
                   >
                     Bulk Eligible Orders
                   </button>
                 </div>
               </FieldRow>
               <FieldRow label="Seller *">
-                <select className={inputCls} value={processModal.sellerId} onChange={(e) => setProcessModal((prev) => ({ ...prev, sellerId: e.target.value, organizationId: "" }))}>
+                <select
+                  className={inputCls}
+                  value={processModal.sellerId}
+                  onChange={(e) =>
+                    setProcessModal((prev) => ({
+                      ...prev,
+                      sellerId: e.target.value,
+                      organizationId: "",
+                    }))
+                  }
+                >
                   <option value="">— Select seller —</option>
-                  {sellerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  {sellerOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </FieldRow>
               <FieldRow label="Organization">
-                <select className={inputCls} value={processModal.organizationId} onChange={(e) => setProcessModal((prev) => ({ ...prev, organizationId: e.target.value }))} disabled={!processModal.sellerId}>
-                  <option value="">{processModal.sellerId ? "All Organizations Separately" : "Select seller first"}</option>
-                  {processOrganizationOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                <select
+                  className={inputCls}
+                  value={processModal.organizationId}
+                  onChange={(e) =>
+                    setProcessModal((prev) => ({
+                      ...prev,
+                      organizationId: e.target.value,
+                    }))
+                  }
+                  disabled={!processModal.sellerId}
+                >
+                  <option value="">
+                    {processModal.sellerId
+                      ? "All Organizations Separately"
+                      : "Select seller first"}
+                  </option>
+                  {processOrganizationOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </FieldRow>
               {processModal.mode === "order" ? (
                 <FieldRow label="Eligible Order *">
-                  <select className={inputCls} value={processModal.orderId} onChange={(e) => setProcessModal((prev) => ({ ...prev, orderId: e.target.value }))}>
+                  <select
+                    className={inputCls}
+                    value={processModal.orderId}
+                    onChange={(e) =>
+                      setProcessModal((prev) => ({
+                        ...prev,
+                        orderId: e.target.value,
+                      }))
+                    }
+                  >
                     <option value="">— Select eligible order —</option>
-                    {eligibleOrders.map((order) => <option key={order.id} value={order.id}>#{order.label} · {money(order.amount)}</option>)}
+                    {eligibleOrders.map((order) => (
+                      <option key={order.id} value={order.id}>
+                        #{order.label} · {money(order.amount)}
+                      </option>
+                    ))}
                   </select>
                 </FieldRow>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <FieldRow label="Period Start">
-                    <input type="date" className={inputCls} value={processModal.periodStart} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodStart: e.target.value }))} />
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={processModal.periodStart}
+                      onChange={(e) =>
+                        setProcessModal((prev) => ({
+                          ...prev,
+                          periodStart: e.target.value,
+                        }))
+                      }
+                    />
                   </FieldRow>
                   <FieldRow label="Period End">
-                    <input type="date" className={inputCls} value={processModal.periodEnd} onChange={(e) => setProcessModal((prev) => ({ ...prev, periodEnd: e.target.value }))} />
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={processModal.periodEnd}
+                      onChange={(e) =>
+                        setProcessModal((prev) => ({
+                          ...prev,
+                          periodEnd: e.target.value,
+                        }))
+                      }
+                    />
                   </FieldRow>
                 </div>
               )}
               <FieldRow label="Payment Method">
-                <select className={inputCls} value={processModal.paymentMethod} onChange={(e) => setProcessModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
-                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                <select
+                  className={inputCls}
+                  value={processModal.paymentMethod}
+                  onChange={(e) =>
+                    setProcessModal((prev) => ({
+                      ...prev,
+                      paymentMethod: e.target.value,
+                    }))
+                  }
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {m.toUpperCase()}
+                    </option>
+                  ))}
                 </select>
               </FieldRow>
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
                 {processModal.mode === "order"
                   ? "Only eligible unpaid commissions from the selected order will be prepared."
-                  : "All eligible unpaid orders for this seller and period will be prepared together."}
-                {" "}Approval remains required. Enter the transaction/UTR reference only when completing payment.
+                  : "All eligible unpaid orders for this seller and period will be prepared together."}{" "}
+                Approval remains required. Enter the transaction/UTR reference
+                only when completing payment.
               </div>
               <FieldRow label="Internal Note">
-                <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={processModal.note} onChange={(e) => setProcessModal((prev) => ({ ...prev, note: e.target.value }))} />
+                <textarea
+                  className={`${inputCls} resize-none py-2`}
+                  rows={2}
+                  placeholder="Optional note"
+                  value={processModal.note}
+                  onChange={(e) =>
+                    setProcessModal((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
+                />
               </FieldRow>
             </div>
           </ModalOverlay>
 
           {/* Complete Payout Modal */}
           <ModalOverlay
-        isOpen={completeModal.open}
-        onClose={() => setCompleteModal((prev) => ({ ...prev, open: false }))}
-        title="Complete Payout"
-        onSubmit={handleCompletePayoutSubmit}
-        submitting={submitting}
-      >
-        {completeModal.payout && (
-          <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
-            <div>Seller: <span className="font-medium">{completeModal.payout.sellerName || completeModal.payout.seller?.name || sellerLabel(completeModal.payout.seller_id, sellerOptions)}</span></div>
-            <div>Net Amount: <span className="font-semibold text-[#208a3c]">{money(completeModal.payout.net_amount)}</span></div>
-          </div>
-        )}
-        <div className="space-y-3">
-          <FieldRow label="Payment Reference *">
-            <input className={inputCls} placeholder="UTR / transaction ID / cheque no." value={completeModal.paymentReference} onChange={(e) => setCompleteModal((prev) => ({ ...prev, paymentReference: e.target.value }))} />
-          </FieldRow>
-          <FieldRow label="Payment Method">
-            <select className={inputCls} value={completeModal.paymentMethod} onChange={(e) => setCompleteModal((prev) => ({ ...prev, paymentMethod: e.target.value }))}>
-              {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-            </select>
-          </FieldRow>
-          <FieldRow label="Internal Note">
-            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional note" value={completeModal.note} onChange={(e) => setCompleteModal((prev) => ({ ...prev, note: e.target.value }))} />
-          </FieldRow>
-        </div>
+            isOpen={completeModal.open}
+            onClose={() =>
+              setCompleteModal((prev) => ({ ...prev, open: false }))
+            }
+            title="Complete Payout"
+            onSubmit={handleCompletePayoutSubmit}
+            submitting={submitting}
+          >
+            {completeModal.payout && (
+              <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
+                <div>
+                  Seller:{" "}
+                  <span className="font-medium">
+                    {completeModal.payout.sellerName ||
+                      completeModal.payout.seller?.name ||
+                      sellerLabel(
+                        completeModal.payout.seller_id,
+                        sellerOptions,
+                      )}
+                  </span>
+                </div>
+                <div>
+                  Net Amount:{" "}
+                  <span className="font-semibold text-[#208a3c]">
+                    {money(completeModal.payout.net_amount)}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+              <FieldRow label="Payment Reference *">
+                <input
+                  className={inputCls}
+                  placeholder="UTR / transaction ID / cheque no."
+                  value={completeModal.paymentReference}
+                  onChange={(e) =>
+                    setCompleteModal((prev) => ({
+                      ...prev,
+                      paymentReference: e.target.value,
+                    }))
+                  }
+                />
+              </FieldRow>
+              <FieldRow label="Payment Method">
+                <select
+                  className={inputCls}
+                  value={completeModal.paymentMethod}
+                  onChange={(e) =>
+                    setCompleteModal((prev) => ({
+                      ...prev,
+                      paymentMethod: e.target.value,
+                    }))
+                  }
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {m.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </FieldRow>
+              <FieldRow label="Internal Note">
+                <textarea
+                  className={`${inputCls} resize-none py-2`}
+                  rows={2}
+                  placeholder="Optional note"
+                  value={completeModal.note}
+                  onChange={(e) =>
+                    setCompleteModal((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
+                />
+              </FieldRow>
+            </div>
           </ModalOverlay>
 
           {/* Fail Payout Modal */}
           <ModalOverlay
-        isOpen={failModal.open}
-        onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
-        title="Fail Payout"
-        onSubmit={handleFailPayoutSubmit}
-        submitting={submitting}
-      >
-        {failModal.payout && (
-          <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
-            <div>Seller: <span className="font-medium">{failModal.payout.sellerName || failModal.payout.seller?.displayName || sellerLabel(failModal.payout.seller_id, sellerOptions)}</span></div>
-            <div>This will release the payout back to <strong>pending</strong> status so it can be retried.</div>
-          </div>
-        )}
-        <div className="space-y-3">
-          <FieldRow label="Failure Reason *">
-            <input className={inputCls} placeholder="e.g. Incorrect bank details, payment bounced" value={failModal.reason} onChange={(e) => setFailModal((prev) => ({ ...prev, reason: e.target.value }))} />
-          </FieldRow>
-          <FieldRow label="Internal Note">
-            <textarea className={`${inputCls} resize-none py-2`} rows={2} placeholder="Optional additional context" value={failModal.note} onChange={(e) => setFailModal((prev) => ({ ...prev, note: e.target.value }))} />
-          </FieldRow>
-        </div>
+            isOpen={failModal.open}
+            onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
+            title="Fail Payout"
+            onSubmit={handleFailPayoutSubmit}
+            submitting={submitting}
+          >
+            {failModal.payout && (
+              <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
+                <div>
+                  Seller:{" "}
+                  <span className="font-medium">
+                    {failModal.payout.sellerName ||
+                      failModal.payout.seller?.displayName ||
+                      sellerLabel(failModal.payout.seller_id, sellerOptions)}
+                  </span>
+                </div>
+                <div>
+                  This will release the payout back to <strong>pending</strong>{" "}
+                  status so it can be retried.
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+              <FieldRow label="Failure Reason *">
+                <input
+                  className={inputCls}
+                  placeholder="e.g. Incorrect bank details, payment bounced"
+                  value={failModal.reason}
+                  onChange={(e) =>
+                    setFailModal((prev) => ({
+                      ...prev,
+                      reason: e.target.value,
+                    }))
+                  }
+                />
+              </FieldRow>
+              <FieldRow label="Internal Note">
+                <textarea
+                  className={`${inputCls} resize-none py-2`}
+                  rows={2}
+                  placeholder="Optional additional context"
+                  value={failModal.note}
+                  onChange={(e) =>
+                    setFailModal((prev) => ({ ...prev, note: e.target.value }))
+                  }
+                />
+              </FieldRow>
+            </div>
           </ModalOverlay>
         </>
       )}

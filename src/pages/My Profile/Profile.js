@@ -329,6 +329,7 @@ const Profile = () => {
         );
       }
       setIsEditing(false);
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.log(error);
       toast.error(error?.message || "Error updating profile");
