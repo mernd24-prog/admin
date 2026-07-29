@@ -7,7 +7,6 @@ import {
   MdClose,
   MdDownload,
   MdPayments,
-  MdSearch,
   MdFilterList,
   MdAccountBalance,
   MdLocalOffer,
@@ -56,8 +55,16 @@ const listOf = (payload) => {
   return root.items || root.list || root.rows || [];
 };
 
-const money = (value) => {
+const cleanAmount = (value) => {
   const numeric = Number(value || 0);
+  const nearestRupee = Math.round(numeric);
+  // Avoid showing one-paisa noise from GST-inclusive reverse calculations, e.g. 3000.01.
+  if (Math.abs(numeric - nearestRupee) <= 0.011) return nearestRupee;
+  return numeric;
+};
+
+const money = (value) => {
+  const numeric = cleanAmount(value);
   return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
@@ -114,9 +121,11 @@ const eligibilityCountdown = (value) => {
 };
 const payoutDecision = (row = {}) => {
   const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+  if (row.payout_id || row.payoutId || ["released", "paid", "completed"].includes(status)) {
+    return { allowed: false, label: "Already in payout", reason: "This item was already added to a payout/settlement. It is shown for history only." };
+  }
   if (status === "refunded" || row.itemPayoutStatus === "refunded") return { allowed: false, label: "Refunded", reason: "Customer refund completed; this item has no seller payout" };
   if (["eligible", "available"].includes(status) && !row.payout_id) return { allowed: true, label: "Allowed", reason: "Return window closed; no active hold" };
-  if (row.payout_id) return { allowed: false, label: "In Payout", reason: "Already added to a payout" };
   if (["held", "blocked", "on_hold"].includes(status)) return { allowed: false, label: "Held", reason: row.payoutHoldReason || "Return, refund, dispute, or payment hold" };
   if (row.releaseReason === "waiting_for_item_return_window") return { allowed: false, label: "Not Yet", reason: `Return window open · ${eligibilityCountdown(row.returnWindowEndsAt || row.eligibleAt)}` };
   if (!row.deliveredAt) return { allowed: false, label: "Not Yet", reason: "Waiting for delivery" };
@@ -179,6 +188,10 @@ const MetricCard = ({ label, value, hint }) => {
     "Shipping Deduction": MdLocalShipping,
     "Other Adjustments": MdCalculate,
     "Seller Payable": MdWallet,
+    "Payable Now": MdWallet,
+    "Pending Return Window": MdUndo,
+    "Held Amount": MdAccountBalance,
+    "Already Released": MdCheckCircle,
   }[label] || MdPayments;
 
   return (
@@ -186,7 +199,7 @@ const MetricCard = ({ label, value, hint }) => {
       title={label}
       value={value}
       description={hint ? formatLabel(hint) : null}
-      // icon={<Icon size={18} />}
+      icon={<Icon size={18} />}
     />
   );
 };
@@ -367,55 +380,16 @@ const SellerFinance = () => {
   const commissions = listOf(isSeller ? financeState.myCommissionsData?.data : financeState.adminCommissionsData?.data);
   const payouts = listOf(isSeller ? financeState.myPayoutsData?.data : financeState.adminPayoutsData?.data);
   const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
-  const adminSummary = unwrap(financeState.financeSummaryData?.data);
   const visibleCommissions = useMemo(() => commissions.filter((row) =>
     commissionStatusMatches(row, filters.status) &&
     commissionSearchMatches(row, filters.search, sellerOptions)
   ), [commissions, filters.search, filters.status, sellerOptions]);
-  const summary = useMemo(() => {
-    const totals = commissions.reduce(
-      (acc, row) => {
-        const deductions = deductionOf(row);
-        return {
-          count: acc.count + 1,
-          grossAmount: acc.grossAmount + rowMoney(row, "amount", "gross_amount", "grossAmount"),
-          commissionAmount: acc.commissionAmount + deductions.commission,
-          commissionTaxAmount: acc.commissionTaxAmount + deductions.commissionGst,
-          gstTcsAmount: acc.gstTcsAmount + deductions.gstTcs,
-          incomeTaxTdsAmount: acc.incomeTaxTdsAmount + deductions.incomeTaxTds,
-          sellerFundedDiscountAmount: acc.sellerFundedDiscountAmount + deductions.sellerFundedDiscount,
-          shippingDeductionAmount: acc.shippingDeductionAmount + deductions.shipping,
-          refundAmount: acc.refundAmount + deductions.refund,
-          adjustmentAmount: acc.adjustmentAmount + deductions.adjustment,
-          payableAmount: acc.payableAmount + rowMoney(row, "net_amount", "netAmount"),
-        };
-      },
-      {
-        count: 0,
-        grossAmount: 0,
-        commissionAmount: 0,
-        commissionTaxAmount: 0,
-        gstTcsAmount: 0,
-        incomeTaxTdsAmount: 0,
-        sellerFundedDiscountAmount: 0,
-        shippingDeductionAmount: 0,
-        refundAmount: 0,
-        adjustmentAmount: 0,
-        payableAmount: 0,
-      },
-    );
-    const paidAmount = payouts.reduce((total, row) => {
-      const status = String(row.status || "").toLowerCase();
-      if (!["paid", "completed"].includes(status)) return total;
-      return total + rowMoney(row, "net_amount", "netAmount");
-    }, 0);
-    if (!isSeller) return adminSummary;
-    return {
-      ...adminSummary,
-      commissions: { ...totals, ...(adminSummary?.commissions || {}), sellerFundedDiscountAmount: totals.sellerFundedDiscountAmount },
-      payouts: { paidAmount, ...(adminSummary?.payouts || {}) },
-    };
-  }, [adminSummary, commissions, isSeller, payouts]);
+  const actionableCommissions = useMemo(() => visibleCommissions.filter((row) => {
+    const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+    const hasPayout = Boolean(row.payout_id || row.payoutId);
+    if (!filters.status && (hasPayout || ["released", "paid", "completed"].includes(status))) return false;
+    return true;
+  }), [filters.status, visibleCommissions]);
   // const loading = financeState.loading;
 
   const sellerOverview = useMemo(() => {
@@ -427,121 +401,107 @@ const SellerFinance = () => {
         sellerName: row.sellerName || row.seller?.displayName || row.seller?.businessName || sellerLabel(sellerId, sellerOptions),
         gross: 0,
         payable: 0,
+        payableNow: 0,
+        pendingAmount: 0,
+        heldAmount: 0,
+        releasedAmount: 0,
         pending: 0,
         eligible: 0,
         held: 0,
         released: 0,
         nextEligibleAt: null,
       };
-      current.gross += rowMoney(row, "amount", "gross_amount", "grossAmount");
-      current.payable += rowMoney(row, "net_amount", "netAmount");
+      const rowGross = rowMoney(row, "amount", "gross_amount", "grossAmount");
+      const rowNet = rowMoney(row, "net_amount", "netAmount");
       const lifecycle = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
-      if (["available", "eligible"].includes(lifecycle)) current.eligible += 1;
-      else if (["held", "blocked", "on_hold"].includes(lifecycle)) current.held += 1;
-      else if (["paid", "released", "completed"].includes(lifecycle)) current.released += 1;
-      else current.pending += 1;
+      const hasPayout = Boolean(row.payout_id || row.payoutId);
+      current.gross += rowGross;
+      current.payable += rowNet;
+      if (hasPayout || ["paid", "released", "completed"].includes(lifecycle)) {
+        current.released += 1;
+        current.releasedAmount += rowNet;
+      } else if (["available", "eligible"].includes(lifecycle)) {
+        current.eligible += 1;
+        current.payableNow += rowNet;
+      } else if (["held", "blocked", "on_hold"].includes(lifecycle)) {
+        current.held += 1;
+        current.heldAmount += rowNet;
+      } else {
+        current.pending += 1;
+        current.pendingAmount += rowNet;
+      }
       const eligibleAt = row.eligibleAt || row.eligible_at;
-      if (eligibleAt && (!current.nextEligibleAt || new Date(eligibleAt) < new Date(current.nextEligibleAt))) {
+      if (!hasPayout && eligibleAt && (!current.nextEligibleAt || new Date(eligibleAt) < new Date(current.nextEligibleAt))) {
         current.nextEligibleAt = eligibleAt;
       }
       grouped.set(sellerId, current);
     });
-    payouts.forEach((row) => {
-      const sellerId = String(row.seller_id || row.sellerId || "unknown");
-      const current = grouped.get(sellerId);
-      if (!current) return;
-      if (["completed", "paid"].includes(String(row.status || "").toLowerCase())) {
-        current.released += 1;
-      }
-    });
     return Array.from(grouped.values()).sort((left, right) => right.eligible - left.eligible || right.pending - left.pending);
-  }, [commissions, payouts, sellerOptions]);
+  }, [commissions, sellerOptions]);
 
-  const visibleDeductions = useMemo(() => commissions.reduce((acc, row) => {
-    const values = deductionOf(row);
-    Object.keys(acc).forEach((key) => { acc[key] += Number(values[key] || 0); });
+  const financeBuckets = useMemo(() => visibleCommissions.reduce((acc, row) => {
+    const status = String(row.lifecycleStatus || row.releaseStatus || row.status || "pending").toLowerCase();
+    const hasPayout = Boolean(row.payout_id || row.payoutId);
+    const gross = rowMoney(row, "amount", "gross_amount", "grossAmount");
+    const net = rowMoney(row, "net_amount", "netAmount");
+    acc.totalSales += gross;
+    acc.totalNet += net;
+    acc.count += 1;
+    if (hasPayout || ["released", "paid", "completed"].includes(status)) {
+      acc.released += net;
+      acc.releasedCount += 1;
+    } else if (["eligible", "available"].includes(status)) {
+      acc.payableNow += net;
+      acc.eligibleCount += 1;
+    } else if (["held", "blocked", "on_hold"].includes(status)) {
+      acc.held += net;
+      acc.heldCount += 1;
+    } else {
+      acc.pending += net;
+      acc.pendingCount += 1;
+    }
     return acc;
   }, {
-    commission: 0,
-    commissionGst: 0,
-    gstTcs: 0,
-    incomeTaxTds: 0,
-    sellerFundedDiscount: 0,
-    marketplaceFundedDiscount: 0,
-    paymentPartnerFundedDiscount: 0,
-    shipping: 0,
-    shippingCredit: 0,
-    refund: 0,
-    adjustment: 0,
-  }), [commissions]);
+    totalSales: 0,
+    totalNet: 0,
+    payableNow: 0,
+    pending: 0,
+    held: 0,
+    released: 0,
+    count: 0,
+    eligibleCount: 0,
+    pendingCount: 0,
+    heldCount: 0,
+    releasedCount: 0,
+  }), [visibleCommissions]);
 
   const deductionMetrics = useMemo(() => [
     {
       label: "Gross Sales",
-      value: money(summary?.commissions?.grossAmount),
-      hint: `${summary?.commissions?.count || 0} commission rows`,
+      value: money(financeBuckets.totalSales),
+      hint: `${financeBuckets.count} item settlement rows`,
     },
     {
-      label: "Platform Commission",
-      value: `−${money(visibleDeductions.commission)}`,
-      hint: "Marketplace service fee",
+      label: "Payable Now",
+      value: money(financeBuckets.payableNow),
+      hint: `${financeBuckets.eligibleCount} eligible unpaid row(s)`,
     },
     {
-      label: "GST on Commission",
-      value: `−${money(visibleDeductions.commissionGst)}`,
-      hint: "Tax charged on marketplace service fee",
+      label: "Pending Return Window",
+      value: money(financeBuckets.pending),
+      hint: `${financeBuckets.pendingCount} row(s) still inside return window`,
     },
     {
-      label: "GST TCS Withheld",
-      value: `−${money(visibleDeductions.gstTcs)}`,
-      hint: "Statutory tax collected at source; not platform income",
-    },
-    // {
-    //   label: "Income-tax TDS Withheld",
-    //   value: `−${money(visibleDeductions.incomeTaxTds)}`,
-    //   hint: "Statutory tax deducted at source; not platform income",
-    // },
-    {
-      label: "Refund Adjustments",
-      value: `−${money(visibleDeductions.refund)}`,
-      hint: "Returned or cancelled item recovery",
+      label: "Held Amount",
+      value: money(financeBuckets.held),
+      hint: `${financeBuckets.heldCount} held row(s)`,
     },
     {
-      label: "Seller-funded Discount",
-      value: `−${money(visibleDeductions.sellerFundedDiscount)}`,
-      hint: "Seller's share of customer discount (already reflected in eligible value)",
+      label: "Already Released",
+      value: money(financeBuckets.released),
+      hint: `${financeBuckets.releasedCount} row(s) already in payout/settlement`,
     },
-    {
-      label: "Marketplace Promotion Contribution",
-      value: `+${money(visibleDeductions.marketplaceFundedDiscount)}`,
-      hint: "Paid by the marketplace toward seller invoices; not a seller deduction",
-    },
-    {
-      label: "Payment Partner Contribution",
-      value: `+${money(visibleDeductions.paymentPartnerFundedDiscount)}`,
-      hint: "Paid by a bank or payment partner; not a seller deduction",
-    },
-    {
-      label: "Shipping Collected from Customer",
-      value: `+${money(visibleDeductions.shippingCredit)}`,
-      hint: "Collected by the marketplace and included in this seller's settlement",
-    },
-    {
-      label: "Shipping Deduction",
-      value: `−${money(visibleDeductions.shipping)}`,
-      hint: "Only applies when the shipping policy charges the seller",
-    },
-    {
-      label: "Other Adjustments",
-      value: money(visibleDeductions.adjustment),
-      hint: "Negative values reduce payout; positive values add credit",
-    },
-    {
-      label: "Seller Payable",
-      value: money(summary?.commissions?.payableAmount),
-      hint: `${money(summary?.payouts?.paidAmount)} already paid`,
-    },
-  ], [summary, visibleDeductions]);
+  ], [financeBuckets]);
 
   const loadOrganizationsForSeller = useCallback(async (sellerId) => {
     if (!sellerId) return [];
@@ -797,7 +757,7 @@ const SellerFinance = () => {
         <div className="mb-4">
           <TableShell
             title="Seller-wise Payout Queue"
-            headings={["Seller", "Gross", "Payable", "Pending Window", "Eligible", "Held", "Released", "Next Eligible", "Action"]}
+            headings={["Seller", "Total Sales", "Payable Now", "Pending Window", "Eligible", "Held", "Already Released", "Next Eligible", "Action"]}
             emptyText="No seller commission records found"
           >
             {sellerOverview.length ? sellerOverview.map((seller) => (
@@ -806,12 +766,18 @@ const SellerFinance = () => {
                   <div className="font-semibold text-[#202337]">{seller.sellerName}</div>
                   <div className="font-mono text-[11px] text-[#65718b]">{seller.sellerId}</div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3">{money(seller.gross)}</td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">{money(seller.payable)}</td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="pending" dot /> <span className="ml-1">{seller.pending}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="eligible" dot /> <span className="ml-1">{seller.eligible}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="held" dot /> <span className="ml-1">{seller.held}</span></td>
-                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="released" dot /> <span className="ml-1">{seller.released}</span></td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  {money(seller.gross)}
+                  <div className="text-[11px] text-[#65718b]">All rows, including released</div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                  {money(seller.payableNow)}
+                  <div className="text-[11px] font-normal text-[#65718b]">Eligible and unpaid only</div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="pending" dot /> <span className="ml-1">{seller.pending}</span><div className="text-[11px] text-[#65718b]">{money(seller.pendingAmount)}</div></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="eligible" dot /> <span className="ml-1">{seller.eligible}</span><div className="text-[11px] text-[#65718b]">{money(seller.payableNow)}</div></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="held" dot /> <span className="ml-1">{seller.held}</span><div className="text-[11px] text-[#65718b]">{money(seller.heldAmount)}</div></td>
+                <td className="whitespace-nowrap px-4 py-3"><StatusBadge status="released" dot /> <span className="ml-1">{seller.released}</span><div className="text-[11px] text-[#65718b]">{money(seller.releasedAmount)}</div></td>
                 <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">{seller.nextEligibleAt ? formatDateTime12Hour(seller.nextEligibleAt, "—") : "—"}</td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <button
@@ -918,7 +884,7 @@ const SellerFinance = () => {
           headings={["Order", "Delivered", "Return Window Starts", "Return Window Ends", "Net Payable", "Can Payout?", "Reason", ...(!isSeller ? ["Action"] : [])]}
           emptyText="No order payout records found for this seller"
         >
-          {visibleCommissions.length ? visibleCommissions.map((row) => {
+          {actionableCommissions.length ? actionableCommissions.map((row) => {
             const decision = payoutDecision(row);
             return (
               <tr key={`eligibility-${row.id}`}>

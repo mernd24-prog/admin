@@ -1028,14 +1028,14 @@ const filterFields = useMemo(
                 <div key={`${item.orderItemId || item.productId}-${index}`} className="rounded border border-gray-200 p-3">
                   <div className="mb-2 text-sm font-medium text-gray-800">{item.label}</div>
                   {action.type === "approve" && (
-                    <Input labelName="Approved quantity" type="number" min="0" value={item.approvedQuantity} onChange={(event) => updateItemAction(index, "approvedQuantity", event.target.value)} required />
+                    <Input labelName={`Approved quantity${item.requestedQuantity || item.quantity ? ` (max ${item.requestedQuantity || item.quantity})` : ""}`} type="number" min="0" max={item.requestedQuantity || item.quantity || undefined} value={item.approvedQuantity} onChange={(event) => updateItemAction(index, "approvedQuantity", event.target.value)} required />
                   )}
                   {action.type === "receive" && (
-                    <Input labelName="Received quantity" type="number" min="0" value={item.receivedQuantity} onChange={(event) => updateItemAction(index, "receivedQuantity", event.target.value)} required />
+                    <Input labelName={`Received quantity${item.approvedQuantity || item.requestedQuantity || item.quantity ? ` (max ${item.approvedQuantity || item.requestedQuantity || item.quantity})` : ""}`} type="number" min="0" max={item.approvedQuantity || item.requestedQuantity || item.quantity || undefined} value={item.receivedQuantity} onChange={(event) => updateItemAction(index, "receivedQuantity", event.target.value)} required />
                   )}
                   {action.type === "qc" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <Input labelName="QC quantity" type="number" min="0" value={item.quantity} onChange={(event) => updateItemAction(index, "quantity", event.target.value)} required />
+                      <Input labelName={`QC quantity${item.receivedQuantity || item.approvedQuantity || item.quantity ? ` (max ${item.receivedQuantity || item.approvedQuantity || item.quantity})` : ""}`} type="number" min="0" max={item.receivedQuantity || item.approvedQuantity || item.quantity || undefined} value={item.quantity} onChange={(event) => updateItemAction(index, "quantity", event.target.value)} required />
                       <label className="block text-sm text-gray-700">
                         <span className="mb-1 block">Disposition</span>
                         <select className="admin-input w-full" value={item.result} onChange={(event) => updateItemAction(index, "result", event.target.value)}>
@@ -1058,7 +1058,7 @@ const filterFields = useMemo(
                   )}
                   {action.type === "qc_decision" && ["override", "partial"].includes(action.decision) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <Input labelName="Refund-approved quantity" type="number" min="0" value={item.approvedQuantity} onChange={(event) => updateItemAction(index, "approvedQuantity", event.target.value)} required />
+                      <Input labelName={`Refund-approved quantity${item.receivedQuantity || item.requestedQuantity || item.quantity ? ` (max ${item.receivedQuantity || item.requestedQuantity || item.quantity})` : ""}`} type="number" min="0" max={item.receivedQuantity || item.requestedQuantity || item.quantity || undefined} value={item.approvedQuantity} onChange={(event) => updateItemAction(index, "approvedQuantity", event.target.value)} required />
                       <label className="block text-sm text-gray-700">
                         <span className="mb-1 block">Inventory disposition</span>
                         <select className="admin-input w-full" value={item.result === "sellable" ? "sellable" : "damaged"} onChange={(event) => updateItemAction(index, "result", event.target.value)}>

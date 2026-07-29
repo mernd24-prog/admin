@@ -167,6 +167,86 @@ const getReturnItemTitle = (item = {}) => {
 const getReturnItemQuantity = (item = {}) =>
   Number(firstDefined(item.approvedQuantity, item.approved_quantity, item.requestedQuantity, item.requested_quantity, item.quantity, 1));
 
+const getReturnItemOrderItemId = (item = {}) =>
+  String(firstDefined(item.orderItemId, item.order_item_id, item.order_item, item.itemId, item.item_id, "") || "");
+
+const getReturnItemProductId = (item = {}) =>
+  String(firstDefined(item.productId, item.product_id, item.product?.id, item.product?._id, "") || "");
+
+const getReturnItemVariantText = (item = {}) => {
+  const snapshot = normalizeJson(firstDefined(item.productSnapshot, item.product_snapshot), {});
+  const variant = normalizeJson(firstDefined(item.variantSnapshot, item.variant_snapshot, snapshot.variant), {});
+  return firstDefined(
+    item.variantSku,
+    item.variant_sku,
+    variant.sku,
+    variant.name,
+    item.sku,
+    "",
+  );
+};
+
+const getOrderItemQuantity = (item = {}) =>
+  Number(firstDefined(item.quantity, item.qty, item.orderedQuantity, item.ordered_quantity, 1)) || 1;
+
+const getReturnStatus = (returnRequest = {}) =>
+  String(firstDefined(returnRequest.status, returnRequest.refundStatus, returnRequest.refund_status, "") || "").toLowerCase();
+
+const shouldCountReturnForPayout = (returnRequest = {}) => {
+  const status = getReturnStatus(returnRequest);
+  if (!status) return true;
+  return !["cancelled", "canceled", "rejected", "declined"].includes(status);
+};
+
+const buildReturnImpactByItem = (returnRequests = []) => {
+  const impact = {};
+  (Array.isArray(returnRequests) ? returnRequests : []).forEach((returnRequest) => {
+    if (!shouldCountReturnForPayout(returnRequest)) return;
+    (Array.isArray(returnRequest.items) ? returnRequest.items : []).forEach((item) => {
+      const itemId = getReturnItemOrderItemId(item);
+      const productId = getReturnItemProductId(item);
+      const keys = [itemId, productId].filter(Boolean);
+      if (!keys.length) return;
+      const quantity = getReturnItemQuantity(item);
+      const refundAmount = money(firstDefined(item.refundAmount, item.refund_amount, item.eligibleRefundAmount, item.eligible_refund_amount, 0));
+      keys.forEach((key) => {
+        impact[key] = {
+          quantity: money((impact[key]?.quantity || 0) + quantity),
+          refundAmount: money((impact[key]?.refundAmount || 0) + refundAmount),
+        };
+      });
+    });
+  });
+  return impact;
+};
+
+const getCancellationItemQuantity = (item = {}) =>
+  Number(firstDefined(item.cancelledQuantity, item.cancelled_quantity, item.quantity, item.qty, item.requestedQuantity, item.requested_quantity, 0)) || 0;
+
+const buildCancellationImpactByItem = (cancellations = []) => {
+  const impact = {};
+  (Array.isArray(cancellations) ? cancellations : []).forEach((cancellation) => {
+    const status = String(firstDefined(cancellation.status, cancellation.cancellation_status, "") || "").toLowerCase();
+    if (["rejected", "declined"].includes(status)) return;
+    const items = firstDefined(cancellation.items, cancellation.cancelledItems, cancellation.cancellation_items, []);
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const itemId = getReturnItemOrderItemId(item);
+      const productId = getReturnItemProductId(item);
+      const keys = [itemId, productId].filter(Boolean);
+      if (!keys.length) return;
+      const quantity = getCancellationItemQuantity(item);
+      const refundAmount = money(firstDefined(item.refundAmount, item.refund_amount, item.amount, item.totalAmount, item.total_amount, 0));
+      keys.forEach((key) => {
+        impact[key] = {
+          quantity: money((impact[key]?.quantity || 0) + quantity),
+          refundAmount: money((impact[key]?.refundAmount || 0) + refundAmount),
+        };
+      });
+    });
+  });
+  return impact;
+};
+
 const getItemTaxLabel = (tax = {}, item = {}) => {
   const gstRate = firstDefined(tax.gstRate, item.gst_rate, item.gstRate, 0);
   const cessRate = firstDefined(tax.cessRate, item.cess_rate, item.cessRate, 0);
@@ -366,8 +446,26 @@ const normalizeSellerSettlement = (seller = {}) => ({
   netCommissionFee: money(firstDefined(seller.netPlatformCommissionAmount, seller.net_platform_commission_amount, seller.platformFeeAmount, seller.commissionAmount, 0)),
   variableCommissionFee: money(firstDefined(seller.commissionFeeAmount, seller.commission_fee_amount, 0)),
   platformFeeTax: money(firstDefined(seller.platformFeeTaxAmount, seller.commissionTaxAmount, seller.platform_fee_tax_amount, 0)),
+  platformFeeTaxRate: money(firstDefined(seller.platformFeeTaxRate, seller.platform_fee_tax_rate, seller.commissionTaxRate, seller.commission_tax_rate, 18)),
   commissionTaxReversal: money(firstDefined(seller.commissionTaxReversalAmount, seller.commission_tax_reversal_amount, 0)),
   netCommissionTax: money(firstDefined(seller.netCommissionTaxAmount, seller.net_commission_tax_amount, seller.platformFeeTaxAmount, seller.commissionTaxAmount, 0)),
+  commissionTaxableBase: money(firstDefined(
+    seller.netCommissionTaxableBaseAmount,
+    seller.net_commission_taxable_base_amount,
+    seller.commissionTaxableBaseAmount,
+    seller.commission_taxable_base_amount,
+    seller.commissionBaseAmount,
+    seller.commission_base_amount,
+    seller.platformFeeBaseAmount,
+    seller.platform_fee_base_amount,
+    seller.netGstTcsTaxableBaseAmount,
+    seller.net_gst_tcs_taxable_base_amount,
+    seller.gstTcsTaxableBaseAmount,
+    seller.gst_tcs_taxable_base_amount,
+    seller.taxableAmount,
+    seller.taxableSales,
+    0,
+  )),
   discountAmount: money(firstDefined(seller.discountAmount, seller.discount_amount, 0)),
   sellerFundedDiscount: money(firstDefined(seller.sellerFundedDiscountAmount, seller.seller_funded_discount_amount, 0)),
   marketplaceFundedDiscount: money(firstDefined(seller.marketplaceFundedDiscountAmount, seller.marketplace_funded_discount_amount, 0)),
@@ -389,6 +487,8 @@ const normalizeSellerSettlement = (seller = {}) => ({
   incomeTaxTdsTaxableBase: money(firstDefined(seller.incomeTaxTdsTaxableAmount, seller.incomeTaxTdsTaxableBaseAmount, seller.income_tax_tds_taxable_base_amount, seller.grossSalesAmount, seller.grossSales, 0)),
   incomeTaxTdsAmount: money(firstDefined(seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
   incomeTaxTdsReversal: money(firstDefined(seller.incomeTaxTdsReversalAmount, seller.income_tax_tds_reversal_amount, 0)),
+  incomeTaxTdsTaxableBaseReversal: money(firstDefined(seller.incomeTaxTdsTaxableBaseReversalAmount, seller.income_tax_tds_taxable_base_reversal_amount, 0)),
+  netIncomeTaxTdsTaxableBase: money(firstDefined(seller.netIncomeTaxTdsTaxableBaseAmount, seller.net_income_tax_tds_taxable_base_amount, seller.grossSalesAmount, seller.grossSales, 0)),
   netIncomeTaxTdsAmount: money(firstDefined(seller.netIncomeTaxTdsAmount, seller.net_income_tax_tds_amount, seller.incomeTaxTdsAmount, seller.income_tax_tds_amount, 0)),
   sellerPayout: money(firstDefined(seller.sellerPayoutAmount, seller.sellerPayout, seller.seller_payout_amount, 0)),
   commissionStatus: firstDefined(seller.commissionStatus, seller.commission_status, ""),
@@ -470,24 +570,27 @@ const PayoutFormula = ({ children }) => (
 );
 
 const commissionBaseNote = (seller = {}, commissionAmount = 0) => {
-  const explicitBase = money(firstDefined(
-    seller.netCommissionTaxableBaseAmount,
-    seller.net_commission_taxable_base_amount,
-    seller.commissionTaxableBaseAmount,
-    seller.commission_taxable_base_amount,
-    seller.commissionBaseAmount,
-    seller.commission_base_amount,
-    seller.platformFeeBaseAmount,
-    seller.platform_fee_base_amount,
-  ));
+  const explicitBase = money(firstDefined(seller.commissionTaxableBase, 0));
   const rate = seller.commissionRates.length === 1 ? money(seller.commissionRates[0]) : 0;
-  const derivedBase = explicitBase <= 0 && rate > 0 && commissionAmount > 0
+  const derivedBase = rate > 0 && commissionAmount > 0
     ? money((commissionAmount * 100) / rate)
     : 0;
-  const base = explicitBase || derivedBase;
+  const base = derivedBase || explicitBase;
   const baseText = base > 0 ? `Base: ${formatMoney(base)}` : "";
   const rateText = seller.commissionRates.length ? `Rate: ${seller.commissionRates.map(percent).join(", ")}` : "";
   return [baseText, rateText].filter(Boolean).join(" · ");
+};
+
+const commissionGstBaseNote = (seller = {}, commissionAmount = 0, commissionTaxAmount = 0) => {
+  const base = money(commissionAmount);
+  const configuredRate = money(firstDefined(seller.platformFeeTaxRate, 0));
+  const derivedRate = configuredRate > 0
+    ? configuredRate
+    : base > 0 && commissionTaxAmount > 0
+    ? money((commissionTaxAmount * 100) / base)
+    : 0;
+  const rateText = derivedRate > 0 ? `Rate: ${percent(derivedRate)}` : "";
+  return [`GST base: ${formatMoney(base)}`, rateText].filter(Boolean).join(" · ");
 };
 
 const getOrderItemId = (item = {}) => String(firstDefined(item.id, item._id, item.order_item_id, item.orderItemId, "") || "");
@@ -516,7 +619,9 @@ const getCommissionForItem = (item = {}, records = []) => {
   }) || null;
 };
 
-const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionRecords = []) => {
+const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionRecords = [], returnRequests = [], cancellations = []) => {
+  const returnImpactByItem = buildReturnImpactByItem(returnRequests);
+  const cancellationImpactByItem = buildCancellationImpactByItem(cancellations);
   const productTotal = sellerItems.reduce((total, item) => total + money(firstDefined(item.line_total, item.lineTotal, 0)), 0);
   const taxableTotal = sellerItems.reduce((total, item) => {
     const tax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
@@ -524,6 +629,17 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
   }, 0);
 
   return sellerItems.map((item) => {
+    const orderItemId = getOrderItemId(item);
+    const productId = getItemProductId(item);
+    const itemQuantity = getOrderItemQuantity(item);
+    const returnImpact = returnImpactByItem[orderItemId] || returnImpactByItem[productId] || {};
+    const cancellationImpact = cancellationImpactByItem[orderItemId] || cancellationImpactByItem[productId] || {};
+    const returnedQuantity = Math.min(itemQuantity, money(returnImpact.quantity || 0));
+    const directCancelledQuantity = money(firstDefined(item.cancelled_quantity, item.cancelledQuantity, 0));
+    const cancelledQuantity = Math.min(Math.max(0, itemQuantity - returnedQuantity), Math.max(directCancelledQuantity, money(cancellationImpact.quantity || 0)));
+    const reversedQuantity = Math.min(itemQuantity, money(returnedQuantity + cancelledQuantity));
+    const remainingQuantity = Math.max(0, money(itemQuantity - reversedQuantity));
+    const returnRatio = itemQuantity > 0 ? Math.min(1, reversedQuantity / itemQuantity) : 0;
     const tax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
     const pricing = normalizeJson(firstDefined(item.pricing_snapshot, item.pricingSnapshot), {});
     const record = getCommissionForItem(item, commissionRecords);
@@ -531,6 +647,8 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const product = Array.isArray(metadata.products) ? metadata.products[0] || {} : {};
     const lineTotal = money(firstDefined(item.line_total, item.lineTotal, product.amount, record?.amount, 0));
     const taxableBase = money(firstDefined(tax.taxableAmount, tax.taxable_amount, product.taxableAmount, item.taxable_amount, item.taxableAmount, lineTotal));
+    const gstTcsTaxableBase = money(firstDefined(metadata.taxableSupplyAmount, metadata.gstTcsTaxableAmount, metadata.gst_tcs_taxable_amount, pricing.gstTcsTaxableAmount, pricing.gst_tcs_taxable_amount, taxableBase));
+    const incomeTaxTdsTaxableBase = money(firstDefined(metadata.incomeTaxTdsTaxableAmount, metadata.income_tax_tds_taxable_amount, pricing.incomeTaxTdsTaxableAmount, pricing.income_tax_tds_taxable_amount, taxableBase));
     const productShare = productTotal > 0 ? lineTotal / productTotal : 0;
     const taxableShare = taxableTotal > 0 ? taxableBase / taxableTotal : productShare;
     const payoutMode = String(firstDefined(pricing.sellerPayoutBase, pricing.seller_payout_base, metadata.sellerPayoutBase, "")).toLowerCase();
@@ -540,26 +658,68 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const discount = discountIncluded ? 0 : money(firstDefined(pricing.marketplaceFundedDiscountAmount, pricing.marketplace_funded_discount_amount, product.marketplaceFundedDiscountAmount, seller.marketplaceFundedDiscount * productShare));
     const commission = money(firstDefined(record?.commission_amount, record?.commissionAmount, metadata.platformFeeAmount, metadata.commissionFeeAmount, product.platformFeeAmount, pricing.platformFeeAmount, seller.commissionFee * taxableShare));
     const commissionGst = money(firstDefined(record?.tax_amount, record?.taxAmount, metadata.platformFeeTaxAmount, product.platformFeeTaxAmount, pricing.platformFeeTaxAmount, seller.platformFeeTax * taxableShare));
+    const commissionRate = money(firstDefined(metadata.platformFeeRate, metadata.commissionRate, pricing.platformFeeRate, pricing.commissionRate, seller.commissionRates?.[0], 0));
+    const commissionBase = commissionRate > 0 ? money((commission * 100) / commissionRate) : taxableBase;
+    const netCommission = money(commission * (1 - returnRatio));
+    const netCommissionGst = money(commissionGst * (1 - returnRatio));
+    const netCommissionBase = money(commissionBase * (1 - returnRatio));
+    const commissionGstRate = money(firstDefined(metadata.platformFeeTaxRate, metadata.commissionTaxRate, pricing.platformFeeTaxRate, pricing.commissionTaxRate, seller.platformFeeTaxRate, 18));
     const gstTcs = money(firstDefined(metadata.gstTcsAmount, pricing.gstTcsAmount, pricing.gst_tcs_amount, seller.gstTcsAmount * taxableShare));
     const incomeTaxTds = money(firstDefined(metadata.incomeTaxTdsAmount, pricing.incomeTaxTdsAmount, pricing.income_tax_tds_amount, seller.incomeTaxTdsAmount * taxableShare));
-    const refundRecovery = money(firstDefined(record?.refund_amount, record?.refundAmount, metadata.refundAmount, 0));
+    const netGstTcs = money(gstTcs * (1 - returnRatio));
+    const netIncomeTaxTds = money(incomeTaxTds * (1 - returnRatio));
+    const netGstTcsTaxableBase = money(gstTcsTaxableBase * (1 - returnRatio));
+    const netIncomeTaxTdsTaxableBase = money(incomeTaxTdsTaxableBase * (1 - returnRatio));
+    const computedOriginalPayout = money(productAmount + shipping + discount - commission - commissionGst - gstTcs - incomeTaxTds);
+    const backendRefundRecovery = money(firstDefined(record?.refund_amount, record?.refundAmount, metadata.refundAmount, 0));
+    const refundRecovery = backendRefundRecovery || (returnRatio > 0 ? money(computedOriginalPayout * returnRatio) : 0);
+    const backendNetPayout = money(firstDefined(record?.net_amount, record?.netAmount, 0));
     const finalPayout = record
-      ? money(firstDefined(record.net_amount, record.netAmount, 0))
+      ? (refundRecovery > 0 && backendRefundRecovery <= 0 ? Math.max(0, money(backendNetPayout - refundRecovery)) : backendNetPayout)
       : Math.max(0, money(productAmount + shipping + discount - commission - commissionGst - gstTcs - incomeTaxTds - refundRecovery));
     const beforeReturn = money(finalPayout + refundRecovery);
+    const isCancelled = cancelledQuantity > 0;
+    const isReturned = returnedQuantity > 0;
 
     return {
       id: getItemKey(item),
       title: getOrderItemTitle(item),
-      status: refundRecovery > 0 ? "Returned/refunded" : displayStatus(firstDefined(record?.status, item.payout_status, item.payoutStatus, item.delivery_status, item.deliveryStatus, "pending")),
+      status: remainingQuantity <= 0 && isCancelled
+        ? "Cancelled"
+        : remainingQuantity <= 0 && isReturned
+          ? "Returned/refunded"
+          : isCancelled
+            ? "Partially cancelled"
+            : isReturned
+              ? "Partially returned"
+              : displayStatus(firstDefined(record?.status, item.payout_status, item.payoutStatus, item.delivery_status, item.deliveryStatus, "pending")),
+      orderedQuantity: itemQuantity,
+      returnedQuantity,
+      cancelledQuantity,
+      reversedQuantity,
+      remainingQuantity,
+      returnRatio,
+      customerRefundAmount: money((returnImpact.refundAmount || 0) + (cancellationImpact.refundAmount || 0)),
       productAmount,
       shipping,
       discount,
       discountIncluded,
       commission,
       commissionGst,
+      commissionRate,
+      commissionBase,
+      netCommission,
+      netCommissionGst,
+      netCommissionBase,
+      commissionGstRate,
       gstTcs,
       incomeTaxTds,
+      gstTcsTaxableBase,
+      incomeTaxTdsTaxableBase,
+      netGstTcs,
+      netIncomeTaxTds,
+      netGstTcsTaxableBase,
+      netIncomeTaxTdsTaxableBase,
       refundRecovery,
       beforeReturn,
       finalPayout,
@@ -570,32 +730,70 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
 const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
   <div className="overflow-hidden rounded-xl border border-[#eadfbd] bg-white">
     <div className="bg-[#fff9ea] px-4 py-3">
-      <div className="text-sm font-bold text-[#202337]">Product-wise seller payout</div>
-      <div className="mt-1 text-xs text-[#65718b]">Each product shows its own charges, taxes, return adjustment, and final payable amount.</div>
+      <div className="text-sm font-bold text-[#202337]">Seller payout by product</div>
+      <div className="mt-1 text-xs text-[#65718b]">Simple view: original payout, reversed amount, and final payable.</div>
     </div>
     <div className="divide-y divide-[#f1e7cd]">
       {rows.map((row, index) => {
-        const sellerGets = money(row.productAmount + row.shipping + row.discount);
-        const platformCharges = money(row.commission + row.commissionGst);
-        const taxWithheld = money(row.gstTcs + row.incomeTaxTds);
+        const finalTaxWithheld = money(row.netGstTcs + row.netIncomeTaxTds);
+        const returned = row.refundRecovery > 0;
         return (
           <div key={row.id || index} className="px-4 py-3">
             <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="font-bold text-[#202337]">{row.title}</div>
-                <div className="mt-1 text-xs text-[#65718b]">{row.status}</div>
+                <div className="mt-1 text-xs text-[#65718b]">
+                  {row.status}
+                  {row.orderedQuantity > 1 && (
+                    <span>
+                      {" "}· Ordered {row.orderedQuantity}
+                      {row.returnedQuantity > 0 ? ` · Returned ${row.returnedQuantity} · Payable ${row.remainingQuantity}` : ""}
+                      {row.cancelledQuantity > 0 ? ` · Cancelled ${row.cancelledQuantity} · Payable ${row.remainingQuantity}` : ""}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-[#65718b]">Item payout</div>
                 <div className="text-base font-bold text-[#21812C]">{formatMoney(row.finalPayout)}</div>
               </div>
             </div>
-            <div className="space-y-1 rounded-lg bg-[#fffdf8] px-3 py-2">
-              <PayoutRow label="Seller gets" note={`Product ${formatMoney(row.productAmount)}${row.shipping > 0 ? ` + shipping ${formatMoney(row.shipping)}` : ""}${row.discount > 0 ? ` + discount ${formatMoney(row.discount)}` : row.discountIncluded ? " · discount included" : ""}`} value={`+${formatMoney(sellerGets)}`} tone="credit" small />
-              {platformCharges > 0 && <PayoutRow label="Platform charges" note={`Commission ${formatMoney(row.commission)} + GST ${formatMoney(row.commissionGst)}`} value={`-${formatMoney(platformCharges)}`} small />}
-              {taxWithheld > 0 && <PayoutRow label="Tax withheld" note={`GST TCS ${formatMoney(row.gstTcs)} + TDS ${formatMoney(row.incomeTaxTds)}`} value={`-${formatMoney(taxWithheld)}`} small />}
-              {row.refundRecovery > 0 && <PayoutRow label="Return adjustment" note={`Before return: ${formatMoney(row.beforeReturn)}`} value={`-${formatMoney(row.refundRecovery)}`} tone="warning" small />}
-              <PayoutRow label="Final for this product" value={formatMoney(row.finalPayout)} tone="credit" small className="border-t border-[#f1e7cd] pt-2 font-bold" />
+            <div className="space-y-2 rounded-lg bg-[#fffdf8] px-3 py-2">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-lg bg-white p-2">
+                  <div className="text-[11px] font-bold uppercase text-[#65718b]">Original payout</div>
+                  <div className="mt-1 text-sm font-bold text-[#202337]">{formatMoney(row.beforeReturn)}</div>
+                  <div className="mt-1 text-[11px] leading-4 text-[#65718b]">Before return or cancellation adjustment.</div>
+                </div>
+                <div className="rounded-lg bg-[#fff7ed] p-2">
+                  <div className="text-[11px] font-bold uppercase text-[#9a5b00]">Reversed</div>
+                  <div className="mt-1 text-sm font-bold text-[#9a3412]">
+                    {returned ? `-${formatMoney(row.refundRecovery)}` : "—"}
+                  </div>
+                  <div className="mt-1 text-[11px] leading-4 text-[#8a5a00]">
+                    {returned
+                      ? `${row.returnedQuantity > 0 ? `Returned ${row.returnedQuantity}` : ""}${row.returnedQuantity > 0 && row.cancelledQuantity > 0 ? " · " : ""}${row.cancelledQuantity > 0 ? `Cancelled ${row.cancelledQuantity}` : ""} of ${row.orderedQuantity}. Charges/tax are recalculated.`
+                      : "No reversal for this item."}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-[#eefbf2] p-2">
+                  <div className="text-[11px] font-bold uppercase text-[#21812C]">Final payable</div>
+                  <div className="mt-1 text-sm font-bold text-[#21812C]">{formatMoney(row.finalPayout)}</div>
+                  <div className="mt-1 text-[11px] leading-4 text-[#2f6f3f]">
+                    Platform Commission  {formatMoney(row.netCommission + row.netCommissionGst)}, TCS/TDS total {formatMoney(finalTaxWithheld)}
+                  </div>
+                </div>
+              </div>
+              {row.customerRefundAmount > 0 && (
+                <PayoutRow
+                  label="Customer refund for returned quantity"
+                  note="Shown for reference; seller payout reversal is calculated separately."
+                  value={formatMoney(row.customerRefundAmount)}
+                  tone="muted"
+                  small
+                />
+              )}
+              <PayoutRow label="Final payable for this product" value={formatMoney(row.finalPayout)} tone="credit" small className="border-t border-[#f1e7cd] pt-2 font-bold" />
             </div>
           </div>
         );
@@ -604,6 +802,117 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
     <div className="flex items-center justify-between bg-[#fff9ea] px-4 py-3 text-base font-bold text-[#202337]">
       <span>Total seller payout</span>
       <span>{formatMoney(finalTotal)}</span>
+    </div>
+  </div>
+);
+
+const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
+  <div className="space-y-3 border-t border-[#dbe6f7] p-3">
+    {rows.map((row, index) => (
+      <div key={row.id || index} className="overflow-hidden rounded-lg border border-[#dbe6f7] bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-3 bg-[#f8faff] px-3 py-2">
+          <div>
+            <div className="font-bold text-[#202337]">{row.title}</div>
+            <div className="mt-0.5 text-xs text-[#65718b]">
+              Ordered {row.orderedQuantity}
+              {row.returnedQuantity > 0 ? ` · Returned ${row.returnedQuantity} · Payable ${row.remainingQuantity}` : " · No return"}
+              {row.cancelledQuantity > 0 ? ` · Cancelled ${row.cancelledQuantity} · Payable ${row.remainingQuantity}` : ""}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] font-semibold uppercase text-[#65718b]">Final item payout</div>
+            <div className="text-base font-bold text-[#21812C]">{formatMoney(row.finalPayout)}</div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-[#eef3ff] text-[#56617a]">
+              <tr>
+                <th className="px-3 py-2 font-bold">Calculation</th>
+                <th className="px-3 py-2 text-right font-bold">Original</th>
+                <th className="px-3 py-2 text-right font-bold">Reversed</th>
+                <th className="px-3 py-2 text-right font-bold">Final</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#edf1f7] text-[#202337]">
+              <tr>
+                <td className="px-3 py-2">
+                  <div className="font-semibold">Seller payout</div>
+                  <div className="text-[#65718b]">Payable amount for this product.</div>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold">{formatMoney(row.beforeReturn)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-[#b45309]">-{row.refundRecovery > 0 ? formatMoney(row.refundRecovery) : "—"}</td>
+                <td className="px-3 py-2 text-right font-bold text-[#21812C]">{formatMoney(row.finalPayout)}</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2">
+                  <div className="font-semibold">Platform commission</div>
+                  <div className="text-[#65718b]">
+                    Base {formatMoney(row.commissionBase)} → final base {formatMoney(row.netCommissionBase)} · Rate {percent(row.commissionRate)}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold">{formatMoney(row.commission)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-[#b45309]">-{row.returnRatio > 0 ? formatMoney(row.commission - row.netCommission) : "—"}</td>
+                <td className="px-3 py-2 text-right font-bold">{formatMoney(row.netCommission)}</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2">
+                  <div className="font-semibold">GST on commission</div>
+                  <div className="text-[#65718b]">
+                    GST base {formatMoney(row.commission)} → final base {formatMoney(row.netCommission)} · Rate {percent(row.commissionGstRate)}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold">{formatMoney(row.commissionGst)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-[#b45309]">-{row.returnRatio > 0 ? formatMoney(row.commissionGst - row.netCommissionGst) : "—"}</td>
+                <td className="px-3 py-2 text-right font-bold">{formatMoney(row.netCommissionGst)}</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2">
+                  <div className="font-semibold">GST TCS</div>
+                  <div className="text-[#65718b]">
+                    Base {formatMoney(row.gstTcsTaxableBase)} → final base {formatMoney(row.netGstTcsTaxableBase)}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold">{formatMoney(row.gstTcs)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-[#b45309]">-{row.returnRatio > 0 ? formatMoney(row.gstTcs - row.netGstTcs) : "—"}</td>
+                <td className="px-3 py-2 text-right font-bold">{formatMoney(row.netGstTcs)}</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2">
+                  <div className="font-semibold">Income-tax TDS</div>
+                  <div className="text-[#65718b]">
+                    Base {formatMoney(row.incomeTaxTdsTaxableBase)} → final base {formatMoney(row.netIncomeTaxTdsTaxableBase)}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold">{formatMoney(row.incomeTaxTds)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-[#b45309]">-{row.returnRatio > 0 ? formatMoney(row.incomeTaxTds - row.netIncomeTaxTds) : "—"}</td>
+                <td className="px-3 py-2 text-right font-bold">{formatMoney(row.netIncomeTaxTds)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ))}
+
+    <div className="overflow-hidden rounded-lg border border-[#cdebd6] bg-[#f7fff9]">
+      <div className="bg-[#eefbf2] px-3 py-2 font-bold text-[#21812C]">Final seller payout calculation</div>
+      <div className="grid gap-2 p-3 text-sm sm:grid-cols-3">
+        <div>
+          <div className="text-xs font-bold uppercase text-[#65718b]">Original payout</div>
+          <div className="font-bold text-[#202337]">{formatMoney(totals.beforeReturn)}</div>
+        </div>
+        <div>
+          <div className="text-xs font-bold uppercase text-[#b45309]">Return removed</div>
+          <div className="font-bold text-[#b45309]">{formatMoney(totals.refundRecovery)}</div>
+        </div>
+        <div>
+          <div className="text-xs font-bold uppercase text-[#21812C]">Final payout</div>
+          <div className="font-bold text-[#21812C]">{formatMoney(totals.finalPayout)}</div>
+        </div>
+      </div>
+      <div className="border-t border-[#d9f1df] px-3 py-2 text-xs leading-5 text-[#65718b]">
+        Final payout is the amount payable to the seller for delivered/non-returned quantity after platform commission, GST on commission, GST TCS, income-tax TDS, shipping settlement, and return reversal.
+      </div>
     </div>
   </div>
 );
@@ -641,7 +950,7 @@ const MetricCard = ({ label, value, tone = "default" }) => {
       title={label}
       value={value}
       icon={<Icon size={18} />}
-      valueClassName={valueClass}
+      valueClassName={valueClass + "capitalize"}
     />
   );
 };
@@ -1136,7 +1445,7 @@ const OrderSummary = () => {
           )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
           <MetricCard label="Order Status" value={<StatusBadge status={order.status} dot />} />
-          <MetricCard label="Shipment" value={shipmentSummary}/>
+          <MetricCard label="Shipment" value={shipmentSummary} />
           <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
 
@@ -1237,7 +1546,7 @@ const OrderSummary = () => {
                       </div>
                       <div className="font-medium text-[#202337] md:col-span-1 md:text-center">
                         {Number(item.quantity || 0)}
-                        {Number(item.cancelled_quantity || 0) > 0 && <div className="text-xs text-red-600">{Number(item.cancelled_quantity)} cancelled</div>}
+                        {Number(item.cancelled_quantity || 0) > 0  }
                       </div>
                       <div className="md:col-span-2">
                         <StatusBadge
@@ -1516,6 +1825,14 @@ const OrderSummary = () => {
                           returnRequest.refund?.creditNoteId,
                           returnRequest.refund?.credit_note_id,
                         );
+                        const returnedQuantity = (Array.isArray(returnRequest.items) ? returnRequest.items : [])
+                          .reduce((total, item) => total + getReturnItemQuantity(item), 0);
+                        const refundStatus = String(firstDefined(returnRequest.refundStatus, returnRequest.refund_status, returnRequest.status, "") || "").toLowerCase();
+                        const creditNoteLabel = creditNoteId
+                          ? "Generated"
+                          : refundStatus === "refunded"
+                          ? "Pending generation"
+                          : "Will generate after refund";
                         return (
                           <RelatedCard
                             key={returnRequest.id || returnRequest._id}
@@ -1524,9 +1841,9 @@ const OrderSummary = () => {
                             status={returnRequest.status}
                             rows={[
                               { label: "Refund", value: formatMoney(firstDefined(returnRequest.refundAmount, returnRequest.refundBreakup?.totalRefundAmount)) },
-                              { label: "Returned items", value: Array.isArray(returnRequest.items) ? returnRequest.items.length : 0 },
-                              { label: "Payout impact", value: "Only returned item payout is held/reversed" },
-                              { label: "Reverse invoice", value: creditNoteId ? "Generated" : "Pending refund" },
+                              { label: "Returned quantity", value: returnedQuantity },
+                              { label: "Seller payout impact", value: "Only returned quantity is reversed" },
+                              { label: "Credit note / reverse invoice", value: creditNoteLabel },
                               { label: "Requested", value: formatDate(firstDefined(returnRequest.createdAt, returnRequest.created_at)) },
                             ]}
                             action={creditNoteId ? (
@@ -1543,7 +1860,9 @@ const OrderSummary = () => {
                                     <div className="min-w-0">
                                       <div className="font-medium text-[#202337]">{getReturnItemTitle(item)}</div>
                                       <div className="text-[#65718b]">
-                                        Qty {getReturnItemQuantity(item)} · Payout for this item only is affected
+                                        Returned qty {getReturnItemQuantity(item)}
+                                        {getReturnItemVariantText(item) ? ` · ${getReturnItemVariantText(item)}` : ""}
+                                        {getReturnItemOrderItemId(item) ? ` · Item ${getReturnItemOrderItemId(item).slice(0, 8)}` : ""}
                                       </div>
                                     </div>
                                     <div className="shrink-0 text-right font-semibold text-[#202337]">
@@ -1603,19 +1922,25 @@ const OrderSummary = () => {
                   String(firstDefined(record.seller_id, record.sellerId, "")) === String(seller.sellerId || "") &&
                   (!seller.organizationId || String(firstDefined(record.organization_id, record.organizationId, "default") || "default") === String(seller.organizationId || "default")),
                 );
-                const productRows = buildSimpleItemPayoutRows(seller, sellerItems, sellerCommissionRecords);
+                const productRows = buildSimpleItemPayoutRows(seller, sellerItems, sellerCommissionRecords, returns, cancellations);
                 const productRowsTotal = sumMoney(productRows, "finalPayout");
-                const displaySellerPayout = productRows.length > 0 ? productRowsTotal : seller.sellerPayout;
-                const payoutMismatch = productRows.length > 0 && Math.abs(productRowsTotal - seller.sellerPayout) >= 0.01;
                 const hasProductRows = productRows.length > 0;
+                const itemRefundRecovery = sumMoney(productRows, "refundRecovery");
+                const hasItemLevelAdjustment = productRows.some((row) =>
+                  money(row.refundRecovery) > 0 || money(row.returnedQuantity) > 0 || money(row.cancelledQuantity) > 0,
+                );
+                const displaySellerPayout = hasProductRows && hasItemLevelAdjustment ? productRowsTotal : seller.sellerPayout;
+                const payoutMismatch = hasProductRows && Math.abs(productRowsTotal - seller.sellerPayout) >= 0.01;
                 const itemProductPayable = sumMoney(productRows, "productAmount");
                 const itemShipping = sumMoney(productRows, "shipping");
                 const itemDiscount = sumMoney(productRows, "discount");
-                const itemCommission = sumMoney(productRows, "commission");
-                const itemCommissionTax = sumMoney(productRows, "commissionGst");
-                const itemGstTcs = sumMoney(productRows, "gstTcs");
-                const itemIncomeTaxTds = sumMoney(productRows, "incomeTaxTds");
-                const itemRefundRecovery = sumMoney(productRows, "refundRecovery");
+                const itemCommission = sumMoney(productRows, "netCommission");
+                const itemCommissionTax = sumMoney(productRows, "netCommissionGst");
+                const itemGstTcs = sumMoney(productRows, "netGstTcs");
+                const itemIncomeTaxTds = sumMoney(productRows, "netIncomeTaxTds");
+                const itemGstTcsBase = sumMoney(productRows, "netGstTcsTaxableBase");
+                const itemIncomeTaxTdsBase = sumMoney(productRows, "netIncomeTaxTdsTaxableBase");
+                const beforeReturnTotal = sumMoney(productRows, "beforeReturn");
                 const productPayable = hasProductRows ? itemProductPayable : (seller.sellerPayoutBase || seller.grossSales);
                 const netCommission = seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee;
                 const netCommissionTax = seller.commissionTaxReversal > 0 ? seller.netCommissionTax : seller.platformFeeTax;
@@ -1627,6 +1952,16 @@ const OrderSummary = () => {
                 const displayCommissionTax = hasProductRows ? itemCommissionTax : netCommissionTax;
                 const displayGstTcs = hasProductRows ? itemGstTcs : netGstTcs;
                 const displayIncomeTaxTds = hasProductRows ? itemIncomeTaxTds : netIncomeTaxTds;
+                const displayGstTcsBase = hasProductRows
+                  ? itemGstTcsBase
+                  : seller.gstTcsReversal > 0
+                    ? seller.netGstTcsTaxableBase
+                    : seller.gstTcsTaxableBase;
+                const displayIncomeTaxTdsBase = hasProductRows
+                  ? itemIncomeTaxTdsBase
+                  : seller.incomeTaxTdsReversal > 0
+                    ? firstDefined(seller.netIncomeTaxTdsTaxableBase, seller.incomeTaxTdsTaxableBase)
+                    : seller.incomeTaxTdsTaxableBase;
                 const hasRefundAdjustment = itemRefundRecovery > 0 || seller.sellerPayoutBaseReversal > 0 || seller.commissionReversal > 0 || seller.commissionTaxReversal > 0 || seller.gstTcsReversal > 0 || seller.incomeTaxTdsReversal > 0;
 
                 return (
@@ -1643,16 +1978,21 @@ const OrderSummary = () => {
                         {seller.organizationName && <div className="text-xs text-[#65718b]">{seller.organizationName}</div>}
                         {hasRefundAdjustment && (
                           <div className="mt-2 inline-flex rounded-full bg-[#fff3d6] px-2.5 py-1 text-xs font-semibold text-[#8A5A00]">
-                            Payout adjusted because an item was refunded
+                            Payout adjusted because an item was returned or cancelled
                           </div>
                         )}
                       </div>
                       <div className="rounded-lg bg-[#f8faff] px-3 py-2 text-right">
                         <div className="text-xs text-[#65718b]">Amount payable to seller</div>
                         <div className="text-lg font-bold text-[#1f4fc9]">{formatMoney(displaySellerPayout)}</div>
-                        {payoutMismatch && (
+                        {payoutMismatch && !hasItemLevelAdjustment && (
                           <div className="mt-1 text-[11px] font-semibold text-[#8A5A00]">
-                            Recalculated from product payouts
+                            Item rows need backend reconciliation
+                          </div>
+                        )}
+                        {payoutMismatch && hasItemLevelAdjustment && (
+                          <div className="mt-1 text-[11px] font-semibold text-[#8A5A00]">
+                            Showing item-wise adjusted payout
                           </div>
                         )}
                       </div>
@@ -1666,46 +2006,53 @@ const OrderSummary = () => {
                           No product-wise payout records found. Showing seller-level payout below.
                         </PayoutFormula>
                       )}
-
-                      <details className="rounded-lg border border-[#eadfbd] bg-[#fffdf8]">
-                        <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-[#1f4fc9]">
-                          Show seller total calculation
-                        </summary>
-                        <div className="space-y-3 border-t border-[#eadfbd] p-3">
-                          <PayoutFormula>
-                            Seller payout = seller gets − platform charges − tax withheld − return adjustment.
-                            {payoutMismatch ? " Product-wise total is used because returned/refunded items are settled item-wise." : ""}
-                          </PayoutFormula>
-
-                          <PayoutSection
-                            title="Seller gets"
-                            subtitle="Money collected from the customer for this seller."
-                            tone="earn"
-                          >
-                            <PayoutRow
-                              label="Product amount"
-                              note={seller.taxCollected > 0 ? `Product GST included: ${formatMoney(seller.taxCollected)}` : ""}
-                              value={formatMoney(productPayable)}
-                            />
-                            {displayShipping > 0 && (
-                              <PayoutRow
-                                label="Shipping collected for seller"
-                                note="Platform collected this online and adds it to seller payout."
-                                value={`+${formatMoney(displayShipping)}`}
-                                tone="credit"
+   {hasProductRows && itemRefundRecovery > 0 && (
+                            <details className="rounded-lg border border-[#dbe6f7] bg-white">
+                              <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-[#1f4fc9]">
+                                View full calculation
+                              </summary>
+                              <ItemWisePayoutCalculation
+                                rows={productRows}
+                                totals={{
+                                  beforeReturn: beforeReturnTotal,
+                                  refundRecovery: itemRefundRecovery,
+                                  finalPayout: displaySellerPayout,
+                                }}
                               />
-                            )}
-                            {displayMarketplaceDiscount > 0 && (
-                              <PayoutRow
-                                label="Marketplace-funded discount reimbursement"
-                                note="Shown separately only when not already included in product amount."
-                                value={`+${formatMoney(displayMarketplaceDiscount)}`}
-                                tone="credit"
-                              />
-                            )}
-                          </PayoutSection>
+                            </details>
+                          )}
 
-                          {(seller.sellerFundedDiscount > 0 || seller.discountAmount > 0 || displayCommission > 0 || displayCommissionTax > 0 || seller.shippingDeduction > 0) && (
+                          {!itemRefundRecovery && (
+                            <PayoutSection
+                              title="Seller receivable"
+                              subtitle="Amount before platform charges."
+                              tone="earn"
+                            >
+                              <PayoutRow
+                                label="Product amount"
+                                note={seller.taxCollected > 0 ? `Product GST included: ${formatMoney(seller.taxCollected)}` : ""}
+                                value={formatMoney(productPayable)}
+                              />
+                              {displayShipping > 0 && (
+                                <PayoutRow
+                                  label="Shipping collected for seller"
+                                  note="Platform collected this online and adds it to seller payout."
+                                  value={formatMoney(displayShipping)}
+                                  tone="credit"
+                                />
+                              )}
+                              {displayMarketplaceDiscount > 0 && (
+                                <PayoutRow
+                                  label="Marketplace-funded discount reimbursement"
+                                  note="Shown separately only when not already included in product amount."
+                                  value={formatMoney(displayMarketplaceDiscount)}
+                                  tone="credit"
+                                />
+                              )}
+                            </PayoutSection>
+                          )}
+
+                          {!itemRefundRecovery && (seller.sellerFundedDiscount > 0 || seller.discountAmount > 0 || displayCommission > 0 || displayCommissionTax > 0 || seller.shippingDeduction > 0) && (
                             <PayoutSection
                               title="Platform charges"
                               subtitle="Charges kept by platform as per marketplace agreement."
@@ -1720,27 +2067,29 @@ const OrderSummary = () => {
                                   value={`-${formatMoney(displayCommission)}`}
                                 />
                               )}
-                              {displayCommissionTax > 0 && <PayoutRow label="GST on commission" value={`-${formatMoney(displayCommissionTax)}`} />}
+                              {displayCommissionTax > 0 && (
+                                <PayoutRow
+                                  label="GST on commission"
+                                  note={commissionGstBaseNote(seller, displayCommission, displayCommissionTax)}
+                                  value={`-${formatMoney(displayCommissionTax)}`}
+                                />
+                              )}
                               {seller.shippingDeduction > 0 && <PayoutRow label="Shipping deduction" value={`-${formatMoney(seller.shippingDeduction)}`} />}
                             </PayoutSection>
                           )}
 
-                          {hasRefundAdjustment && (
+                          {!itemRefundRecovery && hasRefundAdjustment && (
                             <PayoutSection
                               title="Return adjustment"
-                              subtitle="Only the returned/refunded item is reversed. Delivered items remain payable."
+                              subtitle="Only the returned quantity payout is removed."
                               tone="refund"
                             >
                               {itemRefundRecovery > 0 && <PayoutRow label="Returned item payout removed" value={`-${formatMoney(itemRefundRecovery)}`} />}
                               {!itemRefundRecovery && seller.sellerPayoutBaseReversal > 0 && <PayoutRow label="Returned item value removed" value={`-${formatMoney(seller.sellerPayoutBaseReversal)}`} />}
-                              {seller.commissionReversal > 0 && <PayoutRow label="Commission credited back" value={`+${formatMoney(seller.commissionReversal)}`} tone="credit" />}
-                              {seller.commissionTaxReversal > 0 && <PayoutRow label="GST on commission credited back" value={`+${formatMoney(seller.commissionTaxReversal)}`} tone="credit" />}
-                              {seller.gstTcsReversal > 0 && <PayoutRow label="GST TCS credited back" value={`+${formatMoney(seller.gstTcsReversal)}`} tone="credit" />}
-                              {seller.incomeTaxTdsReversal > 0 && <PayoutRow label="Income-tax TDS credited back" value={`+${formatMoney(seller.incomeTaxTdsReversal)}`} tone="credit" />}
                             </PayoutSection>
                           )}
 
-                          {(displayGstTcs > 0 || displayIncomeTaxTds > 0) && (
+                          {!itemRefundRecovery && (displayGstTcs > 0 || displayIncomeTaxTds > 0) && (
                             <PayoutSection
                               title="Tax withheld"
                               subtitle="Final withholding after refund reversals."
@@ -1749,14 +2098,14 @@ const OrderSummary = () => {
                               {displayGstTcs > 0 && (
                                 <PayoutRow
                                   label={`GST TCS (${percent(seller.gstTcsRate)})`}
-                                  note={`Final base: ${formatMoney(seller.gstTcsReversal > 0 ? seller.netGstTcsTaxableBase : seller.gstTcsTaxableBase)}`}
+                                  note={`Final base: ${formatMoney(displayGstTcsBase)}`}
                                   value={`-${formatMoney(displayGstTcs)}`}
                                 />
                               )}
                               {displayIncomeTaxTds > 0 && (
                                 <PayoutRow
                                   label={`Income-tax TDS (${percent(seller.incomeTaxTdsRate)})`}
-                                  note={`Base: ${formatMoney(seller.incomeTaxTdsTaxableBase)}`}
+                                  note={`Final base: ${formatMoney(displayIncomeTaxTdsBase)}`}
                                   value={`-${formatMoney(displayIncomeTaxTds)}`}
                                 />
                               )}
@@ -1769,8 +2118,7 @@ const OrderSummary = () => {
                               )}
                             </PayoutSection>
                           )}
-                        </div>
-                      </details>
+                      
 
                       <div className="flex items-center justify-between rounded-lg bg-[#fff9ea] px-3 py-3 text-base font-bold text-[#202337]">
                         <span>Final seller payout</span>

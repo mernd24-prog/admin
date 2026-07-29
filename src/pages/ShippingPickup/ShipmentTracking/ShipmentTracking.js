@@ -50,6 +50,16 @@ const FULFILLMENT_TRANSITIONS = {
   out_for_delivery: ["delivered", "failed", "rto"],
   failed: ["in_transit", "rto"],
 };
+const COURIER_METHOD_OPTIONS = [
+  { value: "Manual / seller delivery", label: "Manual / seller delivery", hint: "Seller handles delivery directly" },
+  { value: "Delhivery", label: "Delhivery", hint: "Courier partner" },
+  { value: "Blue Dart", label: "Blue Dart", hint: "Courier partner" },
+  { value: "DTDC", label: "DTDC", hint: "Courier partner" },
+  { value: "Ecom Express", label: "Ecom Express", hint: "Courier partner" },
+  { value: "India Post", label: "India Post", hint: "Postal shipment" },
+  { value: "Xpressbees", label: "Xpressbees", hint: "Courier partner" },
+  { value: "Other courier", label: "Other courier", hint: "Use tracking reference below" },
+];
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
@@ -816,17 +826,27 @@ const ShipmentTracking = () => {
                 )}
 
                 {trackingAction.status === "in_transit" && (
-                  <div className="rounded-lg border border-gray-200 bg-white p-3">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Dispatch details
+                  <div className="rounded-xl border border-[#eadfbd] bg-[#fffdf8] p-4 shadow-sm">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-wide text-[#8A5A00]">
+                          Dispatch details
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Choose how this package is being sent and add the tracking reference.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#1B1D60] ring-1 ring-[#eadfbd]">
+                        Required before moving to in transit
+                      </span>
                     </div>
-                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-3">
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        Courier / delivery method{" "}
-                        <span className="text-red-500">Required</span>
-                        <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
-                          placeholder="Example: Seller delivery"
+                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4">
+                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
+                        <span>
+                          Courier / delivery method <span className="text-red-500">Required</span>
+                        </span>
+                        <select
+                          className={`min-w-0 w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.courierName ? "border-red-400" : "border-[#eadfbd]"}`}
                           value={trackingAction.courierName}
                           onChange={(event) =>
                             setTrackingAction((prev) => ({
@@ -834,18 +854,32 @@ const ShipmentTracking = () => {
                               courierName: event.target.value,
                             }))
                           }
-                        />
+                        >
+                          <option value="">Select delivery method</option>
+                          {COURIER_METHOD_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {trackingAction.courierName && (
+                          <span className="font-normal text-gray-500">
+                            {COURIER_METHOD_OPTIONS.find((option) => option.value === trackingAction.courierName)?.hint || "Selected dispatch method"}
+                          </span>
+                        )}
                         {trackingErrors.courierName && (
                           <span className="text-red-600">
                             {trackingErrors.courierName}
                           </span>
                         )}
                       </label>
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        AWB / tracking reference{" "}
-                        <span className="text-red-500">Required</span>
+                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
+                        <span>
+                          AWB / tracking reference <span className="text-red-500">Required</span>
+                        </span>
                         <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.awbNumber ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.awbNumber ? "border-red-400" : "border-[#eadfbd]"}`}
+                          placeholder="Enter AWB / manual reference"
                           value={trackingAction.awbNumber}
                           onChange={(event) =>
                             setTrackingAction((prev) => ({
@@ -860,10 +894,10 @@ const ShipmentTracking = () => {
                           </span>
                         )}
                       </label>
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
+                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
                         Tracking URL
                         <input
-                          className={`min-w-0 w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.trackingUrl ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.trackingUrl ? "border-red-400" : "border-[#eadfbd]"}`}
                           type="url"
                           placeholder="https://..."
                           value={trackingAction.trackingUrl}
@@ -880,11 +914,12 @@ const ShipmentTracking = () => {
                           </span>
                         )}
                       </label>
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        Shipped at{" "}
-                        <span className="text-red-500">Required</span>
+                      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
+                        <span>
+                          Shipped at <span className="text-red-500">Required</span>
+                        </span>
                         <input
-                          className={`min-w-0 w-full max-w-full rounded-md border px-3 py-2 text-sm text-gray-800 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
+                          className={`min-w-0 w-full max-w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.shippedAt ? "border-red-400" : "border-[#eadfbd]"}`}
                           type="datetime-local"
                           max={moment().format("YYYY-MM-DDTHH:mm")}
                           value={trackingAction.shippedAt}
