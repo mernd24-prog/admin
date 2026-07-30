@@ -343,7 +343,14 @@ export const getDashboardOverview = createApiThunkPrivate(
   ENDPOINTS.dashboard.overview,
   "GET",
   true,
-  { transformParams: pickQuery(["fromDate", "toDate", "limit"]) }
+  {
+    transformParams: pickQuery([
+      "fromDate",
+      "toDate",
+      "limit",
+      "granularity",
+    ]),
+  }
 );
 
 export const getAccessModules = createApiThunkPrivate(

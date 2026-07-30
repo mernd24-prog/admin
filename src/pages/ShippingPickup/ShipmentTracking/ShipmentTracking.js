@@ -31,7 +31,7 @@ import { cancelSellerOrder } from "../../../Redux/sellerOrdersSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -757,7 +757,7 @@ const ShipmentTracking = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open live tracking <MdOpenInNew size={14} />
+                  Open Live Tracking <MdOpenInNew size={14} />
                 </a>
                 ) : (
                   <strong className="font-medium text-gray-700">
@@ -1161,7 +1161,7 @@ const ShipmentTracking = () => {
               </span>
               <div>
                 <div className="font-semibold text-gray-900">
-                  Tracking timeline
+                  Tracking imeline
                 </div>
                 <div className="text-xs text-gray-500">
                   Shipment updates in chronological order
@@ -1194,7 +1194,7 @@ const ShipmentTracking = () => {
                   )}
                   {event.note && (
                     <div className="mt-1 whitespace-pre-wrap text-xs text-gray-600">
-                      <span className="font-semibold">Note:</span> {event.note}
+                      <span className="font-semibold">Note:</span> {formatLabel(event.note)}
                     </div>
                   )}
                 </div>

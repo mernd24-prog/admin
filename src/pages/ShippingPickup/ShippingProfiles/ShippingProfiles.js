@@ -38,16 +38,20 @@ import {
   updateShippingProfile,
   updateShippingProfileTemplate,
 } from "../../../Redux/deliverySlice";
+import { MdKeyboardArrowDown } from "react-icons/md";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SERVICEABILITY_MODES = [
-  { value: "all_india", label: "All Locations", description: "Deliver everywhere supported by configured locations" },
-  { value: "selected_states", label: "Selected States", description: "Only selected states" },
-  { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
-  { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
-  { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
-];
+    { value: "all_india", label: "All Locations", description: "Deliver everywhere supported by configured locations" },
+    { value: "selected_pincodes", label: "Custom Selection", description: "Select zip codes according to your needs" },
+    // { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
+    // { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
+    // { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
+  ];
+
+const normalizeServiceabilityMode = (value) =>
+  value === "custom" ? "selected_pincodes" : value || "all_india";
 
 const SHIPPING_METHODS = [
   { value: "standard", label: "Standard" },
@@ -129,20 +133,50 @@ function OptionMultiSelect({
 
   return (
     <div ref={ref} className="relative">
-      <div
-        className={`admin-input min-h-[42px] flex flex-wrap gap-1 ${disabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : "cursor-pointer"}`}
-        onClick={() => {
-          if (!disabled) setOpen((current) => !current);
-        }}
+    <div
+  className={`admin-input min-h-[42px] flex items-center justify-between gap-2 ${
+    disabled
+      ? "cursor-not-allowed bg-gray-50 text-gray-400"
+      : "cursor-pointer"
+  }`}
+  onClick={() => {
+    if (!disabled) setOpen((current) => !current);
+  }}
+>
+  <div className="flex min-w-0 flex-1 flex-wrap gap-1">
+    {value.length === 0 && (
+      <span className="truncate text-sm text-gray-400">
+        {placeholder}
+      </span>
+    )}
+
+    {value.map((item) => (
+      <span
+        key={item}
+        className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]"
       >
-        {value.length === 0 && <span className="text-sm text-gray-400">{placeholder}</span>}
-        {value.map((item) => (
-          <span key={item} className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs px-2 py-0.5 font-medium">
-            {item}
-            <button type="button" onClick={(e) => { e.stopPropagation(); onChange(value.filter((tag) => tag !== item)); }} className="hover:text-red-500 ml-0.5 leading-none">×</button>
-          </span>
-        ))}
-      </div>
+        {item}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(value.filter((tag) => tag !== item));
+          }}
+          className="ml-0.5 leading-none hover:text-red-500"
+        >
+          ×
+        </button>
+      </span>
+    ))}
+  </div>
+
+  <MdKeyboardArrowDown
+    className={`shrink-0 text-xl transition-transform ${
+      open ? "rotate-180" : ""
+    }`}
+  />
+</div>
       {open && !disabled && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
           <div className="p-2 border-b sticky top-0 bg-white">
@@ -191,9 +225,9 @@ function ProfileForm({
 }) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
   const mode = form.serviceabilityMode;
-  const needsCountry = ["selected_states", "selected_cities", "selected_pincodes", "block_pincodes"].includes(mode);
-  const needsState = ["selected_cities", "selected_pincodes", "block_pincodes"].includes(mode);
-  const needsCity = ["selected_pincodes", "block_pincodes"].includes(mode);
+  const needsCountry = ["selected_states", "selected_cities", "block_pincodes"].includes(mode);
+  const needsState = ["selected_cities", "block_pincodes"].includes(mode);
+  const needsCity = mode === "block_pincodes";
   const [locationFilter, setLocationFilter] = useState({ countryId: "", stateId: "", cityId: "" });
   const [locationOptions, setLocationOptions] = useState({
     countries: [],
@@ -296,6 +330,44 @@ function ProfileForm({
     }));
   };
 
+
+  const [pincodeInput, setPincodeInput] = useState("");
+
+  const addPincode = () => {
+  const pincode = pincodeInput.trim();
+
+  if (!pincode) return;
+
+  if (!/^\d{6}$/.test(pincode)) {
+    toast.error("Please enter a valid 6-digit pincode");
+    return;
+  }
+
+  if (form.allowedPincodes.includes(pincode)) {
+    toast.error("This pincode is already added");
+    return;
+  }
+
+  patch("allowedPincodes", [...form.allowedPincodes, pincode]);
+  setPincodeInput("");
+};
+
+const removePincode = (pincode) => {
+  patch(
+    "allowedPincodes",
+    form.allowedPincodes.filter((item) => item !== pincode),
+  );
+};
+
+const handlePincodeKeyDown = (event) => {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    addPincode();
+  }
+};
+
+
+
   return (
     <div className="space-y-6 py-2">
       {/* Identity */}
@@ -372,16 +444,114 @@ function ProfileForm({
         <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Serviceability</h4>
 
         <div className="space-y-2">
-          {SERVICEABILITY_MODES.map((m) => (
-            <label key={m.value} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${form.serviceabilityMode === m.value ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5" : "border-gray-200 hover:border-gray-300"}`}>
-              <input type="radio" name="serviceabilityMode" value={m.value} checked={form.serviceabilityMode === m.value} onChange={() => patch("serviceabilityMode", m.value)} className="mt-0.5 accent-[var(--admin-blue)]" />
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{m.label}</p>
-                <p className="text-xs text-gray-500">{m.description}</p>
-              </div>
-            </label>
-          ))}
+  {SERVICEABILITY_MODES.map((mode) => {
+    const isSelected = form.serviceabilityMode === mode.value;
+
+    return (
+      <label
+        key={mode.value}
+        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+          isSelected
+            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
+            : "border-gray-200 hover:border-gray-300"
+        }`}
+      >
+        <input
+          type="radio"
+          name="serviceabilityMode"
+          value={mode.value}
+          checked={isSelected}
+          onChange={() => {
+            setForm((prev) => ({
+              ...prev,
+              serviceabilityMode: mode.value,
+              allowedPincodes:
+                mode.value === "all_india" ? [] : prev.allowedPincodes,
+            }));
+
+            if (mode.value === "all_india") {
+              setPincodeInput("");
+            }
+          }}
+          className="sr-only"
+        />
+        <span
+          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+            isSelected
+              ? "border-[var(--admin-blue)]"
+              : "border-gray-400 bg-white"
+          }`}
+          aria-hidden="true"
+        >
+          {isSelected && (
+            <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
+          )}
+        </span>
+
+        <div>
+          <p className="text-sm font-semibold text-gray-800">{mode.label}</p>
+          <p className="text-xs text-gray-500">{mode.description}</p>
         </div>
+      </label>
+    );
+  })}
+</div>
+{form.serviceabilityMode === "selected_pincodes" && (
+  <div className="mt-4 space-y-2">
+    <label className="admin-label">
+      Allowed Pincodes <span className="text-red-500">*</span>
+    </label>
+
+    <div className="flex gap-2">
+      <input
+        type="text"
+        value={pincodeInput}
+        onChange={(event) => {
+          const value = event.target.value.replace(/\D/g, "").slice(0, 6);
+          setPincodeInput(value);
+        }}
+        onKeyDown={handlePincodeKeyDown}
+        placeholder="Enter 6-digit pincode"
+        className="admin-input flex-1"
+        maxLength={6}
+        inputMode="numeric"
+      />
+
+      <button
+        type="button"
+        onClick={addPincode}
+        className="admin-btn-primary whitespace-nowrap px-4"
+      >
+        Add
+      </button>
+    </div>
+
+    {form.allowedPincodes.length > 0 && (
+      <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 p-3">
+        {form.allowedPincodes.map((pincode) => (
+          <span
+            key={pincode}
+            className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+          >
+            {pincode}
+
+            <button
+              type="button"
+              onClick={() => removePincode(pincode)}
+              className="ml-1 text-sm leading-none hover:text-red-500"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+    )}
+
+    <p className="text-xs text-gray-400">
+      {form.allowedPincodes.length} pincode(s) selected
+    </p>
+  </div>
+)}
 
         {needsCountry && (
           <div className="grid gap-3 md:grid-cols-3">
@@ -439,7 +609,7 @@ function ProfileForm({
           </div>
         )}
 
-        {(mode === "selected_states" || mode === "selected_cities") && (
+        {/* {(mode === "selected_states" || mode === "selected_cities") && (
           <div className="space-y-1">
             <label className="admin-label">States</label>
             <OptionMultiSelect
@@ -505,7 +675,7 @@ function ProfileForm({
             />
             <p className="text-xs text-gray-400">{form.blockedPincodes.length} pincode(s) blocked</p>
           </div>
-        )}
+        )} */}
       </section>
 
       {/* Charges */}
@@ -937,7 +1107,9 @@ export default function ShippingProfiles() {
       name: template.name || "",
       description: template.description || "",
       shippingMethod: template.shippingMethod || "standard",
-      serviceabilityMode: template.serviceabilityMode || "all_india",
+      serviceabilityMode: normalizeServiceabilityMode(
+        template.serviceabilityMode,
+      ),
       allowedStates: template.allowedStates || [],
       allowedCities: template.allowedCities || [],
       allowedPincodes: template.allowedPincodes || [],
@@ -988,7 +1160,9 @@ export default function ShippingProfiles() {
       name: profile.name || "",
       description: profile.description || "",
       shippingMethod: profile.shippingMethod || "standard",
-      serviceabilityMode: profile.serviceabilityMode || "all_india",
+      serviceabilityMode: normalizeServiceabilityMode(
+        profile.serviceabilityMode,
+      ),
       allowedStates: profile.allowedStates || [],
       allowedCities: profile.allowedCities || [],
       allowedPincodes: profile.allowedPincodes || [],
@@ -1012,6 +1186,9 @@ export default function ShippingProfiles() {
 
   const buildPayload = () => ({
     ...form,
+    serviceabilityMode: normalizeServiceabilityMode(
+      form.serviceabilityMode,
+    ),
     sellerId: form.sellerId || activeSellerId || undefined,
     organizationId: form.organizationId || null,
     shippingCharge: form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
@@ -1042,6 +1219,14 @@ export default function ShippingProfiles() {
     }
     if (!form.name?.trim()) { toast.error("Profile name is required"); return; }
     if (!isSeller && !(form.sellerId || activeSellerId)) { toast.error("Select a target seller"); return; }
+    if (
+      normalizeServiceabilityMode(form.serviceabilityMode) ===
+        "selected_pincodes" &&
+      !form.allowedPincodes?.length
+    ) {
+      toast.error("Add at least one allowed pincode");
+      return;
+    }
     setSaving(true);
     try {
       if (modal.mode === "create") {
@@ -1062,6 +1247,14 @@ export default function ShippingProfiles() {
 
   const handleTemplateSave = async () => {
     if (!form.name?.trim()) { toast.error("Template name is required"); return; }
+    if (
+      normalizeServiceabilityMode(form.serviceabilityMode) ===
+        "selected_pincodes" &&
+      !form.allowedPincodes?.length
+    ) {
+      toast.error("Add at least one allowed pincode");
+      return;
+    }
     setSaving(true);
     try {
       if (templateModal.mode === "create") {

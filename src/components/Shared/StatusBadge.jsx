@@ -193,7 +193,7 @@ const StatusBadge = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 border font-medium capitalize ${colorClass} ${sizeClass} ${shapeClass}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border font-medium capitalize ${colorClass} ${sizeClass} ${shapeClass}`}
     >
       {dot && (
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />

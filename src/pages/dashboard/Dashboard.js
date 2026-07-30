@@ -56,6 +56,20 @@ const monthFormatter = new Intl.DateTimeFormat("en-IN", {
   year: "numeric",
 });
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const asNumber = (value) => {
   const number = Number(value);
@@ -100,6 +114,21 @@ const parseInputDate = (value) => {
   const [year, month, day] = String(value).split("-").map(Number);
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day);
+};
+
+const getDashboardGranularity = (range, dates) => {
+  if (range === "year") return "month";
+  if (range === "today") return "hour";
+  if (range !== "custom") return "day";
+
+  const start = parseInputDate(dates?.fromDate);
+  const end = parseInputDate(dates?.toDate);
+  if (!start || !end) return "day";
+
+  const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (days > 93) return "month";
+  if (days > 31) return "week";
+  return "day";
 };
 
 const addMonths = (date, amount) => {
@@ -275,6 +304,11 @@ function GoldDateRangeCalendar({
 }) {
   const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
   const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
+  const today = new Date();
+  const todayValue = toInputDate(today);
+  const isCurrentMonth =
+    viewDate.getFullYear() === today.getFullYear() &&
+    viewDate.getMonth() === today.getMonth();
 
   return (
     <div
@@ -300,9 +334,9 @@ function GoldDateRangeCalendar({
         </div>
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc] disabled:cursor-not-allowed disabled:opacity-40"
           onClick={() => onViewDateChange(addMonths(viewDate, 1))}
-          disabled={loading}
+          disabled={loading || isCurrentMonth}
           aria-label="Next month"
         >
           ›
@@ -317,6 +351,7 @@ function GoldDateRangeCalendar({
 
       <div className="grid grid-cols-7 gap-1">
         {days.map((day) => {
+          const isFutureDate = day.value > todayValue;
           const isStart = day.value === dates.fromDate;
           const isEnd = day.value === dates.toDate;
           const isSelected = isStart || isEnd;
@@ -330,7 +365,9 @@ function GoldDateRangeCalendar({
               key={day.value}
               type="button"
               className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
-                isSelected
+                isFutureDate
+                  ? "cursor-not-allowed text-slate-300 opacity-50"
+                  : isSelected
                   ? "bg-[var(--admin-gold)] text-white shadow-sm"
                   : isInRange
                     ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
@@ -339,7 +376,12 @@ function GoldDateRangeCalendar({
                       : "text-slate-300 hover:bg-slate-50"
               }`}
               onClick={() => onSelectDate(day.value)}
-              disabled={loading}
+              disabled={loading || isFutureDate}
+              aria-label={
+                isFutureDate
+                  ? `${day.value} is unavailable because it is in the future`
+                  : undefined
+              }
             >
               {day.day}
             </button>
@@ -404,17 +446,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     let active = true;
-    dispatch(getDashboardOverview(dateFilters)).finally(() => {
-      if (active && closeCustomPickerAfterLoadRef.current) {
-        closeCustomPickerAfterLoadRef.current = false;
-        setCustomApplying(false);
-        setCustomPickerOpen(false);
-      }
-    });
+    const granularity = getDashboardGranularity(range, dateFilters);
+    dispatch(getDashboardOverview({ ...dateFilters, granularity })).finally(
+      () => {
+        if (active && closeCustomPickerAfterLoadRef.current) {
+          closeCustomPickerAfterLoadRef.current = false;
+          setCustomApplying(false);
+          setCustomPickerOpen(false);
+        }
+      },
+    );
     return () => {
       active = false;
     };
-  }, [dateFilters, dispatch]);
+  }, [dateFilters, dispatch, range]);
 
   const handleRangeChange = (nextRange) => {
     if (nextRange === "custom") {
@@ -433,7 +478,7 @@ export default function Dashboard() {
 
   const handleCustomCalendarSelect = (value) => {
     const selectedDate = parseInputDate(value);
-    if (!selectedDate) return;
+    if (!selectedDate || value > toInputDate(new Date())) return;
 
     setCustomCalendarViewDate(selectedDate);
     setCustomDates((current) => {
@@ -451,6 +496,13 @@ export default function Dashboard() {
 
   const applyCustomDateRange = () => {
     if (!customDates.fromDate || !customDates.toDate) return;
+    const todayValue = toInputDate(new Date());
+    if (
+      customDates.fromDate > todayValue ||
+      customDates.toDate > todayValue
+    ) {
+      return;
+    }
     const fromTime = new Date(customDates.fromDate).getTime();
     const toTime = new Date(customDates.toDate).getTime();
     if (Number.isNaN(fromTime) || Number.isNaN(toTime)) return;
@@ -597,7 +649,11 @@ export default function Dashboard() {
       overview?.orderPerformance ||
       overview?.ordersPerformance ||
       overview?.salesTrend;
-    if (!Array.isArray(source) || source.length === 0) {
+    if (
+      (!Array.isArray(source) || source.length === 0) &&
+      range !== "year" &&
+      range !== "custom"
+    ) {
       if (!recentOrders.length) return EMPTY_PERFORMANCE;
 
       const weekdayCounts = recentOrders.reduce((acc, order) => {
@@ -615,25 +671,240 @@ export default function Dashboard() {
       }));
     }
 
-    return source.map((item, index) => ({
-      label: item.label || item.name || item.date || `Day ${index + 1}`,
-      value: asNumber(
+    const sourceRows = Array.isArray(source) ? source : [];
+    const selectedDates = {
+      fromDate: dateFilters.fromDate,
+      toDate: dateFilters.toDate,
+    };
+    const customStart = parseInputDate(selectedDates.fromDate);
+    const customEnd = parseInputDate(selectedDates.toDate);
+    const customGranularity = getDashboardGranularity(range, selectedDates);
+    const getCustomBucketDate = (date) => {
+      const bucketDate = new Date(date);
+      if (customGranularity === "month") {
+        bucketDate.setDate(1);
+      } else if (customGranularity === "week" && customStart) {
+        const daysFromStart = Math.floor(
+          (bucketDate.getTime() - customStart.getTime()) / 86400000,
+        );
+        bucketDate.setTime(customStart.getTime());
+        bucketDate.setDate(
+          customStart.getDate() + Math.floor(daysFromStart / 7) * 7,
+        );
+      }
+      return bucketDate;
+    };
+    const getCustomBucketLabel = (date) => {
+      const bucketDate = getCustomBucketDate(date);
+      return bucketDate.toLocaleDateString("en-IN", {
+        day: customGranularity === "month" ? undefined : "2-digit",
+        month: "short",
+        year: customGranularity === "month" ? "2-digit" : undefined,
+      });
+    };
+
+    const groupedData = new Map();
+    let hasYearBuckets = false;
+    let hasCustomBuckets = false;
+
+    sourceRows.forEach((item, index) => {
+      const suppliedLabel = String(item.label || item.name || "");
+      const rawDate =
+        item.date ||
+        item.created_at ||
+        item.createdAt ||
+        item.timestamp ||
+        (/^\d{4}[-/]\d{1,2}/.test(suppliedLabel) ? suppliedLabel : null);
+      const parsedDate =
+        rawDate && (typeof rawDate === "number" || /\d/.test(String(rawDate)))
+          ? new Date(rawDate)
+          : null;
+      const hasValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
+
+      let label = item.label || item.name || `Day ${index + 1}`;
+      if (hasValidDate) {
+        if (range === "year") {
+          label = parsedDate.toLocaleDateString("en-IN", { month: "short" });
+          hasYearBuckets = true;
+        } else if (range === "today") {
+          label = parsedDate.toLocaleTimeString("en-IN", {
+            hour: "numeric",
+            hour12: true,
+          });
+        } else if (range === "last_week") {
+          label = parsedDate.toLocaleDateString("en-IN", {
+            weekday: "short",
+          });
+        } else if (range === "custom") {
+          label = getCustomBucketLabel(parsedDate);
+          hasCustomBuckets = true;
+        } else {
+          label = parsedDate.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+          });
+        }
+      } else if (range === "year") {
+        const normalizedMonth = MONTH_LABELS.find((month) =>
+          suppliedLabel.toLowerCase().startsWith(month.toLowerCase()),
+        );
+        if (normalizedMonth) {
+          label = normalizedMonth;
+          hasYearBuckets = true;
+        }
+      }
+
+      const value = asNumber(
         item.value ?? item.orders ?? item.totalOrders ?? item.total,
-      ),
-      revenue: asNumber(item.revenue ?? item.gmv ?? item.totalRevenue),
-      averageOrderValue: asNumber(
+      );
+      const revenue = asNumber(item.revenue ?? item.gmv ?? item.totalRevenue);
+      const averageOrderValue = asNumber(
         item.averageOrderValue ??
           item.aov ??
-          asNumber(item.revenue ?? item.gmv ?? item.totalRevenue) /
-            Math.max(
-              asNumber(
-                item.value ?? item.orders ?? item.totalOrders ?? item.total,
-              ),
-              1,
-            ),
-      ),
-    }));
-  }, [overview, recentOrders]);
+          revenue / Math.max(value, 1),
+      );
+      const current = groupedData.get(label) || {
+        label,
+        value: 0,
+        revenue: 0,
+        averageOrderValue: 0,
+        pointCount: 0,
+      };
+
+      groupedData.set(label, {
+        ...current,
+        value: current.value + value,
+        revenue: current.revenue + revenue,
+        averageOrderValue:
+          current.averageOrderValue + averageOrderValue,
+        pointCount: current.pointCount + 1,
+      });
+    });
+
+    const groupedRows = Array.from(groupedData.values()).map(
+      ({ pointCount, ...item }) => ({
+        ...item,
+        averageOrderValue: pointCount
+          ? item.averageOrderValue / pointCount
+          : 0,
+      }),
+    );
+
+    if (range === "custom" && customStart && customEnd) {
+      const customRows = new Map();
+      if (hasCustomBuckets) {
+        groupedRows.forEach((item) => customRows.set(item.label, item));
+      } else {
+        recentOrders.forEach((order) => {
+          const rawDate = order.created_at || order.createdAt || order.date;
+          const date = rawDate ? new Date(rawDate) : null;
+          if (
+            !date ||
+            Number.isNaN(date.getTime()) ||
+            date < customStart ||
+            date > new Date(customEnd.getTime() + 86400000 - 1)
+          ) {
+            return;
+          }
+
+          const label = getCustomBucketLabel(date);
+          const revenue = asNumber(
+            order.seller_order_total ??
+              order.payable_amount ??
+              order.totalAmount ??
+              order.total,
+          );
+          const current = customRows.get(label) || {
+            label,
+            value: 0,
+            revenue: 0,
+            averageOrderValue: 0,
+          };
+          const nextValue = current.value + 1;
+          const nextRevenue = current.revenue + revenue;
+          customRows.set(label, {
+            label,
+            value: nextValue,
+            revenue: nextRevenue,
+            averageOrderValue: nextRevenue / nextValue,
+          });
+        });
+      }
+
+      const buckets = [];
+      const cursor = getCustomBucketDate(customStart);
+      while (cursor <= customEnd) {
+        buckets.push(getCustomBucketLabel(cursor));
+        if (customGranularity === "month") {
+          cursor.setMonth(cursor.getMonth() + 1, 1);
+        } else {
+          cursor.setDate(cursor.getDate() + (customGranularity === "week" ? 7 : 1));
+        }
+      }
+
+      return buckets.map(
+        (label) =>
+          customRows.get(label) || {
+            label,
+            value: 0,
+            revenue: 0,
+            averageOrderValue: 0,
+          },
+      );
+    }
+
+    if (range !== "year") return groupedRows;
+
+    const yearlyRows = new Map();
+    if (hasYearBuckets) {
+      groupedRows.forEach((item) => yearlyRows.set(item.label, item));
+    } else {
+      recentOrders.forEach((order) => {
+        const rawDate = order.created_at || order.createdAt || order.date;
+        const date = rawDate ? new Date(rawDate) : null;
+        if (!date || Number.isNaN(date.getTime())) return;
+
+        const label = MONTH_LABELS[date.getMonth()];
+        const value = 1;
+        const revenue = asNumber(
+          order.seller_order_total ??
+            order.payable_amount ??
+            order.totalAmount ??
+            order.total,
+        );
+        const current = yearlyRows.get(label) || {
+          label,
+          value: 0,
+          revenue: 0,
+          averageOrderValue: 0,
+        };
+        const nextValue = current.value + value;
+        const nextRevenue = current.revenue + revenue;
+        yearlyRows.set(label, {
+          label,
+          value: nextValue,
+          revenue: nextRevenue,
+          averageOrderValue: nextRevenue / nextValue,
+        });
+      });
+    }
+
+    return MONTH_LABELS.map(
+      (label) =>
+        yearlyRows.get(label) || {
+          label,
+          value: 0,
+          revenue: 0,
+          averageOrderValue: 0,
+        },
+    );
+  }, [
+    dateFilters.fromDate,
+    dateFilters.toDate,
+    overview,
+    range,
+    recentOrders,
+  ]);
 
   const topProducts = useMemo(
     () =>
@@ -821,17 +1092,18 @@ export default function Dashboard() {
               Average Order Value
             </span>
           </div>
-          <div className="h-[270px] w-full text-xs">
-            <ResponsiveContainer
-              key={chartRenderKey}
-              width="100%"
-              height="100%"
-            >
-              {chartView === "performance" ? (
-                <AreaChart
-                  data={activeChartData}
-                  margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                >
+          <div className="relative h-[270px] w-full text-xs">
+            {hasActiveChartData ? (
+              <ResponsiveContainer
+                key={chartRenderKey}
+                width="100%"
+                height="100%"
+              >
+                {chartView === "performance" ? (
+                  <AreaChart
+                    data={activeChartData}
+                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
+                  >
                   <defs>
                     <linearGradient
                       id="ordersPerformanceFill"
@@ -887,6 +1159,7 @@ export default function Dashboard() {
                   <CartesianGrid vertical={false} stroke="#EADFCE" />
                   <XAxis
                     dataKey="label"
+                    interval={range === "year" ? 0 : "preserveEnd"}
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: "#777487", fontSize: 10 }}
@@ -928,12 +1201,12 @@ export default function Dashboard() {
                     strokeWidth={2}
                     fill="url(#aovPerformanceFill)"
                   />
-                </AreaChart>
-              ) : (
-                <BarChart
-                  data={activeChartData}
-                  margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                >
+                  </AreaChart>
+                ) : (
+                  <BarChart
+                    data={activeChartData}
+                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
+                  >
                   <CartesianGrid vertical={false} stroke="#EADFCE" />
                   <XAxis
                     dataKey="label"
@@ -968,15 +1241,22 @@ export default function Dashboard() {
                     fill="#D6A323"
                     radius={[4, 4, 0, 0]}
                   />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-slate-400">
+                <img
+                  src="/Img/noData.png"
+                  alt=""
+                  className="h-28 w-28 object-contain"
+                />
+                <span className="text-sm font-medium">
+                  No performance data found
+                </span>
+              </div>
+            )}
           </div>
-          {!hasActiveChartData && (
-            <p className="-mt-4 text-center text-[11px] text-slate-400">
-              Chart data is not available yet.
-            </p>
-          )}
         </section>
 
         <section className="admin-card p-5">
@@ -986,54 +1266,62 @@ export default function Dashboard() {
             </h2>
           </div>
           <div className="grid items-center gap-4 sm:grid-cols-[160px_1fr] xl:grid-cols-1 2xl:grid-cols-[170px_1fr]">
-            <div className="relative h-[170px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusRows}
-                    dataKey="value"
-                    nameKey="label"
-                    innerRadius={48}
-                    outerRadius={74}
-                    paddingAngle={1}
-                  >
-                    {statusRows.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[21px] font-bold text-[var(--admin-ink)]">
-                  {formatNumber(statusTotal)}
-                </span>
-                <span className="text-[10px] text-[var(--admin-muted)]">
-                  Total Orders
+            {statusTotal === 0 ? (
+              <div className="col-span-full flex h-[170px] flex-col items-center justify-center gap-1 text-center text-slate-400">
+                <span className="text-sm font-medium">
+                  No order status data found
                 </span>
               </div>
-            </div>
-            <div className="space-y-3">
-              {statusRows.slice(0, 5).map((row) => (
-                <div
-                  key={row.name}
-                  className="flex items-center justify-between gap-3 text-[11px]"
-                >
-                  <span className="inline-flex items-center gap-2 capitalize text-[var(--admin-ink)]">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: row.color }}
-                    />
-                    {row.label}
-                  </span>
-                  <span className="font-semibold text-[var(--admin-ink)]">
-                    {formatNumber(row.value)}
-                    {statusTotal
-                      ? ` (${Math.round((row.value / statusTotal) * 100)}%)`
-                      : ""}
-                  </span>
+            ) : (
+              <>
+                <div className="relative h-[170px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusRows}
+                        dataKey="value"
+                        nameKey="label"
+                        innerRadius={48}
+                        outerRadius={74}
+                        paddingAngle={1}
+                      >
+                        {statusRows.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span className="text-[21px] font-bold text-[var(--admin-ink)]">
+                      {formatNumber(statusTotal)}
+                    </span>
+                    <span className="text-[10px] text-[var(--admin-muted)]">
+                      Total Orders
+                    </span>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-3">
+                  {statusRows.slice(0, 5).map((row) => (
+                    <div
+                      key={row.name}
+                      className="flex items-center justify-between gap-3 text-[11px]"
+                    >
+                      <span className="inline-flex items-center gap-2 capitalize text-[var(--admin-ink)]">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: row.color }}
+                        />
+                        {row.label}
+                      </span>
+                      <span className="font-semibold text-[var(--admin-ink)]">
+                        {formatNumber(row.value)}
+                        {` (${Math.round((row.value / statusTotal) * 100)}%)`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </section>
       </div>
