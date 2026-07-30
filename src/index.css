@@ -11,7 +11,7 @@ body {
   font-optical-sizing: auto;
   font-style: normal;
   color: #252238;
-  background: #F4F6FA;
+  background: #f4f6fa;
 }
 
 .d {
@@ -28,10 +28,10 @@ body {
   --admin-gold-soft: #fff3d2;
   --admin-amber: var(--admin-gold);
   --admin-amber-soft: var(--admin-gold-soft);
-  --admin-shell: #FCF5E8;
+  --admin-shell: #fcf5e8;
   --admin-canvas: #f6f7fb;
-  --admin-shell-soft: #D3DEF9;
-  --admin-surface: #FFFFFF;
+  --admin-shell-soft: #d3def9;
+  --admin-surface: #ffffff;
   --admin-surface-soft: #fffaf1;
   --admin-table-head: #eef3ff;
   --admin-line: #eadfce;
@@ -41,7 +41,8 @@ body {
   --admin-ink: #252238;
   --admin-muted: #777487;
   --admin-soft-text: #9a96a6;
-  --admin-shadow: 0 10px 30px rgba(31, 27, 95, 0.06), 0 1px 2px rgba(31, 27, 95, 0.05);
+  --admin-shadow:
+    0 10px 30px rgba(31, 27, 95, 0.06), 0 1px 2px rgba(31, 27, 95, 0.05);
   --admin-shadow-strong: 0 16px 40px rgba(31, 27, 95, 0.13);
   --admin-danger: #ff453d;
   --admin-success: #37b446;
@@ -371,7 +372,7 @@ select:active {
 
 .admin-input[data-has-value="true"]:disabled,
 .admin-input[data-has-value="true"][readonly] {
-  color: #1A1A2E;
+  color: #1a1a2e;
 }
 
 .admin-field {
@@ -974,13 +975,19 @@ select:active {
     box-shadow 0.2s ease !important;
 }
 
-.admin-shell .header-search-pill input.admin-header-search-input.admin-input::placeholder {
+.admin-shell
+  .header-search-pill
+  input.admin-header-search-input.admin-input::placeholder {
   color: var(--admin-muted) !important;
   opacity: 0.95 !important;
 }
 
-.admin-shell .header-search-pill input.admin-header-search-input.admin-input:hover,
-.admin-shell .header-search-pill input.admin-header-search-input.admin-input:focus {
+.admin-shell
+  .header-search-pill
+  input.admin-header-search-input.admin-input:hover,
+.admin-shell
+  .header-search-pill
+  input.admin-header-search-input.admin-input:focus {
   border-color: var(--admin-blue) !important;
   border-radius: 999px !important;
   background-color: #ffffff !important;
@@ -1612,7 +1619,7 @@ label {
 }
 
 .thin-scrollbar::-webkit-scrollbar-track {
-  background: #E5E7EB;
+  background: #e5e7eb;
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb {

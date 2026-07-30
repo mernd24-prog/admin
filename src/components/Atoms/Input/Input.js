@@ -78,7 +78,9 @@ const selectStyles = (invalid, hasValue) => ({
 
 const normalizeOptions = (options = []) =>
   options.map((option) =>
-    typeof option === "object" ? option : { label: String(option), value: option }
+    typeof option === "object"
+      ? option
+      : { label: String(option), value: option },
   );
 
 const Input = ({
@@ -155,9 +157,17 @@ const Input = ({
   };
 
   const baseStyles = `admin-input ${invalid ? "admin-input-error" : ""} ${success ? "admin-input-success" : ""} ${inputClassName}`;
-  const passwordType = type === "password" ? (showPassword ? "text" : "password") : type;
-  const simpleType = type === "price" || type === "percentage" ? "number" : type === "phone" ? "tel" : type;
-  const describedBy = `${helperText ? `${inputId}-help ` : ""}${invalid ? `${inputId}-error` : ""}`.trim() || undefined;
+  const passwordType =
+    type === "password" ? (showPassword ? "text" : "password") : type;
+  const simpleType =
+    type === "price" || type === "percentage"
+      ? "number"
+      : type === "phone"
+        ? "tel"
+        : type;
+  const describedBy =
+    `${helperText ? `${inputId}-help ` : ""}${invalid ? `${inputId}-error` : ""}`.trim() ||
+    undefined;
   const commonProps = {
     id: inputId,
     name,
@@ -173,13 +183,27 @@ const Input = ({
   };
 
   const renderField = () => {
-    if (["select", "multi-select", "searchable-select", "async-select", "dependent-select"].includes(type)) {
+    if (
+      [
+        "select",
+        "multi-select",
+        "searchable-select",
+        "async-select",
+        "dependent-select",
+      ].includes(type)
+    ) {
       const list = normalizeOptions(options);
-      const selectedValue = type === "multi-select" || isMulti
-        ? list.filter((option) => (value || []).includes?.(option.value) || (value || []).some?.((item) => item.value === option.value))
-        : list.find((option) => option.value === value) || value || null;
-      const hasSelectedValue =
-        Array.isArray(selectedValue) ? selectedValue.length > 0 : Boolean(selectedValue);
+      const selectedValue =
+        type === "multi-select" || isMulti
+          ? list.filter(
+              (option) =>
+                (value || []).includes?.(option.value) ||
+                (value || []).some?.((item) => item.value === option.value),
+            )
+          : list.find((option) => option.value === value) || value || null;
+      const hasSelectedValue = Array.isArray(selectedValue)
+        ? selectedValue.length > 0
+        : Boolean(selectedValue);
       return (
         <Select
           inputId={inputId}
@@ -201,12 +225,27 @@ const Input = ({
       );
     }
     if (type === "textarea") {
-      return <textarea {...commonProps} rows={rows} maxLength={maxLength} minLength={minLength} onChange={emit} className={`${baseStyles} admin-textarea`} />;
+      return (
+        <textarea
+          {...commonProps}
+          rows={rows}
+          maxLength={maxLength}
+          minLength={minLength}
+          onChange={emit}
+          className={`${baseStyles} admin-textarea`}
+        />
+      );
     }
     if (type === "checkbox" || type === "switch" || type === "toggle") {
       return (
         <label className={`admin-switch ${disable ? "opacity-60" : ""}`}>
-          <input {...commonProps} type="checkbox" checked={Boolean(value)} onChange={emit} className="sr-only peer" />
+          <input
+            {...commonProps}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={emit}
+            className="sr-only peer"
+          />
           <span className="admin-switch-track" />
           <span>{children || helperText || labelName}</span>
         </label>
@@ -214,10 +253,24 @@ const Input = ({
     }
     if (type === "radio") {
       return (
-        <div className="flex flex-wrap gap-4" role="radiogroup" aria-labelledby={`${inputId}-label`}>
+        <div
+          className="flex flex-wrap gap-4"
+          role="radiogroup"
+          aria-labelledby={`${inputId}-label`}
+        >
           {normalizeOptions(options).map((option) => (
-            <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <input {...commonProps} id={`${inputId}-${option.value}`} type="radio" value={option.value} checked={value === option.value} onChange={emit} />
+            <label
+              key={option.value}
+              className="inline-flex items-center gap-2 text-sm text-gray-700"
+            >
+              <input
+                {...commonProps}
+                id={`${inputId}-${option.value}`}
+                type="radio"
+                value={option.value}
+                checked={value === option.value}
+                onChange={emit}
+              />
               {option.label}
             </label>
           ))}
@@ -228,7 +281,10 @@ const Input = ({
       return (
         <label
           className={`admin-dropzone ${dragActive ? "admin-dropzone-active" : ""} ${invalid ? "admin-input-error" : ""}`}
-          onDragOver={(event) => { event.preventDefault(); setDragActive(true); }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
           onDragLeave={() => setDragActive(false)}
           onDrop={(event) => {
             event.preventDefault();
@@ -239,7 +295,15 @@ const Input = ({
         >
           <IoCloudUploadOutline size={22} />
           <span>{placeholder || "Choose or drop a file"}</span>
-          <input {...commonProps} value={undefined} type="file" accept={accept || (type.includes("image") ? "image/*" : undefined)} multiple={multiple} onChange={emit} className="sr-only" />
+          <input
+            {...commonProps}
+            value={undefined}
+            type="file"
+            accept={accept || (type.includes("image") ? "image/*" : undefined)}
+            multiple={multiple}
+            onChange={emit}
+            className="sr-only"
+          />
         </label>
       );
     }
@@ -264,28 +328,61 @@ const Input = ({
   return (
     <div className={`admin-field ${className}`}>
       {!hideExternalLabel && labelName && (
-        <label id={`${inputId}-label`} htmlFor={inputId} className="admin-label">
+        <label
+          id={`${inputId}-label`}
+          htmlFor={inputId}
+          className="admin-label "
+        >
           {labelName} {required && <span className="admin-required">*</span>}
         </label>
       )}
       <div className="relative">
-        {(prefix || icon) && <span className="admin-input-prefix">{icon || prefix}</span>}
+        {(prefix || icon) && (
+          <span className="admin-input-prefix">{icon || prefix}</span>
+        )}
         {renderField()}
         {suffix && <span className="admin-input-suffix">{suffix}</span>}
-        {clearable && value && !disable && !["select", "multi-select"].includes(type) && (
-          <button type="button" className="admin-input-clear" aria-label={`Clear ${labelName || name}`} onClick={() => emit({ target: { name, value: "" } })}>
-            <IoClose />
-          </button>
-        )}
+        {clearable &&
+          value &&
+          !disable &&
+          !["select", "multi-select"].includes(type) && (
+            <button
+              type="button"
+              className="admin-input-clear"
+              aria-label={`Clear ${labelName || name}`}
+              onClick={() => emit({ target: { name, value: "" } })}
+            >
+              <IoClose />
+            </button>
+          )}
         {type === "password" && (
-          <button type="button" onClick={togglePassword} className="admin-password-toggle" aria-label={showPassword ? "Hide password" : "Show password"}>
+          <button
+            type="button"
+            onClick={togglePassword}
+            className="admin-password-toggle"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
             {showPassword ? <FaEyeSlash /> : <FaEye />}
           </button>
         )}
       </div>
       <div className="flex justify-between gap-2">
-        {invalid ? <p id={`${inputId}-error`} className="admin-field-error" role="alert">{error || errorMessage}</p> : helperText && !hideExternalLabel ? <p id={`${inputId}-help`} className="admin-field-help">{helperText}</p> : <span />}
-        {maxLength && typeof value === "string" && <span className="admin-field-count">{value.length}/{maxLength}</span>}
+        {invalid ? (
+          <p id={`${inputId}-error`} className="admin-field-error" role="alert">
+            {error || errorMessage}
+          </p>
+        ) : helperText && !hideExternalLabel ? (
+          <p id={`${inputId}-help`} className="admin-field-help">
+            {helperText}
+          </p>
+        ) : (
+          <span />
+        )}
+        {maxLength && typeof value === "string" && (
+          <span className="admin-field-count">
+            {value.length}/{maxLength}
+          </span>
+        )}
       </div>
     </div>
   );

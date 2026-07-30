@@ -14,7 +14,7 @@ export default function Cards({
   trendNegative = false,
   onClick,
 }) {
-  const trendColor = trendNegative ? "text-red-500" : "text-emerald-500";
+  const trendColor = trendNegative ? "text-red-500 " : "text-emerald-500";
   const iconNode = icon ? (
     iconColor ? (
       <span
@@ -34,7 +34,9 @@ export default function Cards({
     trend || helper ? (
       <p className="text-[9px] font-medium text-[#36363f]">
         {trend && (
-          <span className={`inline-flex items-center gap-1 font-bold ${trendColor}`}>
+          <span
+            className={`inline-flex  items-center gap-1 font-bold ${trendColor}`}
+          >
             {trendNegative ? (
               <IoMdTrendingDown className="h-3 w-3" />
             ) : (
