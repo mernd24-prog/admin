@@ -573,7 +573,7 @@ const commissionBaseNote = (seller = {}, commissionAmount = 0) => {
   const explicitBase = money(firstDefined(seller.commissionTaxableBase, 0));
   const rate = seller.commissionRates.length === 1 ? money(seller.commissionRates[0]) : 0;
   const derivedBase = rate > 0 && commissionAmount > 0
-    ? money((commissionAmount * 100) / rate)
+    ? money((commissionAmount)) 
     : 0;
   const base = derivedBase || explicitBase;
   const baseText = base > 0 ? `Base: ${formatMoney(base)}` : "";
@@ -2145,7 +2145,7 @@ const OrderSummary = () => {
                               {displayCommission > 0 && (
                                 <PayoutRow
                                   label="Platform commission"
-                                  note={commissionBaseNote(seller, displayCommission)}
+                                  note={commissionBaseNote(seller, displayGstTcsBase)}
                                   value={`-${formatMoney(displayCommission)}`}
                                 />
                               )}
