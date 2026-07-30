@@ -1426,7 +1426,7 @@ export default function ShippingProfiles() {
       sellerId: sellerId || "",
       organizationId: activeOrganizationId || "",
       name: selectedTemplate?.name
-        ? `${selectedTemplate.name} - Seller Copy`
+        ? `${selectedTemplate.name}`
         : "",
       description: selectedTemplate?.description || "",
       isDefault: profilesPayload.list.length === 0,
@@ -1908,7 +1908,7 @@ export default function ShippingProfiles() {
                         className="admin-btn-secondary text-xs"
                         onClick={() => openClone(template)}
                       >
-                        Copy to Seller
+                        Use Template
                       </button>
                       {!isSeller && (
                         <>
@@ -2153,7 +2153,7 @@ export default function ShippingProfiles() {
             />
           </div>
           <div className="space-y-1">
-            <label className="admin-label">Seller Copy Name</label>
+            <label className="admin-label">Template Name</label>
             <input
               className="admin-input"
               value={cloneForm.name}

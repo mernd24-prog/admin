@@ -986,6 +986,16 @@ export default function Dashboard() {
     return rows;
   }, [overview, recentOrders]);
   const statusTotal = statusRows.reduce((sum, row) => sum + row.value, 0);
+  const selectedRangeOption = useMemo(() => {
+    const option =
+      RANGE_OPTIONS.find((item) => item.value === range) || null;
+    if (!option || range !== "custom") return option;
+
+    return {
+      ...option,
+      label: formatRangeLabel(dateFilters),
+    };
+  }, [dateFilters, range]);
 
   return (
     <div className="admin-page min-h-screen">
@@ -997,7 +1007,7 @@ export default function Dashboard() {
           <div className="w-full sm:w-[190px]">
             <FilterSelect
               options={RANGE_OPTIONS}
-              value={RANGE_OPTIONS.find((o) => o.value === range) || null}
+              value={selectedRangeOption}
               onChange={(opt) => opt && handleRangeChange(opt.value)}
               placeholder="Select date range"
               isSearchable={false}
