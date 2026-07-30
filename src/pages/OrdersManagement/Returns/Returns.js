@@ -49,6 +49,7 @@ import {
 } from "../../../Redux/adminCoreSlice";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 
 const ACTION_TITLES = {
   approve: "Approve Return",
@@ -214,6 +215,91 @@ const REVERSE_TRACKING_OPTIONS = {
     { value: "delivered", label: "Received at warehouse" },
   ],
 };
+
+const splitEvidenceUrls = (value = "") =>
+  String(value || "")
+    .split(/[\n,]/)
+    .map((url) => url.trim())
+    .filter(Boolean);
+
+const joinEvidenceUrls = (urls = []) => [...new Set((urls || []).filter(Boolean))].join("\n");
+
+function QCEvidenceUploader({ value = "", required = false, onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const urls = splitEvidenceUrls(value);
+
+  const handleUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length) return;
+    const invalid = files.find((file) => !String(file.type || "").startsWith("image/"));
+    if (invalid) {
+      toast.error("Please upload image files only");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploadedUrls = await uploadFileMulti(files, "RETURN_QC");
+      onChange(joinEvidenceUrls([...urls, ...uploadedUrls]));
+      toast.success(`${uploadedUrls.length} evidence image${uploadedUrls.length === 1 ? "" : "s"} uploaded`);
+    } catch (error) {
+      toast.error(error?.message || error || "Failed to upload QC evidence image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeUrl = (url) => {
+    onChange(joinEvidenceUrls(urls.filter((item) => item !== url)));
+  };
+
+  return (
+    <div className="md:col-span-2 rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold text-gray-800">
+            QC evidence images {required ? <span className="text-red-500">*</span> : null}
+          </div>
+          <div className="text-xs text-gray-500">
+            Upload product condition photos. URLs are saved automatically after upload.
+          </div>
+        </div>
+        <label className={`inline-flex cursor-pointer items-center rounded-md border border-[#CE9F2D] px-3 py-2 text-xs font-semibold text-[#8A5A00] ${uploading ? "pointer-events-none opacity-60" : "bg-white hover:bg-[#fff3d6]"}`}>
+          {uploading ? "Uploading..." : "Upload images"}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
+
+      {urls.length > 0 && (
+        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {urls.map((url) => (
+            <div key={url} className="group relative overflow-hidden rounded-md border border-gray-200 bg-white">
+              <img src={url} alt="QC evidence" className="h-24 w-full object-cover" />
+              <button
+                type="button"
+                className="absolute right-1 top-1 rounded bg-white/90 px-2 py-1 text-[11px] font-semibold text-red-600 shadow"
+                onClick={() => removeUrl(url)}
+              >
+                Remove
+              </button>
+              <a href={url} target="_blank" rel="noreferrer" className="block truncate px-2 py-1 text-[10px] text-blue-600">
+                View image
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Input
+        type="textarea"
+        labelName="Manual evidence image URLs (optional, one per line)"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+      />
+    </div>
+  );
+}
 
 const reverseTrackingOptions = (returnRequest = {}) => {
   const shipmentStatus = String(returnRequest?.reverseShipment?.status || "").toLowerCase();
@@ -395,7 +481,7 @@ const filterFields = useMemo(
     if (action.type === "tracking" && !action.shipmentStatus) return "Shipment status is required";
     if (["approve", "receive", "qc"].includes(action.type) && !action.itemActions.length) return "Return items are missing";
     if (["qc_evidence", "qc_decision"].includes(action.type) && !action.reason.trim() && !action.note.trim()) return "A review reason or note is required";
-    if (action.type === "qc_evidence" && action.itemActions.some((item) => !item.notes.trim() || !item.photos.trim())) return "Each rejected item requires notes and at least one evidence image URL";
+    if (action.type === "qc_evidence" && action.itemActions.some((item) => !item.notes.trim() || !item.photos.trim())) return "Each rejected item requires notes and at least one evidence image";
     if (action.type === "return_customer" && (!action.courierName.trim() || !action.trackingNumber.trim())) return "Courier and tracking/AWB are required";
     if (action.type === "replacement_ship" && (!action.courierName.trim() || !action.trackingNumber.trim())) {
       return "Courier and tracking/AWB are required";
@@ -1047,13 +1133,13 @@ const filterFields = useMemo(
                       </label>
                       <Input labelName="Condition" value={item.condition} onChange={(event) => updateItemAction(index, "condition", event.target.value)} />
                       <Input labelName="Item note" value={item.notes} onChange={(event) => updateItemAction(index, "notes", event.target.value)} />
-                      <Input type="textarea" labelName="Evidence image URLs (one per line)" value={item.photos} onChange={(event) => updateItemAction(index, "photos", event.target.value)} />
+                      <QCEvidenceUploader value={item.photos} onChange={(value) => updateItemAction(index, "photos", value)} />
                     </div>
                   )}
                   {action.type === "qc_evidence" && (
                     <div className="grid grid-cols-1 gap-3">
                       <Input type="textarea" labelName="Additional inspection notes" value={item.notes} onChange={(event) => updateItemAction(index, "notes", event.target.value)} required />
-                      <Input type="textarea" labelName="Evidence image URLs (one per line)" value={item.photos} onChange={(event) => updateItemAction(index, "photos", event.target.value)} required />
+                      <QCEvidenceUploader value={item.photos} onChange={(value) => updateItemAction(index, "photos", value)} required />
                     </div>
                   )}
                   {action.type === "qc_decision" && ["override", "partial"].includes(action.decision) && (

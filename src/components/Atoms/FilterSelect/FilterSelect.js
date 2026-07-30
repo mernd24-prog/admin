@@ -126,7 +126,7 @@ const FilterSelect = ({
       {label && (
         <label htmlFor={inputId} className="admin-label">
           {label}
-          {required && <span className="admin-required d">*</span>}
+          {required && <span className="admin-required">*</span>}
         </label>
       )}
       <div className="relative text-sm min-w-40 ">

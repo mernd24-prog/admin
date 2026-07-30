@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +19,7 @@ import {
   MdStarBorder,
 } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   ConfirmModal,
   DataTable,
@@ -89,14 +96,30 @@ const EMPTY_CLONE_FORM = {
 };
 
 const optionLabel = (option = {}) =>
-  option.label || option.name || option.title || option.code || option.pincode || option.value || "";
+  option.label ||
+  option.name ||
+  option.title ||
+  option.code ||
+  option.pincode ||
+  option.value ||
+  "";
 
 const optionValue = (option = {}) =>
-  String(option.rawValue || option.value || option.name || option.code || option.pincode || option.label || "").trim();
+  String(
+    option.rawValue ||
+      option.value ||
+      option.name ||
+      option.code ||
+      option.pincode ||
+      option.label ||
+      "",
+  ).trim();
 
-const optionId = (option = {}) => option.id || option.value || option._id || optionLabel(option);
+const optionId = (option = {}) =>
+  option.id || option.value || option._id || optionLabel(option);
 
-const optionParentId = (option = {}) => option.id || option._id || option.value || "";
+const optionParentId = (option = {}) =>
+  option.id || option._id || option.value || "";
 
 // API-backed multi-select dropdown for states, cities, and pincodes.
 function OptionMultiSelect({
@@ -115,7 +138,9 @@ function OptionMultiSelect({
   const ref = useRef(null);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -127,7 +152,8 @@ function OptionMultiSelect({
   const toggle = (option) => {
     const nextValue = getValue(option);
     if (!nextValue) return;
-    if (value.includes(nextValue)) onChange(value.filter((item) => item !== nextValue));
+    if (value.includes(nextValue))
+      onChange(value.filter((item) => item !== nextValue));
     else onChange([...value, nextValue]);
   };
 
@@ -189,23 +215,40 @@ function OptionMultiSelect({
               autoFocus
             />
           </div>
-          {loading && <div className="px-3 py-4 text-center text-sm text-gray-400">Loading...</div>}
-          {!loading && filtered.map((option) => {
-            const selectedValue = getValue(option);
-            const selected = value.includes(selectedValue);
-            return (
-            <div
-              key={optionId(option)}
-              className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${selected ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
-              onClick={(e) => { e.stopPropagation(); toggle(option); }}
-            >
-              <span className={`w-4 h-4 rounded border flex items-center justify-center ${selected ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}>
-                {selected && <MdCheckCircle className="text-white text-xs" />}
-              </span>
-              {optionLabel(option)}
+          {loading && (
+            <div className="px-3 py-4 text-center text-sm text-gray-400">
+              Loading...
             </div>
-          );})}
-          {!loading && filtered.length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">{emptyText}</div>}
+          )}
+          {!loading &&
+            filtered.map((option) => {
+              const selectedValue = getValue(option);
+              const selected = value.includes(selectedValue);
+              return (
+                <div
+                  key={optionId(option)}
+                  className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${selected ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggle(option);
+                  }}
+                >
+                  <span
+                    className={`w-4 h-4 rounded border flex items-center justify-center ${selected ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}
+                  >
+                    {selected && (
+                      <MdCheckCircle className="text-white text-xs" />
+                    )}
+                  </span>
+                  {optionLabel(option)}
+                </div>
+              );
+            })}
+          {!loading && filtered.length === 0 && (
+            <div className="px-3 py-4 text-center text-sm text-gray-400">
+              {emptyText}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -242,35 +285,76 @@ function ProfileForm({
     pincodes: false,
   });
 
+  const countryOptions = useMemo(() =>
+    locationOptions.countries.map((c) => ({
+      value: optionParentId(c),
+      label: optionLabel(c),
+    })),
+    [locationOptions.countries]
+  );
+
+  const stateOptions = useMemo(() =>
+    locationOptions.states.map((s) => ({
+      value: optionParentId(s),
+      label: optionLabel(s),
+    })),
+    [locationOptions.states]
+  );
+
+  const cityOptions = useMemo(() =>
+    locationOptions.cities.map((c) => ({
+      value: optionParentId(c),
+      label: optionLabel(c),
+    })),
+    [locationOptions.cities]
+  );
+
   useEffect(() => {
     let active = true;
     setLocationLoading((prev) => ({ ...prev, countries: true }));
-    dropdownApi.getCountries({ limit: 100 })
+    dropdownApi
+      .getCountries({ limit: 100 })
       .then((options) => {
         if (!active) return;
         setLocationOptions((prev) => ({ ...prev, countries: options || [] }));
-        const india = (options || []).find((option) => /india/i.test(optionLabel(option)));
-        setLocationFilter((prev) => prev.countryId || !india ? prev : { ...prev, countryId: optionParentId(india) });
+        const india = (options || []).find((option) =>
+          /india/i.test(optionLabel(option)),
+        );
+        setLocationFilter((prev) =>
+          prev.countryId || !india
+            ? prev
+            : { ...prev, countryId: optionParentId(india) },
+        );
       })
       .catch(() => {
         if (active) setLocationOptions((prev) => ({ ...prev, countries: [] }));
       })
       .finally(() => {
-        if (active) setLocationLoading((prev) => ({ ...prev, countries: false }));
+        if (active)
+          setLocationLoading((prev) => ({ ...prev, countries: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!locationFilter.countryId) {
-      setLocationOptions((prev) => ({ ...prev, states: [], cities: [], pincodes: [] }));
+      setLocationOptions((prev) => ({
+        ...prev,
+        states: [],
+        cities: [],
+        pincodes: [],
+      }));
       return undefined;
     }
     let active = true;
     setLocationLoading((prev) => ({ ...prev, states: true }));
-    dropdownApi.getStates(locationFilter.countryId, { limit: 100 })
+    dropdownApi
+      .getStates(locationFilter.countryId, { limit: 100 })
       .then((options) => {
-        if (active) setLocationOptions((prev) => ({ ...prev, states: options || [] }));
+        if (active)
+          setLocationOptions((prev) => ({ ...prev, states: options || [] }));
       })
       .catch(() => {
         if (active) setLocationOptions((prev) => ({ ...prev, states: [] }));
@@ -278,7 +362,9 @@ function ProfileForm({
       .finally(() => {
         if (active) setLocationLoading((prev) => ({ ...prev, states: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [locationFilter.countryId]);
 
   useEffect(() => {
@@ -288,9 +374,11 @@ function ProfileForm({
     }
     let active = true;
     setLocationLoading((prev) => ({ ...prev, cities: true }));
-    dropdownApi.getCities(locationFilter.stateId, { limit: 100 })
+    dropdownApi
+      .getCities(locationFilter.stateId, { limit: 100 })
       .then((options) => {
-        if (active) setLocationOptions((prev) => ({ ...prev, cities: options || [] }));
+        if (active)
+          setLocationOptions((prev) => ({ ...prev, cities: options || [] }));
       })
       .catch(() => {
         if (active) setLocationOptions((prev) => ({ ...prev, cities: [] }));
@@ -298,7 +386,9 @@ function ProfileForm({
       .finally(() => {
         if (active) setLocationLoading((prev) => ({ ...prev, cities: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [locationFilter.stateId]);
 
   useEffect(() => {
@@ -308,17 +398,22 @@ function ProfileForm({
     }
     let active = true;
     setLocationLoading((prev) => ({ ...prev, pincodes: true }));
-    dropdownApi.getPincodes(locationFilter.cityId, { limit: 100 })
+    dropdownApi
+      .getPincodes(locationFilter.cityId, { limit: 100 })
       .then((options) => {
-        if (active) setLocationOptions((prev) => ({ ...prev, pincodes: options || [] }));
+        if (active)
+          setLocationOptions((prev) => ({ ...prev, pincodes: options || [] }));
       })
       .catch(() => {
         if (active) setLocationOptions((prev) => ({ ...prev, pincodes: [] }));
       })
       .finally(() => {
-        if (active) setLocationLoading((prev) => ({ ...prev, pincodes: false }));
+        if (active)
+          setLocationLoading((prev) => ({ ...prev, pincodes: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [locationFilter.cityId]);
 
   const patchLocation = (key, value) => {
@@ -372,76 +467,90 @@ const handlePincodeKeyDown = (event) => {
     <div className="space-y-6 py-2">
       {/* Identity */}
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Profile Identity</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Profile Identity
+        </h4>
 
         {!isTemplate && !isSeller && (
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="admin-label">Target Seller <span className="text-red-500">*</span></label>
+              <label className="admin-label">
+                Target Seller <span className="text-red-500">*</span>
+              </label>
               <input
-                className="admin-input"
+                className="admin-input mb-1"
                 placeholder="Search seller by name, email, or business..."
                 onChange={(event) => onSellerSearch?.(event.target.value)}
               />
-              <select
-                className="admin-input"
-                value={form.sellerId || ""}
-                onChange={(event) => {
+              <FilterSelect
+                options={sellerOptions}
+                value={sellerOptions.find((seller) => seller.value === form.sellerId) || null}
+                onChange={(option) => {
                   setForm((prev) => ({
                     ...prev,
-                    sellerId: event.target.value,
+                    sellerId: option?.value || "",
                     organizationId: "",
                   }));
                 }}
-              >
-                <option value="">Select seller...</option>
-                {sellerOptions.map((seller) => (
-                  <option key={seller.value} value={seller.value}>
-                    {seller.label}
-                  </option>
-                ))}
-              </select>
+                isSearchable
+                placeholder="Select seller..."
+                isClearable
+              />
             </div>
             <div className="space-y-1">
               <label className="admin-label">Organization</label>
-              <select
-                className="admin-input"
-                value={form.organizationId || ""}
-                onChange={(event) => patch("organizationId", event.target.value)}
-                disabled={!form.sellerId}
-              >
-                <option value="">Seller-wide default</option>
-                {organizationOptions.map((organization) => (
-                  <option key={organization.value} value={organization.value}>
-                    {organization.label}
-                  </option>
-                ))}
-              </select>
+              <FilterSelect
+                options={organizationOptions}
+                value={organizationOptions.find((o) => o.value === form.organizationId) || null}
+                onChange={(option) => patch("organizationId", option?.value || "")}
+                isDisabled={!form.sellerId}
+                placeholder="Seller-wide default"
+                isSearchable
+                isClearable
+              />
             </div>
           </div>
         )}
 
         <div className="space-y-1">
-          <label className="admin-label">Profile Name <span className="text-red-500">*</span></label>
-          <input className="admin-input" placeholder="e.g. Standard Shipping, Express, Heavy Products" value={form.name} onChange={(e) => patch("name", e.target.value)} />
+          <label className="admin-label">
+            Profile Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            className="admin-input"
+            placeholder="e.g. Standard Shipping, Express, Heavy Products"
+            value={form.name}
+            onChange={(e) => patch("name", e.target.value)}
+          />
         </div>
 
         <div className="space-y-1">
           <label className="admin-label">Description</label>
-          <input className="admin-input" placeholder="Optional description" value={form.description} onChange={(e) => patch("description", e.target.value)} />
+          <input
+            className="admin-input"
+            placeholder="Optional description"
+            value={form.description}
+            onChange={(e) => patch("description", e.target.value)}
+          />
         </div>
 
         <div className="space-y-1">
           <label className="admin-label">Shipping Method</label>
-          <select className="admin-input" value={form.shippingMethod} onChange={(e) => patch("shippingMethod", e.target.value)}>
-            {SHIPPING_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
+          <FilterSelect
+            options={SHIPPING_METHODS}
+            value={SHIPPING_METHODS.find((m) => m.value === form.shippingMethod) || null}
+            onChange={(option) => patch("shippingMethod", option?.value || "")}
+            isSearchable={false}
+            placeholder="Select shipping method..."
+          />
         </div>
       </section>
 
       {/* Serviceability */}
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Serviceability</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Serviceability
+        </h4>
 
         <div className="space-y-2">
   {SERVICEABILITY_MODES.map((mode) => {
@@ -557,53 +666,44 @@ const handlePincodeKeyDown = (event) => {
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-1">
               <label className="admin-label">Country</label>
-              <select
-                className="admin-input"
-                value={locationFilter.countryId}
-                onChange={(event) => patchLocation("countryId", event.target.value)}
-              >
-                <option value="">{locationLoading.countries ? "Loading countries..." : "Select country..."}</option>
-                {locationOptions.countries.map((country) => (
-                  <option key={optionId(country)} value={optionParentId(country)}>
-                    {optionLabel(country)}
-                  </option>
-                ))}
-              </select>
+              <FilterSelect
+                options={countryOptions}
+                value={countryOptions.find((o) => o.value === locationFilter.countryId) || null}
+                onChange={(option) => patchLocation("countryId", option?.value || "")}
+                isLoading={locationLoading.countries}
+                isSearchable
+                placeholder="Select country..."
+                isClearable
+              />
             </div>
             {needsState && (
               <div className="space-y-1">
                 <label className="admin-label">State Filter</label>
-                <select
-                  className="admin-input"
-                  value={locationFilter.stateId}
-                  onChange={(event) => patchLocation("stateId", event.target.value)}
-                  disabled={!locationFilter.countryId}
-                >
-                  <option value="">{locationLoading.states ? "Loading states..." : "Select state..."}</option>
-                  {locationOptions.states.map((state) => (
-                    <option key={optionId(state)} value={optionParentId(state)}>
-                      {optionLabel(state)}
-                    </option>
-                  ))}
-                </select>
+                <FilterSelect
+                  options={stateOptions}
+                  value={stateOptions.find((o) => o.value === locationFilter.stateId) || null}
+                  onChange={(option) => patchLocation("stateId", option?.value || "")}
+                  isDisabled={!locationFilter.countryId}
+                  isLoading={locationLoading.states}
+                  isSearchable
+                  placeholder="Select state..."
+                  isClearable
+                />
               </div>
             )}
             {needsCity && (
               <div className="space-y-1">
                 <label className="admin-label">City Filter</label>
-                <select
-                  className="admin-input"
-                  value={locationFilter.cityId}
-                  onChange={(event) => patchLocation("cityId", event.target.value)}
-                  disabled={!locationFilter.stateId}
-                >
-                  <option value="">{locationLoading.cities ? "Loading cities..." : "Select city..."}</option>
-                  {locationOptions.cities.map((city) => (
-                    <option key={optionId(city)} value={optionParentId(city)}>
-                      {optionLabel(city)}
-                    </option>
-                  ))}
-                </select>
+                <FilterSelect
+                  options={cityOptions}
+                  value={cityOptions.find((o) => o.value === locationFilter.cityId) || null}
+                  onChange={(option) => patchLocation("cityId", option?.value || "")}
+                  isDisabled={!locationFilter.stateId}
+                  isLoading={locationLoading.cities}
+                  isSearchable
+                  placeholder="Select city..."
+                  isClearable
+                />
               </div>
             )}
           </div>
@@ -616,13 +716,19 @@ const handlePincodeKeyDown = (event) => {
               value={form.allowedStates}
               onChange={(v) => patch("allowedStates", v)}
               options={locationOptions.states}
-              placeholder={locationFilter.countryId ? "Select states..." : "Select a country first"}
+              placeholder={
+                locationFilter.countryId
+                  ? "Select states..."
+                  : "Select a country first"
+              }
               searchPlaceholder="Search states..."
               emptyText="No states found"
               disabled={!locationFilter.countryId}
               loading={locationLoading.states}
             />
-            <p className="text-xs text-gray-400">{form.allowedStates.length} state(s) selected</p>
+            <p className="text-xs text-gray-400">
+              {form.allowedStates.length} state(s) selected
+            </p>
           </div>
         )}
 
@@ -633,13 +739,19 @@ const handlePincodeKeyDown = (event) => {
               value={form.allowedCities}
               onChange={(v) => patch("allowedCities", v)}
               options={locationOptions.cities}
-              placeholder={locationFilter.stateId ? "Select cities..." : "Select a state filter first"}
+              placeholder={
+                locationFilter.stateId
+                  ? "Select cities..."
+                  : "Select a state filter first"
+              }
               searchPlaceholder="Search cities..."
               emptyText="No cities found"
               disabled={!locationFilter.stateId}
               loading={locationLoading.cities}
             />
-            <p className="text-xs text-gray-400">{form.allowedCities.length} city/cities selected</p>
+            <p className="text-xs text-gray-400">
+              {form.allowedCities.length} city/cities selected
+            </p>
           </div>
         )}
 
@@ -650,13 +762,19 @@ const handlePincodeKeyDown = (event) => {
               value={form.allowedPincodes}
               onChange={(v) => patch("allowedPincodes", v)}
               options={locationOptions.pincodes}
-              placeholder={locationFilter.cityId ? "Select allowed pincodes..." : "Select a city filter first"}
+              placeholder={
+                locationFilter.cityId
+                  ? "Select allowed pincodes..."
+                  : "Select a city filter first"
+              }
               searchPlaceholder="Search pincodes..."
               emptyText="No pincodes found"
               disabled={!locationFilter.cityId}
               loading={locationLoading.pincodes}
             />
-            <p className="text-xs text-gray-400">{form.allowedPincodes.length} pincode(s) added</p>
+            <p className="text-xs text-gray-400">
+              {form.allowedPincodes.length} pincode(s) added
+            </p>
           </div>
         )}
 
@@ -667,30 +785,52 @@ const handlePincodeKeyDown = (event) => {
               value={form.blockedPincodes}
               onChange={(v) => patch("blockedPincodes", v)}
               options={locationOptions.pincodes}
-              placeholder={locationFilter.cityId ? "Select blocked pincodes..." : "Select a city filter first"}
+              placeholder={
+                locationFilter.cityId
+                  ? "Select blocked pincodes..."
+                  : "Select a city filter first"
+              }
               searchPlaceholder="Search pincodes..."
               emptyText="No pincodes found"
               disabled={!locationFilter.cityId}
               loading={locationLoading.pincodes}
             />
-            <p className="text-xs text-gray-400">{form.blockedPincodes.length} pincode(s) blocked</p>
+            <p className="text-xs text-gray-400">
+              {form.blockedPincodes.length} pincode(s) blocked
+            </p>
           </div>
         )} */}
       </section>
 
       {/* Charges */}
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Charges</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Charges
+        </h4>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="admin-label">Shipping Charge (₹)</label>
-            <input className="admin-input" type="number" min="0" placeholder="0" value={form.shippingCharge} onChange={(e) => patch("shippingCharge", e.target.value)} />
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="0"
+              value={form.shippingCharge}
+              onChange={(e) => patch("shippingCharge", e.target.value)}
+            />
             <p className="text-xs text-gray-400">Set 0 for free shipping</p>
           </div>
           <div className="space-y-1">
             <label className="admin-label">Free Shipping Above (₹)</label>
-            <input className="admin-input" type="number" min="0" placeholder="Leave blank to disable" value={form.freeShippingThreshold} onChange={(e) => patch("freeShippingThreshold", e.target.value)} />
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="Leave blank to disable"
+              value={form.freeShippingThreshold}
+              onChange={(e) => patch("freeShippingThreshold", e.target.value)}
+            />
             <p className="text-xs text-gray-400">Order value threshold</p>
           </div>
         </div>
@@ -698,45 +838,92 @@ const handlePincodeKeyDown = (event) => {
 
       {/* ETA */}
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Estimated Delivery Time</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Estimated Delivery Time
+        </h4>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="admin-label">ETA Min (days)</label>
-            <input className="admin-input" type="number" min="0" placeholder="e.g. 2" value={form.etaMin} onChange={(e) => patch("etaMin", e.target.value)} />
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="e.g. 2"
+              value={form.etaMin}
+              onChange={(e) => patch("etaMin", e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <label className="admin-label">ETA Max (days)</label>
-            <input className="admin-input" type="number" min="0" placeholder="e.g. 5" value={form.etaMax} onChange={(e) => patch("etaMax", e.target.value)} />
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="e.g. 5"
+              value={form.etaMax}
+              onChange={(e) => patch("etaMax", e.target.value)}
+            />
           </div>
         </div>
       </section>
 
       {/* COD & Flags */}
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Options</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Options
+        </h4>
         <div className="space-y-2">
           <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
             <div>
-              <p className="text-sm font-semibold text-gray-800">COD Available</p>
-              <p className="text-xs text-gray-500">Allow Cash on Delivery for this profile</p>
+              <p className="text-sm font-semibold text-gray-800">
+                COD Available
+              </p>
+              <p className="text-xs text-gray-500">
+                Allow Cash on Delivery for this profile
+              </p>
             </div>
-            <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.codAvailable)} onChange={(e) => patch("codAvailable", e.target.checked)} />
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--admin-blue)]"
+              checked={Boolean(form.codAvailable)}
+              onChange={(e) => patch("codAvailable", e.target.checked)}
+            />
           </label>
           {!isTemplate && (
             <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Set as Default Profile</p>
-                <p className="text-xs text-gray-500">Products with no profile assigned will use this</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  Set as Default Profile
+                </p>
+                <p className="text-xs text-gray-500">
+                  Products with no profile assigned will use this
+                </p>
               </div>
-              <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.isDefault)} onChange={(e) => patch("isDefault", e.target.checked)} />
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--admin-blue)]"
+                checked={Boolean(form.isDefault)}
+                onChange={(e) => patch("isDefault", e.target.checked)}
+              />
             </label>
           )}
           <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
             <div>
-              <p className="text-sm font-semibold text-gray-800">{isTemplate ? "Published / Active" : "Active"}</p>
-              <p className="text-xs text-gray-500">{isTemplate ? "Inactive templates cannot be cloned by sellers" : "Inactive profiles cannot be assigned to products"}</p>
+              <p className="text-sm font-semibold text-gray-800">
+                {isTemplate ? "Published / Active" : "Active"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {isTemplate
+                  ? "Inactive templates cannot be cloned by sellers"
+                  : "Inactive profiles cannot be assigned to products"}
+              </p>
             </div>
-            <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={Boolean(form.active)} onChange={(e) => patch("active", e.target.checked)} />
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--admin-blue)]"
+              checked={Boolean(form.active)}
+              onChange={(e) => patch("active", e.target.checked)}
+            />
           </label>
         </div>
       </section>
@@ -769,7 +956,14 @@ const unwrapTemplates = (payload = {}) => {
 };
 
 const getSellerIdFromUser = (user = {}) =>
-  String(user.ownerSellerId || user.sellerId || user._id || user.id || user.userId || "");
+  String(
+    user.ownerSellerId ||
+      user.sellerId ||
+      user._id ||
+      user.id ||
+      user.userId ||
+      "",
+  );
 
 const getSellerLabelFromUser = (user = {}) =>
   user.sellerProfile?.displayName ||
@@ -780,31 +974,51 @@ const getSellerLabelFromUser = (user = {}) =>
   "Current seller";
 
 const displayStatus = (value = "") => String(value || "N/A").replace(/_/g, " ");
-const formatMoney = (value) => Number(value || 0) === 0 ? "Free" : `₹${Number(value || 0).toFixed(0)}`;
+const formatMoney = (value) =>
+  Number(value || 0) === 0 ? "Free" : `₹${Number(value || 0).toFixed(0)}`;
 const shortId = (value = "") => String(value || "").slice(0, 8) || "N/A";
-const profileId = (profile = {}) => profile.id || profile._id || profile.profileId;
-const initialLetter = (value = "") => String(value || "S").trim().charAt(0).toUpperCase() || "S";
+const profileId = (profile = {}) =>
+  profile.id || profile._id || profile.profileId;
+const initialLetter = (value = "") =>
+  String(value || "S")
+    .trim()
+    .charAt(0)
+    .toUpperCase() || "S";
 
 const modeLabel = (value) =>
-  SERVICEABILITY_MODES.find((mode) => mode.value === value)?.label || displayStatus(value);
+  SERVICEABILITY_MODES.find((mode) => mode.value === value)?.label ||
+  displayStatus(value);
 
 const methodLabel = (value) =>
-  SHIPPING_METHODS.find((method) => method.value === value)?.label || displayStatus(value);
+  SHIPPING_METHODS.find((method) => method.value === value)?.label ||
+  displayStatus(value);
 
 const etaLabel = (profile = {}) => {
-  const values = [profile.etaMin, profile.etaMax].filter((value) => value !== undefined && value !== null && value !== "");
+  const values = [profile.etaMin, profile.etaMax].filter(
+    (value) => value !== undefined && value !== null && value !== "",
+  );
   return values.length ? `${values.join("-")} days` : "N/A";
 };
 
 const coverageLabel = (profile = {}) => {
   if (profile.serviceabilityMode === "all_india") return "All locations";
   const parts = [
-    profile.allowedStates?.length ? `${profile.allowedStates.length} states` : "",
-    profile.allowedCities?.length ? `${profile.allowedCities.length} cities` : "",
-    profile.allowedPincodes?.length ? `${profile.allowedPincodes.length} pincodes` : "",
-    profile.blockedPincodes?.length ? `${profile.blockedPincodes.length} blocked` : "",
+    profile.allowedStates?.length
+      ? `${profile.allowedStates.length} states`
+      : "",
+    profile.allowedCities?.length
+      ? `${profile.allowedCities.length} cities`
+      : "",
+    profile.allowedPincodes?.length
+      ? `${profile.allowedPincodes.length} pincodes`
+      : "",
+    profile.blockedPincodes?.length
+      ? `${profile.blockedPincodes.length} blocked`
+      : "",
   ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : modeLabel(profile.serviceabilityMode);
+  return parts.length
+    ? parts.join(" · ")
+    : modeLabel(profile.serviceabilityMode);
 };
 
 export default function ShippingProfiles() {
@@ -815,8 +1029,14 @@ export default function ShippingProfiles() {
   const canUpdateProfile = can("delivery", ACTIONS.UPDATE);
   const canDeleteProfile = can("delivery", ACTIONS.DELETE);
   const storedUser = useMemo(() => getStoredUser() || {}, []);
-  const sellerSessionId = useMemo(() => getSellerIdFromUser(storedUser), [storedUser]);
-  const sellerSessionLabel = useMemo(() => getSellerLabelFromUser(storedUser), [storedUser]);
+  const sellerSessionId = useMemo(
+    () => getSellerIdFromUser(storedUser),
+    [storedUser],
+  );
+  const sellerSessionLabel = useMemo(
+    () => getSellerLabelFromUser(storedUser),
+    [storedUser],
+  );
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
@@ -838,9 +1058,19 @@ export default function ShippingProfiles() {
     activeFilterCount,
   } = list;
 
-  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(getSelectedSellerOrganizationId());
-  const [modal, setModal] = useState({ open: false, mode: "create", profile: null });
-  const [templateModal, setTemplateModal] = useState({ open: false, mode: "create", template: null });
+  const [selectedOrganizationId, setSelectedOrganizationIdState] = useState(
+    getSelectedSellerOrganizationId(),
+  );
+  const [modal, setModal] = useState({
+    open: false,
+    mode: "create",
+    profile: null,
+  });
+  const [templateModal, setTemplateModal] = useState({
+    open: false,
+    mode: "create",
+    template: null,
+  });
   const [cloneModal, setCloneModal] = useState({ open: false, template: null });
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [cloneForm, setCloneForm] = useState({ ...EMPTY_CLONE_FORM });
@@ -857,12 +1087,30 @@ export default function ShippingProfiles() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { shippingProfilesData, shippingProfileTemplatesData } = useSelector((state) => state.delivery);
-  const profilesPayload = useMemo(() => unwrapProfiles(shippingProfilesData), [shippingProfilesData]);
-  const templatesPayload = useMemo(() => unwrapTemplates(shippingProfileTemplatesData), [shippingProfileTemplatesData]);
+  const { shippingProfilesData, shippingProfileTemplatesData } = useSelector(
+    (state) => state.delivery,
+  );
+  const profilesPayload = useMemo(
+    () => unwrapProfiles(shippingProfilesData),
+    [shippingProfilesData],
+  );
+  const templatesPayload = useMemo(
+    () => unwrapTemplates(shippingProfileTemplatesData),
+    [shippingProfileTemplatesData],
+  );
+
+  const templateOptions = useMemo(() =>
+    templatesPayload.list.map((template) => ({
+      value: profileId(template),
+      label: `${template.name} · v${template.version || 1}`,
+    })),
+    [templatesPayload.list]
+  );
 
   useEffect(() => {
-    const visibleIds = new Set(profilesPayload.list.map(profileId).filter(Boolean));
+    const visibleIds = new Set(
+      profilesPayload.list.map(profileId).filter(Boolean),
+    );
     setSelectedProfileIds((ids) => ids.filter((id) => visibleIds.has(id)));
   }, [profilesPayload.list]);
 
@@ -874,36 +1122,43 @@ export default function ShippingProfiles() {
       );
     };
     window.addEventListener("seller:organizationChanged", handler);
-    return () => window.removeEventListener("seller:organizationChanged", handler);
+    return () =>
+      window.removeEventListener("seller:organizationChanged", handler);
   }, [isSeller]);
 
-  const loadSellerOptions = useCallback((term = "") => {
-    if (isSeller) return Promise.resolve([]);
-    const searchTerm = term.trim();
-    return dropdownApi.getSellers({
-      keyWord: searchTerm,
-      keyword: searchTerm,
-      search: searchTerm,
-      q: searchTerm,
-      searchFields: "full_name,email,businessName,displayName",
-      limit: 100,
-    })
-      .then((options) => {
-        setSellerOptions(options || []);
-        return options || [];
-      })
-      .catch(() => {
-        setSellerOptions([]);
-        return [];
-      });
-  }, [isSeller]);
+  const loadSellerOptions = useCallback(
+    (term = "") => {
+      if (isSeller) return Promise.resolve([]);
+      const searchTerm = term.trim();
+      return dropdownApi
+        .getSellers({
+          keyWord: searchTerm,
+          keyword: searchTerm,
+          search: searchTerm,
+          q: searchTerm,
+          searchFields: "full_name,email,businessName,displayName",
+          limit: 100,
+        })
+        .then((options) => {
+          setSellerOptions(options || []);
+          return options || [];
+        })
+        .catch(() => {
+          setSellerOptions([]);
+          return [];
+        });
+    },
+    [isSeller],
+  );
 
   useEffect(() => {
     loadSellerOptions("");
   }, [loadSellerOptions]);
 
   const activeSellerId = isSeller ? sellerSessionId : filters.sellerId;
-  const activeOrganizationId = isSeller ? selectedOrganizationId : filters.organizationId;
+  const activeOrganizationId = isSeller
+    ? selectedOrganizationId
+    : filters.organizationId;
 
   useEffect(() => {
     if (!activeSellerId) {
@@ -913,14 +1168,17 @@ export default function ShippingProfiles() {
     }
 
     let active = true;
-    dropdownApi.getSellerOrganizations(activeSellerId)
+    dropdownApi
+      .getSellerOrganizations(activeSellerId)
       .then((options) => {
         if (active) setOrganizationOptions(options || []);
       })
       .catch(() => {
         if (active) setOrganizationOptions([]);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [activeSellerId, filters.organizationId, isSeller, setFilter]);
 
   useEffect(() => {
@@ -937,14 +1195,17 @@ export default function ShippingProfiles() {
     }
 
     let active = true;
-    dropdownApi.getSellerOrganizations(cloneSellerId)
+    dropdownApi
+      .getSellerOrganizations(cloneSellerId)
       .then((options) => {
         if (active) setCloneOrganizationOptions(options || []);
       })
       .catch(() => {
         if (active) setCloneOrganizationOptions([]);
-    });
-    return () => { active = false; };
+      });
+    return () => {
+      active = false;
+    };
   }, [cloneForm.sellerId, cloneModal.open, isSeller, sellerSessionId]);
 
   useEffect(() => {
@@ -955,14 +1216,17 @@ export default function ShippingProfiles() {
     }
 
     let active = true;
-    dropdownApi.getSellerOrganizations(formSellerId)
+    dropdownApi
+      .getSellerOrganizations(formSellerId)
       .then((options) => {
         if (active) setFormOrganizationOptions(options || []);
       })
       .catch(() => {
         if (active) setFormOrganizationOptions([]);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [form.sellerId, isSeller, modal.open, sellerSessionId]);
 
   useEffect(() => {
@@ -989,7 +1253,10 @@ export default function ShippingProfiles() {
       }
       await dispatch(getShippingProfiles(params)).unwrap();
     } catch (requestError) {
-      const message = requestError?.message || requestError || "Failed to load shipping profiles";
+      const message =
+        requestError?.message ||
+        requestError ||
+        "Failed to load shipping profiles";
       setError(message);
       toast.error(message);
     } finally {
@@ -1011,12 +1278,14 @@ export default function ShippingProfiles() {
 
   const fetchTemplates = useCallback(async () => {
     try {
-      await dispatch(getShippingProfileTemplates({
-        limit: 100,
-        offset: 0,
-        ...(isSeller ? {} : { status: "published" }),
-        active: true,
-      })).unwrap();
+      await dispatch(
+        getShippingProfileTemplates({
+          limit: 100,
+          offset: 0,
+          ...(isSeller ? {} : { status: "published" }),
+          active: true,
+        }),
+      ).unwrap();
     } catch {
       // Template access is non-blocking for manual profile management.
     }
@@ -1062,22 +1331,35 @@ export default function ShippingProfiles() {
     return fields;
   }, [filters.sellerId, isSeller, loadSellerOptions, organizationOptions]);
 
-  const sellerDetails = useCallback((row = {}) => {
-    const sellerId = row.sellerId || row.seller_id || row.seller?.id || row.seller?._id;
-    const option = sellerOptions.find((item) => String(item.value) === String(sellerId));
-    const name = row.seller?.name || (isSeller ? sellerSessionLabel : option?.label) || shortId(sellerId);
+  const sellerDetails = useCallback(
+    (row = {}) => {
+      const sellerId =
+        row.sellerId || row.seller_id || row.seller?.id || row.seller?._id;
+      const option = sellerOptions.find(
+        (item) => String(item.value) === String(sellerId),
+      );
+      const name =
+        row.seller?.name ||
+        (isSeller ? sellerSessionLabel : option?.label) ||
+        shortId(sellerId);
 
-    return {
-      id: sellerId,
-      name,
-      email: row.seller?.email || "",
-      avatarUrl: row.seller?.avatarUrl || "",
-    };
-  }, [isSeller, sellerOptions, sellerSessionLabel]);
+      return {
+        id: sellerId,
+        name,
+        email: row.seller?.email || "",
+        avatarUrl: row.seller?.avatarUrl || "",
+      };
+    },
+    [isSeller, sellerOptions, sellerSessionLabel],
+  );
 
-  const organizationLabel = useCallback((organizationId) =>
-    organizationOptions.find((option) => String(option.value) === String(organizationId))?.label || shortId(organizationId),
-  [organizationOptions]);
+  const organizationLabel = useCallback(
+    (organizationId) =>
+      organizationOptions.find(
+        (option) => String(option.value) === String(organizationId),
+      )?.label || shortId(organizationId),
+    [organizationOptions],
+  );
 
   const openCreate = () => {
     if (!canCreateProfile) {
@@ -1143,7 +1425,9 @@ export default function ShippingProfiles() {
       templateId: profileId(selectedTemplate || {}) || "",
       sellerId: sellerId || "",
       organizationId: activeOrganizationId || "",
-      name: selectedTemplate?.name ? `${selectedTemplate.name} - Seller Copy` : "",
+      name: selectedTemplate?.name
+        ? `${selectedTemplate.name} - Seller Copy`
+        : "",
       description: selectedTemplate?.description || "",
       isDefault: profilesPayload.list.length === 0,
       active: true,
@@ -1180,8 +1464,10 @@ export default function ShippingProfiles() {
     setModal({ open: true, mode: "edit", profile });
   };
 
-  const closeModal = () => setModal({ open: false, mode: "create", profile: null });
-  const closeTemplateModal = () => setTemplateModal({ open: false, mode: "create", template: null });
+  const closeModal = () =>
+    setModal({ open: false, mode: "create", profile: null });
+  const closeTemplateModal = () =>
+    setTemplateModal({ open: false, mode: "create", template: null });
   const closeCloneModal = () => setCloneModal({ open: false, template: null });
 
   const buildPayload = () => ({
@@ -1191,8 +1477,12 @@ export default function ShippingProfiles() {
     ),
     sellerId: form.sellerId || activeSellerId || undefined,
     organizationId: form.organizationId || null,
-    shippingCharge: form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
-    freeShippingThreshold: form.freeShippingThreshold !== "" ? Number(form.freeShippingThreshold) : null,
+    shippingCharge:
+      form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
+    freeShippingThreshold:
+      form.freeShippingThreshold !== ""
+        ? Number(form.freeShippingThreshold)
+        : null,
     etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
     etaMax: form.etaMax !== "" ? Number(form.etaMax) : null,
   });
@@ -1233,7 +1523,12 @@ export default function ShippingProfiles() {
         await dispatch(createShippingProfile(buildPayload())).unwrap();
         toast.success("Shipping profile created");
       } else {
-        await dispatch(updateShippingProfile({ profileId: profileId(modal.profile), ...buildPayload() })).unwrap();
+        await dispatch(
+          updateShippingProfile({
+            profileId: profileId(modal.profile),
+            ...buildPayload(),
+          }),
+        ).unwrap();
         toast.success("Shipping profile updated");
       }
       closeModal();
@@ -1258,13 +1553,17 @@ export default function ShippingProfiles() {
     setSaving(true);
     try {
       if (templateModal.mode === "create") {
-        await dispatch(createShippingProfileTemplate(buildTemplatePayload())).unwrap();
+        await dispatch(
+          createShippingProfileTemplate(buildTemplatePayload()),
+        ).unwrap();
         toast.success("Admin shipping template created");
       } else {
-        await dispatch(updateShippingProfileTemplate({
-          templateId: profileId(templateModal.template),
-          ...buildTemplatePayload(),
-        })).unwrap();
+        await dispatch(
+          updateShippingProfileTemplate({
+            templateId: profileId(templateModal.template),
+            ...buildTemplatePayload(),
+          }),
+        ).unwrap();
         toast.success("Admin shipping template updated");
       }
       closeTemplateModal();
@@ -1281,21 +1580,31 @@ export default function ShippingProfiles() {
       toast.error("You do not have permission to copy shipping templates");
       return;
     }
-    if (!cloneForm.templateId) { toast.error("Select an admin template to clone"); return; }
+    if (!cloneForm.templateId) {
+      toast.error("Select an admin template to clone");
+      return;
+    }
     const targetSellerId = isSeller ? activeSellerId : cloneForm.sellerId;
-    const targetOrganizationId = isSeller ? activeOrganizationId : cloneForm.organizationId;
-    if (!targetSellerId) { toast.error("Select a seller before cloning a template"); return; }
+    const targetOrganizationId = isSeller
+      ? activeOrganizationId
+      : cloneForm.organizationId;
+    if (!targetSellerId) {
+      toast.error("Select a seller before cloning a template");
+      return;
+    }
     setSaving(true);
     try {
-      await dispatch(cloneShippingProfileTemplate({
-        templateId: cloneForm.templateId,
-        sellerId: targetSellerId,
-        organizationId: targetOrganizationId || null,
-        name: cloneForm.name || undefined,
-        description: cloneForm.description || undefined,
-        isDefault: Boolean(cloneForm.isDefault),
-        active: cloneForm.active !== false,
-      })).unwrap();
+      await dispatch(
+        cloneShippingProfileTemplate({
+          templateId: cloneForm.templateId,
+          sellerId: targetSellerId,
+          organizationId: targetOrganizationId || null,
+          name: cloneForm.name || undefined,
+          description: cloneForm.description || undefined,
+          isDefault: Boolean(cloneForm.isDefault),
+          active: cloneForm.active !== false,
+        }),
+      ).unwrap();
       toast.success("Template copied to seller shipping profiles");
       closeCloneModal();
       fetchProfiles();
@@ -1314,7 +1623,9 @@ export default function ShippingProfiles() {
     }
     try {
       setSaving(true);
-      await dispatch(deleteShippingProfile({ profileId: profileId(deleteTarget) })).unwrap();
+      await dispatch(
+        deleteShippingProfile({ profileId: profileId(deleteTarget) }),
+      ).unwrap();
       toast.success("Profile deleted");
       setDeleteTarget(null);
       fetchProfiles();
@@ -1333,8 +1644,12 @@ export default function ShippingProfiles() {
     }
     try {
       setSaving(true);
-      await dispatch(bulkDeleteShippingProfiles({ profileIds: selectedProfileIds })).unwrap();
-      toast.success(`${selectedProfileIds.length} shipping profile${selectedProfileIds.length > 1 ? "s" : ""} deleted`);
+      await dispatch(
+        bulkDeleteShippingProfiles({ profileIds: selectedProfileIds }),
+      ).unwrap();
+      toast.success(
+        `${selectedProfileIds.length} shipping profile${selectedProfileIds.length > 1 ? "s" : ""} deleted`,
+      );
       setSelectedProfileIds([]);
       setBulkDeleteOpen(false);
       fetchProfiles();
@@ -1352,7 +1667,9 @@ export default function ShippingProfiles() {
     }
     try {
       setLoading(true);
-      await dispatch(setDefaultShippingProfile({ profileId: profileId(profile) })).unwrap();
+      await dispatch(
+        setDefaultShippingProfile({ profileId: profileId(profile) }),
+      ).unwrap();
       toast.success(`"${profile.name}" set as default`);
       fetchProfiles();
     } catch (err) {
@@ -1370,12 +1687,16 @@ export default function ShippingProfiles() {
         sortable: true,
         render: (value, row) => (
           <div className="flex items-start gap-3">
-            <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${row.active !== false ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "bg-gray-100 text-gray-400"}`}>
+            <span
+              className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${row.active !== false ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "bg-gray-100 text-gray-400"}`}
+            >
               <MdLocalShipping size={18} />
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-[var(--admin-ink)]">{value || "N/A"}</span>
+                <span className="font-semibold text-[var(--admin-ink)]">
+                  {value || "N/A"}
+                </span>
                 {row.isDefault && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-blue)]">
                     <MdStar size={12} /> Default
@@ -1408,11 +1729,17 @@ export default function ShippingProfiles() {
                 if (seller.id) navigate(`/app/seller/view/${seller.id}`);
               }}
               disabled={!seller.id}
-              title={seller.id ? "View seller profile" : "Seller profile unavailable"}
+              title={
+                seller.id ? "View seller profile" : "Seller profile unavailable"
+              }
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--admin-line)] bg-[var(--admin-gold)]/10 text-xs font-bold text-[var(--admin-gold)]">
                 {seller.avatarUrl ? (
-                  <img src={seller.avatarUrl} alt={seller.name} className="h-full w-full object-cover" />
+                  <img
+                    src={seller.avatarUrl}
+                    alt={seller.name}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   initialLetter(seller.name)
                 )}
@@ -1434,15 +1761,21 @@ export default function ShippingProfiles() {
       {
         key: "shippingMethod",
         label: "Method",
-        render: (value) => <span className="capitalize">{methodLabel(value)}</span>,
+        render: (value) => (
+          <span className="capitalize">{methodLabel(value)}</span>
+        ),
       },
       {
         key: "serviceabilityMode",
         label: "Serviceability",
         render: (value, row) => (
           <div>
-            <div className="text-sm font-medium text-[var(--admin-ink)]">{modeLabel(value)}</div>
-            <div className="text-xs text-[var(--admin-muted)]">{coverageLabel(row)}</div>
+            <div className="text-sm font-medium text-[var(--admin-ink)]">
+              {modeLabel(value)}
+            </div>
+            <div className="text-xs text-[var(--admin-muted)]">
+              {coverageLabel(row)}
+            </div>
           </div>
         ),
       },
@@ -1451,9 +1784,13 @@ export default function ShippingProfiles() {
         label: "Charge",
         render: (value, row) => (
           <div>
-            <div className="font-medium text-[var(--admin-ink)]">{formatMoney(value)}</div>
+            <div className="font-medium text-[var(--admin-ink)]">
+              {formatMoney(value)}
+            </div>
             {row.freeShippingThreshold != null && (
-              <div className="text-xs text-[var(--admin-muted)]">Free above ₹{Number(row.freeShippingThreshold).toFixed(0)}</div>
+              <div className="text-xs text-[var(--admin-muted)]">
+                Free above ₹{Number(row.freeShippingThreshold).toFixed(0)}
+              </div>
             )}
           </div>
         ),
@@ -1477,21 +1814,30 @@ export default function ShippingProfiles() {
       {
         key: "active",
         label: "Status",
-        render: (value) => <StatusBadge status={value === false ? "inactive" : "active"} dot />,
+        render: (value) => (
+          <StatusBadge status={value === false ? "inactive" : "active"} dot />
+        ),
       },
     ];
 
-    return isSeller ? baseColumns.filter((column) => column.key !== "sellerId") : baseColumns;
+    return isSeller
+      ? baseColumns.filter((column) => column.key !== "sellerId")
+      : baseColumns;
   }, [isSeller, navigate, organizationLabel, sellerDetails]);
 
   return (
     <div>
       <PageHeader
         title="Shipping Profiles"
-        subtitle={isSeller
-          ? "Manage reusable delivery rules for your products."
-          : "Manage reusable seller delivery configurations"}
-        breadcrumbs={[{ label: isSeller ? "Shipping" : "Shipping & Fulfilment" }, { label: "Shipping Profiles" }]}
+        subtitle={
+          isSeller
+            ? "Manage reusable delivery rules for your products."
+            : "Manage reusable seller delivery configurations"
+        }
+        breadcrumbs={[
+          { label: isSeller ? "Shipping" : "Shipping & Fulfilment" },
+          { label: "Shipping Profiles" },
+        ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canCreateProfile && (
@@ -1516,12 +1862,19 @@ export default function ShippingProfiles() {
       <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--admin-ink)]">Admin Shipping Templates</h3>
+            <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
+              Admin Shipping Templates
+            </h3>
             <p className="text-xs text-[var(--admin-muted)]">
-              Sellers copy these templates into their own profile, then edit only their private copy. The admin template never changes.
+              Sellers copy these templates into their own profile, then edit
+              only their private copy. The admin template never changes.
             </p>
           </div>
-          <button type="button" className="admin-btn-secondary text-xs" onClick={fetchTemplates}>
+          <button
+            type="button"
+            className="admin-btn-secondary text-xs"
+            onClick={fetchTemplates}
+          >
             Refresh Templates
           </button>
         </div>
@@ -1550,15 +1903,27 @@ export default function ShippingProfiles() {
                       <span>{formatMoney(template.shippingCharge)}</span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" className="admin-btn-secondary text-xs" onClick={() => openClone(template)}>
+                      <button
+                        type="button"
+                        className="admin-btn-secondary text-xs"
+                        onClick={() => openClone(template)}
+                      >
                         Copy to Seller
                       </button>
                       {!isSeller && (
                         <>
-                          <button type="button" className="admin-btn-secondary text-xs" onClick={() => openTemplateEdit(template)}>
+                          <button
+                            type="button"
+                            className="admin-btn-secondary text-xs"
+                            onClick={() => openTemplateEdit(template)}
+                          >
                             Edit Template
                           </button>
-                          <button type="button" className="text-xs font-semibold text-red-500 hover:underline" onClick={() => setDeleteTemplateTarget(template)}>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-red-500 hover:underline"
+                            onClick={() => setDeleteTemplateTarget(template)}
+                          >
                             Archive
                           </button>
                         </>
@@ -1605,47 +1970,67 @@ export default function ShippingProfiles() {
             activeCount={activeFilterCount}
           />
         }
-        bulkActionBar={!isSeller && canDeleteProfile && selectedProfileIds.length ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--admin-line)] bg-white p-2 m-2 shadow-sm">
-            <span className="text-sm font-semibold text-[var(--admin-ink)]">
-              {selectedProfileIds.length} profile{selectedProfileIds.length > 1 ? "s" : ""} selected
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--admin-muted)] transition hover:border-[var(--admin-gold)] hover:text-[var(--admin-gold-dark)]"
-                onClick={() => setSelectedProfileIds([])}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
-                onClick={() => setBulkDeleteOpen(true)}
-              >
-                <MdDeleteSweep size={17} /> Delete Selected
-              </button>
+        bulkActionBar={
+          !isSeller && canDeleteProfile && selectedProfileIds.length ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--admin-line)] bg-white p-2 m-2 shadow-sm">
+              <span className="text-sm font-semibold text-[var(--admin-ink)]">
+                {selectedProfileIds.length} profile
+                {selectedProfileIds.length > 1 ? "s" : ""} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--admin-muted)] transition hover:border-[var(--admin-gold)] hover:text-[var(--admin-gold-dark)]"
+                  onClick={() => setSelectedProfileIds([])}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  <MdDeleteSweep size={17} /> Delete Selected
+                </button>
+              </div>
             </div>
-          </div>
-        ) : null}
-        rowActions={(row) => [
-          canUpdateProfile && { label: "Edit", icon: <MdEdit size={16} />, onClick: () => openEdit(row) },
-          canUpdateProfile && {
-            label: "Set Default",
-            icon: <MdStarBorder size={16} />,
-            hidden: row.isDefault,
-            onClick: () => handleSetDefault(row),
-          },
-          canDeleteProfile && { label: "Delete", icon: <MdDelete size={16} />, danger: true, onClick: () => setDeleteTarget(row) },
-        ].filter(Boolean)}
+          ) : null
+        }
+        rowActions={(row) =>
+          [
+            canUpdateProfile && {
+              label: "Edit",
+              icon: <MdEdit size={16} />,
+              onClick: () => openEdit(row),
+            },
+            canUpdateProfile && {
+              label: "Set Default",
+              icon: <MdStarBorder size={16} />,
+              hidden: row.isDefault,
+              onClick: () => handleSetDefault(row),
+            },
+            canDeleteProfile && {
+              label: "Delete",
+              icon: <MdDelete size={16} />,
+              danger: true,
+              onClick: () => setDeleteTarget(row),
+            },
+          ].filter(Boolean)
+        }
       />
 
       <DefaultModal
         isOpen={modal.open}
         onClose={closeModal}
-        title={modal.mode === "create" ? "Create Shipping Profile" : `Edit - ${modal.profile?.name}`}
+        title={
+          modal.mode === "create"
+            ? "Create Shipping Profile"
+            : `Edit - ${modal.profile?.name}`
+        }
         onSubmit={handleSave}
-        submitButtonText={modal.mode === "create" ? "Create Profile" : "Save Changes"}
+        submitButtonText={
+          modal.mode === "create" ? "Create Profile" : "Save Changes"
+        }
         closeButtonText="Cancel"
         loading={saving}
       >
@@ -1662,13 +2047,24 @@ export default function ShippingProfiles() {
       <DefaultModal
         isOpen={templateModal.open}
         onClose={closeTemplateModal}
-        title={templateModal.mode === "create" ? "Create Admin Shipping Template" : `Edit Template - ${templateModal.template?.name}`}
+        title={
+          templateModal.mode === "create"
+            ? "Create Admin Shipping Template"
+            : `Edit Template - ${templateModal.template?.name}`
+        }
         onSubmit={handleTemplateSave}
-        submitButtonText={templateModal.mode === "create" ? "Create Template" : "Save Template"}
+        submitButtonText={
+          templateModal.mode === "create" ? "Create Template" : "Save Template"
+        }
         closeButtonText="Cancel"
         loading={saving}
       >
-        <ProfileForm form={form} setForm={setForm} isTemplate isSeller={isSeller} />
+        <ProfileForm
+          form={form}
+          setForm={setForm}
+          isTemplate
+          isSeller={isSeller}
+        />
       </DefaultModal>
 
       <DefaultModal
@@ -1682,88 +2078,88 @@ export default function ShippingProfiles() {
       >
         <div className="space-y-4 py-2">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            This creates a private seller profile. Editing pincodes, charge, ETA, COD, or status after copying will not change the admin template.
+            This creates a private seller profile. Editing pincodes, charge,
+            ETA, COD, or status after copying will not change the admin
+            template.
           </div>
           {!isSeller && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
                 <label className="admin-label">Target Seller</label>
                 <input
-                  className="admin-input"
+                  className="admin-input mb-1"
                   value={cloneSellerSearch}
                   onChange={(event) => setCloneSellerSearch(event.target.value)}
                   placeholder="Search seller by name, email, or business..."
                 />
-                <select
-                  className="admin-input"
-                  value={cloneForm.sellerId}
-                  onChange={(event) => setCloneForm((prev) => ({
-                    ...prev,
-                    sellerId: event.target.value,
-                    organizationId: "",
-                  }))}
-                >
-                  <option value="">Select seller...</option>
-                  {sellerOptions.map((seller) => (
-                    <option key={seller.value} value={seller.value}>
-                      {seller.label}
-                    </option>
-                  ))}
-                </select>
+                <FilterSelect
+                  options={sellerOptions}
+                  value={sellerOptions.find((seller) => seller.value === cloneForm.sellerId) || null}
+                  onChange={(option) =>
+                    setCloneForm((prev) => ({
+                      ...prev,
+                      sellerId: option?.value || "",
+                      organizationId: "",
+                    }))
+                  }
+                  isSearchable
+                  placeholder="Select seller..."
+                  isClearable
+                />
                 <p className="text-xs text-[var(--admin-muted)]">
                   This is the seller who will receive the private copy.
                 </p>
               </div>
               <div className="space-y-1">
                 <label className="admin-label">Organization</label>
-                <select
-                  className="admin-input"
-                  value={cloneForm.organizationId}
-                  onChange={(event) => setCloneForm((prev) => ({
-                    ...prev,
-                    organizationId: event.target.value,
-                  }))}
-                  disabled={!cloneForm.sellerId}
-                >
-                  <option value="">Seller-wide default</option>
-                  {cloneOrganizationOptions.map((organization) => (
-                    <option key={organization.value} value={organization.value}>
-                      {organization.label}
-                    </option>
-                  ))}
-                </select>
+                <FilterSelect
+                  options={cloneOrganizationOptions}
+                  value={cloneOrganizationOptions.find((o) => o.value === cloneForm.organizationId) || null}
+                  onChange={(option) =>
+                    setCloneForm((prev) => ({
+                      ...prev,
+                      organizationId: option?.value || "",
+                    }))
+                  }
+                  isDisabled={!cloneForm.sellerId}
+                  placeholder="Seller-wide default"
+                  isSearchable
+                  isClearable
+                />
               </div>
             </div>
           )}
           <div className="space-y-1">
             <label className="admin-label">Admin Template</label>
-            <select
-              className="admin-input"
-              value={cloneForm.templateId}
-              onChange={(event) => {
-                const nextTemplate = templatesPayload.list.find((template) => profileId(template) === event.target.value);
+            <FilterSelect
+              options={templateOptions}
+              value={templateOptions.find((o) => o.value === cloneForm.templateId) || null}
+              onChange={(option) => {
+                const nextTemplate = templatesPayload.list.find(
+                  (template) => profileId(template) === option?.value,
+                );
                 setCloneForm((prev) => ({
                   ...prev,
-                  templateId: event.target.value,
-                  name: nextTemplate?.name ? `${nextTemplate.name} - Seller Copy` : prev.name,
+                  templateId: option?.value || "",
+                  name: nextTemplate?.name
+                    ? `${nextTemplate.name} - Seller Copy`
+                    : prev.name,
                   description: nextTemplate?.description || prev.description,
                 }));
               }}
-            >
-              <option value="">Select template…</option>
-              {templatesPayload.list.map((template) => (
-                <option key={profileId(template)} value={profileId(template)}>
-                  {template.name} · v{template.version || 1}
-                </option>
-              ))}
-            </select>
+              isSearchable
+              placeholder="Select template..."
+              isClearable
+            />
           </div>
           <div className="space-y-1">
             <label className="admin-label">Seller Copy Name</label>
             <input
               className="admin-input"
               value={cloneForm.name}
-              onChange={(event) => setCloneForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) =>
+                setCloneForm((prev) => ({ ...prev, name: event.target.value }))
+              }
               placeholder="e.g. Standard Shipping - Delhi NCR"
             />
           </div>
@@ -1772,20 +2168,34 @@ export default function ShippingProfiles() {
             <input
               className="admin-input"
               value={cloneForm.description}
-              onChange={(event) => setCloneForm((prev) => ({ ...prev, description: event.target.value }))}
+              onChange={(event) =>
+                setCloneForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
+              }
               placeholder="Optional"
             />
           </div>
           <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer">
             <div>
-              <p className="text-sm font-semibold text-gray-800">Set as Default</p>
-              <p className="text-xs text-gray-500">Use for products without a specific profile in this seller/org.</p>
+              <p className="text-sm font-semibold text-gray-800">
+                Set as Default
+              </p>
+              <p className="text-xs text-gray-500">
+                Use for products without a specific profile in this seller/org.
+              </p>
             </div>
             <input
               type="checkbox"
               className="h-4 w-4 accent-[var(--admin-blue)]"
               checked={Boolean(cloneForm.isDefault)}
-              onChange={(event) => setCloneForm((prev) => ({ ...prev, isDefault: event.target.checked }))}
+              onChange={(event) =>
+                setCloneForm((prev) => ({
+                  ...prev,
+                  isDefault: event.target.checked,
+                }))
+              }
             />
           </label>
         </div>

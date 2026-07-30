@@ -1,5 +1,6 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { LuChevronRight, LuChevronLeft } from "react-icons/lu";
+import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 
 const pageButtonBase =
   "inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 disabled:cursor-not-allowed disabled:opacity-45";
@@ -32,6 +33,14 @@ const Pagination = ({
       onPageChange?.(page);
     }
   };
+
+  const options = useMemo(() =>
+    pageSizeOptions.map((size) => ({
+      value: size,
+      label: String(size),
+    })),
+    [pageSizeOptions]
+  );
 
   const renderPageNumbers = () => {
     const pageNumbers = [];
@@ -76,7 +85,7 @@ const Pagination = ({
       : 0;
 
   const wrapperClass = compact
-    ? "admin-pagination flex flex-wrap items-center justify-end gap-3"
+    ? "admin-pagination  flex flex-wrap items-center justify-end gap-3"
     : "admin-pagination flex w-full flex-wrap items-center justify-end gap-3 rounded-lg   px-3 py-2";
 
   return (
@@ -92,21 +101,17 @@ const Pagination = ({
         </div>
       )}
       {onPageSizeChange && (
-        <label className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
+        <div className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
           Rows Per Page
-          <select
-            className="admin-input !h-8 !w-auto !min-w-[68px] !border-[var(--admin-line)] !bg-white !px-2"
-            value={pageSize}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            aria-label="Rows per page"
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
+          <FilterSelect
+            options={options}
+            value={options.find((option) => option.value === pageSize) || null}
+            onChange={(option) => onPageSizeChange(Number(option?.value))}
+            isSearchable={false}
+            placeholder={String(pageSize)}
+            className="!mb-0 !min-w-0 [&>div]:!min-w-0 w-[72px]"
+          />
+        </div>
       )}
       <nav
         className="flex flex-row items-center justify-end gap-1 overflow-x-auto"
