@@ -22,7 +22,8 @@ const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
 const isEmptyCellValue = (value) =>
   value === null ||
   value === undefined ||
-  (typeof value === "string" && EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
+  (typeof value === "string" &&
+    EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
 
 const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
 
@@ -68,9 +69,7 @@ const renderCellValue = (value, nested = false) => {
 
   if (Array.isArray(value)) {
     return value.map((item, index) => (
-      <React.Fragment key={index}>
-        {renderCellValue(item, true)}
-      </React.Fragment>
+      <React.Fragment key={index}>{renderCellValue(item, true)}</React.Fragment>
     ));
   }
 
@@ -86,7 +85,7 @@ const renderCellValue = (value, nested = false) => {
       {
         ...value.props,
       },
-      React.Children.map(children, (child) => renderCellValue(child, true))
+      React.Children.map(children, (child) => renderCellValue(child, true)),
     );
   }
 
@@ -108,11 +107,15 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
     const rect = button.getBoundingClientRect();
     const width = 190;
     const estimatedHeight = Math.min(visibleActions.length * 38 + 16, 320);
-    const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.right - width));
+    const left = Math.max(
+      8,
+      Math.min(window.innerWidth - width - 8, rect.right - width),
+    );
     const belowTop = rect.bottom + 6;
-    const top = belowTop + estimatedHeight > window.innerHeight
-      ? Math.max(8, rect.top - estimatedHeight - 6)
-      : belowTop;
+    const top =
+      belowTop + estimatedHeight > window.innerHeight
+        ? Math.max(8, rect.top - estimatedHeight - 6)
+        : belowTop;
     setPosition({ top, left });
   }, [visibleActions.length]);
 
@@ -161,38 +164,41 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
         <MdMoreVert size={19} />
       </button>
 
-      {open && createPortal(
-        <div
-          ref={menuRef}
-          role="menu"
-          className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white p-1.5 shadow-xl"
-          style={{ top: position.top, left: position.left }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {visibleActions.map((action, index) => (
-            <button
-              key={`${action.label || "action"}-${index}`}
-              type="button"
-              role="menuitem"
-              disabled={action.disabled}
-              className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                action.danger
-                  ? "text-red-600 hover:bg-red-50"
-                  : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-              }`}
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpen(false);
-                action.onClick?.();
-              }}
-            >
-              {action.icon ? <span className="flex-shrink-0">{action.icon}</span> : null}
-              <span>{action.label || "Action"}</span>
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white p-1.5 shadow-xl"
+            style={{ top: position.top, left: position.left }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {visibleActions.map((action, index) => (
+              <button
+                key={`${action.label || "action"}-${index}`}
+                type="button"
+                role="menuitem"
+                disabled={action.disabled}
+                className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  action.danger
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+                }`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen(false);
+                  action.onClick?.();
+                }}
+              >
+                {action.icon ? (
+                  <span className="flex-shrink-0">{action.icon}</span>
+                ) : null}
+                <span>{action.label || "Action"}</span>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
@@ -282,10 +288,16 @@ const DataTable = ({
   const safeData = Array.isArray(data) ? data : [];
   const safeColumns = Array.isArray(columns) ? columns : [];
   const hasSerialColumn = safeColumns.some((column) => {
-    const key = String(column?.key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const label = String(column?.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    return ["sno", "srno", "serial", "serialnumber"].includes(key) ||
-      ["sno", "srno", "serial", "serialnumber"].includes(label);
+    const key = String(column?.key || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    const label = String(column?.label || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    return (
+      ["sno", "srno", "serial", "serialnumber"].includes(key) ||
+      ["sno", "srno", "serial", "serialnumber"].includes(label)
+    );
   });
   const shouldShowSerialNumber = showSerialNumber && !hasSerialColumn;
   const resolvedTotalCount = Number(totalCount ?? total ?? safeData.length);
@@ -299,8 +311,12 @@ const DataTable = ({
   const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
   const resolvedSearchValue = listPage?.search ?? "";
   const resolvedEmptyText = emptyMessage || emptyText;
-  const totalPages = Math.max(1, Math.ceil(resolvedTotalCount / resolvedPageSize));
-  const showLoading = loading || (!hasMounted && safeData.length === 0 && !error);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(resolvedTotalCount / resolvedPageSize),
+  );
+  const showLoading =
+    loading || (!hasMounted && safeData.length === 0 && !error);
   const showRefreshLoading = refreshing || loading;
 
   useEffect(() => {
@@ -339,7 +355,9 @@ const DataTable = ({
     if (col.sortable && resolvedOnSort)
       resolvedOnSort(
         col.key,
-        resolvedSortKey === col.key && resolvedSortDir === "asc" ? "desc" : "asc",
+        resolvedSortKey === col.key && resolvedSortDir === "asc"
+          ? "desc"
+          : "asc",
       );
   };
 
@@ -381,7 +399,11 @@ const DataTable = ({
           {...exportConfig}
           data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
           selectedData={selectedData}
-          columns={Array.isArray(exportConfig.columns) ? exportConfig.columns : safeColumns}
+          columns={
+            Array.isArray(exportConfig.columns)
+              ? exportConfig.columns
+              : safeColumns
+          }
           requiredModule={requiredModule}
         />
       )}
@@ -394,10 +416,15 @@ const DataTable = ({
           onClick={handleRefresh}
           disabled={showRefreshLoading}
           className="admin-btn-secondary"
-          aria-label={showRefreshLoading ? "Refreshing records" : "Refresh records"}
+          aria-label={
+            showRefreshLoading ? "Refreshing records" : "Refresh records"
+          }
           aria-busy={showRefreshLoading}
         >
-          <MdRefresh size={17} className={showRefreshLoading ? "animate-spin" : ""} />
+          <MdRefresh
+            size={17}
+            className={showRefreshLoading ? "animate-spin" : ""}
+          />
           {showRefreshLoading ? "Refreshing..." : "Refresh"}
         </button>
       )}
@@ -408,10 +435,14 @@ const DataTable = ({
   return (
     <div className={cardClassName}>
       {/* Search + toolbar */}
-      {(resolvedOnSearch || actions || exportConfig || importConfig || onRefresh) && (
+      {(resolvedOnSearch ||
+        actions ||
+        exportConfig ||
+        importConfig ||
+        onRefresh) && (
         <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           {resolvedOnSearch && (
-            <div className="w-full min-w-0 sm:max-w-2xl sm:flex-1">
+            <div className="w-full  min-w-0 sm:max-w-2xl sm:flex-1">
               <SearchInput
                 searchTerm={searchValue}
                 handleChange={handleSearch}
@@ -429,13 +460,15 @@ const DataTable = ({
       {filterBar}
 
       {/* Bulk action bar slot */}
-      {bulkActionBar && (
-        <div className="px-4 pt-3">{bulkActionBar}</div>
-      )}
+      {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
 
       {/* Table */}
-      <div className={`admin-table-scroll ${tableContainerClassName || "overflow-x-auto overscroll-x-contain"}`}>
-        <table className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}>
+      <div
+        className={`admin-table-scroll ${tableContainerClassName || "overflow-x-auto overscroll-x-contain"}`}
+      >
+        <table
+          className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
+        >
           <thead className="admin-table-head">
             <tr>
               {selectable && (
@@ -496,7 +529,9 @@ const DataTable = ({
                   className="px-4 py-12 text-center text-sm"
                 >
                   <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-5 text-red-600">
-                    <span className="text-sm font-semibold">Unable to load records</span>
+                    <span className="text-sm font-semibold">
+                      Unable to load records
+                    </span>
                     <span className="text-xs text-red-500">{error}</span>
                     {onRefresh && (
                       <button
@@ -519,7 +554,9 @@ const DataTable = ({
                       alt="No records"
                       className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
                     />
-                    <span className="text-sm font-medium">{formatLabel(resolvedEmptyText)}</span>
+                    <span className="text-sm font-medium">
+                      {formatLabel(resolvedEmptyText)}
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -538,7 +575,9 @@ const DataTable = ({
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? "button" : undefined}
                   className={`align-top transition-colors hover:bg-[var(--admin-surface-soft)] ${
-                    onRowClick ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none" : ""
+                    onRowClick
+                      ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none"
+                      : ""
                   } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName}`}
                 >
                   {selectable && (
@@ -557,22 +596,27 @@ const DataTable = ({
                     </td>
                   )}
                   {safeColumns.map((col, columnIndex) => (
-  <td
-    key={`${col.key}-${columnIndex}`}
-    className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
-  >
-    {renderCellValue(
-      col.render
-        ? col.render(row[col.key], row)
-        : row[col.key],
-    )}
-  </td>
-))}
+                    <td
+                      key={`${col.key}-${columnIndex}`}
+                      className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+                    >
+                      {renderCellValue(
+                        col.render
+                          ? col.render(row[col.key], row)
+                          : row[col.key],
+                      )}
+                    </td>
+                  ))}
                   {rowActions && (
                     <td className="px-4 py-3 text-right">
                       <RowActionsMenu
                         actions={rowActions(row)}
-                        rowLabel={row.full_name || row.name || row.title || getKey(row, index)}
+                        rowLabel={
+                          row.full_name ||
+                          row.name ||
+                          row.title ||
+                          getKey(row, index)
+                        }
                       />
                     </td>
                   )}
@@ -589,9 +633,13 @@ const DataTable = ({
           <span className="text-xs font-medium">
             Showing{" "}
             {resolvedTotalCount
-              ? Math.min((resolvedPage - 1) * resolvedPageSize + 1, resolvedTotalCount)
+              ? Math.min(
+                  (resolvedPage - 1) * resolvedPageSize + 1,
+                  resolvedTotalCount,
+                )
               : 0}
-            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of {resolvedTotalCount}
+            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of{" "}
+            {resolvedTotalCount}
           </span>
           <Pagination
             totalPages={totalPages}

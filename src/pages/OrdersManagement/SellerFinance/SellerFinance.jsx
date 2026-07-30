@@ -26,6 +26,7 @@ import {
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
@@ -153,7 +154,7 @@ const commissionStatusMatches = (row = {}, statusFilter = "") => {
 };
 
 const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
-  const needle = String(search || "").trim().toLowerCase();
+  const needle = String(search || "").trim().replace(/^#/, "").toLowerCase();
   if (!needle) return true;
   const sellerId = row.seller_id || row.sellerId;
   const haystack = [
@@ -302,6 +303,17 @@ const inputCls = "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm o
 
 const PAYMENT_METHODS = ["manual", "neft", "rtgs", "imps", "upi", "cheque", "bank_transfer"];
 
+const STATUS_OPTIONS = [
+  { value: "", label: "All Status" },
+  { value: "pending", label: "Pending" },
+  { value: "return_window_open", label: "Return Window Open" },
+  { value: "eligible", label: "Eligible" },
+  { value: "held", label: "Held" },
+  { value: "released", label: "Released" },
+  { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
 const SellerFinance = () => {
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
@@ -348,10 +360,11 @@ const SellerFinance = () => {
 
   const loadFinance = useCallback(async () => {
     try {
+      const cleanSearch = String(filters.search || "").trim().replace(/^#/, "");
       if (isSeller) {
         const sellerFilters = {
           status: filters.status,
-          search: filters.search,
+          search: cleanSearch,
           limit: 100,
         };
         await Promise.all([
@@ -361,10 +374,14 @@ const SellerFinance = () => {
           dispatch(getMySellerFinanceSummary(sellerFilters)).unwrap(),
         ]);
       } else {
+        const adminFilters = {
+          ...filters,
+          search: cleanSearch,
+        };
         await Promise.all([
-          dispatch(getSellerFinanceSummary(filters)).unwrap(),
-          dispatch(getAdminSellerCommissions({ ...filters, limit: 200 })).unwrap(),
-          dispatch(getAdminSellerPayouts({ ...filters, limit: 200 })).unwrap(),
+          dispatch(getSellerFinanceSummary(adminFilters)).unwrap(),
+          dispatch(getAdminSellerCommissions({ ...adminFilters, limit: 200 })).unwrap(),
+          dispatch(getAdminSellerPayouts({ ...adminFilters, limit: 200 })).unwrap(),
           dispatch(getSellerSettlements({ sellerId: filters.sellerId, organizationId: filters.organizationId, limit: 50 })).unwrap(),
         ]);
       }
@@ -380,6 +397,16 @@ const SellerFinance = () => {
   const commissions = listOf(isSeller ? financeState.myCommissionsData?.data : financeState.adminCommissionsData?.data);
   const payouts = listOf(isSeller ? financeState.myPayoutsData?.data : financeState.adminPayoutsData?.data);
   const settlements = listOf(isSeller ? financeState.mySettlementsData?.data : financeState.settlementsData?.data);
+
+  const sellerOpts = useMemo(() => [
+    { value: "", label: "All Sellers" },
+    ...sellerOptions
+  ], [sellerOptions]);
+
+  const orgOpts = useMemo(() => [
+    { value: "", label: filters.sellerId ? "All Organizations" : "Select seller first" },
+    ...organizationOptions
+  ], [organizationOptions, filters.sellerId]);
   const visibleCommissions = useMemo(() => commissions.filter((row) =>
     commissionStatusMatches(row, filters.status) &&
     commissionSearchMatches(row, filters.search, sellerOptions)
@@ -558,10 +585,11 @@ const SellerFinance = () => {
   }));
 
   const handleCalculate = async () => {
-    if (!orderId.trim()) { toast.error("Order ID is required"); return; }
+    const cleanOrderId = orderId.trim().replace(/^#/, "");
+    if (!cleanOrderId) { toast.error("Order ID is required"); return; }
     try {
       setSubmitting(true);
-      await dispatch(calculateSellerCommission({ orderId: orderId.trim(), organizationId: filters.organizationId || undefined })).unwrap();
+      await dispatch(calculateSellerCommission({ orderId: cleanOrderId, organizationId: filters.organizationId || undefined })).unwrap();
       toast.success("Commission recalculated");
       setOrderId("");
       await loadFinance();
@@ -815,38 +843,24 @@ const SellerFinance = () => {
   <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
     {!isSeller && (
       <>
-        <select
-          className={inputCls}
-          value={filters.sellerId}
-          onChange={(e) => updateFilter("sellerId", e.target.value)}
-        >
-          <option value="">All Sellers</option>
-          {sellerOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <FilterSelect
+          options={sellerOpts}
+          value={sellerOpts.find(opt => opt.value === filters.sellerId) || sellerOpts[0]}
+          onChange={(opt) => updateFilter("sellerId", opt?.value || "")}
+          isSearchable={true}
+          isClearable={false}
+          className="w-full [&>div]:!min-w-0"
+        />
 
-        <select
-          className={inputCls}
-          value={filters.organizationId}
-          onChange={(e) =>
-            updateFilter("organizationId", e.target.value)
-          }
-          disabled={!filters.sellerId}
-        >
-          <option value="">
-            {filters.sellerId
-              ? "All Organizations"
-              : "Select seller first"}
-          </option>
-          {organizationOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <FilterSelect
+          options={orgOpts}
+          value={orgOpts.find(opt => opt.value === filters.organizationId) || orgOpts[0]}
+          onChange={(opt) => updateFilter("organizationId", opt?.value || "")}
+          isDisabled={!filters.sellerId}
+          isSearchable={true}
+          isClearable={false}
+          className="w-full [&>div]:!min-w-0"
+        />
       </>
     )}
 
@@ -861,20 +875,14 @@ const SellerFinance = () => {
       onChange={(e) => updateFilter("search", e.target.value)}
     />
 
-    <select
-      className={inputCls}
-      value={filters.status}
-      onChange={(e) => updateFilter("status", e.target.value)}
-    >
-      <option value="">All Status</option>
-      <option value="pending">Pending</option>
-      <option value="return_window_open">Return Window Open</option>
-      <option value="eligible">Eligible</option>
-      <option value="held">Held</option>
-      <option value="released">Released</option>
-      <option value="failed">Failed</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
+    <FilterSelect
+      options={STATUS_OPTIONS}
+      value={STATUS_OPTIONS.find(opt => opt.value === filters.status) || STATUS_OPTIONS[0]}
+      onChange={(opt) => updateFilter("status", opt?.value || "")}
+      isSearchable={false}
+      isClearable={false}
+      className="w-full [&>div]:!min-w-0"
+    />
   </div>
 </div>
 

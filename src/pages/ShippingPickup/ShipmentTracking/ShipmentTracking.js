@@ -54,7 +54,10 @@ const FULFILLMENT_STATUS_OPTIONS = [
 const DELIVERY_METHOD_OPTIONS = [
   { value: "manual", label: "Manual / Seller Delivery" },
   { value: "Local Same Day", label: "Local Same Day" },
-  { value: "Prepaid Heavy and High Value", label: "Prepaid Heavy and High Value" },
+  {
+    value: "Prepaid Heavy and High Value",
+    label: "Prepaid Heavy and High Value",
+  },
   { value: "Express Metro", label: "Express Metro" },
   { value: "Standard All India", label: "Standard All India" },
   { value: "Ecom Express", label: "Ecom Express" },
@@ -68,14 +71,22 @@ const FULFILLMENT_TRANSITIONS = {
   failed: ["in_transit", "rto"],
 };
 const COURIER_METHOD_OPTIONS = [
-  { value: "Manual / seller delivery", label: "Manual / seller delivery", hint: "Seller handles delivery directly" },
+  {
+    value: "Manual / seller delivery",
+    label: "Manual / seller delivery",
+    hint: "Seller handles delivery directly",
+  },
   { value: "Delhivery", label: "Delhivery", hint: "Courier partner" },
   { value: "Blue Dart", label: "Blue Dart", hint: "Courier partner" },
   { value: "DTDC", label: "DTDC", hint: "Courier partner" },
   { value: "Ecom Express", label: "Ecom Express", hint: "Courier partner" },
   { value: "India Post", label: "India Post", hint: "Postal shipment" },
   { value: "Xpressbees", label: "Xpressbees", hint: "Courier partner" },
-  { value: "Other courier", label: "Other courier", hint: "Use tracking reference below" },
+  {
+    value: "Other courier",
+    label: "Other courier",
+    hint: "Use tracking reference below",
+  },
 ];
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -102,8 +113,9 @@ const shipmentStepLabel = (value = "") =>
   displayStatus(value);
 const getTrackingActionOptions = (currentStatus = "initiated") => {
   const nextStatuses = FULFILLMENT_TRANSITIONS[currentStatus] || [];
-  return FULFILLMENT_STATUS_OPTIONS.filter((option) =>
-    nextStatuses.includes(option.value) && option.value !== "cancelled",
+  return FULFILLMENT_STATUS_OPTIONS.filter(
+    (option) =>
+      nextStatuses.includes(option.value) && option.value !== "cancelled",
   );
 };
 const getDefaultTrackingStatus = (currentStatus = "initiated") =>
@@ -179,75 +191,82 @@ const ShipmentTracking = () => {
   });
   const { toQueryParams } = list;
 
-  const FILTER_FIELDS = isSeller ? [
-  { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
- 
-  {
-    key: "shipmentType",
-    type: "select",
-    label: "Type",
-    options: [
-      { value: "forward", label: "Forward" },
-      { value: "return", label: "Return" },
-    ],
-  },
-   {
-    key: "status",
-    type: "select",
-    label: "Status",
-    options: STATUS_OPTIONS.map((value) => ({
-      value,
-      label: shipmentStepLabel(value),
-    })),
-  },
-  // { key: "fromDate", type: "date", label: "From" },
-  // { key: "toDate", type: "date", label: "To" },
-]: [
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
-  { key: "returnId", type: "text", label: "Return #", width: "w-44" },   
-  {
-    key: "shipmentType",
-    type: "select",
-    label: "Type",
-    options: [
-      { value: "forward", label: "Forward" },
-      { value: "return", label: "Return" },
-    ],
-  },
-  {
-    key: "direction",
-    type: "select",
-    label: "Direction",
-    options: [
-      { value: "forward", label: "Forward" },
-      { value: "reverse", label: "Reverse" },
-    ],
-  },
-  {
-    key: "sellerId",
-    type: "asyncDropdown",
-    label: "Seller",
-    width: "w-52",
-    load: (search) =>
-      dropdownApi.getSellers({
-        keyWord: search,
-        searchFields: "full_name,email,businessName",
-      }),
-  },
-  { key: "awbNumber", type: "text", label: "AWB / Tracking", width: "w-44" },
-  { key: "courierName", type: "text", label: "Courier", width: "w-40" },
-  {
-    key: "status",
-    type: "select",
-    label: "Status",
-    options: STATUS_OPTIONS.map((value) => ({
-      value,
-      label: shipmentStepLabel(value),
-    })),
-  },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
-];
+  const FILTER_FIELDS = isSeller
+    ? [
+        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
+
+        {
+          key: "shipmentType",
+          type: "select",
+          label: "Type",
+          options: [
+            { value: "forward", label: "Forward" },
+            { value: "return", label: "Return" },
+          ],
+        },
+        {
+          key: "status",
+          type: "select",
+          label: "Status",
+          options: STATUS_OPTIONS.map((value) => ({
+            value,
+            label: shipmentStepLabel(value),
+          })),
+        },
+        // { key: "fromDate", type: "date", label: "From" },
+        // { key: "toDate", type: "date", label: "To" },
+      ]
+    : [
+        { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
+        {
+          key: "shipmentType",
+          type: "select",
+          label: "Type",
+          options: [
+            { value: "forward", label: "Forward" },
+            { value: "return", label: "Return" },
+          ],
+        },
+        {
+          key: "direction",
+          type: "select",
+          label: "Direction",
+          options: [
+            { value: "forward", label: "Forward" },
+            { value: "reverse", label: "Reverse" },
+          ],
+        },
+        {
+          key: "sellerId",
+          type: "asyncDropdown",
+          label: "Seller",
+          width: "w-52",
+          load: (search) =>
+            dropdownApi.getSellers({
+              keyWord: search,
+              searchFields: "full_name,email,businessName",
+            }),
+        },
+        {
+          key: "awbNumber",
+          type: "text",
+          label: "AWB / Tracking",
+          width: "w-44",
+        },
+        { key: "courierName", type: "text", label: "Courier", width: "w-40" },
+        {
+          key: "status",
+          type: "select",
+          label: "Status",
+          options: STATUS_OPTIONS.map((value) => ({
+            value,
+            label: shipmentStepLabel(value),
+          })),
+        },
+        { key: "fromDate", type: "date", label: "From" },
+        { key: "toDate", type: "date", label: "To" },
+      ];
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -401,11 +420,9 @@ const ShipmentTracking = () => {
         trackingAction.awbNumber.length < 5 ||
         trackingAction.awbNumber.length > 50
       ) {
-        nextErrors.awbNumber =
-          "Tracking reference must be 5–50 characters.";
+        nextErrors.awbNumber = "Tracking reference must be 5–50 characters.";
       } else if (!/^[A-Za-z0-9_/-]+$/.test(trackingAction.awbNumber)) {
-        nextErrors.awbNumber =
-          "Allowed: letters, numbers, -, _, and / only.";
+        nextErrors.awbNumber = "Allowed: letters, numbers, -, _, and / only.";
       }
       if (!trackingAction.shippedAt)
         nextErrors.shippedAt = "Shipment time is required.";
@@ -497,7 +514,9 @@ const ShipmentTracking = () => {
       await refreshSelectedShipment(selectedShipment.id);
     } catch (requestError) {
       toast.error(
-        requestError?.message || requestError || "Failed to cancel seller items",
+        requestError?.message ||
+          requestError ||
+          "Failed to cancel seller items",
       );
     } finally {
       setLoading(false);
@@ -626,10 +645,7 @@ const ShipmentTracking = () => {
       <PageHeader
         title="Shipments"
         subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details."
-        breadcrumbs={[
-          { label: "Shipping" },
-          { label: "Shipments Tracking" },
-        ]}
+        breadcrumbs={[{ label: "Shipping" }, { label: "Shipments Tracking" }]}
       />
 
       <DataTable
@@ -714,7 +730,10 @@ const ShipmentTracking = () => {
                   selectedShipment?.buyer?.email ||
                   "Customer"}
               </ShipmentFact>
-              <ShipmentFact icon={<MdLocalShipping size={17} />} label="Delivery">
+              <ShipmentFact
+                icon={<MdLocalShipping size={17} />}
+                label="Delivery"
+              >
                 <div>{selectedShipment?.courier_name || "Seller delivery"}</div>
                 <div className="mt-0.5 text-xs font-normal text-gray-500">
                   {selectedShipment?.tracking_number ||
@@ -751,14 +770,14 @@ const ShipmentTracking = () => {
               <div className="sm:text-right">
                 Tracking URL:{" "}
                 {selectedShipment?.tracking_url ? (
-                <a
-                  className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
-                  href={selectedShipment.tracking_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open Live Tracking <MdOpenInNew size={14} />
-                </a>
+                  <a
+                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
+                    href={selectedShipment.tracking_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Live Tracking <MdOpenInNew size={14} />
+                  </a>
                 ) : (
                   <strong className="font-medium text-gray-700">
                     Not added
@@ -790,8 +809,10 @@ const ShipmentTracking = () => {
                 <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
                   <div className="font-semibold">Seller items cancelled</div>
                   <div className="mt-1 text-xs">
-                    Inventory processing: {displayStatus(lastCancellation.inventory_status)}
-                    {" · "}Customer refund: {displayStatus(lastCancellation.refund_status)}
+                    Inventory processing:{" "}
+                    {displayStatus(lastCancellation.inventory_status)}
+                    {" · "}Customer refund:{" "}
+                    {displayStatus(lastCancellation.refund_status)}
                   </div>
                   <button
                     type="button"
@@ -805,7 +826,7 @@ const ShipmentTracking = () => {
                     View cancellation
                   </button>
                 </div>
-            )}
+              )}
             {trackingActionOptions.length > 0 ? (
               <div className="mt-4 space-y-2">
                 <div className="grid min-w-0 gap-1.5">
@@ -1053,15 +1074,17 @@ const ShipmentTracking = () => {
               <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
                 {isSeller &&
                 selectedShipment?.status === "cancelled" &&
-                String(lastCancellation?.order_id || lastCancellation?.orderId || "") !==
-                  String(selectedShipment?.order_id || "") ? (
+                String(
+                  lastCancellation?.order_id || lastCancellation?.orderId || "",
+                ) !== String(selectedShipment?.order_id || "") ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-amber-800">
                         Cancellation processing is not confirmed
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
-                        Complete the cancellation workflow to release inventory and create the customer refund review.
+                        Complete the cancellation workflow to release inventory
+                        and create the customer refund review.
                       </div>
                     </div>
                     <button
@@ -1080,8 +1103,10 @@ const ShipmentTracking = () => {
                 ) : (
                   <>
                     This shipment is{" "}
-                    <strong>{shipmentStepLabel(selectedShipment?.status)}</strong>.
-                    No further seller action is currently required.
+                    <strong>
+                      {shipmentStepLabel(selectedShipment?.status)}
+                    </strong>
+                    . No further seller action is currently required.
                   </>
                 )}
               </div>
@@ -1101,8 +1126,7 @@ const ShipmentTracking = () => {
               {selectedShipment?.ship_to_snapshot ? (
                 <div className="mt-3 space-y-1 text-sm leading-5 text-gray-600">
                   <div className="font-semibold text-gray-800">
-                    {selectedShipment.ship_to_snapshot.fullName ||
-                      "Customer"}
+                    {selectedShipment.ship_to_snapshot.fullName || "Customer"}
                   </div>
                   {selectedShipment.ship_to_snapshot.phone && (
                     <div>{selectedShipment.ship_to_snapshot.phone}</div>
@@ -1194,7 +1218,8 @@ const ShipmentTracking = () => {
                   )}
                   {event.note && (
                     <div className="mt-1 whitespace-pre-wrap text-xs text-gray-600">
-                      <span className="font-semibold">Note:</span> {formatLabel(event.note)}
+                      <span className="font-semibold">Note:</span>{" "}
+                      {formatLabel(event.note)}
                     </div>
                   )}
                 </div>
@@ -1239,7 +1264,9 @@ const ShipmentTracking = () => {
               }
             >
               <option value="seller_unavailable">Item unavailable</option>
-              <option value="inventory_unavailable">Inventory unavailable</option>
+              <option value="inventory_unavailable">
+                Inventory unavailable
+              </option>
               <option value="pricing_issue">Pricing issue</option>
               <option value="delivery_delay">Unable to deliver on time</option>
               <option value="other">Other</option>
