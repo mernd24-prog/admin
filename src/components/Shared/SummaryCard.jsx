@@ -33,13 +33,14 @@ const SummaryCard = ({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={twMerge(
-        "group relative flex    h-full min-h-[98px] w-full overflow-hidden rounded-lg bg-gradient-to-br border border-golden/60 from-white to-[var(--admin-gold-soft)]/45 p-3.5 text-left   transition duration-200  ",
+        "group relative flex    h-full min-h-[98px] w-full overflow-hidden rounded-lg bg-gradient-to-br  from-white to-[var(--admin-gold-soft)]/45 p-3.5 text-left   transition duration-200  ",
         onClick
           ? "cursor-pointer focus:outline-none focus:ring2 focus:ring-[var(--admin-gold)] focus:ring-offset-2"
           : "",
         className,
       )}
     >
+      <span className="absolute inset-y-0 left-0 w-[3px] bg-golden" />
       {icon && (
         <span
           className={twMerge(

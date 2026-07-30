@@ -109,7 +109,7 @@ const Pagination = ({
             onChange={(option) => onPageSizeChange(Number(option?.value))}
             isSearchable={false}
             placeholder={String(pageSize)}
-            className="!mb-0 !min-w-0 [&>div]:!min-w-0 w-[72px]"
+            className="!mb-0 !min-w-0 [&>div]:!min-w-0 w-[80px]"
           />
         </div>
       )}

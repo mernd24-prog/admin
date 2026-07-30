@@ -201,7 +201,7 @@ export function useListPage(opts = {}) {
       sortBy:  state.sortKey,
       sortDir: state.sortDir,
     };
-    if (state.search) params.search = state.search;
+    let finalSearch = state.search ? String(state.search).trim().replace(/^#/, '') : "";
 
     for (const [key, value] of Object.entries(state.filters)) {
       const normalizedValue = getFilterValue(value);
@@ -210,8 +210,28 @@ export function useListPage(opts = {}) {
         if (value.startDate) params[`${key}_start`] = value.startDate;
         if (value.endDate)   params[`${key}_end`]   = toInclusiveEndOfDay('endDate', value.endDate);
       } else {
-        params[key] = toInclusiveEndOfDay(key, normalizedValue);
+        let val = normalizedValue;
+        if (typeof val === 'string' && (key.toLowerCase().includes('order') || key.toLowerCase().includes('return') || key.toLowerCase().includes('id'))) {
+          val = val.trim().replace(/^#/, '');
+        }
+        if (typeof val === 'string' && (key === 'orderId' || key === 'orderNumber')) {
+          const isObjectId = /^[0-9a-fA-F]{24}$/.test(val);
+          const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(val);
+          if (isObjectId || isUuid) {
+            params.orderId = val;
+          } else {
+            params.orderNumber = val;
+            params.order_number = val;
+            finalSearch = finalSearch ? `${finalSearch} ${val}` : val;
+          }
+        } else {
+          params[key] = toInclusiveEndOfDay(key, val);
+        }
       }
+    }
+
+    if (finalSearch) {
+      params.search = finalSearch;
     }
     return params;
   }, [state]);

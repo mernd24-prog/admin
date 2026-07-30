@@ -57,7 +57,7 @@ export const getShipments = createApiThunkPrivate(
   ENDPOINTS.delivery.shipments,
   "GET",
   true,
-  { transformParams: pickQuery(["orderId", "returnId", "shipmentType", "direction", "sellerId", "status", "courierName", "awbNumber", "search", "cod", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) }
+  { transformParams: pickQuery(["orderId", "orderNumber", "order_number", "returnId", "shipmentType", "direction", "sellerId", "status", "courierName", "awbNumber", "search", "cod", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) }
 );
 
 export const createShipment = createApiThunkPrivate(
