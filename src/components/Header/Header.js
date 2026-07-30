@@ -161,9 +161,8 @@ export default function Header({
   const isNotificationsPage =
     currentPath === "/app/notifications" ||
     currentPath.startsWith("/app/notifications/");
-  const [suppressNotificationBadge, setSuppressNotificationBadge] = useState(
-    isNotificationsPage,
-  );
+  const [suppressNotificationBadge, setSuppressNotificationBadge] =
+    useState(isNotificationsPage);
   const [headerTitle, setHeaderTitle] = useState("");
   const [userData, setUserData] = useState({});
   const [, setOrganizations] = useState([]);
@@ -210,7 +209,7 @@ export default function Header({
           notification,
           readNotificationIds,
           notificationsSeenAt,
-        )
+        ),
       ).length;
     } catch (err) {
       return 0;
@@ -389,7 +388,7 @@ export default function Header({
           </div>
 
           {/* Center: search bar */}
-          <div className="hidden md:flex flex-1 max-w-[325px]">
+          {/* <div className="hidden md:flex flex-1 max-w-[325px]">
             <div className="header-search-pill group relative w-full">
               <MdSearch
                 size={14}
@@ -401,7 +400,7 @@ export default function Header({
                 className="admin-input admin-header-search-input"
               />
             </div>
-          </div>
+          </div> */}
 
           {/* Right: user profile */}
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -420,10 +419,10 @@ export default function Header({
                 {!isNotificationsPage &&
                   !suppressNotificationBadge &&
                   unreadCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-medium leading-none text-white">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-medium leading-none text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
               </button>
             </Tooltip>
             {/* {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
@@ -490,7 +489,7 @@ export default function Header({
                   >
                     {avatarUrl && !avatarFailed ? (
                       <img
-                        className="h-full w-full object-cover"
+                        className="h-full  w-full object-cover"
                         src={avatarUrl}
                         alt={getDisplayName(userData)}
                         onError={() => setAvatarFailed(true)}

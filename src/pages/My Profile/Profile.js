@@ -330,6 +330,14 @@ const Profile = () => {
 
       setIsEditing(false);
       toast.success("Profile updated successfully!");
+<<<<<<< HEAD
+=======
+    } catch (error) {
+      console.log(error);
+      toast.error(error?.message || "Error updating profile");
+    } finally {
+      setUpdating(false);
+>>>>>>> origin/aditi-dev
     }
   } catch (error) {
     console.error(error);

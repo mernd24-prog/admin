@@ -1,5 +1,19 @@
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { MdFilterList, MdClose, MdSearch, MdArrowDropDown, MdClear } from 'react-icons/md';
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  MdFilterList,
+  MdClose,
+  MdSearch,
+  MdArrowDropDown,
+  MdClear,
+} from "react-icons/md";
+import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 
 /**
  * FilterBar
@@ -23,24 +37,27 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
   const inputRef = useRef(null);
 
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState('');
+  const [selectedLabel, setSelectedLabel] = useState("");
   const debounceRef = useRef(null);
 
-  const loadOptions = useCallback(async (search) => {
-    if (!field.load) return;
-    setLoading(true);
-    try {
-      const result = await field.load(search);
-      setOptions(Array.isArray(result) ? result : []);
-    } catch {
-      setOptions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [field]);
+  const loadOptions = useCallback(
+    async (search) => {
+      if (!field.load) return;
+      setLoading(true);
+      try {
+        const result = await field.load(search);
+        setOptions(Array.isArray(result) ? result : []);
+      } catch {
+        setOptions([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [field],
+  );
 
   // Load initial options when dropdown opens
   useEffect(() => {
@@ -64,46 +81,66 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const select = (opt) => {
     onChange(field.key, opt.value);
     setSelectedLabel(opt.label);
     setOpen(false);
-    setQuery('');
+    setQuery("");
   };
 
   const clear = (e) => {
     e.stopPropagation();
-    onChange(field.key, '');
-    setSelectedLabel('');
-    setQuery('');
+    onChange(field.key, "");
+    setSelectedLabel("");
+    setQuery("");
   };
 
-  const displayText = value ? (selectedLabel || value) : (field.placeholder || `All ${field.label || ''}`);
+  const displayText = value
+    ? selectedLabel || value
+    : field.placeholder || `All ${field.label || ""}`;
   const hasValue = !!value;
 
   return (
-    <div ref={containerRef} className= "relative flex min-w-0 flex-col gap-1 w-full">
+    <div
+      ref={containerRef}
+      className="relative flex min-w-0 flex-col gap-1 w-full"
+    >
       {field.label && (
-        <label htmlFor={id} className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
+        <label
+          htmlFor={id}
+          className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+        >
           {field.label}
         </label>
       )}
       <button
         id={id}
         type="button"
-        onClick={() => { setOpen((o) => !o); if (!open) setTimeout(() => inputRef.current?.focus(), 50); }}
-        className={`admin-input text-sm py-1.5 flex items-center justify-between gap-1 text-left ${hasValue ? 'text-gray-800' : 'text-gray-400'}`}
+        onClick={() => {
+          setOpen((o) => !o);
+          if (!open) setTimeout(() => inputRef.current?.focus(), 50);
+        }}
+        className={`admin-input text-sm py-1.5 flex items-center justify-between gap-1 text-left ${hasValue ? "text-gray-800" : "text-gray-400"}`}
       >
         <span className="truncate">{displayText}</span>
         <span className="flex items-center gap-0.5 shrink-0">
           {hasValue && (
-            <MdClear size={14} className="text-gray-400 hover:text-red-500" onClick={clear} role="button" aria-label={`Clear ${field.label || field.key}`} />
+            <MdClear
+              size={14}
+              className="text-gray-400 hover:text-red-500"
+              onClick={clear}
+              role="button"
+              aria-label={`Clear ${field.label || field.key}`}
+            />
           )}
-          <MdArrowDropDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+          <MdArrowDropDown
+            size={16}
+            className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
         </span>
       </button>
 
@@ -111,7 +148,10 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
         <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[220px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
-              <MdSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <MdSearch
+                size={14}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -124,21 +164,26 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
           </div>
           <div className="max-h-48 overflow-y-auto">
             {loading && (
-              <div className="px-3 py-2 text-xs text-gray-400 text-center">Loading…</div>
+              <div className="px-3 py-2 text-xs text-gray-400 text-center">
+                Loading…
+              </div>
             )}
             {!loading && options.length === 0 && (
-              <div className="px-3 py-2 text-xs text-gray-400 text-center">No results</div>
+              <div className="px-3 py-2 text-xs text-gray-400 text-center">
+                No results
+              </div>
             )}
-            {!loading && options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => select(opt)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${String(value) === String(opt.value) ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {!loading &&
+              options.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => select(opt)}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${String(value) === String(opt.value) ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
           </div>
         </div>
       )}
@@ -147,28 +192,28 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
 };
 
 const RANGE_PAIRS = [
-  ['fromDate', 'toDate'],
-  ['startDate', 'endDate'],
-  ['dateFrom', 'dateTo'],
+  ["fromDate", "toDate"],
+  ["startDate", "endDate"],
+  ["dateFrom", "dateTo"],
 ];
-const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-const monthFormatter = new Intl.DateTimeFormat('en-IN', {
-  month: 'long',
-  year: 'numeric',
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const monthFormatter = new Intl.DateTimeFormat("en-IN", {
+  month: "long",
+  year: "numeric",
 });
 
-const normalizeKey = (key = '') => String(key).trim().toLowerCase();
+const normalizeKey = (key = "") => String(key).trim().toLowerCase();
 
 const toInputDate = (date) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 const parseInputDate = (value) => {
   if (!value) return null;
-  const [year, month, day] = String(value).split('-').map(Number);
+  const [year, month, day] = String(value).split("-").map(Number);
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day);
 };
@@ -200,26 +245,33 @@ const isBetweenDates = (value, start, end) =>
   Boolean(start && end && value >= start && value <= end);
 
 const formatDateLabel = (value) => {
-  if (!value) return '';
+  if (!value) return "";
   const date = parseInputDate(value);
   if (!date || Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 };
 
 const isDateRangeStart = (field, nextField) => {
-  if (!field || !nextField || field.type !== 'date' || nextField.type !== 'date') {
+  if (
+    !field ||
+    !nextField ||
+    field.type !== "date" ||
+    nextField.type !== "date"
+  ) {
     return null;
   }
 
-  return RANGE_PAIRS.find(
-    ([startKey, endKey]) =>
-      normalizeKey(field.key) === normalizeKey(startKey) &&
-      normalizeKey(nextField.key) === normalizeKey(endKey),
-  ) || null;
+  return (
+    RANGE_PAIRS.find(
+      ([startKey, endKey]) =>
+        normalizeKey(field.key) === normalizeKey(startKey) &&
+        normalizeKey(nextField.key) === normalizeKey(endKey),
+    ) || null
+  );
 };
 
 const resolveDateRangeLabel = (startField = {}, endField = {}) => {
@@ -232,15 +284,15 @@ const resolveDateRangeLabel = (startField = {}, endField = {}) => {
 
   if (
     labels.length === 2 &&
-    labels.some((label) => ['from', 'from date'].includes(label)) &&
-    labels.some((label) => ['to', 'to date'].includes(label))
+    labels.some((label) => ["from", "from date"].includes(label)) &&
+    labels.some((label) => ["to", "to date"].includes(label))
   ) {
-    return 'Date Range';
+    return "Date Range";
   }
 
   return startField.label && endField.label
     ? `${startField.label} - ${endField.label}`
-    : 'Date Range';
+    : "Date Range";
 };
 
 const GoldDateRangeCalendar = ({
@@ -300,7 +352,11 @@ const GoldDateRangeCalendar = ({
           const isStart = day.value === dates.fromDate;
           const isEnd = day.value === dates.toDate;
           const isSelected = isStart || isEnd;
-          const isInRange = isBetweenDates(day.value, dates.fromDate, dates.toDate);
+          const isInRange = isBetweenDates(
+            day.value,
+            dates.fromDate,
+            dates.toDate,
+          );
           const isDisabled = Boolean(maxDate && day.value > maxDate);
           return (
             <button
@@ -308,12 +364,12 @@ const GoldDateRangeCalendar = ({
               type="button"
               className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
                 isSelected
-                  ? 'bg-[var(--admin-gold)] text-white shadow-sm'
+                  ? "bg-[var(--admin-gold)] text-white shadow-sm"
                   : isInRange
-                    ? 'bg-[#fff3cc] text-[var(--admin-gold-dark)]'
+                    ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
                     : day.isCurrentMonth
-                      ? 'text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]'
-                      : 'text-slate-300 hover:bg-slate-50'
+                      ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
+                      : "text-slate-300 hover:bg-slate-50"
               } disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
               onClick={() => onSelectDate(day.value)}
               disabled={loading || isDisabled}
@@ -325,7 +381,8 @@ const GoldDateRangeCalendar = ({
       </div>
 
       <div className="mt-3 rounded border border-[#f1dfad] bg-[#fffaf0] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
-        {dates.fromDate ? formatDateLabel(dates.fromDate) : 'Start date'} - {dates.toDate ? formatDateLabel(dates.toDate) : 'End date'}
+        {dates.fromDate ? formatDateLabel(dates.fromDate) : "Start date"} -{" "}
+        {dates.toDate ? formatDateLabel(dates.toDate) : "End date"}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
@@ -372,18 +429,20 @@ const GoldDateRangeCalendar = ({
 
 export const DateRangeFilter = ({ field, value, onChange, values }) => {
   const id = useId();
-  const startKey = field.startKey || 'startDate';
-  const endKey = field.endKey || 'endDate';
-  const startValue = values?.[startKey] ?? value?.startDate ?? '';
-  const endValue = values?.[endKey] ?? value?.endDate ?? '';
-  const today = new Date().toISOString().split('T')[0];
+  const startKey = field.startKey || "startDate";
+  const endKey = field.endKey || "endDate";
+  const startValue = values?.[startKey] ?? value?.startDate ?? "";
+  const endValue = values?.[endKey] ?? value?.endDate ?? "";
+  const today = new Date().toISOString().split("T")[0];
   const maxDate = field.disableFuture ? today : field.maxDate;
   const [open, setOpen] = useState(false);
   const [draftDates, setDraftDates] = useState({
     fromDate: startValue,
     toDate: endValue,
   });
-  const [viewDate, setViewDate] = useState(() => parseInputDate(startValue) || new Date());
+  const [viewDate, setViewDate] = useState(
+    () => parseInputDate(startValue) || new Date(),
+  );
 
   useEffect(() => {
     if (open) return;
@@ -393,22 +452,23 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
   const displayLabel =
     startValue && endValue
       ? `${formatDateLabel(startValue)} - ${formatDateLabel(endValue)}`
-      : field.placeholder || `All ${field.label || 'Date Range'}`;
+      : field.placeholder || `All ${field.label || "Date Range"}`;
 
   const applyRange = () => {
     if (!draftDates.fromDate || !draftDates.toDate) return;
-    const nextDates = draftDates.fromDate <= draftDates.toDate
-      ? draftDates
-      : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
+    const nextDates =
+      draftDates.fromDate <= draftDates.toDate
+        ? draftDates
+        : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
     onChange(startKey, nextDates.fromDate);
     onChange(endKey, nextDates.toDate);
     setOpen(false);
   };
 
   const clearRange = () => {
-    setDraftDates({ fromDate: '', toDate: '' });
-    onChange(startKey, '');
-    onChange(endKey, '');
+    setDraftDates({ fromDate: "", toDate: "" });
+    onChange(startKey, "");
+    onChange(endKey, "");
     setOpen(false);
   };
 
@@ -424,7 +484,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
     setViewDate(selectedDate);
     setDraftDates((current) => {
       if (!current.fromDate || current.toDate) {
-        return { fromDate: valueToSelect, toDate: '' };
+        return { fromDate: valueToSelect, toDate: "" };
       }
       if (valueToSelect < current.fromDate) {
         return { fromDate: valueToSelect, toDate: current.fromDate };
@@ -440,11 +500,16 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
   };
 
   return (
-    <div className={`flex min-w-0 flex-col gap-1 ${field.wrapperClassName || ''} ${field.width || 'w-full'}`}>
+    <div
+      className={`flex min-w-0 flex-col gap-1 ${field.wrapperClassName || ""} ${field.width || "w-full"}`}
+    >
       {field.label && (
         <label
           htmlFor={id}
-          className={field.labelClassName || "text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"}
+          className={
+            field.labelClassName ||
+            "text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+          }
         >
           {field.label}
         </label>
@@ -453,53 +518,55 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
         id={id}
         type="button"
         onClick={openPicker}
-        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${field.inputClassName || ''} ${
-          startValue && endValue ? 'text-[var(--admin-ink)]' : 'text-gray-400'
+        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${field.inputClassName || ""} ${
+          startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-400"
         }`}
       >
         <span className="min-w-0 truncate">{displayLabel}</span>
         <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
       </button>
 
-     {open && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
-    onClick={() => setOpen(false)}
-  >
-    <div className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-            Select Date Range
-          </h2>
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            Filter data will update after apply.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
           onClick={() => setOpen(false)}
-          aria-label="Close date range picker"
         >
-          ×
-        </button>
-      </div>
-      <GoldDateRangeCalendar
-        dates={draftDates}
-        viewDate={viewDate}
-        onViewDateChange={setViewDate}
-        onSelectDate={selectDate}
-        onApply={applyRange}
-        onCancel={() => setOpen(false)}
-        onClear={clearRange}
-        onToday={selectToday}
-        maxDate={maxDate}
-      />
-    </div>
-  </div>
-)}
+          <div
+            className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+                  Select Date Range
+                </h2>
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  Filter data will update after apply.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
+                onClick={() => setOpen(false)}
+                aria-label="Close date range picker"
+              >
+                ×
+              </button>
+            </div>
+            <GoldDateRangeCalendar
+              dates={draftDates}
+              viewDate={viewDate}
+              onViewDateChange={setViewDate}
+              onSelectDate={selectDate}
+              onApply={applyRange}
+              onCancel={() => setOpen(false)}
+              onClear={clearRange}
+              onToday={selectToday}
+              maxDate={maxDate}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -509,45 +576,55 @@ const FilterField = ({ field, value, onChange, values }) => {
   const id = useId();
   const wrapperClass = "flex min-w-0 flex-col gap-1 w-full";
 
-  if (field.type === 'asyncDropdown') {
-    return <AsyncDropdownFilter field={field} value={value} onChange={onChange} />;
+  if (field.type === "asyncDropdown") {
+    return (
+      <AsyncDropdownFilter field={field} value={value} onChange={onChange} />
+    );
   }
 
-  if (field.type === 'select') {
+  if (field.type === "select") {
+    const selectedOption =
+      (field.options || []).find(
+        (opt) => String(opt.value) === String(value),
+      ) || null;
+
     return (
       <div className={wrapperClass}>
         {field.label && (
-          <label htmlFor={id} className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
+          <label
+            htmlFor={id}
+            className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+          >
             {field.label}
           </label>
         )}
-        <select
-          id={id}
-          value={value ?? ''}
-          onChange={(e) => onChange(field.key, e.target.value)}
-          className="admin-input min-h-9 w-full text-sm"
-        >
-          <option value="">{field.placeholder || `All ${field.label}`}</option>
-          {(field.options || []).map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <FilterSelect
+          options={field.options || []}
+          value={selectedOption}
+          onChange={(opt) => onChange(field.key, opt ? opt.value : "")}
+          placeholder={field.placeholder || `All ${field.label || ""}`}
+          isSearchable={field.isSearchable ?? true}
+          isClearable={true}
+          inputId={id}
+          className="!mb-0"
+        />
       </div>
     );
   }
 
-  if (field.type === 'text' || field.type === 'search') {
+  if (field.type === "text" || field.type === "search") {
     return (
       <div className={wrapperClass}>
         {field.label && (
-          <label htmlFor={id} className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
+          <label
+            htmlFor={id}
+            className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+          >
             {field.label}
           </label>
         )}
         <div className="relative">
-          {field.type === 'search' && (
+          {field.type === "search" && (
             <MdSearch
               size={14}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
@@ -556,32 +633,36 @@ const FilterField = ({ field, value, onChange, values }) => {
           <input
             id={id}
             type="text"
-            value={value ?? ''}
+            value={value ?? ""}
             onChange={(e) => onChange(field.key, e.target.value)}
             placeholder={field.placeholder || `Search ${field.label}…`}
-            className={`admin-input min-h-9 w-full text-sm ${field.type === 'search' ? '!pl-9' : ''}`}
+            className={`admin-input min-h-9 w-full text-sm ${field.type === "search" ? "!pl-9" : ""}`}
           />
         </div>
       </div>
     );
   }
 
-  if (field.type === 'date') {
+  if (field.type === "date") {
     const today = new Date().toISOString().split("T")[0];
     const maxDate = field.maxDate ?? today;
-    const isEndDate = field.key === 'endDate' || field.key === 'toDate';
-    const minDate = isEndDate && values?.fromDate ? values.fromDate : field.minDate;
+    const isEndDate = field.key === "endDate" || field.key === "toDate";
+    const minDate =
+      isEndDate && values?.fromDate ? values.fromDate : field.minDate;
     return (
       <div className={wrapperClass}>
         {field.label && (
-          <label htmlFor={id} className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5">
+          <label
+            htmlFor={id}
+            className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+          >
             {field.label}
           </label>
         )}
         <input
           id={id}
           type="date"
-          value={value ?? ''}
+          value={value ?? ""}
           onChange={(e) => onChange(field.key, e.target.value)}
           min={minDate}
           max={maxDate}
@@ -591,8 +672,15 @@ const FilterField = ({ field, value, onChange, values }) => {
     );
   }
 
-  if (field.type === 'daterange') {
-    return <DateRangeFilter field={field} value={value} onChange={onChange} values={values} />;
+  if (field.type === "daterange") {
+    return (
+      <DateRangeFilter
+        field={field}
+        value={value}
+        onChange={onChange}
+        values={values}
+      />
+    );
   }
 
   return null;
@@ -610,7 +698,7 @@ const FilterBar = ({
   listPage,
 }) => {
   const resolvedFilters = useMemo(
-    () => (filters.length ? filters : (fields || [])),
+    () => (filters.length ? filters : fields || []),
     [fields, filters],
   );
   const resolvedValues = listPage?.filters || values || {};
@@ -624,84 +712,85 @@ const FilterBar = ({
     listPage?.clearSearch?.();
   }, [listPage, onClear]);
   // const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
-  
 
-  const normalizedFilters = useMemo(
-    () => {
-      const nextFilters = [];
+  const normalizedFilters = useMemo(() => {
+    const nextFilters = [];
 
-      for (let index = 0; index < resolvedFilters.length; index += 1) {
-        const field = resolvedFilters[index];
-        const nextField = resolvedFilters[index + 1];
-        const rangePair = isDateRangeStart(field, nextField);
+    for (let index = 0; index < resolvedFilters.length; index += 1) {
+      const field = resolvedFilters[index];
+      const nextField = resolvedFilters[index + 1];
+      const rangePair = isDateRangeStart(field, nextField);
 
-        if (rangePair) {
-          const [startKey, endKey] = rangePair;
-          nextFilters.push({
-            ...field,
-            key: `${startKey}__${endKey}`,
-            type: 'daterange',
-            label: resolveDateRangeLabel(field, nextField),
-            startKey: field.key || startKey,
-            endKey: nextField.key || endKey,
-            minDate: field.minDate,
-            maxDate: nextField.maxDate ?? field.maxDate,
-            disableFuture: field.disableFuture ?? nextField.disableFuture ?? true,
-            width: field.rangeWidth || nextField.rangeWidth || field.width || nextField.width || 'w-full',
-          });
-          index += 1;
-          continue;
-        }
-
-        if (field.type !== 'date') {
-          nextFilters.push(field);
-          continue;
-        }
-        const lowerKey = String(field.key || '').toLowerCase();
-        if (lowerKey === 'from' || lowerKey === 'startdate') {
-          nextFilters.push({ ...field, key: 'startDate' });
-          continue;
-        }
-        if (lowerKey === 'to' || lowerKey === 'enddate') {
-          nextFilters.push({ ...field, key: 'endDate' });
-          continue;
-        }
-        nextFilters.push(field);
+      if (rangePair) {
+        const [startKey, endKey] = rangePair;
+        nextFilters.push({
+          ...field,
+          key: `${startKey}__${endKey}`,
+          type: "daterange",
+          label: resolveDateRangeLabel(field, nextField),
+          startKey: field.key || startKey,
+          endKey: nextField.key || endKey,
+          minDate: field.minDate,
+          maxDate: nextField.maxDate ?? field.maxDate,
+          disableFuture: field.disableFuture ?? nextField.disableFuture ?? true,
+          width:
+            field.rangeWidth ||
+            nextField.rangeWidth ||
+            field.width ||
+            nextField.width ||
+            "w-full",
+        });
+        index += 1;
+        continue;
       }
 
-      return nextFilters;
-    },
-    [resolvedFilters],
-  );
+      if (field.type !== "date") {
+        nextFilters.push(field);
+        continue;
+      }
+      const lowerKey = String(field.key || "").toLowerCase();
+      if (lowerKey === "from" || lowerKey === "startdate") {
+        nextFilters.push({ ...field, key: "startDate" });
+        continue;
+      }
+      if (lowerKey === "to" || lowerKey === "enddate") {
+        nextFilters.push({ ...field, key: "endDate" });
+        continue;
+      }
+      nextFilters.push(field);
+    }
 
-const resolvedActiveCount = useMemo(() => {
-  return normalizedFilters.reduce((count, field) => {
-    if (field.type === "daterange") {
-      const startValue = resolvedValues[field.startKey];
-      const endValue = resolvedValues[field.endKey];
+    return nextFilters;
+  }, [resolvedFilters]);
 
-      // From Date + To Date count as one filter
-      if (startValue || endValue) {
+  const resolvedActiveCount = useMemo(() => {
+    return normalizedFilters.reduce((count, field) => {
+      if (field.type === "daterange") {
+        const startValue = resolvedValues[field.startKey];
+        const endValue = resolvedValues[field.endKey];
+
+        // From Date + To Date count as one filter
+        if (startValue || endValue) {
+          return count + 1;
+        }
+
+        return count;
+      }
+
+      const value = resolvedValues[field.key];
+
+      if (
+        value !== "" &&
+        value !== null &&
+        value !== undefined &&
+        (!Array.isArray(value) || value.length > 0)
+      ) {
         return count + 1;
       }
 
       return count;
-    }
-
-    const value = resolvedValues[field.key];
-
-    if (
-      value !== "" &&
-      value !== null &&
-      value !== undefined &&
-      (!Array.isArray(value) || value.length > 0)
-    ) {
-      return count + 1;
-    }
-
-    return count;
-  }, 0);
-}, [normalizedFilters, resolvedValues]);
+    }, 0);
+  }, [normalizedFilters, resolvedValues]);
 
   if (!normalizedFilters.length) return null;
 
@@ -731,7 +820,7 @@ const resolvedActiveCount = useMemo(() => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid  grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {normalizedFilters.map((field) => (
           <FilterField
             key={field.key}

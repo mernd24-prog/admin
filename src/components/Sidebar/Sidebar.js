@@ -23,7 +23,10 @@ import {
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
-import { getAccessModules, getRbacSidebarModules } from "../../Redux/adminCoreSlice";
+import {
+  getAccessModules,
+  getRbacSidebarModules,
+} from "../../Redux/adminCoreSlice";
 import {
   getAccessToken,
   getStoredSidebarModules,
@@ -126,17 +129,18 @@ const flattenSidebarChildren = (items = [], prefix = "") =>
       : item.moduleName || item.name;
     const route = toRouteCode(item.routePath);
     const children = flattenSidebarChildren(item.children || [], label);
-    const self = route && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route)
-      ? [
-          {
-            name: label,
-            label,
-            module_code: route,
-            module:
-              item.metadata?.requiredModule || item.moduleKey || item.slug,
-          },
-        ]
-      : [];
+    const self =
+      route && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route)
+        ? [
+            {
+              name: label,
+              label,
+              module_code: route,
+              module:
+                item.metadata?.requiredModule || item.moduleKey || item.slug,
+            },
+          ]
+        : [];
     return [...self, ...children];
   });
 
@@ -151,8 +155,7 @@ const filterSellerSidebarItems = (items = []) =>
         item.slug;
       const children = filterSellerSidebarItems(item.children || []);
       const blocked =
-        isSellerBlockedRoute(route) ||
-        isSellerBlockedModule(moduleCode);
+        isSellerBlockedRoute(route) || isSellerBlockedModule(moduleCode);
       if (blocked && !children.length) return null;
       return { ...item, children };
     })
@@ -187,11 +190,17 @@ const filterSidebarTreeByAccess = (items = [], options = {}) => {
 };
 
 const buildDynamicSidebarData = (modules = [], options = {}) =>
-  filterSidebarTreeByAccess(options.sellerPanel ? filterSellerSidebarItems(modules) : modules, options)
+  filterSidebarTreeByAccess(
+    options.sellerPanel ? filterSellerSidebarItems(modules) : modules,
+    options,
+  )
     .map((item) => {
       const subItems = flattenSidebarChildren(item.children || []);
       const route = toRouteCode(item.routePath);
-      const isSingleItem = Boolean(route) && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route) && subItems.length === 0;
+      const isSingleItem =
+        Boolean(route) &&
+        !HIDDEN_SIDEBAR_ROUTE_CODES.has(route) &&
+        subItems.length === 0;
       return {
         label: item.moduleName || item.name,
         icon: getSidebarIcon(item.icon, item.moduleName || item.name),
@@ -248,16 +257,25 @@ const SELLER_SECTION_ORDER = [
 ];
 
 const sellerSectionOrderIndex = (label = "") => {
-  const normalized = String(label || "").trim().toLowerCase();
+  const normalized = String(label || "")
+    .trim()
+    .toLowerCase();
   const index = SELLER_SECTION_ORDER.indexOf(normalized);
   return index === -1 ? SELLER_SECTION_ORDER.length : index;
 };
 
 const sortSidebarGroups = (groups = [], sellerPanel = false) =>
   [...groups].sort((left, right) => {
-    const leftOrder = sellerPanel ? sellerSectionOrderIndex(left.label) : tabOrderIndex(left.label);
-    const rightOrder = sellerPanel ? sellerSectionOrderIndex(right.label) : tabOrderIndex(right.label);
-    return leftOrder - rightOrder || String(left.label).localeCompare(String(right.label));
+    const leftOrder = sellerPanel
+      ? sellerSectionOrderIndex(left.label)
+      : tabOrderIndex(left.label);
+    const rightOrder = sellerPanel
+      ? sellerSectionOrderIndex(right.label)
+      : tabOrderIndex(right.label);
+    return (
+      leftOrder - rightOrder ||
+      String(left.label).localeCompare(String(right.label))
+    );
   });
 
 const buildAccessModuleSidebarData = (modules = [], options = {}) => {
@@ -283,7 +301,8 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
       }
       if (
         options.sellerPanel &&
-        (isSellerBlockedRoute(entry.route) || isSellerBlockedModule(entry.module))
+        (isSellerBlockedRoute(entry.route) ||
+          isSellerBlockedModule(entry.module))
       ) {
         return false;
       }
@@ -306,7 +325,10 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
   }, {});
 
   return Object.entries(grouped)
-    .sort(([left], [right]) => tabOrderIndex(left) - tabOrderIndex(right) || left.localeCompare(right))
+    .sort(
+      ([left], [right]) =>
+        tabOrderIndex(left) - tabOrderIndex(right) || left.localeCompare(right),
+    )
     .map(([tab, subItems]) => {
       const sortedItems = subItems.sort(
         (left, right) =>
@@ -317,7 +339,8 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
         label: tab,
         icon: getIconForTab(tab),
         subItems: sortedItems,
-        isSingleItem: tab.toLowerCase() === "dashboard" && sortedItems.length === 1,
+        isSingleItem:
+          tab.toLowerCase() === "dashboard" && sortedItems.length === 1,
       };
     })
     .filter((item) => item.subItems.length > 0);
@@ -379,7 +402,8 @@ const getSessionUser = () => {
 const getCurrentSidebarUser = () => {
   const s = getSessionUser() || {};
   const u = getStoredUser() || {};
-  const role = s.role || s.roleSlug || s.roleId || getStoredRole() || u.role || u.roleId;
+  const role =
+    s.role || s.roleSlug || s.roleId || getStoredRole() || u.role || u.roleId;
   const userId =
     s.userId ||
     s.user_id ||
@@ -477,13 +501,14 @@ const Sidebar = ({
 
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
-    const accessSidebar = Array.isArray(accessModules) && accessModules.length
-      ? buildAccessModuleSidebarData(accessModules, {
-          sellerPanel,
-          superAdmin: isSuperAdmin,
-          allowedModules: assignedSidebarModules,
-        })
-      : [];
+    const accessSidebar =
+      Array.isArray(accessModules) && accessModules.length
+        ? buildAccessModuleSidebarData(accessModules, {
+            sellerPanel,
+            superAdmin: isSuperAdmin,
+            allowedModules: assignedSidebarModules,
+          })
+        : [];
 
     if (Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length) {
       const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
@@ -492,12 +517,15 @@ const Sidebar = ({
         sellerPanel,
         trustBackend: true,
       });
-      if (sellerPanel && sidebarTree.length) return sortSidebarGroups(sidebarTree, sellerPanel);
+      if (sellerPanel && sidebarTree.length)
+        return sortSidebarGroups(sidebarTree, sellerPanel);
       const mergedSidebar = mergeSidebarData(sidebarTree, accessSidebar);
-      if (mergedSidebar.length) return sortSidebarGroups(mergedSidebar, sellerPanel);
+      if (mergedSidebar.length)
+        return sortSidebarGroups(mergedSidebar, sellerPanel);
     }
 
-    if (accessSidebar.length) return sortSidebarGroups(accessSidebar, sellerPanel);
+    if (accessSidebar.length)
+      return sortSidebarGroups(accessSidebar, sellerPanel);
 
     return [];
   }, [
@@ -533,7 +561,9 @@ const Sidebar = ({
         getAccessModules({
           role,
           includePermissions: true,
-          ...(!["seller", "admin", "super-admin"].includes(normalizeRole(role)) && userId
+          ...(!["seller", "admin", "super-admin"].includes(
+            normalizeRole(role),
+          ) && userId
             ? { userId }
             : {}),
         }),
@@ -624,11 +654,13 @@ const Sidebar = ({
         className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${isExpanded ? "h-[120px]" : "h-[70px]"} sm:pt-4`}
       >
         {isExpanded ? (
-          <div className="flex items-center justify-center">
-            <BrandLogo
-              className="mb-0 h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[6px] shadow-[0_3px_8px_rgba(31,27,95,0.08)]"
-              imageClassName="!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]"
-            />
+          <div className="flex  items-center justify-center">
+            <a href={"/app/dashboard"}>
+              <BrandLogo
+                className="mb-0  h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[6px] shadow-[0_3px_8px_rgba(31,27,95,0.08)]"
+                imageClassName="!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]"
+              />
+            </a>
           </div>
         ) : (
           <button
@@ -799,7 +831,9 @@ const Sidebar = ({
         <NeedHelpCard
           title="Need Help?"
           onClick={() => {
-            const supportRoute = isSellerPanel() ? "/app/help-support" : "/app/queries";
+            const supportRoute = isSellerPanel()
+              ? "/app/help-support"
+              : "/app/queries";
             const supportKey = isSellerPanel() ? "help-support" : "queries";
             navigate(supportRoute);
             handleNavClick(supportKey);

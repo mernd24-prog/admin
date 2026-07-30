@@ -6,14 +6,17 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const imageArray = normalizeImageList(images);
 
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === imageArray.length - 1;
+
   const handlePrev = useCallback(() => {
     if (!imageArray.length) return;
-    setCurrentIndex((prev) => (prev === 0 ? imageArray.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
   }, [imageArray.length]);
 
   const handleNext = useCallback(() => {
     if (!imageArray.length) return;
-    setCurrentIndex((prev) => (prev === imageArray.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev < imageArray.length - 1 ? prev + 1 : prev));
   }, [imageArray.length]);
 
   // Handle keyboard navigation
@@ -21,13 +24,13 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
     if (!isOpen) return;
 
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'Escape') onClose();
+      if (e.key === "ArrowRight") handleNext();
+      if (e.key === "ArrowLeft") handlePrev();
+      if (e.key === "Escape") onClose();
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleNext, handlePrev, isOpen, onClose]);
 
   useEffect(() => {
@@ -39,14 +42,17 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
       <div className="w-11/12 max-w-2xl p-6 bg-white rounded-lg shadow-xl overflow-y-auto max-h-[70vh]">
         <div className="flex items-center justify-between pb-3 border-b">
           <h2 className="text-xl font-semibold">
-            Product Images {imageArray.length ? `(${currentIndex + 1}/${imageArray.length})` : ""}
+            Product Images{" "}
+            {imageArray.length
+              ? `(${currentIndex + 1}/${imageArray.length})`
+              : ""}
           </h2>
           <button
-            className="p-1 text-2xl font-bold text-gray-600 hover:text-black"
+            className="p-1 text-2xl font-bold text-gray-600 cursor-pointer hover:text-black"
             onClick={onClose}
             aria-label="Close gallery"
           >
@@ -60,7 +66,12 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
               {imageArray.length > 1 && (
                 <button
                   onClick={handlePrev}
-                  className="absolute left-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full -translate-x-1/2 hover:bg-opacity-70 z-10"
+                  disabled={isFirst}
+                  className={`absolute left-0 p-2 text-2xl rounded-full -translate-x-1/2 z-10 transition-opacity ${
+                    isFirst
+                      ? "bg-gray-300 text-gray-400 opacity-50 cursor-not-allowed"
+                      : "text-white bg-[#CE9F2D] hover:opacity-90"
+                  }`}
                   aria-label="Previous image"
                 >
                   <IoArrowBack />
@@ -78,7 +89,12 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
               {imageArray.length > 1 && (
                 <button
                   onClick={handleNext}
-                  className="absolute right-0 p-2 text-2xl text-black bg-black bg-opacity-50 rounded-full translate-x-1/2 hover:bg-opacity-70 z-10"
+                  disabled={isLast}
+                  className={`absolute right-0 p-2 text-2xl rounded-full translate-x-1/2 z-10 transition-opacity ${
+                    isLast
+                      ? "bg-gray-300 text-gray-400 opacity-50 cursor-not-allowed"
+                      : "text-white bg-[#CE9F2D] hover:opacity-90"
+                  }`}
                   aria-label="Next image"
                 >
                   <IoArrowForwardOutline />
@@ -98,7 +114,7 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
                   <button
                     key={idx}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`shrink-0 transition-opacity ${idx === currentIndex ? 'ring-2 ring-blue-500' : 'opacity-70 hover:opacity-100'}`}
+                    className={`shrink-0 transition-opacity ${idx === currentIndex ? "ring-2 ring-blue-500" : "opacity-70 hover:opacity-100"}`}
                     aria-label={`View image ${idx + 1}`}
                   >
                     <img
