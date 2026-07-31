@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdReplay, MdVisibility, MdPayment } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+// import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
@@ -375,53 +375,6 @@ const Cancellations = () => {
       sortable: true,
       render: (v) => <span className="text-xs text-gray-500">{fmt(v)}</span>,
     },
-    {
-      key: "_actions",
-      label: "Actions",
-      render: (_, row) => (
-        <div className="flex gap-1">
-          <button
-            onClick={() => setDetail(row)}
-            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="View"
-          >
-            <MdVisibility size={18} />
-          </button>
-          {!isSeller && (
-            <PermissionGuard module="orders" action={ACTIONS.UPDATE} hide>
-              {["refund_pending", "failed"].includes(row.status) && (
-                <button
-                  onClick={() =>
-                    setRetryConfirm({ open: true, item: row, note: "" })
-                  }
-                  className="p-1 text-orange-600 hover:bg-orange-50 rounded"
-                  title="Retry Refund"
-                >
-                  <MdReplay size={18} />
-                </button>
-              )}
-              {row.status === "manual_review" && (
-                <button
-                  onClick={() =>
-                    setManualRefund({
-                      open: true,
-                      item: row,
-                      referenceId: "",
-                      proofUrl: "",
-                      note: "",
-                    })
-                  }
-                  className="p-1 text-green-600 hover:bg-green-50 rounded"
-                  title="Complete Manual Refund"
-                >
-                  <MdPayment size={18} />
-                </button>
-              )}
-            </PermissionGuard>
-          )}
-        </div>
-      ),
-    },
   ];
   const filters = isSeller
     ? FILTER_FIELDS.filter(
@@ -459,6 +412,52 @@ const Cancellations = () => {
           listPage={list}
           emptyMessage="No cancellations found"
           filterBar={<FilterBar fields={filters} listPage={list} />}
+          rowActions={(row) => {
+            const actions = [
+              {
+                label: "View Details",
+                icon: <MdVisibility size={16} className="text-blue-600" />,
+                onClick: () => setDetail(row),
+              },
+            ];
+
+            if (
+              !isSeller &&
+              ["refund_pending", "failed"].includes(row.status)
+            ) {
+              actions.push({
+                label: "Retry Refund",
+                icon: <MdReplay size={16} className="text-orange-600" />,
+                requiredModule: "orders",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () =>
+                  setRetryConfirm({
+                    open: true,
+                    item: row,
+                    note: "",
+                  }),
+              });
+            }
+
+            if (!isSeller && row.status === "manual_review") {
+              actions.push({
+                label: "Complete Manual Refund",
+                icon: <MdPayment size={16} className="text-green-600" />,
+                requiredModule: "orders",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () =>
+                  setManualRefund({
+                    open: true,
+                    item: row,
+                    referenceId: "",
+                    proofUrl: "",
+                    note: "",
+                  }),
+              });
+            }
+
+            return actions;
+          }}
         />
       )}
 

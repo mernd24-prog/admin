@@ -353,7 +353,7 @@ const Profile = () => {
   const allowedModules = Array.isArray(formData.allowedModules)
     ? formData.allowedModules
     : [];
-  const addresses = Array.isArray(formData.addresses) ? formData.addresses : [];
+  // const addresses = Array.isArray(formData.addresses) ? formData.addresses : [];
   const authProviders = Array.isArray(formData.authProviders)
     ? formData.authProviders
     : [];

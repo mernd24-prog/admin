@@ -17,7 +17,7 @@ import {
   StatusBadge,
   FilterBar,
 } from "../../../components/Shared";
-import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+// import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
@@ -51,14 +51,22 @@ const FILTER_FIELDS = [
     type: "asyncDropdown",
     label: "Buyer",
     width: "w-52",
-    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+    load: (search) =>
+      dropdownApi.getBuyers({
+        keyWord: search,
+        searchFields: "full_name,email",
+      }),
   },
   {
     key: "sellerId",
     type: "asyncDropdown",
     label: "Seller",
     width: "w-52",
-    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+    load: (search) =>
+      dropdownApi.getSellers({
+        keyWord: search,
+        searchFields: "full_name,email,businessName",
+      }),
   },
   {
     key: "fromDate",
@@ -86,7 +94,15 @@ const formatMoney = (value) => formatCurrency(value, "—");
 
 const getInitialQueryFilters = () => {
   const params = new URLSearchParams(window.location.search);
-  return ["status", "paymentStatus", "deliveryStatus", "buyerId", "sellerId", "fromDate", "toDate"].reduce((filters, key) => {
+  return [
+    "status",
+    "paymentStatus",
+    "deliveryStatus",
+    "buyerId",
+    "sellerId",
+    "fromDate",
+    "toDate",
+  ].reduce((filters, key) => {
     const value = params.get(key);
     if (value) filters[key] = value;
     return filters;
@@ -135,26 +151,39 @@ const sellerGroupsOf = (row = {}) => {
     : [];
   if (relationGroups.length) return relationGroups;
 
-  const itemGroups = (Array.isArray(row.items) ? row.items : []).reduce((groups, item) => {
-    const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
-    const organizationId = firstDefined(item.organization_id, item.organizationId, "default");
-    const key = `${sellerId}:${organizationId}`;
-    const sellerSnapshot = normalizeJson(firstDefined(item.seller_snapshot, item.sellerSnapshot), {});
-    const organizationSnapshot = normalizeJson(firstDefined(item.organization_snapshot, item.organizationSnapshot), {});
-    if (!groups[key]) {
-      groups[key] = {
-        sellerId,
-        organizationId,
-        sellerName: sellerNameOf(sellerSnapshot),
-        organizationName: organizationNameOf(organizationSnapshot),
-        itemCount: 0,
-        quantity: 0,
-      };
-    }
-    groups[key].itemCount += 1;
-    groups[key].quantity += Number(item.quantity || 0);
-    return groups;
-  }, {});
+  const itemGroups = (Array.isArray(row.items) ? row.items : []).reduce(
+    (groups, item) => {
+      const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
+      const organizationId = firstDefined(
+        item.organization_id,
+        item.organizationId,
+        "default",
+      );
+      const key = `${sellerId}:${organizationId}`;
+      const sellerSnapshot = normalizeJson(
+        firstDefined(item.seller_snapshot, item.sellerSnapshot),
+        {},
+      );
+      const organizationSnapshot = normalizeJson(
+        firstDefined(item.organization_snapshot, item.organizationSnapshot),
+        {},
+      );
+      if (!groups[key]) {
+        groups[key] = {
+          sellerId,
+          organizationId,
+          sellerName: sellerNameOf(sellerSnapshot),
+          organizationName: organizationNameOf(organizationSnapshot),
+          itemCount: 0,
+          quantity: 0,
+        };
+      }
+      groups[key].itemCount += 1;
+      groups[key].quantity += Number(item.quantity || 0);
+      return groups;
+    },
+    {},
+  );
   return Object.values(itemGroups);
 };
 
@@ -163,7 +192,10 @@ const countItems = (row = {}) => {
     return row.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
   }
   const groups = sellerGroupsOf(row);
-  const quantity = groups.reduce((sum, group) => sum + Number(group.quantity || 0), 0);
+  const quantity = groups.reduce(
+    (sum, group) => sum + Number(group.quantity || 0),
+    0,
+  );
   return firstDefined(
     quantity || null,
     row.itemQuantity,
@@ -181,14 +213,21 @@ const shipmentStatusOf = (row = {}) => {
     (shipment) => String(shipment.direction || "forward") !== "reverse",
   );
   const statusCounts = forwardShipments.reduce((counts, shipment) => {
-    const status = firstDefined(shipment.status, shipment.shipment_status, shipment.delivery_status);
+    const status = firstDefined(
+      shipment.status,
+      shipment.shipment_status,
+      shipment.delivery_status,
+    );
     if (!status) return counts;
     counts[status] = (counts[status] || 0) + 1;
     return counts;
   }, {});
   const statuses = Object.keys(statusCounts);
   if (statuses.length === 1) return statuses[0];
-  if (statuses.length > 1) return statuses.map((status) => `${status} (${statusCounts[status]})`).join(", ");
+  if (statuses.length > 1)
+    return statuses
+      .map((status) => `${status} (${statusCounts[status]})`)
+      .join(", ");
   return firstDefined(
     row.delivery_status,
     row.deliveryStatus,
@@ -201,13 +240,24 @@ const payoutWindowOf = (row = {}) => {
   const items = Array.isArray(row.items) ? row.items : [];
   const commissions = row.relations?.sellerCommissions || [];
   const deadlines = items
-    .map((item) => firstDefined(item.payout_eligible_at, item.payoutEligibleAt, item.return_eligible_until, item.returnEligibleUntil))
+    .map((item) =>
+      firstDefined(
+        item.payout_eligible_at,
+        item.payoutEligibleAt,
+        item.return_eligible_until,
+        item.returnEligibleUntil,
+      ),
+    )
     .filter(Boolean);
   const latestDeadline = deadlines.length
-    ? deadlines.reduce((latest, value) => new Date(value).getTime() > new Date(latest).getTime() ? value : latest)
+    ? deadlines.reduce((latest, value) =>
+        new Date(value).getTime() > new Date(latest).getTime() ? value : latest,
+      )
     : null;
   const held = items.some((item) => item.payout_status === "held");
-  const paid = commissions.length > 0 && commissions.every((commission) => commission.status === "paid");
+  const paid =
+    commissions.length > 0 &&
+    commissions.every((commission) => commission.status === "paid");
   const fulfilled = row.status === "fulfilled";
   return { latestDeadline, held, paid, fulfilled };
 };
@@ -222,7 +272,13 @@ const returnWindowLabel = (deadline) => {
   return `${days} days remaining`;
 };
 
-const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, showSellerColumn = true, showBuyerColumn = true) => [
+const createColumns = (
+  navigate,
+  canOpenBuyerDetails,
+  canOpenSellerDetails,
+  showSellerColumn = true,
+  showBuyerColumn = true,
+) => [
   {
     key: "order_number",
     label: "Order #",
@@ -250,109 +306,159 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
       );
     },
   },
-  ...(showBuyerColumn ? [{
-    key: "buyer_id",
-    label: "Buyer",
-    render: (v, row) => {
-      const buyer = row.relations?.buyer || row.buyer || row.buyerSnapshot || {};
-      const name = row.buyerName || buyer.displayName || buyer.fullName || buyer.name || row.buyer_name;
-      const email = row.buyerEmail || buyer.email || row.buyer_email;
-      const buyerId = firstDefined(buyer.id, buyer._id, row.buyer_id, row.buyerId);
-      const buyerContent = (
-        <>
-          {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
-          {email && !name && <div className="text-sm text-gray-700">{email}</div>}
-          {email && name && <div className="text-xs text-gray-400">{email}</div>}
-          {!name && !email && <span className="text-gray-400">Customer details unavailable</span>}
-        </>
-      );
+  ...(showBuyerColumn
+    ? [
+        {
+          key: "buyer_id",
+          label: "Buyer",
+          render: (v, row) => {
+            const buyer =
+              row.relations?.buyer || row.buyer || row.buyerSnapshot || {};
+            const name =
+              row.buyerName ||
+              buyer.displayName ||
+              buyer.fullName ||
+              buyer.name ||
+              row.buyer_name;
+            const email = row.buyerEmail || buyer.email || row.buyer_email;
+            const buyerId = firstDefined(
+              buyer.id,
+              buyer._id,
+              row.buyer_id,
+              row.buyerId,
+            );
+            const buyerContent = (
+              <>
+                {name && (
+                  <div className="text-sm font-medium text-gray-800">
+                    {name}
+                  </div>
+                )}
+                {email && !name && (
+                  <div className="text-sm text-gray-700">{email}</div>
+                )}
+                {email && name && (
+                  <div className="text-xs text-gray-400">{email}</div>
+                )}
+                {!name && !email && (
+                  <span className="text-gray-400">
+                    Customer details unavailable
+                  </span>
+                )}
+              </>
+            );
 
-      return canOpenBuyerDetails && buyerId ? (
-        <button
-          type="button"
-          onClick={() => navigate(`/app/users/view/${buyerId}`)}
-          className="text-left hover:underline"
-        >
-          {buyerContent}
-        </button>
-      ) : (
-        <div className="text-left">{buyerContent}</div>
-      );
-    },
-  }] : []),
-  ...(showSellerColumn ? [{
-    key: "seller",
-    label: "Seller / Org",
-    render: (_, row) => {
-      const sellerGroups = sellerGroupsOf(row);
-      const primaryGroup = sellerGroups[0] || {};
-      const primarySeller = row.relations?.sellers?.[0] || row.seller || {};
-      const sellerName = firstDefined(
-        row.sellerName,
-        primaryGroup.sellerName,
-        sellerNameOf(primarySeller),
-        row.sellerSnapshot?.name,
-        row.seller_snapshot?.name,
-      );
-      const organizationName = firstDefined(
-        row.organizationName,
-        primaryGroup.organizationName,
-        organizationNameOf(primaryGroup.organizationSnapshot),
-        row.organization?.legalName,
-        row.organizationSnapshot?.legalName,
-        row.organization_snapshot?.legalName,
-        row.organizationSnapshot?.storeDisplayName,
-        row.organization_snapshot?.storeDisplayName,
-      );
-      const sellerId = firstDefined(
-        row.sellerId,
-        row.seller_id,
-        primaryGroup.sellerId,
-        primaryGroup.seller_id,
-        primarySeller.id,
-        primarySeller._id,
-        row.seller?.id,
-        row.seller?._id,
-      );
-      const organizationId = firstDefined(
-        row.organizationId,
-        row.organization_id,
-        primaryGroup.organizationId,
-        primaryGroup.organization_id,
-      );
-      if (!sellerName && !organizationName && !sellerId && !organizationId) {
-        return <span className="text-gray-400">—</span>;
-      }
-      const sellerViewPath = sellerId && canOpenSellerDetails ? `/app/seller/view/${encodeURIComponent(String(sellerId))}` : "";
-      const content = (
-        <>
-          <div className="text-sm font-medium text-gray-800">
-            {organizationName || sellerName || "Seller"}
-          </div>
-          {sellerName && organizationName && (
-            <div className="text-xs text-gray-400">{sellerName}</div>
-          )}
-          {sellerViewPath && <div className="text-[11px] font-medium text-[#2f6fed]">View seller</div>}
-          {sellerGroups.length > 1 && (
-            <div className="text-xs text-gray-400">+{sellerGroups.length - 1} more seller</div>
-          )}
-          {!sellerName && sellerId && <div className="text-xs text-gray-400">Seller details unavailable</div>}
-        </>
-      );
-      return sellerViewPath ? (
-        <button
-          type="button"
-          onClick={() => navigate(sellerViewPath)}
-          className="text-left hover:underline"
-          title={sellerViewPath}
-        >
-          {content}
-        </button>
-      ) : (
-        <div className="text-left">{content}</div>
-      );
-    },
-  }] : []),
+            return canOpenBuyerDetails && buyerId ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/app/users/view/${buyerId}`)}
+                className="text-left hover:underline"
+              >
+                {buyerContent}
+              </button>
+            ) : (
+              <div className="text-left">{buyerContent}</div>
+            );
+          },
+        },
+      ]
+    : []),
+  ...(showSellerColumn
+    ? [
+        {
+          key: "seller",
+          label: "Seller / Org",
+          render: (_, row) => {
+            const sellerGroups = sellerGroupsOf(row);
+            const primaryGroup = sellerGroups[0] || {};
+            const primarySeller =
+              row.relations?.sellers?.[0] || row.seller || {};
+            const sellerName = firstDefined(
+              row.sellerName,
+              primaryGroup.sellerName,
+              sellerNameOf(primarySeller),
+              row.sellerSnapshot?.name,
+              row.seller_snapshot?.name,
+            );
+            const organizationName = firstDefined(
+              row.organizationName,
+              primaryGroup.organizationName,
+              organizationNameOf(primaryGroup.organizationSnapshot),
+              row.organization?.legalName,
+              row.organizationSnapshot?.legalName,
+              row.organization_snapshot?.legalName,
+              row.organizationSnapshot?.storeDisplayName,
+              row.organization_snapshot?.storeDisplayName,
+            );
+            const sellerId = firstDefined(
+              row.sellerId,
+              row.seller_id,
+              primaryGroup.sellerId,
+              primaryGroup.seller_id,
+              primarySeller.id,
+              primarySeller._id,
+              row.seller?.id,
+              row.seller?._id,
+            );
+            const organizationId = firstDefined(
+              row.organizationId,
+              row.organization_id,
+              primaryGroup.organizationId,
+              primaryGroup.organization_id,
+            );
+            if (
+              !sellerName &&
+              !organizationName &&
+              !sellerId &&
+              !organizationId
+            ) {
+              return <span className="text-gray-400">—</span>;
+            }
+            const sellerViewPath =
+              sellerId && canOpenSellerDetails
+                ? `/app/seller/view/${encodeURIComponent(String(sellerId))}`
+                : "";
+            const content = (
+              <>
+                <div className="text-sm font-medium text-gray-800">
+                  {organizationName || sellerName || "Seller"}
+                </div>
+                {sellerName && organizationName && (
+                  <div className="text-xs text-gray-400">{sellerName}</div>
+                )}
+                {sellerViewPath && (
+                  <div className="text-[11px] font-medium text-[#2f6fed]">
+                    View seller
+                  </div>
+                )}
+                {sellerGroups.length > 1 && (
+                  <div className="text-xs text-gray-400">
+                    +{sellerGroups.length - 1} more seller
+                  </div>
+                )}
+                {!sellerName && sellerId && (
+                  <div className="text-xs text-gray-400">
+                    Seller details unavailable
+                  </div>
+                )}
+              </>
+            );
+            return sellerViewPath ? (
+              <button
+                type="button"
+                onClick={() => navigate(sellerViewPath)}
+                className="text-left hover:underline"
+                title={sellerViewPath}
+              >
+                {content}
+              </button>
+            ) : (
+              <div className="text-left">{content}</div>
+            );
+          },
+        },
+      ]
+    : []),
   {
     key: "items",
     label: "Items",
@@ -387,10 +493,7 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
     key: "payment_status",
     label: "Payment",
     render: (v, row) => (
-      <StatusBadge
-        status={firstDefined(v, row.paymentStatus)}
-        dot
-      />
+      <StatusBadge status={firstDefined(v, row.paymentStatus)} dot />
     ),
   },
   {
@@ -398,9 +501,13 @@ const createColumns = (navigate, canOpenBuyerDetails, canOpenSellerDetails, show
     label: "Shipment Status",
     render: (v, row) => {
       const s = firstDefined(v, shipmentStatusOf(row));
-      return s ? <StatusBadge status={s} dot /> : <span className="text-gray-400">N/A</span>;
+      return s ? (
+        <StatusBadge status={s} dot />
+      ) : (
+        <span className="text-gray-400">N/A</span>
+      );
     },
-  }
+  },
 ];
 
 const getListPayload = (selector = {}) => {
@@ -430,8 +537,7 @@ const Orders = () => {
   const { items, total } = getListPayload(selector);
   const orderListState = selector?.getOrderListData;
   const loading =
-    !!selector?.loading ||
-    (!orderListState?.data && !orderListState?.error);
+    !!selector?.loading || (!orderListState?.data && !orderListState?.error);
   const [buyerDirectory, setBuyerDirectory] = useState({});
 
   const buyerIds = useMemo(
@@ -486,8 +592,16 @@ const Orders = () => {
         if (!buyer) return order;
         return {
           ...order,
-          buyerName: firstDefined(order.buyerName, order.buyer_name, buyer.name),
-          buyerEmail: firstDefined(order.buyerEmail, order.buyer_email, buyer.email),
+          buyerName: firstDefined(
+            order.buyerName,
+            order.buyer_name,
+            buyer.name,
+          ),
+          buyerEmail: firstDefined(
+            order.buyerEmail,
+            order.buyer_email,
+            buyer.email,
+          ),
         };
       }),
     [items, buyerDirectory],
@@ -515,9 +629,11 @@ const Orders = () => {
         sortBy: params.sortBy,
         sortDir: params.sortDir,
       }),
-    ).unwrap().catch((err) => {
-      toast.error(err?.message || "Failed to fetch orders");
-    });
+    )
+      .unwrap()
+      .catch((err) => {
+        toast.error(err?.message || "Failed to fetch orders");
+      });
   }, [
     dispatch,
     toQueryParams,
@@ -530,11 +646,12 @@ const Orders = () => {
   ]);
 
   const filterFields = useMemo(
-    () => FILTER_FIELDS.filter((field) => {
-      if (field.key === "buyerId" && !isAdmin) return false;
-      if (field.key === "sellerId" && isSeller) return false;
-      return true;
-    }),
+    () =>
+      FILTER_FIELDS.filter((field) => {
+        if (field.key === "buyerId" && !isAdmin) return false;
+        if (field.key === "sellerId" && isSeller) return false;
+        return true;
+      }),
     [isAdmin, isSeller],
   );
 
@@ -546,50 +663,41 @@ const Orders = () => {
       render: (_, row) => {
         const payout = payoutWindowOf(row);
         if (payout.paid) return <StatusBadge status="paid" dot />;
-        if (payout.held) return <><StatusBadge status="held" dot /><div className="mt-1 text-[11px] text-red-600">Return or refund hold</div></>;
-        if (payout.fulfilled) return <><StatusBadge status="eligible" dot /><div className="mt-1 text-[11px] text-green-700">Ready for payout</div></>;
+        if (payout.held)
+          return (
+            <>
+              <StatusBadge status="held" dot />
+              <div className="mt-1 text-[11px] text-red-600">
+                Return or refund hold
+              </div>
+            </>
+          );
+        if (payout.fulfilled)
+          return (
+            <>
+              <StatusBadge status="eligible" dot />
+              <div className="mt-1 text-[11px] text-green-700">
+                Ready for payout
+              </div>
+            </>
+          );
         return (
           <div>
-            <StatusBadge status={payout.latestDeadline ? "pending" : "waiting"} dot />
-            <div className="mt-1 text-[11px] text-gray-500">{returnWindowLabel(payout.latestDeadline)}</div>
-            {payout.latestDeadline && <div className="text-[11px] text-gray-400">Until {formatDateTime12Hour(payout.latestDeadline)}</div>}
+            <StatusBadge
+              status={payout.latestDeadline ? "pending" : "waiting"}
+              dot
+            />
+            <div className="mt-1 text-[11px] text-gray-500">
+              {returnWindowLabel(payout.latestDeadline)}
+            </div>
+            {payout.latestDeadline && (
+              <div className="text-[11px] text-gray-400">
+                Until {formatDateTime12Hour(payout.latestDeadline)}
+              </div>
+            )}
           </div>
         );
       },
-    },
-    {
-      key: "_actions",
-      label: "Action",
-      render: (_, row) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <PermissionGuard module="orders" action={ACTIONS.VIEW} hide>
-            <button
-              type="button"
-              onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-navy)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-navy)] hover:text-white"
-            >
-              <MdVisibility size={15} /> View Details
-            </button>
-          </PermissionGuard>
-          {!isSeller && payoutWindowOf(row).fulfilled && !payoutWindowOf(row).paid && (
-            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                onClick={() => {
-                  const group = sellerGroupsOf(row)[0] || {};
-                  const params = new URLSearchParams({ orderId: String(orderIdOf(row)) });
-                  if (group.sellerId) params.set("sellerId", String(group.sellerId));
-                  if (group.organizationId) params.set("organizationId", String(group.organizationId));
-                  navigate(`/app/seller-finance?${params.toString()}`);
-                }}
-                className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
-              >
-                <MdPayments size={15} /> Manage Payout
-              </button>
-            </PermissionGuard>
-          )}
-        </div>
-      ),
     },
   ];
 
@@ -617,7 +725,11 @@ const Orders = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
-        searchPlaceholder={isAdmin ? "Search by order number or buyer…" : "Search by order number…"}
+        searchPlaceholder={
+          isAdmin
+            ? "Search by order number or buyer…"
+            : "Search by order number…"
+        }
         emptyText="No orders found."
         emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
         requiredModule="orders"
@@ -632,8 +744,47 @@ const Orders = () => {
             activeCount={list.activeFilterCount}
           />
         }
-      />
+        rowActions={(row) => {
+          const payout = payoutWindowOf(row);
+          const group = sellerGroupsOf(row)[0] || {};
 
+          const actions = [
+            {
+              label: "View Details",
+              icon: <MdVisibility size={16} className="text-blue-600" />,
+              requiredModule: "orders",
+              requiredAction: ACTIONS.VIEW,
+              onClick: () => navigate(`/app/orders/view/${orderIdOf(row)}`),
+            },
+          ];
+
+          if (!isSeller && payout.fulfilled && !payout.paid) {
+            actions.push({
+              label: "Manage Payout",
+              icon: <MdPayments size={16} className="text-green-600" />,
+              requiredModule: "sellers/commissions",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () => {
+                const params = new URLSearchParams({
+                  orderId: String(orderIdOf(row)),
+                });
+
+                if (group.sellerId) {
+                  params.set("sellerId", String(group.sellerId));
+                }
+
+                if (group.organizationId) {
+                  params.set("organizationId", String(group.organizationId));
+                }
+
+                navigate(`/app/seller-finance?${params.toString()}`);
+              },
+            });
+          }
+
+          return actions;
+        }}
+      />
     </div>
   );
 };

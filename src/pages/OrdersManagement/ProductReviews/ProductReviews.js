@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdAdd, MdStar, MdStarBorder, MdRateReview, MdEdit, MdDelete, MdReply, MdCheckCircle, MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
+import {
+  MdAdd,
+  MdStar,
+  MdStarBorder,
+  MdRateReview,
+  MdEdit,
+  MdDelete,
+  MdReply,
+  MdCheckCircle,
+  MdClose,
+  MdVisibility,
+  MdVisibilityOff,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -24,7 +36,11 @@ import { useListPage } from "../../../hooks/useListPage";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 
-const SELLER_PANEL_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
+const SELLER_PANEL_ROLES = new Set([
+  "seller",
+  "seller-admin",
+  "seller-sub-admin",
+]);
 
 const getSessionUserData = () => {
   const userDataString = sessionStorage.getItem("EcomAdmin");
@@ -44,9 +60,9 @@ const FILTER_FIELDS = [
     width: "w-36",
     options: [
       { value: "published", label: "Published" },
-      { value: "pending",   label: "Pending" },
-      { value: "hidden",    label: "Hidden" },
-      { value: "rejected",  label: "Rejected" },
+      { value: "pending", label: "Pending" },
+      { value: "hidden", label: "Hidden" },
+      { value: "rejected", label: "Rejected" },
     ],
   },
   {
@@ -67,9 +83,11 @@ const FILTER_FIELDS = [
 const StarRating = ({ rating = 0 }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map((star) =>
-      star <= rating
-        ? <MdStar key={star} size={14} className="text-yellow-400" />
-        : <MdStarBorder key={star} size={14} className="text-gray-300" />,
+      star <= rating ? (
+        <MdStar key={star} size={14} className="text-yellow-400" />
+      ) : (
+        <MdStarBorder key={star} size={14} className="text-gray-300" />
+      ),
     )}
     <span className="ml-1 text-xs text-gray-500">{rating}/5</span>
   </div>
@@ -77,13 +95,14 @@ const StarRating = ({ rating = 0 }) => (
 
 const STATUS_COLOR = {
   published: "success",
-  pending:   "warning",
-  hidden:    "default",
-  rejected:  "danger",
+  pending: "warning",
+  hidden: "default",
+  rejected: "danger",
 };
 
 const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
-const isLikelyEmail = (value = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+const isLikelyEmail = (value = "") =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
 const getBuyerName = (row = {}) => {
   const names = [
@@ -93,7 +112,9 @@ const getBuyerName = (row = {}) => {
     row.buyer?.name,
     row.buyer?.email || "",
   ];
-  const name = names.find((value) => value && !isLikelyId(value) && !isLikelyEmail(value));
+  const name = names.find(
+    (value) => value && !isLikelyId(value) && !isLikelyEmail(value),
+  );
   if (name) return name;
   return "Verified Buyer";
 };
@@ -123,7 +144,8 @@ const initials = (value = "") =>
     .map((part) => part.charAt(0).toUpperCase())
     .join("") || "B";
 
-const cssImageUrl = (value) => `url("${String(value || "").replace(/"/g, "%22")}")`;
+const cssImageUrl = (value) =>
+  `url("${String(value || "").replace(/"/g, "%22")}")`;
 
 const getReviewsPayload = (state = {}) => {
   const payload = state?.productReviewsData?.data?.data || {};
@@ -142,14 +164,23 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">Review Details</h2>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Review Details
+            </h2>
             <p className="mt-0.5 text-xs text-gray-500">{productName}</p>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+            aria-label="Close"
+          >
             <MdClose size={22} />
           </button>
         </div>
@@ -161,36 +192,53 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
                 {sellerView ? "Created By" : "Buyer"}
               </p>
               <p className="mt-1 font-medium text-gray-800">{createdByName}</p>
-              
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Status</p>
+              <p className="text-xs font-medium uppercase text-gray-400">
+                Status
+              </p>
               <div className="mt-1">
-                <StatusBadge status={review.status || "pending"} dot variant={STATUS_COLOR[review.status] || "default"} />
+                <StatusBadge
+                  status={review.status || "pending"}
+                  dot
+                  variant={STATUS_COLOR[review.status] || "default"}
+                />
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Rating</p>
-              <div className="mt-1"><StarRating rating={Number(review.rating) || 0} /></div>
+              <p className="text-xs font-medium uppercase text-gray-400">
+                Rating
+              </p>
+              <div className="mt-1">
+                <StarRating rating={Number(review.rating) || 0} />
+              </div>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Date</p>
+              <p className="text-xs font-medium uppercase text-gray-400">
+                Date
+              </p>
               <p className="mt-1 text-gray-800">{reviewDate}</p>
             </div>
-           
+
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">Helpful Votes</p>
+              <p className="text-xs font-medium uppercase text-gray-400">
+                Helpful Votes
+              </p>
               <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
             </div>
           </div>
 
           <section>
             <p className="text-xs font-medium uppercase text-gray-400">Title</p>
-            <p className="mt-1 text-sm font-semibold text-gray-800">{review.title || "—"}</p>
+            <p className="mt-1 text-sm font-semibold text-gray-800">
+              {review.title || "—"}
+            </p>
           </section>
 
           <section>
-            <p className="text-xs font-medium uppercase text-gray-400">Review</p>
+            <p className="text-xs font-medium uppercase text-gray-400">
+              Review
+            </p>
             <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">
               {review.reviewText || "—"}
             </p>
@@ -198,11 +246,23 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
 
           {Array.isArray(review.media) && review.media.length ? (
             <section>
-              <p className="text-xs font-medium uppercase text-gray-400">Review Photos</p>
+              <p className="text-xs font-medium uppercase text-gray-400">
+                Review Photos
+              </p>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {review.media.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded border">
-                    <img src={url} alt="Review media" className="h-24 w-full object-cover" />
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block overflow-hidden rounded border"
+                  >
+                    <img
+                      src={url}
+                      alt="Review media"
+                      className="h-24 w-full object-cover"
+                    />
                   </a>
                 ))}
               </div>
@@ -211,8 +271,12 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
 
           {review.adminReply?.text ? (
             <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-              <p className="text-xs font-medium uppercase text-blue-500">Admin Reply</p>
-              <p className="mt-1 text-sm text-blue-900">{review.adminReply.text}</p>
+              <p className="text-xs font-medium uppercase text-blue-500">
+                Admin Reply
+              </p>
+              <p className="mt-1 text-sm text-blue-900">
+                {review.adminReply.text}
+              </p>
             </section>
           ) : null}
         </div>
@@ -224,18 +288,25 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
 const ProductReviews = () => {
   const dispatch = useDispatch();
   const reviewsData = useSelector((state) => state.adminCore);
-  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
 
-  const [editTarget, setEditTarget]       = useState(null);
-  const [viewTarget, setViewTarget]       = useState(null);
-  const [addOpen, setAddOpen]             = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, review: null });
+  const [editTarget, setEditTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    open: false,
+    review: null,
+  });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
-  const [bulkLoading, setBulkLoading]     = useState(false);
-  const [userData, setUserData]           = useState(() => getSessionUserData());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [userData, setUserData] = useState(() => getSessionUserData());
 
   const { list: items, total } = getReviewsPayload(reviewsData);
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
@@ -251,15 +322,15 @@ const ProductReviews = () => {
     setError("");
     dispatch(
       getProductReviews({
-        page:      params.page,
-        limit:     params.limit,
-        search:    params.search || undefined,
-        status:    params.status || undefined,
-        rating:    params.rating ? Number(params.rating) : undefined,
+        page: params.page,
+        limit: params.limit,
+        search: params.search || undefined,
+        status: params.status || undefined,
+        rating: params.rating ? Number(params.rating) : undefined,
         productId: params.productId || undefined,
-        buyerId:   params.buyerId || undefined,
-        sortBy:    params.sortBy,
-        sortDir:   params.sortDir,
+        buyerId: params.buyerId || undefined,
+        sortBy: params.sortBy,
+        sortDir: params.sortDir,
         sellerScope: isSellerPanelUser || undefined,
       }),
     )
@@ -275,7 +346,14 @@ const ProductReviews = () => {
   useEffect(() => {
     fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
+  }, [
+    list.page,
+    list.pageSize,
+    list.search,
+    list.sortKey,
+    list.sortDir,
+    list.filters,
+  ]);
 
   const handleToggleStatus = async (review) => {
     const reviewId = review._id || review.id;
@@ -283,7 +361,13 @@ const ProductReviews = () => {
     const newStatus = current === "published" ? "hidden" : "published";
     setToggleLoadingId(reviewId);
     try {
-      await dispatch(updateProductReview({ reviewId, status: newStatus, sellerScope: isSellerPanelUser })).unwrap();
+      await dispatch(
+        updateProductReview({
+          reviewId,
+          status: newStatus,
+          sellerScope: isSellerPanelUser,
+        }),
+      ).unwrap();
       toast.success("Review status updated");
       fetchReviews();
     } catch (err) {
@@ -351,7 +435,8 @@ const ProductReviews = () => {
       key: "productId",
       label: "Product",
       render: (v, row) => {
-        const productImage = row.productImage || row.product?.image || row.media?.[0];
+        const productImage =
+          row.productImage || row.product?.image || row.media?.[0];
         const productName = getProductName(row) || "Product";
         return (
           <div className="flex items-center gap-2 min-w-0">
@@ -397,11 +482,13 @@ const ProductReviews = () => {
               <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
                 {buyerName}
               </span>
-              {showBuyerDetails && row.buyer?.email && row.buyer.email !== buyerName && (
-                <span className="block max-w-[150px] truncate text-[10px] text-gray-400">
-                  {row.buyer.email}
-                </span>
-              )}
+              {showBuyerDetails &&
+                row.buyer?.email &&
+                row.buyer.email !== buyerName && (
+                  <span className="block max-w-[150px] truncate text-[10px] text-gray-400">
+                    {row.buyer.email}
+                  </span>
+                )}
             </div>
           </div>
         );
@@ -419,7 +506,9 @@ const ProductReviews = () => {
       render: (v, row) => (
         <div className="max-w-[220px]">
           {row.title && (
-            <div className="text-xs font-semibold text-gray-700 truncate">{row.title}</div>
+            <div className="text-xs font-semibold text-gray-700 truncate">
+              {row.title}
+            </div>
           )}
           <div className="text-xs text-gray-500 line-clamp-2">{v || "—"}</div>
           {row.adminReply?.text && (
@@ -441,19 +530,23 @@ const ProductReviews = () => {
           className="disabled:opacity-50"
           title="Click to toggle published/hidden"
         >
-          <StatusBadge status={v || "pending"} dot variant={STATUS_COLOR[v] || "default"} />
+          <StatusBadge
+            status={v || "pending"}
+            dot
+            variant={STATUS_COLOR[v] || "default"}
+          />
         </button>
       ),
     },
-   {
-  key: "helpfulVotes",
-  label: "Likes",
-  render: (v) => (
-    <span className="flex items-center gap-1 text-xs text-gray-500">
-      👍  {v || 0}
-    </span>
-  ),
-},
+    {
+      key: "helpfulVotes",
+      label: "Likes",
+      render: (v) => (
+        <span className="flex items-center gap-1 text-xs text-gray-500">
+          👍 {v || 0}
+        </span>
+      ),
+    },
     {
       key: "createdAt",
       label: "Date",
@@ -462,46 +555,6 @@ const ProductReviews = () => {
         <span className="text-xs text-gray-400">
           {formatDateTime12Hour(v, "—")}
         </span>
-      ),
-    },
-    {
-      key: "_actions",
-      label: "Actions",
-      render: (_, row) => (
-        <div className="flex items-center gap-1 justify-start">
-          <button
-            onClick={() => setViewTarget(row)}
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
-            title="View review"
-            aria-label="View review"
-          >
-            <MdVisibility size={15} />
-          </button>
-          {!isSellerPanelUser && (
-            <>
-              <PermissionGuard module="reviews" action={ACTIONS.EDIT} hide>
-                <button
-                  onClick={() => setEditTarget(row)}
-                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-[var(--admin-navy)] transition-colors"
-                  title="Edit review"
-                  aria-label="Edit review"
-                >
-                  <MdEdit size={15} />
-                </button>
-              </PermissionGuard>
-              <PermissionGuard module="reviews" action={ACTIONS.DELETE} hide>
-                <button
-                  onClick={() => setDeleteConfirm({ open: true, review: row })}
-                  className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Delete review"
-                  aria-label="Delete review"
-                >
-                  <MdDelete size={15} />
-                </button>
-              </PermissionGuard>
-            </>
-          )}
-        </div>
       ),
     },
   ];
@@ -515,17 +568,16 @@ const ProductReviews = () => {
           { label: sellerView ? "Catalog" : "Orders Management" },
           { label: "Product Reviews" },
         ]}
-        actions={!isSellerPanelUser ? (
-          <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={() => setAddOpen(true)}
-
-            >
-              <MdAdd size={18} />
-              Add Review
-            </button>
-          </PermissionGuard>
-        ) : null}
+        actions={
+          !isSellerPanelUser ? (
+            <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
+              <button onClick={() => setAddOpen(true)}>
+                <MdAdd size={18} />
+                Add Review
+              </button>
+            </PermissionGuard>
+          ) : null
+        }
       />
 
       <DataTable
@@ -561,51 +613,94 @@ const ProductReviews = () => {
             activeCount={list.activeFilterCount}
           />
         }
-        bulkActionBar={!isSellerPanelUser ? (
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={items.length}
-            onClear={list.clearSelection}
-            onSelectAll={() => list.setSelectedKeys(items.map((row) => row._id || row.id).filter(Boolean))}
-            module="reviews"
-            loading={loading || bulkLoading}
-            actions={[
+        bulkActionBar={
+          !isSellerPanelUser ? (
+            <BulkActionBar
+              selectedCount={list.selectedCount}
+              totalCount={items.length}
+              onClear={list.clearSelection}
+              onSelectAll={() =>
+                list.setSelectedKeys(
+                  items.map((row) => row._id || row.id).filter(Boolean),
+                )
+              }
+              module="reviews"
+              loading={loading || bulkLoading}
+              actions={[
+                {
+                  label: "Approve Selected",
+                  icon: <MdCheckCircle />,
+                  action: ACTIONS.EDIT,
+                  variant: "primary",
+                  onClick: () => handleBulkStatus("published"),
+                },
+                {
+                  label: "Reject Selected",
+                  icon: <MdClose />,
+                  action: ACTIONS.EDIT,
+                  variant: "danger",
+                  onClick: () => handleBulkStatus("rejected"),
+                },
+                {
+                  label: "Hide Selected",
+                  icon: <MdVisibilityOff />,
+                  action: ACTIONS.EDIT,
+                  variant: "warning",
+                  onClick: () => handleBulkStatus("hidden"),
+                },
+                {
+                  label: "Delete Selected",
+                  icon: <MdDelete />,
+                  action: ACTIONS.DELETE,
+                  variant: "danger",
+                  onClick: () => setBulkDeleteConfirm(true),
+                },
+              ]}
+            />
+          ) : null
+        }
+        rowActions={(row) => {
+          const actions = [
+            {
+              label: "View Review",
+              icon: <MdVisibility size={16} className="text-blue-600" />,
+              onClick: () => setViewTarget(row),
+            },
+          ];
+
+          if (!isSellerPanelUser) {
+            actions.push(
               {
-                label: "Approve Selected",
-                icon: <MdCheckCircle />,
-                action: ACTIONS.EDIT,
-                variant: "primary",
-                onClick: () => handleBulkStatus("published"),
+                label: "Edit Review",
+                icon: <MdEdit size={16} className="text-green-600" />,
+                requiredModule: "reviews",
+                requiredAction: ACTIONS.EDIT,
+                onClick: () => setEditTarget(row),
               },
               {
-                label: "Reject Selected",
-                icon: <MdClose />,
-                action: ACTIONS.EDIT,
-                variant: "danger",
-                onClick: () => handleBulkStatus("rejected"),
+                label: "Delete Review",
+                icon: <MdDelete size={16} className="text-red-600" />,
+                requiredModule: "reviews",
+                requiredAction: ACTIONS.DELETE,
+                onClick: () =>
+                  setDeleteConfirm({
+                    open: true,
+                    review: row,
+                  }),
               },
-              {
-                label: "Hide Selected",
-                icon: <MdVisibilityOff />,
-                action: ACTIONS.EDIT,
-                variant: "warning",
-                onClick: () => handleBulkStatus("hidden"),
-              },
-              {
-                label: "Delete Selected",
-                icon: <MdDelete />,
-                action: ACTIONS.DELETE,
-                variant: "danger",
-                onClick: () => setBulkDeleteConfirm(true),
-              },
-            ]}
-          />
-        ) : null}
+            );
+          }
+
+          return actions;
+        }}
       />
 
       <EditProductReview
         isOpen={Boolean(editTarget)}
-        onClose={() => { setEditTarget(null); fetchReviews(); }}
+        onClose={() => {
+          setEditTarget(null);
+          fetchReviews();
+        }}
         reviewData={editTarget}
       />
 

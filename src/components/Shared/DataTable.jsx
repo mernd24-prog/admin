@@ -511,7 +511,7 @@ const DataTable = ({
               ))}
               {rowActions && (
                 <th className="w-16 px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap">
-                  Actions
+                  ACTIONS
                 </th>
               )}
             </tr>

@@ -202,81 +202,48 @@ const UserMessages = () => {
     (notification) => dispatch(markNotificationRead(notification)),
     [dispatch],
   );
-  const columns = useMemo(
-    () => {
-      const baseColumns = (
-        isSeller
-          ? BASE_COLUMNS.filter((column) => column.key !== "userId")
-          : BASE_COLUMNS
-      ).map((column) => {
-        if (column.key !== "channel") return column;
-        return {
-          ...column,
-          render: (value, row) => {
-            const unread = isNotificationUnread(
-              row,
-              readNotificationIds,
-              notificationReadBaselineAt,
-            );
-            return (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="rounded-full bg-[#F4F1ED] px-2 py-0.5 text-xs font-medium capitalize text-[var(--admin-navy)]">
-                  {String(value || "in_app").replace(/_/g, " ")}
-                </span>
-                <span
-                  className={`h-2 w-2 flex-none rounded-full ${
-                    unread
-                      ? "bg-[var(--admin-navy)] shadow-[0_0_0_3px_rgba(31,27,95,0.12)]"
-                      : "bg-transparent"
-                  }`}
-                  aria-label={unread ? "Unseen notification" : undefined}
-                />
+  const columns = useMemo(() => {
+    const baseColumns = (
+      isSeller
+        ? BASE_COLUMNS.filter((column) => column.key !== "userId")
+        : BASE_COLUMNS
+    ).map((column) => {
+      if (column.key !== "channel") return column;
+      return {
+        ...column,
+        render: (value, row) => {
+          const unread = isNotificationUnread(
+            row,
+            readNotificationIds,
+            notificationReadBaselineAt,
+          );
+          return (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="rounded-full bg-[#F4F1ED] px-2 py-0.5 text-xs font-medium capitalize text-[var(--admin-navy)]">
+                {String(value || "in_app").replace(/_/g, " ")}
               </span>
-            );
-          },
-        };
-      });
-
-      return [
-        ...baseColumns,
-        {
-          key: "_actions",
-          label: "Action",
-          render: (_, row) => {
-            const detailRoute = getNotificationDetailRoute(row);
-            const unread = isNotificationUnread(
-              row,
-              readNotificationIds,
-              notificationReadBaselineAt,
-            );
-            if (!detailRoute && !unread) return null;
-            return (
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-                title={detailRoute ? "View detail" : "Mark as seen"}
-                aria-label={detailRoute ? "View notification detail" : "Mark notification as seen"}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  markAsSeen(row);
-                  if (detailRoute) navigate(detailRoute);
-                }}
-              >
-                {detailRoute ? <MdVisibility size={18} /> : <MdMarkEmailRead size={18} />}
-              </button>
-            );
-          },
+              <span
+                className={`h-2 w-2 flex-none rounded-full ${
+                  unread
+                    ? "bg-[var(--admin-navy)] shadow-[0_0_0_3px_rgba(31,27,95,0.12)]"
+                    : "bg-transparent"
+                }`}
+                aria-label={unread ? "Unseen notification" : undefined}
+              />
+            </span>
+          );
         },
-      ];
-    },
-    [
-      isSeller,
-      markAsSeen,
-      navigate,
-      notificationReadBaselineAt,
-      readNotificationIds,
-    ],
-  );
+      };
+    });
+
+    return [...baseColumns];
+  }, [
+    isSeller,
+    markAsSeen,
+    navigate,
+    notificationReadBaselineAt,
+    readNotificationIds,
+  ]);
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -295,45 +262,50 @@ const UserMessages = () => {
     dispatch(setNotificationsSeenAt(Date.now()));
   }, [dispatch]);
 
-  const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) {
-      setLoading(true);
-      setError("");
-    }
-    try {
-      const params = toQueryParams();
-      const endpoint = isSeller
-        ? ENDPOINTS.notifications.mine
-        : ENDPOINTS.notifications.admin;
-      const res = await axiosProvider.get(endpoint, {
-        params: {
-          page: params.page,
-          limit: params.limit,
-          type: params.type || undefined,
-          search: params.search || undefined,
-        },
-      });
-      const data = res?.data?.data;
-      const items = Array.isArray(data)
-        ? data
-        : data?.items || data?.list || data?.notifications || [];
-      const totalCount = Number(
-        res?.data?.pagination?.total ?? res?.data?.meta?.total ?? items.length,
-      );
-      setNotifications(items);
-      setTotal(totalCount);
-      dispatch(setNotificationsSeenAt(Date.now()));
-    } catch (err) {
-      const msg =
-        err?.response?.data?.message || "Failed to load notifications";
+  const fetchNotifications = useCallback(
+    async ({ silent = false } = {}) => {
       if (!silent) {
-        setError(msg);
-        toast.error(msg);
+        setLoading(true);
+        setError("");
       }
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [dispatch, isSeller, toQueryParams]);
+      try {
+        const params = toQueryParams();
+        const endpoint = isSeller
+          ? ENDPOINTS.notifications.mine
+          : ENDPOINTS.notifications.admin;
+        const res = await axiosProvider.get(endpoint, {
+          params: {
+            page: params.page,
+            limit: params.limit,
+            type: params.type || undefined,
+            search: params.search || undefined,
+          },
+        });
+        const data = res?.data?.data;
+        const items = Array.isArray(data)
+          ? data
+          : data?.items || data?.list || data?.notifications || [];
+        const totalCount = Number(
+          res?.data?.pagination?.total ??
+            res?.data?.meta?.total ??
+            items.length,
+        );
+        setNotifications(items);
+        setTotal(totalCount);
+        dispatch(setNotificationsSeenAt(Date.now()));
+      } catch (err) {
+        const msg =
+          err?.response?.data?.message || "Failed to load notifications";
+        if (!silent) {
+          setError(msg);
+          toast.error(msg);
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [dispatch, isSeller, toQueryParams],
+  );
 
   useEffect(() => {
     fetchNotifications();
@@ -382,8 +354,15 @@ const UserMessages = () => {
     <div>
       <PageHeader
         title="Notifications"
-        subtitle={isSeller ? "View and manage all your notifications." : "Send and manage user notifications"}
-        breadcrumbs={[{ label: isSeller ? "Marketing" : "User Management" }, { label: "Notifications" }]}
+        subtitle={
+          isSeller
+            ? "View and manage all your notifications."
+            : "Send and manage user notifications"
+        }
+        breadcrumbs={[
+          { label: isSeller ? "Marketing" : "User Management" },
+          { label: "Notifications" },
+        ]}
         actions={
           <div className="flex items-center gap-2">
             {!isSeller && (
@@ -435,6 +414,37 @@ const UserMessages = () => {
             loading={loading}
           />
         }
+        rowActions={(row) => {
+          const detailRoute = getNotificationDetailRoute(row);
+          const unread = isNotificationUnread(
+            row,
+            readNotificationIds,
+            notificationReadBaselineAt,
+          );
+
+          const actions = [];
+
+          if (detailRoute) {
+            actions.push({
+              label: "View Detail",
+              icon: <MdVisibility size={16} className="text-blue-600" />,
+              onClick: () => {
+                markAsSeen(row);
+                navigate(detailRoute);
+              },
+            });
+          }
+
+          if (unread) {
+            actions.push({
+              label: "Mark as Seen",
+              icon: <MdMarkEmailRead size={16} className="text-emerald-600" />,
+              onClick: () => markAsSeen(row),
+            });
+          }
+
+          return actions;
+        }}
       />
 
       {/* Send Notification Modal */}

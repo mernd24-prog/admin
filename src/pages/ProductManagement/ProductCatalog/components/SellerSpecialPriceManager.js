@@ -186,6 +186,8 @@ const buildRowsFromProducts = (products = []) => {
           sellingPrice: variantPrice,
           originalSpecialPrice: variantSpecialPrice,
           specialPrice: variantSpecialPrice,
+          productStatus: product?.status || "",
+          variantStatus: variant?.status || product?.status || "",
         });
       });
       return;
@@ -203,6 +205,8 @@ const buildRowsFromProducts = (products = []) => {
       sellingPrice: product?.price || 0,
       originalSpecialPrice: product?.salePrice ?? "",
       specialPrice: product?.salePrice ?? "",
+      productStatus: product?.status || "",
+      variantStatus: product?.status || "",
     });
   });
 
@@ -297,7 +301,6 @@ const SellerSpecialPriceManager = () => {
       return true;
     });
   }, [rows, list.filters.priceStatus]);
-
   const total = filteredRows.length;
 
   const visibleRows = useMemo(() => {
@@ -744,7 +747,23 @@ const SellerSpecialPriceManager = () => {
               </span>
             );
           }
-          return <span className="text-xs text-[var(--admin-muted)]">N/A</span>;
+          const status = row.variantStatus || row.productStatus;
+
+          return (
+            <span
+              className={`inline-flex rounded-lg px-2 py-1 text-xs font-medium ${
+                status === "active"
+                  ? "bg-green-50 text-green-700"
+                  : status === "inactive"
+                    ? "bg-gray-100 text-gray-700"
+                    : "bg-yellow-50 text-yellow-700"
+              }`}
+            >
+              {status
+                ? status.charAt(0).toUpperCase() + status.slice(1)
+                : "N/A"}
+            </span>
+          );
         },
       },
     ],
@@ -755,15 +774,23 @@ const SellerSpecialPriceManager = () => {
     <div>
       <Loader
         loading={saving || importing}
-        label={importing ? "Importing special prices..." : "Saving special prices..."}
+        label={
+          importing ? "Importing special prices..." : "Saving special prices..."
+        }
       />
       <PageHeader
-        title={sellerView ? "Special Price Management" : "Special Price Management"}
+        title={
+          sellerView ? "Special Price Management" : "Special Price Management"
+        }
         subtitle="Update variant-wise special prices, export a template, edit it in Excel, and import the updated values back here."
         count={total}
         breadcrumbs={[
           { label: sellerView ? "Catalog" : "Product Management" },
-          { label: sellerView ? "Special Price Management" : "Special Price Management" },
+          {
+            label: sellerView
+              ? "Special Price Management"
+              : "Special Price Management",
+          },
         ]}
         actions={
           <>
@@ -784,7 +811,11 @@ const SellerSpecialPriceManager = () => {
               type="button"
               onClick={handleSave}
               disabled={!canSave}
-              title={pendingCount ? "Save special price changes" : "No changes to save"}
+              title={
+                pendingCount
+                  ? "Save special price changes"
+                  : "No changes to save"
+              }
               className="disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
             >
               {saving

@@ -32,7 +32,7 @@ import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { apiRequest } from "../../../_helpers/apiConfig";
 import {
-  calculateSellerCommission,
+  // calculateSellerCommission,
   completeSellerPayout,
   failSellerPayout,
   getAdminSellerCommissions,
@@ -584,21 +584,21 @@ const SellerFinance = () => {
     ...(key === "sellerId" ? { organizationId: "" } : {}),
   }));
 
-  const handleCalculate = async () => {
-    const cleanOrderId = orderId.trim().replace(/^#/, "");
-    if (!cleanOrderId) { toast.error("Order ID is required"); return; }
-    try {
-      setSubmitting(true);
-      await dispatch(calculateSellerCommission({ orderId: cleanOrderId, organizationId: filters.organizationId || undefined })).unwrap();
-      toast.success("Commission recalculated");
-      setOrderId("");
-      await loadFinance();
-    } catch (error) {
-      toast.error(error?.message || error || "Unable to calculate commission");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // const handleCalculate = async () => {
+  //   const cleanOrderId = orderId.trim().replace(/^#/, "");
+  //   if (!cleanOrderId) { toast.error("Order ID is required"); return; }
+  //   try {
+  //     setSubmitting(true);
+  //     await dispatch(calculateSellerCommission({ orderId: cleanOrderId, organizationId: filters.organizationId || undefined })).unwrap();
+  //     toast.success("Commission recalculated");
+  //     setOrderId("");
+  //     await loadFinance();
+  //   } catch (error) {
+  //     toast.error(error?.message || error || "Unable to calculate commission");
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
 
   const handleProcessPayoutSubmit = async () => {
     if (!processModal.sellerId.trim()) { toast.error("Seller ID is required"); return; }
