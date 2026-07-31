@@ -122,7 +122,7 @@ const FilterSelect = ({
     typeof document !== "undefined" ? document.body : undefined;
 
   return (
-    <div className={`admin-field relative  ${className}`}>
+    <div className={` relative  ${className}`}>
       {label && (
         <label htmlFor={inputId} className="admin-label">
           {label}

@@ -34,9 +34,8 @@ export const PANEL_MODES = {
 // };
 
 const configuredMode =
-  // resolvePanelMode(process.env.REACT_APP_PANEL_MODE) ||
-  // detectModeFromRuntime() ||
-  PANEL_MODES.SELLER; // Default to seller panel if not configured
+  PANEL_MODES[String(process.env.REACT_APP_PANEL_MODE).toUpperCase()] ||
+  PANEL_MODES.SELLER;
 
 export const getPanelMode = () => configuredMode;
 

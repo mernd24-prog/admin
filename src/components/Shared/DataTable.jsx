@@ -467,7 +467,7 @@ const DataTable = ({
         className={`admin-table-scroll ${tableContainerClassName || "overflow-x-auto overscroll-x-contain"}`}
       >
         <table
-          className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
+          className={`min-w-full  whitespace-nowrap text-sm ${tableClassName}`}
         >
           <thead className="admin-table-head">
             <tr>
