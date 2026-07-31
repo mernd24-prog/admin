@@ -13,6 +13,7 @@ import {
   MdPerson,
   MdStorefront,
   MdTimeline,
+  MdVisibility,
 } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -70,24 +71,24 @@ const FULFILLMENT_TRANSITIONS = {
   out_for_delivery: ["delivered", "failed", "rto"],
   failed: ["in_transit", "rto"],
 };
-const COURIER_METHOD_OPTIONS = [
-  {
-    value: "Manual / seller delivery",
-    label: "Manual / seller delivery",
-    hint: "Seller handles delivery directly",
-  },
-  { value: "Delhivery", label: "Delhivery", hint: "Courier partner" },
-  { value: "Blue Dart", label: "Blue Dart", hint: "Courier partner" },
-  { value: "DTDC", label: "DTDC", hint: "Courier partner" },
-  { value: "Ecom Express", label: "Ecom Express", hint: "Courier partner" },
-  { value: "India Post", label: "India Post", hint: "Postal shipment" },
-  { value: "Xpressbees", label: "Xpressbees", hint: "Courier partner" },
-  {
-    value: "Other courier",
-    label: "Other courier",
-    hint: "Use tracking reference below",
-  },
-];
+// const COURIER_METHOD_OPTIONS = [
+//   {
+//     value: "Manual / seller delivery",
+//     label: "Manual / seller delivery",
+//     hint: "Seller handles delivery directly",
+//   },
+//   { value: "Delhivery", label: "Delhivery", hint: "Courier partner" },
+//   { value: "Blue Dart", label: "Blue Dart", hint: "Courier partner" },
+//   { value: "DTDC", label: "DTDC", hint: "Courier partner" },
+//   { value: "Ecom Express", label: "Ecom Express", hint: "Courier partner" },
+//   { value: "India Post", label: "India Post", hint: "Postal shipment" },
+//   { value: "Xpressbees", label: "Xpressbees", hint: "Courier partner" },
+//   {
+//     value: "Other courier",
+//     label: "Other courier",
+//     hint: "Use tracking reference below",
+//   },
+// ];
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
@@ -619,20 +620,6 @@ const ShipmentTracking = () => {
         sortable: true,
         render: (value) => formatDateTime12Hour(value, "N/A"),
       },
-      {
-        key: "actions",
-        label: "Action",
-        render: (_, row) => (
-          <div className="flex items-center gap-2">
-            <ActionButton
-              onClick={() => openDetail(row)}
-              title="View shipment details"
-            >
-              View
-            </ActionButton>
-          </div>
-        ),
-      },
     ];
     return isSeller
       ? baseColumns.filter((column) => column.key !== "seller_id")
@@ -683,6 +670,13 @@ const ShipmentTracking = () => {
           columns,
           data: shipmentPayload.list,
         }}
+        rowActions={(row) => [
+          {
+            label: "View Shipment Details",
+            icon: <MdVisibility size={16} className="text-blue-600" />,
+            onClick: () => openDetail(row),
+          },
+        ]}
       />
 
       <DefaultModal

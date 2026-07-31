@@ -122,138 +122,138 @@ const optionParentId = (option = {}) =>
   option.id || option._id || option.value || "";
 
 // API-backed multi-select dropdown for states, cities, and pincodes.
-function OptionMultiSelect({
-  value = [],
-  onChange,
-  options = [],
-  placeholder = "Select values...",
-  searchPlaceholder = "Search...",
-  emptyText = "No options found",
-  disabled = false,
-  loading = false,
-  getValue = optionValue,
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef(null);
+// function OptionMultiSelect({
+//   value = [],
+//   onChange,
+//   options = [],
+//   placeholder = "Select values...",
+//   searchPlaceholder = "Search...",
+//   emptyText = "No options found",
+//   disabled = false,
+//   loading = false,
+//   getValue = optionValue,
+// }) {
+//   const [open, setOpen] = useState(false);
+//   const [search, setSearch] = useState("");
+//   const ref = useRef(null);
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+//   useEffect(() => {
+//     const handler = (e) => {
+//       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+//     };
+//     document.addEventListener("mousedown", handler);
+//     return () => document.removeEventListener("mousedown", handler);
+//   }, []);
 
-  const filtered = options.filter((option) =>
-    optionLabel(option).toLowerCase().includes(search.toLowerCase()),
-  );
+//   const filtered = options.filter((option) =>
+//     optionLabel(option).toLowerCase().includes(search.toLowerCase()),
+//   );
 
-  const toggle = (option) => {
-    const nextValue = getValue(option);
-    if (!nextValue) return;
-    if (value.includes(nextValue))
-      onChange(value.filter((item) => item !== nextValue));
-    else onChange([...value, nextValue]);
-  };
+//   const toggle = (option) => {
+//     const nextValue = getValue(option);
+//     if (!nextValue) return;
+//     if (value.includes(nextValue))
+//       onChange(value.filter((item) => item !== nextValue));
+//     else onChange([...value, nextValue]);
+//   };
 
-  return (
-    <div ref={ref} className="relative">
-    <div
-  className={`admin-input min-h-[42px] flex items-center justify-between gap-2 ${
-    disabled
-      ? "cursor-not-allowed bg-gray-50 text-gray-400"
-      : "cursor-pointer"
-  }`}
-  onClick={() => {
-    if (!disabled) setOpen((current) => !current);
-  }}
->
-  <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-    {value.length === 0 && (
-      <span className="truncate text-sm text-gray-400">
-        {placeholder}
-      </span>
-    )}
+//   return (
+//     <div ref={ref} className="relative">
+//     <div
+//   className={`admin-input min-h-[42px] flex items-center justify-between gap-2 ${
+//     disabled
+//       ? "cursor-not-allowed bg-gray-50 text-gray-400"
+//       : "cursor-pointer"
+//   }`}
+//   onClick={() => {
+//     if (!disabled) setOpen((current) => !current);
+//   }}
+// >
+//   <div className="flex min-w-0 flex-1 flex-wrap gap-1">
+//     {value.length === 0 && (
+//       <span className="truncate text-sm text-gray-400">
+//         {placeholder}
+//       </span>
+//     )}
 
-    {value.map((item) => (
-      <span
-        key={item}
-        className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]"
-      >
-        {item}
+//     {value.map((item) => (
+//       <span
+//         key={item}
+//         className="inline-flex items-center gap-1 rounded bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]"
+//       >
+//         {item}
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange(value.filter((tag) => tag !== item));
-          }}
-          className="ml-0.5 leading-none hover:text-red-500"
-        >
-          ×
-        </button>
-      </span>
-    ))}
-  </div>
+//         <button
+//           type="button"
+//           onClick={(e) => {
+//             e.stopPropagation();
+//             onChange(value.filter((tag) => tag !== item));
+//           }}
+//           className="ml-0.5 leading-none hover:text-red-500"
+//         >
+//           ×
+//         </button>
+//       </span>
+//     ))}
+//   </div>
 
-  <MdKeyboardArrowDown
-    className={`shrink-0 text-xl transition-transform ${
-      open ? "rotate-180" : ""
-    }`}
-  />
-</div>
-      {open && !disabled && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
-          <div className="p-2 border-b sticky top-0 bg-white">
-            <input
-              className="admin-input text-sm py-1"
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-            />
-          </div>
-          {loading && (
-            <div className="px-3 py-4 text-center text-sm text-gray-400">
-              Loading...
-            </div>
-          )}
-          {!loading &&
-            filtered.map((option) => {
-              const selectedValue = getValue(option);
-              const selected = value.includes(selectedValue);
-              return (
-                <div
-                  key={optionId(option)}
-                  className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${selected ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggle(option);
-                  }}
-                >
-                  <span
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${selected ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}
-                  >
-                    {selected && (
-                      <MdCheckCircle className="text-white text-xs" />
-                    )}
-                  </span>
-                  {optionLabel(option)}
-                </div>
-              );
-            })}
-          {!loading && filtered.length === 0 && (
-            <div className="px-3 py-4 text-center text-sm text-gray-400">
-              {emptyText}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+//   <MdKeyboardArrowDown
+//     className={`shrink-0 text-xl transition-transform ${
+//       open ? "rotate-180" : ""
+//     }`}
+//   />
+// </div>
+//       {open && !disabled && (
+//         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
+//           <div className="p-2 border-b sticky top-0 bg-white">
+//             <input
+//               className="admin-input text-sm py-1"
+//               placeholder={searchPlaceholder}
+//               value={search}
+//               onChange={(e) => setSearch(e.target.value)}
+//               onClick={(e) => e.stopPropagation()}
+//               autoFocus
+//             />
+//           </div>
+//           {loading && (
+//             <div className="px-3 py-4 text-center text-sm text-gray-400">
+//               Loading...
+//             </div>
+//           )}
+//           {!loading &&
+//             filtered.map((option) => {
+//               const selectedValue = getValue(option);
+//               const selected = value.includes(selectedValue);
+//               return (
+//                 <div
+//                   key={optionId(option)}
+//                   className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${selected ? "text-[var(--admin-blue)] font-medium" : "text-gray-700"}`}
+//                   onClick={(e) => {
+//                     e.stopPropagation();
+//                     toggle(option);
+//                   }}
+//                 >
+//                   <span
+//                     className={`w-4 h-4 rounded border flex items-center justify-center ${selected ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300"}`}
+//                   >
+//                     {selected && (
+//                       <MdCheckCircle className="text-white text-xs" />
+//                     )}
+//                   </span>
+//                   {optionLabel(option)}
+//                 </div>
+//               );
+//             })}
+//           {!loading && filtered.length === 0 && (
+//             <div className="px-3 py-4 text-center text-sm text-gray-400">
+//               {emptyText}
+//             </div>
+//           )}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
 // ── Profile Form (inside modal) ──────────────────────────────────────────────
 
@@ -425,6 +425,7 @@ function ProfileForm({
     }));
   };
 
+  const TOAST_ID = "shipping-profile-pincode";
 
   const [pincodeInput, setPincodeInput] = useState("");
 
@@ -434,12 +435,16 @@ function ProfileForm({
   if (!pincode) return;
 
   if (!/^\d{6}$/.test(pincode)) {
-    toast.error("Please enter a valid 6-digit pincode");
+    toast.error("Please enter a valid 6-digit pincode", {
+      id: TOAST_ID,
+    });
     return;
   }
 
   if (form.allowedPincodes.includes(pincode)) {
-    toast.error("This pincode is already added");
+    toast.error("This pincode is already added", {
+      id: TOAST_ID,
+    });
     return;
   }
 
@@ -1099,13 +1104,13 @@ export default function ShippingProfiles() {
     [shippingProfileTemplatesData],
   );
 
-  const templateOptions = useMemo(() =>
-    templatesPayload.list.map((template) => ({
-      value: profileId(template),
-      label: `${template.name} · v${template.version || 1}`,
-    })),
-    [templatesPayload.list]
-  );
+  // const templateOptions = useMemo(() =>
+  //   templatesPayload.list.map((template) => ({
+  //     value: profileId(template),
+  //     label: `${template.name} · v${template.version || 1}`,
+  //   })),
+  //   [templatesPayload.list]
+  // );
 
   useEffect(() => {
     const visibleIds = new Set(
@@ -2129,7 +2134,7 @@ export default function ShippingProfiles() {
               </div>
             </div>
           )}
-          <div className="space-y-1">
+          {/* <div className="space-y-1">
             <label className="admin-label">Admin Template</label>
             <FilterSelect
               options={templateOptions}
@@ -2151,7 +2156,7 @@ export default function ShippingProfiles() {
               placeholder="Select template..."
               isClearable
             />
-          </div>
+          </div> */}
           <div className="space-y-1">
             <label className="admin-label">Template Name</label>
             <input

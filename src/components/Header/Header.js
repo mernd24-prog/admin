@@ -3,7 +3,7 @@ import { forceLogout } from "../../_helpers/authSession";
 import { IoLogOutOutline } from "react-icons/io5";
 import {
   MdOutlineMenu,
-  MdSearch,
+  // MdSearch,
   MdOutlineNotificationsNone,
   MdInfoOutline,
 } from "react-icons/md";

@@ -1224,9 +1224,18 @@ const OrderSummary = () => {
     setState((prev) => ({ ...prev, isLoading: loading }));
   }, []);
 
-  const handleError = useCallback((error, defaultMessage = "An error occurred") => {
-    toast.error(error?.message || error || defaultMessage);
-  }, []);
+  const handleError = useCallback(
+  (error, defaultMessage = "An error occurred") => {
+    const message = error?.message || error || defaultMessage;
+
+    toast.error(message, {
+      id: message,
+    });
+
+    console.error(error);
+  },
+  []
+);
 
   const fetchOrderInfo = useCallback(async () => {
     if (!id) return;
