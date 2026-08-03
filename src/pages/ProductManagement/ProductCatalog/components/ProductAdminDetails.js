@@ -349,7 +349,7 @@ const ProductAdminDetails = () => {
           )} */}
           <Link
             to={`/app/product-catalog/form/${id}`}
-            className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
           >
             Edit
           </Link>
