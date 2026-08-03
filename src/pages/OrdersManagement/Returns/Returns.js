@@ -942,6 +942,256 @@ const Returns = () => {
         sortable: true,
         render: (value) => formatDateTime12Hour(value),
       },
+      {
+        key: "actions",
+        label: "Actions",
+        sortable: false,
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openDetail(row)}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <MdVisibility size={16} className="text-blue-600" />
+              View Details
+            </button>
+
+            {row.status === "requested" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openAction("approve", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+                >
+                  <MdCheckCircle size={16} />
+                  {isSeller ? "Accept Return" : "Approve Return"}
+                </button>
+
+                {!isSeller && (
+                  <button
+                    type="button"
+                    onClick={() => openAction("reject", row)}
+                    className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                  >
+                    <MdClose size={16} />
+                    Reject Return
+                  </button>
+                )}
+              </>
+            )}
+
+            {["approved", "pickup_failed"].includes(row.status) && (
+              <button
+                type="button"
+                onClick={() => openAction("schedule", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+              >
+                <MdLocalShipping size={16} />
+                Arrange Pickup
+              </button>
+            )}
+
+            {[
+              "reverse_pickup_scheduled",
+              "pickup_failed",
+              "in_reverse_transit",
+            ].includes(row.status) &&
+              row.reverseShipment?.shipmentId && (
+                <button
+                  type="button"
+                  onClick={() => openAction("tracking", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  <MdLocalShipping size={16} />
+                  Update Tracking
+                </button>
+              )}
+
+            {row.status === "shipped_back" && (
+              <button
+                type="button"
+                onClick={() => openAction("receive", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+              >
+                <MdAssignmentReturn size={16} />
+                Confirm Receipt
+              </button>
+            )}
+
+            {row.status === "received" && (
+              <button
+                type="button"
+                onClick={() => openAction("qc", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-amber-200 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50"
+              >
+                <MdFactCheck size={16} />
+                Record QC
+              </button>
+            )}
+
+            {row.status === "qc_failed" &&
+              row.qcReview?.status === "evidence_requested" && (
+                <button
+                  type="button"
+                  onClick={() => openAction("qc_evidence", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-violet-200 px-2.5 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50"
+                >
+                  <MdUploadFile size={16} />
+                  Submit QC Evidence
+                </button>
+              )}
+
+            {!isSeller && row.status === "qc_failed" && (
+              <button
+                type="button"
+                onClick={() => openAction("qc_decision", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-amber-200 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50"
+              >
+                <MdRateReview size={16} />
+                Review QC Failure
+              </button>
+            )}
+
+            {row.status === "qc_failure_upheld" &&
+              row.returnToCustomer?.required !== false &&
+              !row.returnToCustomer?.trackingNumber && (
+                <button
+                  type="button"
+                  onClick={() => openAction("return_customer", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-orange-200 px-2.5 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-50"
+                >
+                  <MdAssignmentReturn size={16} />
+                  Return to Customer
+                </button>
+              )}
+
+            {row.status === "qc_failure_upheld" &&
+              row.returnToCustomer?.trackingNumber && (
+                <button
+                  type="button"
+                  onClick={() => openAction("return_customer_tracking", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  <MdLocalShipping size={16} />
+                  Update Customer Shipment
+                </button>
+              )}
+
+            {["qc_passed", "qc_completed"].includes(row.status) && (
+              <>
+                {!isSeller && (
+                  <button
+                    type="button"
+                    onClick={() => openAction("refund", row)}
+                    className="inline-flex items-center gap-1 rounded-md border border-orange-200 px-2.5 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-50"
+                  >
+                    <MdReplay size={16} />
+                    Process Refund
+                  </button>
+                )}
+
+                {(!isSeller ||
+                  ["replacement", "exchange"].includes(row.resolution)) && (
+                  <button
+                    type="button"
+                    onClick={() => openAction("replacement_request", row)}
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 px-2.5 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50"
+                  >
+                    <MdSwapHoriz size={16} />
+                    Request Replacement
+                  </button>
+                )}
+              </>
+            )}
+
+            {!isSeller && row.status === "replacement_requested" && (
+              <button
+                type="button"
+                onClick={() => openAction("replacement_approve", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+              >
+                <MdCheckCircle size={16} />
+                Approve Replacement
+              </button>
+            )}
+
+            {row.status === "replacement_created" && (
+              <button
+                type="button"
+                onClick={() => openAction("replacement_ship", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+              >
+                <MdLocalShipping size={16} />
+                Ship Replacement
+              </button>
+            )}
+
+            {!isSeller && row.status === "replacement_shipped" && (
+              <button
+                type="button"
+                onClick={() => openAction("replacement_deliver", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+              >
+                <MdCheckCircle size={16} />
+                Confirm Replacement Delivery
+              </button>
+            )}
+
+            {!isSeller && row.status === "replacement_delivered" && (
+              <button
+                type="button"
+                onClick={() => openAction("replacement_complete", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+              >
+                <MdDoneAll size={16} />
+                Complete Replacement
+              </button>
+            )}
+
+            {!isSeller && row.status === "refund_failed" && (
+              <button
+                type="button"
+                onClick={() => openAction("retry_refund", row)}
+                className="inline-flex items-center gap-1 rounded-md border border-orange-200 px-2.5 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-50"
+              >
+                <MdReplay size={16} />
+                Retry Refund
+              </button>
+            )}
+
+            {!isSeller &&
+              ["refund_pending", "refund_failed"].includes(row.status) &&
+              row.refund?.providerRefundId && (
+                <button
+                  type="button"
+                  onClick={() => openAction("sync_refund", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  <MdRefresh size={16} />
+                  Sync Refund Status
+                </button>
+              )}
+
+            {!isSeller &&
+              !["closed", "refunded", "replaced"].includes(row.status) &&
+              !(
+                row.status === "qc_failure_upheld" &&
+                row.returnToCustomer?.required !== false &&
+                row.returnToCustomer?.status !== "delivered"
+              ) && (
+                <button
+                  type="button"
+                  onClick={() => openAction("close", row)}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <MdClose size={16} />
+                  Close Return
+                </button>
+              )}
+          </div>
+        ),
+      },
     ],
     [isSeller, openAction, openDetail],
   );
@@ -995,246 +1245,6 @@ const Returns = () => {
           filename: "returns-refunds",
           columns,
           data: visibleReturns,
-        }}
-        rowActions={(row) => {
-          const actions = [
-            {
-              label: "View Details",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.VIEW,
-              onClick: () => openDetail(row),
-            },
-          ];
-
-          if (row.status === "requested") {
-            actions.push({
-              label: isSeller ? "Accept Return" : "Approve Return",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.APPROVE,
-              onClick: () => openAction("approve", row),
-            });
-
-            if (!isSeller) {
-              actions.push({
-                label: "Reject Return",
-                icon: <MdClose size={16} className="text-red-600" />,
-                requiredModule: "returns",
-                requiredAction: ACTIONS.REJECT,
-                onClick: () => openAction("reject", row),
-              });
-            }
-          }
-
-          if (["approved", "pickup_failed"].includes(row.status)) {
-            actions.push({
-              label: "Arrange Pickup",
-              icon: <MdLocalShipping size={16} className="text-indigo-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("schedule", row),
-            });
-          }
-
-          if (
-            [
-              "reverse_pickup_scheduled",
-              "pickup_failed",
-              "in_reverse_transit",
-            ].includes(row.status) &&
-            row.reverseShipment?.shipmentId
-          ) {
-            actions.push({
-              label: "Update Tracking",
-              icon: <MdLocalShipping size={16} className="text-blue-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("tracking", row),
-            });
-          }
-
-          if (row.status === "shipped_back") {
-            actions.push({
-              label: "Confirm Receipt",
-              icon: <MdAssignmentReturn size={16} className="text-green-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("receive", row),
-            });
-          }
-
-          if (row.status === "received") {
-            actions.push({
-              label: "Record QC",
-              icon: <MdFactCheck size={16} className="text-amber-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("qc", row),
-            });
-          }
-
-          if (
-            row.status === "qc_failed" &&
-            row.qcReview?.status === "evidence_requested"
-          ) {
-            actions.push({
-              label: "Submit QC Evidence",
-              icon: <MdUploadFile size={16} className="text-violet-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("qc_evidence", row),
-            });
-          }
-
-          if (!isSeller && row.status === "qc_failed") {
-            actions.push({
-              label: "Review QC Failure",
-              icon: <MdRateReview size={16} className="text-amber-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.APPROVE,
-              onClick: () => openAction("qc_decision", row),
-            });
-          }
-
-          if (
-            row.status === "qc_failure_upheld" &&
-            row.returnToCustomer?.required !== false &&
-            !row.returnToCustomer?.trackingNumber
-          ) {
-            actions.push({
-              label: "Return to Customer",
-              icon: (
-                <MdAssignmentReturn size={16} className="text-orange-600" />
-              ),
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("return_customer", row),
-            });
-          }
-
-          if (
-            row.status === "qc_failure_upheld" &&
-            row.returnToCustomer?.trackingNumber
-          ) {
-            actions.push({
-              label: "Update Customer Shipment",
-              icon: <MdLocalShipping size={16} className="text-blue-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("return_customer_tracking", row),
-            });
-          }
-
-          if (["qc_passed", "qc_completed"].includes(row.status)) {
-            if (!isSeller) {
-              actions.push({
-                label: "Process Refund",
-                icon: <MdReplay size={16} className="text-orange-600" />,
-                requiredModule: "returns",
-                requiredAction: ACTIONS.APPROVE,
-                onClick: () => openAction("refund", row),
-              });
-            }
-
-            if (
-              !isSeller ||
-              ["replacement", "exchange"].includes(row.resolution)
-            ) {
-              actions.push({
-                label: "Request Replacement",
-                icon: <MdSwapHoriz size={16} className="text-violet-600" />,
-                requiredModule: "returns",
-                requiredAction: ACTIONS.UPDATE,
-                onClick: () => openAction("replacement_request", row),
-              });
-            }
-          }
-
-          if (!isSeller && row.status === "replacement_requested") {
-            actions.push({
-              label: "Approve Replacement",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.APPROVE,
-              onClick: () => openAction("replacement_approve", row),
-            });
-          }
-
-          if (row.status === "replacement_created") {
-            actions.push({
-              label: "Ship Replacement",
-              icon: <MdLocalShipping size={16} className="text-indigo-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("replacement_ship", row),
-            });
-          }
-
-          if (!isSeller && row.status === "replacement_shipped") {
-            actions.push({
-              label: "Confirm Replacement Delivery",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("replacement_deliver", row),
-            });
-          }
-
-          if (!isSeller && row.status === "replacement_delivered") {
-            actions.push({
-              label: "Complete Replacement",
-              icon: <MdDoneAll size={16} className="text-green-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("replacement_complete", row),
-            });
-          }
-
-          if (!isSeller && row.status === "refund_failed") {
-            actions.push({
-              label: "Retry Refund",
-              icon: <MdReplay size={16} className="text-orange-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.APPROVE,
-              onClick: () => openAction("retry_refund", row),
-            });
-          }
-
-          if (
-            !isSeller &&
-            ["refund_pending", "refund_failed"].includes(row.status) &&
-            row.refund?.providerRefundId
-          ) {
-            actions.push({
-              label: "Sync Refund Status",
-              icon: <MdRefresh size={16} className="text-blue-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.APPROVE,
-              onClick: () => openAction("sync_refund", row),
-            });
-          }
-
-          const canClose =
-            !isSeller &&
-            !["closed", "refunded", "replaced"].includes(row.status) &&
-            !(
-              row.status === "qc_failure_upheld" &&
-              row.returnToCustomer?.required !== false &&
-              row.returnToCustomer?.status !== "delivered"
-            );
-
-          if (canClose) {
-            actions.push({
-              label: "Close Return",
-              icon: <MdClose size={16} className="text-gray-600" />,
-              requiredModule: "returns",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openAction("close", row),
-            });
-          }
-
-          return actions;
         }}
       />
       <DefaultModal
@@ -1879,7 +1889,7 @@ const Returns = () => {
                   )}
                 </select>
               </label>
-              <Input
+              {/* <Input
                 labelName="Location"
                 value={action.location}
                 onChange={(event) =>
@@ -1888,7 +1898,7 @@ const Returns = () => {
                     location: event.target.value,
                   }))
                 }
-              />
+              /> */}
             </div>
           )}
           {["approve", "receive", "qc", "qc_evidence", "qc_decision"].includes(
@@ -1908,18 +1918,21 @@ const Returns = () => {
                   </div>
                   {action.type === "approve" && (
                     <Input
-                      labelName={`Approved quantity${item.requestedQuantity || item.quantity ? ` (max ${item.requestedQuantity || item.quantity})` : ""}`}
+                      labelName={`Approved quantity${
+                        item.requestedQuantity || item.quantity
+                          ? ` (max ${item.requestedQuantity || item.quantity})`
+                          : ""
+                      }`}
                       type="number"
                       min="0"
                       max={item.requestedQuantity || item.quantity || undefined}
-                      value={item.approvedQuantity}
-                      onChange={(event) =>
-                        updateItemAction(
-                          index,
-                          "approvedQuantity",
-                          event.target.value,
-                        )
+                      value={
+                        item.approvedQuantity ??
+                        item.requestedQuantity ??
+                        item.quantity ??
+                        ""
                       }
+                      readOnly
                       required
                     />
                   )}

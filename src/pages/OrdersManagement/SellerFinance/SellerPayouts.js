@@ -14,8 +14,9 @@ import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
+import { exportToCsv } from "../../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const STATUSES = ["pending", "processing", "approved", "on_hold", "completed", "failed", "cancelled"];
 const FILTER_FIELDS = [
@@ -154,6 +155,78 @@ const SellerPayouts = () => {
     return base;
   }, [isSeller]);
 
+  const payoutExportColumns = useMemo(() => [
+    ...(!isSeller ? [{ label: "Seller", value: (row) => sellerName(row) }] : []),
+    { label: "Status", value: (row) => formatLabel(row.status || "pending") },
+    { label: "Seller receivable", value: (row) => money(valueOf(row, "total_amount", "totalAmount"), row.currency) },
+    { label: "Platform commission", value: (row) => `-${money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}` },
+    { label: "GST on commission", value: (row) => `-${money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}` },
+    { label: "TCS/TDS", value: (row) => {
+      const breakdown = breakdownOf(row);
+      return `-${money(Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0), row.currency)}`;
+    } },
+    { label: "Shipping net", value: (row) => {
+      const breakdown = breakdownOf(row);
+      return signedMoney(Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0), row.currency);
+    } },
+    { label: "Refunds", value: (row) => `-${money(valueOf(row, "refund_amount", "refundAmount"), row.currency)}` },
+    { label: "Net payout", value: (row) => money(valueOf(row, "net_amount", "netAmount"), row.currency) },
+    { label: "Period", value: (row) => `${fmt(valueOf(row, "period_start", "periodStart"))} – ${fmt(valueOf(row, "period_end", "periodEnd"))}` },
+    { label: "Paid", value: (row) => fmt(valueOf(row, "processed_at", "processedAt")) },
+  ], [isSeller]);
+
+ const exportPayoutTable = () => {
+  if (!payload.list.length) {
+    toast.error("No payout records available to export", {
+      id: "export-payout-error",
+    });
+    return;
+  }
+
+  exportToCsv(payload.list, {
+    filename: "seller-payouts.csv",
+    columns: payoutExportColumns,
+  });
+
+  toast.success(
+    `${payload.list.length} payout record${payload.list.length === 1 ? "" : "s"} exported`,
+    {
+      id: "export-payout-success",
+    }
+  );
+};
+
+  const settlementExportColumns = useMemo(() => [
+    { label: "Settlement", value: (row) => `#${String(row.id || "").slice(0, 8) || "—"}` },
+    { label: "Payout", value: (row) => `#${String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}` },
+    { label: "Seller receivable", value: (row) => money(valueOf(row, "gross_amount", "grossAmount"), row.currency) },
+    { label: "Platform commission", value: (row) => `-${money(valueOf(row, "commission_amount", "commissionAmount"), row.currency)}` },
+    { label: "GST on commission", value: (row) => `-${money(valueOf(row, "tax_amount", "taxAmount"), row.currency)}` },
+    { label: "TCS/TDS", value: (row) => {
+      const breakdown = breakdownOf(row);
+      return `-${money(Number(breakdown.gstTcsAmount || 0) + Number(breakdown.incomeTaxTdsAmount || 0), row.currency)}`;
+    } },
+    { label: "Shipping net", value: (row) => {
+      const breakdown = breakdownOf(row);
+      return signedMoney(Number(breakdown.shippingReimbursementAmount || 0) - Number(breakdown.shippingDeductionAmount || 0), row.currency);
+    } },
+    { label: "Net", value: (row) => money(valueOf(row, "net_amount", "netAmount"), row.currency) },
+    { label: "Status", value: (row) => formatLabel(row.status || "pending") },
+    { label: "Paid", value: (row) => fmt(valueOf(row, "settlement_date", "settlementDate") ?? row.created_at) },
+  ], []);
+
+  const exportSettlementTable = () => {
+    if (!settlementsPayload.list.length) {
+      toast.error("No settlement records available to export");
+      return;
+    }
+    exportToCsv(settlementsPayload.list, {
+      filename: "seller-settlements.csv",
+      columns: settlementExportColumns,
+    });
+    toast.success(`${settlementsPayload.list.length} settlement record${settlementsPayload.list.length === 1 ? "" : "s"} exported`);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -164,19 +237,9 @@ const SellerPayouts = () => {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => downloadFile(
-                isSeller ? ENDPOINTS.payouts.myPayoutsExport : ENDPOINTS.payouts.sellerPayoutsExport,
-                { format: "csv" },
-                "seller-payouts.csv",
-                "payouts-csv",
-              )}
-              disabled={downloadingId === "payouts-csv"}
+              onClick={exportPayoutTable}
             >
-              {downloadingId === "payouts-csv" ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-              ) : (
-                <MdDownload size={16} />
-              )}
+              <MdDownload size={16} />
               Export
             </button>
           </div>
@@ -220,15 +283,10 @@ const SellerPayouts = () => {
             </div>
             <button
               type="button"
-              onClick={() => downloadFile(ENDPOINTS.payouts.mySettlementsExport, { format: "csv" }, "seller-settlements.csv", "settlements-csv")}
-              disabled={downloadingId === "settlements-csv"}
+              onClick={exportSettlementTable}
               className="admin-btn-secondary shrink-0"
             >
-              {downloadingId === "settlements-csv" ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-              ) : (
-                <MdDownload size={16} />
-              )}
+              <MdDownload size={16} />
               Export
             </button>
           </div>

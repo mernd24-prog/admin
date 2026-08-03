@@ -579,13 +579,7 @@ const handlePincodeKeyDown = (event) => {
             setForm((prev) => ({
               ...prev,
               serviceabilityMode: mode.value,
-              allowedPincodes:
-                mode.value === "all_india" ? [] : prev.allowedPincodes,
             }));
-
-            if (mode.value === "all_india") {
-              setPincodeInput("");
-            }
           }}
           className="sr-only"
         />
@@ -667,7 +661,7 @@ const handlePincodeKeyDown = (event) => {
   </div>
 )}
 
-        {needsCountry && (
+        {/* {needsCountry && (
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-1">
               <label className="admin-label">Country</label>
@@ -712,7 +706,7 @@ const handlePincodeKeyDown = (event) => {
               </div>
             )}
           </div>
-        )}
+        )} */}
 
         {/* {(mode === "selected_states" || mode === "selected_cities") && (
           <div className="space-y-1">
@@ -1459,22 +1453,29 @@ export default function ShippingProfiles() {
     setTemplateModal({ open: false, mode: "create", template: null });
   const closeCloneModal = () => setCloneModal({ open: false, template: null });
 
-  const buildPayload = () => ({
-    ...form,
-    serviceabilityMode: normalizeServiceabilityMode(
+  const buildPayload = () => {
+    const serviceabilityMode = normalizeServiceabilityMode(
       form.serviceabilityMode,
-    ),
-    sellerId: form.sellerId || activeSellerId || undefined,
-    organizationId: form.organizationId || null,
-    shippingCharge:
-      form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
-    freeShippingThreshold:
-      form.freeShippingThreshold !== ""
-        ? Number(form.freeShippingThreshold)
-        : null,
-    etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
-    etaMax: form.etaMax !== "" ? Number(form.etaMax) : null,
-  });
+    );
+    return {
+      ...form,
+      serviceabilityMode,
+      allowedPincodes:
+        serviceabilityMode === "selected_pincodes"
+          ? form.allowedPincodes
+          : [],
+      sellerId: form.sellerId || activeSellerId || undefined,
+      organizationId: form.organizationId || null,
+      shippingCharge:
+        form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
+      freeShippingThreshold:
+        form.freeShippingThreshold !== ""
+          ? Number(form.freeShippingThreshold)
+          : null,
+      etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
+      etaMax: form.etaMax !== "" ? Number(form.etaMax) : null,
+    };
+  };
 
   const buildTemplatePayload = () => {
     const payload = buildPayload();

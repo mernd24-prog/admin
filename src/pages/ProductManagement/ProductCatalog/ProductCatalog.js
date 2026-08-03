@@ -32,7 +32,6 @@ import {
   reviewProductRevision,
 } from "../../../Redux/productSlice";
 // import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
-import Loader from "../../../components/Loader/Loader";
 import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
 import { transformArray } from "../../../_helpers/globalFunctions";
@@ -1060,7 +1059,6 @@ const ProductCatalog = () => {
 
   return (
     <div className="overflow-x-auto overflow-y-auto">
-      <Loader loading={loading} />
       <PageHeader
         title={sellerView ? "Products" : "Product Catalog"}
         subtitle={

@@ -15,7 +15,7 @@ const ProductStatusBadge = ({ status, revisionStatus }) => {
   const effectiveStatus = revisionStatus === 'change_pending' ? 'change_pending' : status;
   const cfg = STATUS_CONFIG[effectiveStatus] || { label: effectiveStatus || 'Unknown', color: 'bg-gray-100 text-gray-600' };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-2 px-4 py-2  text-sm rounded-lg transition-colors px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
       {cfg.label}
     </span>
   );

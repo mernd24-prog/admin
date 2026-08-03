@@ -19,7 +19,7 @@ const Loader = ({ loading = true, fullScreen = true, label }) => {
 
   const loader = (
     <div
-      className={`${fullScreen ? "fixed inset-0 z-[9999] bg-black/40 backdrop-blur-[2px]" : "min-h-32"} flex items-center justify-center`}
+      className={`${fullScreen ? "fixed inset-0 z-[11000] bg-black/40 backdrop-blur-[2px]" : "min-h-32"} flex items-center justify-center`}
       role="status"
       aria-label={label || "Loading"}
     >

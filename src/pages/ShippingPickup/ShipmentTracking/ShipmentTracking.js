@@ -472,6 +472,9 @@ const ShipmentTracking = () => {
         `Shipment status updated to ${shipmentStepLabel(trackingAction.status)}.`,
       );
       await refreshSelectedShipment(selectedShipment.id);
+      if (["in_transit", "delivered"].includes(trackingAction.status)) {
+        setDetailModal(false);
+      }
     } catch (requestError) {
       toast.error(
         requestError?.message ||
