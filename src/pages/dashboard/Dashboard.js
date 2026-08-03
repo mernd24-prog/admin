@@ -425,9 +425,9 @@ function GoldDateRangeCalendar({
 export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [range, setRange] = useState("year");
-  const [dateFilters, setDateFilters] = useState(() => getRangeDates("year"));
-  const [customDates, setCustomDates] = useState(() => getRangeDates("year"));
+  const [range, setRange] = useState("today");
+  const [dateFilters, setDateFilters] = useState(() => getRangeDates("today"));
+  const [customDates, setCustomDates] = useState(() => getRangeDates("today"));
   const [customCalendarViewDate, setCustomCalendarViewDate] = useState(
     () => new Date(),
   );

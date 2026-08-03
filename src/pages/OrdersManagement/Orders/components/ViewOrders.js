@@ -660,7 +660,18 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const commission = money(firstDefined(record?.commission_amount, record?.commissionAmount, metadata.platformFeeAmount, metadata.commissionFeeAmount, product.platformFeeAmount, pricing.platformFeeAmount, seller.commissionFee * taxableShare));
     const commissionGst = money(firstDefined(record?.tax_amount, record?.taxAmount, metadata.platformFeeTaxAmount, product.platformFeeTaxAmount, pricing.platformFeeTaxAmount, seller.platformFeeTax * taxableShare));
     const commissionRate = money(firstDefined(metadata.platformFeeRate, metadata.commissionRate, pricing.platformFeeRate, pricing.commissionRate, seller.commissionRates?.[0], 0));
-    const commissionBase = commissionRate > 0 ? money((commission * 100) / commissionRate) : taxableBase;
+    const commissionBase = money(firstDefined(
+      metadata.sellerCommissionBaseAmount,
+      metadata.commissionBaseAmount,
+      metadata.platformFeeBaseAmount,
+      product.sellerCommissionBaseAmount,
+      product.commissionBaseAmount,
+      pricing.sellerCommissionBaseAmount,
+      pricing.seller_commission_base_amount,
+      pricing.commissionBaseAmount,
+      pricing.commission_base_amount,
+      commissionRate > 0 ? (commission * 100) / commissionRate : taxableBase,
+    ));
     const netCommission = money(commission * (1 - returnRatio));
     const netCommissionGst = money(commissionGst * (1 - returnRatio));
     const netCommissionBase = money(commissionBase * (1 - returnRatio));

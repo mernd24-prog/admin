@@ -41,6 +41,19 @@ const Row = ({ label, value }) => (
   </div>
 );
 
+const getShippingPincodeSummary = (shipping = {}) => {
+  const mode = shipping?.serviceabilityMode || "inherit";
+  const allowed = shipping?.allowPincodes || shipping?.serviceablePincodes || [];
+  if (mode === "disabled") return "Delivery disabled for this product";
+  if (mode === "allowlist") {
+    return allowed.length
+      ? `Only allowed pincodes: ${allowed.join(", ")}`
+      : "Allowlist selected, but no pincodes added";
+  }
+  if (mode === "all_pincodes") return "Deliverable to all pincodes";
+  return "Inherits seller or shipping profile pincode rules";
+};
+
 // const CHECKLIST_LABELS = {
 //   titleVerified: "Title & Description",
 //   categoryVerified: "Category",
@@ -741,12 +754,36 @@ const ProductAdminDetails = () => {
           onClose={() => setVariantGalleryOpen(false)}
         />
 
-        {(product.dimensions || product.origin || product.warranty) && (
+        {(product.dimensions || product.origin || product.warranty || product.shipping) && (
           <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Shipping & Compliance
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+              {product.shipping && (
+                <>
+                  <Row
+                    label="Delivery pincode rule"
+                    value={getShippingPincodeSummary(product.shipping)}
+                  />
+                  <Row
+                    label="Shipping charge"
+                    value={
+                      product.shipping.freeShipping
+                        ? "Free shipping"
+                        : product.shipping.shippingCharge ?? product.shipping.additionalCost
+                    }
+                  />
+                  <Row
+                    label="COD"
+                    value={
+                      product.shipping.codAvailable === false
+                        ? "Not available"
+                        : "Available"
+                    }
+                  />
+                </>
+              )}
               {product.dimensions && (
                 <>
                   <Row

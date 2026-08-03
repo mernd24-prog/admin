@@ -238,6 +238,7 @@ export const ENDPOINTS = {
     hold: (payoutId) => `/sellers/commissions/payouts/${payoutId}/hold`,
     releaseHold: (payoutId) => `/sellers/commissions/payouts/${payoutId}/release-hold`,
     retry: (payoutId) => `/sellers/commissions/payouts/${payoutId}/retry`,
+    syncRazorpayX: (payoutId) => `/sellers/commissions/payouts/${payoutId}/sync-razorpayx`,
     operationsQueue: "/sellers/commissions/payout-ops/queue",
     sellerWallet: (sellerId) => `/sellers/commissions/wallet/${sellerId}`,
     negativeBalances: "/sellers/commissions/negative-balances",

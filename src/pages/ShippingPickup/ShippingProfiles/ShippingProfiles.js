@@ -872,28 +872,12 @@ const handlePincodeKeyDown = (event) => {
         </div>
       </section>
 
-      {/* COD & Flags */}
+      {/* Profile flags */}
       <section className="space-y-3">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
           Options
         </h4>
         <div className="space-y-2">
-          <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">
-                COD Available
-              </p>
-              <p className="text-xs text-gray-500">
-                Allow Cash on Delivery for this profile
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--admin-blue)]"
-              checked={Boolean(form.codAvailable)}
-              onChange={(e) => patch("codAvailable", e.target.checked)}
-            />
-          </label>
           {!isTemplate && (
             <label className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
               <div>
@@ -1801,17 +1785,6 @@ export default function ShippingProfiles() {
         ),
       },
       {
-        key: "codAvailable",
-        label: "COD",
-        render: (value) => (
-          <StatusBadge
-            status={value ? "yes" : "no"}
-            label={value ? "Available" : "Unavailable"}
-            dot
-          />
-        ),
-      },
-      {
         key: "etaMin",
         label: "ETA",
         render: (_, row) => etaLabel(row),
@@ -2084,7 +2057,7 @@ export default function ShippingProfiles() {
         <div className="space-y-4 py-2">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             This creates a private seller profile. Editing pincodes, charge,
-            ETA, COD, or status after copying will not change the admin
+            ETA, or status after copying will not change the admin
             template.
           </div>
           {!isSeller && (

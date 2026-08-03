@@ -194,7 +194,16 @@ export const approveSellerPayout = createApiThunkPrivate(
   (payload) => ENDPOINTS.payouts.approve(payload?.payoutId || payload?.id),
   "POST",
   false,
-  { transformBody: (payload = {}) => ({ note: payload.note, paymentMethod: payload.paymentMethod }) }
+  {
+    transformBody: (payload = {}) => {
+      const body = {};
+      const note = payload.note ?? payload.notes;
+      if (note !== undefined && note !== null && note !== "") body.note = note;
+      if (payload.paymentMethod) body.paymentMethod = payload.paymentMethod;
+      if (payload.autoProcess === true) body.autoProcess = true;
+      return body;
+    },
+  }
 );
 
 export const holdSellerPayout = createApiThunkPrivate(
@@ -210,7 +219,7 @@ export const releaseSellerPayoutHold = createApiThunkPrivate(
   (payload) => ENDPOINTS.payouts.releaseHold(payload?.payoutId || payload?.id),
   "POST",
   false,
-  { transformBody: (payload = {}) => ({ approve: payload.approve === true, note: payload.note }) }
+  { transformBody: (payload = {}) => ({ approve: payload.approve === true, note: payload.note, paymentMethod: payload.paymentMethod, autoProcess: payload.autoProcess === true }) }
 );
 
 export const retrySellerPayout = createApiThunkPrivate(
@@ -225,6 +234,14 @@ export const retrySellerPayout = createApiThunkPrivate(
       autoProcess: payload.autoProcess === true,
     }),
   }
+);
+
+export const syncRazorpayXPayout = createApiThunkPrivate(
+  "sellerCommissions/syncRazorpayXPayout",
+  (payload) => ENDPOINTS.payouts.syncRazorpayX(payload?.payoutId || payload?.id),
+  "POST",
+  false,
+  { transformBody: () => ({}) }
 );
 
 export const resolveNegativeBalance = createApiThunkPrivate(

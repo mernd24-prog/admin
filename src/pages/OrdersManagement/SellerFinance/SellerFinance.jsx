@@ -421,14 +421,18 @@ const inputCls =
   "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]";
 
 const PAYMENT_METHODS = [
-  "manual",
-  "neft",
-  "rtgs",
-  "imps",
-  "upi",
-  "cheque",
-  "bank_transfer",
+  { value: "manual", label: "Manual / record later" },
+  { value: "razorpayx", label: "RazorpayX bank payout" },
+  { value: "neft", label: "NEFT" },
+  { value: "rtgs", label: "RTGS" },
+  { value: "imps", label: "IMPS" },
+  { value: "upi", label: "UPI" },
+  { value: "cheque", label: "Cheque" },
+  { value: "bank_transfer", label: "Bank transfer" },
 ];
+
+const availablePaymentMethods = (razorpayXEnabled) =>
+  PAYMENT_METHODS.filter((method) => method.value !== "razorpayx" || razorpayXEnabled);
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -463,9 +467,24 @@ const SellerFinance = () => {
   const [processOrganizationOptions, setProcessOrganizationOptions] = useState(
     [],
   );
+  const [runtime, setRuntime] = useState({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+  const razorpayXEnabled = runtime?.razorpayX?.enabled === true;
+  const payoutMethods = useMemo(() => availablePaymentMethods(razorpayXEnabled), [razorpayXEnabled]);
+
+  const loadRuntime = useCallback(async () => {
+    if (isSeller) return;
+    try {
+      const response = await apiRequest("GET", ENDPOINTS.commerceSettings.detail);
+      const data = response?.data || response || {};
+      setRuntime(data.runtime || {});
+    } catch {
+      setRuntime({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+    }
+  }, [isSeller]);
 
   React.useEffect(() => {
     if (isSeller) return;
+    loadRuntime();
     dropdownApi
       .getSellers({ limit: 100 })
       .then(setSellerOptions)
@@ -474,7 +493,7 @@ const SellerFinance = () => {
       .getOrders({ limit: 100 })
       .then(setOrderOptions)
       .catch(() => {});
-  }, [isSeller]);
+  }, [isSeller, loadRuntime]);
 
   // Process Payout modal
   const [processModal, setProcessModal] = useState({
@@ -880,8 +899,11 @@ const SellerFinance = () => {
         sellerId: processModal.sellerId.trim(),
         organizationId: processModal.organizationId || undefined,
         paymentMethod: processModal.paymentMethod,
+        autoProcess: processModal.paymentMethod === "razorpayx",
         paymentReference:
-          processModal.paymentReference.trim() || `admin_${Date.now()}`,
+          processModal.paymentMethod === "razorpayx"
+            ? undefined
+            : processModal.paymentReference.trim() || `admin_${Date.now()}`,
         note: processModal.note.trim() || undefined,
         ...(selectedCommissions.length
           ? {
@@ -985,6 +1007,23 @@ const SellerFinance = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openOrderPayoutModal = (commission) => {
+    const sellerId = commission.seller_id || commission.sellerId || "";
+    const orderId = commission.order_id || commission.orderId || "";
+    setProcessModal({
+      open: true,
+      mode: "order",
+      orderId,
+      sellerId,
+      organizationId: commission.organization_id || commission.organizationId || "",
+      paymentMethod: "manual",
+      paymentReference: "",
+      periodStart: "",
+      periodEnd: "",
+      note: `Payout for order ${commission.order_number || commission.order_id || orderId}`,
+    });
   };
 
   const handleCompletePayoutSubmit = async () => {
@@ -1382,7 +1421,7 @@ const SellerFinance = () => {
                             <button
                               type="button"
                               className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
-                              onClick={() => handleSingleCommissionPayout(row)}
+                              onClick={() => openOrderPayoutModal(row)}
                               disabled={submitting}
                             >
                               Payout This Order
@@ -1543,9 +1582,7 @@ const SellerFinance = () => {
                               <button
                                 type="button"
                                 className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                                onClick={() =>
-                                  handleSingleCommissionPayout(row)
-                                }
+                                onClick={() => openOrderPayoutModal(row)}
                                 disabled={submitting}
                               >
                                 Payout This Order
@@ -1994,12 +2031,22 @@ const SellerFinance = () => {
                     }))
                   }
                 >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m} value={m}>
-                      {m.toUpperCase()}
+                  {payoutMethods.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
                     </option>
                   ))}
                 </select>
+                {processModal.paymentMethod === "razorpayx" && (
+                  <p className="text-xs text-[#65718b]">
+                    Uses the seller's verified onboarding bank details and sends the payout through RazorpayX.
+                  </p>
+                )}
+                {!razorpayXEnabled && (
+                  <p className="text-xs text-amber-700">
+                    RazorpayX is disabled in backend env, so automatic bank payout is hidden. Enable live keys or mock mode to test it.
+                  </p>
+                )}
               </FieldRow>
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
                 {processModal.mode === "order"
@@ -2081,9 +2128,9 @@ const SellerFinance = () => {
                     }))
                   }
                 >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m} value={m}>
-                      {m.toUpperCase()}
+                  {payoutMethods.filter((m) => m.value !== "razorpayx").map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
                     </option>
                   ))}
                 </select>

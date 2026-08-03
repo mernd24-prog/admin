@@ -1319,6 +1319,44 @@ const Returns = () => {
                 "Not available"}
             </div>
           </div>
+          {Array.isArray(detailReturn?.refund?.attempts) &&
+            detailReturn.refund.attempts.length > 0 && (
+              <div className="rounded border border-gray-100 p-3">
+                <div className="font-semibold text-gray-700 mb-2">
+                  Refund processing attempts
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-xs">
+                    <thead className="bg-gray-50 text-gray-600">
+                      <tr>
+                        <th className="px-2 py-1">Method</th>
+                        <th className="px-2 py-1">Provider</th>
+                        <th className="px-2 py-1 text-right">Amount</th>
+                        <th className="px-2 py-1 text-right">Gateway</th>
+                        <th className="px-2 py-1">Status</th>
+                        <th className="px-2 py-1">Provider refund</th>
+                        <th className="px-2 py-1">Started</th>
+                        <th className="px-2 py-1">Failure</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {detailReturn.refund.attempts.map((attempt, index) => (
+                        <tr key={attempt.attemptId || index}>
+                          <td className="px-2 py-1">{display(attempt.method)}</td>
+                          <td className="px-2 py-1">{display(attempt.provider)}</td>
+                          <td className="px-2 py-1 text-right">{money(attempt.amount)}</td>
+                          <td className="px-2 py-1 text-right">{money(attempt.providerAmount)}</td>
+                          <td className="px-2 py-1">{display(attempt.status)}</td>
+                          <td className="px-2 py-1">{attempt.providerRefundId || "—"}</td>
+                          <td className="px-2 py-1">{formatDateTime12Hour(attempt.startedAt)}</td>
+                          <td className="px-2 py-1">{attempt.failureReason || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           <div className="rounded border border-gray-100 p-3">
             <div className="font-semibold text-gray-700 mb-2">
               Eligibility &amp; Reverse Shipping

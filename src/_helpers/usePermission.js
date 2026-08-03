@@ -102,6 +102,8 @@ const MODULE_ALIASES = {
   'seller-finance-payouts': ['sellers/commissions', 'seller-payouts'],
   'seller-my-payouts': ['sellers/commissions'],
   'seller-payouts': ['sellers/commissions'],
+  'seller-cod-collections': ['sellers/commissions'],
+  'cod-collections': ['payments'],
   products: ['product'],
   product: ['products'],
   'product-catalog': ['products'],

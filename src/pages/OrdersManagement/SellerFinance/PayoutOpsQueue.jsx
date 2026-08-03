@@ -23,10 +23,13 @@ import {
   completeSellerPayout,
   failSellerPayout,
   cancelSellerPayout,
+  syncRazorpayXPayout,
 } from "../../../Redux/sellerCommissionsSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import { apiRequest } from "../../../_helpers/apiConfig";
+import { ENDPOINTS } from "../../../_helpers/endpoints";
 
 const PAYOUT_STATUSES = [
   "pending",
@@ -37,6 +40,7 @@ const PAYOUT_STATUSES = [
 ];
 
 const PAYMENT_METHODS = [
+  { value: "razorpayx", label: "RazorpayX bank payout" },
   { value: "bank_transfer", label: "Bank Transfer" },
   { value: "upi", label: "UPI" },
   { value: "neft", label: "NEFT" },
@@ -45,6 +49,9 @@ const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
   { value: "manual", label: "Manual" },
 ];
+
+const availablePaymentMethods = (razorpayXEnabled) =>
+  PAYMENT_METHODS.filter((method) => method.value !== "razorpayx" || razorpayXEnabled);
 
 const ACTION_TITLES = {
   approve: "Approve Payout",
@@ -135,6 +142,29 @@ const valueOf = (row = {}, ...keys) => {
 };
 const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
 const payoutId = (row) => row?._id || row?.id || row?.payoutId;
+const metadataOf = (row = {}) => {
+  const metadata = row.metadata || row.meta || {};
+  if (!metadata || typeof metadata !== "string") return metadata || {};
+  try { return JSON.parse(metadata); } catch { return {}; }
+};
+const razorpayXOf = (row = {}) => metadataOf(row).razorpayX || {};
+const payoutMethodText = (row = {}) => {
+  const method = valueOf(row, "paymentMethod", "payment_method");
+  return method === "razorpayx" ? "RazorpayX bank payout" : method ? display(method) : "—";
+};
+const payoutDurationText = (row = {}) => {
+  const rx = razorpayXOf(row);
+  if (rx.status === "processed" || row.status === "completed") return "Completed by provider";
+  if (rx.status === "queued") return "Queued by RazorpayX";
+  if (rx.status === "failed" || row.status === "failed") return "Failed — retry needed";
+  if (rx.payoutId || row.payment_method === "razorpayx") return "Usually minutes via IMPS";
+  return "";
+};
+const payoutFailureReason = (row = {}) => {
+  const metadata = metadataOf(row);
+  const rx = metadata.razorpayX || {};
+  return metadata.failedReason || metadata.cancellationReason || rx.rawWebhook?.failure_reason || rx.raw?.failure_reason || rx.raw?.status_details?.description || "";
+};
 
 const PayoutOpsQueue = () => {
   const dispatch = useDispatch();
@@ -151,6 +181,19 @@ const PayoutOpsQueue = () => {
   const [error, setError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
   const [confirmAction, setConfirmAction] = useState({ open: false });
+  const [runtime, setRuntime] = useState({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+  const razorpayXEnabled = runtime?.razorpayX?.enabled === true;
+  const payoutMethods = useMemo(() => availablePaymentMethods(razorpayXEnabled), [razorpayXEnabled]);
+
+  const fetchRuntime = useCallback(async () => {
+    try {
+      const response = await apiRequest("GET", ENDPOINTS.commerceSettings.detail);
+      const data = response?.data || response || {};
+      setRuntime(data.runtime || {});
+    } catch {
+      setRuntime({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+    }
+  }, []);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -176,8 +219,9 @@ const PayoutOpsQueue = () => {
   }, [dispatch, toQueryParams]);
 
   useEffect(() => {
+    fetchRuntime();
     fetchQueue();
-  }, [fetchQueue]);
+  }, [fetchQueue, fetchRuntime]);
 
   const openAction = (type, payout) => {
     setAction({
@@ -199,6 +243,15 @@ const PayoutOpsQueue = () => {
       return "Cancellation reason is required";
     if (action.type === "complete" && !action.paymentReference.trim())
       return "Payment reference is required before completion";
+    if (["approve", "retry", "release"].includes(action.type)) {
+      const existingMethod = valueOf(action.payout, "paymentMethod", "payment_method");
+      const selectedMethod = existingMethod === "razorpayx" ? "razorpayx" : action.paymentMethod;
+      if (selectedMethod === "razorpayx" && !razorpayXEnabled) {
+        return "RazorpayX is disabled. Configure RazorpayX keys or enable mock mode before starting bank payout.";
+      }
+    }
+    if (["approve", "retry", "release"].includes(action.type) && action.paymentMethod === "razorpayx" && action.type === "release" && !action.approve)
+      return "Enable approve on release to send a held payout through RazorpayX";
     return "";
   };
 
@@ -221,11 +274,16 @@ const PayoutOpsQueue = () => {
     const buildBody = () => {
       switch (action.type) {
         case "approve":
-          return {
-            ...base,
-            note: action.note,
-            paymentMethod: action.paymentMethod || undefined,
-          };
+          {
+            const existingMethod = valueOf(action.payout, "paymentMethod", "payment_method");
+            const paymentMethod = existingMethod === "razorpayx" ? "razorpayx" : action.paymentMethod;
+            return {
+              ...base,
+              note: action.note,
+              paymentMethod: paymentMethod || undefined,
+              autoProcess: paymentMethod === "razorpayx",
+            };
+          }
         case "hold":
           return { ...base, reason: action.reason };
         case "release":
@@ -233,12 +291,15 @@ const PayoutOpsQueue = () => {
             ...base,
             approve: action.approve,
             note: action.note,
+            paymentMethod: action.paymentMethod || undefined,
+            autoProcess: action.paymentMethod === "razorpayx",
           };
         case "retry":
           return {
             ...base,
             paymentReference: action.paymentReference || undefined,
             paymentMethod: action.paymentMethod || undefined,
+            autoProcess: action.paymentMethod === "razorpayx",
           };
         case "complete":
           return {
@@ -281,6 +342,24 @@ const PayoutOpsQueue = () => {
     }
   }, [action, dispatch, fetchQueue]);
 
+  const handleSyncRazorpayX = useCallback(async (row) => {
+    const id = payoutId(row);
+    if (!id) {
+      toast.error("Payout ID is missing");
+      return;
+    }
+    try {
+      setLoading(true);
+      await dispatch(syncRazorpayXPayout({ payoutId: id })).unwrap();
+      toast.success("RazorpayX status synced");
+      await fetchQueue();
+    } catch (requestError) {
+      toast.error(requestError?.message || requestError || "Failed to sync RazorpayX payout");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, fetchQueue]);
+
   const columns = useMemo(
     () => [
       {
@@ -319,15 +398,30 @@ const PayoutOpsQueue = () => {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (value) => <StatusBadge status={value} dot />,
+        render: (value, row) => (
+          <div>
+            <StatusBadge status={value} dot />
+            {payoutFailureReason(row) && (
+              <div className="mt-1 max-w-[220px] text-xs text-red-600">
+                {payoutFailureReason(row)}
+              </div>
+            )}
+          </div>
+        ),
       },
       {
         key: "paymentMethod",
         label: "Method",
         sortable: false,
         render: (_, row) => {
-          const method = valueOf(row, "paymentMethod", "payment_method");
-          return method ? display(method) : "—";
+          const rx = razorpayXOf(row);
+          return (
+            <div>
+              <div className="font-medium">{payoutMethodText(row)}</div>
+              {rx.payoutId && <div className="text-xs text-gray-400">Provider ID: {rx.payoutId}</div>}
+              {payoutDurationText(row) && <div className="text-xs text-gray-500">{payoutDurationText(row)}</div>}
+            </div>
+          );
         },
       },
       {
@@ -344,6 +438,8 @@ const PayoutOpsQueue = () => {
         label: "Actions",
         render: (_, row) => {
           const status = row.status;
+          const method = valueOf(row, "paymentMethod", "payment_method");
+          const isRazorpayX = method === "razorpayx";
           return (
             <div className="flex flex-wrap items-center gap-2">
               {status === "pending" && (
@@ -354,7 +450,7 @@ const PayoutOpsQueue = () => {
                       className="admin-btn-secondary !px-2 !py-1"
                       onClick={() => openAction("approve", row)}
                     >
-                      Approve
+                      {isRazorpayX ? "Start Payout" : "Approve"}
                     </button>
                   </PermissionGuard>
                   <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
@@ -392,15 +488,27 @@ const PayoutOpsQueue = () => {
               )}
               {status === "processing" && (
                 <>
-                  <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
-                    <button
-                      type="button"
-                      className="admin-btn-secondary !px-2 !py-1"
-                      onClick={() => openAction("complete", row)}
-                    >
-                      Complete
-                    </button>
-                  </PermissionGuard>
+                  {isRazorpayX ? (
+                    <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+                      <button
+                        type="button"
+                        className="admin-btn-secondary !px-2 !py-1"
+                        onClick={() => handleSyncRazorpayX(row)}
+                      >
+                        Sync Status
+                      </button>
+                    </PermissionGuard>
+                  ) : (
+                    <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+                      <button
+                        type="button"
+                        className="admin-btn-secondary !px-2 !py-1"
+                        onClick={() => openAction("complete", row)}
+                      >
+                        Complete
+                      </button>
+                    </PermissionGuard>
+                  )}
                   <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
                     <button
                       type="button"
@@ -424,7 +532,7 @@ const PayoutOpsQueue = () => {
         },
       },
     ],
-    []
+    [handleSyncRazorpayX]
   );
 
   return (
@@ -498,31 +606,53 @@ const PayoutOpsQueue = () => {
               <div><strong>Seller:</strong> {action.payout.sellerName || action.payout.seller?.displayName || "Seller"}</div>
               <div><strong>Net amount:</strong> {money(valueOf(action.payout, "net_amount", "netAmount", "amount"))}</div>
               <div><strong>Current status:</strong> {display(action.payout.status)}</div>
+              {payoutMethodText(action.payout) !== "—" && <div><strong>Method:</strong> {payoutMethodText(action.payout)}</div>}
+              {razorpayXOf(action.payout).payoutId && <div><strong>Provider ID:</strong> {razorpayXOf(action.payout).payoutId}</div>}
+              {payoutFailureReason(action.payout) && <div className="text-red-600"><strong>Failure reason:</strong> {payoutFailureReason(action.payout)}</div>}
+            </div>
+          )}
+          {!razorpayXEnabled && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              RazorpayX bank payout is currently disabled. Enable live RazorpayX keys or mock mode in backend env before using automatic seller bank payouts.
+              {runtime?.razorpayX?.missingKeys?.length ? (
+                <span className="mt-1 block">Missing: {runtime.razorpayX.missingKeys.join(", ")}</span>
+              ) : null}
             </div>
           )}
           {/* Approve */}
           {action.type === "approve" && (
             <>
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Payment Method (optional)</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.paymentMethod}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      paymentMethod: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">-- Select --</option>
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {valueOf(action.payout, "paymentMethod", "payment_method") === "razorpayx" ? (
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+                  RazorpayX was already selected while creating this payout. Continuing will start the bank payout using the seller's verified onboarding bank details.
+                </div>
+              ) : (
+                <label className="block text-sm text-gray-700">
+                  <span className="mb-1 block">Payment Method (optional)</span>
+                  <select
+                    className="admin-input w-full"
+                    value={action.paymentMethod}
+                    onChange={(e) =>
+                      setAction((prev) => ({
+                        ...prev,
+                        paymentMethod: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">-- Select --</option>
+                    {payoutMethods.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  {action.paymentMethod === "razorpayx" && (
+                    <span className="mt-1 block text-xs text-gray-500">
+                      Sends money to the seller's verified onboarding bank account through RazorpayX.
+                    </span>
+                  )}
+                </label>
+              )}
               <Input
                 labelName="Note (optional)"
                 type="textarea"
@@ -574,6 +704,28 @@ const PayoutOpsQueue = () => {
                   setAction((prev) => ({ ...prev, note: e.target.value }))
                 }
               />
+              {action.approve && (
+                <label className="block text-sm text-gray-700">
+                  <span className="mb-1 block">Payment method after release</span>
+                  <select
+                    className="admin-input w-full"
+                    value={action.paymentMethod}
+                    onChange={(e) =>
+                      setAction((prev) => ({
+                        ...prev,
+                        paymentMethod: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">-- Keep manual / existing --</option>
+                    {payoutMethods.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </>
           )}
 
@@ -581,7 +733,7 @@ const PayoutOpsQueue = () => {
           {action.type === "retry" && (
             <>
               <Input
-                labelName="Payment Reference *"
+                labelName={action.paymentMethod === "razorpayx" ? "Payment Reference (not required for RazorpayX)" : "Payment Reference *"}
                 value={action.paymentReference}
                 onChange={(e) =>
                   setAction((prev) => ({
@@ -603,12 +755,17 @@ const PayoutOpsQueue = () => {
                   }
                 >
                   <option value="">-- Select --</option>
-                  {PAYMENT_METHODS.map((m) => (
+                  {payoutMethods.map((m) => (
                     <option key={m.value} value={m.value}>
                       {m.label}
                     </option>
                   ))}
                 </select>
+                {action.paymentMethod === "razorpayx" && (
+                  <span className="mt-1 block text-xs text-gray-500">
+                    A fresh RazorpayX payout will be created. Provider ID will appear after initiation.
+                  </span>
+                )}
               </label>
               <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
                 Retrying creates a new payout request. Required approval still applies.
@@ -642,7 +799,7 @@ const PayoutOpsQueue = () => {
                   }
                 >
                   <option value="">-- Select --</option>
-                  {PAYMENT_METHODS.map((m) => (
+                  {payoutMethods.filter((m) => m.value !== "razorpayx").map((m) => (
                     <option key={m.value} value={m.value}>
                       {m.label}
                     </option>

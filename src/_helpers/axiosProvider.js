@@ -37,22 +37,38 @@ export const socketApiUrl =
 
 const axiosPublic = axios.create({
     baseURL: apiUrl,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+    },
 });
 
 const axiosPrivate = axios.create({
     baseURL: apiUrl,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+    },
 });
 
 const axiosImage = axios.create({
     baseURL: apiUrl,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: {
+        'Content-Type': 'multipart/form-data',
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+    },
 });
 
 const axiosRefresh = axios.create({
     baseURL: apiUrl,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+    },
 });
 
 let refreshPromise = null;
