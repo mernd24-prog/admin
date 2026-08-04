@@ -1113,7 +1113,7 @@ export default function BasicDetailsTab({
               />
             </div>
 
-            <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="md:col-span-2 rounded-lg border border-gray-200 p-4">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-900">
                   Product Return Policy
