@@ -24,6 +24,8 @@ import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 import SummaryCard from "../../../../components/Shared/SummaryCard";
 
+import { ENDPOINTS } from "../../../../_helpers/endpoints";
+import { downloadApiFile } from "../../../../_helpers/downloadApi";
 import { usePermission } from "../../../../_helpers/usePermission";
 import {
   formatDateTime12Hour,
@@ -1100,7 +1102,7 @@ const DetailStat = ({ label, value, icon, tone = "default" }) => {
   );
 };
 
-const ShipmentCard = ({ shipment = {}, seller, onManage }) => {
+const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
   const trackingNumber = firstDefined(shipment.tracking_number, shipment.trackingNumber, shipment.awb_number, "");
   const provider = displayStatus(firstDefined(shipment.provider, shipment.courier_name, shipment.courierName, "Manual"));
   const isCod = Boolean(shipment.cod);
@@ -1131,6 +1133,16 @@ const ShipmentCard = ({ shipment = {}, seller, onManage }) => {
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#f1e7cd] px-4 py-3 text-xs text-[#65718b]">
         <span>{eventCount ? `${eventCount} tracking update${eventCount === 1 ? "" : "s"}` : "No tracking updates yet"}</span>
+        <div className="flex flex-wrap items-center gap-2">
+        {onDownloadLabel && (
+          <button
+            type="button"
+            className="rounded-md border border-[#D8A21D] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A5A00] hover:bg-[#fff8ea]"
+            onClick={onDownloadLabel}
+          >
+            Download box label
+          </button>
+        )}
         {onManage && (
           <button
             type="button"
@@ -1140,6 +1152,7 @@ const ShipmentCard = ({ shipment = {}, seller, onManage }) => {
             Manage shipment
           </button>
         )}
+        </div>
       </div>
     </div>
   );
@@ -1292,6 +1305,20 @@ const OrderSummary = () => {
 
   const order = state.orderInfo || {};
   const orderId = getOrderId(order);
+  const handleDownloadBoxLabel = useCallback(async (shipment) => {
+    const shipmentId = shipment?.id || shipment?._id || shipment?.shipment_id || shipment?.shipmentId;
+    if (!orderId || !shipmentId) {
+      toast.error("Shipment label is not available for this package yet");
+      return;
+    }
+    try {
+      await downloadApiFile(ENDPOINTS.orders.boxLabelDownload(orderId, shipmentId), { format: "pdf" });
+      toast.success("Box label downloaded");
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Failed to download box label";
+      toast.error(message);
+    }
+  }, [orderId]);
   const relationActions = [
     { label: "Payments", module: "payments", path: "/app/payments" },
     { label: "Shipments", module: "delivery", path: "/app/shipment-tracking" },
@@ -1891,6 +1918,7 @@ const OrderSummary = () => {
                         key={shipment.id || shipment._id || shipment.awb_number || shipment.tracking_number}
                         shipment={shipment}
                         seller={seller}
+                        onDownloadLabel={() => handleDownloadBoxLabel(shipment)}
                         onManage={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`)}
                       />
                     );

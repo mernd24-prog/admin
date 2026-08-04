@@ -171,6 +171,7 @@ export const ENDPOINTS = {
     cancel: (orderId) => `/orders/${orderId}/cancel`,
     status: (orderId) => `/orders/${orderId}/status`,
     notes: (orderId) => `/orders/${orderId}/notes`,
+    boxLabelDownload: (orderId, shipmentId) => `/orders/${orderId}/shipments/${shipmentId}/box-label`,
     checkoutQuote: "/orders/checkout/admin-quote",
   },
   cancellations: {
