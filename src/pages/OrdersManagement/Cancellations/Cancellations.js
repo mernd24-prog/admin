@@ -23,6 +23,7 @@ import {
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import { useNavigate } from "react-router";
 
 const STATUSES = [
   "processing",
@@ -174,6 +175,7 @@ const refundSource = (row = {}) => {
 };
 
 const Cancellations = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const selector = useSelector((s) => s.order);
@@ -302,9 +304,13 @@ const Cancellations = () => {
       key: "orderId",
       label: "Order #",
       render: (v, row) => (
-        <span className="font-mono text-xs">
+        <button
+          type="button"
+          onClick={() => navigate(`/app/orders/view/${row.orderId}`)}
+          className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
+        >
           #{row.orderNumber || String(v || "—").slice(-8)}
-        </span>
+        </button>
       ),
     },
     {
@@ -479,9 +485,14 @@ const Cancellations = () => {
               <div>
                 <p className="text-gray-500">Order #</p>
                 <p className="font-mono text-xs">
-                  #
-                  {detail.orderNumber ||
-                    String(detail.orderId || "—").slice(-8)}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/orders/view/${detail.orderId}`)}
+                    className="font-medium text-[var(--admin-navy)] hover:underline"
+                  >
+                    {detail.orderNumber ||
+                      String(detail.orderId || "—").slice(-8)}
+                  </button>
                 </p>
               </div>
               <div>
