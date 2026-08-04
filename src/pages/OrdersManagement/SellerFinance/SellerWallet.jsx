@@ -49,7 +49,7 @@ export default function SellerWallet() {
         render: (value) => (
           <button
             type="button"
-            className="font-mono text-xs font-semibold text-blue-700 hover:underline"
+            className="font-mono font-medium text-[var(--admin-navy)] hover:underline"    
             onClick={() => navigate(`/app/orders/view/${value}`)}
           >
             {String(value || "—").slice(0, 12)}

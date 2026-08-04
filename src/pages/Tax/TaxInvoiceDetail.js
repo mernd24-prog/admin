@@ -54,12 +54,27 @@ const invoiceCopy = {
   },
 };
 
-const Field = ({ label: fieldLabel, value, mono = false }) => (
-  <div>
-    <p className="text-xs font-medium uppercase text-gray-500">{fieldLabel}</p>
-    <p className={`mt-1 text-sm text-gray-900 ${mono ? "font-mono break-all" : ""}`}>{value || "—"}</p>
-  </div>
-);
+const Field = ({ label: fieldLabel, value, mono = false, onClick }) => {
+  const displayValue = value || "—";
+  const textStyles = `mt-1 text-sm ${mono ? "font-mono break-all" : ""}`;
+
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase text-gray-500">{fieldLabel}</p>
+      {onClick && value ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className={`${textStyles} text-[var(--admin-navy)] font-medium hover:underline text-left block`}
+        >
+          {displayValue}
+        </button>
+      ) : (
+        <p className={`${textStyles} text-gray-900`}>{displayValue}</p>
+      )}
+    </div>
+  );
+};
 
 const AmountCard = ({ label: cardLabel, value, tone = "default" }) => {
   const toneClass = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-600" : "text-gray-950";
@@ -183,7 +198,7 @@ const TaxInvoiceDetail = () => {
   if (loading && !pick(invoice, "id", "invoice_id")) {
     return <Loader />;
   }
-
+  
   return (
     <div className="space-y-6">
       <PageHeader
@@ -211,7 +226,15 @@ const TaxInvoiceDetail = () => {
           <StatusBadge status={pick(invoice, "state", "status", "invoice_state") || "issued"} dot />
         </div>
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Field label="Order" value={pick(invoice, "orderId", "order_id")} mono />
+         
+          
+
+<Field
+  label="Order"
+  value={pick(invoice, "orderId", "order_id")}
+  mono
+  onClick={() => navigate(`/app/orders/view/${pick(invoice, "orderId", "order_id")}`)}
+/>
           <Field label="Reference" value={[pick(invoice, "reference_type"), pick(invoice, "reference_id")].filter(Boolean).join(" / ")} mono />
           <Field label="Issued" value={date(pick(invoice, "issuedAt", "issued_at", "created_at"))} />
           <Field label="Place of Supply" value={pick(invoice, "place_of_supply") || metadata.shippingAddress?.state} />

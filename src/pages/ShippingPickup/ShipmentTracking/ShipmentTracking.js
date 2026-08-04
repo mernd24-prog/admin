@@ -700,10 +700,15 @@ const ShipmentTracking = () => {
                     Order Shipment
                   </div>
                   <div className="truncate text-lg font-semibold text-gray-950">
-                    #
-                    {selectedShipment?.orderNumber ||
-                      selectedShipment?.order_number ||
-                      String(selectedShipment?.order_id || "Order").slice(-8)}
+                    <button 
+                      type="button"
+                      onClick={() => navigate(`/app/orders/view/${selectedShipment?.order_id}`, "_blank")}
+                      className="font-medium hover:underline text-left block"
+                    >
+                      {selectedShipment?.orderNumber ||
+                        selectedShipment?.order_number ||
+                        String(selectedShipment?.order_id || "Order").slice(-8)}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -17,6 +17,7 @@ import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
+import { useNavigate } from "react-router";
 
 const money = (value, currency = "INR") =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(
@@ -38,6 +39,7 @@ const FUNDING_OPTIONS = [
 ];
 
 const PromotionFundingLedger = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const sellerMode = isSellerPanel();
   const state = useSelector(
@@ -58,19 +60,39 @@ const PromotionFundingLedger = () => {
       {
         key: "orderId",
         label: "Order / Item",
-        render: (value, row) => (
-          <div>
-            <div className="font-mono text-xs font-semibold">
-              {row.orderNumber || value}
+        render: (value, row) => {
+          const orderId = row?.orderId || row?.order_id;
+          const orderDisplay = row?.orderNumber || value || "—";
+
+          return (
+            <div className="flex flex-col">
+              {/* Order Link / Number */}
+              {orderId ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/app/orders/view/${orderId}`, "_blank")
+                  }
+                  className="font-mono text-xs font-semibold text-blue-600 hover:underline text-left self-start"
+                >
+                  {orderDisplay}
+                </button>
+              ) : (
+                <span className="font-mono text-xs font-semibold text-gray-500">
+                  {orderDisplay}
+                </span>
+              )}
+
+              {/* Product Details */}
+              <div className="mt-1 font-medium text-gray-900">
+                {row?.productTitle || "Order item"}
+              </div>
+              <div className="text-xs text-gray-500">
+                {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
+              </div>
             </div>
-            <div className="mt-1 font-medium text-gray-900">
-              {row.productTitle || "Order item"}
-            </div>
-            <div className="text-xs text-gray-500">
-              {row.productSku || "No SKU"} · Qty {row.quantity}
-            </div>
-          </div>
-        ),
+          );
+        },
       },
       ...(!sellerMode
         ? [
@@ -263,7 +285,11 @@ const PromotionFundingLedger = () => {
 
             <FilterSelect
               options={FUNDING_OPTIONS}
-              value={FUNDING_OPTIONS.find((opt) => opt.value === filters.fundingType) || null}
+              value={
+                FUNDING_OPTIONS.find(
+                  (opt) => opt.value === filters.fundingType,
+                ) || null
+              }
               onChange={(opt) =>
                 setFilters((current) => ({
                   ...current,

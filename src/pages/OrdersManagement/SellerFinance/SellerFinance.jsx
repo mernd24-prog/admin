@@ -45,6 +45,7 @@ import {
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import { useNavigate } from "react-router";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -481,6 +482,7 @@ const SellerFinance = () => {
       setRuntime({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
     }
   }, [isSeller]);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (isSeller) return;
@@ -1358,9 +1360,14 @@ const SellerFinance = () => {
                   <tr key={`eligibility-${row.id}`}>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
                       #
-                      {row.orderNumber ||
-                        row.order_number ||
-                        String(row.order_id || "").slice(-8)}
+                      <button 
+                        className="font-mono font-medium text-[var(--admin-navy)] hover:underline text-left"
+                        onClick={() => navigate(`/app/orders/view/${row.order_id || row.orderId}`)}
+                      >
+                        {row.orderNumber ||
+                          row.order_number ||
+                          String(row.order_id || "").slice(-8)}
+                      </button>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs">
                       {row.deliveredAt ? (
@@ -1474,12 +1481,17 @@ const SellerFinance = () => {
                   const deductions = deductionOf(row);
                   return (
                     <tr key={row.id}>
-                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                        #
+                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                      #
+                      <button 
+                        className="font-mono font-medium text-[var(--admin-navy)] hover:underline text-left"
+                        onClick={() => navigate(`/app/orders/view/${row.order_id || row.orderId}`)}
+                      >
                         {row.orderNumber ||
                           row.order_number ||
                           String(row.order_id || "").slice(-8)}
-                      </td>
+                      </button>
+                    </td>
                       {!isSeller && (
                         <td className="whitespace-nowrap px-4 py-3 text-xs">
                           {row.sellerName ||

@@ -60,6 +60,7 @@ import {
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
+import { useNavigate } from "react-router";
 
 const ACTION_TITLES = {
   approve: "Approve Return",
@@ -480,6 +481,7 @@ const sellerQcGuidance = (row = {}) => {
 };
 
 const Returns = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const selector = useSelector((state) => state.adminCore);
@@ -883,7 +885,13 @@ const Returns = () => {
             <div className="font-semibold text-gray-800">
               {row.returnNumber || returnId(row)}
             </div>
-            <div className="text-xs text-gray-400">Order {row.orderId}</div>
+            <button
+              type="button"
+              onClick={() => navigate(`/app/orders/view/${row.orderId}`)}
+              className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
+            >
+              Order {row.orderId}
+            </button>
           </div>
         ),
       },
@@ -948,14 +956,7 @@ const Returns = () => {
         sortable: false,
         render: (_, row) => (
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openDetail(row)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <MdVisibility size={16} className="text-blue-600" />
-              View Details
-            </button>
+            
 
             {row.status === "requested" && (
               <>
@@ -1189,6 +1190,15 @@ const Returns = () => {
                   Close Return
                 </button>
               )}
+
+              <button
+              type="button"
+              onClick={() => openDetail(row)}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <MdVisibility size={16} className="text-blue-600" />
+              View Details
+            </button>
           </div>
         ),
       },

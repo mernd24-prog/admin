@@ -167,6 +167,11 @@ const TaxInvoices = () => {
   const [error, setError] = useState("");
   const [downloadingId, setDownloadingId] = useState(null);
   const hideOrganizationColumn = isSellerPanel();
+  const firstDefined = (...values) =>
+    values.find((v) => v !== undefined && v !== null && v !== "");
+
+  const orderIdOf = (order = {}) =>
+    firstDefined(order._id, order.id, order.orderId, order.order_no);
 
   const fetchInvoices = useCallback(async () => {
     try {
@@ -245,14 +250,24 @@ const TaxInvoices = () => {
           key: "orderId",
           label: "Order",
           render: (v, row) => {
-            const orderId = v || row.order_id;
+            const orderId = v || orderIdOf(row);
+
             return (
-              <span className="font-mono text-xs text-gray-500">
-                {orderId ? String(orderId).slice(-8) : "—"}
-              </span>
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/orders/view/${orderId}`)}
+                  className="font-mono font-medium text-[var(--admin-navy)] hover:underline text-left"
+                >
+                  <span className="font-mono text-xs text-gray-500">
+                    {orderId ? String(orderId).slice(-8) : "—"}
+                  </span>
+                </button>
+              </div>
             );
           },
         },
+
         {
           key: "invoiceType",
           label: "Document",

@@ -46,7 +46,34 @@ export default function SellerCodCollections() {
   }, [form, load]);
 
   const columns = useMemo(() => [
-    { key: "order_number", label: "Order / Shipment", render: (_, row) => <div><div className="font-medium">#{row.order_number || row.order_id}</div><div className="text-xs text-gray-500">{row.awb_number || "Shipment"}</div></div> },
+   {
+  key: "order_number",
+  label: "Order / Shipment",
+  render: (_, row) => {
+    const orderId = row?.order_id || row?.id || row?.order_number;
+    const orderDisplay = row?.order_number ? `#${row.order_number}` : (row?.order_id || "—");
+
+    return (
+      <div>
+        {orderId ? (
+          <button
+            type="button"
+            onClick={() => window.open(`/app/orders/view/${orderId}`, "_blank")}
+            className="font-medium hover:underline text-left block"
+          >
+            {orderDisplay}
+          </button>
+        ) : (
+          <div className="font-medium text-gray-900">{orderDisplay}</div>
+        )}
+
+        <div className="text-xs text-gray-500">
+          {row?.awb_number || "Shipment"}
+        </div>
+      </div>
+    );
+  },
+},
     { key: "collection_mode", label: "Mode", render: (value) => label(value) },
     { key: "expected_amount", label: "Expected", render: (value) => money(value) },
     { key: "collected_amount", label: "Collected", render: (value) => money(value) },
