@@ -236,7 +236,10 @@ export default function ProductManagementUI() {
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const mainContainerRef = useRef(null);
   const { id } = useParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [productLoading, setProductLoading] = useState(Boolean(id));
+  const [prefilledProductId, setPrefilledProductId] = useState(null);
+  const [productLoadFailed, setProductLoadFailed] = useState(false);
   const [error, setError] = useState(null);
   let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
@@ -359,8 +362,48 @@ export default function ProductManagementUI() {
   };
 
   const scrollToFirstValidationError = (errors, attempt = 0) => {
-    const firstField = Object.keys(errors || {})[0];
+    const sectionOrder = [
+      "basic-details",
+      "product-details",
+      "common-images",
+      "variants-options",
+      "shipping",
+      "seo",
+      "tags",
+    ];
+    const errorFields = Object.keys(errors || {});
+    const firstField = errorFields
+      .map((field, index) => ({
+        field,
+        index,
+        sectionIndex: sectionOrder.indexOf(
+          FIELD_TO_SECTION[field] || "basic-details",
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          (a.sectionIndex < 0 ? sectionOrder.length : a.sectionIndex) -
+            (b.sectionIndex < 0 ? sectionOrder.length : b.sectionIndex) ||
+          a.index - b.index,
+      )[0]?.field;
     if (!firstField || typeof document === "undefined") return;
+
+    let nestedFieldSelector = null;
+    if (
+      firstField === "variants" &&
+      errors?.variants &&
+      typeof errors.variants === "object"
+    ) {
+      const firstVariantIndex = Object.keys(errors.variants).find(
+        (key) => key !== "_form",
+      );
+      const firstVariantField = firstVariantIndex
+        ? Object.keys(errors.variants[firstVariantIndex] || {})[0]
+        : null;
+      if (firstVariantIndex !== undefined && firstVariantField) {
+        nestedFieldSelector = `[name="variants.${firstVariantIndex}.${firstVariantField}"]`;
+      }
+    }
 
     const sectionId = FIELD_TO_SECTION[firstField] || "basic-details";
     if (activeTab !== sectionId) setActiveTab(sectionId);
@@ -368,10 +411,11 @@ export default function ProductManagementUI() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const selectors = [
+          nestedFieldSelector,
           `[name="${firstField}"]`,
           `[id="${firstField}"]`,
           `[data-error-field="${firstField}"]`,
-        ];
+        ].filter(Boolean);
         let field = null;
 
         for (const selector of selectors) {
@@ -407,8 +451,11 @@ export default function ProductManagementUI() {
   };
 
   const fetchProductById = async (productId) => {
+    setProductLoading(true);
+    setProductLoadFailed(false);
+    setPrefilledProductId(null);
     try {
-      dispatch(getProductById({ _id: productId }))
+      return dispatch(getProductById({ _id: productId }))
         .unwrap()
         .then((res) => {
           const productData = res?.data;
@@ -447,7 +494,13 @@ export default function ProductManagementUI() {
             gstRate: productData?.gstRate ?? 18,
             gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
-            shipping: productData?.shipping || {},
+           shipping: {
+  ...(productData?.shipping || {}),
+  codAvailable:
+    productData?.shipping?.codAvailable ??
+    productData?.metadata?.codAvailable ??
+    false,
+},
             options: productData?.options || [
               {
                 sku: "",
@@ -549,19 +602,23 @@ export default function ProductManagementUI() {
               setTaxData(hsnCodeData);
             }
           }
+          setPrefilledProductId(String(productId));
         })
         .catch((err) => {
-          toast.error("Error fetching collections:" || err);
-        });
+          setProductLoadFailed(true);
+          toast.error(err?.message || "Error fetching product");
+        })
+        .finally(() => setProductLoading(false));
     } catch (err) {
-      toast.error("Failed to fetch product:" || err);
+      setProductLoadFailed(true);
+      setProductLoading(false);
+      toast.error(err?.message || "Failed to fetch product");
     }
   };
 
   const fetchAllData = useCallback(
     async (callsArray = API_CALLS) => {
       // setLoading(true);
-      setError(null);
       try {
         const results = await Promise.allSettled(
           callsArray.map(
@@ -574,7 +631,7 @@ export default function ProductManagementUI() {
           .map((_, index) => callsArray[index].name);
 
         if (failedCalls.length > 0) {
-          setError(
+          toast.error(
             `Some data failed to load: ${failedCalls.join(", ")}. Please refresh to try again.`,
           );
         } else {
@@ -1169,7 +1226,9 @@ export default function ProductManagementUI() {
       newErrors.category_id = "Category is required.";
     }
     if (!variantsData.length) {
-      newErrors.variants = "Add at least one variant for this product.";
+      newErrors.variants = {
+        _form: "Add at least one variant for this product.",
+      };
     }
     const hasShippingProfile = Boolean(formData?.shipping?.shippingProfileId);
     if (!hasShippingProfile) {
@@ -1193,21 +1252,38 @@ export default function ProductManagementUI() {
         newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
       }
     }
-    const invalidVariant = variantsData.find(
-      (variant) =>
-        !variant?.sku ||
-        Number(variant?.price || 0) <= 0 ||
-        Number(variant?.mrp || 0) <= 0 ||
-        Number(variant?.price || 0) > Number(variant?.mrp || 0) ||
-        (variant?.salePrice !== undefined &&
-          variant.salePrice !== "" &&
-          Number(variant.salePrice) < 0) ||
-        (variant?.salePrice !== undefined &&
-          variant.salePrice !== "" &&
-          Number(variant.salePrice) > Number(variant.price || 0)),
-    );
-    if (invalidVariant)
-      newErrors.variants = "Every variant needs SKU, valid price, and MRP.";
+    const variantErrors = variantsData.reduce((result, variant, index) => {
+      const fieldErrors = {};
+      const price = Number(variant?.price || 0);
+      const mrp = Number(variant?.mrp || 0);
+      const hasSalePrice =
+        variant?.salePrice !== undefined && variant.salePrice !== "";
+      const salePrice = Number(variant?.salePrice || 0);
+
+      if (!String(variant?.sku || "").trim()) {
+        fieldErrors.sku = "SKU is required.";
+      }
+      if (price <= 0) {
+        fieldErrors.price = "Price must be greater than 0.";
+      } else if (mrp > 0 && price > mrp) {
+        fieldErrors.price = "Price cannot be greater than MRP.";
+      }
+      if (mrp <= 0) {
+        fieldErrors.mrp = "MRP must be greater than 0.";
+      }
+      if (!hasSalePrice) {
+        fieldErrors.salePrice = "Sale price is required.";
+      } else if (salePrice <= 0) {
+        fieldErrors.salePrice = "Sale price must be greater than 0.";
+      } else if (hasSalePrice && salePrice > price) {
+        fieldErrors.salePrice = "Sale price cannot be greater than price.";
+      }
+      if (Object.keys(fieldErrors).length) result[index] = fieldErrors;
+      return result;
+    }, {});
+    if (Object.keys(variantErrors).length) {
+      newErrors.variants = variantErrors;
+    }
     if (!useManualAttributes) {
       categoryAttributeSchema.forEach((field) => {
         const value = formData?.attributes?.[field.key];
@@ -1442,7 +1518,6 @@ export default function ProductManagementUI() {
           ...prev,
           store_id: selectedOption?.value || "",
         }));
-        setError({});
         break;
       case "SELLER_ID":
         setFormData((prev) => ({
@@ -1559,62 +1634,57 @@ export default function ProductManagementUI() {
         break;
     }
   };
-  const handleToggleProductSetting = (key) => {
-    const fieldMap = {
-      DISABLE: "isDisable",
-      APPROVE: "isApproved",
-      FEATURED: "markAsFeatured",
-      DEAL_PRODUCT: "isDealProduct",
-      COD: "cod",
-      FREE_SHIPPING: "shipping.freeShipping",
-      prescription_required: "prescription_required",
-    };
+ const handleToggleProductSetting = (key) => {
+  if (key === "COD") {
+    setFormData((prev) => ({
+      ...prev,
+      shipping: {
+        ...(prev.shipping || {}),
+        codAvailable: !Boolean(prev?.shipping?.codAvailable),
+      },
+    }));
 
-    const fieldName = fieldMap[key];
+    return;
+  }
 
-    if (fieldName) {
-      if (key === "COD") {
-        setFormData((prev) => {
-          const currentCod =
-            prev?.shipping?.codAvailable !== undefined
-              ? Boolean(prev.shipping.codAvailable)
-              : Boolean(prev?.cod);
-          const nextCod = !currentCod;
+  if (key === "FREE_SHIPPING") {
+    setFormData((prev) => {
+      const nextFreeShipping = !Boolean(
+        prev?.shipping?.freeShipping,
+      );
 
-          return {
-            ...prev,
-            cod: nextCod,
-            shipping: {
-              ...(prev.shipping || {}),
-              codAvailable: nextCod,
-            },
-          };
-        });
-        return;
-      }
-
-      if (key === "FREE_SHIPPING") {
-        setFormData((prev) => {
-          const nextFreeShipping = !Boolean(prev?.shipping?.freeShipping);
-
-          return {
-            ...prev,
-            shipping: {
-              ...(prev.shipping || {}),
-              freeShipping: nextFreeShipping,
-              ...(nextFreeShipping ? { shippingProfileId: null } : {}),
-            },
-          };
-        });
-        return;
-      }
-
-      setFormData((prev) => ({
+      return {
         ...prev,
-        [fieldName]: !prev[fieldName],
-      }));
-    }
+        shipping: {
+          ...(prev.shipping || {}),
+          freeShipping: nextFreeShipping,
+          ...(nextFreeShipping
+            ? { shippingProfileId: null }
+            : {}),
+        },
+      };
+    });
+
+    return;
+  }
+
+  const fieldMap = {
+    DISABLE: "isDisable",
+    APPROVE: "isApproved",
+    FEATURED: "markAsFeatured",
+    DEAL_PRODUCT: "isDealProduct",
+    prescription_required: "prescription_required",
   };
+
+  const fieldName = fieldMap[key];
+
+  if (!fieldName) return;
+
+  setFormData((prev) => ({
+    ...prev,
+    [fieldName]: !Boolean(prev[fieldName]),
+  }));
+};
 
   const handleSaveSubmit = useCallback(async () => {
     setSaving(true);
@@ -1642,12 +1712,8 @@ export default function ProductManagementUI() {
     const profileEtaMax = selectedShippingProfile
       ? toOptionalNumber(selectedShippingProfile.etaMax)
       : undefined;
-    let resolvedCodAvailable;
-    if (updatedFormData.shipping?.codAvailable !== undefined) {
-      resolvedCodAvailable = Boolean(updatedFormData.shipping.codAvailable);
-    } else if (updatedFormData.cod !== undefined) {
-      resolvedCodAvailable = Boolean(updatedFormData.cod);
-    }
+    const resolvedCodAvailable =
+  updatedFormData?.shipping?.codAvailable === true;
 
     const formattedOptions = options.map((option) => ({
       sku: option.sku || "",
@@ -1743,91 +1809,120 @@ export default function ProductManagementUI() {
         };
       })(),
     });
-    const shipping = compactObject(
-      selectedShippingProfile
-        ? {
-            shippingProfileId: isSelectedShippingTemplate
-              ? null
-              : updatedFormData.shipping?.shippingProfileId,
-            freeShipping: profileShippingCharge === 0,
-            additionalCost: profileShippingCharge,
-            shippingCharge: profileShippingCharge,
-            serviceabilityMode: normalizeProductServiceabilityMode(
-              selectedShippingProfile.serviceabilityMode,
-            ),
-            allowPincodes:
-              selectedShippingProfile.allowedPincodes ||
-              selectedShippingProfile.allowPincodes ||
-              selectedShippingProfile.serviceablePincodes ||
-              [],
-            serviceablePincodes:
-              selectedShippingProfile.allowedPincodes ||
-              selectedShippingProfile.serviceablePincodes ||
-              selectedShippingProfile.allowPincodes ||
-              [],
-            regions:
-              selectedShippingProfile.regions ||
-              selectedShippingProfile.allowedStates ||
-              selectedShippingProfile.states ||
-              [],
-            states:
-              selectedShippingProfile.allowedStates ||
-              selectedShippingProfile.states ||
-              [],
-            cities:
-              selectedShippingProfile.allowedCities ||
-              selectedShippingProfile.cities ||
-              [],
-            processingDays: profileEtaMin,
-            estimatedDaysMin: profileEtaMin,
-            estimatedDaysMax: profileEtaMax,
-            shippingMethod:
-              selectedShippingProfile.shippingMethod || "standard",
-          }
-        : {
-            ...(updatedFormData.shipping || {}),
-            blockPincodes: undefined,
-            serviceabilityMode: normalizeProductServiceabilityMode(
-              updatedFormData.shipping?.serviceabilityMode,
-            ),
-            allowPincodes: normalizePincodeList(
-              updatedFormData.shipping?.allowPincodes ||
-                updatedFormData.shipping?.serviceablePincodes,
-            ),
-            serviceablePincodes: normalizePincodeList(
-              updatedFormData.shipping?.serviceablePincodes ||
-                updatedFormData.shipping?.allowPincodes,
-            ),
-            freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
-            freeShippingMinOrder: toOptionalNumber(
-              updatedFormData.shipping?.freeShippingMinOrder,
-            ),
-            additionalCost: toOptionalNumber(
-              updatedFormData.shipping?.additionalCost,
-            ),
-            shippingCharge: toOptionalNumber(
-              updatedFormData.shipping?.shippingCharge,
-            ),
-            handlingCharge: toOptionalNumber(
-              updatedFormData.shipping?.handlingCharge,
-            ),
-            ...(resolvedCodAvailable !== undefined
-              ? { codAvailable: resolvedCodAvailable }
-              : {}),
-            processingDays: toOptionalNumber(
-              updatedFormData.shipping?.processingDays,
-            ),
-            estimatedDaysMin: toOptionalNumber(
-              updatedFormData.shipping?.estimatedDaysMin,
-            ),
-            estimatedDaysMax: toOptionalNumber(
-              updatedFormData.shipping?.estimatedDaysMax,
-            ),
-            shippingProfileId: updatedFormData.shipping?.freeShipping
-              ? null
-              : updatedFormData.shipping?.shippingProfileId || null,
-          },
-    );
+   const shipping = compactObject(
+  selectedShippingProfile
+    ? {
+        shippingProfileId: isSelectedShippingTemplate
+          ? null
+          : updatedFormData.shipping?.shippingProfileId,
+
+        freeShipping: profileShippingCharge === 0,
+        additionalCost: profileShippingCharge,
+        shippingCharge: profileShippingCharge,
+
+        serviceabilityMode:
+          normalizeProductServiceabilityMode(
+            selectedShippingProfile.serviceabilityMode,
+          ),
+
+        allowPincodes:
+          selectedShippingProfile.allowedPincodes ||
+          selectedShippingProfile.allowPincodes ||
+          selectedShippingProfile.serviceablePincodes ||
+          [],
+
+        serviceablePincodes:
+          selectedShippingProfile.allowedPincodes ||
+          selectedShippingProfile.serviceablePincodes ||
+          selectedShippingProfile.allowPincodes ||
+          [],
+
+        regions:
+          selectedShippingProfile.regions ||
+          selectedShippingProfile.allowedStates ||
+          selectedShippingProfile.states ||
+          [],
+
+        states:
+          selectedShippingProfile.allowedStates ||
+          selectedShippingProfile.states ||
+          [],
+
+        cities:
+          selectedShippingProfile.allowedCities ||
+          selectedShippingProfile.cities ||
+          [],
+
+        codAvailable: resolvedCodAvailable,
+
+        processingDays: profileEtaMin,
+        estimatedDaysMin: profileEtaMin,
+        estimatedDaysMax: profileEtaMax,
+
+        shippingMethod:
+          selectedShippingProfile.shippingMethod ||
+          "standard",
+      }
+    : {
+        ...(updatedFormData.shipping || {}),
+        blockPincodes: undefined,
+
+        serviceabilityMode:
+          normalizeProductServiceabilityMode(
+            updatedFormData.shipping?.serviceabilityMode,
+          ),
+
+        allowPincodes: normalizePincodeList(
+          updatedFormData.shipping?.allowPincodes ||
+            updatedFormData.shipping?.serviceablePincodes,
+        ),
+
+        serviceablePincodes: normalizePincodeList(
+          updatedFormData.shipping?.serviceablePincodes ||
+            updatedFormData.shipping?.allowPincodes,
+        ),
+
+        freeShipping: Boolean(
+          updatedFormData.shipping?.freeShipping,
+        ),
+
+        freeShippingMinOrder: toOptionalNumber(
+          updatedFormData.shipping?.freeShippingMinOrder,
+        ),
+
+        additionalCost: toOptionalNumber(
+          updatedFormData.shipping?.additionalCost,
+        ),
+
+        shippingCharge: toOptionalNumber(
+          updatedFormData.shipping?.shippingCharge,
+        ),
+
+        handlingCharge: toOptionalNumber(
+          updatedFormData.shipping?.handlingCharge,
+        ),
+
+        codAvailable: resolvedCodAvailable,
+
+        processingDays: toOptionalNumber(
+          updatedFormData.shipping?.processingDays,
+        ),
+
+        estimatedDaysMin: toOptionalNumber(
+          updatedFormData.shipping?.estimatedDaysMin,
+        ),
+
+        estimatedDaysMax: toOptionalNumber(
+          updatedFormData.shipping?.estimatedDaysMax,
+        ),
+
+        shippingProfileId:
+          updatedFormData.shipping?.freeShipping
+            ? null
+            : updatedFormData.shipping?.shippingProfileId ||
+              null,
+      },
+);
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
@@ -1871,8 +1966,7 @@ export default function ProductManagementUI() {
         dealSource: updatedFormData.isDealProduct
           ? updatedFormData.dealSource
           : undefined,
-        codAvailable:
-          resolvedCodAvailable !== undefined ? resolvedCodAvailable : true,
+        codAvailable: resolvedCodAvailable,
         prescriptionRequired: Boolean(updatedFormData.prescription_required),
         attributesManual: Boolean(updatedFormData.attributesManual),
       },
@@ -1982,7 +2076,14 @@ export default function ProductManagementUI() {
       ...prev,
       [field]: content,
     }));
-    setError({});
+    setError((current) => {
+      if (!current || typeof current !== "object" || !current[field]) {
+        return current;
+      }
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+      return Object.keys(nextErrors).length ? nextErrors : null;
+    });
   };
 
   const handleNestedChange = useCallback((field, value) => {
@@ -2039,7 +2140,12 @@ export default function ProductManagementUI() {
         serviceablePincodes: next,
       });
       setAllowedPincodeInput("");
-      setError((prev) => (prev?.shipping ? { ...prev, shipping: undefined } : prev));
+      setError((previous) => {
+        if (!previous?.shipping) return previous;
+        const nextErrors = { ...previous };
+        delete nextErrors.shipping;
+        return Object.keys(nextErrors).length ? nextErrors : null;
+      });
     },
     [
       allowedPincodeInput,
@@ -2183,7 +2289,34 @@ export default function ProductManagementUI() {
     }));
   };
 
-   
+  const handleVariantsChange = useCallback((nextVariants) => {
+    setVariantsData(nextVariants);
+  }, []);
+
+  const handleVariantErrorClear = useCallback((variantIndex, field) => {
+    setError((current) => {
+      if (!current || typeof current !== "object" || !current.variants) {
+        return current;
+      }
+      const variantErrors = { ...current.variants };
+      const fieldErrors = { ...(variantErrors[variantIndex] || {}) };
+      delete fieldErrors[field];
+      if (Object.keys(fieldErrors).length) {
+        variantErrors[variantIndex] = fieldErrors;
+      } else {
+        delete variantErrors[variantIndex];
+      }
+
+      const nextErrors = { ...current };
+      if (Object.keys(variantErrors).length) {
+        nextErrors.variants = variantErrors;
+      } else {
+        delete nextErrors.variants;
+      }
+      return Object.keys(nextErrors).length ? nextErrors : null;
+    });
+  }, []);
+
   const tabs = useMemo(
     () => [
       {
@@ -2483,9 +2616,9 @@ export default function ProductManagementUI() {
                 edit each variant.
               </p>
             </div>
-            {error?.variants && (
+            {error?.variants?._form && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error.variants}
+                {error.variants._form}
               </div>
             )}
             <VariantBuilder
@@ -2493,11 +2626,13 @@ export default function ProductManagementUI() {
               options={variantAxes}
               basePrice={Number(formData?.price || 0)}
               baseMrp={Number(formData?.mrp || 0)}
-              onChange={setVariantsData}
+              onChange={handleVariantsChange}
               onOptionsChange={setVariantAxes}
               platformOptions={platformOptions}
               platformValues={platformValues}
               onOptionSearch={handleOptionSearch}
+              errors={error?.variants}
+              onClearError={handleVariantErrorClear}
             />
           </div>
         ),
@@ -2529,7 +2664,7 @@ export default function ProductManagementUI() {
               </div>
             ) : (
               <div
-                className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5" : "border-gray-200 bg-gray-50"}`}
+                className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? "border-[var(--admin-blue)]" : "border-gray-200 "}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -2894,6 +3029,8 @@ export default function ProductManagementUI() {
       addProductPincode,
       removeProductPincode,
       handleProductPincodeKeyDown,
+      handleVariantsChange,
+      handleVariantErrorClear,
     ],
   );
 
@@ -2994,7 +3131,16 @@ export default function ProductManagementUI() {
 
   return (
     <div className="relative min-h-screen">
-      <Loader loading={loading || saving} />
+      <Loader
+        loading={
+          loading ||
+          productLoading ||
+          (isEditMode &&
+            !productLoadFailed &&
+            String(prefilledProductId || "") !== String(id)) ||
+          saving
+        }
+      />
       <Breadcrumb isEditMode={isEditMode} />
       {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>

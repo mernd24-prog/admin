@@ -37,9 +37,10 @@ const FieldLabel = ({ children }) => (
   </span>
 );
 
-const SmallInput = ({ className = "", ...props }) => (
+const SmallInput = ({ className = "", error = "", ...props }) => (
   <input
-    className={`w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20 ${className}`}
+    className={`w-full rounded-md border bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-1 ${error ? "border-red-400 focus:border-red-500 focus:ring-red-200" : "border-gray-200 focus:border-[var(--admin-blue)] focus:ring-[var(--admin-blue)]/20"} ${className}`}
+    aria-invalid={Boolean(error)}
     {...props}
   />
 );
@@ -61,6 +62,8 @@ const VariantBuilder = ({
   onChange,
   onOptionsChange,
   onOptionSearch,
+  errors = {},
+  onClearError,
 }) => {
   const productStatuses = useDropdownOptions("product-statuses");
   const [optionSearch, setOptionSearch] = useState("");
@@ -197,10 +200,17 @@ const VariantBuilder = ({
     );
   }, [options, variants, onChange]);
 
-  const updateVariant = (idx, field, value) =>
+  const updateVariant = (idx, field, value) => {
+    setExpandedVariants((previous) => {
+      const next = new Set(previous);
+      next.add(idx);
+      return next;
+    });
+    onClearError?.(idx, field);
     onChange(
       variants.map((v, i) => (i === idx ? { ...v, [field]: value } : v)),
     );
+  };
   const removeVariant = (idx) => {
     onChange(variants.filter((_, i) => i !== idx));
     setExpandedVariants((prev) => {
@@ -681,7 +691,10 @@ const VariantBuilder = ({
           {variants.map((variant, idx) => {
             const imageCount = (variant.images || []).length;
             const hasImages = imageCount > 0;
-            const isExpanded = expandedVariants.has(idx);
+            const variantErrors =
+              errors && typeof errors === "object" ? errors[idx] || {} : {};
+            const hasVariantErrors = Object.keys(variantErrors).length > 0;
+            const isExpanded = expandedVariants.has(idx) || hasVariantErrors;
             const isUploading = uploadingVariants.has(idx);
             const variantLabel =
               variant.attributes && Object.keys(variant.attributes).length
@@ -813,16 +826,27 @@ const VariantBuilder = ({
                       <div className="space-y-1">
                         <FieldLabel>SKU</FieldLabel>
                         <SmallInput
+                          name={`variants.${idx}.sku`}
+                          data-error-field={variantErrors.sku ? "variants" : undefined}
+                          error={variantErrors.sku}
                           value={variant.sku || ""}
                           onChange={(e) =>
                             updateVariant(idx, "sku", e.target.value)
                           }
                           placeholder="SKU"
                         />
+                        {variantErrors.sku && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.sku}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Price (₹)</FieldLabel>
                         <SmallInput
+                          name={`variants.${idx}.price`}
+                          data-error-field={variantErrors.price ? "variants" : undefined}
+                          error={variantErrors.price}
                           type="number"
                           min={0}
                           value={variant.price ?? ""}
@@ -837,10 +861,18 @@ const VariantBuilder = ({
                           }
                           placeholder=""
                         />
+                        {variantErrors.price && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.price}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>MRP (₹)</FieldLabel>
                         <SmallInput
+                          name={`variants.${idx}.mrp`}
+                          data-error-field={variantErrors.mrp ? "variants" : undefined}
+                          error={variantErrors.mrp}
                           type="number"
                           min={0}
                           value={variant.mrp ?? ""}
@@ -855,10 +887,18 @@ const VariantBuilder = ({
                           }
                           placeholder=""
                         />
+                        {variantErrors.mrp && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.mrp}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Sale Price (₹)</FieldLabel>
                         <SmallInput
+                          name={`variants.${idx}.salePrice`}
+                          data-error-field={variantErrors.salePrice ? "variants" : undefined}
+                          error={variantErrors.salePrice}
                           type="number"
                           min={0}
                           value={variant.salePrice ?? ""}
@@ -873,6 +913,11 @@ const VariantBuilder = ({
                           }
                           placeholder=""
                         />
+                        {variantErrors.salePrice && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.salePrice}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Stock</FieldLabel>
