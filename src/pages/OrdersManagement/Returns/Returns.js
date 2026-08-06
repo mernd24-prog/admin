@@ -61,6 +61,7 @@ import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 import { useNavigate } from "react-router";
+import moment from "moment";
 
 const ACTION_TITLES = {
   approve: "Approve Return",
@@ -956,8 +957,6 @@ const Returns = () => {
         sortable: false,
         render: (_, row) => (
           <div className="flex items-center gap-2">
-            
-
             {row.status === "requested" && (
               <>
                 <button
@@ -1191,7 +1190,7 @@ const Returns = () => {
                 </button>
               )}
 
-              <button
+            <button
               type="button"
               onClick={() => openDetail(row)}
               className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
@@ -1362,14 +1361,30 @@ const Returns = () => {
                     <tbody className="divide-y divide-gray-100">
                       {detailReturn.refund.attempts.map((attempt, index) => (
                         <tr key={attempt.attemptId || index}>
-                          <td className="px-2 py-1">{display(attempt.method)}</td>
-                          <td className="px-2 py-1">{display(attempt.provider)}</td>
-                          <td className="px-2 py-1 text-right">{money(attempt.amount)}</td>
-                          <td className="px-2 py-1 text-right">{money(attempt.providerAmount)}</td>
-                          <td className="px-2 py-1">{display(attempt.status)}</td>
-                          <td className="px-2 py-1">{attempt.providerRefundId || "—"}</td>
-                          <td className="px-2 py-1">{formatDateTime12Hour(attempt.startedAt)}</td>
-                          <td className="px-2 py-1">{attempt.failureReason || "—"}</td>
+                          <td className="px-2 py-1">
+                            {display(attempt.method)}
+                          </td>
+                          <td className="px-2 py-1">
+                            {display(attempt.provider)}
+                          </td>
+                          <td className="px-2 py-1 text-right">
+                            {money(attempt.amount)}
+                          </td>
+                          <td className="px-2 py-1 text-right">
+                            {money(attempt.providerAmount)}
+                          </td>
+                          <td className="px-2 py-1">
+                            {display(attempt.status)}
+                          </td>
+                          <td className="px-2 py-1">
+                            {attempt.providerRefundId || "—"}
+                          </td>
+                          <td className="px-2 py-1">
+                            {formatDateTime12Hour(attempt.startedAt)}
+                          </td>
+                          <td className="px-2 py-1">
+                            {attempt.failureReason || "—"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1859,12 +1874,24 @@ const Returns = () => {
                     labelName="Pickup date"
                     type="datetime-local"
                     value={action.pickupScheduledAt}
-                    onChange={(event) =>
+                    min={moment().format("YYYY-MM-DDTHH:mm")}
+                    onChange={(event) => {
+                      const selectedValue = event.target.value;
+                      const selectedDate = moment(selectedValue);
+                      const currentDate = moment();
+
+                      if (selectedDate.isBefore(currentDate)) {
+                        toast.error(
+                          "Pickup date and time cannot be in the past.",
+                        );
+                        return;
+                      }
+
                       setAction((prev) => ({
                         ...prev,
-                        pickupScheduledAt: event.target.value,
-                      }))
-                    }
+                        pickupScheduledAt: selectedValue,
+                      }));
+                    }}
                   />
                 </div>
               ) : (

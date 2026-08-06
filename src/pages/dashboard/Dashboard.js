@@ -1433,7 +1433,6 @@ export default function Dashboard() {
                 <th className="px-4 py-3 font-semibold">S. No.</th>
                 <th className="px-4 py-3 font-semibold">Order ID</th>
                 <th className="px-4 py-3 font-semibold">Customer</th>
-                <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold">Amount</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
@@ -1485,11 +1484,6 @@ export default function Dashboard() {
                           order.buyer_id ||
                           order.buyerId ||
                           "-",
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatDateTime12Hour(
-                        order.created_at || order.createdAt || order.date,
                       )}
                     </td>
                     <td className="px-4 py-3">

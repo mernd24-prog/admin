@@ -379,7 +379,7 @@ const ProductAdminDetails = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-4">
+        <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
           <h2 className="text-base font-semibold text-gray-800 mb-3">
             Overview
           </h2>

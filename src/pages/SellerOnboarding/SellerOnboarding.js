@@ -140,7 +140,13 @@ const OnboardingSelect = ({
           </option>
         ))}
       </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full bg-[#082f91] text-white">
+      <span
+        className={`pointer-events-none absolute right-3 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${
+          disabled || loading
+            ? "bg-gray-300 text-gray-500"
+            : "bg-[#082f91] text-white"
+        }`}
+      >
         <ChevronDown size={12} />
       </span>
     </div>
@@ -264,9 +270,7 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
       title={value || "-"}
     >
       <FileText size={16} className="shrink-0 text-[#484555]" />
-      <span className="block min-w-0 flex-1 truncate leading-none">
-        {value || "-"}
-      </span>
+      <span className="w-0 flex-1 truncate">{value || "-"}</span>
     </div>
   </div>
 );
@@ -679,14 +683,22 @@ const onlyAlphaNumericUpper = (value = "", limit = 255) =>
     .slice(0, limit);
 
 const getGstValidationError = (value = "") => {
-  const gst = String(value || "").trim().toUpperCase();
+  const gst = String(value || "")
+    .trim()
+    .toUpperCase();
   if (!gst) return "GST number is required";
-  if (gst.length !== 15) return `GST number must be exactly 15 characters, like ${GST_EXAMPLE}`;
-  if (!/^[0-9]{2}/.test(gst)) return "GST number must start with 2 digit state code";
-  if (!/^[0-9]{2}[A-Z]{5}/.test(gst)) return "GST PAN section must have 5 letters after state code";
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}/.test(gst)) return "GST PAN section must have 4 digits after the 5 letters";
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(gst)) return "GST PAN section must end with 1 letter";
-  if (!GST_REGEX.test(gst)) return `GST number format should be like ${GST_EXAMPLE}`;
+  if (gst.length !== 15)
+    return `GST number must be exactly 15 characters, like ${GST_EXAMPLE}`;
+  if (!/^[0-9]{2}/.test(gst))
+    return "GST number must start with 2 digit state code";
+  if (!/^[0-9]{2}[A-Z]{5}/.test(gst))
+    return "GST PAN section must have 5 letters after state code";
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}/.test(gst))
+    return "GST PAN section must have 4 digits after the 5 letters";
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(gst))
+    return "GST PAN section must end with 1 letter";
+  if (!GST_REGEX.test(gst))
+    return `GST number format should be like ${GST_EXAMPLE}`;
   return "";
 };
 
@@ -1526,7 +1538,7 @@ const SellerOnboarding = () => {
     return () => {
       isMounted = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, organizationIdParam]);
 
   useEffect(() => {
@@ -2431,7 +2443,8 @@ const SellerOnboarding = () => {
     else if (profileForm.businessName.trim().length > BUSINESS_NAME_MAX_LENGTH)
       errors.businessName = `Legal business name cannot be more than ${BUSINESS_NAME_MAX_LENGTH} characters`;
     else if (!BUSINESS_NAME_REGEX.test(profileForm.businessName.trim()))
-      errors.businessName = "Legal business name can contain only letters and spaces";
+      errors.businessName =
+        "Legal business name can contain only letters and spaces";
     if (!profileForm.description.trim()) {
       errors.description = "Description is required";
     } else {
@@ -2499,7 +2512,9 @@ const SellerOnboarding = () => {
       errors.businessAddressCity = "Business city is required";
     if (!profileForm.businessAddressPostalCode.trim()) {
       errors.businessAddressPostalCode = "Business postal code is required";
-    } else if (!POSTAL_CODE_REGEX.test(profileForm.businessAddressPostalCode.trim())) {
+    } else if (
+      !POSTAL_CODE_REGEX.test(profileForm.businessAddressPostalCode.trim())
+    ) {
       errors.businessAddressPostalCode =
         "Business postal code must be 6 digits";
     }
@@ -2929,9 +2944,10 @@ const SellerOnboarding = () => {
                 <div className="mt-8 grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
                   {/* PAN Number */}
                   <div>
-                    <label className="text-[#484555] font-medium font-inter text-base">
-                      PAN Number
+                    <label className="font-inter text-base font-medium text-[#484555]">
+                      PAN Number <span className="text-red-500">*</span>
                     </label>
+
                     <input
                       id="panNumber"
                       name="panNumber"
@@ -2941,6 +2957,7 @@ const SellerOnboarding = () => {
                       onChange={onKycChange}
                       maxLength={10}
                       pattern="[A-Za-z0-9]{10}"
+                      required
                       data-has-value={Boolean(kycForm.panNumber)}
                     />
                     {kycErrors.panNumber && (
@@ -2950,19 +2967,21 @@ const SellerOnboarding = () => {
 
                   {/* Aadhaar Number */}
                   <div>
-                    <label className="text-[#484555] font-medium font-inter text-base">
-                      Aadhaar Number
+                    <label className="font-inter text-base font-medium text-[#484555]">
+                      Aadhaar Number <span className="text-red-500">*</span>
                     </label>
+
                     <input
                       id="aadhaarNumber"
                       name="aadhaarNumber"
-                      placeholder="1234 4567 8910"
+                      placeholder="1234 5678 9012"
                       className={STEP_ONE_INPUT_CLASS}
                       value={kycForm.aadhaarNumber}
                       onChange={onKycChange}
                       inputMode="numeric"
                       pattern="[0-9]{12}"
                       maxLength={12}
+                      required
                       data-has-value={Boolean(kycForm.aadhaarNumber)}
                     />
                     {kycErrors.aadhaarNumber && (
@@ -3096,11 +3115,12 @@ const SellerOnboarding = () => {
                       maxLength={15}
                       required
                     />
-                    {!profileErrors.gstNumber && (
-                      <p className="mt-1 text-xs text-[#7a7488]">
-                        Example: {GST_EXAMPLE}
-                      </p>
-                    )}
+                    {!profileErrors.gstNumber &&
+                      !profileForm.gstNumber.trim() && (
+                        <p className="mt-1 text-xs text-[#7a7488]">
+                          Example: {GST_EXAMPLE}
+                        </p>
+                      )}
                     {profileErrors.gstNumber && (
                       <p className={ERROR_CLASS}>{profileErrors.gstNumber}</p>
                     )}
@@ -3175,7 +3195,7 @@ const SellerOnboarding = () => {
                     )}
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
                       Business Website (Optional)
                     </label>

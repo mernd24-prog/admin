@@ -192,6 +192,8 @@ const ShipmentTracking = () => {
   });
   const { toQueryParams } = list;
 
+ 
+
   const FILTER_FIELDS = isSeller
     ? [
         { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
@@ -308,6 +310,22 @@ const ShipmentTracking = () => {
     [isSeller],
   );
 
+   const minimumShippedAt = useMemo(() => {
+  const orderDate =
+    selectedShipment?.order_created_at ||
+    selectedShipment?.orderCreatedAt ||
+    selectedShipment?.order?.created_at ||
+    selectedShipment?.order?.createdAt ||
+    selectedShipment?.created_at ||
+    selectedShipment?.createdAt;
+
+  if (!orderDate || !moment(orderDate).isValid()) {
+    return undefined;
+  }
+
+  return moment(orderDate).format("YYYY-MM-DDTHH:mm");
+}, [selectedShipment]);
+
   const fetchShipments = useCallback(async () => {
     try {
       setLoading(true);
@@ -400,6 +418,23 @@ const ShipmentTracking = () => {
   );
 
   const handleTrackingStatus = useCallback(async () => {
+
+    const orderDate =
+  selectedShipment?.order_created_at ||
+  selectedShipment?.orderCreatedAt ||
+  selectedShipment?.order?.created_at ||
+  selectedShipment?.order?.createdAt ||
+  selectedShipment?.created_at ||
+  selectedShipment?.createdAt;
+
+if (
+  trackingAction.shippedAt &&
+  orderDate &&
+  moment(trackingAction.shippedAt).isBefore(moment(orderDate))
+) {
+  nextErrors.shippedAt =
+    "Shipment time cannot be earlier than the order date.";
+}
     if (!selectedShipment?.id) return;
     const nextErrors = {};
     const location = trackingAction.location.trim();
@@ -1011,34 +1046,42 @@ const ShipmentTracking = () => {
                         />
                         <FieldError message={trackingErrors.trackingUrl} />
                       </label>
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        <span>
-                          Shipped At{" "}
-                          <span className="text-red-500" aria-hidden="true">
-                            *
-                          </span>
-                        </span>
-                        <input
-                          className={`min-w-0 w-full max-w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.shippedAt ? "border-red-400" : "border-gray-200"}`}
-                          type="datetime-local"
-                          max={moment().format("YYYY-MM-DDTHH:mm")}
-                          value={trackingAction.shippedAt}
-                          required
-                          aria-required="true"
-                          aria-invalid={Boolean(trackingErrors.shippedAt)}
-                          onChange={(event) => {
-                            setTrackingAction((prev) => ({
-                              ...prev,
-                              shippedAt: event.target.value,
-                            }));
-                            setTrackingErrors((prev) => ({
-                              ...prev,
-                              shippedAt: "",
-                            }));
-                          }}
-                        />
-                        <FieldError message={trackingErrors.shippedAt} />
-                      </label>
+                     <label className="grid min-w-0 gap-1 text-xs text-gray-500">
+  <span>
+    Shipped At{" "}
+    <span className="text-red-500" aria-hidden="true">
+      *
+    </span>
+  </span>
+
+  <input
+    className={`min-w-0 w-full max-w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
+      trackingErrors.shippedAt
+        ? "border-red-400"
+        : "border-gray-200"
+    }`}
+    type="datetime-local"
+    min={minimumShippedAt}
+    max={moment().format("YYYY-MM-DDTHH:mm")}
+    value={trackingAction.shippedAt}
+    required
+    aria-required="true"
+    aria-invalid={Boolean(trackingErrors.shippedAt)}
+    onChange={(event) => {
+      setTrackingAction((prev) => ({
+        ...prev,
+        shippedAt: event.target.value,
+      }));
+
+      setTrackingErrors((prev) => ({
+        ...prev,
+        shippedAt: "",
+      }));
+    }}
+  />
+
+  <FieldError message={trackingErrors.shippedAt} />
+</label>
                     </div>
                   </div>
                 )}

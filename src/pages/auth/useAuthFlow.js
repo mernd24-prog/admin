@@ -617,101 +617,169 @@ export const useAuthFlow = ({
     [codeInputRefs, formFields, verificationCode],
   );
 
-  const handleLoginSubmit = useCallback(
-    async (event) => {
-      event.preventDefault();
-      if (!validateFields(AUTH_FORM_TYPES.LOGIN)) {
-        setFormAnimation("slide-in");
-        return;
-      }
+const handleLoginSubmit = useCallback(
+  async (event) => {
+    event.preventDefault();
 
-      if (!requireTermsAgreement(AUTH_FORM_TYPES.LOGIN)) {
-        return;
-      }
+    if (!validateFields(AUTH_FORM_TYPES.LOGIN)) {
+      setFormAnimation("slide-in");
+      return;
+    }
 
-      const { email, password } = formFields;
-      storeOrClearCredentials(email);
+    if (!requireTermsAgreement(AUTH_FORM_TYPES.LOGIN)) {
+      return;
+    }
 
-      try {
+    const email = formFields.email?.trim().toLowerCase();
+    const password = formFields.password;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      setInlineError(
+        AUTH_FORM_TYPES.LOGIN,
+        "Please enter a valid email address.",
+      );
+      setFormAnimation("error");
+
+      setTimeout(() => {
         setFormAnimation("loading");
-        const response = await dispatch(adminLogin({ email, password }));
+      }, 500);
 
-        if (response?.error) {
-          setInlineError(AUTH_FORM_TYPES.LOGIN, getApiErrorMessage(response));
-          setFormAnimation("error");
-          setTimeout(() => setFormAnimation("slide-in"), 500);
+      return;
+    }
+
+    storeOrClearCredentials(email);
+
+    try {
+      setFormAnimation("loading");
+
+      const response = await dispatch(
+        adminLogin({
+          email,
+          password,
+        }),
+      );
+
+      if (response?.error) {
+        const apiMessage = getApiErrorMessage(response);
+
+        const friendlyMessage = apiMessage
+          ?.toLowerCase()
+          .includes("email must be a valid email")
+          ? "Please enter a valid email address."
+          : apiMessage;
+
+        setInlineError(
+          AUTH_FORM_TYPES.LOGIN,
+          friendlyMessage,
+        );
+
+        setFormAnimation("error");
+
+        setTimeout(() => {
+          setFormAnimation("slide-in");
+        }, 500);
+
+        return;
+      }
+
+      setFormAnimation("success-animation");
+
+      setTimeout(() => {
+        const auth = normalizeAuthPayload(response?.payload);
+
+        if (auth.requiresOnboarding && auth.onboardingToken) {
+          if (!sellerPanel) {
+            clearStoredAuth();
+
+            setInlineError(
+              AUTH_FORM_TYPES.LOGIN,
+              "Seller onboarding belongs in the seller panel.",
+            );
+
+            return;
+          }
+
+          dispatch(
+            startSellerOnboarding({
+              onboardingToken: auth.onboardingToken,
+              user: auth.user || null,
+              flowState: auth.flowState || null,
+            }),
+          );
+
+          toast.success("Continue seller onboarding.");
+          navigate(AUTH_ROUTES.VERIFICATION_COMPLETE);
           return;
         }
 
-        setFormAnimation("success-animation");
-        setTimeout(() => {
-          const auth = normalizeAuthPayload(response?.payload);
-          if (auth.requiresOnboarding && auth.onboardingToken) {
-            if (!sellerPanel) {
-              clearStoredAuth();
-              setInlineError(
-                AUTH_FORM_TYPES.LOGIN,
-                "Seller onboarding belongs in the seller panel.",
-              );
-              return;
-            }
-            dispatch(
-              startSellerOnboarding({
-                onboardingToken: auth.onboardingToken,
-                user: auth.user || null,
-                flowState: auth.flowState || null,
-              }),
-            );
-            toast.success("Continue seller onboarding.");
-            navigate(AUTH_ROUTES.VERIFICATION_COMPLETE);
-            return;
-          }
+        if (!auth.accessToken) {
+          setInlineError(
+            AUTH_FORM_TYPES.LOGIN,
+            "Login did not return an access token.",
+          );
 
-          if (!auth.accessToken) {
-            setInlineError(
-              AUTH_FORM_TYPES.LOGIN,
-              "Login did not return an access token.",
-            );
-            return;
-          }
+          return;
+        }
 
-          if (!isAllowedRoleForPanel(auth.role, panelMode)) {
-            clearStoredAuth();
-            setInlineError(
-              AUTH_FORM_TYPES.LOGIN,
-              sellerPanel
-                ? "Please use a seller account for this panel."
-                : "Please use an admin account for this panel.",
-            );
-            return;
-          }
+        if (!isAllowedRoleForPanel(auth.role, panelMode)) {
+          clearStoredAuth();
 
-          persistAuthenticatedSession(auth);
-          toast.success("Login successful");
-          resetForm();
-          navigate(AUTH_ROUTES.APP_HOME);
-        }, 600);
-      } catch (error) {
-        setInlineError(
-          AUTH_FORM_TYPES.LOGIN,
-          getApiErrorMessage(error, "Login failed. Please try again."),
-        );
-      }
-    },
-    [
-      dispatch,
-      formFields,
-      navigate,
-      panelMode,
-      persistAuthenticatedSession,
-      requireTermsAgreement,
-      resetForm,
-      sellerPanel,
-      setInlineError,
-      storeOrClearCredentials,
-      validateFields,
-    ],
-  );
+          setInlineError(
+            AUTH_FORM_TYPES.LOGIN,
+            sellerPanel
+              ? "Please use a seller account for this panel."
+              : "Please use an admin account for this panel.",
+          );
+
+          return;
+        }
+
+        persistAuthenticatedSession(auth);
+        toast.success("Login successful");
+        resetForm();
+        navigate(AUTH_ROUTES.APP_HOME);
+      }, 600);
+    } catch (error) {
+      const apiMessage = getApiErrorMessage(
+        error,
+        "Login failed. Please try again.",
+      );
+
+      const friendlyMessage = apiMessage
+        ?.toLowerCase()
+        .includes("email must be a valid email")
+        ? "Please enter a valid email address."
+        : apiMessage;
+
+      setInlineError(
+        AUTH_FORM_TYPES.LOGIN,
+        friendlyMessage,
+      );
+
+      setFormAnimation("error");
+
+      setTimeout(() => {
+        setFormAnimation("slide-in");
+      }, 500);
+    }
+  },
+  [
+    dispatch,
+    formFields.email,
+    formFields.password,
+    navigate,
+    panelMode,
+    persistAuthenticatedSession,
+    requireTermsAgreement,
+    resetForm,
+    sellerPanel,
+    setInlineError,
+    storeOrClearCredentials,
+    validateFields,
+  ],
+);
 
   const handleForgotPasswordSubmit = useCallback(
     async (event) => {

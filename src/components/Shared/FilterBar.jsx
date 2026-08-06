@@ -501,28 +501,33 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
 
   return (
     <div
-      className={`flex min-w-0 flex-col gap-1 ${field.wrapperClassName || ""} ${field.width || "w-full"}`}
+      className={`flex min-w-[250px] flex-col gap-1 ${
+        field.wrapperClassName || ""
+      } ${field.width || "w-full"}`}
     >
       {field.label && (
         <label
           htmlFor={id}
           className={
             field.labelClassName ||
-            "text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+            "px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
           }
         >
           {field.label}
         </label>
       )}
+
       <button
         id={id}
         type="button"
         onClick={openPicker}
-        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${field.inputClassName || ""} ${
+        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${
+          field.inputClassName || ""
+        } ${
           startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-400"
         }`}
       >
-        <span className="min-w-0 truncate">{displayLabel}</span>
+        <span className="whitespace-nowrap">{displayLabel}</span>
         <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
       </button>
 
@@ -532,8 +537,8 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>

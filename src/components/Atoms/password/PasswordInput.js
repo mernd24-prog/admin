@@ -45,26 +45,23 @@ const PasswordInput = React.memo(
             value={value}
             autoComplete={autoComplete}
             required={required}
-            className={`admin-input h-[40px] pr-10
-              ${inputClassName}
-              
-            `}
+            className={`admin-input h-[40px] ${inputClassName} !pr-12`}
             placeholder={placeholder}
             {...rest}
           />
-          {type === "password" ? (
-            <FiEye
-              size={14}
-              className={`absolute right-[14px] top-1/2    -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
-              onClick={clickEyeButton}
-            />
-          ) : (
-            <FaEyeSlash
-              size={14}
-              className={`absolute right-[14px] top-1/2  -translate-y-1/2 cursor-pointer text-[#9a9a9a] ${iconClassName}`}
-              onClick={clickEyeButton}
-            />
-          )}
+
+          <button
+            type="button"
+            onClick={clickEyeButton}
+            className={`absolute right-0 top-0 z-10 flex h-[40px] w-10 items-center justify-center text-[#9a9a9a] hover:text-[#031b52] ${iconClassName}`}
+            aria-label={type === "password" ? "Show password" : "Hide password"}
+          >
+            {type === "password" ? (
+              <FiEye size={14} />
+            ) : (
+              <FaEyeSlash size={14} />
+            )}
+          </button>
         </div>
         {errorMessage && (
           <div className="mt-1 text-[11px] leading-[15px] text-red-700">

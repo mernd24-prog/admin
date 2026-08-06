@@ -608,16 +608,18 @@ const DataTable = ({
                     </td>
                   ))}
                   {rowActions && (
-                    <td className="px-4 py-3 text-right">
-                      <RowActionsMenu
-                        actions={rowActions(row)}
-                        rowLabel={
-                          row.full_name ||
-                          row.name ||
-                          row.title ||
-                          getKey(row, index)
-                        }
-                      />
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex h-full items-center justify-end">
+                        <RowActionsMenu
+                          actions={rowActions(row)}
+                          rowLabel={
+                            row.full_name ||
+                            row.name ||
+                            row.title ||
+                            getKey(row, index)
+                          }
+                        />
+                      </div>
                     </td>
                   )}
                 </tr>

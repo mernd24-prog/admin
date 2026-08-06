@@ -47,7 +47,7 @@ const Login = () => {
               name="email"
               label="Email Address"
               value={auth.formFields.email}
-              placeholder="e.g. John Doe"
+              placeholder="e.g. john@example.com"
               onChange={auth.handleInputChange}
               onBlur={auth.handleInputBlur}
               errorMessage={auth.formErrors.email}
