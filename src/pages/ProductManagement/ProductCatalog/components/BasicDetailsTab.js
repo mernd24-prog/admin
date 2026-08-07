@@ -417,18 +417,33 @@ export default function BasicDetailsTab({
   }, [formattedBrandList, isSellerPanelUser, myBrandSubmissions]);
 
   const handleBrandSelect = (option) => {
-    if (option?.isAddBrand) {
+    // Clear selected brand
+    if (!option) {
+      handleSelectChange(null, "BRAND_ID");
+      return;
+    }
+
+    // Open Add Brand modal
+    if (option.isAddBrand) {
       setBrandSubmission({
         name: "",
         logo: "",
         thumbnails: "",
         description: "",
       });
+
       setIsBrandModal(true);
       return;
     }
+
+    // Select existing or pending brand
     handleSelectChange(
-      option?.brandName ? { ...option, label: option.brandName } : option,
+      option.brandName
+        ? {
+            ...option,
+            label: option.brandName,
+          }
+        : option,
       "BRAND_ID",
     );
   };
@@ -788,6 +803,8 @@ export default function BasicDetailsTab({
                 options={brandOptions}
                 placeholder="Select Brand"
                 error={errors?.brand}
+                isClearable
+                required
               />
             </div>
 
@@ -804,6 +821,7 @@ export default function BasicDetailsTab({
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
                     required
+                    isClearable={true}
                   />
                 </div>
                 <PermissionGuard module="categories" action="create" hide>
@@ -825,13 +843,15 @@ export default function BasicDetailsTab({
                     label="HSN Code"
                     name="hsn_code"
                     value={selectedHsnOption}
-                    onChange={(e) => {
+                    onChange={(option) => {
                       setHsnSuggestion(null);
-                      handleSelectChange(e, "hsn_code");
+                      handleSelectChange(option, "hsn_code");
                     }}
                     options={hsnCodeList || []}
                     error={errors?.hsn_code}
                     placeholder="Search by code or description…"
+                    isClearable
+                    required
                   />
                 </div>
                 <PermissionGuard module="tax" action="create" hide>
@@ -931,6 +951,7 @@ export default function BasicDetailsTab({
               options={formattedProductFamilyList || []}
               placeholder="Select family code"
               error={errors?.productFamilyCode}
+              isClearable={true}
             />
 
             <div

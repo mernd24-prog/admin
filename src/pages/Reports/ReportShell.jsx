@@ -475,11 +475,66 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
             >
               <MdChevronLeft size={18} />
             </button>
-            <div className="text-center">
-              <h3 className="text-sm font-bold text-[var(--admin-navy)] tracking-tight">
-                {monthFormatter.format(viewDate)}
-              </h3>
-              <p className="text-[10px] font-semibold text-[var(--admin-muted)] uppercase tracking-wider">
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+              <div className="flex items-center justify-center gap-1">
+                {/* Month dropdown */}
+                <select
+                  value={viewDate.getMonth()}
+                  onChange={(e) => {
+                    const nextDate = new Date(viewDate);
+                    nextDate.setDate(1);
+                    nextDate.setMonth(Number(e.target.value));
+                    setViewDate(nextDate);
+                  }}
+                  disabled={loading}
+                  className="h-8 max-w-[110px] rounded border border-[var(--admin-gold)] bg-white px-1.5 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {[
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                  ].map((month, index) => (
+                    <option key={month} value={index}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Year dropdown */}
+                <select
+                  value={viewDate.getFullYear()}
+                  onChange={(e) => {
+                    const nextDate = new Date(viewDate);
+                    nextDate.setDate(1);
+                    nextDate.setFullYear(Number(e.target.value));
+                    setViewDate(nextDate);
+                  }}
+                  disabled={loading}
+                  className="h-8 rounded border border-[var(--admin-gold)] bg-white px-1.5 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {Array.from({ length: 21 }, (_, index) => {
+                    const currentYear = new Date().getFullYear();
+                    const year = currentYear - 10 + index;
+
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <p className="text-[10px] font-semibold leading-tight uppercase tracking-wider text-[var(--admin-muted)]">
                 Select start and end date
               </p>
             </div>
@@ -504,7 +559,6 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
             {days.map((day) => {
               const isStart = day.value === draftDates.fromDate;
               const isEnd = day.value === draftDates.toDate;
-              const isSelected = isStart || isEnd;
               const isInRange = isBetweenDates(
                 day.value,
                 draftDates.fromDate,

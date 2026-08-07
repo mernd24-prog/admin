@@ -644,11 +644,38 @@ const Sidebar = ({
     ? "w-full max-w-[260px] lg:w-[260px]"
     : "w-16";
 
+    const handleNeedHelpClick = () => {
+  const supportRoute = isSellerPanel()
+    ? "/app/help-support"
+    : "/app/queries";
+
+  const supportKey = isSellerPanel()
+    ? "help-support"
+    : "queries";
+
+  navigate(supportRoute);
+  handleNavClick(supportKey);
+};
+
   return (
-    <div
-      ref={sidebarRef}
-      className={`fixed lg:static inset-y-0 bg-[#FCF5E8]   ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${navbarOpen ? "flex" : "hidden lg:flex"}`}
-    >
+   <div
+  ref={sidebarRef}
+  onMouseEnter={() => {
+    if (!isPermanentlyOpen) {
+      setNavbarOpen(true);
+      setIsExpanded(true);
+    }
+  }}
+  onMouseLeave={() => {
+    if (!isPermanentlyOpen) {
+      setNavbarOpen(false);
+      setIsExpanded(false);
+    }
+  }}
+  className={`fixed lg:static inset-y-0 bg-[#FCF5E8] ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${
+    navbarOpen ? "flex" : "hidden lg:flex"
+  }`}
+>
       {/* Logo / toggle */}
       <div
         className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${isExpanded ? "h-[120px]" : "h-[70px]"} sm:pt-4`}
@@ -668,12 +695,16 @@ const Sidebar = ({
             aria-label="Open sidebar"
             className="hidden h-9 w-9 min-w-9 flex-none aspect-square items-center justify-center rounded-full border border-[#eadcc3] bg-white p-0 text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] lg:flex"
             onClick={() => {
-              setNavbarOpen(true);
-              setIsExpanded(true);
-              setHasPermanentOpen(true);
-              sessionStorage.setItem("sidebarExpandedState", "true");
-              sessionStorage.setItem("sidebarPermanentState", "true");
-            }}
+    setNavbarOpen(true);
+    setIsExpanded(true);
+
+    // Permanent pin
+    setIsPermanentlyOpen(true);
+    setHasPermanentOpen(true);
+
+    sessionStorage.setItem("sidebarExpandedState", "true");
+    sessionStorage.setItem("sidebarPermanentState", "true");
+  }}
           >
             <MdChevronRight size={20} />
           </button>
@@ -827,25 +858,30 @@ const Sidebar = ({
           </ul>
         </nav>
       </div>
-      {isExpanded && (
-        <NeedHelpCard
-          title="Need Help?"
-          onClick={() => {
-            const supportRoute = isSellerPanel()
-              ? "/app/help-support"
-              : "/app/queries";
-            const supportKey = isSellerPanel() ? "help-support" : "queries";
-            navigate(supportRoute);
-            handleNavClick(supportKey);
-          }}
-          description="Our verification team is available 24/7 to help you complete KYC."
-          buttonText="Contact Support"
-          className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"
-          titleClassName="text-[11px] tracking-[0.04em] text-[var(--admin-navy)]"
-          descriptionClassName="text-[11px] leading-4 text-[var(--admin-ink)]"
-          buttonClassName="mt-3 h-8 rounded-[5px] bg-[var(--admin-gold)] text-[10px] font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-gold-dark)]"
-        />
-      )}
+     {isExpanded ? (
+  <NeedHelpCard
+    title="Need Help?"
+    onClick={handleNeedHelpClick}
+    description="Our verification team is available 24/7 to help you complete KYC."
+    buttonText="Contact Support"
+    className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"
+    titleClassName="text-[11px] tracking-[0.04em] text-[var(--admin-navy)]"
+    descriptionClassName="text-[11px] leading-4 text-[var(--admin-ink)]"
+    buttonClassName="mt-3 h-8 rounded-[5px] bg-[var(--admin-gold)] text-[10px] font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-gold-dark)]"
+  />
+) : (
+  <div className="mb-5 mt-3 flex justify-center">
+    <button
+      type="button"
+      onClick={handleNeedHelpClick}
+      title="Need Help?"
+      aria-label="Need Help?"
+      className="flex h-10 w-10 items-center justify-center rounded-[6px] text-[var(--admin-blue)] transition-colors duration-200 hover:bg-white hover:text-[var(--admin-navy)]"
+    >
+      <MdSupportAgent size={19} />
+    </button>
+  </div>
+)}
     </div>
   );
 };

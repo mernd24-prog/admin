@@ -7,6 +7,37 @@ import { FaInfoCircle } from "react-icons/fa";
 
 const MAX_VARIANT_IMAGES = 5;
 
+const sanitizeDecimalInput = (value, { max = null, decimals = 2 } = {}) => {
+  let next = String(value ?? "")
+    .replace(/[^0-9.]/g, "")
+    .replace(/(\..*)\./g, "$1");
+
+  if (next.startsWith(".")) {
+    next = `0${next}`;
+  }
+
+  const [whole = "", decimal = ""] = next.split(".");
+
+  next =
+    next.includes(".") && decimals > 0
+      ? `${whole}.${decimal.slice(0, decimals)}`
+      : whole;
+
+  if (next === "") return "";
+
+  if (max !== null && Number(next) > max) {
+    return String(max);
+  }
+
+  return next;
+};
+
+const blockInvalidNumberKeys = (event) => {
+  if (["e", "E", "+", "-", "_", "?", "*", " "].includes(event.key)) {
+    event.preventDefault();
+  }
+};
+
 const DISPLAY_TYPES = [
   { value: "button", label: "Button" },
   { value: "dropdown", label: "Dropdown" },
@@ -619,7 +650,7 @@ const VariantBuilder = ({
               { field: "price", label: "Price (₹)", placeholder: "0" },
               { field: "mrp", label: "MRP (₹)", placeholder: "0" },
               { field: "salePrice", label: "Sale Price (₹)", placeholder: "0" },
-              { field: "gstRate", label: "GST (%)", placeholder: "18" },
+              // { field: "gstRate", label: "GST (%)", placeholder: "18" },
             ].map(({ field, label, placeholder }) => (
               <div key={field} className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -629,19 +660,27 @@ const VariantBuilder = ({
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <SmallInput
-                      type="number"
-                      min={0}
+                      type="text"
+                      inputMode="decimal"
                       placeholder={placeholder}
                       value={bulkValues[field] ?? ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const nextValue = sanitizeDecimalInput(e.target.value, {
+                          max: field === "gstRate" ? 100 : null,
+                          decimals: 2,
+                        });
+
                         setBulkValues((prev) => ({
                           ...prev,
-                          [field]: e.target.value,
-                        }))
-                      }
+                          [field]: nextValue,
+                        }));
+                      }}
                       onKeyDown={(e) => {
+                        blockInvalidNumberKeys(e);
+
                         if (e.key === "Enter") {
                           applyToAll(field, bulkValues[field]);
+
                           setBulkValues((prev) => ({
                             ...prev,
                             [field]: "",
@@ -827,7 +866,9 @@ const VariantBuilder = ({
                         <FieldLabel>SKU</FieldLabel>
                         <SmallInput
                           name={`variants.${idx}.sku`}
-                          data-error-field={variantErrors.sku ? "variants" : undefined}
+                          data-error-field={
+                            variantErrors.sku ? "variants" : undefined
+                          }
                           error={variantErrors.sku}
                           value={variant.sku || ""}
                           onChange={(e) =>
@@ -845,20 +886,28 @@ const VariantBuilder = ({
                         <FieldLabel>Price (₹)</FieldLabel>
                         <SmallInput
                           name={`variants.${idx}.price`}
-                          data-error-field={variantErrors.price ? "variants" : undefined}
+                          data-error-field={
+                            variantErrors.price ? "variants" : undefined
+                          }
                           error={variantErrors.price}
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="decimal"
                           value={variant.price ?? ""}
-                          onChange={(e) =>
+                          onKeyDown={blockInvalidNumberKeys}
+                          onChange={(e) => {
+                            const nextValue = sanitizeDecimalInput(
+                              e.target.value,
+                              {
+                                decimals: 2,
+                              },
+                            );
+
                             updateVariant(
                               idx,
                               "price",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              nextValue === "" ? "" : Number(nextValue),
+                            );
+                          }}
                           placeholder=""
                         />
                         {variantErrors.price && (
@@ -871,20 +920,28 @@ const VariantBuilder = ({
                         <FieldLabel>MRP (₹)</FieldLabel>
                         <SmallInput
                           name={`variants.${idx}.mrp`}
-                          data-error-field={variantErrors.mrp ? "variants" : undefined}
+                          data-error-field={
+                            variantErrors.mrp ? "variants" : undefined
+                          }
                           error={variantErrors.mrp}
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="decimal"
                           value={variant.mrp ?? ""}
-                          onChange={(e) =>
+                          onKeyDown={blockInvalidNumberKeys}
+                          onChange={(e) => {
+                            const nextValue = sanitizeDecimalInput(
+                              e.target.value,
+                              {
+                                decimals: 2,
+                              },
+                            );
+
                             updateVariant(
                               idx,
                               "mrp",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              nextValue === "" ? "" : Number(nextValue),
+                            );
+                          }}
                           placeholder=""
                         />
                         {variantErrors.mrp && (
@@ -897,20 +954,28 @@ const VariantBuilder = ({
                         <FieldLabel>Sale Price (₹)</FieldLabel>
                         <SmallInput
                           name={`variants.${idx}.salePrice`}
-                          data-error-field={variantErrors.salePrice ? "variants" : undefined}
+                          data-error-field={
+                            variantErrors.salePrice ? "variants" : undefined
+                          }
                           error={variantErrors.salePrice}
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="decimal"
                           value={variant.salePrice ?? ""}
-                          onChange={(e) =>
+                          onKeyDown={blockInvalidNumberKeys}
+                          onChange={(e) => {
+                            const nextValue = sanitizeDecimalInput(
+                              e.target.value,
+                              {
+                                decimals: 2,
+                              },
+                            );
+
                             updateVariant(
                               idx,
                               "salePrice",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              nextValue === "" ? "" : Number(nextValue),
+                            );
+                          }}
                           placeholder=""
                         />
                         {variantErrors.salePrice && (
@@ -939,24 +1004,42 @@ const VariantBuilder = ({
                           Managed in Inventory later too.
                         </p>
                       </div>
-                      <div className="space-y-1">
+                      {/* <div className="space-y-1">
                         <FieldLabel>GST (%)</FieldLabel>
+
                         <SmallInput
-                          type="number"
-                          min={0}
-                          max={100}
+                          name={`variants.${idx}.gstRate`}
+                          data-error-field={
+                            variantErrors.gstRate ? "variants" : undefined
+                          }
+                          error={variantErrors.gstRate}
+                          type="text"
+                          inputMode="decimal"
                           value={variant.gstRate ?? ""}
-                          onChange={(e) =>
+                          onKeyDown={blockInvalidNumberKeys}
+                          onChange={(e) => {
+                            const nextValue = sanitizeDecimalInput(
+                              e.target.value,
+                              {
+                                max: 100,
+                                decimals: 2,
+                              },
+                            );
+
                             updateVariant(
                               idx,
                               "gstRate",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              nextValue === "" ? "" : Number(nextValue),
+                            );
+                          }}
                         />
-                      </div>
+
+                        {variantErrors.gstRate && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.gstRate}
+                          </p>
+                        )}
+                      </div> */}
                       <div className="space-y-1">
                         <FieldLabel>Status</FieldLabel>
                         <SmallSelect

@@ -1185,199 +1185,369 @@ export default function ProductManagementUI() {
   }, [selector?.getListData, prefillList]);
 
   const validateForm = () => {
-    const newErrors = {};
-    if (!formData?.name?.trim()) newErrors.name = "Product name is required.";
-    if (formData?.name?.trim() && formData.name.trim().length < 3)
-      newErrors.name = "Product name must be at least 3 characters.";
-    if (formData?.name?.trim() && formData.name.trim().length > 200)
-      newErrors.name = "Product name must be not more than 200 characters.";
-    // Description Validation
-    const description = formData.description || "";
+  const newErrors = {};
 
-    const plainDescription = description
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .trim();
+  // Product name validation
+  const productName = String(formData?.name || "").trim();
 
-    if (!plainDescription) {
-      newErrors.description = "Description is required.";
-    } else if (plainDescription.length < 10) {
-      newErrors.description = "Description must be at least 10 characters.";
-    } else if (plainDescription.length > 5000) {
-      newErrors.description =
-        "Description must not be more than 5000 characters.";
-    }
-    // API adapter supplies a generated fallback from the product title.
-    if (!formData?.sellerId && !isSellerPanelUser)
-      newErrors.sellerId = "Seller is required.";
-    if (!formData?.organizationId) {
-      if (isSellerPanelUser) {
-        const activeOrgId = getSelectedSellerOrganizationId();
-        if (!activeOrgId)
-          newErrors.organizationId =
-            "No active organization is available for this seller account.";
-      } else {
-        newErrors.organizationId = "Organization is required.";
+  if (!productName) {
+    newErrors.name = "Product name is required.";
+  } else if (productName.length < 3) {
+    newErrors.name = "Product name must be at least 3 characters.";
+  } else if (productName.length > 200) {
+    newErrors.name = "Product name must not be more than 200 characters.";
+  }
+
+  // Description validation
+  const description = formData?.description || "";
+
+  const plainDescription = description
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+
+  if (!plainDescription) {
+    newErrors.description = "Description is required.";
+  } else if (plainDescription.length < 10) {
+    newErrors.description = "Description must be at least 10 characters.";
+  } else if (plainDescription.length > 5000) {
+    newErrors.description =
+      "Description must not be more than 5000 characters.";
+  }
+
+  // Seller validation
+  if (!formData?.sellerId && !isSellerPanelUser) {
+    newErrors.sellerId = "Seller is required.";
+  }
+
+  // Organization validation
+  if (!formData?.organizationId) {
+    if (isSellerPanelUser) {
+      const activeOrgId = getSelectedSellerOrganizationId();
+
+      if (!activeOrgId) {
+        newErrors.organizationId =
+          "No active organization is available for this seller account.";
       }
+    } else {
+      newErrors.organizationId = "Organization is required.";
     }
-    if (
-      !(formData?.category_id || formData?.category || formData?.category_key)
-    ) {
-      newErrors.category_id = "Category is required.";
-    }
-    if (!variantsData.length) {
-      newErrors.variants = {
-        _form: "Add at least one variant for this product.",
-      };
-    }
-    const hasShippingProfile = Boolean(formData?.shipping?.shippingProfileId);
-    if (!hasShippingProfile) {
-      const deliveryMode = normalizeProductServiceabilityMode(
-        formData?.shipping?.serviceabilityMode,
-      );
-      const allowedPincodes = normalizePincodeList(
-        formData?.shipping?.allowPincodes ||
-          formData?.shipping?.serviceablePincodes,
-      );
-      if (deliveryMode !== "allowlist") {
-        newErrors.shipping =
-          "Add allowed delivery pincodes when no shipping profile is selected.";
-      } else if (deliveryMode === "allowlist" && !allowedPincodes.length) {
-        newErrors.shipping = "Add at least one allowed delivery pincode.";
-      } else if (
-        allowedPincodes.some(
-          (pincode) => !isValidIndianPincode(pincode),
-        )
-      ) {
-        newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
-      }
-    }
-    const variantErrors = variantsData.reduce((result, variant, index) => {
-      const fieldErrors = {};
-      const price = Number(variant?.price || 0);
-      const mrp = Number(variant?.mrp || 0);
-      const hasSalePrice =
-        variant?.salePrice !== undefined && variant.salePrice !== "";
-      const salePrice = Number(variant?.salePrice || 0);
+  }
 
-      if (!String(variant?.sku || "").trim()) {
-        fieldErrors.sku = "SKU is required.";
-      }
-      if (price <= 0) {
-        fieldErrors.price = "Price must be greater than 0.";
-      } else if (mrp > 0 && price > mrp) {
-        fieldErrors.price = "Price cannot be greater than MRP.";
-      }
-      if (mrp <= 0) {
-        fieldErrors.mrp = "MRP must be greater than 0.";
-      }
-      if (!hasSalePrice) {
-        fieldErrors.salePrice = "Sale price is required.";
-      } else if (salePrice <= 0) {
-        fieldErrors.salePrice = "Sale price must be greater than 0.";
-      } else if (hasSalePrice && salePrice > price) {
-        fieldErrors.salePrice = "Sale price cannot be greater than price.";
-      }
-      if (Object.keys(fieldErrors).length) result[index] = fieldErrors;
-      return result;
-    }, {});
-    if (Object.keys(variantErrors).length) {
-      newErrors.variants = variantErrors;
-    }
-    if (!useManualAttributes) {
-      categoryAttributeSchema.forEach((field) => {
-        const value = formData?.attributes?.[field.key];
-        if (
-          field.required &&
-          (value === undefined ||
-            value === null ||
-            value === "" ||
-            (Array.isArray(value) && value.length === 0))
-        ) {
-          newErrors.attributes = {
-            ...(newErrors.attributes || {}),
-            [field.key]: `${field.label || field.key} is required.`,
-          };
-        }
-      });
-    }
+  // Brand validation
+  const brandValue = String(
+    formData?.brand ||
+      formData?.brandId ||
+      formData?.brand_id ||
+      "",
+  ).trim();
 
-    setError(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      scrollToFirstValidationError(newErrors);
-    }
-    return Object.keys(newErrors).length === 0;
-  };
+  if (!brandValue) {
+    newErrors.brand = "Brand is required.";
+  }
 
-  useEffect(() => {
-    if (isScrolling) return;
+  // Category validation
+  const categoryValue =
+    formData?.category_id ||
+    formData?.categoryId ||
+    formData?.category ||
+    formData?.category_key;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let mostVisibleEntry = null;
-        let maxRatio = 0;
+  if (!categoryValue) {
+    newErrors.category_id = "Category is required.";
+  }
 
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
-            maxRatio = entry.intersectionRatio;
-            mostVisibleEntry = entry;
-          }
-        });
+  // HSN code validation
+  const hsnValue = String(
+    formData?.hsn_code ||
+      formData?.hsnCode ||
+      formData?.hsn_id ||
+      "",
+  ).trim();
 
-        if (mostVisibleEntry) {
-          const targetId = mostVisibleEntry.target.id;
-          if (targetId && targetId !== activeTab) {
-            setActiveTab(targetId);
-          }
-        }
-      },
-      {
-        root: null,
-        rootMargin: "-20% 0px -20% 0px",
-        threshold: [0.1, 0.5, 0.9],
-      },
+  if (!hsnValue) {
+    newErrors.hsn_code = "HSN Code is required.";
+  }
+
+  // Variant existence validation
+  if (!Array.isArray(variantsData) || !variantsData.length) {
+    newErrors.variants = {
+      _form: "Add at least one variant for this product.",
+    };
+  }
+
+  // Shipping validation
+  const hasShippingProfile = Boolean(
+    formData?.shipping?.shippingProfileId,
+  );
+
+  if (!hasShippingProfile) {
+    const deliveryMode = normalizeProductServiceabilityMode(
+      formData?.shipping?.serviceabilityMode,
     );
 
-    Object.values(refs).forEach((ref) => {
-      if (ref.current) observer.observe(ref.current);
+    const allowedPincodes = normalizePincodeList(
+      formData?.shipping?.allowPincodes ||
+        formData?.shipping?.serviceablePincodes,
+    );
+
+    if (deliveryMode !== "allowlist") {
+      newErrors.shipping =
+        "Add allowed delivery pincodes when no shipping profile is selected.";
+    } else if (!allowedPincodes.length) {
+      newErrors.shipping = "Add at least one allowed delivery pincode.";
+    } else if (
+      allowedPincodes.some(
+        (pincode) => !isValidIndianPincode(pincode),
+      )
+    ) {
+      newErrors.shipping =
+        "Every pincode must be a valid 6-digit pincode.";
+    }
+  }
+
+  // Variant field validation
+  if (Array.isArray(variantsData) && variantsData.length) {
+    const variantErrors = variantsData.reduce(
+  (result, variant, index) => {
+    const fieldErrors = {};
+
+    const price = Number(variant?.price || 0);
+    const mrp = Number(variant?.mrp || 0);
+
+    const hasSalePrice =
+      variant?.salePrice !== undefined &&
+      variant?.salePrice !== null &&
+      variant?.salePrice !== "";
+
+    const salePrice = Number(variant?.salePrice || 0);
+
+    const hasGstRate =
+      variant?.gstRate !== undefined &&
+      variant?.gstRate !== null &&
+      variant?.gstRate !== "";
+
+    const gstRate = Number(variant?.gstRate);
+
+    if (!String(variant?.sku || "").trim()) {
+      fieldErrors.sku = "SKU is required.";
+    }
+
+    if (price <= 0) {
+      fieldErrors.price = "Price must be greater than 0.";
+    } else if (mrp > 0 && price > mrp) {
+      fieldErrors.price = "Price cannot be greater than MRP.";
+    }
+
+    if (mrp <= 0) {
+      fieldErrors.mrp = "MRP must be greater than 0.";
+    }
+
+    if (!hasSalePrice) {
+      fieldErrors.salePrice = "Sale price is required.";
+    } else if (salePrice <= 0) {
+      fieldErrors.salePrice = "Sale price must be greater than 0.";
+    } else if (salePrice > price) {
+      fieldErrors.salePrice =
+        "Sale price cannot be greater than price.";
+    }
+
+    // GST validation
+    if (!hasGstRate) {
+      fieldErrors.gstRate = "GST rate is required.";
+    } else if (Number.isNaN(gstRate)) {
+      fieldErrors.gstRate = "Enter a valid GST rate.";
+    } else if (gstRate < 0 || gstRate > 100) {
+      fieldErrors.gstRate = "GST rate must be between 0 and 100.";
+    }
+
+    if (Object.keys(fieldErrors).length) {
+      result[index] = fieldErrors;
+    }
+
+    return result;
+  },
+  {},
+);
+
+    if (Object.keys(variantErrors).length) {
+      newErrors.variants = {
+        ...(newErrors.variants || {}),
+        ...variantErrors,
+      };
+    }
+  }
+
+  // Category attribute validation
+  if (!useManualAttributes) {
+    categoryAttributeSchema.forEach((field) => {
+      const value = formData?.attributes?.[field.key];
+
+      const isEmpty =
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (Array.isArray(value) && value.length === 0);
+
+      if (field.required && isEmpty) {
+        newErrors.attributes = {
+          ...(newErrors.attributes || {}),
+          [field.key]: `${field.label || field.key} is required.`,
+        };
+      }
+    });
+  }
+
+  setError(newErrors);
+
+  if (Object.keys(newErrors).length > 0) {
+    scrollToFirstValidationError(newErrors);
+  }
+
+  return Object.keys(newErrors).length === 0;
+};
+ useEffect(() => {
+  if (isScrolling) return;
+
+  const sectionIds = [
+    "basic-details",
+    "product-details",
+    "common-images",
+    "variants-options",
+    "shipping",
+    "seo",
+    "tags",
+  ];
+
+  let animationFrameId = null;
+
+  const updateActiveSection = () => {
+    const viewportHeight = window.innerHeight;
+
+    // Position in viewport where a section becomes active.
+    const activationLine = 220;
+
+    const sections = sectionIds
+      .map((id) => ({
+        id,
+        element: refs[id]?.current,
+      }))
+      .filter((item) => item.element);
+
+    if (!sections.length) return;
+
+    // -----------------------------------------
+    // LAST SECTION FIX
+    // -----------------------------------------
+    const lastSection = sections[sections.length - 1];
+    const lastRect = lastSection.element.getBoundingClientRect();
+
+    /*
+      Last section often cannot move all the way to the top because
+      there is no content after it.
+
+      As soon as Tags & Discovery enters enough of the viewport,
+      activate it.
+    */
+    if (
+      lastRect.top <= viewportHeight * 0.78 &&
+      lastRect.bottom > 0
+    ) {
+      setActiveTab((prev) =>
+        prev !== lastSection.id ? lastSection.id : prev,
+      );
+
+      return;
+    }
+
+    // -----------------------------------------
+    // NORMAL SECTION DETECTION
+    // -----------------------------------------
+    let currentSection = sections[0].id;
+
+    sections.forEach(({ id, element }) => {
+      const rect = element.getBoundingClientRect();
+
+      /*
+        The latest section that has crossed the activation line
+        becomes active.
+      */
+      if (rect.top <= activationLine) {
+        currentSection = id;
+      }
     });
 
-    const handleManualScroll = () => {
-      if (isScrolling) return;
+    setActiveTab((prev) =>
+      prev !== currentSection ? currentSection : prev,
+    );
+  };
 
-      if (window.scrollY <= 100 && activeTab !== "basic-details") {
-        setActiveTab("basic-details");
-      }
-    };
+  const handleScroll = () => {
+    if (isScrolling) return;
 
-    window.addEventListener("scroll", handleManualScroll);
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
 
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("scroll", handleManualScroll);
-    };
-  }, [isScrolling, refs, activeTab]);
+    animationFrameId = requestAnimationFrame(() => {
+      updateActiveSection();
+      animationFrameId = null;
+    });
+  };
 
-  const scrollToSection = useCallback(
-    (id) => {
-      setIsScrolling(true);
+  /*
+    IMPORTANT:
+    true = capture phase.
 
-      refs[id]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    This lets us detect scrolling even when your admin layout
+    scrolls inside a nested div instead of window.
+  */
+  document.addEventListener("scroll", handleScroll, true);
 
-      const handleScrollStop = () => {
-        setIsScrolling(false);
-        window.removeEventListener("scroll", handleScrollStop);
-      };
+  window.addEventListener("resize", handleScroll);
 
-      window.addEventListener("scroll", handleScrollStop);
+  // Set correct active tab immediately.
+  updateActiveSection();
 
-      setTimeout(() => {
-        setIsScrolling(false);
-        window.removeEventListener("scroll", handleScrollStop);
-      }, 1200);
-    },
-    [refs],
-  );
+  return () => {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+
+    document.removeEventListener(
+      "scroll",
+      handleScroll,
+      true,
+    );
+
+    window.removeEventListener(
+      "resize",
+      handleScroll,
+    );
+  };
+}, [isScrolling]);
+
+ const scrollToSection = useCallback(
+  (id) => {
+    const target = refs[id]?.current;
+
+    if (!target) return;
+
+    // Immediately highlight clicked navigation item
+    setActiveTab(id);
+    setIsScrolling(true);
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    setTimeout(() => {
+      setIsScrolling(false);
+    }, 700);
+  },
+  [],
+);
 
   function calculateDiscount(price, discountPercent = 0) {
     const validPrice = parseFloat(price) || 0;
@@ -1478,7 +1648,7 @@ export default function ProductManagementUI() {
           delete newErrors.organizationId;
           break;
         case "BRAND_ID":
-          delete newErrors.brand_id;
+          delete newErrors.brand;
           break;
         case "CATEGORY_ID":
           delete newErrors.category_id;
@@ -1507,6 +1677,9 @@ export default function ProductManagementUI() {
         case "STORE_SHIPPING_DURATION_ID":
           delete newErrors.store_shipping_duration_id;
           break;
+        case "hsn_code":
+          delete newErrors.hsn_code;
+      break;
         default:
           break;
       }
@@ -3088,20 +3261,7 @@ export default function ProductManagementUI() {
         route: "/app/hsn-code",
       });
     }
-    if (!formData?.brand) {
-      blockers.push({
-        key: "brand_selected",
-        message: "Select a brand for this product.",
-        route: "/app/brands",
-      });
-    }
-    if (!formData?.hsnCode && !formData?.hsn_code) {
-      blockers.push({
-        key: "hsn_selected",
-        message: "Select an HSN code for this product.",
-        route: "/app/hsn-code",
-      });
-    }
+   
     // Product Family Code remains available in the form, but it is optional.
     // The prior gate blocked saves after related product fields were hidden.
     return blockers;

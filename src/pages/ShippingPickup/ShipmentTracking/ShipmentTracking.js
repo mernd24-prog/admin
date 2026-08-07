@@ -418,38 +418,61 @@ const ShipmentTracking = () => {
   );
 
   const handleTrackingStatus = useCallback(async () => {
-
-    const orderDate =
-  selectedShipment?.order_created_at ||
-  selectedShipment?.orderCreatedAt ||
-  selectedShipment?.order?.created_at ||
-  selectedShipment?.order?.createdAt ||
-  selectedShipment?.created_at ||
-  selectedShipment?.createdAt;
-
-if (
-  trackingAction.shippedAt &&
-  orderDate &&
-  moment(trackingAction.shippedAt).isBefore(moment(orderDate))
-) {
-  nextErrors.shippedAt =
-    "Shipment time cannot be earlier than the order date.";
-}
     if (!selectedShipment?.id) return;
+
     const nextErrors = {};
     const location = trackingAction.location.trim();
     const note = trackingAction.note.trim();
     const trackingUrl = trackingAction.trackingUrl.trim();
-    if (location && (/^\d+$/.test(location) || location.length < 3))
+
+    const orderDate =
+      selectedShipment?.order_created_at ||
+      selectedShipment?.orderCreatedAt ||
+      selectedShipment?.order?.created_at ||
+      selectedShipment?.order?.createdAt ||
+      selectedShipment?.created_at ||
+      selectedShipment?.createdAt;
+
+    // `datetime-local` has no timezone information. Parse it as browser-local
+    // time first, then convert to ISO before sending it to the backend.
+    const selectedShippedAt = trackingAction.shippedAt
+      ? moment(trackingAction.shippedAt, "YYYY-MM-DDTHH:mm", true)
+      : null;
+
+    if (
+      selectedShippedAt &&
+      (!selectedShippedAt.isValid() ||
+        selectedShippedAt.valueOf() > moment().valueOf())
+    ) {
+      nextErrors.shippedAt = "Shipment time cannot be in the future.";
+    }
+
+    if (
+      selectedShippedAt?.isValid() &&
+      orderDate &&
+      moment(orderDate).isValid() &&
+      selectedShippedAt.valueOf() < moment(orderDate).valueOf()
+    ) {
+      nextErrors.shippedAt =
+        "Shipment time cannot be earlier than the order date.";
+    }
+
+    if (location && (/^\d+$/.test(location) || location.length < 3)) {
       nextErrors.location = "Enter a readable location, not only numbers.";
+    }
+
     if (
       ["failed", "rto", "cancelled"].includes(trackingAction.status) &&
       note.length < 3
-    )
+    ) {
       nextErrors.note = "Add a reason of at least 3 characters.";
+    }
+
     if (trackingAction.status === "in_transit") {
-      if (!trackingAction.courierName.trim())
+      if (!trackingAction.courierName.trim()) {
         nextErrors.courierName = "Courier or delivery method is required.";
+      }
+
       if (!trackingAction.awbNumber.trim()) {
         nextErrors.awbNumber = "Tracking reference is required.";
       } else if (
@@ -458,37 +481,48 @@ if (
       ) {
         nextErrors.awbNumber = "Tracking reference must be 5–50 characters.";
       } else if (!/^[A-Za-z0-9_/-]+$/.test(trackingAction.awbNumber)) {
-        nextErrors.awbNumber = "Allowed: letters, numbers, -, _, and / only.";
+        nextErrors.awbNumber =
+          "Allowed: letters, numbers, -, _, and / only.";
       }
-      if (!trackingAction.shippedAt)
+
+      if (!trackingAction.shippedAt) {
         nextErrors.shippedAt = "Shipment time is required.";
+      }
     }
+
     if (trackingUrl) {
       try {
         const parsedUrl = new URL(trackingUrl);
-        if (!["http:", "https:"].includes(parsedUrl.protocol))
+
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
           throw new Error("Invalid protocol");
+        }
       } catch {
         nextErrors.trackingUrl =
           "Enter a valid http:// or https:// tracking URL.";
       }
     }
-    if (
-      trackingAction.shippedAt &&
-      new Date(trackingAction.shippedAt).getTime() > Date.now()
-    )
-      nextErrors.shippedAt = "Shipment time cannot be in the future.";
+
     if (Object.keys(nextErrors).length) {
       setTrackingErrors(nextErrors);
+
       toast.error(
         "Please correct the highlighted shipment fields before updating.",
         { id: "shipment-tracking-validation-error" },
       );
+
       return;
     }
+
     try {
       setTrackingErrors({});
       setLoading(true);
+
+      const shippedAtIso =
+        selectedShippedAt?.isValid() && trackingAction.shippedAt
+          ? selectedShippedAt.toISOString()
+          : undefined;
+
       await dispatch(
         addShipmentTracking({
           shipmentId: selectedShipment.id,
@@ -500,13 +534,16 @@ if (
           awbNumber: trackingAction.awbNumber,
           trackingNumber: trackingAction.awbNumber,
           trackingUrl: trackingAction.trackingUrl,
-          shippedAt: trackingAction.shippedAt || undefined,
+          shippedAt: shippedAtIso,
         }),
       ).unwrap();
+
       toast.success(
         `Shipment status updated to ${shipmentStepLabel(trackingAction.status)}.`,
       );
+
       await refreshSelectedShipment(selectedShipment.id);
+
       if (["in_transit", "delivered"].includes(trackingAction.status)) {
         setDetailModal(false);
       }
@@ -519,7 +556,12 @@ if (
     } finally {
       setLoading(false);
     }
-  }, [dispatch, refreshSelectedShipment, selectedShipment?.id, trackingAction]);
+  }, [
+    dispatch,
+    refreshSelectedShipment,
+    selectedShipment,
+    trackingAction,
+  ]);
 
   const handleSellerCancellation = useCallback(async () => {
     if (!selectedShipment?.order_id) return;
@@ -1062,7 +1104,7 @@ if (
     }`}
     type="datetime-local"
     min={minimumShippedAt}
-    max={moment().format("YYYY-MM-DDTHH:mm")}
+    max={moment().local().format("YYYY-MM-DDTHH:mm")}
     value={trackingAction.shippedAt}
     required
     aria-required="true"
@@ -1158,7 +1200,7 @@ if (
             )}
           </section>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-1">
             <section className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
@@ -1195,7 +1237,7 @@ if (
               )}
             </section>
 
-            <section className="rounded-2xl border border-gray-200 bg-white p-4">
+            {/* <section className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
                   <MdInventory2 size={18} />
@@ -1220,7 +1262,7 @@ if (
                     : "Not entered"}
                 </div>
               </div>
-            </section>
+            </section> */}
           </div>
 
           <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
@@ -1230,7 +1272,7 @@ if (
               </span>
               <div>
                 <div className="font-semibold text-gray-900">
-                  Tracking imeline
+                  Tracking Timeline
                 </div>
                 <div className="text-xs text-gray-500">
                   Shipment updates in chronological order

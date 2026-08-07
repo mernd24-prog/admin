@@ -796,18 +796,26 @@ const DocumentUploadField = ({
 
   useEffect(() => {
     let isActive = true;
+
     if (!isPreviewableImage(file)) {
       setPreviewUrl("");
       return undefined;
     }
 
     const reader = new FileReader();
+
     reader.onload = () => {
-      if (isActive) setPreviewUrl(reader.result || "");
+      if (isActive) {
+        setPreviewUrl(reader.result || "");
+      }
     };
+
     reader.onerror = () => {
-      if (isActive) setPreviewUrl("");
+      if (isActive) {
+        setPreviewUrl("");
+      }
     };
+
     reader.readAsDataURL(file);
 
     return () => {
@@ -815,75 +823,105 @@ const DocumentUploadField = ({
     };
   }, [file]);
 
+  const inputId = `${id}-input`;
+
   return (
-    <div data-onboarding-field={id}>
-      <label className="mb-[6px]   block text-[13px] font-medium leading-[17px] text-[#484555]">
+    <div className="space-y-2">
+      <label
+        htmlFor={inputId}
+        className="text-sm font-medium text-gray-700"
+      >
         {label} {required && STEP_ONE_REQUIRED}
       </label>
+
       <div
-        className="flex min-h-[200px]  flex-col items-center justify-center rounded-[8px] border-2 border-dashed border-[#f2b84b]  bg-[#F4F1ED] px-4 py-3 transition "
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={onDrop}
+        className={`flex min-h-[200px] flex-col items-center justify-center rounded-[8px] border-2 border-dashed bg-[#F4F1ED] px-4 py-3 transition ${
+          error
+            ? "border-red-400"
+            : "border-[#f2b84b]"
+        }`}
+        onDragOver={(event) => {
+          event.preventDefault();
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          onDrop?.(event);
+        }}
       >
+        {/* Hidden file input */}
+        <input
+          id={inputId}
+          type="file"
+          accept={accept}
+          onChange={onChange}
+          className="hidden"
+        />
+
         {file || existingUrl ? (
           <div className="flex w-full flex-col items-center gap-3">
-            {previewUrl || isPreviewableImageUrl(existingUrl) ? (
+            {previewUrl ||
+            isPreviewableImageUrl(existingUrl) ? (
               <img
                 src={previewUrl || existingUrl}
                 alt={label}
-                className="h-24 max-w-full  rounded-md border border-[#F4F1ED] bg-white object-contain"
+                className="h-24 max-w-full rounded-md border border-[#F4F1ED] bg-white object-contain"
               />
             ) : (
-              <div className="flex max-w-full items-center gap-2 text-sm text-gray-700">
-                <FileText size={18} className="shrink-0 text-[#082f91]" />
-                <span className="truncate ">
-                  {file?.name || getFileNameFromUrl(existingUrl, label)}
-                </span>
+              <div className="flex flex-col items-center gap-1">
+                <p className="max-w-[260px] truncate text-sm font-medium text-gray-700">
+                  {file?.name ||
+                    getFileNameFromUrl(
+                      existingUrl,
+                      label,
+                    )}
+                </p>
               </div>
             )}
-            <div className="flex max-w-full items-center gap-3">
-              <span className="max-w-[220px] truncate text-xs text-gray-600">
-                {file?.name || getFileNameFromUrl(existingUrl, label)}
-              </span>
-              <label
-                htmlFor={id}
-                className="shrink-0  cursor-pointer rounded-[7px] bg-[#082f91] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#062779]"
-              >
-                Change
-              </label>
-            </div>
+
+            <p className="max-w-[280px] truncate text-xs text-gray-500">
+              {file?.name ||
+                getFileNameFromUrl(
+                  existingUrl,
+                  label,
+                )}
+            </p>
+
+            <label
+              htmlFor={inputId}
+              className="cursor-pointer rounded-[6px] border border-[#d9d9d9] bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+            >
+              Change
+            </label>
           </div>
         ) : (
           <>
-            <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#ead9bf] bg-white text-[#f2a900]">
-              <UploadCloud size={24} />
-            </span>
-            <p className="mb-1 text-[14px] font-inter text-[#182D50]">
-              {emptyText}
-            </p>
-            <p className="mb-3 text-[10px] text-[#182D5066]/40">
-              PNG, JPG or PDF • Max 5 MB
-            </p>
-            <label
-              htmlFor={id}
-              className="cursor-pointer rounded-[7px] bg-[#082f91] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#062779]"
-            >
-              Browse
-            </label>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <p className="text-sm font-medium text-gray-700">
+                {emptyText}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                PNG, JPG, WEBP or PDF • Max 5 MB
+              </p>
+
+              <label
+                htmlFor={inputId}
+                className="mt-2 cursor-pointer rounded-[6px] border border-[#d9d9d9] bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                Browse
+              </label>
+            </div>
           </>
         )}
-        <input
-          id={id}
-          name={id}
-          type="file"
-          className="hidden"
-          accept={accept}
-          onChange={onChange}
-          aria-required={required}
-        />
       </div>
+
       {helpAction}
-      {error && <p className={ERROR_CLASS}>{error}</p>}
+
+      {error && (
+        <p className="text-xs text-red-500">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
@@ -1844,67 +1882,207 @@ const SellerOnboarding = () => {
     input.click();
   };
 
+  const ALLOWED_KYC_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+
+const ALLOWED_KYC_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "pdf",
+];
+
+const isInvalidKycDocumentType = (file) => {
+  if (!file) return false;
+
+  const extension = file.name
+    ?.split(".")
+    .pop()
+    ?.toLowerCase();
+
+  return (
+    !ALLOWED_KYC_TYPES.includes(file.type) ||
+    !ALLOWED_KYC_EXTENSIONS.includes(extension)
+  );
+};
+
   const onKycDocumentFileChange = (fieldName) => (event) => {
-    const file = event.target.files?.[0] || null;
-    if (isDocumentTooLarge(file)) {
-      setKycForm((prev) => ({ ...prev, [fieldName]: null }));
-      setKycErrors((prev) => ({
-        ...prev,
-        [fieldName]: "Document file must be 5 MB or smaller",
-      }));
-      setProfileErrors((prev) => ({
-        ...prev,
-        [fieldName]: "Document file must be 5 MB or smaller",
-      }));
-      event.target.value = "";
-      return;
-    }
-    setKycForm((prev) => ({ ...prev, [fieldName]: file }));
-    const urlFieldMap = {
-      panDocumentFile: "panDocumentUrl",
-      aadhaarFrontFile: "aadhaarFrontUrl",
-      aadhaarBackFile: "aadhaarBackUrl",
-      addressProofFile: "addressProofUrl",
-      bankProofFile: "bankProofUrl",
-    };
-    if (file && urlFieldMap[fieldName]) {
-      setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
-    }
-    setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
-    setProfileErrors((prev) => ({ ...prev, [fieldName]: null }));
+  const file = event.target.files?.[0] || null;
+
+  if (!file) return;
+
+  // File type validation
+  if (isInvalidKycDocumentType(file)) {
+    const message =
+      "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
+
+    setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+
+    setKycErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    setProfileErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
     event.target.value = "";
+    return;
+  }
+
+  // File size validation
+  if (isDocumentTooLarge(file)) {
+    const message =
+      "Document file must be 5 MB or smaller";
+
+    setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+
+    setKycErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    setProfileErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    event.target.value = "";
+    return;
+  }
+
+  // Valid file
+  setKycForm((prev) => ({
+    ...prev,
+    [fieldName]: file,
+  }));
+
+  const urlFieldMap = {
+    panDocumentFile: "panDocumentUrl",
+    aadhaarFrontFile: "aadhaarFrontUrl",
+    aadhaarBackFile: "aadhaarBackUrl",
+    addressProofFile: "addressProofUrl",
+    bankProofFile: "bankProofUrl",
   };
 
+  if (file && urlFieldMap[fieldName]) {
+    setDocumentUrls((prev) => ({
+      ...prev,
+      [urlFieldMap[fieldName]]: "",
+    }));
+  }
+
+  setKycErrors((prev) => ({
+    ...prev,
+    [fieldName]: null,
+  }));
+
+  setProfileErrors((prev) => ({
+    ...prev,
+    [fieldName]: null,
+  }));
+
+  event.target.value = "";
+};
+
   const onKycDocumentDrop = (fieldName) => (event) => {
-    event.preventDefault();
-    const file = event.dataTransfer.files?.[0] || null;
-    if (!file) return;
-    if (isDocumentTooLarge(file)) {
-      setKycForm((prev) => ({ ...prev, [fieldName]: null }));
-      setKycErrors((prev) => ({
-        ...prev,
-        [fieldName]: "Document file must be 5 MB or smaller",
-      }));
-      setProfileErrors((prev) => ({
-        ...prev,
-        [fieldName]: "Document file must be 5 MB or smaller",
-      }));
-      return;
-    }
-    setKycForm((prev) => ({ ...prev, [fieldName]: file }));
-    const urlFieldMap = {
-      panDocumentFile: "panDocumentUrl",
-      aadhaarFrontFile: "aadhaarFrontUrl",
-      aadhaarBackFile: "aadhaarBackUrl",
-      addressProofFile: "addressProofUrl",
-      bankProofFile: "bankProofUrl",
-    };
-    if (urlFieldMap[fieldName]) {
-      setDocumentUrls((prev) => ({ ...prev, [urlFieldMap[fieldName]]: "" }));
-    }
-    setKycErrors((prev) => ({ ...prev, [fieldName]: null }));
-    setProfileErrors((prev) => ({ ...prev, [fieldName]: null }));
+  event.preventDefault();
+
+  const file =
+    event.dataTransfer.files?.[0] || null;
+
+  if (!file) return;
+
+  // File type validation
+  if (isInvalidKycDocumentType(file)) {
+    const message =
+      "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
+
+    setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+
+    setKycErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    setProfileErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    return;
+  }
+
+  // File size validation
+  if (isDocumentTooLarge(file)) {
+    const message =
+      "Document file must be 5 MB or smaller";
+
+    setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: null,
+    }));
+
+    setKycErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    setProfileErrors((prev) => ({
+      ...prev,
+      [fieldName]: message,
+    }));
+
+    return;
+  }
+
+  // Valid file
+  setKycForm((prev) => ({
+    ...prev,
+    [fieldName]: file,
+  }));
+
+  const urlFieldMap = {
+    panDocumentFile: "panDocumentUrl",
+    aadhaarFrontFile: "aadhaarFrontUrl",
+    aadhaarBackFile: "aadhaarBackUrl",
+    addressProofFile: "addressProofUrl",
+    bankProofFile: "bankProofUrl",
   };
+
+  if (urlFieldMap[fieldName]) {
+    setDocumentUrls((prev) => ({
+      ...prev,
+      [urlFieldMap[fieldName]]: "",
+    }));
+  }
+
+  setKycErrors((prev) => ({
+    ...prev,
+    [fieldName]: null,
+  }));
+
+  setProfileErrors((prev) => ({
+    ...prev,
+    [fieldName]: null,
+  }));
+};
 
   const onProfileDocumentFileChange = (fieldName, urlFieldName) => (event) => {
     const file = event.target.files?.[0] || null;

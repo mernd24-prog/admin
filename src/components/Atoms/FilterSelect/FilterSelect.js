@@ -108,7 +108,7 @@ const FilterSelect = ({
   name,
   inputId = name,
   isLoading = false,
-  isClearable = false,
+  isClearable,
   isSearchable = true,
   onBlur,
   helperText,
