@@ -24,7 +24,15 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 
 const FILTER_FIELDS = [
-  { key: "active", type: "select", label: "Status", options: [{ value: "true", label: "Active" }, { value: "false", label: "Inactive" }] },
+  {
+    key: "active",
+    type: "select",
+    label: "Status",
+    options: [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ],
+  },
 ];
 
 const unwrapList = (payload = {}) => {
@@ -36,7 +44,8 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const money = (v, currency = "INR") => v != null ? `${currency} ${Number(v).toFixed(2)}` : "—";
+const money = (v, currency = "INR") =>
+  v != null ? `${currency} ${Number(v).toFixed(2)}` : "—";
 
 const EMPTY_FORM = {
   planCode: "",
@@ -70,7 +79,12 @@ const SubscriptionPlans = () => {
       setLoading(true);
       setError("");
       const params = toQueryParams();
-      await dispatch(getSubscriptionPlans({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(
+        getSubscriptionPlans({
+          ...params,
+          offset: (params.page - 1) * params.limit,
+        }),
+      ).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load subscription plans";
       setError(msg);
@@ -80,9 +94,15 @@ const SubscriptionPlans = () => {
     }
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchPlans(); }, [fetchPlans]);
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
-  const openCreate = () => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(true); };
+  const openCreate = () => {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setShowForm(true);
+  };
 
   const openEdit = (plan) => {
     setForm({
@@ -98,24 +118,38 @@ const SubscriptionPlans = () => {
     setShowForm(true);
   };
 
-  const closeForm = () => { setShowForm(false); setForm(EMPTY_FORM); setEditingId(null); };
+  const closeForm = () => {
+    setShowForm(false);
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+  };
 
   const handleSave = useCallback(async () => {
-    if (!form.title.trim()) { toast.error("Title required"); return; }
-    if (!form.planCode.trim()) { toast.error("Plan code required"); return; }
+    if (!form.title.trim()) {
+      toast.error("Title required");
+      return;
+    }
+    if (!form.planCode.trim()) {
+      toast.error("Plan code required");
+      return;
+    }
     try {
       setSaving(true);
       const body = {
         planCode: form.planCode,
         title: form.title,
         description: form.description || undefined,
-        monthlyPrice: form.monthlyPrice !== "" ? Number(form.monthlyPrice) : undefined,
-        yearlyPrice: form.yearlyPrice !== "" ? Number(form.yearlyPrice) : undefined,
+        monthlyPrice:
+          form.monthlyPrice !== "" ? Number(form.monthlyPrice) : undefined,
+        yearlyPrice:
+          form.yearlyPrice !== "" ? Number(form.yearlyPrice) : undefined,
         currency: form.currency || "INR",
         active: form.active,
       };
       if (editingId) {
-        await dispatch(updateSubscriptionPlan({ planId: editingId, ...body })).unwrap();
+        await dispatch(
+          updateSubscriptionPlan({ planId: editingId, ...body }),
+        ).unwrap();
         toast.success("Plan updated");
       } else {
         await dispatch(createSubscriptionPlan(body)).unwrap();
@@ -134,7 +168,9 @@ const SubscriptionPlans = () => {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      await dispatch(deleteSubscriptionPlan({ planId: deleteTarget._id || deleteTarget.id })).unwrap();
+      await dispatch(
+        deleteSubscriptionPlan({ planId: deleteTarget._id || deleteTarget.id }),
+      ).unwrap();
       toast.success("Plan deleted");
       setDeleteTarget(null);
       fetchPlans();
@@ -149,28 +185,41 @@ const SubscriptionPlans = () => {
     {
       key: "planCode",
       label: "Code",
-      render: (v) => <span className="font-mono text-sm font-medium">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-mono text-sm font-medium">{v || "—"}</span>
+      ),
     },
     {
       key: "title",
       label: "Title",
       sortable: true,
-      render: (v) => <span className="font-medium text-gray-800">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-medium text-gray-800">{v || "—"}</span>
+      ),
     },
     {
       key: "monthlyPrice",
       label: "Monthly",
-      render: (v, row) => <span className="text-sm">{money(v, row.currency)}</span>,
+      render: (v, row) => (
+        <span className="text-sm">{money(v, row.currency)}</span>
+      ),
     },
     {
       key: "yearlyPrice",
       label: "Yearly",
-      render: (v, row) => <span className="text-sm">{money(v, row.currency)}</span>,
+      render: (v, row) => (
+        <span className="text-sm">{money(v, row.currency)}</span>
+      ),
     },
     {
       key: "active",
       label: "Status",
-      render: (v) => <StatusBadge status={v ? "active" : "inactive"} color={v ? "green" : "gray"} />,
+      render: (v) => (
+        <StatusBadge
+          status={v ? "active" : "inactive"}
+          color={v ? "green" : "gray"}
+        />
+      ),
     },
     {
       key: "_actions",
@@ -178,12 +227,20 @@ const SubscriptionPlans = () => {
       render: (_, row) => (
         <div className="flex gap-1">
           <PermissionGuard module="subscriptions" action={ACTIONS.UPDATE} hide>
-            <button onClick={() => openEdit(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+            <button
+              onClick={() => openEdit(row)}
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+              title="Edit"
+            >
               <MdEdit size={18} />
             </button>
           </PermissionGuard>
           <PermissionGuard module="subscriptions" action={ACTIONS.DELETE} hide>
-            <button onClick={() => setDeleteTarget(row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+            <button
+              onClick={() => setDeleteTarget(row)}
+              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              title="Delete"
+            >
               <MdDelete size={18} />
             </button>
           </PermissionGuard>
@@ -197,13 +254,20 @@ const SubscriptionPlans = () => {
       <PageHeader
         title="Subscription Plans"
         subtitle="Manage platform subscription plans"
-        breadcrumbs={[{ label: "Commerce Settings" }, { label: "Subscription Plans" }]}
+        breadcrumbs={[
+          { label: "Commerce Settings" },
+          { label: "Subscription Plans" },
+        ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 ">
             <button onClick={fetchPlans}>
               <MdRefresh size={16} /> Refresh
             </button>
-            <PermissionGuard module="subscriptions" action={ACTIONS.CREATE} hide>
+            <PermissionGuard
+              module="subscriptions"
+              action={ACTIONS.CREATE}
+              hide
+            >
               <button onClick={openCreate}>
                 <MdAdd size={16} /> New Plan
               </button>
@@ -215,7 +279,9 @@ const SubscriptionPlans = () => {
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+          {error}
+        </div>
       )}
 
       {loading ? (
@@ -240,7 +306,9 @@ const SubscriptionPlans = () => {
           <Input
             label="Plan Code *"
             value={form.planCode}
-            onChange={(e) => setForm((p) => ({ ...p, planCode: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, planCode: e.target.value }))
+            }
             placeholder="e.g. BASIC_MONTHLY"
             disabled={!!editingId}
           />
@@ -253,7 +321,9 @@ const SubscriptionPlans = () => {
           <Input
             label="Description"
             value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
             placeholder="Plan description..."
           />
           <div className="grid grid-cols-2 gap-3">
@@ -261,28 +331,36 @@ const SubscriptionPlans = () => {
               label="Monthly Price"
               type="number"
               value={form.monthlyPrice}
-              onChange={(e) => setForm((p) => ({ ...p, monthlyPrice: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, monthlyPrice: e.target.value }))
+              }
               placeholder="0.00"
             />
             <Input
               label="Yearly Price"
               type="number"
               value={form.yearlyPrice}
-              onChange={(e) => setForm((p) => ({ ...p, yearlyPrice: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, yearlyPrice: e.target.value }))
+              }
               placeholder="0.00"
             />
           </div>
           <Input
             label="Currency"
             value={form.currency}
-            onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, currency: e.target.value }))
+            }
             placeholder="INR"
           />
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={form.active}
-              onChange={(e) => setForm((p) => ({ ...p, active: e.target.checked }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, active: e.target.checked }))
+              }
               className="w-4 h-4 rounded"
             />
             <span className="text-sm font-medium text-gray-700">Active</span>

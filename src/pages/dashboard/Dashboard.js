@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
+import { DateRangePickerModal } from "../../components/Shared";
 import {
   Area,
   AreaChart,
@@ -312,7 +313,7 @@ function GoldDateRangeCalendar({
 
   return (
     <div
-      className={`w-full rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl ${className}`}
+      className={`w-full  rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl ${className}`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
@@ -368,12 +369,12 @@ function GoldDateRangeCalendar({
                 isFutureDate
                   ? "cursor-not-allowed text-slate-300 opacity-50"
                   : isSelected
-                  ? "bg-[var(--admin-gold)] text-white shadow-sm"
-                  : isInRange
-                    ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
-                    : day.isCurrentMonth
-                      ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
-                      : "text-slate-300 hover:bg-slate-50"
+                    ? "bg-[var(--admin-gold)] text-white shadow-sm"
+                    : isInRange
+                      ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
+                      : day.isCurrentMonth
+                        ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
+                        : "text-slate-300 hover:bg-slate-50"
               }`}
               onClick={() => onSelectDate(day.value)}
               disabled={loading || isFutureDate}
@@ -497,10 +498,7 @@ export default function Dashboard() {
   const applyCustomDateRange = () => {
     if (!customDates.fromDate || !customDates.toDate) return;
     const todayValue = toInputDate(new Date());
-    if (
-      customDates.fromDate > todayValue ||
-      customDates.toDate > todayValue
-    ) {
+    if (customDates.fromDate > todayValue || customDates.toDate > todayValue) {
       return;
     }
     const fromTime = new Date(customDates.fromDate).getTime();
@@ -759,9 +757,7 @@ export default function Dashboard() {
       );
       const revenue = asNumber(item.revenue ?? item.gmv ?? item.totalRevenue);
       const averageOrderValue = asNumber(
-        item.averageOrderValue ??
-          item.aov ??
-          revenue / Math.max(value, 1),
+        item.averageOrderValue ?? item.aov ?? revenue / Math.max(value, 1),
       );
       const current = groupedData.get(label) || {
         label,
@@ -775,8 +771,7 @@ export default function Dashboard() {
         ...current,
         value: current.value + value,
         revenue: current.revenue + revenue,
-        averageOrderValue:
-          current.averageOrderValue + averageOrderValue,
+        averageOrderValue: current.averageOrderValue + averageOrderValue,
         pointCount: current.pointCount + 1,
       });
     });
@@ -784,9 +779,7 @@ export default function Dashboard() {
     const groupedRows = Array.from(groupedData.values()).map(
       ({ pointCount, ...item }) => ({
         ...item,
-        averageOrderValue: pointCount
-          ? item.averageOrderValue / pointCount
-          : 0,
+        averageOrderValue: pointCount ? item.averageOrderValue / pointCount : 0,
       }),
     );
 
@@ -838,7 +831,9 @@ export default function Dashboard() {
         if (customGranularity === "month") {
           cursor.setMonth(cursor.getMonth() + 1, 1);
         } else {
-          cursor.setDate(cursor.getDate() + (customGranularity === "week" ? 7 : 1));
+          cursor.setDate(
+            cursor.getDate() + (customGranularity === "week" ? 7 : 1),
+          );
         }
       }
 
@@ -898,13 +893,7 @@ export default function Dashboard() {
           averageOrderValue: 0,
         },
     );
-  }, [
-    dateFilters.fromDate,
-    dateFilters.toDate,
-    overview,
-    range,
-    recentOrders,
-  ]);
+  }, [dateFilters.fromDate, dateFilters.toDate, overview, range, recentOrders]);
 
   const topProducts = useMemo(
     () =>
@@ -987,8 +976,7 @@ export default function Dashboard() {
   }, [overview, recentOrders]);
   const statusTotal = statusRows.reduce((sum, row) => sum + row.value, 0);
   const selectedRangeOption = useMemo(() => {
-    const option =
-      RANGE_OPTIONS.find((item) => item.value === range) || null;
+    const option = RANGE_OPTIONS.find((item) => item.value === range) || null;
     if (!option || range !== "custom") return option;
 
     return {
@@ -1027,42 +1015,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {customPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
-          <div className="w-full max-w-[380px] rounded-lg border-[var(--admin-gold)] bg-white p-4 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-                  Select Date Range
-                </h2>
-                <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  Dashboard data will update after apply.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700"
-                onClick={closeCustomPicker}
-                disabled={customApplying}
-                aria-label="Close custom date picker"
-              >
-                ×
-              </button>
-            </div>
-
-            <GoldDateRangeCalendar
-              dates={customDates}
-              viewDate={customCalendarViewDate}
-              onViewDateChange={setCustomCalendarViewDate}
-              onSelectDate={handleCustomCalendarSelect}
-              onApply={applyCustomDateRange}
-              onCancel={closeCustomPicker}
-              loading={customApplying}
-              className="shadow-none"
-            />
-          </div>
-        </div>
-      )}
+      <DateRangePickerModal
+        open={customPickerOpen}
+        onClose={closeCustomPicker}
+        title="Select Date Range"
+        subtitle="Dashboard data will update after apply."
+        loading={customApplying}
+      >
+        <GoldDateRangeCalendar
+          dates={customDates}
+          viewDate={customCalendarViewDate}
+          onViewDateChange={setCustomCalendarViewDate}
+          onSelectDate={handleCustomCalendarSelect}
+          onApply={applyCustomDateRange}
+          onCancel={closeCustomPicker}
+          loading={customApplying}
+          className="shadow-none"
+        />
+      </DateRangePickerModal>
 
       {isLoading && !dashboardState?.normalized?.data && (
         <p className="mb-4 text-xs text-slate-400">Loading dashboard data...</p>
@@ -1114,143 +1084,147 @@ export default function Dashboard() {
                     data={activeChartData}
                     margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
                   >
-                  <defs>
-                    <linearGradient
-                      id="ordersPerformanceFill"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="#37B446"
-                        stopOpacity={0.34}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#37B446"
-                        stopOpacity={0.07}
-                      />
-                    </linearGradient>
-                    <linearGradient
-                      id="revenuePerformanceFill"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="#D6A323"
-                        stopOpacity={0.38}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#D6A323"
-                        stopOpacity={0.08}
-                      />
-                    </linearGradient>
-                    <linearGradient
-                      id="aovPerformanceFill"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#1F1B5F" stopOpacity={0.3} />
-                      <stop
-                        offset="95%"
-                        stopColor="#1F1B5F"
-                        stopOpacity={0.06}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="#EADFCE" />
-                  <XAxis
-                    dataKey="label"
-                    interval={range === "year" ? 0 : "preserveEnd"}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      name === "Revenue" || name === "Average Order Value"
-                        ? formatCurrency(value)
-                        : formatNumber(value),
-                      name,
-                    ]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    name="Orders"
-                    stroke="#37B446"
-                    strokeWidth={2}
-                    fill="url(#ordersPerformanceFill)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    name="Revenue"
-                    stroke="#D6A323"
-                    strokeWidth={2}
-                    fill="url(#revenuePerformanceFill)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="averageOrderValue"
-                    name="Average Order Value"
-                    stroke="#1F1B5F"
-                    strokeWidth={2}
-                    fill="url(#aovPerformanceFill)"
-                  />
+                    <defs>
+                      <linearGradient
+                        id="ordersPerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#37B446"
+                          stopOpacity={0.34}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#37B446"
+                          stopOpacity={0.07}
+                        />
+                      </linearGradient>
+                      <linearGradient
+                        id="revenuePerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#D6A323"
+                          stopOpacity={0.38}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#D6A323"
+                          stopOpacity={0.08}
+                        />
+                      </linearGradient>
+                      <linearGradient
+                        id="aovPerformanceFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#1F1B5F"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#1F1B5F"
+                          stopOpacity={0.06}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#EADFCE" />
+                    <XAxis
+                      dataKey="label"
+                      interval={range === "year" ? 0 : "preserveEnd"}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        name === "Revenue" || name === "Average Order Value"
+                          ? formatCurrency(value)
+                          : formatNumber(value),
+                        name,
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      name="Orders"
+                      stroke="#37B446"
+                      strokeWidth={2}
+                      fill="url(#ordersPerformanceFill)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Revenue"
+                      stroke="#D6A323"
+                      strokeWidth={2}
+                      fill="url(#revenuePerformanceFill)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="averageOrderValue"
+                      name="Average Order Value"
+                      stroke="#1F1B5F"
+                      strokeWidth={2}
+                      fill="url(#aovPerformanceFill)"
+                    />
                   </AreaChart>
                 ) : (
                   <BarChart
                     data={activeChartData}
                     margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
                   >
-                  <CartesianGrid vertical={false} stroke="#EADFCE" />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#777487", fontSize: 10 }}
-                  />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      name === "Revenue"
-                        ? formatCurrency(value)
-                        : formatNumber(value),
-                      name,
-                    ]}
-                  />
-                  <Bar
-                    dataKey="orders"
-                    name={
-                      chartView === "top_products" ? "Units Sold" : "Orders"
-                    }
-                    fill="#37B446"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="revenue"
-                    name="Revenue"
-                    fill="#D6A323"
-                    radius={[4, 4, 0, 0]}
-                  />
+                    <CartesianGrid vertical={false} stroke="#EADFCE" />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#777487", fontSize: 10 }}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        name === "Revenue"
+                          ? formatCurrency(value)
+                          : formatNumber(value),
+                        name,
+                      ]}
+                    />
+                    <Bar
+                      dataKey="orders"
+                      name={
+                        chartView === "top_products" ? "Units Sold" : "Orders"
+                      }
+                      fill="#37B446"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      name="Revenue"
+                      fill="#D6A323"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 )}
               </ResponsiveContainer>

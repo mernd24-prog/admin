@@ -47,6 +47,9 @@ import {
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
+import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
+import { PageHeader } from "../../components/Shared";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -72,7 +75,10 @@ const tabs = [
 ];
 
 const sectionToTab = Object.fromEntries(
-  tabs.map((tab) => [tab.key.replace(/([A-Z])/g, "-$1").toLowerCase(), tab.key]),
+  tabs.map((tab) => [
+    tab.key.replace(/([A-Z])/g, "-$1").toLowerCase(),
+    tab.key,
+  ]),
 );
 const emptyInfluencerForm = {
   firstName: "",
@@ -137,21 +143,32 @@ const getBranchList = (branch = {}) => {
   return payload?.list || payload?.items || [];
 };
 
-const getId = (record = {}) => record.id || record._id || record.influencerId || record.codeId || record.payoutId;
+const getId = (record = {}) =>
+  record.id ||
+  record._id ||
+  record.influencerId ||
+  record.codeId ||
+  record.payoutId;
 const shortId = (value) => (value ? String(value).slice(0, 12) : "-");
 
 const fullName = (user = {}) => {
   const profile = user.profile || {};
-  return [profile.firstName, profile.lastName].filter(Boolean).join(" ") || user.email || "Influencer";
+  return (
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+    user.email ||
+    "Influencer"
+  );
 };
 
-const formatAmount = (value) => `INR ${Number(value || 0).toLocaleString("en-IN", {
-  maximumFractionDigits: 2,
-})}`;
+const formatAmount = (value) =>
+  `INR ${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
 
-const formatCoins = (value) => `${Number(value || 0).toLocaleString("en-IN", {
-  maximumFractionDigits: 2,
-})} coins`;
+const formatCoins = (value) =>
+  `${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })} coins`;
 
 const formatDate = (value) => formatDateTime12Hour(value, "-");
 
@@ -163,30 +180,61 @@ const optionList = (options = [], fallbackValues = []) =>
 
 const statusClass = (status) => {
   const normalized = String(status || "").toLowerCase();
-  if (["active", "completed", "available", "paid", "approved", "resolved"].includes(normalized)) {
+  if (
+    [
+      "active",
+      "completed",
+      "available",
+      "paid",
+      "approved",
+      "resolved",
+    ].includes(normalized)
+  ) {
     return "bg-emerald-50 text-emerald-700 border-emerald-200";
   }
-  if (["pending", "locked", "payout_requested", "reviewing"].includes(normalized)) {
+  if (
+    ["pending", "locked", "payout_requested", "reviewing"].includes(normalized)
+  ) {
     return "bg-amber-50 text-amber-700 border-amber-200";
   }
-  if (["suspended", "rejected", "reversed", "failed", "cancelled", "refunded", "dismissed"].includes(normalized)) {
+  if (
+    [
+      "suspended",
+      "rejected",
+      "reversed",
+      "failed",
+      "cancelled",
+      "refunded",
+      "dismissed",
+    ].includes(normalized)
+  ) {
     return "bg-rose-50 text-rose-700 border-rose-200";
   }
   return "bg-slate-50 text-slate-700 border-slate-200";
 };
 
 const StatusPill = ({ value }) => (
-  <span className={`inline-flex max-w-full items-center rounded border px-2 py-1 text-xs font-medium ${statusClass(value)}`}>
+  <span
+    className={`inline-flex max-w-full items-center rounded border px-2 py-1 text-xs font-medium ${statusClass(value)}`}
+  >
     {value || "-"}
   </span>
 );
 
-const IconButton = ({ title, onClick, children, variant = "plain", disabled = false }) => {
+const IconButton = ({
+  title,
+  onClick,
+  children,
+  variant = "plain",
+  disabled = false,
+}) => {
   const variants = {
     plain: "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
-    primary: "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
+    primary:
+      "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
     danger: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
-    success: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    success:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
   };
   return (
     <button
@@ -202,9 +250,21 @@ const IconButton = ({ title, onClick, children, variant = "plain", disabled = fa
   );
 };
 
-const TextInput = ({ label, name, value, onChange, type = "text", placeholder = "", min, step, hint = "" }) => (
+const TextInput = ({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  placeholder = "",
+  min,
+  step,
+  hint = "",
+}) => (
   <label className="block">
-    <span className="mb-1 block text-xs font-medium uppercase text-gray-500">{label}</span>
+    <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
+      {label}
+    </span>
     <input
       type={type}
       name={name}
@@ -215,23 +275,90 @@ const TextInput = ({ label, name, value, onChange, type = "text", placeholder = 
       step={step}
       className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
     />
-    {hint ? <span className="mt-1 block text-xs font-normal text-gray-500">{hint}</span> : null}
+    {hint ? (
+      <span className="mt-1 block text-xs font-normal text-gray-500">
+        {hint}
+      </span>
+    ) : null}
   </label>
 );
 
-const SelectInput = ({ label, name, value, onChange, children }) => (
-  <label className="block">
-    <span className="mb-1 block text-xs font-medium uppercase text-gray-500">{label}</span>
-    <select
+const SelectInput = ({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  children,
+  required,
+  placeholder,
+  className = "",
+  disabled = false,
+}) => {
+  const parsedOptions = useMemo(() => {
+    if (options && Array.isArray(options)) return options;
+    const flatChildren = [];
+    const extractOptions = (nodes) => {
+      React.Children.forEach(nodes, (child) => {
+        if (!child) return;
+        if (Array.isArray(child)) {
+          extractOptions(child);
+        } else if (React.isValidElement(child)) {
+          let childLabel = child.props.children;
+          if (Array.isArray(childLabel)) {
+            childLabel = childLabel.join("");
+          }
+          flatChildren.push({
+            value: child.props.value !== undefined ? child.props.value : "",
+            label: String(
+              childLabel !== undefined && childLabel !== null
+                ? childLabel
+                : child.props.value || "",
+            ),
+          });
+        }
+      });
+    };
+    extractOptions(children);
+    return flatChildren;
+  }, [options, children]);
+
+  const selectedValue = useMemo(() => {
+    return (
+      parsedOptions.find((opt) => String(opt.value) === String(value ?? "")) ||
+      null
+    );
+  }, [parsedOptions, value]);
+
+  const handleChange = (selected) => {
+    if (onChange) {
+      onChange({
+        target: {
+          name,
+          value: selected ? selected.value : "",
+        },
+      });
+    }
+  };
+
+  return (
+    <FilterSelect
+      label={label}
       name={name}
-      value={value}
-      onChange={onChange}
-      className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
-    >
-      {children}
-    </select>
-  </label>
-);
+      options={parsedOptions}
+      value={selectedValue}
+      onChange={handleChange}
+      required={required}
+      isDisabled={disabled}
+      placeholder={
+        placeholder ||
+        (label ? `Select ${label.toLowerCase()}` : "Select option")
+      }
+      isSearchable={true}
+      className={className}
+    />
+  );
+};
 
 const Modal = ({ title, open, onClose, children, footer }) => {
   if (!open) return null;
@@ -245,7 +372,9 @@ const Modal = ({ title, open, onClose, children, footer }) => {
           </IconButton>
         </div>
         <div className="max-h-[65vh] overflow-y-auto p-5">{children}</div>
-        {footer && <div className="border-t border-gray-200 px-5 py-4">{footer}</div>}
+        {footer && (
+          <div className="border-t border-gray-200 px-5 py-4">{footer}</div>
+        )}
       </div>
     </div>
   );
@@ -254,7 +383,9 @@ const Modal = ({ title, open, onClose, children, footer }) => {
 const Section = ({ title, actions, children }) => (
   <section className="bg-white">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-      <h2 className="text-sm font-semibold uppercase tracking-normal text-gray-700">{title}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-normal text-gray-700">
+        {title}
+      </h2>
       {actions}
     </div>
     {children}
@@ -267,7 +398,10 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
       <thead className="bg-gray-50 text-xs uppercase text-gray-500">
         <tr>
           {columns.map((column) => (
-            <th key={column.key} className="border-b border-gray-200 px-4 py-3 font-semibold">
+            <th
+              key={column.key}
+              className="border-b border-gray-200 px-4 py-3 font-semibold"
+            >
               {column.label}
             </th>
           ))}
@@ -286,7 +420,10 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
           ))
         ) : (
           <tr>
-            <td colSpan={columns.length} className="px-4 py-8 text-center text-sm text-gray-500">
+            <td
+              colSpan={columns.length}
+              className="px-4 py-8 text-center text-sm text-gray-500"
+            >
               {emptyText}
             </td>
           </tr>
@@ -311,23 +448,54 @@ const emptyProductConfig = {
 
 const responseList = (response) => {
   const payload = response?.data?.data || response?.data || response || [];
-  return Array.isArray(payload) ? payload : payload?.items || payload?.list || [];
+  return Array.isArray(payload)
+    ? payload
+    : payload?.items || payload?.list || [];
 };
 
 const responsePagination = (response, fallbackPage = 1, fallbackLimit = 50) => {
-  const meta = response?.meta?.pagination || response?.meta || response?.data?.meta?.pagination || {};
+  const meta =
+    response?.meta?.pagination ||
+    response?.meta ||
+    response?.data?.meta?.pagination ||
+    {};
   const total = Number(meta.total || meta.totalItems || 0);
   const limit = Number(meta.limit || meta.pageSize || fallbackLimit);
   const page = Number(meta.page || meta.currentPage || fallbackPage);
-  return { total, limit, page, totalPages: Math.max(1, Number(meta.totalPages || Math.ceil(total / limit) || 1)) };
+  return {
+    total,
+    limit,
+    page,
+    totalPages: Math.max(
+      1,
+      Number(meta.totalPages || Math.ceil(total / limit) || 1),
+    ),
+  };
 };
 
 const PaginationControls = ({ pagination, onPageChange, disabled }) => (
   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 text-xs text-gray-600">
-    <span>Page {pagination.page} of {pagination.totalPages} · {pagination.total} records</span>
+    <span>
+      Page {pagination.page} of {pagination.totalPages} · {pagination.total}{" "}
+      records
+    </span>
     <div className="flex gap-2">
-      <button type="button" disabled={disabled || pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)} className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
-      <button type="button" disabled={disabled || pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)} className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+      <button
+        type="button"
+        disabled={disabled || pagination.page <= 1}
+        onClick={() => onPageChange(pagination.page - 1)}
+        className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Previous
+      </button>
+      <button
+        type="button"
+        disabled={disabled || pagination.page >= pagination.totalPages}
+        onClick={() => onPageChange(pagination.page + 1)}
+        className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next
+      </button>
     </div>
   </div>
 );
@@ -341,36 +509,60 @@ const ProductDistributionManager = () => {
   const [productPage, setProductPage] = useState(1);
   const [productSearch, setProductSearch] = useState("");
   const [appliedProductSearch, setAppliedProductSearch] = useState("");
-  const [configPagination, setConfigPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 50 });
-  const [productPagination, setProductPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 200 });
+  const [configPagination, setConfigPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 50,
+  });
+  const [productPagination, setProductPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 200,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [configResponse, productResponse] = await Promise.all([
-        apiRequest("GET", ENDPOINTS.referral.productConfigs, { page: configPage, limit: 50 }),
-        apiRequest("GET", ENDPOINTS.products.listForPanel, { page: productPage, limit: 200, ...(appliedProductSearch ? { q: appliedProductSearch } : {}) }),
+        apiRequest("GET", ENDPOINTS.referral.productConfigs, {
+          page: configPage,
+          limit: 50,
+        }),
+        apiRequest("GET", ENDPOINTS.products.listForPanel, {
+          page: productPage,
+          limit: 200,
+          ...(appliedProductSearch ? { q: appliedProductSearch } : {}),
+        }),
       ]);
       setConfigs(responseList(configResponse));
       setProducts(responseList(productResponse));
       setConfigPagination(responsePagination(configResponse, configPage, 50));
-      setProductPagination(responsePagination(productResponse, productPage, 200));
+      setProductPagination(
+        responsePagination(productResponse, productPage, 200),
+      );
     } catch (error) {
-      toast.error(error?.message || "Unable to load product distribution settings");
+      toast.error(
+        error?.message || "Unable to load product distribution settings",
+      );
     } finally {
       setLoading(false);
     }
   }, [configPage, productPage, appliedProductSearch]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const selectedProduct = products.find(
     (product) => String(product._id || product.id) === String(form.productId),
   );
   const variants = selectedProduct?.variants || [];
-  const shareTotal = Number(form.customerSharePercent || 0)
-    + Number(form.codeOwnerSharePercent || 0)
-    + Number(form.parentSharePercent || 0);
+  const shareTotal =
+    Number(form.customerSharePercent || 0) +
+    Number(form.codeOwnerSharePercent || 0) +
+    Number(form.parentSharePercent || 0);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -389,7 +581,11 @@ const ProductDistributionManager = () => {
         parentSharePercent: Number(form.parentSharePercent || 0),
         metadata: {
           productTitle: selectedProduct?.title || selectedProduct?.name || "",
-          variantTitle: variants.find((variant) => String(variant._id || variant.id) === String(form.variantId))?.title || "",
+          variantTitle:
+            variants.find(
+              (variant) =>
+                String(variant._id || variant.id) === String(form.variantId),
+            )?.title || "",
         },
       });
       toast.success("Product distribution saved");
@@ -400,16 +596,20 @@ const ProductDistributionManager = () => {
     }
   };
 
-  const edit = (config) => setForm({
-    ...emptyProductConfig,
-    ...config,
-    productId: String(config.productId || ""),
-    variantId: config.variantId ? String(config.variantId) : "",
-  });
+  const edit = (config) =>
+    setForm({
+      ...emptyProductConfig,
+      ...config,
+      productId: String(config.productId || ""),
+      variantId: config.variantId ? String(config.variantId) : "",
+    });
 
   const remove = async (config) => {
     try {
-      await apiRequest("DELETE", ENDPOINTS.referral.productConfig(config._id || config.id));
+      await apiRequest(
+        "DELETE",
+        ENDPOINTS.referral.productConfig(config._id || config.id),
+      );
       toast.success("Product distribution removed");
       await load();
     } catch (error) {
@@ -417,68 +617,268 @@ const ProductDistributionManager = () => {
     }
   };
 
-  return <div className="space-y-4">
-    <Section title="Product Distribution Configuration">
-      <form onSubmit={submit} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
-        <div className="md:col-span-4 flex flex-wrap items-end gap-2 rounded border border-gray-100 bg-gray-50 p-3">
-          <TextInput label="Search Product Catalog" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} />
-          <button type="button" onClick={() => { setProductPage(1); setAppliedProductSearch(productSearch.trim()); }} className="rounded bg-gray-900 px-4 py-2 text-sm text-white">Search Products</button>
-          {appliedProductSearch && <button type="button" onClick={() => { setProductSearch(""); setAppliedProductSearch(""); setProductPage(1); }} className="rounded border border-gray-200 bg-white px-4 py-2 text-sm">Clear</button>}
-        </div>
-        <SelectInput label="Product" value={form.productId} onChange={(event) => setForm({ ...form, productId: event.target.value, variantId: "" })} required>
-          <option value="">Select product</option>
-          {products.map((product) => <option key={product._id || product.id} value={product._id || product.id}>{product.title || product.name} — ₹{Number(product.salePrice || product.price || 0).toLocaleString("en-IN")}</option>)}
-        </SelectInput>
-        <SelectInput label="Variant Override" value={form.variantId} onChange={(event) => setForm({ ...form, variantId: event.target.value })}>
-          <option value="">All variants</option>
-          {variants.map((variant) => <option key={variant._id || variant.id} value={variant._id || variant.id}>{variant.title || variant.sku}</option>)}
-        </SelectInput>
-        <SelectInput label="Pool Type" value={form.poolType} onChange={(event) => setForm({ ...form, poolType: event.target.value })}>
-          <option value="fixed_amount">Fixed amount per unit</option><option value="percentage">Percentage of item value</option>
-        </SelectInput>
-        <TextInput label={form.poolType === "fixed_amount" ? "Shareable Amount" : "Shareable %"} type="number" min="0" step="0.01" value={form.poolValue} onChange={(event) => setForm({ ...form, poolValue: event.target.value })} />
-        <TextInput label="Maximum Amount Per Unit" type="number" min="0" step="0.01" value={form.maximumPoolAmount} onChange={(event) => setForm({ ...form, maximumPoolAmount: event.target.value })} />
-        <TextInput label="Customer Share %" type="number" min="0" max="100" value={form.customerSharePercent} onChange={(event) => setForm({ ...form, customerSharePercent: event.target.value })} />
-        <TextInput label="Code Owner Share %" type="number" min="0" max="100" value={form.codeOwnerSharePercent} onChange={(event) => setForm({ ...form, codeOwnerSharePercent: event.target.value })} />
-        <TextInput label="Parent Share %" type="number" min="0" max="100" value={form.parentSharePercent} onChange={(event) => setForm({ ...form, parentSharePercent: event.target.value })} />
-        <SelectInput label="Funded By" value={form.fundedBy} onChange={(event) => setForm({ ...form, fundedBy: event.target.value })}>
-          <option value="platform">Platform</option><option value="seller">Seller</option><option value="shared">Shared</option>
-        </SelectInput>
-        <label className="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active</label>
-        <div className={`flex items-end font-semibold ${shareTotal === 100 ? "text-emerald-600" : "text-red-600"}`}>Distribution total: {shareTotal}%</div>
-        <div className="flex items-end"><button className="rounded bg-indigo-600 px-4 py-2 text-white">Save Distribution</button></div>
-        <div className="md:col-span-4"><PaginationControls pagination={productPagination} onPageChange={setProductPage} disabled={loading} /></div>
-      </form>
-    </Section>
-    <Section title="Configured Products">
-      {loading ? <div className="p-6 text-sm text-gray-500">Loading configurations…</div> : <><DataTable columns={[
-        { key: "product", label: "Product" }, { key: "variant", label: "Variant" }, { key: "pool", label: "Shareable Pool" }, { key: "split", label: "Customer / Owner / Parent" }, { key: "status", label: "Status" }, { key: "actions", label: "Actions" },
-      ]} rows={configs.map((config) => ({
-        key: config._id || config.id,
-        product: config.metadata?.productTitle || shortId(config.productId),
-        variant: config.metadata?.variantTitle || (config.variantId ? shortId(config.variantId) : "All variants"),
-        pool: config.poolType === "percentage" ? `${config.poolValue}%` : `₹${Number(config.poolValue || 0).toLocaleString("en-IN")} / unit`,
-        split: `${config.customerSharePercent}% / ${config.codeOwnerSharePercent}% / ${config.parentSharePercent}%`,
-        status: <StatusPill value={config.active ? "active" : "inactive"} />,
-        actions: <div className="flex gap-2"><IconButton title="Edit" onClick={() => edit(config)}><Pencil size={15} /></IconButton><IconButton title="Delete" variant="danger" onClick={() => remove(config)}><X size={15} /></IconButton></div>,
-      }))} emptyText="No product-specific distribution configured; global rules will apply." /><PaginationControls pagination={configPagination} onPageChange={setConfigPage} disabled={loading} /></>}
-    </Section>
-  </div>;
+  return (
+    <div className="space-y-4">
+      <Section title="Product Distribution Configuration">
+        <form
+          onSubmit={submit}
+          className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4"
+        >
+          <div className="md:col-span-4 flex flex-wrap items-end gap-2 rounded border border-gray-100 bg-gray-50 p-3">
+            <TextInput
+              label="Search Product Catalog"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+            />
+            <OrangeButton
+              onClick={() => {
+                setProductPage(1);
+                setAppliedProductSearch(productSearch.trim());
+              }}
+            >
+              Search Products
+            </OrangeButton>
+            {appliedProductSearch && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProductSearch("");
+                  setAppliedProductSearch("");
+                  setProductPage(1);
+                }}
+                className="rounded border border-gray-200 bg-white px-4 py-2 text-sm"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <SelectInput
+            label="Product"
+            value={form.productId}
+            onChange={(event) =>
+              setForm({ ...form, productId: event.target.value, variantId: "" })
+            }
+            required
+          >
+            <option value="">Select product</option>
+            {products.map((product) => (
+              <option
+                key={product._id || product.id}
+                value={product._id || product.id}
+              >
+                {product.title || product.name} — ₹
+                {Number(product.salePrice || product.price || 0).toLocaleString(
+                  "en-IN",
+                )}
+              </option>
+            ))}
+          </SelectInput>
+          <SelectInput
+            label="Variant Override"
+            value={form.variantId}
+            onChange={(event) =>
+              setForm({ ...form, variantId: event.target.value })
+            }
+          >
+            <option value="">All variants</option>
+            {variants.map((variant) => (
+              <option
+                key={variant._id || variant.id}
+                value={variant._id || variant.id}
+              >
+                {variant.title || variant.sku}
+              </option>
+            ))}
+          </SelectInput>
+          <SelectInput
+            label="Pool Type"
+            value={form.poolType}
+            onChange={(event) =>
+              setForm({ ...form, poolType: event.target.value })
+            }
+          >
+            <option value="fixed_amount">Fixed amount per unit</option>
+            <option value="percentage">Percentage of item value</option>
+          </SelectInput>
+          <TextInput
+            label={
+              form.poolType === "fixed_amount"
+                ? "Shareable Amount"
+                : "Shareable %"
+            }
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.poolValue}
+            onChange={(event) =>
+              setForm({ ...form, poolValue: event.target.value })
+            }
+          />
+          <TextInput
+            label="Maximum Amount Per Unit"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.maximumPoolAmount}
+            onChange={(event) =>
+              setForm({ ...form, maximumPoolAmount: event.target.value })
+            }
+          />
+          <TextInput
+            label="Customer Share %"
+            type="number"
+            min="0"
+            max="100"
+            value={form.customerSharePercent}
+            onChange={(event) =>
+              setForm({ ...form, customerSharePercent: event.target.value })
+            }
+          />
+          <TextInput
+            label="Code Owner Share %"
+            type="number"
+            min="0"
+            max="100"
+            value={form.codeOwnerSharePercent}
+            onChange={(event) =>
+              setForm({ ...form, codeOwnerSharePercent: event.target.value })
+            }
+          />
+          <TextInput
+            label="Parent Share %"
+            type="number"
+            min="0"
+            max="100"
+            value={form.parentSharePercent}
+            onChange={(event) =>
+              setForm({ ...form, parentSharePercent: event.target.value })
+            }
+          />
+          <SelectInput
+            label="Funded By"
+            value={form.fundedBy}
+            onChange={(event) =>
+              setForm({ ...form, fundedBy: event.target.value })
+            }
+          >
+            <option value="platform">Platform</option>
+            <option value="seller">Seller</option>
+            <option value="shared">Shared</option>
+          </SelectInput>
+          <label className="flex items-center gap-2 pt-6 text-sm">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(event) =>
+                setForm({ ...form, active: event.target.checked })
+              }
+            />{" "}
+            Active
+          </label>
+          <div
+            className={`flex items-end font-semibold ${shareTotal === 100 ? "text-emerald-600" : "text-red-600"}`}
+          >
+            Distribution total: {shareTotal}%
+          </div>
+          <div className="flex items-end">
+            <OrangeButton>Save Distribution</OrangeButton>
+          </div>
+          <div className="md:col-span-4">
+            <PaginationControls
+              pagination={productPagination}
+              onPageChange={setProductPage}
+              disabled={loading}
+            />
+          </div>
+        </form>
+      </Section>
+      <Section title="Configured Products">
+        {loading ? (
+          <div className="p-6 text-sm text-gray-500">
+            Loading configurations…
+          </div>
+        ) : (
+          <>
+            <DataTable
+              columns={[
+                { key: "product", label: "Product" },
+                { key: "variant", label: "Variant" },
+                { key: "pool", label: "Shareable Pool" },
+                { key: "split", label: "Customer / Owner / Parent" },
+                { key: "status", label: "Status" },
+                { key: "actions", label: "Actions" },
+              ]}
+              rows={configs.map((config) => ({
+                key: config._id || config.id,
+                product:
+                  config.metadata?.productTitle || shortId(config.productId),
+                variant:
+                  config.metadata?.variantTitle ||
+                  (config.variantId
+                    ? shortId(config.variantId)
+                    : "All variants"),
+                pool:
+                  config.poolType === "percentage"
+                    ? `${config.poolValue}%`
+                    : `₹${Number(config.poolValue || 0).toLocaleString("en-IN")} / unit`,
+                split: `${config.customerSharePercent}% / ${config.codeOwnerSharePercent}% / ${config.parentSharePercent}%`,
+                status: (
+                  <StatusPill value={config.active ? "active" : "inactive"} />
+                ),
+                actions: (
+                  <div className="flex gap-2">
+                    <IconButton title="Edit" onClick={() => edit(config)}>
+                      <Pencil size={15} />
+                    </IconButton>
+                    <IconButton
+                      title="Delete"
+                      variant="danger"
+                      onClick={() => remove(config)}
+                    >
+                      <X size={15} />
+                    </IconButton>
+                  </div>
+                ),
+              }))}
+              emptyText="No product-specific distribution configured; global rules will apply."
+            />
+            <PaginationControls
+              pagination={configPagination}
+              onPageChange={setConfigPage}
+              disabled={loading}
+            />
+          </>
+        )}
+      </Section>
+    </div>
+  );
 };
 
 const ReferralCommerce = () => {
   const { section } = useParams();
   const referralFilterStatuses = useDropdownOptions("referral-filter-statuses");
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
-  const referralDistributionTypes = useDropdownOptions("referral-distribution-types");
-  const referralCoinUsageModes = useDropdownOptions("referral-coin-usage-modes");
-  const referralWithdrawalApprovalModes = useDropdownOptions("referral-withdrawal-approval-modes");
-  const referralWithdrawalMethods = useDropdownOptions("referral-withdrawal-methods");
+  const referralDistributionTypes = useDropdownOptions(
+    "referral-distribution-types",
+  );
+  const referralCoinUsageModes = useDropdownOptions(
+    "referral-coin-usage-modes",
+  );
+  const referralWithdrawalApprovalModes = useDropdownOptions(
+    "referral-withdrawal-approval-modes",
+  );
+  const referralWithdrawalMethods = useDropdownOptions(
+    "referral-withdrawal-methods",
+  );
   const referralBonusPeriods = useDropdownOptions("referral-bonus-periods");
-  const referralBonusTargetTypes = useDropdownOptions("referral-bonus-target-types");
+  const referralBonusTargetTypes = useDropdownOptions(
+    "referral-bonus-target-types",
+  );
   const referralBonusTypes = useDropdownOptions("referral-bonus-types");
   const referralBonusApplyTo = useDropdownOptions("referral-bonus-apply-to");
-  const referralBonusReleaseRules = useDropdownOptions("referral-bonus-release-rules");
+  const referralBonusReleaseRules = useDropdownOptions(
+    "referral-bonus-release-rules",
+  );
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const activeTab = sectionToTab[section] || "overview";
@@ -525,12 +925,20 @@ const ReferralCommerce = () => {
   const renderInfluencerRef = (influencerId) => {
     const influencer = influencerById.get(String(influencerId));
     if (!influencer) {
-      return <span className="font-mono text-xs text-gray-500">{shortId(influencerId)}</span>;
+      return (
+        <span className="font-mono text-xs text-gray-500">
+          {shortId(influencerId)}
+        </span>
+      );
     }
     return (
       <div className="min-w-0">
-        <div className="truncate text-sm font-medium text-gray-800">{fullName(influencer.user)}</div>
-        <div className="truncate font-mono text-xs text-gray-500">Profile {shortId(getId(influencer))}</div>
+        <div className="truncate text-sm font-medium text-gray-800">
+          {fullName(influencer.user)}
+        </div>
+        <div className="truncate font-mono text-xs text-gray-500">
+          Profile {shortId(getId(influencer))}
+        </div>
       </div>
     );
   };
@@ -544,27 +952,76 @@ const ReferralCommerce = () => {
     const nextStatus = filters.status ?? status;
     const withStatus = (allowed = []) => ({
       ...baseQuery,
-      ...(nextStatus && allowed.includes(nextStatus) ? { status: nextStatus } : {}),
+      ...(nextStatus && allowed.includes(nextStatus)
+        ? { status: nextStatus }
+        : {}),
     });
     await Promise.all([
       dispatch(getReferralSummary()),
       dispatch(getReferralHierarchy()),
-      dispatch(getReferralInfluencers(withStatus(["pending", "active", "suspended", "rejected"]))),
-      dispatch(getReferralCodes(withStatus(["active", "inactive", "expired", "suspended"]))),
-      dispatch(getReferralOrders(withStatus(["pending", "completed", "cancelled", "refunded", "reversed"]))),
-      dispatch(getReferralCommissions(withStatus(["pending", "locked", "available", "payout_requested", "paid", "reversed"]))),
-      dispatch(getReferralPayouts(withStatus(["pending", "approved", "rejected", "processing", "paid", "failed"]))),
+      dispatch(
+        getReferralInfluencers(
+          withStatus(["pending", "active", "suspended", "rejected"]),
+        ),
+      ),
+      dispatch(
+        getReferralCodes(
+          withStatus(["active", "inactive", "expired", "suspended"]),
+        ),
+      ),
+      dispatch(
+        getReferralOrders(
+          withStatus([
+            "pending",
+            "completed",
+            "cancelled",
+            "refunded",
+            "reversed",
+          ]),
+        ),
+      ),
+      dispatch(
+        getReferralCommissions(
+          withStatus([
+            "pending",
+            "locked",
+            "available",
+            "payout_requested",
+            "paid",
+            "reversed",
+          ]),
+        ),
+      ),
+      dispatch(
+        getReferralPayouts(
+          withStatus([
+            "pending",
+            "approved",
+            "rejected",
+            "processing",
+            "paid",
+            "failed",
+          ]),
+        ),
+      ),
       dispatch(getReferralRules({ page: 1, limit: 20 })),
       dispatch(getReferralBonusRules(withStatus(["active", "inactive"]))),
       dispatch(getReferralBonusProgress({ page: 1, limit: 50 })),
-      dispatch(getReferralBonusAchievements(withStatus(["locked", "released", "reversed"]))),
-      dispatch(getReferralFraudReviews({
-        page: 1,
-        limit: 50,
-        ...(nextStatus && ["open", "reviewing", "resolved", "dismissed"].includes(nextStatus)
-          ? { status: nextStatus }
-          : {}),
-      })),
+      dispatch(
+        getReferralBonusAchievements(
+          withStatus(["locked", "released", "reversed"]),
+        ),
+      ),
+      dispatch(
+        getReferralFraudReviews({
+          page: 1,
+          limit: 50,
+          ...(nextStatus &&
+          ["open", "reviewing", "resolved", "dismissed"].includes(nextStatus)
+            ? { status: nextStatus }
+            : {}),
+        }),
+      ),
     ]);
   };
 
@@ -579,7 +1036,9 @@ const ReferralCommerce = () => {
       setRulesForm({
         ...emptyRulesForm,
         ...Object.fromEntries(
-          Object.entries(currentRules).filter(([, value]) => value !== undefined && value !== null),
+          Object.entries(currentRules).filter(
+            ([, value]) => value !== undefined && value !== null,
+          ),
         ),
       });
     }
@@ -622,7 +1081,9 @@ const ReferralCommerce = () => {
 
   const toggleWithdrawalMethod = (method) => {
     setRulesForm((prev) => {
-      const selected = new Set(Array.isArray(prev.withdrawalMethods) ? prev.withdrawalMethods : []);
+      const selected = new Set(
+        Array.isArray(prev.withdrawalMethods) ? prev.withdrawalMethods : [],
+      );
       if (selected.has(method)) selected.delete(method);
       else selected.add(method);
       return {
@@ -648,7 +1109,8 @@ const ReferralCommerce = () => {
 
   const compactPayload = (payload = {}) =>
     Object.entries(payload).reduce((acc, [key, value]) => {
-      if (value !== "" && value !== undefined && value !== null) acc[key] = value;
+      if (value !== "" && value !== undefined && value !== null)
+        acc[key] = value;
       return acc;
     }, {});
 
@@ -691,7 +1153,9 @@ const ReferralCommerce = () => {
     try {
       if (editingCode) {
         const { influencerId: _influencerId, ...codePayload } = payload;
-        await dispatch(updateReferralCode({ ...codePayload, codeId: getId(editingCode) })).unwrap();
+        await dispatch(
+          updateReferralCode({ ...codePayload, codeId: getId(editingCode) }),
+        ).unwrap();
         toast.success("Influencer code updated");
       } else {
         await dispatch(createReferralCode(payload)).unwrap();
@@ -762,21 +1226,29 @@ const ReferralCommerce = () => {
 
   const openBonusRuleModal = (rule = null) => {
     setEditingBonusRule(rule);
-    setBonusRuleForm(rule ? {
-      ...emptyBonusRuleForm,
-      ruleName: rule.ruleName || "",
-      period: rule.period || "monthly",
-      customStartAt: rule.customStartAt ? String(rule.customStartAt).slice(0, 10) : "",
-      customEndAt: rule.customEndAt ? String(rule.customEndAt).slice(0, 10) : "",
-      targetType: rule.targetType || "order_value",
-      targetValue: rule.targetValue ?? "",
-      bonusType: rule.bonusType || "fixed_coins",
-      bonusValue: rule.bonusValue ?? "",
-      applyTo: rule.applyTo || "code_owner",
-      resetCycle: rule.resetCycle || "monthly",
-      releaseRule: rule.releaseRule || "instantly_available",
-      status: rule.status || "active",
-    } : emptyBonusRuleForm);
+    setBonusRuleForm(
+      rule
+        ? {
+            ...emptyBonusRuleForm,
+            ruleName: rule.ruleName || "",
+            period: rule.period || "monthly",
+            customStartAt: rule.customStartAt
+              ? String(rule.customStartAt).slice(0, 10)
+              : "",
+            customEndAt: rule.customEndAt
+              ? String(rule.customEndAt).slice(0, 10)
+              : "",
+            targetType: rule.targetType || "order_value",
+            targetValue: rule.targetValue ?? "",
+            bonusType: rule.bonusType || "fixed_coins",
+            bonusValue: rule.bonusValue ?? "",
+            applyTo: rule.applyTo || "code_owner",
+            resetCycle: rule.resetCycle || "monthly",
+            releaseRule: rule.releaseRule || "instantly_available",
+            status: rule.status || "active",
+          }
+        : emptyBonusRuleForm,
+    );
     setBonusRuleModalOpen(true);
   };
 
@@ -787,7 +1259,12 @@ const ReferralCommerce = () => {
     );
     try {
       if (editingBonusRule) {
-        await dispatch(updateReferralBonusRule({ ...payload, ruleId: getId(editingBonusRule) })).unwrap();
+        await dispatch(
+          updateReferralBonusRule({
+            ...payload,
+            ruleId: getId(editingBonusRule),
+          }),
+        ).unwrap();
         toast.success("Bonus rule updated");
       } else {
         await dispatch(createReferralBonusRule(payload)).unwrap();
@@ -821,7 +1298,9 @@ const ReferralCommerce = () => {
     try {
       const result = await dispatch(evaluateReferralBonusRules({})).unwrap();
       const payload = result?.normalized?.data || result?.data || result || {};
-      toast.success(`Bonus evaluation complete: ${payload.totalCreated || 0} awarded`);
+      toast.success(
+        `Bonus evaluation complete: ${payload.totalCreated || 0} awarded`,
+      );
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to evaluate bonus rules");
@@ -880,7 +1359,9 @@ const ReferralCommerce = () => {
         await dispatch(approveReferralPayout({ payoutId })).unwrap();
       }
       if (action === "reject") {
-        await dispatch(rejectReferralPayout({ payoutId, adminNote: "Rejected by admin" })).unwrap();
+        await dispatch(
+          rejectReferralPayout({ payoutId, adminNote: "Rejected by admin" }),
+        ).unwrap();
       }
       if (action === "paid") {
         await dispatch(markReferralPayoutPaid({ payoutId })).unwrap();
@@ -940,20 +1421,32 @@ const ReferralCommerce = () => {
     key: getId(item),
     influencer: (
       <div className="min-w-0">
-        <div className="truncate font-medium text-gray-900">{fullName(item.user)}</div>
-        <div className="truncate text-xs text-gray-500">{item.user?.email || "Linked account"}</div>
+        <div className="truncate font-medium text-gray-900">
+          {fullName(item.user)}
+        </div>
+        <div className="truncate text-xs text-gray-500">
+          {item.user?.email || "Linked account"}
+        </div>
       </div>
     ),
     profileId: (
       <div className="min-w-0">
-        <div className="font-mono text-xs text-gray-800">{shortId(getId(item))}</div>
-        <div className="font-mono text-[11px] text-gray-400">User {shortId(item.userId)}</div>
+        <div className="font-mono text-xs text-gray-800">
+          {shortId(getId(item))}
+        </div>
+        <div className="font-mono text-[11px] text-gray-400">
+          User {shortId(item.userId)}
+        </div>
       </div>
     ),
     type: <span className="capitalize">{item.influencerType}</span>,
-    code: item.primaryCode?.code
-      ? <span className="font-mono text-sm font-semibold text-indigo-700">{item.primaryCode.code}</span>
-      : "-",
+    code: item.primaryCode?.code ? (
+      <span className="font-mono text-sm font-semibold text-indigo-700">
+        {item.primaryCode.code}
+      </span>
+    ) : (
+      "-"
+    ),
     hierarchy: `Level ${item.level || 1}`,
     wallet: formatCoins(item.wallet?.availableBalance),
     status: <StatusPill value={item.status} />,
@@ -961,7 +1454,12 @@ const ReferralCommerce = () => {
       <div className="flex flex-wrap gap-2">
         <IconButton
           title={item.status === "active" ? "Suspend" : "Reactivate"}
-          onClick={() => setInfluencerStatus(item, item.status === "active" ? "suspended" : "active")}
+          onClick={() =>
+            setInfluencerStatus(
+              item,
+              item.status === "active" ? "suspended" : "active",
+            )
+          }
           variant={item.status === "active" ? "danger" : "success"}
         >
           {item.status === "active" ? <X size={15} /> : <Check size={15} />}
@@ -986,10 +1484,17 @@ const ReferralCommerce = () => {
     status: <StatusPill value={code.status} />,
     actions: (
       <div className="flex flex-wrap gap-2">
-        <IconButton title="Edit" onClick={() => openEditCode(code)} variant="primary">
+        <IconButton
+          title="Edit"
+          onClick={() => openEditCode(code)}
+          variant="primary"
+        >
           <Pencil size={15} />
         </IconButton>
-        <IconButton title={code.status === "active" ? "Deactivate" : "Activate"} onClick={() => toggleCodeStatus(code)}>
+        <IconButton
+          title={code.status === "active" ? "Deactivate" : "Activate"}
+          onClick={() => toggleCodeStatus(code)}
+        >
           {code.status === "active" ? <X size={15} /> : <Check size={15} />}
         </IconButton>
       </div>
@@ -1027,13 +1532,28 @@ const ReferralCommerce = () => {
     requested: formatDate(payout.requestedAt || payout.createdAt),
     actions: (
       <div className="flex flex-wrap gap-2">
-        <IconButton title="Approve" onClick={() => handlePayoutAction(payout, "approve")} variant="success" disabled={payout.status !== "pending"}>
+        <IconButton
+          title="Approve"
+          onClick={() => handlePayoutAction(payout, "approve")}
+          variant="success"
+          disabled={payout.status !== "pending"}
+        >
           <Check size={15} />
         </IconButton>
-        <IconButton title="Reject" onClick={() => handlePayoutAction(payout, "reject")} variant="danger" disabled={payout.status === "paid"}>
+        <IconButton
+          title="Reject"
+          onClick={() => handlePayoutAction(payout, "reject")}
+          variant="danger"
+          disabled={payout.status === "paid"}
+        >
           <X size={15} />
         </IconButton>
-        <IconButton title="Mark Paid" onClick={() => handlePayoutAction(payout, "paid")} variant="primary" disabled={!["approved", "processing"].includes(payout.status)}>
+        <IconButton
+          title="Mark Paid"
+          onClick={() => handlePayoutAction(payout, "paid")}
+          variant="primary"
+          disabled={!["approved", "processing"].includes(payout.status)}
+        >
           <BadgeIndianRupee size={15} />
         </IconButton>
       </div>
@@ -1043,20 +1563,32 @@ const ReferralCommerce = () => {
   const bonusRuleRows = bonusRules.map((rule) => ({
     key: getId(rule),
     name: <span className="font-medium text-gray-900">{rule.ruleName}</span>,
-    period: <span className="capitalize">{String(rule.period || "").replace(/_/g, " ")}</span>,
+    period: (
+      <span className="capitalize">
+        {String(rule.period || "").replace(/_/g, " ")}
+      </span>
+    ),
     target: `${String(rule.targetType || "").replace(/_/g, " ")} >= ${Number(rule.targetValue || 0).toLocaleString("en-IN")}`,
-    bonus: rule.bonusType === "percentage_extra_coins"
-      ? `${Number(rule.bonusValue || 0)}% extra coins`
-      : formatCoins(rule.bonusValue),
+    bonus:
+      rule.bonusType === "percentage_extra_coins"
+        ? `${Number(rule.bonusValue || 0)}% extra coins`
+        : formatCoins(rule.bonusValue),
     applyTo: String(rule.applyTo || "").replace(/_/g, " "),
     release: String(rule.releaseRule || "").replace(/_/g, " "),
     status: <StatusPill value={rule.status} />,
     actions: (
       <div className="flex flex-wrap gap-2">
-        <IconButton title="Edit bonus rule" onClick={() => openBonusRuleModal(rule)} variant="primary">
+        <IconButton
+          title="Edit bonus rule"
+          onClick={() => openBonusRuleModal(rule)}
+          variant="primary"
+        >
           <Pencil size={15} />
         </IconButton>
-        <IconButton title={rule.status === "active" ? "Deactivate" : "Activate"} onClick={() => toggleBonusRuleStatus(rule)}>
+        <IconButton
+          title={rule.status === "active" ? "Deactivate" : "Activate"}
+          onClick={() => toggleBonusRuleStatus(rule)}
+        >
           {rule.status === "active" ? <X size={15} /> : <Check size={15} />}
         </IconButton>
       </div>
@@ -1071,9 +1603,11 @@ const ReferralCommerce = () => {
     target: Number(row.targetValue || 0).toLocaleString("en-IN"),
     achieved: Number(row.achievedValue || 0).toLocaleString("en-IN"),
     progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
-    status: row.existingAchievement
-      ? <StatusPill value={row.existingAchievement.status} />
-      : <StatusPill value={row.achieved ? "achieved" : "in_progress"} />,
+    status: row.existingAchievement ? (
+      <StatusPill value={row.existingAchievement.status} />
+    ) : (
+      <StatusPill value={row.achieved ? "achieved" : "in_progress"} />
+    ),
   }));
 
   const bonusAchievementRows = bonusAchievements.map((achievement) => ({
@@ -1098,13 +1632,19 @@ const ReferralCommerce = () => {
   }));
 
   const renderHierarchyNode = (node, depth = 0) => (
-    <div key={getId(node)} className="border-l border-gray-200 pl-4">
+    <div key={getId(node)} className="border-l  border-gray-200 pl-4">
       <div className="mb-2 flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
         <span className="font-medium text-gray-900">{fullName(node.user)}</span>
-        <span className="font-mono text-xs text-gray-500">Profile {shortId(getId(node))}</span>
+        <span className="font-mono text-xs text-gray-500">
+          Profile {shortId(getId(node))}
+        </span>
         <StatusPill value={node.influencerType} />
-        <span className="text-xs text-gray-500">Level {node.level || depth + 1}</span>
-        <span className="text-xs text-gray-500">{node.primaryCode?.code || "No influencer code"}</span>
+        <span className="text-xs text-gray-500">
+          Level {node.level || depth + 1}
+        </span>
+        <span className="text-xs text-gray-500">
+          {node.primaryCode?.code || "No influencer code"}
+        </span>
       </div>
       {Array.isArray(node.children) && node.children.length > 0 && (
         <div className="ml-4 space-y-2">
@@ -1118,12 +1658,21 @@ const ReferralCommerce = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {statItems.map((item) => (
-          <div key={item.label} className="rounded border border-gray-200 bg-white p-4">
+          <div
+            key={item.label}
+            className="rounded border border-gray-200 bg-white p-4"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase text-gray-500">{item.label}</p>
-                <p className="mt-2 truncate text-xl font-semibold text-gray-900">{item.value}</p>
-                <p className="mt-1 truncate text-xs text-gray-500">{item.sub}</p>
+                <p className="text-xs font-medium uppercase text-gray-500">
+                  {item.label}
+                </p>
+                <p className="mt-2 truncate text-xl font-semibold text-gray-900">
+                  {item.value}
+                </p>
+                <p className="mt-1 truncate text-xs text-gray-500">
+                  {item.sub}
+                </p>
               </div>
               <div className="flex h-9 w-9 items-center justify-center rounded border border-indigo-100 bg-indigo-50 text-indigo-600">
                 {item.icon}
@@ -1135,14 +1684,24 @@ const ReferralCommerce = () => {
       <Section title="Wallet Balances">
         <div className="grid grid-cols-1 divide-y divide-gray-100 text-sm md:grid-cols-4 md:divide-x md:divide-y-0">
           {[
-            ["Locked", summary?.wallets?.lockedBalance ?? summary?.wallets?.pendingBalance],
+            [
+              "Locked",
+              summary?.wallets?.lockedBalance ??
+                summary?.wallets?.pendingBalance,
+            ],
             ["Available", summary?.wallets?.availableBalance],
-            ["Withdrawn", summary?.wallets?.withdrawnBalance ?? summary?.wallets?.paidBalance],
+            [
+              "Withdrawn",
+              summary?.wallets?.withdrawnBalance ??
+                summary?.wallets?.paidBalance,
+            ],
             ["Reversed", summary?.wallets?.reversedBalance],
           ].map(([label, value]) => (
             <div key={label} className="p-4">
               <p className="text-xs uppercase text-gray-500">{label}</p>
-              <p className="mt-1 font-semibold text-gray-900">{formatCoins(value)}</p>
+              <p className="mt-1 font-semibold text-gray-900">
+                {formatCoins(value)}
+              </p>
             </div>
           ))}
         </div>
@@ -1152,17 +1711,50 @@ const ReferralCommerce = () => {
 
   const renderRules = () => (
     <Section title="Referral Commerce Rules">
-      <form onSubmit={submitRules} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
+      <form
+        onSubmit={submitRules}
+        className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4"
+      >
         <div className="md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">Referral pool and coin setup</p>
+          <p className="text-xs font-semibold uppercase text-gray-500">
+            Referral pool and coin setup
+          </p>
         </div>
-        <SelectInput label="Distribution Type" name="distributionType" value={rulesForm.distributionType} onChange={handleRulesField}>
-          {optionList(referralDistributionTypes.options, ["percentage", "fixed_amount"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        <SelectInput
+          label="Distribution Type"
+          name="distributionType"
+          value={rulesForm.distributionType}
+          onChange={handleRulesField}
+        >
+          {optionList(referralDistributionTypes.options, [
+            "percentage",
+            "fixed_amount",
+          ]).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </SelectInput>
         {rulesForm.distributionType === "fixed_amount" ? (
-          <TextInput label="Referral Pool Amount" name="referralPoolAmount" type="number" min="0" step="0.01" value={rulesForm.referralPoolAmount} onChange={handleRulesField} />
+          <TextInput
+            label="Referral Pool Amount"
+            name="referralPoolAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.referralPoolAmount}
+            onChange={handleRulesField}
+          />
         ) : (
-          <TextInput label="Referral Pool %" name="referralPoolPercent" type="number" min="0" step="0.01" value={rulesForm.referralPoolPercent} onChange={handleRulesField} />
+          <TextInput
+            label="Referral Pool %"
+            name="referralPoolPercent"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.referralPoolPercent}
+            onChange={handleRulesField}
+          />
         )}
         <TextInput
           label="Maximum Referral Pool Per Order"
@@ -1174,30 +1766,138 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
           hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and influencer shares are then calculated from this capped pool."
         />
-        <TextInput label="INR per Coin" name="coinValue" type="number" min="0.000001" step="0.01" value={rulesForm.coinValue} onChange={handleRulesField} />
-        <TextInput label="Coin Expiry Days" name="coinExpiryDays" type="number" value={rulesForm.coinExpiryDays} onChange={handleRulesField} />
-        <SelectInput label="Coin Usage" name="coinUsage" value={rulesForm.coinUsage} onChange={handleRulesField}>
-          {optionList(referralCoinUsageModes.options, ["wallet", "discount", "both"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        <TextInput
+          label="INR per Coin"
+          name="coinValue"
+          type="number"
+          min="0.000001"
+          step="0.01"
+          value={rulesForm.coinValue}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Coin Expiry Days"
+          name="coinExpiryDays"
+          type="number"
+          value={rulesForm.coinExpiryDays}
+          onChange={handleRulesField}
+        />
+        <SelectInput
+          label="Coin Usage"
+          name="coinUsage"
+          value={rulesForm.coinUsage}
+          onChange={handleRulesField}
+        >
+          {optionList(referralCoinUsageModes.options, [
+            "wallet",
+            "discount",
+            "both",
+          ]).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </SelectInput>
-        <TextInput label="Release Delay Days" name="releaseDelayDays" type="number" value={rulesForm.releaseDelayDays} onChange={handleRulesField} />
-        <TextInput label="Minimum Eligible Order Amount" name="minOrderAmount" type="number" min="0" step="0.01" value={rulesForm.minOrderAmount} onChange={handleRulesField} />
+        <TextInput
+          label="Release Delay Days"
+          name="releaseDelayDays"
+          type="number"
+          value={rulesForm.releaseDelayDays}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Minimum Eligible Order Amount"
+          name="minOrderAmount"
+          type="number"
+          min="0"
+          step="0.01"
+          value={rulesForm.minOrderAmount}
+          onChange={handleRulesField}
+        />
 
         <div className="border-t border-gray-100 pt-2 md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">Distribution shares</p>
+          <p className="text-xs font-semibold uppercase text-gray-500">
+            Distribution shares
+          </p>
         </div>
-        <TextInput label="Customer Discount Share %" name="customerSharePercent" type="number" min="0" step="0.01" value={rulesForm.customerSharePercent} onChange={handleRulesField} />
-        <TextInput label="Code Owner / Child Share %" name="childSharePercent" type="number" min="0" step="0.01" value={rulesForm.childSharePercent} onChange={handleRulesField} />
-        <TextInput label="Parent Share %" name="parentSharePercent" type="number" step="0.01" value={rulesForm.parentSharePercent} onChange={handleRulesField} />
+        <TextInput
+          label="Customer Discount Share %"
+          name="customerSharePercent"
+          type="number"
+          min="0"
+          step="0.01"
+          value={rulesForm.customerSharePercent}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Code Owner / Child Share %"
+          name="childSharePercent"
+          type="number"
+          min="0"
+          step="0.01"
+          value={rulesForm.childSharePercent}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Parent Share %"
+          name="parentSharePercent"
+          type="number"
+          step="0.01"
+          value={rulesForm.parentSharePercent}
+          onChange={handleRulesField}
+        />
 
         <div className="border-t border-gray-100 pt-2 md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">Withdrawal rules</p>
+          <p className="text-xs font-semibold uppercase text-gray-500">
+            Withdrawal rules
+          </p>
         </div>
-        <TextInput label="Minimum Withdrawal Coins" name="minimumWithdrawalCoins" type="number" step="0.01" value={rulesForm.minimumWithdrawalCoins} onChange={handleRulesField} />
-        <TextInput label="Maximum Withdrawal Coins" name="maximumWithdrawalCoins" type="number" step="0.01" value={rulesForm.maximumWithdrawalCoins} onChange={handleRulesField} />
-        <TextInput label="Daily Withdrawal Limit" name="dailyWithdrawalLimitCoins" type="number" step="0.01" value={rulesForm.dailyWithdrawalLimitCoins} onChange={handleRulesField} />
-        <TextInput label="Monthly Withdrawal Limit" name="monthlyWithdrawalLimitCoins" type="number" step="0.01" value={rulesForm.monthlyWithdrawalLimitCoins} onChange={handleRulesField} />
-        <SelectInput label="Approval Mode" name="withdrawalApprovalMode" value={rulesForm.withdrawalApprovalMode} onChange={handleRulesField}>
-          {optionList(referralWithdrawalApprovalModes.options, ["manual", "auto"]).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        <TextInput
+          label="Minimum Withdrawal Coins"
+          name="minimumWithdrawalCoins"
+          type="number"
+          step="0.01"
+          value={rulesForm.minimumWithdrawalCoins}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Maximum Withdrawal Coins"
+          name="maximumWithdrawalCoins"
+          type="number"
+          step="0.01"
+          value={rulesForm.maximumWithdrawalCoins}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Daily Withdrawal Limit"
+          name="dailyWithdrawalLimitCoins"
+          type="number"
+          step="0.01"
+          value={rulesForm.dailyWithdrawalLimitCoins}
+          onChange={handleRulesField}
+        />
+        <TextInput
+          label="Monthly Withdrawal Limit"
+          name="monthlyWithdrawalLimitCoins"
+          type="number"
+          step="0.01"
+          value={rulesForm.monthlyWithdrawalLimitCoins}
+          onChange={handleRulesField}
+        />
+        <SelectInput
+          label="Approval Mode"
+          name="withdrawalApprovalMode"
+          value={rulesForm.withdrawalApprovalMode}
+          onChange={handleRulesField}
+        >
+          {optionList(referralWithdrawalApprovalModes.options, [
+            "manual",
+            "auto",
+          ]).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </SelectInput>
         <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
           <input
@@ -1210,13 +1910,25 @@ const ReferralCommerce = () => {
           KYC required for withdrawal
         </label>
         <div className="md:col-span-2">
-          <span className="mb-2 block text-xs font-medium uppercase text-gray-500">Withdrawal Methods</span>
+          <span className="mb-2 block text-xs font-medium uppercase text-gray-500">
+            Withdrawal Methods
+          </span>
           <div className="flex flex-wrap gap-2">
-            {optionList(referralWithdrawalMethods.options, ["upi", "bank", "manual"]).map((option) => (
-              <label key={option.value} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700">
+            {optionList(referralWithdrawalMethods.options, [
+              "upi",
+              "bank",
+              "manual",
+            ]).map((option) => (
+              <label
+                key={option.value}
+                className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700"
+              >
                 <input
                   type="checkbox"
-                  checked={Array.isArray(rulesForm.withdrawalMethods) && rulesForm.withdrawalMethods.includes(option.value)}
+                  checked={
+                    Array.isArray(rulesForm.withdrawalMethods) &&
+                    rulesForm.withdrawalMethods.includes(option.value)
+                  }
                   onChange={() => toggleWithdrawalMethod(option.value)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600"
                 />
@@ -1227,10 +1939,10 @@ const ReferralCommerce = () => {
         </div>
 
         <div className="md:col-span-4">
-          <button type="submit" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          <OrangeButton type="submit">
             <Check size={16} />
             Save Rules
-          </button>
+          </OrangeButton>
         </div>
       </form>
     </Section>
@@ -1314,66 +2026,84 @@ const ReferralCommerce = () => {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Referral Commerce</h1>
-          <p className="text-sm text-gray-500">Influencer referral operations</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={influencerPortalUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
-            title="Open the influencer sign-in portal"
-          >
-            <ExternalLink size={16} />
-            Influencer Login
-          </a>
-          <IconButton title="Refresh" onClick={() => refreshAll()} variant="primary" disabled={loading}>
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          </IconButton>
-          <button
-            type="button"
-            onClick={() => {
-              resetInfluencerForm();
-              setParentModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-          >
-            <UserPlus size={16} />
-            Parent
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              resetInfluencerForm();
-              setInfluencerForm({ ...emptyInfluencerForm, canCreateChildren: false });
-              setChildModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <GitBranch size={16} />
-            Child
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingCode(null);
-              setCodeForm(emptyCodeForm);
-              setCodeModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <Plus size={16} />
-            Influencer Code
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Referral Commerce"
+        subtitle="Influencer referral operations"
+        breadcrumbs={[
+          { label: "Marketing & Growth" },
+          { label: "Referral Commerce" },
+        ]}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={influencerPortalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="admin-btn-secondary inline-flex items-center gap-2"
+              title="Open the influencer sign-in portal"
+            >
+              <ExternalLink size={16} />
+              Influencer Login
+            </a>
+            {/* <IconButton
+              title="Refresh"
+              onClick={() => refreshAll()}
+              variant="primary"
+              disabled={loading}
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </IconButton> */}
+            <button
+              type="button"
+              onClick={() => {
+                resetInfluencerForm();
+                setParentModalOpen(true);
+              }}
+              className="admin-btn-secondary inline-flex items-center gap-2"
+            >
+              <UserPlus size={16} />
+              Parent
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetInfluencerForm();
+                setInfluencerForm({
+                  ...emptyInfluencerForm,
+                  canCreateChildren: false,
+                });
+                setChildModalOpen(true);
+              }}
+              className="admin-btn-secondary inline-flex items-center gap-2"
+            >
+              <GitBranch size={16} />
+              Child
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCode(null);
+                setCodeForm(emptyCodeForm);
+                setCodeModalOpen(true);
+              }}
+              className="admin-btn-secondary inline-flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Influencer Code
+            </button>
+          </div>
+        }
+      />
 
-      <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white p-3">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white p-3"
+      >
         <div className="relative min-w-[220px] flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -1381,18 +2111,29 @@ const ReferralCommerce = () => {
             className="h-10 w-full rounded border border-gray-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-400"
           />
         </div>
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="h-10 rounded border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-indigo-400"
-        >
-          <option value="">All statuses</option>
-          {referralFilterStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-        <button type="submit" className="inline-flex h-10 items-center gap-2 rounded bg-gray-900 px-4 text-sm font-medium text-white hover:bg-gray-800">
+        <FilterSelect
+          className="w-48"
+          options={[
+            { value: "", label: "All statuses" },
+            ...referralFilterStatuses.options,
+          ]}
+          value={
+            [
+              { value: "", label: "All statuses" },
+              ...referralFilterStatuses.options,
+            ].find((opt) => String(opt.value) === String(status)) || {
+              value: "",
+              label: "All statuses",
+            }
+          }
+          onChange={(selected) => setStatus(selected ? selected.value : "")}
+          isSearchable={false}
+          placeholder="All statuses"
+        />
+        <OrangeButton type="submit">
           <Search size={16} />
           Search
-        </button>
+        </OrangeButton>
       </form>
 
       {activeTab === "overview" && renderOverview()}
@@ -1482,19 +2223,28 @@ const ReferralCommerce = () => {
       {activeTab === "hierarchy" && (
         <Section
           title={`Hierarchy (${hierarchy?.total || 0})`}
-          actions={<span className="text-xs text-gray-500">Max level {hierarchy?.maxLevel || 1}</span>}
+          actions={
+            <span className="text-xs text-gray-500">
+              Max level {hierarchy?.maxLevel || 1}
+            </span>
+          }
         >
           <div className="space-y-2 p-4">
             {Array.isArray(hierarchy?.roots) && hierarchy.roots.length ? (
               hierarchy.roots.map((node) => renderHierarchyNode(node))
             ) : (
-              <div className="py-8 text-center text-sm text-gray-500">No hierarchy found</div>
+              <div className="py-8 text-center text-sm text-gray-500">
+                No hierarchy found
+              </div>
             )}
           </div>
         </Section>
       )}
       {activeTab === "fraud" && (
-        <Section title="Fraud Review" actions={<ShieldAlert size={18} className="text-amber-600" />}>
+        <Section
+          title="Fraud Review"
+          actions={<ShieldAlert size={18} className="text-amber-600" />}
+        >
           <DataTable
             columns={[
               { key: "reason", label: "Reason" },
@@ -1514,21 +2264,63 @@ const ReferralCommerce = () => {
         open={parentModalOpen}
         onClose={() => setParentModalOpen(false)}
         footer={
-          <button type="submit" form="parentInfluencerForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          <OrangeButton type="submit" form="parentInfluencerForm">
             <Check size={16} />
             Create Parent
-          </button>
+          </OrangeButton>
         }
       >
-        <form id="parentInfluencerForm" onSubmit={submitParent} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <TextInput label="First Name" name="firstName" value={influencerForm.firstName} onChange={handleInfluencerField} />
-          <TextInput label="Last Name" name="lastName" value={influencerForm.lastName} onChange={handleInfluencerField} />
-          <TextInput label="Email" name="email" type="email" value={influencerForm.email} onChange={handleInfluencerField} />
-          <TextInput label="Phone" name="phone" value={influencerForm.phone} onChange={handleInfluencerField} />
-          <TextInput label="Password" name="password" type="password" value={influencerForm.password} onChange={handleInfluencerField} />
-          <TextInput label="Influencer Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
+        <form
+          id="parentInfluencerForm"
+          onSubmit={submitParent}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
+          <TextInput
+            label="First Name"
+            name="firstName"
+            value={influencerForm.firstName}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Last Name"
+            name="lastName"
+            value={influencerForm.lastName}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Email"
+            name="email"
+            type="email"
+            value={influencerForm.email}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Phone"
+            name="phone"
+            value={influencerForm.phone}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Password"
+            name="password"
+            type="password"
+            value={influencerForm.password}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Influencer Code"
+            name="code"
+            value={influencerForm.code}
+            onChange={handleInfluencerField}
+          />
           <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
-            <input type="checkbox" name="canCreateChildren" checked={Boolean(influencerForm.canCreateChildren)} onChange={handleInfluencerField} className="h-4 w-4" />
+            <input
+              type="checkbox"
+              name="canCreateChildren"
+              checked={Boolean(influencerForm.canCreateChildren)}
+              onChange={handleInfluencerField}
+              className="h-4 w-4"
+            />
             Can create children
           </label>
         </form>
@@ -1539,27 +2331,69 @@ const ReferralCommerce = () => {
         open={childModalOpen}
         onClose={() => setChildModalOpen(false)}
         footer={
-          <button type="submit" form="childInfluencerForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          <OrangeButton type="submit" form="childInfluencerForm">
             <Check size={16} />
             Create Child
-          </button>
+          </OrangeButton>
         }
       >
-        <form id="childInfluencerForm" onSubmit={submitChild} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <SelectInput label="Parent" name="parentId" value={parentId} onChange={(event) => setParentId(event.target.value)}>
+        <form
+          id="childInfluencerForm"
+          onSubmit={submitChild}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
+          <SelectInput
+            label="Parent"
+            name="parentId"
+            value={parentId}
+            onChange={(event) => setParentId(event.target.value)}
+          >
             <option value="">Select parent</option>
             {parentOptions.map((parent) => (
               <option key={getId(parent)} value={getId(parent)}>
-                {fullName(parent.user)} - {parent.primaryCode?.code || getId(parent)}
+                {fullName(parent.user)} -{" "}
+                {parent.primaryCode?.code || getId(parent)}
               </option>
             ))}
           </SelectInput>
-          <TextInput label="First Name" name="firstName" value={influencerForm.firstName} onChange={handleInfluencerField} />
-          <TextInput label="Last Name" name="lastName" value={influencerForm.lastName} onChange={handleInfluencerField} />
-          <TextInput label="Email" name="email" type="email" value={influencerForm.email} onChange={handleInfluencerField} />
-          <TextInput label="Phone" name="phone" value={influencerForm.phone} onChange={handleInfluencerField} />
-          <TextInput label="Password" name="password" type="password" value={influencerForm.password} onChange={handleInfluencerField} />
-          <TextInput label="Influencer Code" name="code" value={influencerForm.code} onChange={handleInfluencerField} />
+          <TextInput
+            label="First Name"
+            name="firstName"
+            value={influencerForm.firstName}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Last Name"
+            name="lastName"
+            value={influencerForm.lastName}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Email"
+            name="email"
+            type="email"
+            value={influencerForm.email}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Phone"
+            name="phone"
+            value={influencerForm.phone}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Password"
+            name="password"
+            type="password"
+            value={influencerForm.password}
+            onChange={handleInfluencerField}
+          />
+          <TextInput
+            label="Influencer Code"
+            name="code"
+            value={influencerForm.code}
+            onChange={handleInfluencerField}
+          />
         </form>
       </Modal>
 
@@ -1571,15 +2405,24 @@ const ReferralCommerce = () => {
           setEditingCode(null);
         }}
         footer={
-          <button type="submit" form="referralCodeForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          <OrangeButton type="submit" form="referralCodeForm">
             <Check size={16} />
             Save Influencer Code
-          </button>
+          </OrangeButton>
         }
       >
-        <form id="referralCodeForm" onSubmit={submitCode} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <form
+          id="referralCodeForm"
+          onSubmit={submitCode}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
           {!editingCode && (
-            <SelectInput label="Influencer Profile" name="influencerId" value={codeForm.influencerId} onChange={handleCodeField}>
+            <SelectInput
+              label="Influencer Profile"
+              name="influencerId"
+              value={codeForm.influencerId}
+              onChange={handleCodeField}
+            >
               <option value="">Select influencer profile</option>
               {influencers.map((item) => (
                 <option key={getId(item)} value={getId(item)}>
@@ -1588,10 +2431,30 @@ const ReferralCommerce = () => {
               ))}
             </SelectInput>
           )}
-          <TextInput label="Influencer Code" name="code" value={codeForm.code} onChange={handleCodeField} />
-          <TextInput label="Usage Limit" name="usageLimit" type="number" value={codeForm.usageLimit} onChange={handleCodeField} />
-          <SelectInput label="Status" name="status" value={codeForm.status} onChange={handleCodeField}>
-            {referralCodeStatuses.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <TextInput
+            label="Influencer Code"
+            name="code"
+            value={codeForm.code}
+            onChange={handleCodeField}
+          />
+          <TextInput
+            label="Usage Limit"
+            name="usageLimit"
+            type="number"
+            value={codeForm.usageLimit}
+            onChange={handleCodeField}
+          />
+          <SelectInput
+            label="Status"
+            name="status"
+            value={codeForm.status}
+            onChange={handleCodeField}
+          >
+            {referralCodeStatuses.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
         </form>
       </Modal>
@@ -1605,41 +2468,135 @@ const ReferralCommerce = () => {
           setBonusRuleForm(emptyBonusRuleForm);
         }}
         footer={
-          <button type="submit" form="bonusRuleForm" className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+          <OrangeButton type="submit" form="bonusRuleForm">
             <Check size={16} />
             Save Bonus Rule
-          </button>
+          </OrangeButton>
         }
       >
-        <form id="bonusRuleForm" onSubmit={submitBonusRule} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <TextInput label="Bonus Rule Name" name="ruleName" value={bonusRuleForm.ruleName} onChange={handleBonusRuleField} />
-          <SelectInput label="Bonus Period" name="period" value={bonusRuleForm.period} onChange={handleBonusRuleField}>
-            {referralBonusPeriods.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        <form
+          id="bonusRuleForm"
+          onSubmit={submitBonusRule}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
+          <TextInput
+            label="Bonus Rule Name"
+            name="ruleName"
+            value={bonusRuleForm.ruleName}
+            onChange={handleBonusRuleField}
+          />
+          <SelectInput
+            label="Bonus Period"
+            name="period"
+            value={bonusRuleForm.period}
+            onChange={handleBonusRuleField}
+          >
+            {referralBonusPeriods.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
           {bonusRuleForm.period === "custom" && (
             <>
-              <TextInput label="Custom Start" name="customStartAt" type="date" value={bonusRuleForm.customStartAt} onChange={handleBonusRuleField} />
-              <TextInput label="Custom End" name="customEndAt" type="date" value={bonusRuleForm.customEndAt} onChange={handleBonusRuleField} />
+              <TextInput
+                label="Custom Start"
+                name="customStartAt"
+                type="date"
+                value={bonusRuleForm.customStartAt}
+                onChange={handleBonusRuleField}
+              />
+              <TextInput
+                label="Custom End"
+                name="customEndAt"
+                type="date"
+                value={bonusRuleForm.customEndAt}
+                onChange={handleBonusRuleField}
+              />
             </>
           )}
-          <SelectInput label="Target Type" name="targetType" value={bonusRuleForm.targetType} onChange={handleBonusRuleField}>
-            {referralBonusTargetTypes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <SelectInput
+            label="Target Type"
+            name="targetType"
+            value={bonusRuleForm.targetType}
+            onChange={handleBonusRuleField}
+          >
+            {referralBonusTargetTypes.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
-          <TextInput label="Target Value" name="targetValue" type="number" step="0.01" value={bonusRuleForm.targetValue} onChange={handleBonusRuleField} />
-          <SelectInput label="Bonus Type" name="bonusType" value={bonusRuleForm.bonusType} onChange={handleBonusRuleField}>
-            {referralBonusTypes.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <TextInput
+            label="Target Value"
+            name="targetValue"
+            type="number"
+            step="0.01"
+            value={bonusRuleForm.targetValue}
+            onChange={handleBonusRuleField}
+          />
+          <SelectInput
+            label="Bonus Type"
+            name="bonusType"
+            value={bonusRuleForm.bonusType}
+            onChange={handleBonusRuleField}
+          >
+            {referralBonusTypes.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
-          <TextInput label="Bonus Value" name="bonusValue" type="number" step="0.01" value={bonusRuleForm.bonusValue} onChange={handleBonusRuleField} />
-          <SelectInput label="Apply To" name="applyTo" value={bonusRuleForm.applyTo} onChange={handleBonusRuleField}>
-            {referralBonusApplyTo.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <TextInput
+            label="Bonus Value"
+            name="bonusValue"
+            type="number"
+            step="0.01"
+            value={bonusRuleForm.bonusValue}
+            onChange={handleBonusRuleField}
+          />
+          <SelectInput
+            label="Apply To"
+            name="applyTo"
+            value={bonusRuleForm.applyTo}
+            onChange={handleBonusRuleField}
+          >
+            {referralBonusApplyTo.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
-          <SelectInput label="Reset Cycle" name="resetCycle" value={bonusRuleForm.resetCycle} onChange={handleBonusRuleField}>
-            {["monthly", "quarterly", "yearly"].map((value) => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}
+          <SelectInput
+            label="Reset Cycle"
+            name="resetCycle"
+            value={bonusRuleForm.resetCycle}
+            onChange={handleBonusRuleField}
+          >
+            {["monthly", "quarterly", "yearly"].map((value) => (
+              <option key={value} value={value}>
+                {value.replace(/_/g, " ")}
+              </option>
+            ))}
           </SelectInput>
-          <SelectInput label="Release Rule" name="releaseRule" value={bonusRuleForm.releaseRule} onChange={handleBonusRuleField}>
-            {referralBonusReleaseRules.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <SelectInput
+            label="Release Rule"
+            name="releaseRule"
+            value={bonusRuleForm.releaseRule}
+            onChange={handleBonusRuleField}
+          >
+            {referralBonusReleaseRules.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </SelectInput>
-          <SelectInput label="Status" name="status" value={bonusRuleForm.status} onChange={handleBonusRuleField}>
+          <SelectInput
+            label="Status"
+            name="status"
+            value={bonusRuleForm.status}
+            onChange={handleBonusRuleField}
+          >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </SelectInput>
