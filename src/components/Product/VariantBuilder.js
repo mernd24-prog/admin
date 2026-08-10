@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 import { MdDragIndicator, MdAdd } from "react-icons/md";
 import { FaInfoCircle } from "react-icons/fa";
+import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 
 const MAX_VARIANT_IMAGES = 5;
 
@@ -74,15 +75,6 @@ const SmallInput = ({ className = "", error = "", ...props }) => (
     aria-invalid={Boolean(error)}
     {...props}
   />
-);
-
-const SmallSelect = ({ className = "", children, ...props }) => (
-  <select
-    className={`w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 focus:border-[var(--admin-blue)] focus:outline-none ${className}`}
-    {...props}
-  >
-    {children}
-  </select>
 );
 
 const VariantBuilder = ({
@@ -1004,60 +996,28 @@ const VariantBuilder = ({
                           Managed in Inventory later too.
                         </p>
                       </div>
-                      {/* <div className="space-y-1">
-                        <FieldLabel>GST (%)</FieldLabel>
 
-                        <SmallInput
-                          name={`variants.${idx}.gstRate`}
-                          data-error-field={
-                            variantErrors.gstRate ? "variants" : undefined
-                          }
-                          error={variantErrors.gstRate}
-                          type="text"
-                          inputMode="decimal"
-                          value={variant.gstRate ?? ""}
-                          onKeyDown={blockInvalidNumberKeys}
-                          onChange={(e) => {
-                            const nextValue = sanitizeDecimalInput(
-                              e.target.value,
-                              {
-                                max: 100,
-                                decimals: 2,
-                              },
-                            );
-
-                            updateVariant(
-                              idx,
-                              "gstRate",
-                              nextValue === "" ? "" : Number(nextValue),
-                            );
-                          }}
-                        />
-
-                        {variantErrors.gstRate && (
-                          <p className="text-[10px] text-red-600" role="alert">
-                            {variantErrors.gstRate}
-                          </p>
-                        )}
-                      </div> */}
                       <div className="space-y-1">
                         <FieldLabel>Status</FieldLabel>
-                        <SmallSelect
-                          value={variant.status || "active"}
-                          onChange={(e) =>
-                            updateVariant(idx, "status", e.target.value)
+                        <FilterSelect
+                          options={productStatuses.options.filter((o) =>
+                            ["active", "inactive"].includes(o.value),
+                          )}
+                          value={
+                            productStatuses.options.find(
+                              (o) => o.value === (variant.status || "active"),
+                            ) || null
                           }
-                        >
-                          {productStatuses.options
-                            .filter((o) =>
-                              ["active", "inactive"].includes(o.value),
+                          onChange={(selected) =>
+                            updateVariant(
+                              idx,
+                              "status",
+                              selected?.value || "active",
                             )
-                            .map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                        </SmallSelect>
+                          }
+                          isSearchable={false}
+                          placeholder="Select status"
+                        />
                       </div>
                       {/* <div className="space-y-1">
                         <FieldLabel>Barcode (EAN/UPC)</FieldLabel>

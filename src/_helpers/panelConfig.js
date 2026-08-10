@@ -35,7 +35,7 @@ export const PANEL_MODES = {
 
 const configuredMode =
   // PANEL_MODES[String(process.env.REACT_APP_PANEL_MODE).toUpperCase()] ||
-  PANEL_MODES.SELLER; // detectModeFromRuntime() || PANEL_MODES.ADMIN;
+  PANEL_MODES.ADMIN; // detectModeFromRuntime() || PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 

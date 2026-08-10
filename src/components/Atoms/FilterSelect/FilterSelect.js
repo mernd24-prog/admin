@@ -129,7 +129,7 @@ const FilterSelect = ({
           {required && <span className="admin-required">*</span>}
         </label>
       )}
-      <div className="relative text-sm min-w-40 ">
+      <div className="relative text-sm min-w-0 ">
         <SelectComponent
           styles={customStyles(error)}
           className="capitalize"

@@ -77,9 +77,9 @@ const FILTER_FIELDS = isSellerPanel()
         width: "w-52",
       },
       {
-        key: "state",
+        key: "status",
         type: "select",
-        label: "State",
+        label: "Status",
         options: STATES.map((v) => ({ value: v, label: v })),
       },
       { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },

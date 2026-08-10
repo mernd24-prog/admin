@@ -311,92 +311,105 @@ const GoldDateRangeCalendar = ({
   const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
 
   return (
-      <div className="w-full rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl">
-        <div className="mb-3 flex items-center justify-between gap-3">
-    <button
-      type="button"
-      className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
-      onClick={() => onViewDateChange(addMonths(viewDate, -1))}
-      disabled={loading}
-      aria-label="Previous month"
-    >
-      ‹
-    </button>
-
-    <div className="flex flex-col items-center gap-1">
-      <div className="flex items-center justify-center gap-1">
-        {/* Month dropdown */}
-        <select
-          value={viewDate.getMonth()}
-          onChange={(e) => {
-            const nextDate = new Date(viewDate);
-            nextDate.setDate(1);
-            nextDate.setMonth(Number(e.target.value));
-            onViewDateChange(nextDate);
-          }}
+    <div className="w-full rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, -1))}
           disabled={loading}
-          className="h-8 rounded border border-[var(--admin-gold)] bg-white px-2 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
+          aria-label="Previous month"
         >
-          {[
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December",
-          ].map((month, index) => (
-            <option key={month} value={index}>
-              {month}
-            </option>
-          ))}
-        </select>
+          ‹
+        </button>
 
-        {/* Year dropdown */}
-        <select
-          value={viewDate.getFullYear()}
-          onChange={(e) => {
-            const nextDate = new Date(viewDate);
-            nextDate.setDate(1);
-            nextDate.setFullYear(Number(e.target.value));
-            onViewDateChange(nextDate);
-          }}
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center justify-center gap-2">
+            {/* Month dropdown */}
+            <FilterSelect
+              className="w-[130px]"
+              options={[
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+              ].map((month, index) => ({ value: index, label: month }))}
+              value={{
+                value: viewDate.getMonth(),
+                label: [
+                  "January",
+                  "February",
+                  "March",
+                  "April",
+                  "May",
+                  "June",
+                  "July",
+                  "August",
+                  "September",
+                  "October",
+                  "November",
+                  "December",
+                ][viewDate.getMonth()],
+              }}
+              onChange={(selected) => {
+                if (!selected) return;
+                const nextDate = new Date(viewDate);
+                nextDate.setDate(1);
+                nextDate.setMonth(Number(selected.value));
+                onViewDateChange(nextDate);
+              }}
+              isDisabled={loading}
+              isSearchable={false}
+              placeholder="Month"
+            />
+
+            {/* Year dropdown */}
+            <FilterSelect
+              className="w-[90px]"
+              options={Array.from({ length: 21 }, (_, index) => {
+                const year = new Date().getFullYear() - 10 + index;
+                return { value: year, label: String(year) };
+              })}
+              value={{
+                value: viewDate.getFullYear(),
+                label: String(viewDate.getFullYear()),
+              }}
+              onChange={(selected) => {
+                if (!selected) return;
+                const nextDate = new Date(viewDate);
+                nextDate.setDate(1);
+                nextDate.setFullYear(Number(selected.value));
+                onViewDateChange(nextDate);
+              }}
+              isDisabled={loading}
+              isSearchable={false}
+              placeholder="Year"
+            />
+          </div>
+
+          <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+            Select start and end date
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
+          onClick={() => onViewDateChange(addMonths(viewDate, 1))}
           disabled={loading}
-          className="h-8 rounded border border-[var(--admin-gold)] bg-white px-2 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
+          aria-label="Next month"
         >
-          {Array.from({ length: 21 }, (_, index) => {
-            const currentYear = new Date().getFullYear();
-            const year = currentYear - 10 + index;
-
-            return (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            );
-          })}
-        </select>
+          ›
+        </button>
       </div>
-
-      <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-        Select start and end date
-      </p>
-    </div>
-
-    <button
-      type="button"
-      className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
-      onClick={() => onViewDateChange(addMonths(viewDate, 1))}
-      disabled={loading}
-      aria-label="Next month"
-    >
-      ›
-    </button>
-  </div>
 
       <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
         {WEEKDAY_LABELS.map((label) => (

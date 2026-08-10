@@ -14,7 +14,10 @@ import {
   getPlatformOptions,
   getPlatformOptionValues,
 } from "../../../../Redux/adminCoreSlice";
-import { transformArray, uploadFileMulti } from "../../../../_helpers/globalFunctions";
+import {
+  transformArray,
+  uploadFileMulti,
+} from "../../../../_helpers/globalFunctions";
 import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
@@ -33,6 +36,7 @@ import TagsInput from "../../../../components/Product/TagsInput";
 import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrganizationContext";
 import { getShippingProfiles } from "../../../../Redux/deliverySlice";
 import { getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   extractRole,
   getStoredRole,
@@ -142,15 +146,12 @@ const normalizePincodeList = (value) => {
     ? value
     : String(value || "").split(/[\n,]+/);
   return Array.from(
-    new Set(
-      source
-        .map((item) => String(item || "").trim())
-        .filter(Boolean),
-    ),
+    new Set(source.map((item) => String(item || "").trim()).filter(Boolean)),
   );
 };
 
-const isValidIndianPincode = (value) => /^\d{6}$/.test(String(value || "").trim());
+const isValidIndianPincode = (value) =>
+  /^\d{6}$/.test(String(value || "").trim());
 
 const inferWarrantyDuration = (template = {}) => {
   const metadata = template?.metadata || {};
@@ -494,13 +495,13 @@ export default function ProductManagementUI() {
             gstRate: productData?.gstRate ?? 18,
             gstInclusive: productData?.gstInclusive ?? true,
             attributes: productData?.attributes || {},
-           shipping: {
-  ...(productData?.shipping || {}),
-  codAvailable:
-    productData?.shipping?.codAvailable ??
-    productData?.metadata?.codAvailable ??
-    false,
-},
+            shipping: {
+              ...(productData?.shipping || {}),
+              codAvailable:
+                productData?.shipping?.codAvailable ??
+                productData?.metadata?.codAvailable ??
+                false,
+            },
             options: productData?.options || [
               {
                 sku: "",
@@ -1185,350 +1186,322 @@ export default function ProductManagementUI() {
   }, [selector?.getListData, prefillList]);
 
   const validateForm = () => {
-  const newErrors = {};
+    const newErrors = {};
 
-  // Product name validation
-  const productName = String(formData?.name || "").trim();
+    // Product name validation
+    const productName = String(formData?.name || "").trim();
 
-  if (!productName) {
-    newErrors.name = "Product name is required.";
-  } else if (productName.length < 3) {
-    newErrors.name = "Product name must be at least 3 characters.";
-  } else if (productName.length > 200) {
-    newErrors.name = "Product name must not be more than 200 characters.";
-  }
+    if (!productName) {
+      newErrors.name = "Product name is required.";
+    } else if (productName.length < 3) {
+      newErrors.name = "Product name must be at least 3 characters.";
+    } else if (productName.length > 200) {
+      newErrors.name = "Product name must not be more than 200 characters.";
+    }
 
-  // Description validation
-  const description = formData?.description || "";
+    // Description validation
+    const description = formData?.description || "";
 
-  const plainDescription = description
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
+    const plainDescription = description
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .trim();
 
-  if (!plainDescription) {
-    newErrors.description = "Description is required.";
-  } else if (plainDescription.length < 10) {
-    newErrors.description = "Description must be at least 10 characters.";
-  } else if (plainDescription.length > 5000) {
-    newErrors.description =
-      "Description must not be more than 5000 characters.";
-  }
+    if (!plainDescription) {
+      newErrors.description = "Description is required.";
+    } else if (plainDescription.length < 10) {
+      newErrors.description = "Description must be at least 10 characters.";
+    } else if (plainDescription.length > 5000) {
+      newErrors.description =
+        "Description must not be more than 5000 characters.";
+    }
 
-  // Seller validation
-  if (!formData?.sellerId && !isSellerPanelUser) {
-    newErrors.sellerId = "Seller is required.";
-  }
+    // Seller validation
+    if (!formData?.sellerId && !isSellerPanelUser) {
+      newErrors.sellerId = "Seller is required.";
+    }
 
-  // Organization validation
-  if (!formData?.organizationId) {
-    if (isSellerPanelUser) {
-      const activeOrgId = getSelectedSellerOrganizationId();
+    // Organization validation
+    if (!formData?.organizationId) {
+      if (isSellerPanelUser) {
+        const activeOrgId = getSelectedSellerOrganizationId();
 
-      if (!activeOrgId) {
-        newErrors.organizationId =
-          "No active organization is available for this seller account.";
+        if (!activeOrgId) {
+          newErrors.organizationId =
+            "No active organization is available for this seller account.";
+        }
+      } else {
+        newErrors.organizationId = "Organization is required.";
       }
-    } else {
-      newErrors.organizationId = "Organization is required.";
-    }
-  }
-
-  // Brand validation
-  const brandValue = String(
-    formData?.brand ||
-      formData?.brandId ||
-      formData?.brand_id ||
-      "",
-  ).trim();
-
-  if (!brandValue) {
-    newErrors.brand = "Brand is required.";
-  }
-
-  // Category validation
-  const categoryValue =
-    formData?.category_id ||
-    formData?.categoryId ||
-    formData?.category ||
-    formData?.category_key;
-
-  if (!categoryValue) {
-    newErrors.category_id = "Category is required.";
-  }
-
-  // HSN code validation
-  const hsnValue = String(
-    formData?.hsn_code ||
-      formData?.hsnCode ||
-      formData?.hsn_id ||
-      "",
-  ).trim();
-
-  if (!hsnValue) {
-    newErrors.hsn_code = "HSN Code is required.";
-  }
-
-  // Variant existence validation
-  if (!Array.isArray(variantsData) || !variantsData.length) {
-    newErrors.variants = {
-      _form: "Add at least one variant for this product.",
-    };
-  }
-
-  // Shipping validation
-  const hasShippingProfile = Boolean(
-    formData?.shipping?.shippingProfileId,
-  );
-
-  if (!hasShippingProfile) {
-    const deliveryMode = normalizeProductServiceabilityMode(
-      formData?.shipping?.serviceabilityMode,
-    );
-
-    const allowedPincodes = normalizePincodeList(
-      formData?.shipping?.allowPincodes ||
-        formData?.shipping?.serviceablePincodes,
-    );
-
-    if (deliveryMode !== "allowlist") {
-      newErrors.shipping =
-        "Add allowed delivery pincodes when no shipping profile is selected.";
-    } else if (!allowedPincodes.length) {
-      newErrors.shipping = "Add at least one allowed delivery pincode.";
-    } else if (
-      allowedPincodes.some(
-        (pincode) => !isValidIndianPincode(pincode),
-      )
-    ) {
-      newErrors.shipping =
-        "Every pincode must be a valid 6-digit pincode.";
-    }
-  }
-
-  // Variant field validation
-  if (Array.isArray(variantsData) && variantsData.length) {
-    const variantErrors = variantsData.reduce(
-  (result, variant, index) => {
-    const fieldErrors = {};
-
-    const price = Number(variant?.price || 0);
-    const mrp = Number(variant?.mrp || 0);
-
-    const hasSalePrice =
-      variant?.salePrice !== undefined &&
-      variant?.salePrice !== null &&
-      variant?.salePrice !== "";
-
-    const salePrice = Number(variant?.salePrice || 0);
-
-    const hasGstRate =
-      variant?.gstRate !== undefined &&
-      variant?.gstRate !== null &&
-      variant?.gstRate !== "";
-
-    const gstRate = Number(variant?.gstRate);
-
-    if (!String(variant?.sku || "").trim()) {
-      fieldErrors.sku = "SKU is required.";
     }
 
-    if (price <= 0) {
-      fieldErrors.price = "Price must be greater than 0.";
-    } else if (mrp > 0 && price > mrp) {
-      fieldErrors.price = "Price cannot be greater than MRP.";
+    // Brand validation
+    const brandValue = String(
+      formData?.brand || formData?.brandId || formData?.brand_id || "",
+    ).trim();
+
+    if (!brandValue) {
+      newErrors.brand = "Brand is required.";
     }
 
-    if (mrp <= 0) {
-      fieldErrors.mrp = "MRP must be greater than 0.";
+    // Category validation
+    const categoryValue =
+      formData?.category_id ||
+      formData?.categoryId ||
+      formData?.category ||
+      formData?.category_key;
+
+    if (!categoryValue) {
+      newErrors.category_id = "Category is required.";
     }
 
-    if (!hasSalePrice) {
-      fieldErrors.salePrice = "Sale price is required.";
-    } else if (salePrice <= 0) {
-      fieldErrors.salePrice = "Sale price must be greater than 0.";
-    } else if (salePrice > price) {
-      fieldErrors.salePrice =
-        "Sale price cannot be greater than price.";
+    // HSN code validation
+    const hsnValue = String(
+      formData?.hsn_code || formData?.hsnCode || formData?.hsn_id || "",
+    ).trim();
+
+    if (!hsnValue) {
+      newErrors.hsn_code = "HSN Code is required.";
     }
 
-    // GST validation
-    if (!hasGstRate) {
-      fieldErrors.gstRate = "GST rate is required.";
-    } else if (Number.isNaN(gstRate)) {
-      fieldErrors.gstRate = "Enter a valid GST rate.";
-    } else if (gstRate < 0 || gstRate > 100) {
-      fieldErrors.gstRate = "GST rate must be between 0 and 100.";
-    }
-
-    if (Object.keys(fieldErrors).length) {
-      result[index] = fieldErrors;
-    }
-
-    return result;
-  },
-  {},
-);
-
-    if (Object.keys(variantErrors).length) {
+    // Variant existence validation
+    if (!Array.isArray(variantsData) || !variantsData.length) {
       newErrors.variants = {
-        ...(newErrors.variants || {}),
-        ...variantErrors,
+        _form: "Add at least one variant for this product.",
       };
     }
-  }
 
-  // Category attribute validation
-  if (!useManualAttributes) {
-    categoryAttributeSchema.forEach((field) => {
-      const value = formData?.attributes?.[field.key];
+    // Shipping validation
+    const hasShippingProfile = Boolean(formData?.shipping?.shippingProfileId);
 
-      const isEmpty =
-        value === undefined ||
-        value === null ||
-        value === "" ||
-        (Array.isArray(value) && value.length === 0);
+    if (!hasShippingProfile) {
+      const deliveryMode = normalizeProductServiceabilityMode(
+        formData?.shipping?.serviceabilityMode,
+      );
 
-      if (field.required && isEmpty) {
-        newErrors.attributes = {
-          ...(newErrors.attributes || {}),
-          [field.key]: `${field.label || field.key} is required.`,
+      const allowedPincodes = normalizePincodeList(
+        formData?.shipping?.allowPincodes ||
+          formData?.shipping?.serviceablePincodes,
+      );
+
+      if (deliveryMode !== "allowlist") {
+        newErrors.shipping =
+          "Add allowed delivery pincodes when no shipping profile is selected.";
+      } else if (!allowedPincodes.length) {
+        newErrors.shipping = "Add at least one allowed delivery pincode.";
+      } else if (
+        allowedPincodes.some((pincode) => !isValidIndianPincode(pincode))
+      ) {
+        newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
+      }
+    }
+
+    // Variant field validation
+    if (Array.isArray(variantsData) && variantsData.length) {
+      const variantErrors = variantsData.reduce((result, variant, index) => {
+        const fieldErrors = {};
+
+        const price = Number(variant?.price || 0);
+        const mrp = Number(variant?.mrp || 0);
+
+        const hasSalePrice =
+          variant?.salePrice !== undefined &&
+          variant?.salePrice !== null &&
+          variant?.salePrice !== "";
+
+        const salePrice = Number(variant?.salePrice || 0);
+
+        const hasGstRate =
+          variant?.gstRate !== undefined &&
+          variant?.gstRate !== null &&
+          variant?.gstRate !== "";
+
+        const gstRate = Number(variant?.gstRate);
+
+        if (!String(variant?.sku || "").trim()) {
+          fieldErrors.sku = "SKU is required.";
+        }
+
+        if (price <= 0) {
+          fieldErrors.price = "Price must be greater than 0.";
+        } else if (mrp > 0 && price > mrp) {
+          fieldErrors.price = "Price cannot be greater than MRP.";
+        }
+
+        if (mrp <= 0) {
+          fieldErrors.mrp = "MRP must be greater than 0.";
+        }
+
+        if (!hasSalePrice) {
+          fieldErrors.salePrice = "Sale price is required.";
+        } else if (salePrice <= 0) {
+          fieldErrors.salePrice = "Sale price must be greater than 0.";
+        } else if (salePrice > price) {
+          fieldErrors.salePrice = "Sale price cannot be greater than price.";
+        }
+
+        // GST validation
+        if (!hasGstRate) {
+          fieldErrors.gstRate = "GST rate is required.";
+        } else if (Number.isNaN(gstRate)) {
+          fieldErrors.gstRate = "Enter a valid GST rate.";
+        } else if (gstRate < 0 || gstRate > 100) {
+          fieldErrors.gstRate = "GST rate must be between 0 and 100.";
+        }
+
+        if (Object.keys(fieldErrors).length) {
+          result[index] = fieldErrors;
+        }
+
+        return result;
+      }, {});
+
+      if (Object.keys(variantErrors).length) {
+        newErrors.variants = {
+          ...(newErrors.variants || {}),
+          ...variantErrors,
         };
       }
-    });
-  }
+    }
 
-  setError(newErrors);
+    // Category attribute validation
+    if (!useManualAttributes) {
+      categoryAttributeSchema.forEach((field) => {
+        const value = formData?.attributes?.[field.key];
 
-  if (Object.keys(newErrors).length > 0) {
-    scrollToFirstValidationError(newErrors);
-  }
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0);
 
-  return Object.keys(newErrors).length === 0;
-};
- useEffect(() => {
-  if (isScrolling) return;
+        if (field.required && isEmpty) {
+          newErrors.attributes = {
+            ...(newErrors.attributes || {}),
+            [field.key]: `${field.label || field.key} is required.`,
+          };
+        }
+      });
+    }
 
-  const sectionIds = [
-    "basic-details",
-    "product-details",
-    "common-images",
-    "variants-options",
-    "shipping",
-    "seo",
-    "tags",
-  ];
+    setError(newErrors);
 
-  let animationFrameId = null;
+    if (Object.keys(newErrors).length > 0) {
+      scrollToFirstValidationError(newErrors);
+    }
 
-  const updateActiveSection = () => {
-    const viewportHeight = window.innerHeight;
+    return Object.keys(newErrors).length === 0;
+  };
+  useEffect(() => {
+    if (isScrolling) return;
 
-    // Position in viewport where a section becomes active.
-    const activationLine = 220;
+    const sectionIds = [
+      "basic-details",
+      "product-details",
+      "common-images",
+      "variants-options",
+      "shipping",
+      "seo",
+      "tags",
+    ];
 
-    const sections = sectionIds
-      .map((id) => ({
-        id,
-        element: refs[id]?.current,
-      }))
-      .filter((item) => item.element);
+    let animationFrameId = null;
 
-    if (!sections.length) return;
+    const updateActiveSection = () => {
+      const viewportHeight = window.innerHeight;
 
-    // -----------------------------------------
-    // LAST SECTION FIX
-    // -----------------------------------------
-    const lastSection = sections[sections.length - 1];
-    const lastRect = lastSection.element.getBoundingClientRect();
+      // Position in viewport where a section becomes active.
+      const activationLine = 220;
 
-    /*
+      const sections = sectionIds
+        .map((id) => ({
+          id,
+          element: refs[id]?.current,
+        }))
+        .filter((item) => item.element);
+
+      if (!sections.length) return;
+
+      // -----------------------------------------
+      // LAST SECTION FIX
+      // -----------------------------------------
+      const lastSection = sections[sections.length - 1];
+      const lastRect = lastSection.element.getBoundingClientRect();
+
+      /*
       Last section often cannot move all the way to the top because
       there is no content after it.
 
       As soon as Tags & Discovery enters enough of the viewport,
       activate it.
     */
-    if (
-      lastRect.top <= viewportHeight * 0.78 &&
-      lastRect.bottom > 0
-    ) {
-      setActiveTab((prev) =>
-        prev !== lastSection.id ? lastSection.id : prev,
-      );
+      if (lastRect.top <= viewportHeight * 0.78 && lastRect.bottom > 0) {
+        setActiveTab((prev) =>
+          prev !== lastSection.id ? lastSection.id : prev,
+        );
 
-      return;
-    }
+        return;
+      }
 
-    // -----------------------------------------
-    // NORMAL SECTION DETECTION
-    // -----------------------------------------
-    let currentSection = sections[0].id;
+      // -----------------------------------------
+      // NORMAL SECTION DETECTION
+      // -----------------------------------------
+      let currentSection = sections[0].id;
 
-    sections.forEach(({ id, element }) => {
-      const rect = element.getBoundingClientRect();
+      sections.forEach(({ id, element }) => {
+        const rect = element.getBoundingClientRect();
 
-      /*
+        /*
         The latest section that has crossed the activation line
         becomes active.
       */
-      if (rect.top <= activationLine) {
-        currentSection = id;
+        if (rect.top <= activationLine) {
+          currentSection = id;
+        }
+      });
+
+      setActiveTab((prev) => (prev !== currentSection ? currentSection : prev));
+    };
+
+    const handleScroll = () => {
+      if (isScrolling) return;
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
       }
-    });
 
-    setActiveTab((prev) =>
-      prev !== currentSection ? currentSection : prev,
-    );
-  };
+      animationFrameId = requestAnimationFrame(() => {
+        updateActiveSection();
+        animationFrameId = null;
+      });
+    };
 
-  const handleScroll = () => {
-    if (isScrolling) return;
-
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-    }
-
-    animationFrameId = requestAnimationFrame(() => {
-      updateActiveSection();
-      animationFrameId = null;
-    });
-  };
-
-  /*
+    /*
     IMPORTANT:
     true = capture phase.
 
     This lets us detect scrolling even when your admin layout
     scrolls inside a nested div instead of window.
   */
-  document.addEventListener("scroll", handleScroll, true);
+    document.addEventListener("scroll", handleScroll, true);
 
-  window.addEventListener("resize", handleScroll);
+    window.addEventListener("resize", handleScroll);
 
-  // Set correct active tab immediately.
-  updateActiveSection();
+    // Set correct active tab immediately.
+    updateActiveSection();
 
-  return () => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-    }
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
 
-    document.removeEventListener(
-      "scroll",
-      handleScroll,
-      true,
-    );
+      document.removeEventListener("scroll", handleScroll, true);
 
-    window.removeEventListener(
-      "resize",
-      handleScroll,
-    );
-  };
-}, [isScrolling]);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [isScrolling]);
 
- const scrollToSection = useCallback(
-  (id) => {
+  const scrollToSection = useCallback((id) => {
     const target = refs[id]?.current;
 
     if (!target) return;
@@ -1545,9 +1518,7 @@ export default function ProductManagementUI() {
     setTimeout(() => {
       setIsScrolling(false);
     }, 700);
-  },
-  [],
-);
+  }, []);
 
   function calculateDiscount(price, discountPercent = 0) {
     const validPrice = parseFloat(price) || 0;
@@ -1679,7 +1650,7 @@ export default function ProductManagementUI() {
           break;
         case "hsn_code":
           delete newErrors.hsn_code;
-      break;
+          break;
         default:
           break;
       }
@@ -1807,57 +1778,53 @@ export default function ProductManagementUI() {
         break;
     }
   };
- const handleToggleProductSetting = (key) => {
-  if (key === "COD") {
-    setFormData((prev) => ({
-      ...prev,
-      shipping: {
-        ...(prev.shipping || {}),
-        codAvailable: !Boolean(prev?.shipping?.codAvailable),
-      },
-    }));
-
-    return;
-  }
-
-  if (key === "FREE_SHIPPING") {
-    setFormData((prev) => {
-      const nextFreeShipping = !Boolean(
-        prev?.shipping?.freeShipping,
-      );
-
-      return {
+  const handleToggleProductSetting = (key) => {
+    if (key === "COD") {
+      setFormData((prev) => ({
         ...prev,
         shipping: {
           ...(prev.shipping || {}),
-          freeShipping: nextFreeShipping,
-          ...(nextFreeShipping
-            ? { shippingProfileId: null }
-            : {}),
+          codAvailable: !Boolean(prev?.shipping?.codAvailable),
         },
-      };
-    });
+      }));
 
-    return;
-  }
+      return;
+    }
 
-  const fieldMap = {
-    DISABLE: "isDisable",
-    APPROVE: "isApproved",
-    FEATURED: "markAsFeatured",
-    DEAL_PRODUCT: "isDealProduct",
-    prescription_required: "prescription_required",
+    if (key === "FREE_SHIPPING") {
+      setFormData((prev) => {
+        const nextFreeShipping = !Boolean(prev?.shipping?.freeShipping);
+
+        return {
+          ...prev,
+          shipping: {
+            ...(prev.shipping || {}),
+            freeShipping: nextFreeShipping,
+            ...(nextFreeShipping ? { shippingProfileId: null } : {}),
+          },
+        };
+      });
+
+      return;
+    }
+
+    const fieldMap = {
+      DISABLE: "isDisable",
+      APPROVE: "isApproved",
+      FEATURED: "markAsFeatured",
+      DEAL_PRODUCT: "isDealProduct",
+      prescription_required: "prescription_required",
+    };
+
+    const fieldName = fieldMap[key];
+
+    if (!fieldName) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: !Boolean(prev[fieldName]),
+    }));
   };
-
-  const fieldName = fieldMap[key];
-
-  if (!fieldName) return;
-
-  setFormData((prev) => ({
-    ...prev,
-    [fieldName]: !Boolean(prev[fieldName]),
-  }));
-};
 
   const handleSaveSubmit = useCallback(async () => {
     setSaving(true);
@@ -1875,7 +1842,8 @@ export default function ProductManagementUI() {
           ) || null
         : null;
     const selectedShippingProfile = selectedShippingOption?.profile || null;
-    const isSelectedShippingTemplate = selectedShippingOption?.type === "template";
+    const isSelectedShippingTemplate =
+      selectedShippingOption?.type === "template";
     const profileShippingCharge = selectedShippingProfile
       ? toOptionalNumber(selectedShippingProfile.shippingCharge)
       : undefined;
@@ -1886,7 +1854,7 @@ export default function ProductManagementUI() {
       ? toOptionalNumber(selectedShippingProfile.etaMax)
       : undefined;
     const resolvedCodAvailable =
-  updatedFormData?.shipping?.codAvailable === true;
+      updatedFormData?.shipping?.codAvailable === true;
 
     const formattedOptions = options.map((option) => ({
       sku: option.sku || "",
@@ -1977,125 +1945,120 @@ export default function ProductManagementUI() {
           resolution: current.resolution || "refund_or_replacement",
           requiresImages: Boolean(current.requiresImages),
           inspectionRequired: current.inspectionRequired !== false,
-          shippingPaidBy: isSellerPanelUser ? 'seller' : (current.shippingPaidBy || 'seller'),
+          shippingPaidBy: isSellerPanelUser
+            ? "seller"
+            : current.shippingPaidBy || "seller",
           restockingFee: Number(current.restockingFee || 0),
         };
       })(),
     });
-   const shipping = compactObject(
-  selectedShippingProfile
-    ? {
-        shippingProfileId: isSelectedShippingTemplate
-          ? null
-          : updatedFormData.shipping?.shippingProfileId,
+    const shipping = compactObject(
+      selectedShippingProfile
+        ? {
+            shippingProfileId: isSelectedShippingTemplate
+              ? null
+              : updatedFormData.shipping?.shippingProfileId,
 
-        freeShipping: profileShippingCharge === 0,
-        additionalCost: profileShippingCharge,
-        shippingCharge: profileShippingCharge,
+            freeShipping: profileShippingCharge === 0,
+            additionalCost: profileShippingCharge,
+            shippingCharge: profileShippingCharge,
 
-        serviceabilityMode:
-          normalizeProductServiceabilityMode(
-            selectedShippingProfile.serviceabilityMode,
-          ),
+            serviceabilityMode: normalizeProductServiceabilityMode(
+              selectedShippingProfile.serviceabilityMode,
+            ),
 
-        allowPincodes:
-          selectedShippingProfile.allowedPincodes ||
-          selectedShippingProfile.allowPincodes ||
-          selectedShippingProfile.serviceablePincodes ||
-          [],
+            allowPincodes:
+              selectedShippingProfile.allowedPincodes ||
+              selectedShippingProfile.allowPincodes ||
+              selectedShippingProfile.serviceablePincodes ||
+              [],
 
-        serviceablePincodes:
-          selectedShippingProfile.allowedPincodes ||
-          selectedShippingProfile.serviceablePincodes ||
-          selectedShippingProfile.allowPincodes ||
-          [],
+            serviceablePincodes:
+              selectedShippingProfile.allowedPincodes ||
+              selectedShippingProfile.serviceablePincodes ||
+              selectedShippingProfile.allowPincodes ||
+              [],
 
-        regions:
-          selectedShippingProfile.regions ||
-          selectedShippingProfile.allowedStates ||
-          selectedShippingProfile.states ||
-          [],
+            regions:
+              selectedShippingProfile.regions ||
+              selectedShippingProfile.allowedStates ||
+              selectedShippingProfile.states ||
+              [],
 
-        states:
-          selectedShippingProfile.allowedStates ||
-          selectedShippingProfile.states ||
-          [],
+            states:
+              selectedShippingProfile.allowedStates ||
+              selectedShippingProfile.states ||
+              [],
 
-        cities:
-          selectedShippingProfile.allowedCities ||
-          selectedShippingProfile.cities ||
-          [],
+            cities:
+              selectedShippingProfile.allowedCities ||
+              selectedShippingProfile.cities ||
+              [],
 
-        codAvailable: resolvedCodAvailable,
+            codAvailable: resolvedCodAvailable,
 
-        processingDays: profileEtaMin,
-        estimatedDaysMin: profileEtaMin,
-        estimatedDaysMax: profileEtaMax,
+            processingDays: profileEtaMin,
+            estimatedDaysMin: profileEtaMin,
+            estimatedDaysMax: profileEtaMax,
 
-        shippingMethod:
-          selectedShippingProfile.shippingMethod ||
-          "standard",
-      }
-    : {
-        ...(updatedFormData.shipping || {}),
-        blockPincodes: undefined,
+            shippingMethod:
+              selectedShippingProfile.shippingMethod || "standard",
+          }
+        : {
+            ...(updatedFormData.shipping || {}),
+            blockPincodes: undefined,
 
-        serviceabilityMode:
-          normalizeProductServiceabilityMode(
-            updatedFormData.shipping?.serviceabilityMode,
-          ),
+            serviceabilityMode: normalizeProductServiceabilityMode(
+              updatedFormData.shipping?.serviceabilityMode,
+            ),
 
-        allowPincodes: normalizePincodeList(
-          updatedFormData.shipping?.allowPincodes ||
-            updatedFormData.shipping?.serviceablePincodes,
-        ),
+            allowPincodes: normalizePincodeList(
+              updatedFormData.shipping?.allowPincodes ||
+                updatedFormData.shipping?.serviceablePincodes,
+            ),
 
-        serviceablePincodes: normalizePincodeList(
-          updatedFormData.shipping?.serviceablePincodes ||
-            updatedFormData.shipping?.allowPincodes,
-        ),
+            serviceablePincodes: normalizePincodeList(
+              updatedFormData.shipping?.serviceablePincodes ||
+                updatedFormData.shipping?.allowPincodes,
+            ),
 
-        freeShipping: Boolean(
-          updatedFormData.shipping?.freeShipping,
-        ),
+            freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
 
-        freeShippingMinOrder: toOptionalNumber(
-          updatedFormData.shipping?.freeShippingMinOrder,
-        ),
+            freeShippingMinOrder: toOptionalNumber(
+              updatedFormData.shipping?.freeShippingMinOrder,
+            ),
 
-        additionalCost: toOptionalNumber(
-          updatedFormData.shipping?.additionalCost,
-        ),
+            additionalCost: toOptionalNumber(
+              updatedFormData.shipping?.additionalCost,
+            ),
 
-        shippingCharge: toOptionalNumber(
-          updatedFormData.shipping?.shippingCharge,
-        ),
+            shippingCharge: toOptionalNumber(
+              updatedFormData.shipping?.shippingCharge,
+            ),
 
-        handlingCharge: toOptionalNumber(
-          updatedFormData.shipping?.handlingCharge,
-        ),
+            handlingCharge: toOptionalNumber(
+              updatedFormData.shipping?.handlingCharge,
+            ),
 
-        codAvailable: resolvedCodAvailable,
+            codAvailable: resolvedCodAvailable,
 
-        processingDays: toOptionalNumber(
-          updatedFormData.shipping?.processingDays,
-        ),
+            processingDays: toOptionalNumber(
+              updatedFormData.shipping?.processingDays,
+            ),
 
-        estimatedDaysMin: toOptionalNumber(
-          updatedFormData.shipping?.estimatedDaysMin,
-        ),
+            estimatedDaysMin: toOptionalNumber(
+              updatedFormData.shipping?.estimatedDaysMin,
+            ),
 
-        estimatedDaysMax: toOptionalNumber(
-          updatedFormData.shipping?.estimatedDaysMax,
-        ),
+            estimatedDaysMax: toOptionalNumber(
+              updatedFormData.shipping?.estimatedDaysMax,
+            ),
 
-        shippingProfileId:
-          updatedFormData.shipping?.freeShipping
-            ? null
-            : updatedFormData.shipping?.shippingProfileId ||
-              null,
-      },
-);
+            shippingProfileId: updatedFormData.shipping?.freeShipping
+              ? null
+              : updatedFormData.shipping?.shippingProfileId || null,
+          },
+    );
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
@@ -2290,42 +2253,35 @@ export default function ProductManagementUI() {
     }));
   }, []);
 
-  const addProductPincode = useCallback(
-    () => {
-      const value = allowedPincodeInput.trim();
-      if (!value) return;
-      if (!isValidIndianPincode(value)) {
-        toast.error("Please enter a valid 6-digit pincode");
-        return;
-      }
-      const current = normalizePincodeList(
-        formData?.shipping?.allowPincodes ||
-          formData?.shipping?.serviceablePincodes,
-      );
-      if (current.includes(value)) {
-        toast.error("This pincode is already added");
-        return;
-      }
-      const next = [...current, value];
-      patchShipping({
-        serviceabilityMode: "allowlist",
-        allowPincodes: next,
-        serviceablePincodes: next,
-      });
-      setAllowedPincodeInput("");
-      setError((previous) => {
-        if (!previous?.shipping) return previous;
-        const nextErrors = { ...previous };
-        delete nextErrors.shipping;
-        return Object.keys(nextErrors).length ? nextErrors : null;
-      });
-    },
-    [
-      allowedPincodeInput,
-      formData?.shipping,
-      patchShipping,
-    ],
-  );
+  const addProductPincode = useCallback(() => {
+    const value = allowedPincodeInput.trim();
+    if (!value) return;
+    if (!isValidIndianPincode(value)) {
+      toast.error("Please enter a valid 6-digit pincode");
+      return;
+    }
+    const current = normalizePincodeList(
+      formData?.shipping?.allowPincodes ||
+        formData?.shipping?.serviceablePincodes,
+    );
+    if (current.includes(value)) {
+      toast.error("This pincode is already added");
+      return;
+    }
+    const next = [...current, value];
+    patchShipping({
+      serviceabilityMode: "allowlist",
+      allowPincodes: next,
+      serviceablePincodes: next,
+    });
+    setAllowedPincodeInput("");
+    setError((previous) => {
+      if (!previous?.shipping) return previous;
+      const nextErrors = { ...previous };
+      delete nextErrors.shipping;
+      return Object.keys(nextErrors).length ? nextErrors : null;
+    });
+  }, [allowedPincodeInput, formData?.shipping, patchShipping]);
 
   const removeProductPincode = useCallback(
     (pincode) => {
@@ -2419,20 +2375,28 @@ export default function ProductManagementUI() {
   );
 
   const uploadCommonProductImages = async (files) => {
-    const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
+    const current = Array.isArray(formData.commonImages)
+      ? formData.commonImages
+      : [];
     const remaining = MAX_COMMON_PRODUCT_IMAGES - current.length;
     if (!files?.length || remaining <= 0) {
-      if (remaining <= 0) toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
+      if (remaining <= 0)
+        toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
       return;
     }
     setCommonImagesUploading(true);
     try {
-      const urls = await uploadFileMulti(Array.from(files).slice(0, remaining), "PRODUCT");
+      const urls = await uploadFileMulti(
+        Array.from(files).slice(0, remaining),
+        "PRODUCT",
+      );
       setFormData((previous) => ({
         ...previous,
         commonImages: [...(previous.commonImages || []), ...urls],
       }));
-      toast.success(`${urls.length} common product image${urls.length === 1 ? "" : "s"} uploaded`);
+      toast.success(
+        `${urls.length} common product image${urls.length === 1 ? "" : "s"} uploaded`,
+      );
     } catch (uploadError) {
       toast.error(uploadError?.message || "Common image upload failed");
     } finally {
@@ -2458,7 +2422,9 @@ export default function ProductManagementUI() {
   const removeCommonProductImage = (imageIndex) => {
     setFormData((previous) => ({
       ...previous,
-      commonImages: (previous.commonImages || []).filter((_, index) => index !== imageIndex),
+      commonImages: (previous.commonImages || []).filter(
+        (_, index) => index !== imageIndex,
+      ),
     }));
   };
 
@@ -2701,55 +2667,74 @@ export default function ProductManagementUI() {
         description: "Images shown across every product variant.",
         icon: <BsMenuApp />,
         component: (
-          <section ref={refs["common-images"]} className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm">
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">Catalog images</h3>
-                  <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
-                    {(formData.commonImages || []).length}/{MAX_COMMON_PRODUCT_IMAGES}
-                  </span>
+          <section
+            ref={refs["common-images"]}
+            className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold text-[var(--admin-ink)]">
+                  Catalog images
+                </h3>
+                <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
+                  {(formData.commonImages || []).length}/
+                  {MAX_COMMON_PRODUCT_IMAGES}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Upload shared catalog images such as front, back, packaging,
+                usage, and detail views. They appear for every variant.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {(formData.commonImages || []).map((image, imageIndex) => (
+                <div
+                  key={`${image}-${imageIndex}`}
+                  className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white"
+                >
+                  <img
+                    src={image}
+                    alt={`Catalog image ${imageIndex + 1}`}
+                    className="h-full w-full object-contain p-1"
+                  />
+                  {imageIndex === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                      Cover
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeCommonProductImage(imageIndex)}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label={`Remove catalog image ${imageIndex + 1}`}
+                  >
+                    ×
+                  </button>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">
-                  Upload shared catalog images such as front, back, packaging, usage, and detail views. They appear for every variant.
-                </p>
-              </div>
+              ))}
 
-              <div className="flex flex-wrap gap-3">
-                {(formData.commonImages || []).map((image, imageIndex) => (
-                  <div key={`${image}-${imageIndex}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                    <img src={image} alt={`Catalog image ${imageIndex + 1}`} className="h-full w-full object-contain p-1" />
-                    {imageIndex === 0 && (
-                      <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">Cover</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeCommonProductImage(imageIndex)}
-                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
-                      aria-label={`Remove catalog image ${imageIndex + 1}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-
-                {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
-                  <label className={`flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}>
-                    <FiPlus size={20} />
-                    <span>{commonImagesUploading ? "Uploading…" : "Upload"}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      multiple
-                      className="hidden"
-                      onChange={(event) => {
-                        uploadCommonProductImages(event.target.files);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
-{/* 
+              {(formData.commonImages || []).length <
+                MAX_COMMON_PRODUCT_IMAGES && (
+                <label
+                  className={`flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  <FiPlus size={20} />
+                  <span>{commonImagesUploading ? "Uploading…" : "Upload"}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      uploadCommonProductImages(event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {/* 
               {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -2779,7 +2764,6 @@ export default function ProductManagementUI() {
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-5">
-
             <div className="pb-4 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">
                 Variant Builder
@@ -2832,7 +2816,8 @@ export default function ProductManagementUI() {
                   Free shipping is enabled
                 </p>
                 <p className="text-xs text-emerald-700 mt-0.5">
-                  Shipping charge is ₹0, but pincode deliverability still applies.
+                  Shipping charge is ₹0, but pincode deliverability still
+                  applies.
                 </p>
               </div>
             ) : (
@@ -2863,11 +2848,18 @@ export default function ProductManagementUI() {
                     </button>
                   )}
                 </div>
-                <select
-                  className="admin-input"
-                  value={formData?.shipping?.shippingProfileId || ""}
-                  onChange={(e) => {
-                    const profileId = e.target.value || null;
+                <FilterSelect
+                  options={shippingProfileOptions.map((opt) => ({
+                    ...opt,
+                    label: opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
+                  }))}
+                  value={
+                    shippingProfileOptions.find(
+                      (opt) => opt.value === formData?.shipping?.shippingProfileId,
+                    ) || null
+                  }
+                  onChange={(selected) => {
+                    const profileId = selected?.value || null;
                     patchShipping({
                       shippingProfileId: profileId,
                       ...(profileId
@@ -2879,17 +2871,11 @@ export default function ProductManagementUI() {
                         : {}),
                     });
                   }}
-                >
-                  <option value="">
-                    — No profile (use manual settings below) —
-                  </option>
-                  {shippingProfileOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                      {opt.profile?.isDefault ? " (Default)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="— No profile (use manual settings below) —"
+                  isClearable
+                  isSearchable
+                />
+
                 {shippingProfileOptions.length === 0 && !formData?.sellerId && (
                   <p className="text-xs text-amber-600">
                     Select a seller first to load their shipping profiles.
@@ -3012,61 +2998,61 @@ export default function ProductManagementUI() {
                   </div>
 
                   <div className="space-y-2">
-                      <label className="admin-label">
-                        Allowed pincodes <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          className="admin-input flex-1"
-                          inputMode="numeric"
-                          maxLength={6}
-                          placeholder="Enter 6-digit pincode"
-                          value={allowedPincodeInput}
-                          onChange={(event) =>
-                            setAllowedPincodeInput(
-                              event.target.value.replace(/\D/g, "").slice(0, 6),
-                            )
-                          }
-                          onKeyDown={handleProductPincodeKeyDown}
-                        />
-                        <button
-                          type="button"
-                          className="admin-btn-primary whitespace-nowrap px-4"
-                          onClick={addProductPincode}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                        {normalizePincodeList(
+                    <label className="admin-label">
+                      Allowed pincodes <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        className="admin-input flex-1"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Enter 6-digit pincode"
+                        value={allowedPincodeInput}
+                        onChange={(event) =>
+                          setAllowedPincodeInput(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
+                        }
+                        onKeyDown={handleProductPincodeKeyDown}
+                      />
+                      <button
+                        type="button"
+                        className="admin-btn-primary whitespace-nowrap px-4"
+                        onClick={addProductPincode}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                      {normalizePincodeList(
+                        formData?.shipping?.allowPincodes ||
+                          formData?.shipping?.serviceablePincodes,
+                      ).length ? (
+                        normalizePincodeList(
                           formData?.shipping?.allowPincodes ||
                             formData?.shipping?.serviceablePincodes,
-                        ).length ? (
-                          normalizePincodeList(
-                            formData?.shipping?.allowPincodes ||
-                              formData?.shipping?.serviceablePincodes,
-                          ).map((pincode) => (
-                            <span
-                              key={pincode}
-                              className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                        ).map((pincode) => (
+                          <span
+                            key={pincode}
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                          >
+                            {pincode}
+                            <button
+                              type="button"
+                              onClick={() => removeProductPincode(pincode)}
+                              className="ml-1 text-sm leading-none hover:text-red-500"
                             >
-                              {pincode}
-                              <button
-                                type="button"
-                                onClick={() => removeProductPincode(pincode)}
-                                className="ml-1 text-sm leading-none hover:text-red-500"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-gray-400">
-                            No allowed pincodes added yet.
+                              ×
+                            </button>
                           </span>
-                        )}
-                      </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400">
+                          No allowed pincodes added yet.
+                        </span>
+                      )}
                     </div>
+                  </div>
                 </>
               )}
               {error?.shipping && (
@@ -3261,7 +3247,7 @@ export default function ProductManagementUI() {
         route: "/app/hsn-code",
       });
     }
-   
+
     // Product Family Code remains available in the form, but it is optional.
     // The prior gate blocked saves after related product fields were hidden.
     return blockers;
