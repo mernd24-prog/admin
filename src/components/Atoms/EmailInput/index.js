@@ -130,6 +130,8 @@ const EmailInput = React.memo(
             type={type}
             value={email}
             required={required}
+            aria-invalid={Boolean(errorMessage)}
+            aria-describedby={errorMessage ? `${id}-error` : undefined}
             autoComplete="off"
             onChange={handleChange}
             onBlur={handleBlur}
@@ -140,8 +142,6 @@ const EmailInput = React.memo(
               disabled:cursor-not-allowed
               disabled:opacity-70
 
-              ${errorMessage ? "border-red-400 focus:ring-red-100" : ""}
-
               ${inputClassName}
               ${className}
             `}
@@ -151,7 +151,11 @@ const EmailInput = React.memo(
 
         {/* ERROR MESSAGE */}
         {errorMessage && (
-          <p className="mt-1 text-[11px] leading-[15px] text-[#B42318]">
+          <p
+            id={`${id}-error`}
+            className="admin-field-error mt-1 text-[11px] leading-[15px] text-red-600"
+            role="alert"
+          >
             {errorMessage}
           </p>
         )}

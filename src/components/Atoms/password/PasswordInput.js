@@ -15,6 +15,7 @@ const PasswordInput = React.memo(
     labelClassName = "",
     autoComplete = "off",
     errorMessage = "",
+    helperText = "",
     required = false,
     value = "",
     ...rest
@@ -45,6 +46,14 @@ const PasswordInput = React.memo(
             value={value}
             autoComplete={autoComplete}
             required={required}
+            aria-invalid={Boolean(errorMessage)}
+            aria-describedby={
+              errorMessage
+                ? `${id}-error`
+                : helperText
+                  ? `${id}-help`
+                  : undefined
+            }
             className={`admin-input h-[40px] ${inputClassName} !pr-12`}
             placeholder={placeholder}
             {...rest}
@@ -63,11 +72,22 @@ const PasswordInput = React.memo(
             )}
           </button>
         </div>
-        {errorMessage && (
-          <div className="mt-1 text-[11px] leading-[15px] text-red-700">
+        {errorMessage ? (
+          <div
+            id={`${id}-error`}
+            className="admin-field-error mt-1 text-[11px] leading-[15px] text-red-600"
+            role="alert"
+          >
             {errorMessage}
           </div>
-        )}
+        ) : helperText ? (
+          <div
+            id={`${id}-help`}
+            className="mt-1 text-[11px] leading-[15px] text-gray-500"
+          >
+            {helperText}
+          </div>
+        ) : null}
       </div>
     );
   },

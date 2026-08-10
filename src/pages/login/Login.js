@@ -46,6 +46,10 @@ const Login = () => {
               id="email"
               name="email"
               label="Email Address"
+              type="text"
+              inputMode="email"
+              maxLength={254}
+              autoComplete="email"
               value={auth.formFields.email}
               placeholder="e.g. john@example.com"
               onChange={auth.handleInputChange}
@@ -63,6 +67,10 @@ const Login = () => {
               name="password"
               label="Password"
               value={auth.formFields.password}
+              maxLength={16}
+              helperText={
+                auth.formFields.password ? "" : "Maximum 16 characters"
+              }
               placeholder="••••••••"
               onChange={auth.handleInputChange}
               onBlur={auth.handleInputBlur}
