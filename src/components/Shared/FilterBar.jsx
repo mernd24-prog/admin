@@ -571,7 +571,9 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
 
   return (
     <div
-      className={`flex min-w-[250px] flex-col gap-1 ${
+      className={`flex min-w-[250px] flex-col ${
+        field.labelClassName ? "gap-0" : "gap-1"
+      } ${
         field.wrapperClassName || ""
       } ${field.width || "w-full"}`}
     >

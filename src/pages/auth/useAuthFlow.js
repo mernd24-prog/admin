@@ -34,6 +34,51 @@ const AUTH_FLOW_DRAFT_KEY = "authFlowDraft";
 const EMPTY_OTP = ["", "", "", "", "", ""];
 const REGISTER_NAME_MAX_LENGTH = 20;
 const REGISTER_NAME_REGEX = /^[A-Za-z]+$/;
+const STANDARD_PASSWORD_LENGTH = 16;
+const EMAIL_MAX_LENGTH = 254;
+const EMAIL_REGEX = /^[^\s@]+@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+const VALID_EMAIL_TLDS = new Set([
+  "com",
+  "in",
+  "org",
+  "net",
+  "edu",
+  "gov",
+  "co",
+  "io",
+  "ai",
+  "biz",
+  "info",
+]);
+
+const normalizeEmail = (value) =>
+  String(value || "").trim().toLowerCase();
+
+const getEmailValidationError = (value) => {
+  const email = String(value || "").trim();
+  if (!email) return "Email is required.";
+  if (email.length > EMAIL_MAX_LENGTH) {
+    return `Email cannot exceed ${EMAIL_MAX_LENGTH} characters.`;
+  }
+
+  const atIndex = email.lastIndexOf("@");
+  const localPart = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
+  const topLevelDomain = domain.split(".").pop().toLowerCase();
+  if (
+    !EMAIL_REGEX.test(email) ||
+    localPart.length > 64 ||
+    localPart.startsWith(".") ||
+    localPart.endsWith(".") ||
+    localPart.includes("..") ||
+    domain.includes("..") ||
+    !VALID_EMAIL_TLDS.has(topLevelDomain)
+  ) {
+    return "Please enter a valid email address.";
+  }
+
+  return null;
+};
 
 const sanitizeRegisterName = (value = "") =>
   String(value || "").replace(/[^A-Za-z]/g, "").slice(0, REGISTER_NAME_MAX_LENGTH);
@@ -242,27 +287,27 @@ export const useAuthFlow = ({
     (targetFormType = activeFormType) => {
       let isValid = true;
       const errors = {};
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
       if (targetFormType === AUTH_FORM_TYPES.LOGIN) {
-        if (!formFields.email.trim()) {
-          errors.email = "Email is required.";
-          isValid = false;
-        } else if (!emailRegex.test(formFields.email)) {
-          errors.email = "Please enter a valid email address.";
+        const emailError = getEmailValidationError(formFields.email);
+        if (emailError) {
+          errors.email = emailError;
           isValid = false;
         }
 
         if (!formFields.password.trim()) {
           errors.password = "Password is required.";
           isValid = false;
+        } else if (formFields.password.length > STANDARD_PASSWORD_LENGTH) {
+          errors.password = `Password cannot exceed ${STANDARD_PASSWORD_LENGTH} characters.`;
+          isValid = false;
         }
       } else if (targetFormType === AUTH_FORM_TYPES.FORGOT_PASSWORD) {
-        if (!formFields.forgotEmail.trim()) {
-          errors.forgotEmail = "Email is required.";
-          isValid = false;
-        } else if (!emailRegex.test(formFields.forgotEmail)) {
-          errors.forgotEmail = "Please enter a valid email address.";
+        const forgotEmailError = getEmailValidationError(
+          formFields.forgotEmail,
+        );
+        if (forgotEmailError) {
+          errors.forgotEmail = forgotEmailError;
           isValid = false;
         }
       } else if (targetFormType === AUTH_FORM_TYPES.VERIFICATION_CODE) {
@@ -340,11 +385,11 @@ export const useAuthFlow = ({
           isValid = false;
         }
 
-        if (!formFields.registerEmail.trim()) {
-          errors.registerEmail = "Email is required";
-          isValid = false;
-        } else if (!emailRegex.test(formFields.registerEmail)) {
-          errors.registerEmail = "Invalid email";
+        const registerEmailError = getEmailValidationError(
+          formFields.registerEmail,
+        );
+        if (registerEmailError) {
+          errors.registerEmail = registerEmailError;
           isValid = false;
         }
 
@@ -352,7 +397,10 @@ export const useAuthFlow = ({
           errors.registerPassword = "Password is required";
           isValid = false;
         } else if (formFields.registerPassword.length < 8) {
-          errors.registerPassword = "Minimum 8 characters required";
+          errors.registerPassword = "Password must be at least 8 characters";
+          isValid = false;
+        } else if (formFields.registerPassword.length > STANDARD_PASSWORD_LENGTH) {
+          errors.registerPassword = `Password cannot exceed ${STANDARD_PASSWORD_LENGTH} characters`;
           isValid = false;
         } else if (
           !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/.test(
@@ -489,18 +537,17 @@ export const useAuthFlow = ({
     (event) => {
       const { name } = event.target;
       const value = String(formFields[name] || "").trim();
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       let error = null;
 
       if (activeFormType === AUTH_FORM_TYPES.LOGIN) {
         if (name === "email") {
+          error = getEmailValidationError(value);
+        } else if (name === "password") {
           error = !value
-            ? "Email is required."
-            : !emailRegex.test(value)
-              ? "Please enter a valid email address."
+            ? "Password is required."
+            : value.length > STANDARD_PASSWORD_LENGTH
+              ? `Password cannot exceed ${STANDARD_PASSWORD_LENGTH} characters.`
               : null;
-        } else if (name === "password" && !value) {
-          error = "Password is required.";
         }
       } else if (activeFormType === AUTH_FORM_TYPES.REGISTER) {
         if (name === "firstName") {
@@ -530,19 +577,17 @@ export const useAuthFlow = ({
               ? "Phone number must be 10 digits and start with 6, 7, 8, or 9"
               : null;
         } else if (name === "registerEmail") {
-          error = !value
-            ? "Email is required"
-            : !emailRegex.test(value)
-              ? "Invalid email"
-              : null;
+          error = getEmailValidationError(value);
         } else if (name === "registerPassword") {
           error = !value
             ? "Password is required"
             : value.length < 8
-              ? "Minimum 8 characters required"
-              : !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/.test(value)
-                ? "Password must contain at least one uppercase letter, one number & one special character"
-                : null;
+              ? "Password must be at least 8 characters"
+              : value.length > STANDARD_PASSWORD_LENGTH
+                ? `Password cannot exceed ${STANDARD_PASSWORD_LENGTH} characters`
+                : !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/.test(value)
+                  ? "Password must contain at least one uppercase letter, one number & one special character"
+                  : null;
         } else if (name === "confirmRegisterPassword") {
           error = !value
             ? "Please confirm your password"
@@ -630,16 +675,15 @@ const handleLoginSubmit = useCallback(
       return;
     }
 
-    const email = formFields.email?.trim().toLowerCase();
+    const email = normalizeEmail(formFields.email);
     const password = formFields.password;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-      setInlineError(
-        AUTH_FORM_TYPES.LOGIN,
-        "Please enter a valid email address.",
-      );
+    if (getEmailValidationError(email)) {
+      setFormErrors((prev) => ({
+        ...prev,
+        email: "Please enter a valid email address.",
+      }));
+      setLoginError("");
       setFormAnimation("error");
 
       setTimeout(() => {
@@ -663,17 +707,21 @@ const handleLoginSubmit = useCallback(
 
       if (response?.error) {
         const apiMessage = getApiErrorMessage(response);
+        const normalizedApiMessage = String(apiMessage || "").toLowerCase();
+        const isEmailValidationError =
+          normalizedApiMessage.includes("email must be") ||
+          normalizedApiMessage.includes("valid email") ||
+          normalizedApiMessage.includes("invalid email");
 
-        const friendlyMessage = apiMessage
-          ?.toLowerCase()
-          .includes("email must be a valid email")
-          ? "Please enter a valid email address."
-          : apiMessage;
-
-        setInlineError(
-          AUTH_FORM_TYPES.LOGIN,
-          friendlyMessage,
-        );
+        if (isEmailValidationError) {
+          setFormErrors((prev) => ({
+            ...prev,
+            email: "Please enter a valid email address.",
+          }));
+          setLoginError("");
+        } else {
+          setInlineError(AUTH_FORM_TYPES.LOGIN, apiMessage);
+        }
 
         setFormAnimation("error");
 
@@ -802,7 +850,7 @@ const handleLoginSubmit = useCallback(
         setFormAnimation("loading");
         setIsLoading(true);
         const response = await dispatch(
-          forgotPassword({ email: formFields.forgotEmail }),
+          forgotPassword({ email: normalizeEmail(formFields.forgotEmail) }),
         );
         setIsLoading(false);
 
@@ -826,7 +874,7 @@ const handleLoginSubmit = useCallback(
           writeAuthFlowDraft(formFields, EMPTY_OTP);
           setResendCooldown(RESEND_COOLDOWN_SECONDS);
           navigate(AUTH_ROUTES.VERIFY_OTP, {
-            state: { email: formFields.forgotEmail },
+            state: { email: normalizeEmail(formFields.forgotEmail) },
           });
         }, 600);
       } catch (error) {
@@ -867,7 +915,7 @@ const handleLoginSubmit = useCallback(
         const code = verificationCode.join("");
         const response = await dispatch(
           verifyOtp({
-            email: formFields.forgotEmail,
+            email: normalizeEmail(formFields.forgotEmail),
             otp: code,
             purpose: "forgot_password",
           }),
@@ -893,7 +941,10 @@ const handleLoginSubmit = useCallback(
           updateFormFields({ forgotOtp: code });
           setResendCooldown(0);
           navigate(AUTH_ROUTES.RESET_PASSWORD, {
-            state: { email: formFields.forgotEmail, otp: code },
+            state: {
+              email: normalizeEmail(formFields.forgotEmail),
+              otp: code,
+            },
           });
         }, 600);
       } catch (error) {
@@ -932,7 +983,7 @@ const handleLoginSubmit = useCallback(
         const { forgotEmail, forgotOtp, newPassword } = formFields;
         const response = await dispatch(
           resetPassword({
-            email: forgotEmail,
+            email: normalizeEmail(forgotEmail),
             otp: forgotOtp || verificationCode.join(""),
             newPassword,
             password: newPassword,
@@ -1004,7 +1055,7 @@ const handleLoginSubmit = useCallback(
       try {
         const response = await dispatch(
           registerWithOtp({
-            email: formFields.registerEmail,
+            email: normalizeEmail(formFields.registerEmail),
             phone: formFields.phone,
             password: formFields.registerPassword,
             role: "seller",
@@ -1023,20 +1074,35 @@ const handleLoginSubmit = useCallback(
           setResendCooldown(RESEND_COOLDOWN_SECONDS);
           navigate(AUTH_ROUTES.REGISTER_VERIFY_OTP);
         } else {
-          setInlineError(
-            AUTH_FORM_TYPES.REGISTER,
-            getApiErrorMessage(
-              response,
-              "Registration failed. Please check the form and try again.",
-            ),
+          const apiMessage = getApiErrorMessage(
+            response,
+            "Registration failed. Please check the form and try again.",
           );
+          if (/(?:body\.)?email.*valid email|invalid email/i.test(apiMessage)) {
+            setFormErrors((prev) => ({
+              ...prev,
+              registerEmail: "Please enter a valid email address.",
+            }));
+            setLoginError("");
+          } else {
+            setInlineError(AUTH_FORM_TYPES.REGISTER, apiMessage);
+          }
         }
       } catch (error) {
         console.log(error);
-        setInlineError(
-          AUTH_FORM_TYPES.REGISTER,
-          getApiErrorMessage(error, "Registration failed. Please try again."),
+        const apiMessage = getApiErrorMessage(
+          error,
+          "Registration failed. Please try again.",
         );
+        if (/(?:body\.)?email.*valid email|invalid email/i.test(apiMessage)) {
+          setFormErrors((prev) => ({
+            ...prev,
+            registerEmail: "Please enter a valid email address.",
+          }));
+          setLoginError("");
+        } else {
+          setInlineError(AUTH_FORM_TYPES.REGISTER, apiMessage);
+        }
       }
     },
     [
@@ -1067,7 +1133,7 @@ const handleLoginSubmit = useCallback(
       try {
         const response = await dispatch(
           verifyRegistration({
-            email: formFields.registerEmail,
+            email: normalizeEmail(formFields.registerEmail),
             otp: code,
           }),
         );
@@ -1120,9 +1186,11 @@ const handleLoginSubmit = useCallback(
         setFormAnimation("loading");
         const isRegistrationOtp =
           activeFormType === AUTH_FORM_TYPES.REGISTER_VERIFICATION;
-        const email = isRegistrationOtp
-          ? formFields.registerEmail
-          : formFields.forgotEmail;
+        const email = normalizeEmail(
+          isRegistrationOtp
+            ? formFields.registerEmail
+            : formFields.forgotEmail,
+        );
         const purpose = isRegistrationOtp ? "registration" : "forgot_password";
         const response = await dispatch(resendOtp({ email, purpose }));
         if (!response?.error) {

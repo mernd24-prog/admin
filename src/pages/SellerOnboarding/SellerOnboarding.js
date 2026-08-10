@@ -38,6 +38,34 @@ const PERSON_NAME_MAX_LENGTH = 30;
 const BUSINESS_NAME_MAX_LENGTH = 30;
 const BANK_NAME_MIN_LENGTH = 2;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_EMAIL_TLDS = new Set([
+  "com",
+  "in",
+  "org",
+  "net",
+  "edu",
+  "gov",
+  "co",
+  "io",
+  "ai",
+  "biz",
+  "info",
+]);
+const isValidEmailAddress = (value) => {
+  const email = String(value || "").trim().toLowerCase();
+  if (!EMAIL_REGEX.test(email) || email.length > 254) return false;
+
+  const [localPart = "", domain = ""] = email.split("@");
+  const topLevelDomain = domain.split(".").pop();
+  return (
+    localPart.length <= 64 &&
+    !localPart.startsWith(".") &&
+    !localPart.endsWith(".") &&
+    !localPart.includes("..") &&
+    !domain.includes("..") &&
+    VALID_EMAIL_TLDS.has(topLevelDomain)
+  );
+};
 const URL_REGEX = /^https?:\/\/.+/i;
 const KYC_DOCUMENT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 const KYC_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
@@ -1853,7 +1881,12 @@ const SellerOnboarding = () => {
     const nextErrors = {};
     details.forEach((detail) => {
       const field = getBackendDetailField(detail);
-      if (field) nextErrors[field] = detail.message;
+      if (field) {
+        nextErrors[field] =
+          field === "supportEmail"
+            ? "Please enter a valid business official email"
+            : detail.message;
+      }
     });
     setErrors(nextErrors);
   };
@@ -2300,7 +2333,7 @@ const isInvalidKycDocumentType = (file) => {
     }
     if (!kycForm.emailAddress.trim()) {
       errors.emailAddress = "Email address is required";
-    } else if (!EMAIL_REGEX.test(kycForm.emailAddress.trim())) {
+    } else if (!isValidEmailAddress(kycForm.emailAddress)) {
       errors.emailAddress = "Email address is invalid";
     }
     if (!dateOfBirth) {
@@ -2643,8 +2676,8 @@ const isInvalidKycDocumentType = (file) => {
     const supportPhone = getResolvedSupportPhone();
     if (!supportEmail)
       errors.supportEmail = "Business official email is required";
-    else if (!EMAIL_REGEX.test(supportEmail))
-      errors.supportEmail = "Business official email is invalid";
+    else if (!isValidEmailAddress(supportEmail))
+      errors.supportEmail = "Please enter a valid business official email";
     if (!supportPhone)
       errors.supportPhone = "Business phone number is required";
     else if (!/^[0-9]{10,15}$/.test(supportPhone))
@@ -3314,6 +3347,7 @@ const isInvalidKycDocumentType = (file) => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.supportEmail}
                       onChange={onProfileChange}
+                      onBlur={() => validateProfile("supportEmail")}
                       type="email"
                       inputMode="email"
                       autoComplete="email"
@@ -3321,13 +3355,14 @@ const isInvalidKycDocumentType = (file) => {
                       pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                       required
                     />
-                    <p className="mt-1 text-[11px] text-[#8a93a5]">
-                      Used for organization support, invoices, and business
-                      communication. Login still uses your seller account email.
-                    </p>
-                    {profileErrors.supportEmail && (
+                    {profileErrors.supportEmail ? (
                       <p className={ERROR_CLASS}>
                         {profileErrors.supportEmail}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-[#8a93a5]">
+                        Used for organization support, invoices, and business
+                        communication. Login still uses your seller account email.
                       </p>
                     )}
                   </div>

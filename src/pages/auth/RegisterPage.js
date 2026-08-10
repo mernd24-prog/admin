@@ -71,6 +71,10 @@ const RegisterPage = () => {
               id="registerEmail"
               name="registerEmail"
               label="Email Address"
+              type="text"
+              inputMode="email"
+              maxLength={254}
+              autoComplete="email"
               value={auth.formFields.registerEmail}
               placeholder="john@example.com"
               onChange={auth.handleInputChange}
@@ -102,6 +106,14 @@ const RegisterPage = () => {
               name="registerPassword"
               label="Password"
               value={auth.formFields.registerPassword}
+              maxLength={16}
+              helperText={
+                /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,16}$/.test(
+                  auth.formFields.registerPassword,
+                )
+                  ? ""
+                  : "Use 8–16 characters with an uppercase letter, number, and special character"
+              }
               placeholder="••••••••"
               onChange={auth.handleInputChange}
               onBlur={auth.handleInputBlur}
@@ -115,6 +127,14 @@ const RegisterPage = () => {
               name="confirmRegisterPassword"
               label="Confirm Password"
               value={auth.formFields.confirmRegisterPassword}
+              maxLength={16}
+              helperText={
+                auth.formFields.confirmRegisterPassword &&
+                auth.formFields.confirmRegisterPassword ===
+                  auth.formFields.registerPassword
+                  ? ""
+                  : "Maximum 16 characters"
+              }
               placeholder="••••••••"
               onChange={auth.handleInputChange}
               onBlur={auth.handleInputBlur}

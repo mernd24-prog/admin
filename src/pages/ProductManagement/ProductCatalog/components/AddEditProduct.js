@@ -236,6 +236,7 @@ export default function ProductManagementUI() {
   const selector = useSelector((state) => state.product);
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const mainContainerRef = useRef(null);
+  const pendingValidationScrollRef = useRef(false);
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [productLoading, setProductLoading] = useState(Boolean(id));
@@ -418,9 +419,18 @@ export default function ProductManagementUI() {
           `[data-error-field="${firstField}"]`,
         ].filter(Boolean);
         let field = null;
+        const formRoot = mainContainerRef.current;
 
         for (const selector of selectors) {
-          const found = document.querySelector(selector);
+          const matches = Array.from(
+            (formRoot || document).querySelectorAll(selector),
+          );
+          const found =
+            matches.find(
+              (element) =>
+                element.getClientRects().length > 0 &&
+                !element.closest("[aria-hidden='true']"),
+            ) || matches[0];
           if (found) {
             field = found;
             break;
@@ -450,6 +460,19 @@ export default function ProductManagementUI() {
       });
     });
   };
+
+  // Validation messages change the form's height. Wait until React has painted
+  // them before measuring and scrolling to the first invalid control.
+  useEffect(() => {
+    if (!pendingValidationScrollRef.current || !error) return undefined;
+
+    pendingValidationScrollRef.current = false;
+    const timeoutId = setTimeout(() => {
+      scrollToFirstValidationError(error);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [error]);
 
   const fetchProductById = async (productId) => {
     setProductLoading(true);
@@ -1374,6 +1397,10 @@ export default function ProductManagementUI() {
           value === null ||
           value === "" ||
           (Array.isArray(value) && value.length === 0);
+  if (Object.keys(newErrors).length > 0) {
+    pendingValidationScrollRef.current = true;
+  }
+  setError(newErrors);
 
         if (field.required && isEmpty) {
           newErrors.attributes = {
