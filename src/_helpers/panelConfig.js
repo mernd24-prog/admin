@@ -1,6 +1,7 @@
 export const PANEL_MODES = {
   ADMIN: "admin",
   SELLER: "seller",
+  INFLUENCER: "influencer",
 };
 
 // const normalizeMode = (value) =>
@@ -33,14 +34,18 @@ export const PANEL_MODES = {
 //   return "";
 // };
 
-const configuredMode =
-  // PANEL_MODES[String(process.env.REACT_APP_PANEL_MODE).toUpperCase()] ||
-  PANEL_MODES.SELLER; // detectModeFromRuntime() || PANEL_MODES.ADMIN;
+const requestedMode = String(process.env.REACT_APP_PANEL_MODE || "")
+  .trim()
+  .toLowerCase();
+const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
+  ? requestedMode
+  : PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 
 export const isSellerPanel = () => getPanelMode() === PANEL_MODES.SELLER;
 export const isAdminPanel = () => getPanelMode() === PANEL_MODES.ADMIN;
+export const isInfluencerPanel = () => getPanelMode() === PANEL_MODES.INFLUENCER;
 
 export const PANEL_ROLE_RULES = {
   [PANEL_MODES.ADMIN]: {
@@ -55,9 +60,24 @@ export const PANEL_ROLE_RULES = {
     restrictedRole: "seller-sub-admin",
     blockedRoles: ["super-admin", "admin", "sub-admin", "buyer"],
   },
+  [PANEL_MODES.INFLUENCER]: {
+    allowedRoles: ["influencer"],
+    fullAccessRoles: [],
+    restrictedRole: "influencer",
+    blockedRoles: [
+      "super-admin",
+      "admin",
+      "sub-admin",
+      "seller",
+      "seller-admin",
+      "seller-sub-admin",
+      "buyer",
+    ],
+  },
 };
 
 export const getPanelRoleRules = (panelMode = getPanelMode()) =>
   PANEL_ROLE_RULES[panelMode] || PANEL_ROLE_RULES[PANEL_MODES.ADMIN];
 
-export const getDefaultAppHome = () => "/app/home";
+export const getDefaultAppHome = (panelMode = getPanelMode()) =>
+  panelMode === PANEL_MODES.INFLUENCER ? "/app/dashboard" : "/app/home";

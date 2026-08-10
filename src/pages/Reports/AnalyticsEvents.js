@@ -1,30 +1,91 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { MdAnalytics } from "react-icons/md";
-import { PageHeader } from "../../components/Shared";
+import { DataTable, PageHeader } from "../../components/Shared";
+import { axiosPrivate } from "../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../_helpers/endpoints";
+
+const PAGE_SIZE = 20;
+
+const formatDate = (value) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+};
 
 const AnalyticsEvents = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await axiosPrivate.get(ENDPOINTS.analytics.events);
+      const payload = response?.data?.data ?? response?.data ?? [];
+      setEvents(Array.isArray(payload) ? payload : payload?.items || []);
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ||
+          requestError?.message ||
+          "Unable to load analytics events.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  const columns = useMemo(
+    () => [
+      { key: "eventName", label: "Event" },
+      { key: "actorId", label: "Actor ID" },
+      {
+        key: "metadata",
+        label: "Metadata",
+        render: (row) => (
+          <pre className="max-w-md whitespace-pre-wrap break-words text-xs">
+            {JSON.stringify(row.metadata || {}, null, 2)}
+          </pre>
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Created At",
+        render: (row) => formatDate(row.createdAt),
+      },
+    ],
+    [],
+  );
+
+  const pageEvents = events.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Analytics Events"
-        subtitle="Platform event tracking and behavioral analytics"
+        subtitle="Recent platform events recorded by the backend"
+        count={events.length}
       />
-
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-        <MdAnalytics size={56} className="mx-auto text-gray-300 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Analytics Events</h3>
-        <p className="text-sm text-gray-500 max-w-md mx-auto">
-          Track user interactions, product views, add-to-cart events, and purchase funnels
-          across the platform. This event stream viewer is pending backend implementation.
-        </p>
-        <p className="mt-4 text-sm text-gray-500">
-          For platform analytics, visit the{" "}
-          <a href="/app/analytics" className="text-blue-600 hover:underline">Analytics Dashboard</a>.
-        </p>
-        <div className="mt-6 inline-flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
-          <span>Backend API: <code className="font-mono">/admin/analytics/events</code></span>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        data={pageEvents}
+        loading={loading}
+        error={error}
+        totalCount={events.length}
+        page={page}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+        onRefresh={loadEvents}
+        rowKey={(row) => row._id || `${row.eventName}-${row.createdAt}`}
+        emptyText="No analytics events have been recorded."
+        emptyIcon={<MdAnalytics size={42} />}
+        showSerialNumber
+      />
     </div>
   );
 };

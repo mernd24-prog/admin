@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 import {
   BadgeIndianRupee,
   Check,
+  ExternalLink,
   GitBranch,
   Pencil,
   Plus,
@@ -43,9 +45,19 @@ import {
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { apiRequest } from "../../_helpers/apiConfig";
+import { ENDPOINTS } from "../../_helpers/endpoints";
+
+const influencerPortalUrl =
+  process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
+  process.env.VITE_INFLUENCER_PORTAL_URL ||
+  (typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:5173/login`
+    : "http://localhost:5173/login");
 
 const tabs = [
   { key: "overview", label: "Overview" },
+  { key: "productDistribution", label: "Product Distribution" },
   { key: "influencers", label: "Influencer Profiles" },
   { key: "codes", label: "Influencer Codes" },
   { key: "rules", label: "Rules & Coins" },
@@ -59,6 +71,9 @@ const tabs = [
   { key: "fraud", label: "Fraud Review" },
 ];
 
+const sectionToTab = Object.fromEntries(
+  tabs.map((tab) => [tab.key.replace(/([A-Z])/g, "-$1").toLowerCase(), tab.key]),
+);
 const emptyInfluencerForm = {
   firstName: "",
   lastName: "",
@@ -281,7 +296,178 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
   </div>
 );
 
+const emptyProductConfig = {
+  productId: "",
+  variantId: "",
+  poolType: "fixed_amount",
+  poolValue: "",
+  maximumPoolAmount: "",
+  customerSharePercent: 30,
+  codeOwnerSharePercent: 50,
+  parentSharePercent: 20,
+  fundedBy: "platform",
+  active: true,
+};
+
+const responseList = (response) => {
+  const payload = response?.data?.data || response?.data || response || [];
+  return Array.isArray(payload) ? payload : payload?.items || payload?.list || [];
+};
+
+const responsePagination = (response, fallbackPage = 1, fallbackLimit = 50) => {
+  const meta = response?.meta?.pagination || response?.meta || response?.data?.meta?.pagination || {};
+  const total = Number(meta.total || meta.totalItems || 0);
+  const limit = Number(meta.limit || meta.pageSize || fallbackLimit);
+  const page = Number(meta.page || meta.currentPage || fallbackPage);
+  return { total, limit, page, totalPages: Math.max(1, Number(meta.totalPages || Math.ceil(total / limit) || 1)) };
+};
+
+const PaginationControls = ({ pagination, onPageChange, disabled }) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 text-xs text-gray-600">
+    <span>Page {pagination.page} of {pagination.totalPages} · {pagination.total} records</span>
+    <div className="flex gap-2">
+      <button type="button" disabled={disabled || pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)} className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+      <button type="button" disabled={disabled || pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)} className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+    </div>
+  </div>
+);
+
+const ProductDistributionManager = () => {
+  const [configs, setConfigs] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [form, setForm] = useState(emptyProductConfig);
+  const [loading, setLoading] = useState(true);
+  const [configPage, setConfigPage] = useState(1);
+  const [productPage, setProductPage] = useState(1);
+  const [productSearch, setProductSearch] = useState("");
+  const [appliedProductSearch, setAppliedProductSearch] = useState("");
+  const [configPagination, setConfigPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 50 });
+  const [productPagination, setProductPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 200 });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [configResponse, productResponse] = await Promise.all([
+        apiRequest("GET", ENDPOINTS.referral.productConfigs, { page: configPage, limit: 50 }),
+        apiRequest("GET", ENDPOINTS.products.listForPanel, { page: productPage, limit: 200, ...(appliedProductSearch ? { q: appliedProductSearch } : {}) }),
+      ]);
+      setConfigs(responseList(configResponse));
+      setProducts(responseList(productResponse));
+      setConfigPagination(responsePagination(configResponse, configPage, 50));
+      setProductPagination(responsePagination(productResponse, productPage, 200));
+    } catch (error) {
+      toast.error(error?.message || "Unable to load product distribution settings");
+    } finally {
+      setLoading(false);
+    }
+  }, [configPage, productPage, appliedProductSearch]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const selectedProduct = products.find(
+    (product) => String(product._id || product.id) === String(form.productId),
+  );
+  const variants = selectedProduct?.variants || [];
+  const shareTotal = Number(form.customerSharePercent || 0)
+    + Number(form.codeOwnerSharePercent || 0)
+    + Number(form.parentSharePercent || 0);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (Math.abs(shareTotal - 100) > 0.001) {
+      toast.error("Customer, code owner and parent shares must total 100%");
+      return;
+    }
+    try {
+      await apiRequest("PUT", ENDPOINTS.referral.productConfigs, {
+        ...form,
+        variantId: form.variantId || null,
+        poolValue: Number(form.poolValue || 0),
+        maximumPoolAmount: Number(form.maximumPoolAmount || 0),
+        customerSharePercent: Number(form.customerSharePercent || 0),
+        codeOwnerSharePercent: Number(form.codeOwnerSharePercent || 0),
+        parentSharePercent: Number(form.parentSharePercent || 0),
+        metadata: {
+          productTitle: selectedProduct?.title || selectedProduct?.name || "",
+          variantTitle: variants.find((variant) => String(variant._id || variant.id) === String(form.variantId))?.title || "",
+        },
+      });
+      toast.success("Product distribution saved");
+      setForm(emptyProductConfig);
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Unable to save product distribution");
+    }
+  };
+
+  const edit = (config) => setForm({
+    ...emptyProductConfig,
+    ...config,
+    productId: String(config.productId || ""),
+    variantId: config.variantId ? String(config.variantId) : "",
+  });
+
+  const remove = async (config) => {
+    try {
+      await apiRequest("DELETE", ENDPOINTS.referral.productConfig(config._id || config.id));
+      toast.success("Product distribution removed");
+      await load();
+    } catch (error) {
+      toast.error(error?.message || "Unable to remove product distribution");
+    }
+  };
+
+  return <div className="space-y-4">
+    <Section title="Product Distribution Configuration">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
+        <div className="md:col-span-4 flex flex-wrap items-end gap-2 rounded border border-gray-100 bg-gray-50 p-3">
+          <TextInput label="Search Product Catalog" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} />
+          <button type="button" onClick={() => { setProductPage(1); setAppliedProductSearch(productSearch.trim()); }} className="rounded bg-gray-900 px-4 py-2 text-sm text-white">Search Products</button>
+          {appliedProductSearch && <button type="button" onClick={() => { setProductSearch(""); setAppliedProductSearch(""); setProductPage(1); }} className="rounded border border-gray-200 bg-white px-4 py-2 text-sm">Clear</button>}
+        </div>
+        <SelectInput label="Product" value={form.productId} onChange={(event) => setForm({ ...form, productId: event.target.value, variantId: "" })} required>
+          <option value="">Select product</option>
+          {products.map((product) => <option key={product._id || product.id} value={product._id || product.id}>{product.title || product.name} — ₹{Number(product.salePrice || product.price || 0).toLocaleString("en-IN")}</option>)}
+        </SelectInput>
+        <SelectInput label="Variant Override" value={form.variantId} onChange={(event) => setForm({ ...form, variantId: event.target.value })}>
+          <option value="">All variants</option>
+          {variants.map((variant) => <option key={variant._id || variant.id} value={variant._id || variant.id}>{variant.title || variant.sku}</option>)}
+        </SelectInput>
+        <SelectInput label="Pool Type" value={form.poolType} onChange={(event) => setForm({ ...form, poolType: event.target.value })}>
+          <option value="fixed_amount">Fixed amount per unit</option><option value="percentage">Percentage of item value</option>
+        </SelectInput>
+        <TextInput label={form.poolType === "fixed_amount" ? "Shareable Amount" : "Shareable %"} type="number" min="0" step="0.01" value={form.poolValue} onChange={(event) => setForm({ ...form, poolValue: event.target.value })} />
+        <TextInput label="Maximum Amount Per Unit" type="number" min="0" step="0.01" value={form.maximumPoolAmount} onChange={(event) => setForm({ ...form, maximumPoolAmount: event.target.value })} />
+        <TextInput label="Customer Share %" type="number" min="0" max="100" value={form.customerSharePercent} onChange={(event) => setForm({ ...form, customerSharePercent: event.target.value })} />
+        <TextInput label="Code Owner Share %" type="number" min="0" max="100" value={form.codeOwnerSharePercent} onChange={(event) => setForm({ ...form, codeOwnerSharePercent: event.target.value })} />
+        <TextInput label="Parent Share %" type="number" min="0" max="100" value={form.parentSharePercent} onChange={(event) => setForm({ ...form, parentSharePercent: event.target.value })} />
+        <SelectInput label="Funded By" value={form.fundedBy} onChange={(event) => setForm({ ...form, fundedBy: event.target.value })}>
+          <option value="platform">Platform</option><option value="seller">Seller</option><option value="shared">Shared</option>
+        </SelectInput>
+        <label className="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active</label>
+        <div className={`flex items-end font-semibold ${shareTotal === 100 ? "text-emerald-600" : "text-red-600"}`}>Distribution total: {shareTotal}%</div>
+        <div className="flex items-end"><button className="rounded bg-indigo-600 px-4 py-2 text-white">Save Distribution</button></div>
+        <div className="md:col-span-4"><PaginationControls pagination={productPagination} onPageChange={setProductPage} disabled={loading} /></div>
+      </form>
+    </Section>
+    <Section title="Configured Products">
+      {loading ? <div className="p-6 text-sm text-gray-500">Loading configurations…</div> : <><DataTable columns={[
+        { key: "product", label: "Product" }, { key: "variant", label: "Variant" }, { key: "pool", label: "Shareable Pool" }, { key: "split", label: "Customer / Owner / Parent" }, { key: "status", label: "Status" }, { key: "actions", label: "Actions" },
+      ]} rows={configs.map((config) => ({
+        key: config._id || config.id,
+        product: config.metadata?.productTitle || shortId(config.productId),
+        variant: config.metadata?.variantTitle || (config.variantId ? shortId(config.variantId) : "All variants"),
+        pool: config.poolType === "percentage" ? `${config.poolValue}%` : `₹${Number(config.poolValue || 0).toLocaleString("en-IN")} / unit`,
+        split: `${config.customerSharePercent}% / ${config.codeOwnerSharePercent}% / ${config.parentSharePercent}%`,
+        status: <StatusPill value={config.active ? "active" : "inactive"} />,
+        actions: <div className="flex gap-2"><IconButton title="Edit" onClick={() => edit(config)}><Pencil size={15} /></IconButton><IconButton title="Delete" variant="danger" onClick={() => remove(config)}><X size={15} /></IconButton></div>,
+      }))} emptyText="No product-specific distribution configured; global rules will apply." /><PaginationControls pagination={configPagination} onPageChange={setConfigPage} disabled={loading} /></>}
+    </Section>
+  </div>;
+};
+
 const ReferralCommerce = () => {
+  const { section } = useParams();
   const referralFilterStatuses = useDropdownOptions("referral-filter-statuses");
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
   const referralDistributionTypes = useDropdownOptions("referral-distribution-types");
@@ -295,7 +481,7 @@ const ReferralCommerce = () => {
   const referralBonusReleaseRules = useDropdownOptions("referral-bonus-release-rules");
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
-  const [activeTab, setActiveTab] = useState("overview");
+  const activeTab = sectionToTab[section] || "overview";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [parentModalOpen, setParentModalOpen] = useState(false);
@@ -1134,6 +1320,16 @@ const ReferralCommerce = () => {
           <p className="text-sm text-gray-500">Influencer referral operations</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a
+            href={influencerPortalUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+            title="Open the influencer sign-in portal"
+          >
+            <ExternalLink size={16} />
+            Influencer Login
+          </a>
           <IconButton title="Refresh" onClick={() => refreshAll()} variant="primary" disabled={loading}>
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </IconButton>
@@ -1199,26 +1395,8 @@ const ReferralCommerce = () => {
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded border border-gray-200 bg-white">
-        <div className="flex min-w-max gap-1 p-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`rounded px-3 py-2 text-sm font-medium transition ${
-                activeTab === tab.key
-                  ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {activeTab === "overview" && renderOverview()}
+      {activeTab === "productDistribution" && <ProductDistributionManager />}
       {activeTab === "influencers" && (
         <Section title="Influencer Profiles">
           <DataTable

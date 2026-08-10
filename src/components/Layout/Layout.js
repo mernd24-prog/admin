@@ -282,9 +282,6 @@ const NotificationTemplates = React.lazy(
   () => import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
 );
  
-const CollectionsPage = React.lazy(
-  () => import("../../pages/Admin/Collection/Collections"),
-);
 const BadgesPage = React.lazy(
   () => import("../../pages/Admin/Badge/Badges"),
 );
@@ -591,6 +588,7 @@ function Layout() {
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },
       { path: "/referral-commerce", render: () => <ReferralCommerce /> },
+      { path: "/referral-commerce/:section", render: () => <ReferralCommerce /> },
       { path: "/shipping-packages", redirectTo: "/app/shipment-tracking" },
       { path: "/pickup-addresses", redirectTo: "/app/shipment-tracking" },
       { path: "/shipment-tracking", render: () => <ShipmentTracking /> },
@@ -678,7 +676,6 @@ function Layout() {
       { path: "/wallet-transactions", render: () => <WalletTransactions /> },
       { path: "/notification-templates", render: () => <NotificationTemplates /> },
       { path: "/cancellations", render: () => <Cancellations /> },
-      { path: "/collections", render: () => <CollectionsPage /> },
       { path: "/badges", render: () => <BadgesPage /> },
       { path: "/tax-invoices", render: () => <TaxInvoices /> },
       { path: "/tax-invoices/:invoiceId", permissionPath: "/tax-invoices", render: () => <TaxInvoiceDetail /> },

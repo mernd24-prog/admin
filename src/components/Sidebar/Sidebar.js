@@ -122,13 +122,17 @@ const normalizeModuleCode = (value = "") =>
     .replace(/\s+/g, "-")
     .replace(/_/g, "-");
 
-const flattenSidebarChildren = (items = [], prefix = "") =>
+const flattenSidebarChildren = (items = [], prefix = "", includeParent = true) =>
   items.flatMap((item) => {
-    const label = prefix
+    const label = includeParent && prefix
       ? `${prefix} / ${item.moduleName || item.name}`
       : item.moduleName || item.name;
     const route = toRouteCode(item.routePath);
-    const children = flattenSidebarChildren(item.children || [], label);
+    const children = flattenSidebarChildren(
+      item.children || [],
+      label,
+      includeParent,
+    );
     const self =
       route && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route)
         ? [
@@ -195,7 +199,11 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
     options,
   )
     .map((item) => {
-      const subItems = flattenSidebarChildren(item.children || []);
+      const subItems = flattenSidebarChildren(
+        item.children || [],
+        "",
+        options.sellerPanel,
+      );
       const route = toRouteCode(item.routePath);
       const isSingleItem =
         Boolean(route) &&
@@ -346,40 +354,6 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
     .filter((item) => item.subItems.length > 0);
 };
 
-const mergeSidebarData = (...groups) => {
-  const byLabel = new Map();
-  const seenRoutes = new Set();
-
-  groups.flat().forEach((group = {}) => {
-    if (!group.label || !Array.isArray(group.subItems)) return;
-    if (!byLabel.has(group.label)) {
-      byLabel.set(group.label, {
-        ...group,
-        subItems: [],
-        isSingleItem: false,
-      });
-    }
-
-    const target = byLabel.get(group.label);
-    group.subItems.forEach((subItem = {}) => {
-      const route = subItem.module_code || subItem.route;
-      if (!route || seenRoutes.has(route)) return;
-      seenRoutes.add(route);
-      target.subItems.push(subItem);
-    });
-  });
-
-  return Array.from(byLabel.values())
-    .map((group) => ({
-      ...group,
-      isSingleItem:
-        group.isSingleItem ||
-        (String(group.label || "").toLowerCase() === "dashboard" &&
-          group.subItems.length === 1),
-    }))
-    .filter((group) => group.subItems.length > 0);
-};
-
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -501,8 +475,11 @@ const Sidebar = ({
 
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
+    // The seller navigation intentionally keeps its access-module fallback.
+    // Admin navigation is owned by the backend sidebar tree so stale frontend
+    // mappings cannot create duplicate or non-routable menu entries.
     const accessSidebar =
-      Array.isArray(accessModules) && accessModules.length
+      sellerPanel && Array.isArray(accessModules) && accessModules.length
         ? buildAccessModuleSidebarData(accessModules, {
             sellerPanel,
             superAdmin: isSuperAdmin,
@@ -519,9 +496,8 @@ const Sidebar = ({
       });
       if (sellerPanel && sidebarTree.length)
         return sortSidebarGroups(sidebarTree, sellerPanel);
-      const mergedSidebar = mergeSidebarData(sidebarTree, accessSidebar);
-      if (mergedSidebar.length)
-        return sortSidebarGroups(mergedSidebar, sellerPanel);
+      if (sidebarTree.length)
+        return sortSidebarGroups(sidebarTree, sellerPanel);
     }
 
     if (accessSidebar.length)

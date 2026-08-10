@@ -474,7 +474,6 @@ export const MODULE_DEFAULT_ROUTES = {
   "content-pages": "content-pages",
   "users-addresses": "users-addresses",
   preferences: "preferences",
-  collections: "collections",
   badges: "badges",
   "wallet-management": "wallet-management",
   "notification-templates": "notification-templates",
@@ -572,7 +571,7 @@ const ROUTE_MODULES = [
   // Catalog Management — other platform catalog
   [
     [
-      "/collections", "/product-families", "/product-variants",
+      "/product-families", "/product-variants",
       "/product-dimensions", "/finish", "/batch",
     ],
     ["platform", "products"],
@@ -631,7 +630,20 @@ const ROUTE_MODULES = [
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
   [["/badges", "/ribbons"], ["badges", "platform", "pricing"]],
-  [["/referral-commerce"], ["referral"]],
+  [["/referral-commerce/overview"], ["referral-overview", "referral"]],
+  [["/referral-commerce/product-distribution"], ["referral-product-distribution", "referral"]],
+  [["/referral-commerce/influencers"], ["influencer-management", "referral"]],
+  [["/referral-commerce/codes"], ["referral-codes", "referral"]],
+  [["/referral-commerce/rules"], ["referral-rules", "referral"]],
+  [["/referral-commerce/bonus-rules"], ["referral-bonus-rules", "referral"]],
+  [["/referral-commerce/bonus-progress"], ["referral-bonus-progress", "referral"]],
+  [["/referral-commerce/bonus-history"], ["referral-bonus-history", "referral"]],
+  [["/referral-commerce/orders"], ["referral-orders", "referral"]],
+  [["/referral-commerce/commissions"], ["referral-ledger", "referral"]],
+  [["/referral-commerce/payouts"], ["referral-payouts", "referral"]],
+  [["/referral-commerce/hierarchy"], ["referral-hierarchy", "referral"]],
+  [["/referral-commerce/fraud"], ["referral-fraud", "referral"]],
+  [["/referral-commerce"], ["referral-overview", "referral"]],
  
 
   // Invoices & Taxation
@@ -685,9 +697,6 @@ const ROUTE_MODULES = [
 
   // Notification templates
   [["/notification-templates"], ["notifications"]],
-
-  // Collections & Badges
-  [["/collections"], ["platform", "products"]],
 
   // Preferences
   [["/preferences"], ["admin"]],

@@ -216,7 +216,7 @@ export const hasModuleAccess = (moduleCode) => {
     "option-masters": ["option-masters", "option_masters", "product-options", "product_options"],
     option_values: ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
     "option-values": ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
-    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish", "batch", "collections"],
+    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish", "batch"],
     inventory: ["inventory", "stock", "stock-adjustment"],
     orders: ["orders", "order", "checkout-quote", "carts", "subscription_orders", "subscription-orders", "view-orders"],
     payments: ["payments", "payment", "payouts", "payments-finance", "cod-collections", "chargebacks", "fraud-cases"],

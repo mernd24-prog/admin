@@ -257,6 +257,8 @@ export const ENDPOINTS = {
     adminTransactions: "/wallets/admin/transactions",
   },
   referral: {
+    productConfigs: "/admin/referral/product-configs",
+    productConfig: (configId) => `/admin/referral/product-configs/${configId}`,
     influencers: "/admin/referral/influencers",
     parentInfluencers: "/admin/referral/influencers/parents",
     childInfluencers: (parentId) => `/admin/referral/influencers/${parentId}/children`,
@@ -377,6 +379,7 @@ export const ENDPOINTS = {
   },
   analytics: {
     seller: "/analytics",
+    events: "/analytics",
     adminDashboard: "/analytics/admin-dashboard",
     sellerDashboard: "/analytics/seller-dashboard",
     realtime: "/admin/analytics/realtime",
