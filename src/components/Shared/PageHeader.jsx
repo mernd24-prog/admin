@@ -1,29 +1,30 @@
-import React from 'react';
-import { MdChevronRight, MdArrowBack } from 'react-icons/md';
-import { Link, useNavigate } from 'react-router-dom';
-import { twMerge } from 'tailwind-merge';
-import StatusBadge from './StatusBadge';
+import React from "react";
+import { MdChevronRight, MdArrowBack } from "react-icons/md";
+import { Link, useNavigate } from "react-router-dom";
+import { twMerge } from "tailwind-merge";
+import StatusBadge from "./StatusBadge";
 
 const HEADER_ACTION_CLASS =
-  'flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors';
+  "flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors";
 
-const applyHeaderActionClass = (children) => React.Children.map(children, (child) => {
-  if (!React.isValidElement(child)) return child;
+const applyHeaderActionClass = (children) =>
+  React.Children.map(children, (child) => {
+    if (!React.isValidElement(child)) return child;
 
-  if (child.type === 'button' || child.type === 'a' || child.type === Link) {
-    return React.cloneElement(child, {
-      className: twMerge(HEADER_ACTION_CLASS, child.props.className),
-    });
-  }
+    if (child.type === "button" || child.type === "a" || child.type === Link) {
+      return React.cloneElement(child, {
+        className: twMerge(HEADER_ACTION_CLASS, child.props.className),
+      });
+    }
 
-  if (child.props?.children) {
-    return React.cloneElement(child, {
-      children: applyHeaderActionClass(child.props.children),
-    });
-  }
+    if (child.props?.children) {
+      return React.cloneElement(child, {
+        children: applyHeaderActionClass(child.props.children),
+      });
+    }
 
-  return child;
-});
+    return child;
+  });
 
 /**
  * PageHeader
@@ -66,7 +67,7 @@ const PageHeader = ({
         {showBackBtn && (
           <button
             onClick={goBack}
-            className="mt-0.5 flex items-center justify-center w-8 h-8 rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)] flex-shrink-0 transition-colors"
+            className="mt-0.5  flex items-center justify-center w-8 h-8 rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)] flex-shrink-0 transition-colors"
             aria-label="Go back"
           >
             <MdArrowBack size={18} />
@@ -80,7 +81,6 @@ const PageHeader = ({
               aria-label="Breadcrumb"
               className="mb-2 inline-flex w-fit max-w-full flex-wrap items-center gap-1 py-1.5 text-[13.5px] "
             >
-          
               {breadcrumbs.map((crumb, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && (
@@ -126,7 +126,9 @@ const PageHeader = ({
           </div>
 
           {subtitle && (
-            <p className="text-sm text-[var(--admin-muted)] mt-0.5">{subtitle}</p>
+            <p className="text-sm text-[var(--admin-muted)] mt-0.5">
+              {subtitle}
+            </p>
           )}
         </div>
       </div>

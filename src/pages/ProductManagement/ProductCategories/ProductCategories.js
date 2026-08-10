@@ -835,7 +835,11 @@ const ProductCategories = () => {
 
           <div className="flex items-center gap-3">
             {/* Subcategory count badge - only show if category has subcategories */}
-            <PermissionGuard module="categories" action={ACTIONS.STATUS_CHANGE} hide>
+            <PermissionGuard
+              module="categories"
+              action={ACTIONS.STATUS_CHANGE}
+              hide
+            >
               <ToggleButton
                 isToggle={!category.isDisable}
                 handleClick={() => setStatusTarget(category)}
@@ -896,8 +900,10 @@ const ProductCategories = () => {
         actions={
           <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
             <button
-              onClick={() => { handleResetForm(); setCategoryOpen(true); }}
-
+              onClick={() => {
+                handleResetForm();
+                setCategoryOpen(true);
+              }}
             >
               <MdAdd size={16} /> Add Category
             </button>
@@ -910,11 +916,16 @@ const ProductCategories = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2 max-w-sm">
             <div className="relative flex-1">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <MdSearch
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
               <input
                 type="text"
                 value={filters.search}
-                onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, search: e.target.value }))
+                }
                 onKeyDown={(e) => e.key === "Enter" && applySearchFilters()}
                 placeholder="Search categories…"
                 className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
@@ -950,13 +961,19 @@ const ProductCategories = () => {
                 <div
                   key={row}
                   className="flex min-h-12 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-white px-3 py-2"
-                  style={{ marginLeft: row === 2 || row === 3 ? 24 : 0 }}
+                  style={{ marginLeft: row === 2 || row === 3 ? 0 : 0 }}
                 >
                   <SkeletonLoader circle height={24} width={24} />
                   <div className="min-w-0 flex-1">
-                    <SkeletonLoader height={12} width={row % 2 === 0 ? "38%" : "28%"} />
+                    <SkeletonLoader
+                      height={12}
+                      width={row % 2 === 0 ? "38%" : "28%"}
+                    />
                     <div className="mt-1">
-                      <SkeletonLoader height={9} width={row % 2 === 0 ? "24%" : "18%"} />
+                      <SkeletonLoader
+                        height={9}
+                        width={row % 2 === 0 ? "24%" : "18%"}
+                      />
                     </div>
                   </div>
                   <SkeletonLoader height={26} width={72} />
@@ -967,11 +984,13 @@ const ProductCategories = () => {
           )}
           {!categoriesLoading && categories.length > 0 ? (
             categories.map((category) =>
-              renderCategory(category, 0, null, categories)
+              renderCategory(category, 0, null, categories),
             )
           ) : !categoriesLoading ? (
             <div className="text-center py-8 text-gray-400 text-sm">
-              {filters.search ? "No categories match your search" : "No categories found"}
+              {filters.search
+                ? "No categories match your search"
+                : "No categories found"}
             </div>
           ) : null}
         </div>
@@ -979,7 +998,10 @@ const ProductCategories = () => {
 
       <CategorySetup
         isOpen={categoryOpen}
-        handleClose={() => { setCategoryOpen(false); handleResetForm(); }}
+        handleClose={() => {
+          setCategoryOpen(false);
+          handleResetForm();
+        }}
         formData={formData}
         setFormData={setFormData}
         parentCategories={createSelectOptions}
@@ -995,7 +1017,10 @@ const ProductCategories = () => {
 
       <CategorySetup
         isOpen={categoryEditOpen}
-        handleClose={() => { setCategoryEditOpen(false); handleResetForm(); }}
+        handleClose={() => {
+          setCategoryEditOpen(false);
+          handleResetForm();
+        }}
         formData={formData}
         setFormData={setFormData}
         parentCategories={createSelectOptions}

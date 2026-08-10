@@ -33,10 +33,6 @@ import { PageSkeletonLoader } from "../Loader/SkeletonLoader";
 const valueFieldSelector =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea';
 
- 
-
- 
-
 const syncPrefilledFieldState = (root) => {
   if (!root) return;
 
@@ -102,13 +98,16 @@ const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
 );
 const PromotionFundingLedger = React.lazy(
-  () => import("../../pages/OrdersManagement/SellerFinance/PromotionFundingLedger"),
+  () =>
+    import("../../pages/OrdersManagement/SellerFinance/PromotionFundingLedger"),
 );
 const SellerCodCollections = React.lazy(
-  () => import("../../pages/OrdersManagement/SellerFinance/SellerCodCollections"),
+  () =>
+    import("../../pages/OrdersManagement/SellerFinance/SellerCodCollections"),
 );
 const CommerceSettings = React.lazy(
-  () => import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
+  () =>
+    import("../../pages/OrdersManagement/CommerceSettings/CommerceSettings"),
 );
 const ProductReviews = React.lazy(
   () => import("../../pages/OrdersManagement/ProductReviews/ProductReviews"),
@@ -162,7 +161,7 @@ const ManageCity = React.lazy(
 const ManageZipCode = React.lazy(
   () => import("../../pages/UserManagement/ManageZipCode/ManageZipCode"),
 );
- 
+
 const Profile = React.lazy(() => import("../../pages/My Profile/Profile"));
 const ChangePassword = React.lazy(
   () => import("../../pages/Change Password/ChangePassword"),
@@ -191,9 +190,7 @@ const MyOrganizations = React.lazy(
 );
 
 // ── Inventory Management ────────────────────────────────────────────────────
-const Inventory = React.lazy(
-  () => import("../../pages/Inventory/Inventory"),
-);
+const Inventory = React.lazy(() => import("../../pages/Inventory/Inventory"));
 
 // ── Reports & Analytics ─────────────────────────────────────────────────────
 const SalesReport = React.lazy(() =>
@@ -239,17 +236,14 @@ const DealSponsorships = React.lazy(
 const Cancellations = React.lazy(
   () => import("../../pages/OrdersManagement/Cancellations/Cancellations"),
 );
-const TaxInvoices = React.lazy(
-  () => import("../../pages/Tax/TaxInvoices"),
-);
+const TaxInvoices = React.lazy(() => import("../../pages/Tax/TaxInvoices"));
 const TaxInvoiceDetail = React.lazy(
   () => import("../../pages/Tax/TaxInvoiceDetail"),
 );
-const CreditNotes = React.lazy(
-  () => import("../../pages/Tax/CreditNotes"),
-);
+const CreditNotes = React.lazy(() => import("../../pages/Tax/CreditNotes"));
 const SubscriptionPlans = React.lazy(
-  () => import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionPlans"),
+  () =>
+    import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionPlans"),
 );
 const Chargebacks = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/Chargebacks"),
@@ -273,18 +267,19 @@ const NegativeBalances = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/NegativeBalances"),
 );
 const WalletTransactions = React.lazy(
-  () => import("../../pages/OrdersManagement/WalletTransactions/WalletTransactions"),
+  () =>
+    import("../../pages/OrdersManagement/WalletTransactions/WalletTransactions"),
 );
 const ProductModerationQueue = React.lazy(
-  () => import("../../pages/ProductManagement/ProductModerationQueue/ProductModerationQueue"),
+  () =>
+    import("../../pages/ProductManagement/ProductModerationQueue/ProductModerationQueue"),
 );
 const NotificationTemplates = React.lazy(
-  () => import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
+  () =>
+    import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
 );
- 
-const BadgesPage = React.lazy(
-  () => import("../../pages/Admin/Badge/Badges"),
-);
+
+const BadgesPage = React.lazy(() => import("../../pages/Admin/Badge/Badges"));
 const AnalyticsEvents = React.lazy(
   () => import("../../pages/Reports/AnalyticsEvents"),
 );
@@ -474,22 +469,22 @@ function Layout() {
       modules.forEach((module) => {
         const moduleCode = normalizeModule(
           module.slug ||
-          module.moduleKey ||
-          module.moduleSlug ||
-          module.module ||
-          module.module_code?.module_code ||
-          module.module_code ||
-          module.metadata?.requiredModule,
+            module.moduleKey ||
+            module.moduleSlug ||
+            module.module ||
+            module.module_code?.module_code ||
+            module.module_code ||
+            module.metadata?.requiredModule,
         );
 
         if (!moduleCode) return;
 
         const hasViewAction = Array.isArray(module.permissions)
           ? module.permissions.some(
-            (permission) =>
-              String(permission.action || "").toLowerCase() === "view" &&
-              permission.assigned === true,
-          )
+              (permission) =>
+                String(permission.action || "").toLowerCase() === "view" &&
+                permission.assigned === true,
+            )
           : module.assigned !== false;
         const isAssigned = module.assigned !== false && hasViewAction;
 
@@ -555,13 +550,16 @@ function Layout() {
       { path: "/users", render: () => <Users /> },
       { path: "/users/view/:id", render: () => <UserDetails /> },
       { path: "/seller/view/:id", render: () => <UserDetails /> },
-	      { path: "/transactions", render: () => <UsersTransactions /> },
-	      { path: "/transactions/view/:id", render: () => <ViewTransaction /> },
-	      { path: "/product-catalog", render: () => <ProductCatalog /> },
-	      { path: "/product-catalog/archived", render: () => <ProductCatalog /> },
+      { path: "/transactions", render: () => <UsersTransactions /> },
+      { path: "/transactions/view/:id", render: () => <ViewTransaction /> },
+      { path: "/product-catalog", render: () => <ProductCatalog /> },
+      { path: "/product-catalog/archived", render: () => <ProductCatalog /> },
       { path: "/seller-Product-Inventory", redirectTo: "/app/inventory" },
       { path: "/seller-product-inventory", redirectTo: "/app/inventory" },
-      { path: "/seller-special-price-manager", render: () => <SellerSpecialPriceManager /> },
+      {
+        path: "/seller-special-price-manager",
+        render: () => <SellerSpecialPriceManager />,
+      },
       { path: "/store", render: () => <Store /> },
       { path: "/brands", render: () => <Brands /> },
       { path: "/product-options", render: () => <ProductOptions /> },
@@ -573,22 +571,37 @@ function Layout() {
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
       { path: "/seller-finance", render: () => <SellerFinance /> },
-      { path: "/promotion-funding-ledger", render: () => <PromotionFundingLedger /> },
+      {
+        path: "/promotion-funding-ledger",
+        render: () => <PromotionFundingLedger />,
+      },
       { path: "/seller-wallet", render: () => <SellerWallet /> },
-      { path: "/seller-cod-collections", render: () => <SellerCodCollections /> },
+      {
+        path: "/seller-cod-collections",
+        render: () => <SellerCodCollections />,
+      },
       { path: "/commission-rules", redirectTo: "/app/platform-commission" },
       { path: "/platform-fee-config", redirectTo: "/app/platform-commission" },
       { path: "/commerce-settings", render: () => <CommerceSettings /> },
-      { path: "/platform-commerce-settings", redirectTo: "/app/platform-commission" },
+      {
+        path: "/platform-commerce-settings",
+        redirectTo: "/app/platform-commission",
+      },
       { path: "/platform-commission", render: () => <CommerceSettings /> },
-      { path: "/seller-commerce-config", redirectTo: "/app/platform-commission" },
+      {
+        path: "/seller-commerce-config",
+        redirectTo: "/app/platform-commission",
+      },
       { path: "/commerce-templates", redirectTo: "/app/platform-commission" },
       { path: "/seller-tiers", redirectTo: "/app/platform-commission" },
       { path: "/returns", render: () => <Returns /> },
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },
       { path: "/referral-commerce", render: () => <ReferralCommerce /> },
-      { path: "/referral-commerce/:section", render: () => <ReferralCommerce /> },
+      {
+        path: "/referral-commerce/:section",
+        render: () => <ReferralCommerce />,
+      },
       { path: "/shipping-packages", redirectTo: "/app/shipment-tracking" },
       { path: "/pickup-addresses", redirectTo: "/app/shipment-tracking" },
       { path: "/shipment-tracking", render: () => <ShipmentTracking /> },
@@ -596,12 +609,22 @@ function Layout() {
       { path: "/categories", render: () => <ProductCategories /> },
       { path: "/category-attributes", redirectTo: "/app/categories" },
       { path: "/subscription-orders", render: () => <SubscriptionOrders /> },
-   
+
       { path: "/view-orders", render: () => <OrderSummary /> },
-      { path: "/product-catalog/form/:id?", render: () => <AddEditProductPopup /> },
-      { path: "/product-catalog/view/:id", render: () => <ProductAdminDetails /> },
+      {
+        path: "/product-catalog/form/:id?",
+        render: () => <AddEditProductPopup />,
+      },
+      {
+        path: "/product-catalog/view/:id",
+        render: () => <ProductAdminDetails />,
+      },
       { path: "/profile", render: () => <Profile />, always: true },
-      { path: "/changePassword", render: () => <ChangePassword />, always: true },
+      {
+        path: "/changePassword",
+        render: () => <ChangePassword />,
+        always: true,
+      },
       { path: "/state", render: () => <ManageState /> },
       { path: "/city", render: () => <ManageCity /> },
       { path: "/country", render: () => <ManageCountry /> },
@@ -645,14 +668,22 @@ function Layout() {
         render: () => <ProductOptionValue setModuleName={setModuleName} />,
       },
       { path: "/inventory", render: () => <Inventory /> },
-      { path: "/inventory/:productId", permissionPath: "/inventory", render: () => <Inventory /> },
+      {
+        path: "/inventory/:productId",
+        permissionPath: "/inventory",
+        render: () => <Inventory />,
+      },
       { path: "/inventory-overview", redirectTo: "/app/inventory" },
       { path: "/variant-inventory", redirectTo: "/app/inventory" },
       { path: "/inventory-adjustment", redirectTo: "/app/inventory" },
       { path: "/inventory-transactions", redirectTo: "/app/inventory" },
       { path: "/warehouse", redirectTo: "/app/inventory" },
       { path: "/low-stock-alerts", redirectTo: "/app/inventory" },
-      { path: "/seller-staff", permissionPath: "/seller-users", render: () => <SellerUsers /> },
+      {
+        path: "/seller-staff",
+        permissionPath: "/seller-users",
+        render: () => <SellerUsers />,
+      },
       { path: "/roles-permissions", render: () => <RolesPermissions /> },
       { path: "/module-management", render: () => <ModuleManagement /> },
       { path: "/activity-logs", render: () => <ActivityLogs /> },
@@ -660,12 +691,20 @@ function Layout() {
       { path: "/permission-templates", render: () => <PermissionTemplates /> },
       {
         path: "/queries",
-        render: () => isSellerPanel() ? <Navigate to="/app/help-support" replace /> : <AdminQueries />,
+        render: () =>
+          isSellerPanel() ? (
+            <Navigate to="/app/help-support" replace />
+          ) : (
+            <AdminQueries />
+          ),
       },
       { path: "/help-support", render: () => <SellerHelpSupport /> },
       { path: "/seller-onboarding", redirectTo: "/app/seller" },
       { path: "/seller-status", redirectTo: "/app/seller" },
-      { path: "/seller-sub-admins", render: () => <SellerSubAdminManagement /> },
+      {
+        path: "/seller-sub-admins",
+        render: () => <SellerSubAdminManagement />,
+      },
       { path: "/content-pages", render: () => <ContentPages /> },
       { path: "/auth-testimonials", render: () => <AuthTestimonials /> },
       { path: "/users-addresses", render: () => <Users /> },
@@ -674,11 +713,18 @@ function Layout() {
       { path: "/fraud-cases", render: () => <FraudCases /> },
       { path: "/wallet-management", render: () => <WalletTransactions /> },
       { path: "/wallet-transactions", render: () => <WalletTransactions /> },
-      { path: "/notification-templates", render: () => <NotificationTemplates /> },
+      {
+        path: "/notification-templates",
+        render: () => <NotificationTemplates />,
+      },
       { path: "/cancellations", render: () => <Cancellations /> },
       { path: "/badges", render: () => <BadgesPage /> },
       { path: "/tax-invoices", render: () => <TaxInvoices /> },
-      { path: "/tax-invoices/:invoiceId", permissionPath: "/tax-invoices", render: () => <TaxInvoiceDetail /> },
+      {
+        path: "/tax-invoices/:invoiceId",
+        permissionPath: "/tax-invoices",
+        render: () => <TaxInvoiceDetail />,
+      },
       { path: "/credit-notes", render: () => <CreditNotes /> },
       { path: "/subscription-plans", render: () => <SubscriptionPlans /> },
       { path: "/cod-config", render: () => <CodConfig /> },
@@ -688,7 +734,7 @@ function Layout() {
       { path: "/negative-balances", render: () => <NegativeBalances /> },
       { path: "/deal-payouts", render: () => <DealPayouts /> },
       { path: "/deal-sponsorships", render: () => <DealSponsorships /> },
- 
+
       { path: "/analytics-events", render: () => <AnalyticsEvents /> },
       { path: "/api-keys", render: () => <ApiKeys /> },
       { path: "/feature-flags", render: () => <FeatureFlags /> },
@@ -696,7 +742,10 @@ function Layout() {
       { path: "/system-health", render: () => <SystemHealth /> },
       { path: "/queue-management", render: () => <QueueManagement /> },
       { path: "/dead-letter-queue", render: () => <DeadLetterQueue /> },
-      { path: "/product-moderation-queue", render: () => <ProductModerationQueue /> },
+      {
+        path: "/product-moderation-queue",
+        render: () => <ProductModerationQueue />,
+      },
       { path: "/analytics", render: () => <AnalyticsDashboard /> },
       { path: "/reports-sales", render: () => <SalesReport /> },
       { path: "/reports-products", render: () => <ProductAnalytics /> },
@@ -732,9 +781,13 @@ function Layout() {
     const normalizedRoute = normalizeRoutePattern(path);
     if (backendRoutePatterns.has(normalizedRoute)) return true;
 
-    const moduleCandidates = getRouteModuleCandidates(path, routePermissionModules, {
-      sellerPanel: isSellerPanel(),
-    });
+    const moduleCandidates = getRouteModuleCandidates(
+      path,
+      routePermissionModules,
+      {
+        sellerPanel: isSellerPanel(),
+      },
+    );
     if (!moduleCandidates.length) return true;
     if (!backendRoutePatterns.size && !Object.keys(modulePermissions).length) {
       return true;
@@ -758,8 +811,6 @@ function Layout() {
     if (!hasPermission(path)) {
       return <PermissionNotAllowed loading={isPermissionShow} />;
     }
-
- 
 
     return element;
   };
@@ -794,8 +845,9 @@ function Layout() {
       </div>
 
       <div
-        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${navbarOpen ? "" : "lg:ml-0"
-          }`}
+        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${
+          navbarOpen ? "" : "lg:ml-0"
+        }`}
       >
         <Header
           handleNavbar={handleSidebarToggle}
@@ -803,7 +855,9 @@ function Layout() {
           hasPermanentOpen={hasPermanentOpen}
           isSidebarExpanded={isExpanded}
         />
-        <main className={`flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}>
+        <main
+          className={`flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}
+        >
           <Suspense fallback={<PageSkeletonLoader />}>
             <div className="admin-page-transition">
               <Routes location={location}>
