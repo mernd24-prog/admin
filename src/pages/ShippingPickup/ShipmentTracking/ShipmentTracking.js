@@ -20,6 +20,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import {
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -625,16 +626,7 @@ const ShipmentTracking = () => {
                 {row.awb_number || row.tracking_number || row.id}
               </div>
               <div className="text-xs text-gray-400">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/app/orders/view/${row.order_id}`)}
-                  className="font-medium text-[var(--admin-navy)] hover:underline"
-                >
-                  Order #
-                  {row.orderNumber ||
-                    row.order_number ||
-                    String(row.order_id || "").slice(-8)}
-                </button>
+                <OrderLink orderId={row.order_id || row.orderId} orderNumber={row.orderNumber || row.order_number} prefix="Order #" />
 
                 {row.return_id && (
                   <span className="text-gray-400">
@@ -777,15 +769,7 @@ const ShipmentTracking = () => {
                     Order Shipment
                   </div>
                   <div className="truncate text-lg font-semibold text-gray-950">
-                    <button 
-                      type="button"
-                      onClick={() => navigate(`/app/orders/view/${selectedShipment?.order_id}`, "_blank")}
-                      className="font-medium hover:underline text-left block"
-                    >
-                      {selectedShipment?.orderNumber ||
-                        selectedShipment?.order_number ||
-                        String(selectedShipment?.order_id || "Order").slice(-8)}
-                    </button>
+                    <OrderLink orderId={selectedShipment?.order_id || selectedShipment?.orderId} orderNumber={selectedShipment?.orderNumber || selectedShipment?.order_number} className="block text-lg" />
                   </div>
                 </div>
               </div>

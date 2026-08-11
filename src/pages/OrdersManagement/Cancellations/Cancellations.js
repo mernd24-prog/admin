@@ -12,6 +12,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -310,13 +311,7 @@ const Cancellations = () => {
       key: "orderId",
       label: "Order #",
       render: (v, row) => (
-        <button
-          type="button"
-          onClick={() => navigate(`/app/orders/view/${row.orderId}`)}
-          className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
-        >
-          #{row.orderNumber || String(v || "—").slice(-8)}
-        </button>
+        <OrderLink orderId={row.orderId || row.order_id || v} orderNumber={row.orderNumber || row.order_number} />
       ),
     },
     {
@@ -490,18 +485,7 @@ const Cancellations = () => {
               </div>
               <div>
                 <p className="text-gray-500">Order #</p>
-                <p className="font-mono text-xs">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(`/app/orders/view/${detail.orderId}`)
-                    }
-                    className="font-medium text-[var(--admin-navy)] hover:underline"
-                  >
-                    {detail.orderNumber ||
-                      String(detail.orderId || "—").slice(-8)}
-                  </button>
-                </p>
+                <p><OrderLink orderId={detail.orderId || detail.order_id} orderNumber={detail.orderNumber || detail.order_number} /></p>
               </div>
               <div>
                 <p className="text-gray-500">Cancellation Status</p>

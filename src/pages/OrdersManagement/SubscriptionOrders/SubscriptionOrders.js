@@ -8,6 +8,7 @@ import {
   DataTable,
   StatusBadge,
   FilterBar,
+  OrderLink,
 } from "../../../components/Shared";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
@@ -50,9 +51,7 @@ const COLUMNS = [
     label: "Order #",
     sortable: true,
     render: (v, row) => (
-      <span className="font-mono font-medium text-[var(--admin-navy)]">
-        {v || orderIdOf(row)}
-      </span>
+      <OrderLink orderId={orderIdOf(row)} orderNumber={v || row.orderNumber} />
     ),
   },
   {

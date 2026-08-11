@@ -13,6 +13,7 @@ import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
+import OrderLink from "../../../components/Shared/OrderLink";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
   formatCurrency,
@@ -46,14 +47,8 @@ export default function SellerWallet() {
       {
         key: "orderId",
         label: "Order",
-        render: (value) => (
-          <button
-            type="button"
-            className="font-mono font-medium text-[var(--admin-navy)] hover:underline"    
-            onClick={() => navigate(`/app/orders/view/${value}`)}
-          >
-            {String(value || "—").slice(0, 12)}
-          </button>
+        render: (value, row) => (
+          <OrderLink orderId={value || row.order_id} orderNumber={row.orderNumber || row.order_number} />
         ),
       },
       {
@@ -92,7 +87,7 @@ export default function SellerWallet() {
         render: (value, item) => formatDateTime12Hour(value || item.createdAt),
       },
     ],
-    [currency, navigate],
+    [currency],
   );
 
   const load = useCallback(async () => {

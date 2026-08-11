@@ -11,13 +11,13 @@ import {
 import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
+import OrderLink from "../../../components/Shared/OrderLink";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
-import { useNavigate } from "react-router";
 
 const money = (value, currency = "INR") =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(
@@ -39,7 +39,6 @@ const FUNDING_OPTIONS = [
 ];
 
 const PromotionFundingLedger = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const sellerMode = isSellerPanel();
   const state = useSelector(
@@ -67,21 +66,9 @@ const PromotionFundingLedger = () => {
           return (
             <div className="flex flex-col">
               {/* Order Link / Number */}
-              {orderId ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(`/app/orders/view/${orderId}`, "_blank")
-                  }
-                  className="font-mono text-xs font-semibold text-blue-600 hover:underline text-left self-start"
-                >
-                  {orderDisplay}
-                </button>
-              ) : (
-                <span className="font-mono text-xs font-semibold text-gray-500">
-                  {orderDisplay}
-                </span>
-              )}
+              <OrderLink orderId={orderId} orderNumber={row?.orderNumber || row?.order_number}>
+                {orderDisplay}
+              </OrderLink>
 
               {/* Product Details */}
               <div className="mt-1 font-medium text-gray-900">

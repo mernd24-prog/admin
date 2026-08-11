@@ -3,7 +3,7 @@ import { MdRefresh, MdUpload } from "react-icons/md";
 import { toast } from "sonner";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
-import { DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
+import { DataTable, OrderLink, PageHeader, StatusBadge } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
@@ -50,22 +50,14 @@ export default function SellerCodCollections() {
   key: "order_number",
   label: "Order / Shipment",
   render: (_, row) => {
-    const orderId = row?.order_id || row?.id || row?.order_number;
+    const orderId = row?.order_id || row?.orderId;
     const orderDisplay = row?.order_number ? `#${row.order_number}` : (row?.order_id || "—");
 
     return (
       <div>
-        {orderId ? (
-          <button
-            type="button"
-            onClick={() => window.open(`/app/orders/view/${orderId}`, "_blank")}
-            className="font-medium hover:underline text-left block"
-          >
-            {orderDisplay}
-          </button>
-        ) : (
-          <div className="font-medium text-gray-900">{orderDisplay}</div>
-        )}
+        <OrderLink orderId={orderId} orderNumber={row?.order_number} className="block">
+          {orderDisplay}
+        </OrderLink>
 
         <div className="text-xs text-gray-500">
           {row?.awb_number || "Shipment"}

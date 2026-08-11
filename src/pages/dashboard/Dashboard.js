@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
-import { DateRangePickerModal } from "../../components/Shared";
+import { DateRangePickerModal, OrderLink } from "../../components/Shared";
 import {
   Area,
   AreaChart,
@@ -1439,17 +1439,7 @@ export default function Dashboard() {
                       {index + 1}.
                     </td>
                     <td className="px-4 py-3 font-medium">
-                      {orderId ? (
-                        <Link
-                          to={`/app/orders/view/${orderId}`}
-                          className="font-mono font-semibold text-[var(--admin-navy)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
-                          title={`View order #${orderNumber}`}
-                        >
-                          #{orderNumber}
-                        </Link>
-                      ) : (
-                        <span className="font-mono">#{orderNumber}</span>
-                      )}
+                      <OrderLink orderId={orderId} orderNumber={orderNumber} className="font-semibold" />
                     </td>
                     <td className="px-4 py-3">
                       {formatLabel(

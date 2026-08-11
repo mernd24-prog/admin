@@ -49,7 +49,7 @@ import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
-import { PageHeader } from "../../components/Shared";
+import { OrderLink, PageHeader } from "../../components/Shared";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -1040,6 +1040,10 @@ const ReferralCommerce = () => {
     );
   };
 
+  const renderOrderLink = (orderId, orderNumber) => {
+    return <OrderLink orderId={orderId} orderNumber={orderNumber} />;
+  };
+
   const refreshAll = async (filters = {}) => {
     const baseQuery = {
       q: filters.q ?? search,
@@ -1608,7 +1612,10 @@ const ReferralCommerce = () => {
 
   const orderRows = orders.map((order) => ({
     key: getId(order),
-    order: order.orderId,
+    order: renderOrderLink(
+      order.orderId || order.order_id,
+      order.orderNumber || order.order_number,
+    ),
     code: order.code,
     customer: order.customerId,
     amount: formatAmount(order.eligibleAmount),
@@ -1619,7 +1626,10 @@ const ReferralCommerce = () => {
 
   const commissionRows = commissions.map((entry) => ({
     key: getId(entry),
-    order: entry.orderId,
+    order: renderOrderLink(
+      entry.orderId || entry.order_id,
+      entry.orderNumber || entry.order_number,
+    ),
     influencer: renderInfluencerRef(entry.influencerId),
     type: entry.commissionType,
     basis: formatAmount(entry.basisAmount),

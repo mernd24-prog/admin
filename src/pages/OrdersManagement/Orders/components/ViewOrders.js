@@ -23,6 +23,7 @@ import PermissionGuard from "../../../../components/Atoms/PermissionGuard/Permis
 import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 import SummaryCard from "../../../../components/Shared/SummaryCard";
+import OrderLink from "../../../../components/Shared/OrderLink";
 
 import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../../_helpers/downloadApi";
@@ -1158,7 +1159,7 @@ const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
   );
 };
 
-const PaymentCard = ({ payment = {}, orderNumber, orderId, currency = "INR", navigate }) => {
+const PaymentCard = ({ payment = {}, orderNumber, orderId, currency = "INR" }) => {
   const provider = displayStatus(firstDefined(payment.provider, "payment"));
   const method = displayStatus(firstDefined(payment.method, payment.payment_method, payment.provider));
   const amount = `${payment.currency || currency} ${money(payment.amount).toFixed(2)}`;
@@ -1171,9 +1172,7 @@ const PaymentCard = ({ payment = {}, orderNumber, orderId, currency = "INR", nav
             <MdPayments className="text-[#D8A21D]" size={18} />
             {provider} payment
           </div>
-          <DetailLink onClick={() => navigate(`/app/orders/view/${orderId}`)} className="mt-1 block text-xs">
-            Order #{orderNumber}
-          </DetailLink>
+          <OrderLink orderId={orderId} orderNumber={orderNumber} prefix="Order #" className="mt-1 block" />
         </div>
         <StatusBadge status={payment.status || "recorded"} size="sm" dot />
       </div>
@@ -1884,7 +1883,6 @@ const OrderSummary = () => {
                       orderNumber={orderNumber}
                       orderId={orderId}
                       currency={order.currency || "INR"}
-                      navigate={navigate}
                     />
                   ))}
                 </div>
@@ -2019,9 +2017,7 @@ const OrderSummary = () => {
                           {
                             label: "Order",
                             value: (
-                              <DetailLink onClick={() => navigate(`/app/orders/view/${orderId}`)} className="text-xs">
-                                #{orderNumber}
-                              </DetailLink>
+                              <OrderLink orderId={orderId} orderNumber={orderNumber} />
                             ),
                           },
                           { label: "Created", value: formatDate(firstDefined(walletTx.created_at, walletTx.createdAt)) },

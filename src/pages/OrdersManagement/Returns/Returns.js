@@ -34,6 +34,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -886,13 +887,7 @@ const Returns = () => {
             <div className="font-semibold text-gray-800">
               {row.returnNumber || returnId(row)}
             </div>
-            <button
-              type="button"
-              onClick={() => navigate(`/app/orders/view/${row.orderId}`)}
-              className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
-            >
-              Order {row.orderId}
-            </button>
+            <OrderLink orderId={row.orderId || row.order_id} orderNumber={row.orderNumber || row.order_number} prefix="Order #" />
           </div>
         ),
       },
@@ -1293,7 +1288,10 @@ const Returns = () => {
             </div>
             <div>
               <strong>Order:</strong>{" "}
-              {orderNumber(detailReturn) || "Not available"}
+              <OrderLink
+                orderId={detailReturn?.orderId || detailReturn?.order_id}
+                orderNumber={orderNumber(detailReturn)}
+              />
             </div>
             <div>
               <strong>Buyer:</strong>{" "}

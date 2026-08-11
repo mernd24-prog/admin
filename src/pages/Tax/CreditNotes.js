@@ -10,6 +10,7 @@ import Input from "../../components/Atoms/Input/Input";
 import {
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../components/Shared";
@@ -243,23 +244,7 @@ const CreditNotes = () => {
           label: "Order",
           render: (v, row) => {
             const orderId = v || row?.order_id;
-            const formattedId = orderId ? String(orderId).slice(-8) : "—";
-
-            if (!orderId) {
-              return <span className="font-mono text-xs text-gray-400">—</span>;
-            }
-
-            return (
-              <button
-                type="button"
-                onClick={() =>
-                  window.open(`/app/orders/view/${orderId}`, "_blank")
-                }
-                className="text-[var(--admin-navy)] hover:underline"
-              >
-                {formattedId}
-              </button>
-            );
+            return <OrderLink orderId={orderId} orderNumber={row.orderNumber || row.order_number} />;
           },
         },
         {
@@ -414,9 +399,7 @@ const CreditNotes = () => {
               </div>
               <div>
                 <p className="text-gray-500">Order ID</p>
-                <p className="font-mono text-xs">
-                  {pick(detail, "orderId", "order_id") || "—"}
-                </p>
+                <p><OrderLink orderId={pick(detail, "orderId", "order_id")} orderNumber={pick(detail, "orderNumber", "order_number")} /></p>
               </div>
               <div>
                 <p className="text-gray-500">Organization ID</p>

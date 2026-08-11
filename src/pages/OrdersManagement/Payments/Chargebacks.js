@@ -7,6 +7,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import {
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -223,7 +224,7 @@ const Chargebacks = () => {
               </div>
               <div>
                 <p className="text-gray-500">Order ID</p>
-                <p className="font-mono text-xs">{detail.orderId || "—"}</p>
+                <p><OrderLink orderId={detail.orderId || detail.order_id} orderNumber={detail.orderNumber || detail.order_number} /></p>
               </div>
               <div>
                 <p className="text-gray-500">Amount</p>

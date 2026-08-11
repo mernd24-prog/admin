@@ -16,6 +16,7 @@ import {
   DataTable,
   StatusBadge,
   FilterBar,
+  OrderLink,
 } from "../../../components/Shared";
 // import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
@@ -284,13 +285,7 @@ const createColumns = (
     label: "Order #",
     sortable: true,
     render: (v, row) => (
-      <button
-        type="button"
-        onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
-        className="font-mono font-medium text-[var(--admin-navy)] hover:underline"
-      >
-        {v || orderIdOf(row)}
-      </button>
+      <OrderLink orderId={orderIdOf(row)} orderNumber={v || row.orderNumber} />
     ),
   },
   {

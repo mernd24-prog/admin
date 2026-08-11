@@ -5,6 +5,7 @@ import { MdOutlineClose, MdStar, MdStarBorder } from "react-icons/md";
 import { updateProductReview } from "../../../../Redux/adminCoreSlice";
 import MultiImageUpload from "../../../../components/Atoms/ImageGallery/MultiImageUpload";
 import { formatDateTime12Hour } from "../../../../utils/formatters";
+import { OrderLink } from "../../../../components/Shared";
 
 const STATUSES = [
   { value: "published", label: "Published" },
@@ -154,7 +155,12 @@ const EditProductReview = ({ isOpen, onClose, reviewData }) => {
             </div>
             <div>
               <span className="font-medium text-gray-500">Order ID</span>
-              <p className="font-mono text-xs truncate">{reviewData?.orderId || "—"}</p>
+              <p className="truncate">
+                <OrderLink
+                  orderId={reviewData?.orderId || reviewData?.order_id}
+                  orderNumber={reviewData?.orderNumber || reviewData?.order_number}
+                />
+              </p>
             </div>
             <div>
               <span className="font-medium text-gray-500">Buyer</span>

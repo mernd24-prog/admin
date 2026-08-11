@@ -14,6 +14,7 @@ import {
 import Loader from "../../components/Loader/Loader";
 import {
   PageHeader,
+  OrderLink,
   StatusBadge,
   SummaryCard,
 } from "../../components/Shared";
@@ -229,12 +230,10 @@ const TaxInvoiceDetail = () => {
          
           
 
-<Field
-  label="Order"
-  value={pick(invoice, "orderId", "order_id")}
-  mono
-  onClick={() => navigate(`/app/orders/view/${pick(invoice, "orderId", "order_id")}`)}
-/>
+          <Field
+            label="Order"
+            value={<OrderLink orderId={pick(invoice, "orderId", "order_id")} orderNumber={pick(invoice, "orderNumber", "order_number")} />}
+          />
           <Field label="Reference" value={[pick(invoice, "reference_type"), pick(invoice, "reference_id")].filter(Boolean).join(" / ")} mono />
           <Field label="Issued" value={date(pick(invoice, "issuedAt", "issued_at", "created_at"))} />
           <Field label="Place of Supply" value={pick(invoice, "place_of_supply") || metadata.shippingAddress?.state} />

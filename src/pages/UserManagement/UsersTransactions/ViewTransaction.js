@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "../../../utils/toast";
 import { MdArrowForward, MdRefresh } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
-import { PageHeader, StatusBadge } from "../../../components/Shared";
+import { OrderLink, PageHeader, StatusBadge } from "../../../components/Shared";
 import { getWalletTransactions } from "../../../Redux/adminCoreSlice";
 
 const firstDefined = (...values) =>
@@ -149,7 +149,7 @@ const ViewTransaction = () => {
 
           <DetailPanel title="Payment Reference">
             <DetailRow label="Provider" value={display(provider)} />
-            <DetailRow label="Order ID" value={orderId} />
+            <DetailRow label="Order ID" value={<OrderLink orderId={orderId} orderNumber={transaction?.orderNumber || transaction?.order_number} />} />
             <DetailRow label="Payment ID" value={paymentId} />
             <DetailRow label="Provider Order ID" value={providerOrderId} />
             <DetailRow label="Reference ID" value={transaction?.reference_id} />

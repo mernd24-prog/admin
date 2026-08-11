@@ -3,7 +3,7 @@ import { MdCheckCircle, MdRefresh } from "react-icons/md";
 import { toast } from "sonner";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
-import { DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
+import { DataTable, OrderLink, PageHeader, StatusBadge } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
@@ -54,7 +54,7 @@ export default function CodCollections() {
   }, [decision, load]);
 
   const columns = useMemo(() => [
-    { key: "order_number", label: "Order / Shipment", render: (_, row) => <div><div className="font-medium">#{row.order_number || row.order_id}</div><div className="text-xs text-gray-500">{row.awb_number || "AWB not assigned"}</div></div> },
+    { key: "order_number", label: "Order / Shipment", render: (_, row) => <div><OrderLink orderId={row.order_id || row.orderId} orderNumber={row.order_number || row.orderNumber} /><div className="text-xs text-gray-500">{row.awb_number || "AWB not assigned"}</div></div> },
     { key: "seller_id", label: "Seller", render: (value) => <span className="text-xs">{value}</span> },
     { key: "collection_mode", label: "Collection", render: (value, row) => <div><div className="capitalize">{label(value)}</div><div className="text-xs text-gray-500">By: {label(row.collected_by)}</div></div> },
     { key: "expected_amount", label: "Expected / Collected", render: (value, row) => <div><div>{money(value)}</div><div className="text-xs text-gray-500">{money(row.collected_amount)}</div></div> },

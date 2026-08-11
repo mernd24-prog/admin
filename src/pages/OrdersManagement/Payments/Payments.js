@@ -15,6 +15,7 @@ import Input from "../../../components/Atoms/Input/Input";
 import {
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -229,7 +230,10 @@ const Payments = () => {
               {display(row.provider)} payment
             </div>
             <div className="text-xs text-gray-400">
-              Order #{row.orderNumber || "Order"}
+              <OrderLink
+                orderId={row.orderId || row.order_id}
+                orderNumber={row.orderNumber || row.order_number}
+              />
             </div>
           </div>
         ),
@@ -410,7 +414,11 @@ const Payments = () => {
         <div className="space-y-3 text-sm" aria-busy={detailLoading}>
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-2">
             <div>
-              <strong>Order:</strong> #{detailPayment?.orderNumber || "Order"}
+              <strong>Order:</strong>{" "}
+              <OrderLink
+                orderId={detailPayment?.orderId || detailPayment?.order_id}
+                orderNumber={detailPayment?.orderNumber || detailPayment?.order_number}
+              />
             </div>
             <div>
               <strong>Customer:</strong>{" "}

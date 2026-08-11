@@ -6,6 +6,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
 } from "../../components/Shared";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
@@ -250,11 +251,10 @@ const TaxCompliance = () => {
         key: "order_id",
         label: "Order",
         render: (value, row) => (
-          <span className="font-mono text-xs">
-            {row.orderNumber ||
-              row.order_number ||
-              (value ? `#${String(value).slice(-8)}` : "—")}
-          </span>
+          <OrderLink
+            orderId={value || row.orderId}
+            orderNumber={row.orderNumber || row.order_number}
+          />
         ),
       },
       {
@@ -362,11 +362,10 @@ const TaxCompliance = () => {
         key: "order_id",
         label: "Order",
         render: (value, row) => (
-          <span className="font-mono text-xs">
-            {row.orderNumber ||
-              row.order_number ||
-              (value ? `#${String(value).slice(-8)}` : "—")}
-          </span>
+          <OrderLink
+            orderId={value || row.orderId}
+            orderNumber={row.orderNumber || row.order_number}
+          />
         ),
       },
       {

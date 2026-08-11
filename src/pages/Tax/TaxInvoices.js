@@ -8,6 +8,7 @@ import Loader from "../../components/Loader/Loader";
 import {
   DataTable,
   FilterBar,
+  OrderLink,
   PageHeader,
   StatusBadge,
 } from "../../components/Shared";
@@ -255,19 +256,7 @@ const TaxInvoices = () => {
           render: (v, row) => {
             const orderId = v || orderIdOf(row);
 
-            return (
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/app/orders/view/${orderId}`)}
-                  className="font-mono font-medium text-[var(--admin-navy)] hover:underline text-left"
-                >
-                  <span className="font-mono text-xs text-gray-500">
-                    {orderId ? String(orderId).slice(-8) : "—"}
-                  </span>
-                </button>
-              </div>
-            );
+            return <OrderLink orderId={orderId} orderNumber={row.orderNumber || row.order_number} />;
           },
         },
 
