@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
     refundPolicy: {
       shipping: {
         fullCancellation: true,
+        itemCancellation: true,
         sellerCancellation: true,
         rtoDeliveryFailed: true,
         customerReturn: false,
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS = {
       },
       platformFee: {
         fullCancellation: true,
+        itemCancellation: false,
         sellerCancellation: true,
         rtoDeliveryFailed: false,
         customerReturn: false,
@@ -456,6 +458,7 @@ export default function CommerceSettings() {
           <div className="grid gap-3">
             {[
               ["fullCancellation", "Full order cancellation", "Customer cancels the complete order before fulfilment."],
+              ["itemCancellation", "Item-wise cancellation", "Customer cancels selected item(s). Shipping is refunded only when that seller package has no active item left."],
               ["sellerCancellation", "Seller cancels / out of stock", "Seller cannot fulfil the item or order."],
               ["rtoDeliveryFailed", "RTO / delivery failed", "Courier returns the shipment or delivery fails."],
               ["customerReturn", "Customer return after delivery", "Customer returns delivered products."],

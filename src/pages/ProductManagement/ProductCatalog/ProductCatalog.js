@@ -67,17 +67,18 @@ const INITIAL_FILTERS = {
 const DEFAULT_PAGE_SIZE = 10;
 const APPROVAL_STATUS_OPTIONS = [
   { value: "All", label: "All" },
-  { value: "Draft", label: "Draft" },
   { value: "Pending", label: "Pending" },
+  { value: "Approved", label: "Approved" },
   { value: "Change Pending", label: "Change Pending" },
   { value: "Rejected", label: "Rejected" },
-  { value: "Scheduled", label: "Scheduled" },
-  { value: "Archived", label: "Archived" },
 ];
 const ACTIVATION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
+  { value: "Draft", label: "Draft" },
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
+  { value: "Scheduled", label: "Scheduled" },
+  { value: "Archived", label: "Archived" },
 ];
 const SELLER_PANEL_ROLES = new Set([
   "seller",
@@ -323,12 +324,10 @@ const ProductCatalog = () => {
 
   const isChangePendingFilter =
     appliedFilters?.approvalStatus?.value === "Change Pending";
-  const approvalStatusToProductStatus = {
-    Draft: "draft",
-    Pending: "pending_approval",
+  const approvalStatusToApiStatus = {
+    Pending: "pending",
+    Approved: "approved",
     Rejected: "rejected",
-    Scheduled: "scheduled",
-    Archived: "archived",
   };
   const getSortByParam = (sortKey, sortDir) => {
     if (sortKey === "price") {
@@ -365,10 +364,13 @@ const ProductCatalog = () => {
       ...(appliedFilters?.activationStatus?.value === "Inactive"
         ? { status: "inactive" }
         : {}),
-      ...(approvalStatusToProductStatus[appliedFilters?.approvalStatus?.value]
+      ...(["Draft", "Scheduled", "Archived"].includes(appliedFilters?.activationStatus?.value)
+        ? { status: String(appliedFilters.activationStatus.value).toLowerCase() }
+        : {}),
+      ...(approvalStatusToApiStatus[appliedFilters?.approvalStatus?.value]
         ? {
-            status:
-              approvalStatusToProductStatus[
+            approvalStatus:
+              approvalStatusToApiStatus[
                 appliedFilters.approvalStatus.value
               ],
           }
@@ -1004,11 +1006,20 @@ const ProductCatalog = () => {
       // },
       {
         key: "status",
-        label: "Status",
+        label: "Activation Status",
         render: (_, product) => (
           <ProductStatusBadge
             status={product?.status}
             revisionStatus={product?.revisionStatus}
+          />
+        ),
+      },
+      {
+        key: "approvalStatus",
+        label: "Approval Status",
+        render: (_, product) => (
+          <ProductStatusBadge
+            status={product?.approvalStatus || (product?.approvedAt ? "approved" : "pending")}
           />
         ),
       },

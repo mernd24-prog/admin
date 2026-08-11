@@ -1364,7 +1364,15 @@ const ReferralCommerce = () => {
         ).unwrap();
       }
       if (action === "paid") {
-        await dispatch(markReferralPayoutPaid({ payoutId })).unwrap();
+        const transactionReference = window.prompt("Enter bank/UPI transaction reference (UTR):");
+        if (!transactionReference?.trim()) return;
+        const paymentProofUrl = window.prompt("Enter payment proof URL (optional):") || null;
+        await dispatch(markReferralPayoutPaid({
+          payoutId,
+          transactionReference: transactionReference.trim(),
+          paymentProofUrl,
+          paidAt: new Date().toISOString(),
+        })).unwrap();
       }
       toast.success("Payout updated");
       await refreshAll();
@@ -1530,6 +1538,7 @@ const ReferralCommerce = () => {
     method: payout.payoutMethod || "-",
     status: <StatusPill value={payout.status} />,
     requested: formatDate(payout.requestedAt || payout.createdAt),
+    reference: payout.transactionReference || "-",
     actions: (
       <div className="flex flex-wrap gap-2">
         <IconButton
@@ -1690,6 +1699,7 @@ const ReferralCommerce = () => {
                 summary?.wallets?.pendingBalance,
             ],
             ["Available", summary?.wallets?.availableBalance],
+            ["Reserved", summary?.wallets?.reservedBalance],
             [
               "Withdrawn",
               summary?.wallets?.withdrawnBalance ??
@@ -2214,6 +2224,7 @@ const ReferralCommerce = () => {
               { key: "method", label: "Method" },
               { key: "status", label: "Status" },
               { key: "requested", label: "Requested" },
+              { key: "reference", label: "UTR / Reference" },
               { key: "actions", label: "Actions" },
             ]}
             rows={payoutRows}

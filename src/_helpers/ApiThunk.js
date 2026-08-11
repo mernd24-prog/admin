@@ -98,7 +98,7 @@ const normalizeLegacyRecord = (record) => {
     }
   }
   if (next.status && next.isApproved === undefined && (next.title || next.sku || next.price !== undefined)) {
-    next.isApproved = next.status === "active";
+    next.isApproved = next.approvalStatus === "approved";
   }
 
   if (typeof next.isDisable !== "boolean") {

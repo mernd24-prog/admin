@@ -3,6 +3,8 @@ import React from 'react';
 const STATUS_CONFIG = {
   draft:            { label: 'Draft',            color: 'bg-gray-100 text-gray-600' },
   pending_approval: { label: 'Pending Approval', color: 'bg-yellow-100 text-yellow-700' },
+  pending:          { label: 'Pending Approval', color: 'bg-yellow-100 text-yellow-700' },
+  approved:         { label: 'Approved',         color: 'bg-green-100 text-green-700' },
   active:           { label: 'Active',           color: 'bg-green-100 text-green-700' },
   inactive:         { label: 'Inactive',         color: 'bg-orange-100 text-orange-700' },
   rejected:         { label: 'Rejected',         color: 'bg-red-100 text-red-700' },
