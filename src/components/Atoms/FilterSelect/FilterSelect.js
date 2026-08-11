@@ -1,7 +1,7 @@
 import Select from "react-select";
 import AsyncSelect from "react-select/async";
 
-const customStyles = (error) => ({
+const customStyles = (error, controlHeight) => ({
   control: (provided, state) => ({
     ...provided,
     backgroundColor: "var(--admin-field)",
@@ -16,7 +16,8 @@ const customStyles = (error) => ({
         ? ""
         : "none",
     borderRadius: "0.375rem",
-    minHeight: "36px",
+    minHeight: controlHeight ? `${controlHeight}px` : "36px",
+    ...(controlHeight ? { height: `${controlHeight}px` } : {}),
     cursor: "pointer",
     "&:hover": {
       borderColor: error ? "var(--admin-danger)" : "",
@@ -116,6 +117,8 @@ const FilterSelect = ({
   loadOptions,
   defaultOptions = true,
   cacheOptions = true,
+  formatOptionLabel,
+  controlHeight,
 }) => {
   const SelectComponent = loadOptions ? AsyncSelect : Select;
   const menuPortalTarget =
@@ -131,7 +134,7 @@ const FilterSelect = ({
       )}
       <div className="relative text-sm min-w-0 ">
         <SelectComponent
-          styles={customStyles(error)}
+          styles={customStyles(error, controlHeight)}
           className="capitalize"
           inputId={inputId}
           name={name}
@@ -147,6 +150,7 @@ const FilterSelect = ({
           isLoading={isLoading}
           isClearable={isClearable}
           isSearchable={isSearchable}
+          formatOptionLabel={formatOptionLabel}
           menuPortalTarget={menuPortalTarget}
           menuPosition="fixed"
           aria-invalid={Boolean(error)}

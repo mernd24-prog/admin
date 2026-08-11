@@ -294,6 +294,7 @@ const SelectInput = ({
   placeholder,
   className = "",
   disabled = false,
+  formatOptionLabel,
 }) => {
   const parsedOptions = useMemo(() => {
     if (options && Array.isArray(options)) return options;
@@ -355,6 +356,14 @@ const SelectInput = ({
         (label ? `Select ${label.toLowerCase()}` : "Select option")
       }
       isSearchable={true}
+      formatOptionLabel={
+        formatOptionLabel ||
+        ((option) => (
+          <span className="block truncate text-[13px] leading-5">
+            {option.label}
+          </span>
+        ))
+      }
       className={className}
     />
   );
@@ -434,6 +443,7 @@ const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
 );
 
 const emptyProductConfig = {
+  sellerId: "",
   productId: "",
   variantId: "",
   poolType: "fixed_amount",
@@ -502,7 +512,7 @@ const PaginationControls = ({ pagination, onPageChange, disabled }) => (
 
 const ProductDistributionManager = () => {
   const [configs, setConfigs] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [catalogProducts, setCatalogProducts] = useState([]);
   const [form, setForm] = useState(emptyProductConfig);
   const [loading, setLoading] = useState(true);
   const [configPage, setConfigPage] = useState(1);
@@ -533,11 +543,10 @@ const ProductDistributionManager = () => {
         apiRequest("GET", ENDPOINTS.products.listForPanel, {
           page: productPage,
           limit: 200,
-          ...(appliedProductSearch ? { q: appliedProductSearch } : {}),
         }),
       ]);
       setConfigs(responseList(configResponse));
-      setProducts(responseList(productResponse));
+      setCatalogProducts(responseList(productResponse));
       setConfigPagination(responsePagination(configResponse, configPage, 50));
       setProductPagination(
         responsePagination(productResponse, productPage, 200),
@@ -549,11 +558,48 @@ const ProductDistributionManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [configPage, productPage, appliedProductSearch]);
+  }, [configPage, productPage]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const sellerOptions = useMemo(() => {
+    const sellers = new Map();
+    catalogProducts.forEach((product) => {
+      const sellerId = product.sellerId || product.seller_id;
+      if (!sellerId || sellers.has(String(sellerId))) return;
+      const organization = product.organizationSnapshot || {};
+      sellers.set(String(sellerId), {
+        value: String(sellerId),
+        label:
+          organization.storeDisplayName ||
+          organization.legalBusinessName ||
+          `Seller ${shortId(sellerId)}`,
+        supportEmail: organization.supportEmail || "",
+      });
+    });
+    return Array.from(sellers.values()).sort((left, right) =>
+      left.label.localeCompare(right.label),
+    );
+  }, [catalogProducts]);
+
+  const products = useMemo(() => {
+    if (!form.sellerId) return [];
+    const query = appliedProductSearch.trim().toLowerCase();
+    return catalogProducts.filter((product) => {
+      if (
+        String(product.sellerId || product.seller_id || "") !==
+        String(form.sellerId)
+      ) {
+        return false;
+      }
+      if (!query) return true;
+      return [product.title, product.name, product.sku]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [catalogProducts, form.sellerId, appliedProductSearch]);
 
   const selectedProduct = products.find(
     (product) => String(product._id || product.id) === String(form.productId),
@@ -566,6 +612,10 @@ const ProductDistributionManager = () => {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (!form.sellerId) {
+      toast.error("Select a seller first");
+      return;
+    }
     if (Math.abs(shareTotal - 100) > 0.001) {
       toast.error("Customer, code owner and parent shares must total 100%");
       return;
@@ -581,6 +631,10 @@ const ProductDistributionManager = () => {
         parentSharePercent: Number(form.parentSharePercent || 0),
         metadata: {
           productTitle: selectedProduct?.title || selectedProduct?.name || "",
+          sellerName:
+            sellerOptions.find(
+              (seller) => String(seller.value) === String(form.sellerId),
+            )?.label || "",
           variantTitle:
             variants.find(
               (variant) =>
@@ -600,6 +654,9 @@ const ProductDistributionManager = () => {
     setForm({
       ...emptyProductConfig,
       ...config,
+      sellerId: String(
+        config.sellerId || config.seller_id || config.metadata?.sellerId || "",
+      ),
       productId: String(config.productId || ""),
       variantId: config.variantId ? String(config.variantId) : "",
     });
@@ -624,34 +681,73 @@ const ProductDistributionManager = () => {
           onSubmit={submit}
           className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4"
         >
-          <div className="md:col-span-4 flex flex-wrap items-end gap-2 rounded border border-gray-100 bg-gray-50 p-3">
-            <TextInput
-              label="Search Product Catalog"
-              value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
-            />
-            <OrangeButton
-              onClick={() => {
-                setProductPage(1);
-                setAppliedProductSearch(productSearch.trim());
-              }}
-            >
-              Search Products
-            </OrangeButton>
-            {appliedProductSearch && (
-              <button
-                type="button"
+          <div className="md:col-span-4 rounded border border-gray-100 bg-gray-50 p-3">
+            <label className="mb-1 block text-xs font-medium uppercase text-gray-500">
+              Search Product Catalog
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(event) => setProductSearch(event.target.value)}
+                className="h-10 min-w-0 flex-1 rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
+              />
+              <OrangeButton
+                disabled={!form.sellerId}
+                className="!h-10 shrink-0 justify-center !py-0 sm:min-w-[142px]"
+                style={{ height: 40 }}
                 onClick={() => {
-                  setProductSearch("");
-                  setAppliedProductSearch("");
                   setProductPage(1);
+                  setAppliedProductSearch(productSearch.trim());
                 }}
-                className="rounded border border-gray-200 bg-white px-4 py-2 text-sm"
               >
-                Clear
-              </button>
-            )}
+                Search Products
+              </OrangeButton>
+              {appliedProductSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductSearch("");
+                    setAppliedProductSearch("");
+                    setProductPage(1);
+                  }}
+                  className="h-10 shrink-0 rounded border border-gray-200 bg-white px-4 text-sm"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
+          <SelectInput
+            label="Seller"
+            value={form.sellerId}
+            options={sellerOptions}
+            formatOptionLabel={(seller, { context }) => (
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-[13px] font-medium">
+                  {seller.label}
+                </div>
+                {context === "menu" && seller.supportEmail ? (
+                  <div className="mt-1 truncate text-[11px] font-normal lowercase text-gray-500">
+                    {seller.supportEmail}
+                  </div>
+                ) : null}
+              </div>
+            )}
+            onChange={(event) => {
+              setForm({
+                ...form,
+                sellerId: event.target.value,
+                productId: "",
+                variantId: "",
+              });
+              setProductSearch("");
+              setAppliedProductSearch("");
+              setProductPage(1);
+            }}
+            required
+            placeholder="Select seller"
+          />
           <SelectInput
             label="Product"
             value={form.productId}
@@ -659,8 +755,9 @@ const ProductDistributionManager = () => {
               setForm({ ...form, productId: event.target.value, variantId: "" })
             }
             required
+            disabled={!form.sellerId}
+            placeholder="Select Product"
           >
-            <option value="">Select product</option>
             {products.map((product) => (
               <option
                 key={product._id || product.id}
@@ -2107,7 +2204,7 @@ const ReferralCommerce = () => {
 
       <form
         onSubmit={handleSearch}
-        className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white p-3"
+        className="flex flex-wrap items-stretch gap-2 rounded border border-gray-200 bg-white p-3"
       >
         <div className="relative min-w-[220px] flex-1">
           <Search
@@ -2139,8 +2236,13 @@ const ReferralCommerce = () => {
           onChange={(selected) => setStatus(selected ? selected.value : "")}
           isSearchable={false}
           placeholder="All statuses"
+          controlHeight={40}
         />
-        <OrangeButton type="submit">
+        <OrangeButton
+          type="submit"
+          className="!h-10 min-w-[106px] justify-center !py-0"
+          style={{ height: 40 }}
+        >
           <Search size={16} />
           Search
         </OrangeButton>
