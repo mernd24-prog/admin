@@ -3,7 +3,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { MdPerson, MdAdd, MdShield } from "react-icons/md";
+import {
+  MdPerson,
+  MdAdd,
+  MdShield,
+  MdVisibility,
+  MdEdit,
+  MdCheckCircle,
+  MdBlock,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -298,16 +306,24 @@ const Users = () => {
   const rowActions = useCallback(
     (row) => [
       {
-        label: "View",
+        label: "View User",
+        icon: <MdVisibility size={16} className="text-blue-600" />,
+        requiredModule: "users",
+        requiredAction: ACTIONS.VIEW,
         onClick: () => navigate(`/app/users/view/${row._id}`),
       },
       {
         label: "Permissions",
-        icon: <MdShield size={14} />,
+        icon: <MdShield size={16} className="text-purple-600" />,
+        requiredModule: "users",
+        requiredAction: ACTIONS.UPDATE,
         onClick: () => navigate(`/app/user-permissions/${row._id}`),
       },
       {
-        label: "Edit",
+        label: "Edit User",
+        icon: <MdEdit size={16} className="text-amber-600" />,
+        requiredModule: "users",
+        requiredAction: ACTIONS.UPDATE,
         onClick: () => {
           setFormData({
             _id: row._id,
@@ -328,7 +344,14 @@ const Users = () => {
         },
       },
       {
-        label: row.isDisable ? "Enable" : "Disable",
+        label: row.isDisable ? "Enable User" : "Disable User",
+        icon: row.isDisable ? (
+          <MdCheckCircle size={16} className="text-green-600" />
+        ) : (
+          <MdBlock size={16} className="text-red-600" />
+        ),
+        requiredModule: "users",
+        requiredAction: ACTIONS.STATUS_CHANGE,
         onClick: () => handleToggle(row),
         danger: !row.isDisable,
       },
