@@ -3,7 +3,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { MdAdd, MdStorefront } from "react-icons/md";
+import {
+  MdAdd,
+  MdStorefront,
+  MdVisibility,
+  MdEdit,
+  MdCheckCircle,
+  MdBlock,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -85,7 +92,9 @@ const Sellers = () => {
         keyWord: search,
         searchFields: "full_name,userName,email",
       }),
-    ).unwrap().catch((err) => toast.error(err?.message || "Failed to fetch sellers"));
+    )
+      .unwrap()
+      .catch((err) => toast.error(err?.message || "Failed to fetch sellers"));
   }, [pageNo, pageSize, search, isRefresh, dispatch]);
 
   const handleInputChange = (e) => {
@@ -97,12 +106,15 @@ const Sellers = () => {
   const validateForm = (isEdit = false) => {
     const errs = {};
     if (!formData.full_name?.trim()) errs.full_name = "Full name is required";
-    else if (formData.full_name.length < 3) errs.full_name = "At least 3 characters";
-    else if (formData.full_name.length > 50) errs.full_name = "Max 50 characters";
+    else if (formData.full_name.length < 3)
+      errs.full_name = "At least 3 characters";
+    else if (formData.full_name.length > 50)
+      errs.full_name = "Max 50 characters";
 
     if (!isEdit) {
       if (!formData.userName?.trim()) errs.userName = "Username is required";
-      else if (formData.userName.length < 5) errs.userName = "At least 5 characters";
+      else if (formData.userName.length < 5)
+        errs.userName = "At least 5 characters";
       else if (!/^[a-zA-Z0-9_]+$/.test(formData.userName))
         errs.userName = "Letters, numbers and underscores only";
     }
@@ -117,14 +129,21 @@ const Sellers = () => {
         errs.phone = "Phone must be 10–15 digits";
 
       if (!formData.password?.trim()) errs.password = "Password is required";
-      else if (formData.password.length < 8) errs.password = "At least 8 characters";
-      else if (formData.password.length > 15) errs.password = "Max 15 characters";
-      else if (!/[A-Z]/.test(formData.password)) errs.password = "At least one uppercase letter";
-      else if (!/[a-z]/.test(formData.password)) errs.password = "At least one lowercase letter";
-      else if (!/[0-9]/.test(formData.password)) errs.password = "At least one number";
-      else if (!/[^A-Za-z0-9]/.test(formData.password)) errs.password = "At least one special character";
+      else if (formData.password.length < 8)
+        errs.password = "At least 8 characters";
+      else if (formData.password.length > 15)
+        errs.password = "Max 15 characters";
+      else if (!/[A-Z]/.test(formData.password))
+        errs.password = "At least one uppercase letter";
+      else if (!/[a-z]/.test(formData.password))
+        errs.password = "At least one lowercase letter";
+      else if (!/[0-9]/.test(formData.password))
+        errs.password = "At least one number";
+      else if (!/[^A-Za-z0-9]/.test(formData.password))
+        errs.password = "At least one special character";
 
-      if (!formData.confirmPassword?.trim()) errs.confirmPassword = "Please confirm your password";
+      if (!formData.confirmPassword?.trim())
+        errs.confirmPassword = "Please confirm your password";
       else if (formData.password !== formData.confirmPassword)
         errs.confirmPassword = "Passwords do not match";
     }
@@ -143,16 +162,21 @@ const Sellers = () => {
     if (!validateForm(false)) return;
     setSaving(true);
     try {
-      const res = await dispatch(createSeller({
-        full_name: formData.full_name.trim(),
-        userName: formData.userName.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        isDisable: formData.isDisable,
-      })).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      const res = await dispatch(
+        createSeller({
+          full_name: formData.full_name.trim(),
+          userName: formData.userName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          isDisable: formData.isDisable,
+        }),
+      ).unwrap();
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "Seller created successfully");
       setIsOpenAddModal(false);
       resetForm();
@@ -170,13 +194,18 @@ const Sellers = () => {
     if (!validateForm(true)) return;
     setSaving(true);
     try {
-      const res = await dispatch(updateSeller({
-        _id: formData._id,
-        full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
-        isDisable: formData.isDisable,
-      })).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      const res = await dispatch(
+        updateSeller({
+          _id: formData._id,
+          full_name: formData.full_name.trim(),
+          email: formData.email.trim(),
+          isDisable: formData.isDisable,
+        }),
+      ).unwrap();
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "Seller updated successfully");
       setIsOpenEditModal(false);
       resetForm();
@@ -191,11 +220,16 @@ const Sellers = () => {
   const handleStatusConfirm = useCallback(async () => {
     if (!statusTarget) return;
     try {
-      const res = await dispatch(enableDisableSeller({
-        _id: [statusTarget._id],
-        isDisable: !statusTarget.isDisable,
-      })).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      const res = await dispatch(
+        enableDisableSeller({
+          _id: [statusTarget._id],
+          isDisable: !statusTarget.isDisable,
+        }),
+      ).unwrap();
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "Status updated successfully");
       setStatusTarget(null);
       setIsRefresh((r) => !r);
@@ -204,123 +238,158 @@ const Sellers = () => {
     }
   }, [statusTarget, dispatch]);
 
-  const columns = useMemo(() => [
-    {
-      key: "full_name",
-      label: "Name",
-      render: (v, row) => (
-        <button
-          type="button"
-          onClick={() => {
-            const sellerId = row?._id || row?.id;
-            if (sellerId) navigate(`/app/seller/view/${sellerId}`);
-          }}
-          className="group flex items-center gap-2 text-left"
-          aria-label={`View ${v || "seller"} details`}
-        >
-          <img
-            src={row?.profile?.avatarUrl || "/Img/noData.png"}
-            alt={v || "Seller"}
-            className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
-          />
-          <div className="min-w-0">
-            <p className="truncate font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
-              {v || row?.sellerProfile?.displayName || "N/A"}
+  const columns = useMemo(
+    () => [
+      {
+        key: "full_name",
+        label: "Name",
+        render: (v, row) => (
+          <button
+            type="button"
+            onClick={() => {
+              const sellerId = row?._id || row?.id;
+              if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+            }}
+            className="group flex items-center gap-2 text-left"
+            aria-label={`View ${v || "seller"} details`}
+          >
+            <img
+              src={row?.profile?.avatarUrl || "/Img/noData.png"}
+              alt={v || "Seller"}
+              className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
+            />
+            <div className="min-w-0">
+              <p className="truncate font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
+                {v || row?.sellerProfile?.displayName || "N/A"}
+              </p>
+              <p className="text-xs text-gray-400 truncate">
+                {row?.userName || ""}
+              </p>
+            </div>
+          </button>
+        ),
+      },
+      {
+        key: "email",
+        label: "Email",
+        render: (v) => (
+          <span className="text-sm text-gray-600">{v || "—"}</span>
+        ),
+      },
+      {
+        key: "phone",
+        label: "Phone",
+        render: (v) => (
+          <span className="text-sm text-gray-600">{v || "—"}</span>
+        ),
+      },
+      {
+        key: "_business",
+        label: "Business",
+        render: (_, row) => (
+          <div className="text-sm text-gray-700">
+            <p className="font-medium truncate max-w-[140px]">
+              {row?.sellerProfile?.businessName ||
+                row?.sellerProfile?.legalBusinessName ||
+                "—"}
             </p>
-            <p className="text-xs text-gray-400 truncate">{row?.userName || ""}</p>
+            {row?.sellerProfile?.gstNumber && (
+              <p className="text-xs text-gray-400">
+                GST: {row.sellerProfile.gstNumber}
+              </p>
+            )}
+            {row?.sellerProfile?.panNumber && (
+              <p className="text-xs text-gray-400">
+                PAN: {row.sellerProfile.panNumber}
+              </p>
+            )}
           </div>
-        </button>
-      ),
-    },
-    {
-      key: "email",
-      label: "Email",
-      render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
-    },
-    {
-      key: "phone",
-      label: "Phone",
-      render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
-    },
-    {
-      key: "_business",
-      label: "Business",
-      render: (_, row) => (
-        <div className="text-sm text-gray-700">
-          <p className="font-medium truncate max-w-[140px]">
-            {row?.sellerProfile?.businessName || row?.sellerProfile?.legalBusinessName || "—"}
-          </p>
-          {row?.sellerProfile?.gstNumber && (
-            <p className="text-xs text-gray-400">GST: {row.sellerProfile.gstNumber}</p>
-          )}
-          {row?.sellerProfile?.panNumber && (
-            <p className="text-xs text-gray-400">PAN: {row.sellerProfile.panNumber}</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "_onboarding",
-      label: "Onboarding",
-      render: (_, row) => (
-        <StatusBadge
-          status={row?.onboarding?.status || row?.sellerProfile?.onboardingStatus || "pending"}
-          size="sm"
-        />
-      ),
-    },
-    {
-      key: "_kyc",
-      label: "KYC",
-      render: (_, row) => (
-        <StatusBadge
-          status={row?.onboarding?.kycStatus || row?.sellerProfile?.kycStatus || "pending"}
-          size="sm"
-        />
-      ),
-    },
-    {
-      key: "_bank",
-      label: "Bank",
-      render: (_, row) => (
-        <StatusBadge
-          status={
-            row?.onboarding?.bankVerificationStatus ||
-            row?.sellerProfile?.bankVerificationStatus ||
-            "pending"
-          }
-          size="sm"
-        />
-      ),
-    },
-    {
-      key: "_golive",
-      label: "Go Live",
-      render: (_, row) => <StatusBadge status={getGoLiveStatus(row)} label={getGoLiveLabel(row)} size="sm" />,
-    },
-    {
-      key: "isDisable",
-      label: "Status",
-      render: (v, row) => (
-        <PermissionGuard module="sellers" action={ACTIONS.STATUS_CHANGE} hide>
-          <ToggleButton
-            isToggle={!v}
-            handleClick={() => setStatusTarget(row)}
+        ),
+      },
+      {
+        key: "_onboarding",
+        label: "Onboarding",
+        render: (_, row) => (
+          <StatusBadge
+            status={
+              row?.onboarding?.status ||
+              row?.sellerProfile?.onboardingStatus ||
+              "pending"
+            }
             size="sm"
           />
-        </PermissionGuard>
-      ),
-    },
-  ], [navigate]);
+        ),
+      },
+      {
+        key: "_kyc",
+        label: "KYC",
+        render: (_, row) => (
+          <StatusBadge
+            status={
+              row?.onboarding?.kycStatus ||
+              row?.sellerProfile?.kycStatus ||
+              "pending"
+            }
+            size="sm"
+          />
+        ),
+      },
+      {
+        key: "_bank",
+        label: "Bank",
+        render: (_, row) => (
+          <StatusBadge
+            status={
+              row?.onboarding?.bankVerificationStatus ||
+              row?.sellerProfile?.bankVerificationStatus ||
+              "pending"
+            }
+            size="sm"
+          />
+        ),
+      },
+      {
+        key: "_golive",
+        label: "Go Live",
+        render: (_, row) => (
+          <StatusBadge
+            status={getGoLiveStatus(row)}
+            label={getGoLiveLabel(row)}
+            size="sm"
+          />
+        ),
+      },
+      {
+        key: "isDisable",
+        label: "Status",
+        render: (v, row) => (
+          <PermissionGuard module="sellers" action={ACTIONS.STATUS_CHANGE} hide>
+            <ToggleButton
+              isToggle={!v}
+              handleClick={() => setStatusTarget(row)}
+              size="sm"
+            />
+          </PermissionGuard>
+        ),
+      },
+    ],
+    [navigate],
+  );
 
   const rowActions = useCallback(
     (row) => [
       {
-        label: "View",
+        label: "View Seller",
+        icon: <MdVisibility size={16} className="text-blue-600" />,
+        requiredModule: "sellers",
+        requiredAction: ACTIONS.VIEW,
         onClick: () => navigate(`/app/seller/view/${row._id}`),
       },
       {
-        label: "Edit",
+        label: "Edit Seller",
+        icon: <MdEdit size={16} className="text-amber-600" />,
+        requiredModule: "sellers",
+        requiredAction: ACTIONS.UPDATE,
         onClick: () => {
           setForm({
             _id: row._id,
@@ -350,8 +419,10 @@ const Sellers = () => {
         actions={
           <PermissionGuard module="sellers" action={ACTIONS.CREATE} hide>
             <button
-              onClick={() => { resetForm(); setIsOpenAddModal(true); }}
-
+              onClick={() => {
+                resetForm();
+                setIsOpenAddModal(true);
+              }}
             >
               <MdAdd size={16} /> Add Seller
             </button>
@@ -371,7 +442,10 @@ const Sellers = () => {
           setPageSize(size);
           setPageNo(1);
         }}
-        onSearch={(val) => { setSearch(val); setPageNo(1); }}
+        onSearch={(val) => {
+          setSearch(val);
+          setPageNo(1);
+        }}
         rowActions={rowActions}
         searchPlaceholder="Search by name, username or email…"
         emptyText="No sellers found."
@@ -382,7 +456,10 @@ const Sellers = () => {
       {/* Add Seller Modal */}
       <DefaultModal
         isOpen={isOpenAddModal}
-        onClose={() => { setIsOpenAddModal(false); resetForm(); }}
+        onClose={() => {
+          setIsOpenAddModal(false);
+          resetForm();
+        }}
         onSubmit={handleAddSubmit}
         isButtonView={true}
         submitButtonText={saving ? "Submitting..." : "Submit"}
@@ -460,7 +537,9 @@ const Sellers = () => {
             <p className="text-sm font-medium text-gray-700">Active</p>
             <ToggleButton
               isToggle={!formData.isDisable}
-              handleClick={() => setForm((p) => ({ ...p, isDisable: !p.isDisable }))}
+              handleClick={() =>
+                setForm((p) => ({ ...p, isDisable: !p.isDisable }))
+              }
             />
           </div>
         </div>
@@ -469,7 +548,10 @@ const Sellers = () => {
       {/* Edit Seller Modal */}
       <DefaultModal
         isOpen={isOpenEditModal}
-        onClose={() => { setIsOpenEditModal(false); resetForm(); }}
+        onClose={() => {
+          setIsOpenEditModal(false);
+          resetForm();
+        }}
         onSubmit={handleEditSubmit}
         isButtonView={true}
         submitButtonText={saving ? "Updating..." : "Update"}
@@ -515,7 +597,9 @@ const Sellers = () => {
             <p className="text-sm font-medium text-gray-700">Active</p>
             <ToggleButton
               isToggle={!formData.isDisable}
-              handleClick={() => setForm((p) => ({ ...p, isDisable: !p.isDisable }))}
+              handleClick={() =>
+                setForm((p) => ({ ...p, isDisable: !p.isDisable }))
+              }
             />
           </div>
         </div>

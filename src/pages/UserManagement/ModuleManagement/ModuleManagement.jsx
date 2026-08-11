@@ -2,6 +2,22 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import {
+  MdAdd,
+  MdEdit,
+  MdDelete,
+  MdCheckCircle,
+  MdBlock,
+  MdViewModule,
+  MdSort,
+  MdClose,
+} from "react-icons/md";
+import {
+  PageHeader,
+  DataTable,
+  StatusBadge,
+  FilterBar,
+} from "../../../components/Shared";
+import {
   createRbacModule,
   deleteRbacModule,
   getRbacModules,
@@ -25,6 +41,19 @@ const emptyForm = {
   isVisibleInSidebar: true,
   permissionsText: "view",
 };
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: "w-36",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+    ],
+  },
+];
 
 const getPayload = (sliceData = {}) => {
   const payload =
@@ -51,7 +80,7 @@ export default function ModuleManagement() {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [filters, setFilters] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -63,14 +92,31 @@ export default function ModuleManagement() {
     () => getPayload(selector?.rbacModulesData),
     [selector?.rbacModulesData],
   );
-  const modules = useMemo(() => payload.list || payload.items || [], [payload]);
+  const rawModules = useMemo(() => payload.list || payload.items || [], [payload]);
   const loading =
     !!selector?.loading ||
     (!selector?.rbacModulesData?.data && !selector?.rbacModulesData?.error);
 
+  const modules = useMemo(() => {
+    let result = rawModules;
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(
+        (m) =>
+          (m.moduleName || m.name || "").toLowerCase().includes(q) ||
+          (m.moduleKey || m.slug || "").toLowerCase().includes(q) ||
+          (m.routePath || "").toLowerCase().includes(q),
+      );
+    }
+    if (filters.status) {
+      result = result.filter((m) => (m.status || "active") === filters.status);
+    }
+    return result;
+  }, [rawModules, search, filters]);
+
   const parentOptions = useMemo(
     () =>
-      modules
+      rawModules
         .filter((item) =>
           ["group", "module"].includes(item.moduleType || "module"),
         )
@@ -78,7 +124,7 @@ export default function ModuleManagement() {
           value: idOf(item),
           label: item.moduleName || item.name,
         })),
-    [modules],
+    [rawModules],
   );
 
   const load = useCallback(() => {
@@ -86,11 +132,9 @@ export default function ModuleManagement() {
       getRbacModules({
         limit: 1000,
         includeInactive: true,
-        ...(search ? { q: search } : {}),
-        ...(status ? { status } : {}),
       }),
     );
-  }, [dispatch, search, status]);
+  }, [dispatch]);
 
   useEffect(() => {
     load();
@@ -116,7 +160,7 @@ export default function ModuleManagement() {
     return "view";
   };
 
-  const openEdit = (row) => {
+  const openEdit = useCallback((row) => {
     setEditing(row);
     setForm({
       moduleName: row.moduleName || row.name || "",
@@ -133,7 +177,7 @@ export default function ModuleManagement() {
       permissionsText: getPermissionsText(row),
     });
     setModalOpen(true);
-  };
+  }, []);
 
   const closeModal = () => {
     setModalOpen(false);
@@ -202,7 +246,7 @@ export default function ModuleManagement() {
     }
   };
 
-  const handleDelete = async (row) => {
+  const handleDelete = useCallback(async (row) => {
     if (!window.confirm(`Delete ${row.moduleName || row.name}?`)) return;
     try {
       await dispatch(deleteRbacModule({ id: idOf(row) })).unwrap();
@@ -211,9 +255,9 @@ export default function ModuleManagement() {
     } catch (error) {
       toast.error(error?.message || error || "Failed to delete module");
     }
-  };
+  }, [dispatch, load]);
 
-  const toggleStatus = async (row) => {
+  const toggleStatus = useCallback(async (row) => {
     const next = (row.status || "active") === "active" ? "inactive" : "active";
     try {
       await dispatch(
@@ -224,13 +268,13 @@ export default function ModuleManagement() {
     } catch (error) {
       toast.error(error?.message || error || "Failed to update status");
     }
-  };
+  }, [dispatch, load]);
 
   const normalizeOrders = async () => {
     try {
       await dispatch(
         reorderRbacModules({
-          modules: modules.map((item, index) => ({
+          modules: rawModules.map((item, index) => ({
             id: idOf(item),
             order: (index + 1) * 10,
           })),
@@ -243,159 +287,151 @@ export default function ModuleManagement() {
     }
   };
 
+  const columns = useMemo(
+    () => [
+      {
+        key: "moduleName",
+        label: "Module",
+        sortable: true,
+        render: (value, row) => (
+          <div>
+            <p className="font-medium text-gray-800">{value || row.name}</p>
+            {row.description && (
+              <p className="text-xs text-gray-400 truncate max-w-xs">{row.description}</p>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "moduleKey",
+        label: "Key",
+        sortable: true,
+        render: (value, row) => (
+          <span className="font-mono text-xs text-gray-600">{value || row.slug || "—"}</span>
+        ),
+      },
+      {
+        key: "parentModule",
+        label: "Parent",
+        render: (_, row) => (
+          <span className="text-sm text-gray-600">
+            {row.parentModule?.moduleName || row.parentModule?.name || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "routePath",
+        label: "Route",
+        render: (value) => (
+          <span className="font-mono text-xs text-gray-600">{value || "—"}</span>
+        ),
+      },
+      {
+        key: "moduleType",
+        label: "Type",
+        render: (value) => (
+          <span className="capitalize text-xs text-gray-600">{value || "module"}</span>
+        ),
+      },
+      {
+        key: "order",
+        label: "Order",
+        sortable: true,
+        render: (value) => <span className="text-xs font-mono">{value}</span>,
+      },
+      {
+        key: "isVisibleInSidebar",
+        label: "Sidebar",
+        render: (value) => (
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${value !== false ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+            {value !== false ? "Yes" : "No"}
+          </span>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (value, row) => (
+          <button type="button" onClick={() => toggleStatus(row)} title="Click to toggle status">
+            <StatusBadge status={value || (row.active === false ? "inactive" : "active")} dot />
+          </button>
+        ),
+      },
+    ],
+    [toggleStatus],
+  );
+
+  const rowActions = useCallback(
+    (row) => [
+      {
+        label: "Edit Module",
+        icon: <MdEdit size={16} className="text-amber-600" />,
+        onClick: () => openEdit(row),
+      },
+      {
+        label: (row.status || "active") === "active" ? "Deactivate Module" : "Activate Module",
+        icon: (row.status || "active") === "active" ? (
+          <MdBlock size={16} className="text-amber-600" />
+        ) : (
+          <MdCheckCircle size={16} className="text-green-600" />
+        ),
+        onClick: () => toggleStatus(row),
+      },
+      {
+        label: "Delete Module",
+        icon: <MdDelete size={16} className="text-red-600" />,
+        onClick: () => handleDelete(row),
+        danger: true,
+      },
+    ],
+    [openEdit, toggleStatus, handleDelete],
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">
-            Module Management
-          </h1>
-          <p className="text-sm text-gray-500">
-            Manage backend/admin modules, routes, sidebar visibility, and
-            parent-child structure.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={normalizeOrders}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
-          >
-            Normalize Order
-          </button>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
-          >
-            Add Module
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Module Management"
+        subtitle="Manage backend/admin modules, routes, sidebar visibility, and parent-child structure"
+        breadcrumbs={[{ label: "User Management" }, { label: "Module Management" }]}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={normalizeOrders}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+            >
+              <MdSort size={16} /> Normalize Order
+            </button>
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[var(--admin-navy)] hover:bg-[var(--admin-navy-dark,#1a1847)] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <MdAdd size={16} /> Add Module
+            </button>
+          </div>
+        }
+      />
 
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search modules..."
-          className="w-72 px-3 py-2 text-sm border border-gray-300 rounded-lg"
-        />
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-        >
-          <option value="">All statuses</option>
-          {recordStatuses.options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={load}
-          className="px-4 py-2 text-sm rounded border border-[var(--admin-blue)] text-[var(--admin-blue)] bg-white"
-        >
-          Apply
-        </button>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              {[
-                "Module",
-                "Key",
-                "Parent",
-                "Route",
-                "Type",
-                "Order",
-                "Sidebar",
-                "Status",
-                "Actions",
-              ].map((heading) => (
-                <th
-                  key={heading}
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase"
-                >
-                  {heading}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              Array.from({ length: 8 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="animate-pulse">
-                  {Array.from({ length: 9 }).map((__, columnIndex) => (
-                    <td key={columnIndex} className="px-4 py-3">
-                      <div className="h-4 w-3/4 rounded bg-[var(--admin-surface-soft)]" />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : modules.length ? (
-              modules.map((row) => (
-                <tr key={idOf(row)} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">
-                      {row.moduleName || row.name}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {row.description || "-"}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {row.moduleKey || row.slug}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.parentModule?.moduleName || "-"}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {row.routePath || "-"}
-                  </td>
-                  <td className="px-4 py-3 capitalize">
-                    {row.moduleType || "module"}
-                  </td>
-                  <td className="px-4 py-3">{row.order}</td>
-                  <td className="px-4 py-3">
-                    {row.isVisibleInSidebar ? "Yes" : "No"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => toggleStatus(row)}
-                      className={`px-2 py-1 rounded-full text-xs ${row.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
-                    >
-                      {row.status || "active"}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="px-2 py-1 text-xs rounded border border-blue-200 text-blue-600"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row)}
-                        className="px-2 py-1 text-xs rounded border border-red-200 text-red-500"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={9} className="p-8 text-center text-gray-400">
-                  No modules found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={modules}
+        loading={loading}
+        totalCount={modules.length}
+        onSearch={(val) => setSearch(val)}
+        rowActions={rowActions}
+        searchPlaceholder="Search modules by name, key, or route..."
+        emptyText="No modules found."
+        emptyIcon={<MdViewModule size={40} className="text-gray-200" />}
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={filters}
+            onChange={(key, val) => setFilters((prev) => ({ ...prev, [key]: val }))}
+            onClear={() => setFilters({})}
+            loading={loading}
+            activeCount={Object.keys(filters).filter((k) => Boolean(filters[k])).length}
+          />
+        }
+      />
 
       {modalOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 p-4">
