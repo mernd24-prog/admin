@@ -22,7 +22,7 @@ import {
 } from "../../../Redux/orderSlice";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import { useNavigate } from "react-router";
 
 const STATUSES = [
@@ -70,22 +70,28 @@ const FILTER_FIELDS = [
     key: "status",
     type: "select",
     label: "Status",
-    options: STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })),
+    options: STATUSES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
+    })),
   },
   {
     key: "refundStatus",
     type: "select",
     label: "Refund",
-    options: REFUND_STATUSES.map((v) => ({
-      value: v,
-      label: v.replace(/_/g, " "),
+    options: REFUND_STATUSES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
     })),
   },
   {
     key: "scope",
     type: "select",
     label: "Scope",
-    options: SCOPES.map((v) => ({ value: v, label: v })),
+    options: SCOPES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
+    })),
   },
   // { key: "fromDate", type: "date", label: "From" },
   // { key: "toDate", type: "date", label: "To" },
@@ -487,7 +493,9 @@ const Cancellations = () => {
                 <p className="font-mono text-xs">
                   <button
                     type="button"
-                    onClick={() => navigate(`/app/orders/view/${detail.orderId}`)}
+                    onClick={() =>
+                      navigate(`/app/orders/view/${detail.orderId}`)
+                    }
                     className="font-medium text-[var(--admin-navy)] hover:underline"
                   >
                     {detail.orderNumber ||

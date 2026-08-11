@@ -2,18 +2,17 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdSubscriptions } from "react-icons/md";
+import { MdSubscriptions, MdVisibility } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
   StatusBadge,
   FilterBar,
 } from "../../../components/Shared";
-import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const PAYMENT_STATUSES = [
   "initiated",
@@ -26,13 +25,13 @@ const PAYMENT_STATUSES = [
 
 const FILTER_FIELDS = [
   {
-    key: "status",
+    key: "paymentStatus",
     type: "select",
     label: "Payment Status",
     width: "w-44",
     options: PAYMENT_STATUSES.map((s) => ({
       value: s,
-      label: s.replace(/_/g, " "),
+      label: formatLabel(s),
     })),
   },
   { key: "fromDate", type: "date", label: "From Date", width: "w-36" },
@@ -126,7 +125,7 @@ const SubscriptionOrders = () => {
         page: params.page,
         limit: params.limit,
         search: params.search || undefined,
-        status: params.status || undefined,
+        paymentStatus: params.paymentStatus || params.status || undefined,
         fromDate: params.fromDate || undefined,
         toDate: params.toDate || undefined,
         orderType: "subscription",
@@ -139,23 +138,7 @@ const SubscriptionOrders = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
 
-  const columns = [
-    ...COLUMNS,
-    {
-      key: "_actions",
-      label: "",
-      render: (_, row) => (
-        <PermissionGuard module="subscriptions" action={ACTIONS.VIEW} hide>
-          <button
-            onClick={() => navigate(`/app/orders/view/${orderIdOf(row)}`)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--admin-navy)] text-[var(--admin-navy)] hover:bg-[var(--admin-navy)] hover:text-white transition-colors"
-          >
-            View
-          </button>
-        </PermissionGuard>
-      ),
-    },
-  ];
+  const columns = COLUMNS;
 
   return (
     <div>
@@ -186,6 +169,15 @@ const SubscriptionOrders = () => {
         emptyIcon={<MdSubscriptions size={40} className="text-gray-200" />}
         requiredModule="subscriptions"
         exportConfig={{ filename: "subscription-orders", columns: COLUMNS }}
+        rowActions={(row) => [
+          {
+            label: "View Order",
+            icon: <MdVisibility size={16} className="text-blue-600" />,
+            requiredModule: "subscriptions",
+            requiredAction: ACTIONS.VIEW,
+            onClick: () => navigate(`/app/orders/view/${orderIdOf(row)}`),
+          },
+        ]}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}

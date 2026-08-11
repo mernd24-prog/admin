@@ -20,7 +20,7 @@ import {
 } from "../../../Redux/sellerCommissionsSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const NEGATIVE_BALANCE_STATUSES = [
   "pending",
@@ -60,9 +60,9 @@ const FILTER_FIELDS = [
     key: "status",
     type: "select",
     label: "Status",
-    options: NEGATIVE_BALANCE_STATUSES.map((value) => ({
-      value,
-      label: value.replace(/_/g, " "),
+    options: NEGATIVE_BALANCE_STATUSES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
     })),
   },
   { key: "search", type: "text", label: "Search", width: "w-52" },
@@ -82,14 +82,15 @@ const unwrapList = (payload = {}) => {
   return {
     list: data?.items || data?.list || data || [],
     total: Number(
-      data?.total || data?.items?.length || data?.list?.length || 0
+      data?.total || data?.items?.length || data?.list?.length || 0,
     ),
   };
 };
 
 const valueOf = (row = {}, ...keys) => {
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") return row[key];
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "")
+      return row[key];
   }
   return 0;
 };
@@ -122,7 +123,7 @@ const NegativeBalances = () => {
         getNegativeBalances({
           ...params,
           offset: (params.page - 1) * params.limit,
-        })
+        }),
       ).unwrap();
     } catch (requestError) {
       const message =
@@ -177,7 +178,7 @@ const NegativeBalances = () => {
           action: action.resolveAction,
           referenceId: action.referenceId.trim() || undefined,
           note: action.note,
-        })
+        }),
       ).unwrap();
       toast.success("Negative balance recovery updated");
       setAction(EMPTY_ACTION);
@@ -187,7 +188,7 @@ const NegativeBalances = () => {
       toast.error(
         requestError?.message ||
           requestError ||
-          "Failed to resolve negative balance"
+          "Failed to resolve negative balance",
       );
     } finally {
       setLoading(false);
@@ -219,21 +220,15 @@ const NegativeBalances = () => {
         sortable: true,
         render: (_, row) => {
           const name =
-            row.sellerName ||
-            row.seller?.name ||
-            row.seller?.businessName;
+            row.sellerName || row.seller?.name || row.seller?.businessName;
           const email = row.sellerEmail || row.seller?.email;
           const value = row.sellerId || row.seller_id;
           return (
             <div>
               {name && (
-                <div className="text-sm font-medium text-gray-800">
-                  {name}
-                </div>
+                <div className="text-sm font-medium text-gray-800">{name}</div>
               )}
-              {email && (
-                <div className="text-xs text-gray-400">{email}</div>
-              )}
+              {email && <div className="text-xs text-gray-400">{email}</div>}
               {!name && !email && value && (
                 <span className="font-mono text-xs text-gray-500">
                   {String(value).slice(0, 16)}
@@ -250,7 +245,16 @@ const NegativeBalances = () => {
         label: "Negative Amount",
         sortable: true,
         render: (value, row) =>
-          money(valueOf({ value, ...row }, "value", "balance", "net_amount", "netAmount", "amount")),
+          money(
+            valueOf(
+              { value, ...row },
+              "value",
+              "balance",
+              "net_amount",
+              "netAmount",
+              "amount",
+            ),
+          ),
       },
       {
         key: "resolvedAmount",
@@ -269,7 +273,12 @@ const NegativeBalances = () => {
         label: "Created",
         sortable: true,
         render: (value, row) => {
-          const createdAt = valueOf({ value, ...row }, "value", "created_at", "createdAt");
+          const createdAt = valueOf(
+            { value, ...row },
+            "value",
+            "created_at",
+            "createdAt",
+          );
           return formatDateTime12Hour(createdAt, "N/A");
         },
       },
@@ -280,7 +289,11 @@ const NegativeBalances = () => {
           const status = row.status;
           if (status === "completed") return null;
           return (
-            <PermissionGuard module="sellers/commissions" action={ACTIONS.UPDATE} hide>
+            <PermissionGuard
+              module="sellers/commissions"
+              action={ACTIONS.UPDATE}
+              hide
+            >
               <button
                 type="button"
                 className="admin-btn-secondary !px-2 !py-1"
@@ -293,7 +306,7 @@ const NegativeBalances = () => {
         },
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -307,11 +320,7 @@ const NegativeBalances = () => {
           { label: "Negative Balances" },
         ]}
         actions={
-          <button
-            type="button"
-
-            onClick={fetchBalances}
-          >
+          <button type="button" onClick={fetchBalances}>
             <MdRefresh size={17} /> Refresh
           </button>
         }

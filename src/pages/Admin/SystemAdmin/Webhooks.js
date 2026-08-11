@@ -8,22 +8,50 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
-import { DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import {
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
 import { getWebhooks, createWebhook } from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { formatLabel } from "../../../utils/formatters";
 
 const STATUSES = ["active", "paused", "failed"];
 const FILTER_FIELDS = [
-  { key: "ownerId", type: "asyncDropdown", label: "Owner", load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "storeName,email" }) },
-  { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
+  {
+    key: "ownerId",
+    type: "asyncDropdown",
+    label: "Owner",
+    load: (search) =>
+      dropdownApi.getSellers({
+        keyWord: search,
+        searchFields: "storeName,email",
+      }),
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    options: STATUSES.map((v) => ({ value: v, label: formatLabel(v) })),
+  },
 ];
 
 const COMMON_EVENTS = [
-  "order.created", "order.status_changed", "order.shipped", "order.delivered",
-  "payment.captured", "payment.failed", "return.requested", "return.approved",
-  "seller.approved", "seller.rejected", "product.approved",
+  "order.created",
+  "order.status_changed",
+  "order.shipped",
+  "order.delivered",
+  "payment.captured",
+  "payment.failed",
+  "return.requested",
+  "return.approved",
+  "seller.approved",
+  "seller.rejected",
+  "product.approved",
 ];
 
 const unwrapList = (payload = {}) => {
@@ -38,7 +66,13 @@ const unwrapList = (payload = {}) => {
 };
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY") : "—");
-const EMPTY_FORM = { endpointUrl: "", secret: "", eventTypes: [], ownerId: "", maxRetries: 5 };
+const EMPTY_FORM = {
+  endpointUrl: "",
+  secret: "",
+  eventTypes: [],
+  ownerId: "",
+  maxRetries: 5,
+};
 
 const Webhooks = () => {
   const dispatch = useDispatch();
@@ -54,13 +88,20 @@ const Webhooks = () => {
   const [customEvent, setCustomEvent] = useState("");
   const [saving, setSaving] = useState(false);
   const [sellerOptions, setSellerOptions] = useState([]);
-  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {}); }, []);
+  useEffect(() => {
+    dropdownApi
+      .getSellers({ limit: 100 })
+      .then(setSellerOptions)
+      .catch(() => {});
+  }, []);
 
   const fetchWebhooks = useCallback(async () => {
     try {
       setLoading(true);
       const params = toQueryParams();
-      await dispatch(getWebhooks({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(
+        getWebhooks({ ...params, offset: (params.page - 1) * params.limit }),
+      ).unwrap();
     } catch (err) {
       toast.error(err?.message || "Failed to load webhooks");
     } finally {
@@ -68,7 +109,9 @@ const Webhooks = () => {
     }
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchWebhooks(); }, [fetchWebhooks]);
+  useEffect(() => {
+    fetchWebhooks();
+  }, [fetchWebhooks]);
 
   const toggleEvent = (event) => {
     setForm((p) => ({
@@ -81,24 +124,38 @@ const Webhooks = () => {
 
   const addCustomEvent = () => {
     if (customEvent.trim() && !form.eventTypes.includes(customEvent.trim())) {
-      setForm((p) => ({ ...p, eventTypes: [...p.eventTypes, customEvent.trim()] }));
+      setForm((p) => ({
+        ...p,
+        eventTypes: [...p.eventTypes, customEvent.trim()],
+      }));
       setCustomEvent("");
     }
   };
 
   const handleCreate = useCallback(async () => {
-    if (!form.endpointUrl.trim()) { toast.error("Endpoint URL required"); return; }
-    if (!form.endpointUrl.startsWith("http")) { toast.error("URL must start with http(s)://"); return; }
-    if (form.eventTypes.length === 0) { toast.error("Select at least one event type"); return; }
+    if (!form.endpointUrl.trim()) {
+      toast.error("Endpoint URL required");
+      return;
+    }
+    if (!form.endpointUrl.startsWith("http")) {
+      toast.error("URL must start with http(s)://");
+      return;
+    }
+    if (form.eventTypes.length === 0) {
+      toast.error("Select at least one event type");
+      return;
+    }
     try {
       setSaving(true);
-      await dispatch(createWebhook({
-        endpointUrl: form.endpointUrl,
-        secret: form.secret || undefined,
-        eventTypes: form.eventTypes,
-        ownerId: form.ownerId || undefined,
-        maxRetries: Number(form.maxRetries) || 5,
-      })).unwrap();
+      await dispatch(
+        createWebhook({
+          endpointUrl: form.endpointUrl,
+          secret: form.secret || undefined,
+          eventTypes: form.eventTypes,
+          ownerId: form.ownerId || undefined,
+          maxRetries: Number(form.maxRetries) || 5,
+        }),
+      ).unwrap();
       toast.success("Webhook created");
       setShowCreate(false);
       setForm(EMPTY_FORM);
@@ -114,12 +171,21 @@ const Webhooks = () => {
     {
       key: "endpointUrl",
       label: "Endpoint",
-      render: (v) => <span className="font-mono text-xs text-gray-800 truncate max-w-[200px] block">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-mono text-xs text-gray-800 truncate max-w-[200px] block">
+          {v || "—"}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusBadge status={v || "active"} color={v === "failed" ? "red" : v === "paused" ? "yellow" : "green"} />,
+      render: (v) => (
+        <StatusBadge
+          status={v || "active"}
+          color={v === "failed" ? "red" : v === "paused" ? "yellow" : "green"}
+        />
+      ),
     },
     {
       key: "eventTypes",
@@ -127,21 +193,46 @@ const Webhooks = () => {
       render: (v) => (
         <div className="flex flex-wrap gap-1">
           {(Array.isArray(v) ? v : []).slice(0, 2).map((e) => (
-            <span key={e} className="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">{e}</span>
+            <span
+              key={e}
+              className="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded"
+            >
+              {e}
+            </span>
           ))}
-          {(Array.isArray(v) ? v : []).length > 2 && <span className="text-xs text-gray-400">+{v.length - 2}</span>}
+          {(Array.isArray(v) ? v : []).length > 2 && (
+            <span className="text-xs text-gray-400">+{v.length - 2}</span>
+          )}
         </div>
       ),
     },
     {
       key: "deliverySuccessRate",
       label: "Success",
-      render: (v) => <span className={`text-sm font-medium ${Number(v) < 80 ? "text-red-600" : "text-green-600"}`}>{v != null ? `${v}%` : "—"}</span>,
+      render: (v) => (
+        <span
+          className={`text-sm font-medium ${Number(v) < 80 ? "text-red-600" : "text-green-600"}`}
+        >
+          {v != null ? `${v}%` : "—"}
+        </span>
+      ),
     },
     {
       key: "ownerId",
       label: "Owner",
-      render: (v, row) => { const name = row.ownerName || row.owner?.name || sellerOptions.find((o) => o.value === v)?.label; return name ? <span className="text-sm text-gray-700">{name}</span> : <span className="font-mono text-xs text-gray-500">{v ? String(v).slice(-8) : "platform"}</span>; },
+      render: (v, row) => {
+        const name =
+          row.ownerName ||
+          row.owner?.name ||
+          sellerOptions.find((o) => o.value === v)?.label;
+        return name ? (
+          <span className="text-sm text-gray-700">{name}</span>
+        ) : (
+          <span className="font-mono text-xs text-gray-500">
+            {v ? String(v).slice(-8) : "platform"}
+          </span>
+        );
+      },
     },
     {
       key: "createdAt",
@@ -171,24 +262,75 @@ const Webhooks = () => {
 
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
-      {loading ? <Loader /> : (
-        <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No webhooks configured" />
+      {loading ? (
+        <Loader />
+      ) : (
+        <DataTable
+          columns={COLUMNS}
+          data={payload.list}
+          total={payload.total}
+          listPage={list}
+          emptyMessage="No webhooks configured"
+        />
       )}
 
-      <DefaultModal isOpen={showCreate} onClose={() => { setShowCreate(false); setForm(EMPTY_FORM); }} title="Add Webhook">
+      <DefaultModal
+        isOpen={showCreate}
+        onClose={() => {
+          setShowCreate(false);
+          setForm(EMPTY_FORM);
+        }}
+        title="Add Webhook"
+      >
         <div className="p-4 space-y-4">
-          <Input label="Endpoint URL *" value={form.endpointUrl} onChange={(e) => setForm((p) => ({ ...p, endpointUrl: e.target.value }))} placeholder="https://your-server.com/webhook" />
-          <Input label="Secret (for HMAC signing)" value={form.secret} onChange={(e) => setForm((p) => ({ ...p, secret: e.target.value }))} placeholder="Leave blank to auto-generate" />
+          <Input
+            label="Endpoint URL *"
+            value={form.endpointUrl}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, endpointUrl: e.target.value }))
+            }
+            placeholder="https://your-server.com/webhook"
+          />
+          <Input
+            label="Secret (for HMAC signing)"
+            value={form.secret}
+            onChange={(e) => setForm((p) => ({ ...p, secret: e.target.value }))}
+            placeholder="Leave blank to auto-generate"
+          />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Owner <span className="text-gray-400 font-normal">(leave blank for platform)</span></label>
-            <select value={form.ownerId} onChange={(e) => setForm((p) => ({ ...p, ownerId: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Owner{" "}
+              <span className="text-gray-400 font-normal">
+                (leave blank for platform)
+              </span>
+            </label>
+            <select
+              value={form.ownerId}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, ownerId: e.target.value }))
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">— Platform (no specific seller) —</option>
-              {sellerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {sellerOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
-          <Input label="Max Retries" type="number" value={form.maxRetries} onChange={(e) => setForm((p) => ({ ...p, maxRetries: e.target.value }))} />
+          <Input
+            label="Max Retries"
+            type="number"
+            value={form.maxRetries}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, maxRetries: e.target.value }))
+            }
+          />
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Event Types *</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Event Types *
+            </p>
             <div className="flex flex-wrap gap-2 mb-2">
               {COMMON_EVENTS.map((e) => (
                 <button
@@ -209,20 +351,37 @@ const Webhooks = () => {
                 placeholder="Custom event type..."
                 className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
               />
-              <button onClick={addCustomEvent} className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200">Add</button>
+              <button
+                onClick={addCustomEvent}
+                className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+              >
+                Add
+              </button>
             </div>
             {form.eventTypes.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {form.eventTypes.map((e) => (
-                  <span key={e} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span
+                    key={e}
+                    className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1"
+                  >
                     {e}
-                    <button onClick={() => toggleEvent(e)} className="text-blue-400 hover:text-red-500">&times;</button>
+                    <button
+                      onClick={() => toggleEvent(e)}
+                      className="text-blue-400 hover:text-red-500"
+                    >
+                      &times;
+                    </button>
                   </span>
                 ))}
               </div>
             )}
           </div>
-          <button onClick={handleCreate} disabled={saving} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
+          <button
+            onClick={handleCreate}
+            disabled={saving}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+          >
             {saving ? "Creating..." : "Create Webhook"}
           </button>
         </div>

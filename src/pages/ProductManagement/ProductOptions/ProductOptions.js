@@ -201,61 +201,7 @@ export default function ProductOptions() {
     }
   };
 
-  const columns = [
-    ...COLUMNS,
-    {
-      key: "actions",
-      label: "Actions",
-      render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <PermissionGuard module="products" action={ACTIONS.VIEW} hide>
-            <button
-              type="button"
-              onClick={() => navigate(`/app/product-option-value/${idOf(row)}`)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-              title="Manage values"
-            >
-              <MdListAlt size={16} />
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
-            <button
-              type="button"
-              onClick={() => openEdit(row)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-              title="Edit option"
-            >
-              <MdEdit size={16} />
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
-            <button
-              type="button"
-              onClick={() => setStatusTarget(row)}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
-                row.active === false
-                  ? "border-green-100 text-green-600 hover:bg-green-50"
-                  : "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
-              }`}
-              title={row.active === false ? "Enable option" : "Disable option"}
-            >
-              {row.active === false ? <MdToggleOn size={18} /> : <MdToggleOff size={18} />}
-            </button>
-          </PermissionGuard>
-          <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(row)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50"
-              title="Delete option"
-            >
-              <MdDelete size={16} />
-            </button>
-          </PermissionGuard>
-        </div>
-      ),
-    },
-  ];
+  const columns = COLUMNS;
 
   return (
     <div>
@@ -293,6 +239,42 @@ export default function ProductOptions() {
         emptyIcon={<MdSettings size={40} className="text-gray-200" />}
         requiredModule="products"
         exportConfig={{ filename: "product-option-masters", columns: COLUMNS }}
+        rowActions={(row) => [
+          {
+            label: "Manage Values",
+            icon: <MdListAlt size={16} className="text-blue-600" />,
+            requiredModule: "products",
+            requiredAction: ACTIONS.VIEW,
+            onClick: () => navigate(`/app/product-option-value/${idOf(row)}`),
+          },
+          {
+            label: "Edit Option",
+            icon: <MdEdit size={16} className="text-emerald-600" />,
+            requiredModule: "products",
+            requiredAction: ACTIONS.UPDATE,
+            onClick: () => openEdit(row),
+          },
+          {
+            label: row.active === false ? "Enable Option" : "Disable Option",
+            icon:
+              row.active === false ? (
+                <MdToggleOn size={18} className="text-emerald-600" />
+              ) : (
+                <MdToggleOff size={18} className="text-amber-600" />
+              ),
+            requiredModule: "products",
+            requiredAction: ACTIONS.STATUS_CHANGE,
+            onClick: () => setStatusTarget(row),
+          },
+          {
+            label: "Delete Option",
+            icon: <MdDelete size={16} className="text-red-600" />,
+            danger: true,
+            requiredModule: "products",
+            requiredAction: ACTIONS.DELETE,
+            onClick: () => setDeleteTarget(row),
+          },
+        ]}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}

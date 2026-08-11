@@ -179,7 +179,7 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
                 type="button"
                 role="menuitem"
                 disabled={action.disabled}
-                className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left  text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
                   action.danger
                     ? "text-red-600 hover:bg-red-50"
                     : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"

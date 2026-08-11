@@ -2,7 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdCheckCircle, MdClose, MdRefresh, MdVisibility, MdGavel } from "react-icons/md";
+import {
+  MdCheckCircle,
+  MdClose,
+  MdRefresh,
+  MdVisibility,
+  MdGavel,
+} from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import {
@@ -20,6 +26,7 @@ import {
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import { getPrimaryProductImage } from "../../../_helpers/productMedia";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -27,18 +34,18 @@ import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const MODERATION_STATUSES = [
   { value: "pending_approval", label: "Pending Approval" },
-  { value: "change_pending",   label: "Change Pending"   },
-  { value: "rejected",         label: "Rejected"         },
+  { value: "change_pending", label: "Change Pending" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 const CHECKLIST_FIELDS = [
-  { key: "imagesOk",      label: "Images OK"      },
-  { key: "titleOk",       label: "Title OK"       },
+  { key: "imagesOk", label: "Images OK" },
+  { key: "titleOk", label: "Title OK" },
   { key: "descriptionOk", label: "Description OK" },
-  { key: "pricingOk",     label: "Pricing OK"     },
-  { key: "categoryOk",    label: "Category OK"    },
-  { key: "specsOk",       label: "Specs OK"       },
-  { key: "complianceOk",  label: "Compliance OK"  },
+  { key: "pricingOk", label: "Pricing OK" },
+  { key: "categoryOk", label: "Category OK" },
+  { key: "specsOk", label: "Specs OK" },
+  { key: "complianceOk", label: "Compliance OK" },
 ];
 
 const FILTER_FIELDS = [
@@ -56,13 +63,13 @@ const EMPTY_REJECT_MODAL = {
   product: null,
   rejectionReason: "",
   checklist: {
-    imagesOk:      false,
-    titleOk:       false,
+    imagesOk: false,
+    titleOk: false,
     descriptionOk: false,
-    pricingOk:     false,
-    categoryOk:    false,
-    specsOk:       false,
-    complianceOk:  false,
+    pricingOk: false,
+    categoryOk: false,
+    specsOk: false,
+    complianceOk: false,
   },
 };
 
@@ -73,7 +80,13 @@ const EMPTY_MODERATE_MODAL = {
   rejectionReason: "",
 };
 
-const EMPTY_CONFIRM = { open: false, title: "", message: "", variant: "warning", onConfirm: null };
+const EMPTY_CONFIRM = {
+  open: false,
+  title: "",
+  message: "",
+  variant: "warning",
+  onConfirm: null,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -83,38 +96,41 @@ const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return { list: data, total: data.length };
   return {
-    list:  data?.items || data?.list || data || [],
-    total: Number(data?.total ?? data?.items?.length ?? data?.list?.length ?? 0),
+    list: data?.items || data?.list || data || [],
+    total: Number(
+      data?.total ?? data?.items?.length ?? data?.list?.length ?? 0,
+    ),
   };
 };
 
 const productId = (row) => row?._id || row?.id || row?.productId;
-const money     = (value) => `INR ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const display   = (value = "") => String(value || "N/A").replace(/_/g, " ");
+const money = (value) =>
+  `INR ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 const ProductModerationQueue = () => {
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
-  const selector  = useSelector((state) => state.adminCore);
-  const payload   = unwrapList(selector.adminProductModerationQueueData);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const selector = useSelector((state) => state.adminCore);
+  const payload = unwrapList(selector.adminProductModerationQueueData);
 
   const list = useListPage({
     defaultPageSize: 20,
-    defaultSortKey:  "createdAt",
-    defaultSortDir:  "desc",
-    defaultFilters:  { status: "pending_approval" },
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+    defaultFilters: { status: "pending_approval" },
   });
   const { toQueryParams } = list;
 
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState("");
-  const [rejectModal,    setRejectModal]    = useState(EMPTY_REJECT_MODAL);
-  const [moderateModal,  setModerateModal]  = useState(EMPTY_MODERATE_MODAL);
-  const [confirmState,   setConfirmState]   = useState(EMPTY_CONFIRM);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [rejectModal, setRejectModal] = useState(EMPTY_REJECT_MODAL);
+  const [moderateModal, setModerateModal] = useState(EMPTY_MODERATE_MODAL);
+  const [confirmState, setConfirmState] = useState(EMPTY_CONFIRM);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchQueue = useCallback(async () => {
@@ -122,12 +138,17 @@ const ProductModerationQueue = () => {
       setLoading(true);
       setError("");
       const params = toQueryParams();
-      await dispatch(getAdminProductModerationQueue({
-        ...params,
-        offset: (params.page - 1) * params.limit,
-      })).unwrap();
+      await dispatch(
+        getAdminProductModerationQueue({
+          ...params,
+          offset: (params.page - 1) * params.limit,
+        }),
+      ).unwrap();
     } catch (requestError) {
-      const message = requestError?.message || requestError || "Failed to load moderation queue";
+      const message =
+        requestError?.message ||
+        requestError ||
+        "Failed to load moderation queue";
       setError(message);
       toast.error(message);
     } finally {
@@ -140,30 +161,39 @@ const ProductModerationQueue = () => {
   }, [fetchQueue]);
 
   // ── Approve single ───────────────────────────────────────────────────────
-  const openApproveConfirm = useCallback((row) => {
-    setConfirmState({
-      open:      true,
-      title:     "Approve Product?",
-      message:   `This will approve "${row.title || row.name || productId(row)}" and set its status to active.`,
-      variant:   "success",
-      onConfirm: async () => {
-        try {
-          setLoading(true);
-          await dispatch(moderateAdminProduct({
-            productId: productId(row),
-            status:    "active",
-          })).unwrap();
-          toast.success("Product approved successfully");
-          setConfirmState(EMPTY_CONFIRM);
-          await fetchQueue();
-        } catch (requestError) {
-          toast.error(requestError?.message || requestError || "Failed to approve product");
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-  }, [dispatch, fetchQueue]);
+  const openApproveConfirm = useCallback(
+    (row) => {
+      setConfirmState({
+        open: true,
+        title: "Approve Product?",
+        message: `This will approve "${row.title || row.name || productId(row)}" and set its status to active.`,
+        variant: "success",
+        onConfirm: async () => {
+          try {
+            setLoading(true);
+            await dispatch(
+              moderateAdminProduct({
+                productId: productId(row),
+                status: "active",
+              }),
+            ).unwrap();
+            toast.success("Product approved successfully");
+            setConfirmState(EMPTY_CONFIRM);
+            await fetchQueue();
+          } catch (requestError) {
+            toast.error(
+              requestError?.message ||
+                requestError ||
+                "Failed to approve product",
+            );
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+    },
+    [dispatch, fetchQueue],
+  );
 
   // ── Reject single ────────────────────────────────────────────────────────
   const openRejectModal = useCallback((row) => {
@@ -182,17 +212,21 @@ const ProductModerationQueue = () => {
     }
     try {
       setLoading(true);
-      await dispatch(moderateAdminProduct({
-        productId:       productId(product),
-        status:          "rejected",
-        rejectionReason: rejectionReason.trim(),
-        checklist,
-      })).unwrap();
+      await dispatch(
+        moderateAdminProduct({
+          productId: productId(product),
+          status: "rejected",
+          rejectionReason: rejectionReason.trim(),
+          checklist,
+        }),
+      ).unwrap();
       toast.success("Product rejected");
       setRejectModal(EMPTY_REJECT_MODAL);
       await fetchQueue();
     } catch (requestError) {
-      toast.error(requestError?.message || requestError || "Failed to reject product");
+      toast.error(
+        requestError?.message || requestError || "Failed to reject product",
+      );
     } finally {
       setLoading(false);
     }
@@ -205,22 +239,33 @@ const ProductModerationQueue = () => {
 
   const handleModerateSubmit = useCallback(async () => {
     const { product, status, rejectionReason } = moderateModal;
-    if (status === "rejected" && (!rejectionReason.trim() || rejectionReason.trim().length < 10)) {
-      toast.error("Rejection reason must be at least 10 characters when rejecting");
+    if (
+      status === "rejected" &&
+      (!rejectionReason.trim() || rejectionReason.trim().length < 10)
+    ) {
+      toast.error(
+        "Rejection reason must be at least 10 characters when rejecting",
+      );
       return;
     }
     try {
       setLoading(true);
-      await dispatch(moderateAdminProduct({
-        productId:       productId(product),
-        status,
-        ...(status === "rejected" && { rejectionReason: rejectionReason.trim() }),
-      })).unwrap();
+      await dispatch(
+        moderateAdminProduct({
+          productId: productId(product),
+          status,
+          ...(status === "rejected" && {
+            rejectionReason: rejectionReason.trim(),
+          }),
+        }),
+      ).unwrap();
       toast.success(`Product status updated to ${display(status)}`);
       setModerateModal(EMPTY_MODERATE_MODAL);
       await fetchQueue();
     } catch (requestError) {
-      toast.error(requestError?.message || requestError || "Failed to moderate product");
+      toast.error(
+        requestError?.message || requestError || "Failed to moderate product",
+      );
     } finally {
       setLoading(false);
     }
@@ -231,24 +276,28 @@ const ProductModerationQueue = () => {
     const count = list.selectedKeys.length;
     if (!count) return;
     setConfirmState({
-      open:      true,
-      title:     `Approve ${count} product${count > 1 ? "s" : ""}?`,
-      message:   `All ${count} selected product${count > 1 ? "s" : ""} will be set to active.`,
-      variant:   "success",
+      open: true,
+      title: `Approve ${count} product${count > 1 ? "s" : ""}?`,
+      message: `All ${count} selected product${count > 1 ? "s" : ""} will be set to active.`,
+      variant: "success",
       onConfirm: async () => {
         try {
           setLoading(true);
           await Promise.all(
             list.selectedKeys.map((key) =>
-              dispatch(moderateAdminProduct({ productId: key, status: "active" })).unwrap()
-            )
+              dispatch(
+                moderateAdminProduct({ productId: key, status: "active" }),
+              ).unwrap(),
+            ),
           );
           toast.success(`${count} product${count > 1 ? "s" : ""} approved`);
           list.clearSelection();
           setConfirmState(EMPTY_CONFIRM);
           await fetchQueue();
         } catch (requestError) {
-          toast.error(requestError?.message || requestError || "Bulk approve failed");
+          toast.error(
+            requestError?.message || requestError || "Bulk approve failed",
+          );
         } finally {
           setLoading(false);
         }
@@ -263,10 +312,10 @@ const ProductModerationQueue = () => {
     // Open the reject modal with null product — we'll iterate selectedKeys on submit
     setRejectModal({
       ...EMPTY_REJECT_MODAL,
-      open:    true,
+      open: true,
       product: null, // signals bulk mode
-      _bulk:   true,
-      _count:  count,
+      _bulk: true,
+      _count: count,
     });
   }, [list]);
 
@@ -285,194 +334,167 @@ const ProductModerationQueue = () => {
       setLoading(true);
       await Promise.all(
         list.selectedKeys.map((key) =>
-          dispatch(moderateAdminProduct({
-            productId:       key,
-            status:          "rejected",
-            rejectionReason: rejectionReason.trim(),
-            checklist,
-          })).unwrap()
-        )
+          dispatch(
+            moderateAdminProduct({
+              productId: key,
+              status: "rejected",
+              rejectionReason: rejectionReason.trim(),
+              checklist,
+            }),
+          ).unwrap(),
+        ),
       );
       toast.success(`${count} product${count > 1 ? "s" : ""} rejected`);
       list.clearSelection();
       setRejectModal(EMPTY_REJECT_MODAL);
       await fetchQueue();
     } catch (requestError) {
-      toast.error(requestError?.message || requestError || "Bulk reject failed");
+      toast.error(
+        requestError?.message || requestError || "Bulk reject failed",
+      );
     } finally {
       setLoading(false);
     }
   }, [dispatch, fetchQueue, list, rejectModal]);
 
   // ── Columns ───────────────────────────────────────────────────────────────
-  const columns = useMemo(() => [
-    {
-      key:      "_id",
-      label:    "Product ID",
-      sortable: true,
-      render:   (_, row) => (
-        <span className="font-mono text-xs text-gray-500">
-          {String(productId(row) || "").slice(0, 16)}{String(productId(row) || "").length > 16 ? "…" : ""}
-        </span>
-      ),
-    },
-    {
-      key:      "title",
-      label:    "Name / Title",
-      sortable: true,
-      render:   (value, row) => {
-        const name      = row.title || row.name || value;
-        const thumbnail = row.thumbnail || row.images?.[0]?.url || row.image;
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            {thumbnail ? (
-              <img
-                src={thumbnail}
-                alt={name || "product"}
-                className="w-8 h-8 rounded object-cover flex-shrink-0 border border-gray-100"
-                onError={(e) => { e.target.style.display = "none"; }}
-              />
-            ) : (
-              <div className="w-8 h-8 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center">
+  const columns = useMemo(
+    () => [
+      {
+        key: "_id",
+        label: "Product ID",
+        sortable: true,
+        render: (_, row) => (
+          <span className="font-mono text-xs text-gray-500">
+            {String(productId(row) || "").slice(0, 16)}
+            {String(productId(row) || "").length > 16 ? "…" : ""}
+          </span>
+        ),
+      },
+      {
+        key: "title",
+        label: "Name / Title",
+        sortable: true,
+        render: (value, row) => {
+          const name = row.title || row.name || value;
+          const thumbnail = getPrimaryProductImage(row);
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              {thumbnail ? (
+                <img
+                  src={thumbnail}
+                  alt={name || "product"}
+                  className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-gray-100"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-8 h-8 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center ${thumbnail ? "hidden" : ""}`}
+              >
                 <span className="text-xs text-gray-400">IMG</span>
               </div>
-            )}
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate max-w-[200px]">{name || "—"}</div>
-              {row.sku && <div className="text-xs text-gray-400">SKU: {row.sku}</div>}
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-800 truncate max-w-[200px]">
+                  {name || "—"}
+                </div>
+                {row.sku && (
+                  <div className="text-xs text-gray-400">SKU: {row.sku}</div>
+                )}
+              </div>
             </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      key:      "category",
-      label:    "Category",
-      sortable: true,
-      render:   (value, row) => {
-        const cat = row.categoryName || row.category?.name || value;
-        return <span className="text-sm text-gray-700">{cat || "—"}</span>;
+      {
+        key: "category",
+        label: "Category",
+        sortable: true,
+        render: (value, row) => {
+          const cat = row.categoryName || row.category?.name || value;
+          return <span className="text-sm text-gray-700">{cat || "—"}</span>;
+        },
       },
-    },
-    {
-      key:      "sellerId",
-      label:    "Seller",
-      sortable: true,
-      render:   (value, row) => {
-        const name = row.sellerName || row.seller?.name || row.seller?.businessName;
-        return (
-          <div>
-            {name && <div className="text-sm font-medium text-gray-800">{name}</div>}
-            {!name && value && (
-              <span className="font-mono text-xs text-gray-500">
-                {String(value).slice(0, 14)}{String(value).length > 14 ? "…" : ""}
-              </span>
-            )}
-            {!name && !value && "—"}
-          </div>
-        );
+      {
+        key: "sellerId",
+        label: "Seller",
+        sortable: true,
+        render: (value, row) => {
+          const name =
+            row.sellerName || row.seller?.name || row.seller?.businessName;
+          return (
+            <div>
+              {name && (
+                <div className="text-sm font-medium text-gray-800">{name}</div>
+              )}
+              {!name && value && (
+                <span className="font-mono text-xs text-gray-500">
+                  {String(value).slice(0, 14)}
+                  {String(value).length > 14 ? "…" : ""}
+                </span>
+              )}
+              {!name && !value && "—"}
+            </div>
+          );
+        },
       },
-    },
-    {
-      key:      "status",
-      label:    "Status",
-      sortable: true,
-      render:   (value) => <StatusBadge status={display(value)} dot />,
-    },
-    {
-      key:      "price",
-      label:    "Price",
-      sortable: true,
-      render:   (value, row) => {
-        const price = value ?? row.basePrice ?? row.mrp ?? row.variants?.[0]?.price;
-        return <span className="text-sm text-gray-700">{price != null ? money(price) : "—"}</span>;
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        render: (value) => <StatusBadge status={display(value)} dot />,
       },
-    },
-    {
-      key:      "createdAt",
-      label:    "Submitted",
-      sortable: true,
-      render:   (value) => formatDateTime12Hour(value, "—"),
-    },
-    {
-      key:    "actions",
-      label:  "Actions",
-      render: (_, row) => (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View */}
-          <PermissionGuard module="products" action={ACTIONS.VIEW} hide>
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => navigate(`/app/product-catalog/view/${productId(row)}`)}
-            >
-              <MdVisibility size={15} /> View
-            </button>
-          </PermissionGuard>
-
-          {/* Approve — for pending_approval */}
-          {row.status === "pending_approval" && (
-            <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                className="admin-btn-secondary !px-2 !py-1 text-green-600"
-                onClick={() => openApproveConfirm(row)}
-              >
-                <MdCheckCircle size={15} /> Approve
-              </button>
-            </PermissionGuard>
-          )}
-
-          {/* Reject — for pending_approval */}
-          {row.status === "pending_approval" && (
-            <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                className="admin-btn-secondary !px-2 !py-1 text-red-600"
-                onClick={() => openRejectModal(row)}
-              >
-                <MdClose size={15} /> Reject
-              </button>
-            </PermissionGuard>
-          )}
-
-          {/* Moderate — for change_pending */}
-          {row.status === "change_pending" && (
-            <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                className="admin-btn-secondary !px-2 !py-1"
-                onClick={() => openModerateModal(row)}
-              >
-                <MdGavel size={15} /> Moderate
-              </button>
-            </PermissionGuard>
-          )}
-        </div>
-      ),
-    },
-  ], [navigate, openApproveConfirm, openRejectModal, openModerateModal]);
+      {
+        key: "price",
+        label: "Price",
+        sortable: true,
+        render: (value, row) => {
+          const price =
+            value ?? row.basePrice ?? row.mrp ?? row.variants?.[0]?.price;
+          return (
+            <span className="text-sm text-gray-700">
+              {price != null ? money(price) : "—"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "createdAt",
+        label: "Submitted",
+        sortable: true,
+        render: (value) => formatDateTime12Hour(value, "—"),
+      },
+    ],
+    [],
+  );
 
   // ── Bulk actions config ──────────────────────────────────────────────────
-  const bulkActions = useMemo(() => [
-    {
-      label:   "Approve Selected",
-      icon:    <MdCheckCircle />,
-      action:  ACTIONS.UPDATE,
-      onClick: handleBulkApprove,
-      variant: "primary",
-    },
-    {
-      label:   "Reject Selected",
-      icon:    <MdClose />,
-      action:  ACTIONS.UPDATE,
-      onClick: handleBulkReject,
-      variant: "danger",
-    },
-  ], [handleBulkApprove, handleBulkReject]);
+  const bulkActions = useMemo(
+    () => [
+      {
+        label: "Approve Selected",
+        icon: <MdCheckCircle />,
+        action: ACTIONS.UPDATE,
+        onClick: handleBulkApprove,
+        variant: "primary",
+      },
+      {
+        label: "Reject Selected",
+        icon: <MdClose />,
+        action: ACTIONS.UPDATE,
+        onClick: handleBulkReject,
+        variant: "danger",
+      },
+    ],
+    [handleBulkApprove, handleBulkReject],
+  );
 
   // ── Reject modal submit handler — routes to single vs bulk ───────────────
-  const onRejectModalSubmit = rejectModal._bulk ? handleBulkRejectSubmit : handleRejectSubmit;
+  const onRejectModalSubmit = rejectModal._bulk
+    ? handleBulkRejectSubmit
+    : handleRejectSubmit;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -482,7 +504,10 @@ const ProductModerationQueue = () => {
       <PageHeader
         title="Product Moderation Queue"
         subtitle="Review and approve or reject products submitted by sellers"
-        breadcrumbs={[{ label: "Product Management" }, { label: "Moderation Queue" }]}
+        breadcrumbs={[
+          { label: "Product Management" },
+          { label: "Moderation Queue" },
+        ]}
         actions={
           <button type="button" onClick={fetchQueue}>
             <MdRefresh size={17} /> Refresh
@@ -510,7 +535,46 @@ const ProductModerationQueue = () => {
         selectable
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
-        filterBar={(
+        rowActions={(row) => [
+          {
+            label: "View Product",
+            icon: <MdVisibility size={16} className="text-blue-600" />,
+            requiredModule: "products",
+            requiredAction: ACTIONS.VIEW,
+            onClick: () =>
+              navigate(`/app/product-catalog/view/${productId(row)}`),
+          },
+          ...(row.status === "pending_approval"
+            ? [
+                {
+                  label: "Approve Product",
+                  icon: <MdCheckCircle size={16} className="text-green-600" />,
+                  requiredModule: "products",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () => openApproveConfirm(row),
+                },
+                {
+                  label: "Reject Product",
+                  icon: <MdClose size={16} className="text-red-600" />,
+                  requiredModule: "products",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () => openRejectModal(row),
+                },
+              ]
+            : []),
+          ...(row.status === "change_pending"
+            ? [
+                {
+                  label: "Moderate Product",
+                  icon: <MdGavel size={16} className="text-amber-600" />,
+                  requiredModule: "products",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () => openModerateModal(row),
+                },
+              ]
+            : []),
+        ]}
+        filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
             values={list.filters}
@@ -519,20 +583,26 @@ const ProductModerationQueue = () => {
             loading={loading}
             activeCount={list.activeFilterCount}
           />
-        )}
-        bulkActionBar={(
+        }
+        bulkActionBar={
           <BulkActionBar
             selectedCount={list.selectedCount}
             totalCount={payload.total || payload.list.length}
             onClear={list.clearSelection}
-            onSelectAll={() => list.setSelectedKeys(payload.list.map((row) => productId(row)))}
+            onSelectAll={() =>
+              list.setSelectedKeys(payload.list.map((row) => productId(row)))
+            }
             module="products"
             actions={bulkActions}
             loading={loading}
           />
-        )}
+        }
         requiredModule="products"
-        exportConfig={{ filename: "product-moderation-queue", columns, data: payload.list }}
+        exportConfig={{
+          filename: "product-moderation-queue",
+          columns,
+          data: payload.list,
+        }}
       />
 
       {/* ── Approve confirmation modal ── */}
@@ -577,7 +647,9 @@ const ProductModerationQueue = () => {
             {rejectModal.product && (
               <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-700">
                 <strong>Product:</strong>{" "}
-                {rejectModal.product.title || rejectModal.product.name || productId(rejectModal.product)}
+                {rejectModal.product.title ||
+                  rejectModal.product.name ||
+                  productId(rejectModal.product)}
               </div>
             )}
 
@@ -592,7 +664,10 @@ const ProductModerationQueue = () => {
                 value={rejectModal.rejectionReason}
                 disabled={loading}
                 onChange={(e) =>
-                  setRejectModal((prev) => ({ ...prev, rejectionReason: e.target.value }))
+                  setRejectModal((prev) => ({
+                    ...prev,
+                    rejectionReason: e.target.value,
+                  }))
                 }
               />
               <div className="text-xs text-gray-400 mt-1">
@@ -602,10 +677,15 @@ const ProductModerationQueue = () => {
 
             {/* Checklist */}
             <div className="mb-5">
-              <div className="text-sm font-medium text-gray-700 mb-2">Review Checklist (optional)</div>
+              <div className="text-sm font-medium text-gray-700 mb-2">
+                Review Checklist (optional)
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {CHECKLIST_FIELDS.map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                  <label
+                    key={key}
+                    className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none"
+                  >
                     <input
                       type="checkbox"
                       className="rounded border-gray-300 text-[var(--admin-gold)] focus:ring-[var(--admin-gold)]"
@@ -614,7 +694,10 @@ const ProductModerationQueue = () => {
                       onChange={(e) =>
                         setRejectModal((prev) => ({
                           ...prev,
-                          checklist: { ...prev.checklist, [key]: e.target.checked },
+                          checklist: {
+                            ...prev.checklist,
+                            [key]: e.target.checked,
+                          },
                         }))
                       }
                     />
@@ -636,7 +719,9 @@ const ProductModerationQueue = () => {
               </button>
               <button
                 type="button"
-                disabled={loading || rejectModal.rejectionReason.trim().length < 10}
+                disabled={
+                  loading || rejectModal.rejectionReason.trim().length < 10
+                }
                 className="px-4 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={onRejectModalSubmit}
               >
@@ -645,7 +730,9 @@ const ProductModerationQueue = () => {
                     <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                     Rejecting…
                   </span>
-                ) : "Reject"}
+                ) : (
+                  "Reject"
+                )}
               </button>
             </div>
           </div>
@@ -662,10 +749,14 @@ const ProductModerationQueue = () => {
           <div className="admin-card relative w-full max-w-md mx-4 p-6 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-[var(--admin-ink)]">Moderate Product</h3>
+              <h3 className="text-base font-semibold text-[var(--admin-ink)]">
+                Moderate Product
+              </h3>
               <button
                 type="button"
-                onClick={() => !loading && setModerateModal(EMPTY_MODERATE_MODAL)}
+                onClick={() =>
+                  !loading && setModerateModal(EMPTY_MODERATE_MODAL)
+                }
                 disabled={loading}
                 className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
               >
@@ -677,7 +768,9 @@ const ProductModerationQueue = () => {
             {moderateModal.product && (
               <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-700">
                 <strong>Product:</strong>{" "}
-                {moderateModal.product.title || moderateModal.product.name || productId(moderateModal.product)}
+                {moderateModal.product.title ||
+                  moderateModal.product.name ||
+                  productId(moderateModal.product)}
               </div>
             )}
 
@@ -690,7 +783,12 @@ const ProductModerationQueue = () => {
                 className="admin-input w-full"
                 value={moderateModal.status}
                 disabled={loading}
-                onChange={(e) => setModerateModal((prev) => ({ ...prev, status: e.target.value }))}
+                onChange={(e) =>
+                  setModerateModal((prev) => ({
+                    ...prev,
+                    status: e.target.value,
+                  }))
+                }
               >
                 <option value="active">Approve — set to Active</option>
                 <option value="rejected">Reject — request changes</option>
@@ -709,11 +807,15 @@ const ProductModerationQueue = () => {
                   value={moderateModal.rejectionReason}
                   disabled={loading}
                   onChange={(e) =>
-                    setModerateModal((prev) => ({ ...prev, rejectionReason: e.target.value }))
+                    setModerateModal((prev) => ({
+                      ...prev,
+                      rejectionReason: e.target.value,
+                    }))
                   }
                 />
                 <div className="text-xs text-gray-400 mt-1">
-                  {moderateModal.rejectionReason.trim().length} / 10 min. characters
+                  {moderateModal.rejectionReason.trim().length} / 10 min.
+                  characters
                 </div>
               </div>
             )}
@@ -732,7 +834,8 @@ const ProductModerationQueue = () => {
                 type="button"
                 disabled={
                   loading ||
-                  (moderateModal.status === "rejected" && moderateModal.rejectionReason.trim().length < 10)
+                  (moderateModal.status === "rejected" &&
+                    moderateModal.rejectionReason.trim().length < 10)
                 }
                 className="px-4 py-2 text-sm font-medium rounded-md bg-[var(--admin-gold)] hover:bg-[var(--admin-gold-dark)] text-[var(--admin-navy)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handleModerateSubmit}
@@ -742,7 +845,9 @@ const ProductModerationQueue = () => {
                     <span className="w-3 h-3 border-2 border-[var(--admin-navy)]/30 border-t-[var(--admin-navy)] rounded-full animate-spin" />
                     Saving…
                   </span>
-                ) : "Submit"}
+                ) : (
+                  "Submit"
+                )}
               </button>
             </div>
           </div>

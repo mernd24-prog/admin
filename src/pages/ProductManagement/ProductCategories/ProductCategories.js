@@ -10,6 +10,7 @@ import { ActionButtons } from "../../../components/Atoms/TableActionButton/Table
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { PageHeader, ConfirmModal } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import SearchInput from "../../../components/Atoms/SearchInput/SearchInput";
 import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import CategorySetup from "./components/CategorySetup";
@@ -608,60 +609,59 @@ const ProductCategories = () => {
     return count;
   }, []);
 
-  const applySearchFilters = useCallback(() => {
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const filtered = allCategories
-        .map((category) => {
-          const mainCategoryMatches = category.name
-            .toLowerCase()
-            .includes(searchTerm);
-
-          const filteredSubCategories =
-            category.subCategories
-              ?.map((subCategory) => {
-                const subCategoryMatches = subCategory.name
-                  .toLowerCase()
-                  .includes(searchTerm);
-
-                const filteredChildren =
-                  subCategory.subCategories?.filter((child) =>
-                    child.name.toLowerCase().includes(searchTerm),
-                  ) || [];
-
-                if (subCategoryMatches || filteredChildren.length > 0) {
-                  return {
-                    ...subCategory,
-                    subCategories: filteredChildren,
-                    isExpanded: filteredChildren.length > 0,
-                  };
-                }
-                return null;
-              })
-              .filter(Boolean) || [];
-
-          if (mainCategoryMatches || filteredSubCategories.length > 0) {
-            return {
-              ...category,
-              subCategories: filteredSubCategories,
-              isExpanded: filteredSubCategories.length > 0,
-            };
-          }
-          return null;
-        })
-        .filter(Boolean);
-
-      setCategories(filtered);
-    } else {
-      setCategories(allCategories);
+  const filterCategoryTree = useCallback((searchTerm, sourceCategories) => {
+    if (!searchTerm || !searchTerm.trim()) {
+      return sourceCategories;
     }
-  }, [filters.search, allCategories]);
+    const term = searchTerm.trim().toLowerCase();
+    return sourceCategories
+      .map((category) => {
+        const mainCategoryMatches = category.name
+          .toLowerCase()
+          .includes(term);
+
+        const filteredSubCategories =
+          category.subCategories
+            ?.map((subCategory) => {
+              const subCategoryMatches = subCategory.name
+                .toLowerCase()
+                .includes(term);
+
+              const filteredChildren =
+                subCategory.subCategories?.filter((child) =>
+                  child.name.toLowerCase().includes(term),
+                ) || [];
+
+              if (subCategoryMatches || filteredChildren.length > 0) {
+                return {
+                  ...subCategory,
+                  subCategories: filteredChildren,
+                  isExpanded: true,
+                };
+              }
+              return null;
+            })
+            .filter(Boolean) || [];
+
+        if (mainCategoryMatches || filteredSubCategories.length > 0) {
+          return {
+            ...category,
+            subCategories: filteredSubCategories,
+            isExpanded: true,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, []);
+
+  useEffect(() => {
+    setCategories(filterCategoryTree(filters.search, allCategories));
+  }, [filters.search, allCategories, filterCategoryTree]);
 
   const handleSearchRemove = useCallback(() => {
     setFilters((prev) => ({ ...prev, search: "" }));
-    setCategories(allCategories);
-    setIsRefresh(!isRefresh);
-  }, [allCategories]);
+  }, []);
 
   // const renderCategory = (category, level = 0, parentId = null) => {
   //   const hasChildren = category.subCategories?.length > 0;
@@ -914,37 +914,15 @@ const ProductCategories = () => {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         {/* Search bar */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 max-w-sm">
-            <div className="relative flex-1">
-              <MdSearch
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, search: e.target.value }))
-                }
-                onKeyDown={(e) => e.key === "Enter" && applySearchFilters()}
-                placeholder="Search categories…"
-                className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-              />
-              {filters.search && (
-                <button
-                  onClick={handleSearchRemove}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <MdClose size={16} />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={applySearchFilters}
-              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
-            >
-              Search
-            </button>
+          <div className="flex items-center gap-2 max-w-2xl">
+            <SearchInput
+              placeholder="Search categories…"
+              searchTerm={filters.search}
+              handleChange={(e) =>
+                setFilters((f) => ({ ...f, search: e.target.value }))
+              }
+              handleRemove={handleSearchRemove}
+            />
           </div>
         </div>
 
