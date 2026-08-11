@@ -6,13 +6,29 @@ import { useDispatch, useSelector } from "react-redux";
 import { MdDelete, MdRefresh, MdReplay } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
 import Input from "../../../components/Atoms/Input/Input";
-import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
-import { getDeadLetterEvents, retryDeadLetterEvent, discardDeadLetterEvent } from "../../../Redux/adminCoreSlice";
+import {
+  ConfirmModal,
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
+import {
+  getDeadLetterEvents,
+  retryDeadLetterEvent,
+  discardDeadLetterEvent,
+} from "../../../Redux/adminCoreSlice";
 import { useListPage } from "../../../hooks/useListPage";
+import { formatLabel } from "../../../utils/formatters";
 
 const STATUSES = ["pending", "retrying", "discarded", "failed"];
 const FILTER_FIELDS = [
-  { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v })) },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    options: STATUSES.map((v) => ({ value: v, label: formatLabel(v) })),
+  },
   { key: "eventType", type: "text", label: "Event Type", width: "w-56" },
 ];
 
@@ -38,14 +54,24 @@ const DeadLetterQueue = () => {
   const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, action: "", event: null, reason: "" });
+  const [confirm, setConfirm] = useState({
+    open: false,
+    action: "",
+    event: null,
+    reason: "",
+  });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       const params = toQueryParams();
-      await dispatch(getDeadLetterEvents({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(
+        getDeadLetterEvents({
+          ...params,
+          offset: (params.page - 1) * params.limit,
+        }),
+      ).unwrap();
     } catch (err) {
       toast.error(err?.message || "Failed to load dead letter events");
     } finally {
@@ -53,7 +79,9 @@ const DeadLetterQueue = () => {
     }
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const handleAction = useCallback(async () => {
     const { action, event, reason } = confirm;
@@ -81,12 +109,21 @@ const DeadLetterQueue = () => {
     {
       key: "eventType",
       label: "Event Type",
-      render: (v) => <span className="font-mono text-xs font-medium text-gray-800">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-mono text-xs font-medium text-gray-800">
+          {v || "—"}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusBadge status={v} color={v === "discarded" ? "gray" : v === "retrying" ? "blue" : "red"} />,
+      render: (v) => (
+        <StatusBadge
+          status={v}
+          color={v === "discarded" ? "gray" : v === "retrying" ? "blue" : "red"}
+        />
+      ),
     },
     {
       key: "retryCount",
@@ -96,7 +133,11 @@ const DeadLetterQueue = () => {
     {
       key: "errorMessage",
       label: "Error",
-      render: (v) => <span className="text-xs text-red-600 truncate max-w-[200px] block">{v || "—"}</span>,
+      render: (v) => (
+        <span className="text-xs text-red-600 truncate max-w-[200px] block">
+          {v || "—"}
+        </span>
+      ),
     },
     {
       key: "createdAt",
@@ -116,14 +157,28 @@ const DeadLetterQueue = () => {
           {row.status !== "discarded" && (
             <>
               <button
-                onClick={() => setConfirm({ open: true, action: "retry", event: row, reason: "" })}
+                onClick={() =>
+                  setConfirm({
+                    open: true,
+                    action: "retry",
+                    event: row,
+                    reason: "",
+                  })
+                }
                 className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                 title="Retry"
               >
                 <MdReplay size={18} />
               </button>
               <button
-                onClick={() => setConfirm({ open: true, action: "discard", event: row, reason: "" })}
+                onClick={() =>
+                  setConfirm({
+                    open: true,
+                    action: "discard",
+                    event: row,
+                    reason: "",
+                  })
+                }
                 className="p-1 text-red-600 hover:bg-red-50 rounded"
                 title="Discard"
               >
@@ -150,7 +205,9 @@ const DeadLetterQueue = () => {
 
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
-      {loading ? <Loader /> : (
+      {loading ? (
+        <Loader />
+      ) : (
         <DataTable
           columns={COLUMNS}
           data={payload.list}
@@ -163,9 +220,15 @@ const DeadLetterQueue = () => {
       <ConfirmModal
         isOpen={confirm.open}
         title={confirm.action === "retry" ? "Retry Event" : "Discard Event"}
-        description={confirm.action === "retry" ? "Retry processing this failed event?" : "Permanently discard this event? It will not be retried."}
+        description={
+          confirm.action === "retry"
+            ? "Retry processing this failed event?"
+            : "Permanently discard this event? It will not be retried."
+        }
         onConfirm={handleAction}
-        onCancel={() => setConfirm({ open: false, action: "", event: null, reason: "" })}
+        onCancel={() =>
+          setConfirm({ open: false, action: "", event: null, reason: "" })
+        }
         loading={actionLoading}
         confirmLabel={confirm.action === "retry" ? "Retry" : "Discard"}
         confirmVariant={confirm.action === "discard" ? "danger" : "primary"}
@@ -174,7 +237,9 @@ const DeadLetterQueue = () => {
           <Input
             label="Reason (optional)"
             value={confirm.reason}
-            onChange={(e) => setConfirm((p) => ({ ...p, reason: e.target.value }))}
+            onChange={(e) =>
+              setConfirm((p) => ({ ...p, reason: e.target.value }))
+            }
             placeholder="Add a note..."
           />
         </div>

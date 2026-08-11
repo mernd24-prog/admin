@@ -12,9 +12,16 @@ import {
 } from "../../../components/Shared";
 import { getChargebacks } from "../../../Redux/adminCoreSlice";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
-const STATUSES = ["open", "under_review", "won", "lost", "cancelled", "expired"];
+const STATUSES = [
+  "open",
+  "under_review",
+  "won",
+  "lost",
+  "cancelled",
+  "expired",
+];
 
 const STATUS_COLOR = {
   open: "yellow",
@@ -26,7 +33,15 @@ const STATUS_COLOR = {
 };
 
 const FILTER_FIELDS = [
-  { key: "status", type: "select", label: "Status", options: STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    options: STATUSES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
+    })),
+  },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
 ];
@@ -36,7 +51,9 @@ const unwrapList = (payload = {}) => {
   if (Array.isArray(data)) return { list: data, total: data.length };
   return {
     list: data?.list || data?.items || data?.chargebacks || data || [],
-    total: Number(data?.total || data?.list?.length || data?.items?.length || 0),
+    total: Number(
+      data?.total || data?.list?.length || data?.items?.length || 0,
+    ),
   };
 };
 
@@ -61,7 +78,9 @@ const Chargebacks = () => {
       setLoading(true);
       setError("");
       const params = toQueryParams();
-      await dispatch(getChargebacks({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(
+        getChargebacks({ ...params, offset: (params.page - 1) * params.limit }),
+      ).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load chargebacks";
       setError(msg);
@@ -71,23 +90,33 @@ const Chargebacks = () => {
     }
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchChargebacks(); }, [fetchChargebacks]);
+  useEffect(() => {
+    fetchChargebacks();
+  }, [fetchChargebacks]);
 
   const COLUMNS = [
     {
       key: "id",
       label: "ID",
-      render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "—").slice(-8)}</span>,
+      render: (v) => (
+        <span className="font-mono text-xs text-gray-500">
+          {String(v || "—").slice(-8)}
+        </span>
+      ),
     },
     {
       key: "paymentId",
       label: "Payment ID",
-      render: (v) => <span className="font-mono text-xs">{String(v || "—").slice(-8)}</span>,
+      render: (v) => (
+        <span className="font-mono text-xs">{String(v || "—").slice(-8)}</span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusBadge status={v} color={STATUS_COLOR[v] || "gray"} />,
+      render: (v) => (
+        <StatusBadge status={v} color={STATUS_COLOR[v] || "gray"} />
+      ),
     },
     {
       key: "amount",
@@ -108,7 +137,13 @@ const Chargebacks = () => {
     {
       key: "dueDate",
       label: "Due Date",
-      render: (v) => <span className={`text-xs ${v && new Date(v) < new Date() ? "text-red-600 font-medium" : "text-gray-500"}`}>{fmt(v)}</span>,
+      render: (v) => (
+        <span
+          className={`text-xs ${v && new Date(v) < new Date() ? "text-red-600 font-medium" : "text-gray-500"}`}
+        >
+          {fmt(v)}
+        </span>
+      ),
     },
     {
       key: "createdAt",
@@ -119,7 +154,11 @@ const Chargebacks = () => {
       key: "_actions",
       label: "",
       render: (_, row) => (
-        <button onClick={() => setDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
+        <button
+          onClick={() => setDetail(row)}
+          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+          title="View"
+        >
           <MdVisibility size={18} />
         </button>
       ),
@@ -131,7 +170,10 @@ const Chargebacks = () => {
       <PageHeader
         title="Chargebacks"
         subtitle="Monitor and track payment chargebacks"
-        breadcrumbs={[{ label: "Payments & Finance" }, { label: "Chargebacks" }]}
+        breadcrumbs={[
+          { label: "Payments & Finance" },
+          { label: "Chargebacks" },
+        ]}
         actions={
           <button onClick={fetchChargebacks}>
             <MdRefresh size={16} /> Refresh
@@ -142,34 +184,88 @@ const Chargebacks = () => {
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+          {error}
+        </div>
       )}
 
       <DataTable
-          columns={COLUMNS}
-          data={payload.list}
-          total={payload.total}
-          listPage={list}
-          loading={loading}
-          emptyMessage="No chargebacks found"
-        />
+        columns={COLUMNS}
+        data={payload.list}
+        total={payload.total}
+        listPage={list}
+        loading={loading}
+        emptyMessage="No chargebacks found"
+      />
 
-      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Chargeback Detail">
+      <DefaultModal
+        isOpen={!!detail}
+        onClose={() => setDetail(null)}
+        title="Chargeback Detail"
+      >
         {detail && (
           <div className="p-4 space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
-              <div><p className="text-gray-500">Chargeback ID</p><p className="font-mono text-xs">{detail._id || detail.id}</p></div>
-              <div><p className="text-gray-500">Status</p><StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} /></div>
-              <div><p className="text-gray-500">Payment ID</p><p className="font-mono text-xs">{detail.paymentId || "—"}</p></div>
-              <div><p className="text-gray-500">Order ID</p><p className="font-mono text-xs">{detail.orderId || "—"}</p></div>
-              <div><p className="text-gray-500">Amount</p><p className="font-semibold">{money(detail.amount)}</p></div>
-              <div><p className="text-gray-500">Provider</p><p className="capitalize">{detail.provider || "—"}</p></div>
-              <div><p className="text-gray-500">Reason</p><p>{display(detail.reason)}</p></div>
-              <div><p className="text-gray-500">Reference #</p><p className="font-mono text-xs">{detail.referenceNumber || "—"}</p></div>
-              <div><p className="text-gray-500">Due Date</p><p className={detail.dueDate && new Date(detail.dueDate) < new Date() ? "text-red-600 font-medium" : ""}>{fmt(detail.dueDate)}</p></div>
-              <div><p className="text-gray-500">Reported</p><p>{fmt(detail.createdAt)}</p></div>
+              <div>
+                <p className="text-gray-500">Chargeback ID</p>
+                <p className="font-mono text-xs">{detail._id || detail.id}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status</p>
+                <StatusBadge
+                  status={detail.status}
+                  color={STATUS_COLOR[detail.status] || "gray"}
+                />
+              </div>
+              <div>
+                <p className="text-gray-500">Payment ID</p>
+                <p className="font-mono text-xs">{detail.paymentId || "—"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Order ID</p>
+                <p className="font-mono text-xs">{detail.orderId || "—"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Amount</p>
+                <p className="font-semibold">{money(detail.amount)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Provider</p>
+                <p className="capitalize">{detail.provider || "—"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Reason</p>
+                <p>{display(detail.reason)}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Reference #</p>
+                <p className="font-mono text-xs">
+                  {detail.referenceNumber || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Due Date</p>
+                <p
+                  className={
+                    detail.dueDate && new Date(detail.dueDate) < new Date()
+                      ? "text-red-600 font-medium"
+                      : ""
+                  }
+                >
+                  {fmt(detail.dueDate)}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Reported</p>
+                <p>{fmt(detail.createdAt)}</p>
+              </div>
             </div>
-            {detail.notes && <div><p className="text-gray-500">Notes</p><p>{detail.notes}</p></div>}
+            {detail.notes && (
+              <div>
+                <p className="text-gray-500">Notes</p>
+                <p>{detail.notes}</p>
+              </div>
+            )}
           </div>
         )}
       </DefaultModal>

@@ -66,7 +66,9 @@ const getBrandInitial = (name = "") => {
 };
 
 const isBrandReviewable = (brand = {}) =>
-  brand.needsApprovalReview || !brand.approvalStatus || brand.approvalStatus === "pending";
+  brand.needsApprovalReview ||
+  !brand.approvalStatus ||
+  brand.approvalStatus === "pending";
 
 const BrandAssetCell = ({ src, name, type = "logo" }) => {
   const [imageError, setImageError] = useState(false);
@@ -143,8 +145,20 @@ const BASE_COLUMNS = [
     render: (v, row) => {
       if (row.needsApprovalReview) return <StatusBadge status="pending" dot />;
       const status = v || "review_required";
-      if (status === "review_required") return <StatusBadge status="pending" dot />;
-      return <StatusBadge status={status === "approved" ? (row.active === false || row.isDisable ? "inactive" : "active") : status} dot />;
+      if (status === "review_required")
+        return <StatusBadge status="pending" dot />;
+      return (
+        <StatusBadge
+          status={
+            status === "approved"
+              ? row.active === false || row.isDisable
+                ? "inactive"
+                : "active"
+              : status
+          }
+          dot
+        />
+      );
     },
   },
 ];
@@ -198,7 +212,9 @@ const Brands = () => {
           ...(params.isDisable !== undefined && {
             isDisable: params.isDisable,
           }),
-          ...(params.approvalStatus && { approvalStatus: params.approvalStatus }),
+          ...(params.approvalStatus && {
+            approvalStatus: params.approvalStatus,
+          }),
         }),
       ).unwrap();
       const data = res?.data || {};
@@ -350,11 +366,13 @@ const Brands = () => {
       return;
     }
     try {
-      await dispatch(reviewBrandSubmission({
-        _id: reviewTarget._id,
-        action,
-        rejectionReason: rejectionReason.trim(),
-      })).unwrap();
+      await dispatch(
+        reviewBrandSubmission({
+          _id: reviewTarget._id,
+          action,
+          rejectionReason: rejectionReason.trim(),
+        }),
+      ).unwrap();
       toast.success(`Brand ${action === "approve" ? "approved" : "rejected"}`);
       setReviewTarget(null);
       setRejectionReason("");
@@ -369,18 +387,21 @@ const Brands = () => {
       ...BASE_COLUMNS,
       {
         key: "actions",
-        label: "Actions",
-        headerClassName: "text-center",
-        cellClassName: "admin-table-action-cell",
+        label: "ACTIONS",
+        headerClassName: "text-left",
+        cellClassName: "admin-table-action-cell !text-left",
         render: (_, row) => (
-          <div className="flex items-center justify-center gap-1.5">
+          <div className="flex items-center !justify-start gap-1.5">
             {isBrandReviewable(row) && (
               <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
                 <button
                   type="button"
                   className="inline-flex h-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700"
                   title="Approve brand"
-                  onClick={() => { setReviewTarget(row); setRejectionReason(""); }}
+                  onClick={() => {
+                    setReviewTarget(row);
+                    setRejectionReason("");
+                  }}
                 >
                   Approve
                 </button>
@@ -392,7 +413,10 @@ const Brands = () => {
                   type="button"
                   className="inline-flex h-8 items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
                   title="Reject brand"
-                  onClick={() => { setReviewTarget({ ...row, reviewAction: "reject" }); setRejectionReason(""); }}
+                  onClick={() => {
+                    setReviewTarget({ ...row, reviewAction: "reject" });
+                    setRejectionReason("");
+                  }}
                 >
                   Reject
                 </button>
@@ -473,10 +497,7 @@ const Brands = () => {
         actions={
           <div className="flex items-center gap-2">
             <PermissionGuard module="brands" action={ACTIONS.CREATE} hide>
-              <button
-                onClick={() => setModalMode("add")}
-
-              >
+              <button onClick={() => setModalMode("add")}>
                 <MdAdd size={16} /> Add Brand
               </button>
             </PermissionGuard>
@@ -555,7 +576,7 @@ const Brands = () => {
                     <img
                       src={formData.logo}
                       alt="Logo preview"
-                      className="h-14 w-14 rounded-lg object-contain border border-gray-200 bg-gray-50"
+                      className="h-16 w-16 rounded-lg object-contain border border-gray-200 bg-gray-50"
                     />
                     <button
                       type="button"
@@ -668,9 +689,12 @@ const Brands = () => {
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--admin-navy)]">
-                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"} Brand
+                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"}{" "}
+                Brand
               </h2>
-              <button type="button" onClick={() => setReviewTarget(null)}><MdClose size={20} /></button>
+              <button type="button" onClick={() => setReviewTarget(null)}>
+                <MdClose size={20} />
+              </button>
             </div>
             <p className="mb-4 text-sm text-gray-600">{reviewTarget.name}</p>
             {reviewTarget.reviewAction === "reject" && (
@@ -683,8 +707,20 @@ const Brands = () => {
               />
             )}
             <div className="flex justify-end gap-3">
-              <button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setReviewTarget(null)}>Cancel</button>
-              <button type="button" className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white" onClick={() => handleReview(reviewTarget.reviewAction || "approve")}>
+              <button
+                type="button"
+                className="rounded-lg border px-4 py-2 text-sm"
+                onClick={() => setReviewTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white"
+                onClick={() =>
+                  handleReview(reviewTarget.reviewAction || "approve")
+                }
+              >
                 {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"}
               </button>
             </div>

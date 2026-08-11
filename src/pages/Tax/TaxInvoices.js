@@ -17,7 +17,7 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
-import { formatDateTime12Hour } from "../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 
 const STATES = ["draft", "issued", "cancelled", "amended"];
 const INVOICE_TYPES = [
@@ -80,7 +80,10 @@ const FILTER_FIELDS = isSellerPanel()
         key: "status",
         type: "select",
         label: "Status",
-        options: STATES.map((v) => ({ value: v, label: v })),
+        options: STATES.map((s) => ({
+          value: s,
+          label: formatLabel(s),
+        })),
       },
       { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
       { key: "fromDate", type: "date", label: "From" },

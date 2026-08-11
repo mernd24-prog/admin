@@ -22,7 +22,7 @@ import { useListPage } from "../../hooks/useListPage";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
-import { formatDateTime12Hour } from "../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 
 const REF_TYPES = ["return", "cancellation", "refund", "manual"];
 
@@ -49,7 +49,10 @@ const FILTER_FIELDS = [
     key: "referenceType",
     type: "select",
     label: "Ref Type",
-    options: REF_TYPES.map((v) => ({ value: v, label: v })),
+    options: REF_TYPES.map((s) => ({
+      value: s,
+      label: formatLabel(s),
+    })),
   },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
@@ -252,7 +255,7 @@ const CreditNotes = () => {
                 onClick={() =>
                   window.open(`/app/orders/view/${orderId}`, "_blank")
                 }
-                 className="text-[var(--admin-navy)] hover:underline"
+                className="text-[var(--admin-navy)] hover:underline"
               >
                 {formattedId}
               </button>
