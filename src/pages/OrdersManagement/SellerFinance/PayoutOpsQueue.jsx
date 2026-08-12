@@ -2,7 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { MdRefresh } from "react-icons/md";
+import {
+  MdBlock,
+  MdCheckCircle,
+  MdClose,
+  MdPause,
+  MdPlayArrow,
+  MdRefresh,
+  MdReplay,
+  MdSync,
+} from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -530,6 +539,7 @@ const PayoutOpsQueue = () => {
                       className="admin-btn-secondary !px-2 !py-1"
                       onClick={() => openAction("approve", row)}
                     >
+                      <MdPlayArrow size={15} />
                       {isRazorpayX ? "Start Payout" : "Approve"}
                     </button>
                   </PermissionGuard>
@@ -543,6 +553,7 @@ const PayoutOpsQueue = () => {
                       className="admin-btn-secondary !px-2 !py-1 text-yellow-600"
                       onClick={() => openAction("hold", row)}
                     >
+                      <MdPause size={15} />
                       Hold
                     </button>
                   </PermissionGuard>
@@ -559,6 +570,7 @@ const PayoutOpsQueue = () => {
                     className="admin-btn-secondary !px-2 !py-1"
                     onClick={() => openAction("release", row)}
                   >
+                    <MdPlayArrow size={15} />
                     Release Hold
                   </button>
                 </PermissionGuard>
@@ -574,6 +586,7 @@ const PayoutOpsQueue = () => {
                     className="admin-btn-secondary !px-2 !py-1"
                     onClick={() => openAction("retry", row)}
                   >
+                    <MdReplay size={15} />
                     Retry
                   </button>
                 </PermissionGuard>
@@ -591,6 +604,7 @@ const PayoutOpsQueue = () => {
                         className="admin-btn-secondary !px-2 !py-1"
                         onClick={() => handleSyncRazorpayX(row)}
                       >
+                        <MdSync size={15} />
                         Sync Status
                       </button>
                     </PermissionGuard>
@@ -605,6 +619,7 @@ const PayoutOpsQueue = () => {
                         className="admin-btn-secondary !px-2 !py-1"
                         onClick={() => openAction("complete", row)}
                       >
+                        <MdCheckCircle size={15} />
                         Complete
                       </button>
                     </PermissionGuard>
@@ -619,6 +634,7 @@ const PayoutOpsQueue = () => {
                       className="admin-btn-secondary !px-2 !py-1 text-red-600"
                       onClick={() => openAction("fail", row)}
                     >
+                      <MdBlock size={15} />
                       Fail
                     </button>
                   </PermissionGuard>
@@ -635,6 +651,7 @@ const PayoutOpsQueue = () => {
                     className="admin-btn-secondary !px-2 !py-1 text-red-600"
                     onClick={() => openAction("cancel", row)}
                   >
+                    <MdClose size={15} />
                     Cancel
                   </button>
                 </PermissionGuard>

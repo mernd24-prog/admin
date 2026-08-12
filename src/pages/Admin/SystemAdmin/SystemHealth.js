@@ -243,7 +243,7 @@ const SystemHealth = () => {
                           {name.replace(/_/g, " ")}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 d">
+                      <div className="flex items-center gap-3">
                         {latency != null && (
                           <span className="rounded border border-[var(--admin-line)] bg-[var(--admin-canvas)] px-2 py-0.5 font-mono text-[11px] font-medium text-[var(--admin-muted)]">
                             {latency} ms

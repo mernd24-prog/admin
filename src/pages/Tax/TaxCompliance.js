@@ -333,19 +333,6 @@ const TaxCompliance = () => {
           </span>
         ),
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="admin-btn-secondary !px-2 !py-1"
-            onClick={() => setSelectedDoc({ type: "invoice", row })}
-          >
-            <MdVisibility size={15} /> View
-          </button>
-        ),
-      },
     ],
     [],
   );
@@ -429,19 +416,6 @@ const TaxCompliance = () => {
           </span>
         ),
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="admin-btn-secondary !px-2 !py-1"
-            onClick={() => setSelectedDoc({ type: "credit note", row })}
-          >
-            <MdVisibility size={15} /> View
-          </button>
-        ),
-      },
     ],
     [],
   );
@@ -512,14 +486,39 @@ const TaxCompliance = () => {
         ? reportEntries.length
         : invoices.total;
 
+  const rowActions = useCallback(
+    (row) => {
+      if (activeTab === "invoices") {
+        return [
+          {
+            label: "View",
+            icon: <MdVisibility size={16} className="text-blue-600" />,
+            onClick: () => setSelectedDoc({ type: "invoice", row }),
+          },
+        ];
+      }
+      if (activeTab === "creditNotes") {
+        return [
+          {
+            label: "View",
+            icon: <MdVisibility size={16} className="text-blue-600" />,
+            onClick: () => setSelectedDoc({ type: "credit note", row }),
+          },
+        ];
+      }
+      return [];
+    },
+    [activeTab],
+  );
+
   return (
     <div>
       <PageHeader
         title="Tax Documents"
-        subtitle="Invoices, credit notes, and tax ledger reports"
+        subtitle="Manage tax compliance invoices, credit notes, and tax summaries"
         breadcrumbs={[
           { label: "Invoices & Taxation" },
-          { label: "Tax Documents" },
+          { label: "Tax Compliance" },
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -570,6 +569,7 @@ const TaxCompliance = () => {
         error={error}
         emptyText="No tax documents found."
         requiredModule="tax"
+        rowActions={activeTab !== "report" ? rowActions : undefined}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}

@@ -3,7 +3,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import moment from "moment/moment";
-import { MdLocalOffer, MdAdd } from "react-icons/md";
+import {
+  MdAdd,
+  MdBlock,
+  MdCheckCircle,
+  MdDelete,
+  MdEdit,
+  MdLocalOffer,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -448,6 +455,7 @@ const DiscountCoupons = () => {
       [
         canUpdateCoupon && {
           label: "Edit",
+          icon: <MdEdit size={16} className="text-amber-600" />,
           onClick: () => {
             const c = normalizeCouponRecord(row);
             setFormData({
@@ -472,6 +480,11 @@ const DiscountCoupons = () => {
         },
         canUpdateCoupon && {
           label: row.isDisable ? "Enable" : "Disable",
+          icon: row.isDisable ? (
+            <MdCheckCircle size={16} className="text-green-600" />
+          ) : (
+            <MdBlock size={16} className="text-red-600" />
+          ),
           onClick: () => {
             setToggleTarget(row);
             setConfirmOpen(true);
@@ -480,6 +493,7 @@ const DiscountCoupons = () => {
         },
         canDeleteCoupon && {
           label: "Delete",
+          icon: <MdDelete size={16} className="text-red-600" />,
           onClick: () => {
             setDeleteTarget(row);
             setDeleteOpen(true);

@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import { MdCode, MdAdd } from "react-icons/md";
+import { MdCode, MdAdd, MdEdit, MdDelete, MdCheckCircle, MdBlock } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -220,6 +220,7 @@ const HsnCode = () => {
     (row) => [
       {
         label: "Edit",
+        icon: <MdEdit size={16} className="text-blue-600" />,
         onClick: () => {
           setFormData({
             _id: row._id,
@@ -236,11 +237,17 @@ const HsnCode = () => {
       },
       {
         label: row.isDisable ? "Enable" : "Disable",
+        icon: row.isDisable ? (
+          <MdCheckCircle size={16} className="text-green-600" />
+        ) : (
+          <MdBlock size={16} className="text-amber-600" />
+        ),
         onClick: () => handleToggleStatus(row),
         danger: !row.isDisable,
       },
       {
         label: "Delete",
+        icon: <MdDelete size={16} className="text-red-600" />,
         onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
         danger: true,
       },

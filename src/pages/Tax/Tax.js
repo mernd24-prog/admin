@@ -3,7 +3,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { MdAccountBalance, MdAdd, MdList } from "react-icons/md";
+import {
+  MdAccountBalance,
+  MdAdd,
+  MdList,
+  MdEdit,
+  MdDelete,
+  MdCheckCircle,
+  MdBlock,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -111,7 +119,7 @@ const Tax = () => {
         searchFields: "name,country_code.name",
         populate: "country_code:name",
         ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
-      })
+      }),
     );
   }, [list.page, list.pageSize, list.search, list.filters, isRefresh]);
 
@@ -134,33 +142,52 @@ const Tax = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const closeModal = () => { setModalMode(null); setFormData(EMPTY_FORM); setErrors({}); };
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
     setSaving(true);
-    const payload = { name: formData.name.trim(), country_code: formData.country_code, isDisable: formData.isDisable };
+    const payload = {
+      name: formData.name.trim(),
+      country_code: formData.country_code,
+      isDisable: formData.isDisable,
+    };
     try {
       let res;
       if (modalMode === "edit") {
-        res = await dispatch(updateTaxList({ ...payload, _id: formData._id })).unwrap();
+        res = await dispatch(
+          updateTaxList({ ...payload, _id: formData._id }),
+        ).unwrap();
       } else {
         res = await dispatch(createTaxList(payload)).unwrap();
       }
-      if (res?.error) { toast.error(res.error); return; }
-      toast.success(res?.message || `Tax ${modalMode === "edit" ? "updated" : "created"}`);
+      if (res?.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        res?.message || `Tax ${modalMode === "edit" ? "updated" : "created"}`,
+      );
       closeModal();
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await dispatch(softDeleteTaxList({ _id: [deleteTarget._id] })).unwrap();
+      const res = await dispatch(
+        softDeleteTaxList({ _id: [deleteTarget._id] }),
+      ).unwrap();
       toast.success(res?.message || "Tax deleted");
       setDeleteOpen(false);
       setDeleteTarget(null);
@@ -172,11 +199,14 @@ const Tax = () => {
 
   const handleToggleConfirm = async () => {
     if (!toggleTarget) return;
-    const isActive = toggleTarget?.active !== undefined
-      ? Boolean(toggleTarget.active)
-      : !toggleTarget.isDisable;
+    const isActive =
+      toggleTarget?.active !== undefined
+        ? Boolean(toggleTarget.active)
+        : !toggleTarget.isDisable;
     try {
-      const res = await dispatch(enableDisableTaxList({ _id: [toggleTarget._id], isDisable: isActive })).unwrap();
+      const res = await dispatch(
+        enableDisableTaxList({ _id: [toggleTarget._id], isDisable: isActive }),
+      ).unwrap();
       toast.success(res?.message || "Status updated");
       setConfirmOpen(false);
       setToggleTarget(null);
@@ -190,36 +220,50 @@ const Tax = () => {
     row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
 
   const rowActions = useCallback(
-    (row) => [
-      {
-        label: "Sub Taxes",
-        icon: <MdList size={14} />,
-        onClick: () => navigate(`/app/subTax/${row._id}`),
-      },
-      {
-        label: "Edit",
-        onClick: () => {
-          setFormData({
-            _id: row._id,
-            name: row.name ? row.name.charAt(0).toUpperCase() + row.name.slice(1).toLowerCase() : "",
-            country_code: row.countryId?._id || row.country_code?._id || "",
-            isDisable: !isRowActive(row),
-          });
-          setModalMode("edit");
+    (row) => {
+      const active = isRowActive(row);
+      return [
+        {
+          label: "Edit",
+          icon: <MdEdit size={16} className="text-blue-600" />,
+          onClick: () => {
+            setFormData({
+              _id: row._id,
+              name: row.name
+                ? row.name.charAt(0).toUpperCase() +
+                  row.name.slice(1).toLowerCase()
+                : "",
+              country_code: row.countryId?._id || row.country_code?._id || "",
+              isDisable: !active,
+            });
+            setModalMode("edit");
+          },
         },
-      },
-      {
-        label: isRowActive(row) ? "Disable" : "Enable",
-        onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
-        danger: isRowActive(row),
-      },
-      {
-        label: "Delete",
-        onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
-        danger: true,
-      },
-    ],
-    [navigate]
+        {
+          label: active ? "Disable" : "Enable",
+          icon: active ? (
+            <MdBlock size={16} className="text-amber-600" />
+          ) : (
+            <MdCheckCircle size={16} className="text-green-600" />
+          ),
+          onClick: () => {
+            setToggleTarget(row);
+            setConfirmOpen(true);
+          },
+          danger: active,
+        },
+        {
+          label: "Delete",
+          icon: <MdDelete size={16} className="text-red-600" />,
+          onClick: () => {
+            setDeleteTarget(row);
+            setDeleteOpen(true);
+          },
+          danger: true,
+        },
+      ];
+    },
+    [navigate],
   );
 
   return (
@@ -230,10 +274,7 @@ const Tax = () => {
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Taxes" }]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={() => setModalMode("add")}
-
-            >
+            <button onClick={() => setModalMode("add")}>
               <MdAdd size={16} /> Add Tax
             </button>
           </PermissionGuard>
@@ -290,7 +331,9 @@ const Tax = () => {
                   placeholder="e.g. GST, VAT"
                   maxLength={100}
                 />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -304,21 +347,48 @@ const Tax = () => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                 >
                   {countryOptions.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
-                {errors.country_code && <p className="text-red-500 text-xs mt-1">{errors.country_code}</p>}
+                {errors.country_code && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.country_code}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">Active</span>
-                <ToggleButton isToggle={!formData.isDisable} handleClick={() => setFormData((p) => ({ ...p, isDisable: !p.isDisable }))} />
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
+                <ToggleButton
+                  isToggle={!formData.isDisable}
+                  handleClick={() =>
+                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
+                  }
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
-                  {saving ? "Saving…" : modalMode === "add" ? "Create Tax" : "Save Changes"}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
+                >
+                  {saving
+                    ? "Saving…"
+                    : modalMode === "add"
+                      ? "Create Tax"
+                      : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -328,17 +398,27 @@ const Tax = () => {
 
       <ConfirmModal
         isOpen={confirmOpen}
-        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onClose={() => {
+          setConfirmOpen(false);
+          setToggleTarget(null);
+        }}
         onConfirm={handleToggleConfirm}
         title={`${toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"} Tax`}
         message={`${toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"} "${toggleTarget?.name}"?`}
-        variant={toggleTarget && isRowActive(toggleTarget) ? "danger" : "default"}
-        confirmText={toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"}
+        variant={
+          toggleTarget && isRowActive(toggleTarget) ? "danger" : "default"
+        }
+        confirmText={
+          toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"
+        }
       />
 
       <ConfirmModal
         isOpen={deleteOpen}
-        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
         onConfirm={handleDeleteConfirm}
         title="Delete Tax"
         message={`Delete tax "${deleteTarget?.name}"? This cannot be undone.`}
