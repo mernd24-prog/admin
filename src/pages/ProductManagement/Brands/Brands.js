@@ -8,7 +8,6 @@ import {
   StatusBadge,
   // FilterBar,
   ConfirmModal,
-  BulkActionBar,
   ExportButton,
 } from "../../../components/Shared";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
@@ -244,43 +243,6 @@ const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const selectedBrands = useMemo(
-    () => brands.filter((brand) => list.selectedKeys.includes(brand._id)),
-    [brands, list.selectedKeys],
-  );
-  const selectedReviewableBrands = useMemo(
-    () => selectedBrands.filter(isBrandReviewable),
-    [selectedBrands],
-  );
-
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = list.toQueryParams();
-      const res = await dispatch(
-        getBrandList({
-          page: params.page,
-          size: params.limit || 10,
-          keyWord: params.search || "",
-          searchFields: "name",
-          select: "name isDisable createdAt logo thumbnails",
-          sortBy: list.sortKey || "name",
-          sortOrder: list.sortDir || "asc",
-          ...(params.isDisable !== undefined && {
-            isDisable: params.isDisable,
-          }),
-          ...(params.approvalStatus && {
-            approvalStatus: params.approvalStatus,
-          }),
-        }),
-      ).unwrap();
-      const data = res?.data || {};
-      setBrands(data?.list || []);
-      setTotal(data?.total || 0);
-    } catch (err) {
-      toast.error(err?.message || "Failed to fetch brands");
-    } finally {
-      setLoading(false);
   const handleBrandImageUpload = async (file, type) => {
   if (!file) return;
 
@@ -707,65 +669,6 @@ const clearFilters = () => {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={brands}
-        loading={loading}
-        totalCount={total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSearch={list.setSearch}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
-        searchPlaceholder="Search brands…"
-        emptyText="No brands found."
-        emptyIcon={<MdBrandingWatermark size={40} className="text-gray-200" />}
-        selectable
-        selectedKeys={list.selectedKeys}
-        onSelectionChange={list.setSelectedKeys}
-        bulkActionBar={
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={brands.length}
-            onClear={list.clearSelection}
-            module="brands"
-            actions={[
-              {
-                label: `Approve ${selectedReviewableBrands.length || ""}`.trim(),
-                icon: <MdCheckCircle />,
-                action: ACTIONS.UPDATE,
-                variant: "primary",
-                disabled: selectedReviewableBrands.length === 0,
-                onClick: () => {
-                  setReviewTarget({
-                    selectedData: selectedReviewableBrands,
-                    reviewAction: "approve",
-                    name: `${selectedReviewableBrands.length} selected brand${selectedReviewableBrands.length === 1 ? "" : "s"}`,
-                  });
-                  setRejectionReason("");
-                },
-              },
-            ]}
-          />
-        }
-        requiredModule="brands"
-        exportConfig={{ filename: "brands", columns: BASE_COLUMNS }}
-        filterBar={
-          <div className="brand-filter-inline">
-            <FilterBar
-              filters={FILTER_FIELDS}
-              values={list.filters}
-              onChange={list.setFilter}
-              onClear={list.clearFilters}
-              loading={loading}
-              activeCount={list.activeFilterCount}
-            />
-          </div>
-        }
-      />
     <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
 
   {/* Search + Filters */}
