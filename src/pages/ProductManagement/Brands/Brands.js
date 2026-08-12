@@ -8,6 +8,7 @@ import {
   StatusBadge,
   FilterBar,
   ConfirmModal,
+  BulkActionBar,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -196,6 +197,15 @@ const Brands = () => {
   const [reviewTarget, setReviewTarget] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  const selectedBrands = useMemo(
+    () => brands.filter((brand) => list.selectedKeys.includes(brand._id)),
+    [brands, list.selectedKeys],
+  );
+  const selectedReviewableBrands = useMemo(
+    () => selectedBrands.filter(isBrandReviewable),
+    [selectedBrands],
+  );
+
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
@@ -365,17 +375,23 @@ const Brands = () => {
       toast.error("Enter a rejection reason");
       return;
     }
+    const reviewIds = Array.isArray(reviewTarget.selectedData)
+      ? reviewTarget.selectedData.map((brand) => brand._id).filter(Boolean)
+      : [reviewTarget._id].filter(Boolean);
+    if (!reviewIds.length) {
+      toast.error("Select at least one brand");
+      return;
+    }
     try {
-      await dispatch(
-        reviewBrandSubmission({
-          _id: reviewTarget._id,
-          action,
-          rejectionReason: rejectionReason.trim(),
-        }),
-      ).unwrap();
-      toast.success(`Brand ${action === "approve" ? "approved" : "rejected"}`);
+      await dispatch(reviewBrandSubmission({
+        _id: reviewIds.length > 1 ? reviewIds : reviewIds[0],
+        action,
+        rejectionReason: rejectionReason.trim(),
+      })).unwrap();
+      toast.success(`${reviewIds.length} brand${reviewIds.length === 1 ? "" : "s"} ${action === "approve" ? "approved" : "rejected"}`);
       setReviewTarget(null);
       setRejectionReason("");
+      list.clearSelection();
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Could not review brand");
@@ -521,6 +537,34 @@ const Brands = () => {
         searchPlaceholder="Search brands…"
         emptyText="No brands found."
         emptyIcon={<MdBrandingWatermark size={40} className="text-gray-200" />}
+        selectable
+        selectedKeys={list.selectedKeys}
+        onSelectionChange={list.setSelectedKeys}
+        bulkActionBar={
+          <BulkActionBar
+            selectedCount={list.selectedCount}
+            totalCount={brands.length}
+            onClear={list.clearSelection}
+            module="brands"
+            actions={[
+              {
+                label: `Approve ${selectedReviewableBrands.length || ""}`.trim(),
+                icon: <MdCheckCircle />,
+                action: ACTIONS.UPDATE,
+                variant: "primary",
+                disabled: selectedReviewableBrands.length === 0,
+                onClick: () => {
+                  setReviewTarget({
+                    selectedData: selectedReviewableBrands,
+                    reviewAction: "approve",
+                    name: `${selectedReviewableBrands.length} selected brand${selectedReviewableBrands.length === 1 ? "" : "s"}`,
+                  });
+                  setRejectionReason("");
+                },
+              },
+            ]}
+          />
+        }
         requiredModule="brands"
         exportConfig={{ filename: "brands", columns: BASE_COLUMNS }}
         filterBar={

@@ -17,6 +17,7 @@ export const ENDPOINTS = {
     mySubmissions: "/platform/brands/submissions/mine",
     submission: (brandId) => `/platform/brands/submissions/${brandId}`,
     approval: (brandId) => `/admin/platform/brands/${brandId}/approval`,
+    approvalBulk: "/admin/platform/brands/approval",
   },
   auth: {
     register: "/auth/register",
@@ -72,6 +73,11 @@ export const ENDPOINTS = {
   sellers: {
     onboardingKyc: "/sellers/onboarding/kyc",
     onboardingProfile: "/sellers/onboarding/profile",
+    aadhaarPrecheck: "/sellers/kyc/aadhaar/precheck",
+    aadhaarSendOtp: "/sellers/kyc/aadhaar/send-otp",
+    aadhaarVerifyOtp: "/sellers/kyc/aadhaar/verify-otp",
+    panPrecheck: "/sellers/kyc/pan/precheck",
+    panVerify: "/sellers/kyc/pan/verify",
     vendors: "/admin/vendors",
     list: "/admin/sellers",
     detail: (sellerId) => `/admin/sellers/${sellerId}`,

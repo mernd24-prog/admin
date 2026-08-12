@@ -102,6 +102,132 @@ export const updateSellerOnboardingProfile = createAsyncThunk(
   }
 );
 
+export const precheckSellerAadhaar = createAsyncThunk(
+  "seller/precheckSellerAadhaar",
+  async (payload, { rejectWithValue, getState }) => {
+    try {
+      const token =
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.aadhaarPrecheck,
+        {
+          aadhaarNumber: payload?.aadhaarNumber,
+          reference_id: payload?.reference_id || payload?.referenceId || "",
+        },
+        "json",
+        token
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to validate Aadhaar"));
+    }
+  }
+);
+
+export const precheckSellerPan = createAsyncThunk(
+  "seller/precheckSellerPan",
+  async (payload, { rejectWithValue, getState }) => {
+    try {
+      const token =
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.panPrecheck,
+        { panNumber: payload?.panNumber },
+        "json",
+        token
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to validate PAN"));
+    }
+  }
+);
+
+export const verifySellerPan = createAsyncThunk(
+  "seller/verifySellerPan",
+  async (payload, { rejectWithValue, getState }) => {
+    try {
+      const token =
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.panVerify,
+        {
+          panNumber: payload?.panNumber,
+          legalName: payload?.legalName,
+          dateOfBirth: payload?.dateOfBirth,
+        },
+        "json",
+        token
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to verify PAN"));
+    }
+  }
+);
+
+export const sendSellerAadhaarOtp = createAsyncThunk(
+  "seller/sendSellerAadhaarOtp",
+  async (payload, { rejectWithValue, getState }) => {
+    try {
+      const token =
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.aadhaarSendOtp,
+        { aadhaarNumber: payload?.aadhaarNumber },
+        "json",
+        token
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to send Aadhaar OTP"));
+    }
+  }
+);
+
+export const verifySellerAadhaarOtp = createAsyncThunk(
+  "seller/verifySellerAadhaarOtp",
+  async (payload, { rejectWithValue, getState }) => {
+    try {
+      const token =
+        payload?.onboardingToken ||
+        getState()?.seller?.onboardingToken ||
+        localStorage.getItem(ONBOARDING_TOKEN_KEY) ||
+        localStorage.getItem("accessToken");
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.sellers.aadhaarVerifyOtp,
+        {
+          reference_id: payload?.reference_id || payload?.referenceId,
+          otp: payload?.otp,
+          aadhaarNumber: payload?.aadhaarNumber,
+        },
+        "json",
+        token
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(normalizeError(error, "Failed to verify Aadhaar OTP"));
+    }
+  }
+);
+
 export const fetchAuthStatus = createAsyncThunk(
   "seller/fetchAuthStatus",
   async (payload = {}, { rejectWithValue }) => {

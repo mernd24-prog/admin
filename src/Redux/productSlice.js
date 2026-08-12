@@ -359,8 +359,36 @@ export const resubmitBrandForApproval = createApiThunkPrivate('brands/resubmitFo
         ...(payload.description ? { description: payload.description } : {}),
     }),
 })
-export const reviewBrandSubmission = createApiThunkPrivate('brands/reviewSubmission', (payload) => ENDPOINTS.brands.approval(firstId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
+const brandReviewIds = (payload = {}) => {
+    const selectedIds = Array.isArray(payload.selectedData)
+        ? payload.selectedData.map((item) => item?._id || item?.id || item?.brandId)
+        : [];
+    const rawIds = [
+        payload.brandIds,
+        payload.ids,
+        payload._id,
+        payload.id,
+        payload.brandId,
+        selectedIds,
+    ];
+    return [...new Set(rawIds.flatMap((value) => Array.isArray(value) ? value : [value]).filter(Boolean))];
+};
+const isBulkBrandReview = (payload = {}) =>
+    brandReviewIds(payload).length > 1 ||
+    Array.isArray(payload.brandIds) ||
+    Array.isArray(payload.ids) ||
+    Array.isArray(payload._id) ||
+    Array.isArray(payload.selectedData);
+
+export const reviewBrandSubmission = createApiThunkPrivate('brands/reviewSubmission', (payload) => {
+    const ids = brandReviewIds(payload);
+    return isBulkBrandReview(payload) ? ENDPOINTS.brands.approvalBulk : ENDPOINTS.brands.approval(ids[0]);
+}, 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        action: payload.action,
+        rejectionReason: payload.rejectionReason || '',
+        ...(isBulkBrandReview(payload) ? { brandIds: brandReviewIds(payload) } : {}),
+    }),
 })
 
 /// batch functions ===>>>>>>>>>>>>>>>>>
