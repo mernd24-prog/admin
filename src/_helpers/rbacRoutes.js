@@ -259,7 +259,7 @@ const MODULE_LABELS = {
   "deal-payouts": "Deal Payout Management",
   "deal-sponsorships": "Deal Sponsorship Management",
   // Referral
-  "influencer-management": "Influencer Management",
+  "influencer-management": "Referral Partner Management",
   // Analytics
   "analytics-events": "Analytics Events",
   // Platform settings
@@ -635,6 +635,7 @@ const ROUTE_MODULES = [
   [["/referral-commerce/influencers"], ["influencer-management", "referral"]],
   [["/referral-commerce/codes"], ["referral-codes", "referral"]],
   [["/referral-commerce/rules"], ["referral-rules", "referral"]],
+  [["/referral-commerce/bonuses"], ["referral-bonus-rules", "referral-bonus-progress", "referral-bonus-history", "referral"]],
   [["/referral-commerce/bonus-rules"], ["referral-bonus-rules", "referral"]],
   [["/referral-commerce/bonus-progress"], ["referral-bonus-progress", "referral"]],
   [["/referral-commerce/bonus-history"], ["referral-bonus-history", "referral"]],

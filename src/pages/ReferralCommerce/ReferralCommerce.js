@@ -12,6 +12,8 @@ import {
   Search,
   Share2,
   ShieldAlert,
+  UploadCloud,
+  MoreVertical,
   UserPlus,
   X,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import {
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+import { uploadDocumentFile } from "../../_helpers/globalFunctions";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { OrderLink, PageHeader } from "../../components/Shared";
@@ -61,12 +64,10 @@ const influencerPortalUrl =
 const tabs = [
   { key: "overview", label: "Overview" },
   { key: "productDistribution", label: "Product Distribution" },
-  { key: "influencers", label: "Influencer Profiles" },
-  { key: "codes", label: "Influencer Codes" },
+  { key: "influencers", label: "Referral Partners" },
+  { key: "codes", label: "Referral Codes" },
   { key: "rules", label: "Rules & Coins" },
-  { key: "bonusRules", label: "Bonus Rules" },
-  { key: "bonusProgress", label: "Bonus Progress" },
-  { key: "bonusHistory", label: "Bonus History" },
+  { key: "bonuses", label: "Bonuses" },
   { key: "orders", label: "Referral Orders" },
   { key: "commissions", label: "Wallet Ledger" },
   { key: "payouts", label: "Payout Requests" },
@@ -80,6 +81,35 @@ const sectionToTab = Object.fromEntries(
     tab.key,
   ]),
 );
+sectionToTab["bonus-rules"] = "bonuses";
+sectionToTab["bonus-progress"] = "bonuses";
+sectionToTab["bonus-history"] = "bonuses";
+
+const FILTER_STATUSES = {
+  influencers: ["pending", "active", "suspended", "rejected"],
+  codes: ["active", "inactive", "expired", "suspended"],
+  bonuses: ["active", "inactive", "locked", "released", "reversed"],
+  orders: ["pending", "completed", "cancelled", "refunded", "reversed"],
+  commissions: [
+    "pending",
+    "locked",
+    "available",
+    "payout_requested",
+    "paid",
+    "reversed",
+    "expired",
+  ],
+  payouts: [
+    "pending",
+    "approved",
+    "rejected",
+    "processing",
+    "paid",
+    "failed",
+    "cancelled",
+  ],
+  fraud: ["open", "reviewing", "resolved", "dismissed"],
+};
 const emptyInfluencerForm = {
   firstName: "",
   lastName: "",
@@ -156,7 +186,7 @@ const fullName = (user = {}) => {
   return (
     [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
     user.email ||
-    "Influencer"
+    "Referral Partner"
   );
 };
 
@@ -173,6 +203,12 @@ const formatCoins = (value) =>
 const formatDate = (value) => formatDateTime12Hour(value, "-");
 
 const humanize = (value) => String(value || "").replace(/_/g, " ");
+const partnerTypeLabel = (value) =>
+  value === "parent"
+    ? "Growth Partner"
+    : value === "child"
+      ? "Brand Associate"
+      : humanize(value);
 const optionList = (options = [], fallbackValues = []) =>
   options.length
     ? options
@@ -250,6 +286,50 @@ const IconButton = ({
   );
 };
 
+const RowActions = ({ actions = [] }) => {
+  const [open, setOpen] = useState(false);
+  const visible = actions.filter((action) => action && !action.hidden);
+  if (!visible.length) return <span className="text-gray-400">-</span>;
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        title="Actions"
+        aria-label="Row actions"
+        onClick={() => setOpen((value) => !value)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-700"
+      >
+        <MoreVertical size={18} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-50 min-w-[190px] rounded-md border border-gray-200 bg-white p-1.5 shadow-xl">
+          {visible.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              disabled={action.disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setOpen(false);
+                action.onClick?.();
+              }}
+              className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                action.danger
+                  ? "text-rose-600 hover:bg-rose-50"
+                  : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+              }`}
+            >
+              {action.icon}
+              <span>{action.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TextInput = ({
   label,
   name,
@@ -260,6 +340,7 @@ const TextInput = ({
   min,
   step,
   hint = "",
+  required = false,
 }) => (
   <label className="block">
     <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
@@ -273,6 +354,7 @@ const TextInput = ({
       placeholder={placeholder}
       min={min}
       step={step}
+      required={required}
       className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
     />
     {hint ? (
@@ -370,10 +452,19 @@ const SelectInput = ({
 };
 
 const Modal = ({ title, open, onClose, children, footer }) => {
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event) => event.key === "Escape" && onClose?.();
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 px-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-md bg-white shadow-xl">
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-[rgba(31,27,95,0.35)] px-4 backdrop-blur-[2px]"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose?.()}
+    >
+      <div role="dialog" aria-modal="true" aria-label={title} className="admin-card max-h-[90vh] w-full max-w-2xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           <IconButton title="Close" onClick={onClose}>
@@ -382,7 +473,7 @@ const Modal = ({ title, open, onClose, children, footer }) => {
         </div>
         <div className="max-h-[65vh] overflow-y-auto p-5">{children}</div>
         {footer && (
-          <div className="border-t border-gray-200 px-5 py-4">{footer}</div>
+          <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-4">{footer}</div>
         )}
       </div>
     </div>
@@ -617,7 +708,9 @@ const ProductDistributionManager = () => {
       return;
     }
     if (Math.abs(shareTotal - 100) > 0.001) {
-      toast.error("Customer, code owner and parent shares must total 100%");
+      toast.error(
+        "Customer, Brand Associate and Growth Partner shares must total 100%",
+      );
       return;
     }
     try {
@@ -832,7 +925,7 @@ const ProductDistributionManager = () => {
             }
           />
           <TextInput
-            label="Code Owner Share %"
+            label="Brand Associate Share %"
             type="number"
             min="0"
             max="100"
@@ -842,7 +935,7 @@ const ProductDistributionManager = () => {
             }
           />
           <TextInput
-            label="Parent Share %"
+            label="Growth Partner Share %"
             type="number"
             min="0"
             max="100"
@@ -901,7 +994,10 @@ const ProductDistributionManager = () => {
                 { key: "product", label: "Product" },
                 { key: "variant", label: "Variant" },
                 { key: "pool", label: "Shareable Pool" },
-                { key: "split", label: "Customer / Owner / Parent" },
+                {
+                  key: "split",
+                  label: "Customer / Brand Associate / Growth Partner",
+                },
                 { key: "status", label: "Status" },
                 { key: "actions", label: "Actions" },
               ]}
@@ -953,7 +1049,6 @@ const ProductDistributionManager = () => {
 
 const ReferralCommerce = () => {
   const { section } = useParams();
-  const referralFilterStatuses = useDropdownOptions("referral-filter-statuses");
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
   const referralDistributionTypes = useDropdownOptions(
     "referral-distribution-types",
@@ -987,6 +1082,14 @@ const ReferralCommerce = () => {
   const [editingCode, setEditingCode] = useState(null);
   const [bonusRuleModalOpen, setBonusRuleModalOpen] = useState(false);
   const [editingBonusRule, setEditingBonusRule] = useState(null);
+  const [bonusView, setBonusView] = useState("rules");
+  const [payoutAction, setPayoutAction] = useState(null);
+  const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
+  const [payoutActionForm, setPayoutActionForm] = useState({
+    adminNote: "",
+    transactionReference: "",
+    paymentProofUrl: "",
+  });
   const [parentId, setParentId] = useState("");
   const [influencerForm, setInfluencerForm] = useState(emptyInfluencerForm);
   const [codeForm, setCodeForm] = useState(emptyCodeForm);
@@ -1006,6 +1109,11 @@ const ReferralCommerce = () => {
   const fraudReviews = getBranchList(referralState.fraudReviewsData);
   const hierarchy = getBranchPayload(referralState.hierarchyData);
   const loading = Boolean(referralState.loading);
+  const activeStatusOptions = (FILTER_STATUSES[activeTab] || []).map((value) => ({
+    value,
+    label: humanize(value),
+  }));
+  const hasListFilters = activeStatusOptions.length > 0;
 
   const parentOptions = useMemo(
     () =>
@@ -1126,10 +1234,50 @@ const ReferralCommerce = () => {
     ]);
   };
 
+  const refreshActive = async (filters = {}) => {
+    const query = {
+      q: filters.q ?? search,
+      page: 1,
+      limit: 50,
+      ...((filters.status ?? status) ? { status: filters.status ?? status } : {}),
+    };
+    const requests = {
+      overview: () => dispatch(getReferralSummary()),
+      influencers: () => Promise.all([dispatch(getReferralInfluencers(query)), dispatch(getReferralHierarchy())]),
+      codes: () => dispatch(getReferralCodes(query)),
+      rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
+      bonuses: () => Promise.all([
+        dispatch(getReferralBonusRules({ ...query, status: ["active", "inactive"].includes(query.status) ? query.status : undefined })),
+        dispatch(getReferralBonusProgress({ page: 1, limit: 50 })),
+        dispatch(getReferralBonusAchievements({ ...query, status: ["locked", "released", "reversed"].includes(query.status) ? query.status : undefined })),
+      ]),
+      orders: () => dispatch(getReferralOrders(query)),
+      commissions: () => dispatch(getReferralCommissions(query)),
+      payouts: () => dispatch(getReferralPayouts(query)),
+      hierarchy: () => dispatch(getReferralHierarchy()),
+      fraud: () => dispatch(getReferralFraudReviews(query)),
+    };
+    return requests[activeTab]?.();
+  };
+
   useEffect(() => {
     refreshAll({ q: "", status: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setSearch("");
+    setStatus("");
+    refreshActive({ q: "", status: "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  useEffect(() => {
+    const refreshOnFocus = () => refreshActive();
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, search, status]);
 
   useEffect(() => {
     const currentRules = rulesPayload?.current || rulesPayload;
@@ -1148,7 +1296,7 @@ const ReferralCommerce = () => {
   const handleSearch = async (event) => {
     event.preventDefault();
     try {
-      await refreshAll({ q: search, status });
+      await refreshActive({ q: search, status });
     } catch (error) {
       toast.error(error || "Failed to refresh referral commerce data");
     }
@@ -1221,12 +1369,12 @@ const ReferralCommerce = () => {
       await dispatch(
         createReferralParent(compactPayload(influencerForm)),
       ).unwrap();
-      toast.success("Parent influencer created");
+      toast.success("Growth Partner created");
       setParentModalOpen(false);
       resetInfluencerForm();
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to create parent influencer");
+      toast.error(error || "Unable to create Growth Partner");
     }
   };
 
@@ -1239,12 +1387,12 @@ const ReferralCommerce = () => {
           parentId,
         }),
       ).unwrap();
-      toast.success("Child influencer created");
+      toast.success("Brand Associate created");
       setChildModalOpen(false);
       resetInfluencerForm();
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to create child influencer");
+      toast.error(error || "Unable to create Brand Associate");
     }
   };
 
@@ -1257,17 +1405,17 @@ const ReferralCommerce = () => {
         await dispatch(
           updateReferralCode({ ...codePayload, codeId: getId(editingCode) }),
         ).unwrap();
-        toast.success("Influencer code updated");
+        toast.success("Referral code updated");
       } else {
         await dispatch(createReferralCode(payload)).unwrap();
-        toast.success("Influencer code created");
+        toast.success("Referral code created");
       }
       setCodeModalOpen(false);
       setEditingCode(null);
       setCodeForm(emptyCodeForm);
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to save influencer code");
+      toast.error(error || "Unable to save referral code");
     }
   };
 
@@ -1416,10 +1564,10 @@ const ReferralCommerce = () => {
           status: nextStatus,
         }),
       ).unwrap();
-      toast.success("Influencer status updated");
+      toast.success("Referral Partner status updated");
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to update influencer status");
+      toast.error(error || "Unable to update Referral Partner status");
     }
   };
 
@@ -1431,10 +1579,10 @@ const ReferralCommerce = () => {
           canCreateChildren: true,
         }),
       ).unwrap();
-      toast.success("Influencer promoted");
+      toast.success("Brand Associate promoted to Growth Partner");
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to promote influencer");
+      toast.error(error || "Unable to promote Brand Associate");
     }
   };
 
@@ -1446,36 +1594,74 @@ const ReferralCommerce = () => {
           status: code.status === "active" ? "inactive" : "active",
         }),
       ).unwrap();
-      toast.success("Influencer code status updated");
+      toast.success("Referral code status updated");
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to update influencer code");
+      toast.error(error || "Unable to update referral code");
     }
   };
 
-  const handlePayoutAction = async (payout, action) => {
+  const openPayoutAction = (payout, action) => {
+    setPayoutAction({ payout, action });
+    setPayoutActionForm({
+      adminNote: "",
+      transactionReference: payout.transactionReference || "",
+      paymentProofUrl: payout.paymentProofUrl || "",
+    });
+  };
+
+  const closePayoutAction = () => {
+    if (uploadingPaymentProof) return;
+    setPayoutAction(null);
+    setPayoutActionForm({ adminNote: "", transactionReference: "", paymentProofUrl: "" });
+  };
+
+  const handlePaymentProofUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Upload a PDF, JPG, PNG, or WebP payment proof");
+      return;
+    }
+    try {
+      setUploadingPaymentProof(true);
+      const paymentProofUrl = await uploadDocumentFile(file, "REFERRAL_PAYOUTS");
+      setPayoutActionForm((form) => ({ ...form, paymentProofUrl }));
+      toast.success("Payment proof uploaded");
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to upload payment proof");
+    } finally {
+      setUploadingPaymentProof(false);
+    }
+  };
+
+  const handlePayoutAction = async (event) => {
+    event.preventDefault();
+    if (!payoutAction || uploadingPaymentProof) return;
+    const { payout, action } = payoutAction;
     const payoutId = getId(payout);
     try {
       if (action === "approve") {
-        await dispatch(approveReferralPayout({ payoutId })).unwrap();
+        await dispatch(approveReferralPayout({ payoutId, adminNote: payoutActionForm.adminNote })).unwrap();
       }
       if (action === "reject") {
         await dispatch(
-          rejectReferralPayout({ payoutId, adminNote: "Rejected by admin" }),
+          rejectReferralPayout({ payoutId, adminNote: payoutActionForm.adminNote }),
         ).unwrap();
       }
       if (action === "paid") {
-        const transactionReference = window.prompt("Enter bank/UPI transaction reference (UTR):");
-        if (!transactionReference?.trim()) return;
-        const paymentProofUrl = window.prompt("Enter payment proof URL (optional):") || null;
         await dispatch(markReferralPayoutPaid({
           payoutId,
-          transactionReference: transactionReference.trim(),
-          paymentProofUrl,
+          transactionReference: payoutActionForm.transactionReference.trim(),
+          paymentProofUrl: payoutActionForm.paymentProofUrl || null,
+          adminNote: payoutActionForm.adminNote || null,
           paidAt: new Date().toISOString(),
         })).unwrap();
       }
       toast.success("Payout updated");
+      closePayoutAction();
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to update payout");
@@ -1495,7 +1681,7 @@ const ReferralCommerce = () => {
 
   const statItems = [
     {
-      label: "Influencers",
+      label: "Referral Partners",
       value: summary?.influencers?.total || 0,
       sub: `${summary?.influencers?.active || 0} active`,
       icon: <UserPlus size={18} />,
@@ -1548,7 +1734,7 @@ const ReferralCommerce = () => {
         </div>
       </div>
     ),
-    type: <span className="capitalize">{item.influencerType}</span>,
+    type: <span>{partnerTypeLabel(item.influencerType)}</span>,
     code: item.primaryCode?.code ? (
       <span className="font-mono text-sm font-semibold text-indigo-700">
         {item.primaryCode.code}
@@ -1559,30 +1745,20 @@ const ReferralCommerce = () => {
     hierarchy: `Level ${item.level || 1}`,
     wallet: formatCoins(item.wallet?.availableBalance),
     status: <StatusPill value={item.status} />,
-    actions: (
-      <div className="flex flex-wrap gap-2">
-        <IconButton
-          title={item.status === "active" ? "Suspend" : "Reactivate"}
-          onClick={() =>
-            setInfluencerStatus(
-              item,
-              item.status === "active" ? "suspended" : "active",
-            )
-          }
-          variant={item.status === "active" ? "danger" : "success"}
-        >
-          {item.status === "active" ? <X size={15} /> : <Check size={15} />}
-        </IconButton>
-        <IconButton
-          title="Promote"
-          onClick={() => promoteInfluencer(item)}
-          variant="primary"
-          disabled={item.influencerType === "parent" && item.canCreateChildren}
-        >
-          <GitBranch size={15} />
-        </IconButton>
-      </div>
-    ),
+    actions: <RowActions actions={[
+      {
+        label: item.status === "active" ? "Suspend partner" : "Reactivate partner",
+        icon: item.status === "active" ? <X size={14} /> : <Check size={14} />,
+        danger: item.status === "active",
+        onClick: () => setInfluencerStatus(item, item.status === "active" ? "suspended" : "active"),
+      },
+      {
+        label: "Promote to Growth Partner",
+        icon: <GitBranch size={14} />,
+        hidden: item.influencerType === "parent" && item.canCreateChildren,
+        onClick: () => promoteInfluencer(item),
+      },
+    ]} />,
   }));
 
   const codeRows = codes.map((code) => ({
@@ -1591,23 +1767,15 @@ const ReferralCommerce = () => {
     influencer: renderInfluencerRef(code.influencerId),
     usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
     status: <StatusPill value={code.status} />,
-    actions: (
-      <div className="flex flex-wrap gap-2">
-        <IconButton
-          title="Edit"
-          onClick={() => openEditCode(code)}
-          variant="primary"
-        >
-          <Pencil size={15} />
-        </IconButton>
-        <IconButton
-          title={code.status === "active" ? "Deactivate" : "Activate"}
-          onClick={() => toggleCodeStatus(code)}
-        >
-          {code.status === "active" ? <X size={15} /> : <Check size={15} />}
-        </IconButton>
-      </div>
-    ),
+    actions: <RowActions actions={[
+      { label: "Edit code", icon: <Pencil size={14} />, onClick: () => openEditCode(code) },
+      {
+        label: code.status === "active" ? "Deactivate code" : "Activate code",
+        icon: code.status === "active" ? <X size={14} /> : <Check size={14} />,
+        danger: code.status === "active",
+        onClick: () => toggleCodeStatus(code),
+      },
+    ]} />,
   }));
 
   const orderRows = orders.map((order) => ({
@@ -1641,40 +1809,33 @@ const ReferralCommerce = () => {
   const payoutRows = payouts.map((payout) => ({
     key: getId(payout),
     influencer: renderInfluencerRef(payout.influencerId),
-    amount: formatCoins(payout.amount),
-    method: payout.payoutMethod || "-",
+    coins: formatCoins(payout.coinAmount ?? payout.amount),
+    payable: formatAmount(
+      payout.currencyAmount ??
+        Number((payout.coinAmount ?? payout.amount) || 0) * Number(payout.coinValue || 1),
+    ),
+    method: payout.payoutMethod === "upi_qr" ? "UPI QR" : payout.payoutMethod || "-",
+    destination:
+      payout.destinationSnapshot?.accountNumberLast4
+        ? `${payout.destinationSnapshot.bankName || "Bank"} · •••• ${payout.destinationSnapshot.accountNumberLast4}`
+        : ["upi", "upi_qr"].includes(payout.payoutMethod)
+        ? payout.destinationSnapshot?.upiId || payout.upiId || "-"
+        : payout.payoutMethod === "bank"
+          ? payout.bankAccountId || "-"
+          : "Manual",
     status: <StatusPill value={payout.status} />,
     requested: formatDate(payout.requestedAt || payout.createdAt),
     reference: payout.transactionReference || "-",
-    actions: (
-      <div className="flex flex-wrap gap-2">
-        <IconButton
-          title="Approve"
-          onClick={() => handlePayoutAction(payout, "approve")}
-          variant="success"
-          disabled={payout.status !== "pending"}
-        >
-          <Check size={15} />
-        </IconButton>
-        <IconButton
-          title="Reject"
-          onClick={() => handlePayoutAction(payout, "reject")}
-          variant="danger"
-          disabled={payout.status === "paid"}
-        >
-          <X size={15} />
-        </IconButton>
-        <IconButton
-          title="Mark Paid"
-          onClick={() => handlePayoutAction(payout, "paid")}
-          variant="primary"
-          disabled={!["approved", "processing"].includes(payout.status)}
-        >
-          <BadgeIndianRupee size={15} />
-        </IconButton>
-      </div>
-    ),
+    actions: <RowActions actions={[
+      { label: "Approve request", icon: <Check size={14} />, hidden: payout.status !== "pending", onClick: () => openPayoutAction(payout, "approve") },
+      { label: "Reject request", icon: <X size={14} />, danger: true, hidden: !["pending", "approved", "processing", "failed"].includes(payout.status), onClick: () => openPayoutAction(payout, "reject") },
+      { label: "Mark as paid", icon: <BadgeIndianRupee size={14} />, hidden: !["approved", "processing"].includes(payout.status), onClick: () => openPayoutAction(payout, "paid") },
+    ]} />,
   }));
+  const payoutHasActions = payouts.some((payout) =>
+    ["pending", "approved", "processing", "failed"].includes(payout.status),
+  );
+  const payoutHasReference = payouts.some((payout) => payout.transactionReference);
 
   const bonusRuleRows = bonusRules.map((rule) => ({
     key: getId(rule),
@@ -1692,23 +1853,10 @@ const ReferralCommerce = () => {
     applyTo: String(rule.applyTo || "").replace(/_/g, " "),
     release: String(rule.releaseRule || "").replace(/_/g, " "),
     status: <StatusPill value={rule.status} />,
-    actions: (
-      <div className="flex flex-wrap gap-2">
-        <IconButton
-          title="Edit bonus rule"
-          onClick={() => openBonusRuleModal(rule)}
-          variant="primary"
-        >
-          <Pencil size={15} />
-        </IconButton>
-        <IconButton
-          title={rule.status === "active" ? "Deactivate" : "Activate"}
-          onClick={() => toggleBonusRuleStatus(rule)}
-        >
-          {rule.status === "active" ? <X size={15} /> : <Check size={15} />}
-        </IconButton>
-      </div>
-    ),
+    actions: <RowActions actions={[
+      { label: "Edit rule", icon: <Pencil size={14} />, onClick: () => openBonusRuleModal(rule) },
+      { label: rule.status === "active" ? "Deactivate rule" : "Activate rule", icon: rule.status === "active" ? <X size={14} /> : <Check size={14} />, danger: rule.status === "active", onClick: () => toggleBonusRuleStatus(rule) },
+    ]} />,
   }));
 
   const bonusProgressRows = bonusProgress.map((row) => ({
@@ -1754,12 +1902,12 @@ const ReferralCommerce = () => {
         <span className="font-mono text-xs text-gray-500">
           Profile {shortId(getId(node))}
         </span>
-        <StatusPill value={node.influencerType} />
+        <StatusPill value={partnerTypeLabel(node.influencerType)} />
         <span className="text-xs text-gray-500">
           Level {node.level || depth + 1}
         </span>
         <span className="text-xs text-gray-500">
-          {node.primaryCode?.code || "No influencer code"}
+          {node.primaryCode?.code || "No referral code"}
         </span>
       </div>
       {Array.isArray(node.children) && node.children.length > 0 && (
@@ -1881,7 +2029,7 @@ const ReferralCommerce = () => {
           step="0.01"
           value={rulesForm.maximumReferralPoolAmount}
           onChange={handleRulesField}
-          hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and influencer shares are then calculated from this capped pool."
+          hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and partner shares are then calculated from this capped pool."
         />
         <TextInput
           label="INR per Coin"
@@ -1947,7 +2095,7 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
         />
         <TextInput
-          label="Code Owner / Child Share %"
+          label="Brand Associate Share %"
           name="childSharePercent"
           type="number"
           min="0"
@@ -1956,7 +2104,7 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
         />
         <TextInput
-          label="Parent Share %"
+          label="Growth Partner Share %"
           name="parentSharePercent"
           type="number"
           step="0.01"
@@ -2067,7 +2215,7 @@ const ReferralCommerce = () => {
 
   const renderBonusRules = () => (
     <Section
-      title="Influencer Bonus Rules"
+      title="Referral Partner Bonus Rules"
       actions={
         <div className="flex flex-wrap gap-2">
           <button
@@ -2110,7 +2258,7 @@ const ReferralCommerce = () => {
       <DataTable
         columns={[
           { key: "rule", label: "Rule" },
-          { key: "influencer", label: "Influencer Profile" },
+          { key: "influencer", label: "Referral Partner" },
           { key: "cycle", label: "Cycle" },
           { key: "target", label: "Target" },
           { key: "achieved", label: "Achieved" },
@@ -2128,7 +2276,7 @@ const ReferralCommerce = () => {
       <DataTable
         columns={[
           { key: "rule", label: "Rule" },
-          { key: "influencer", label: "Influencer Profile" },
+          { key: "influencer", label: "Referral Partner" },
           { key: "cycle", label: "Cycle" },
           { key: "target", label: "Target" },
           { key: "bonus", label: "Bonus Coins" },
@@ -2141,11 +2289,35 @@ const ReferralCommerce = () => {
     </Section>
   );
 
+  const renderBonuses = () => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-1.5">
+        {[
+          ["rules", "Rules"],
+          ["progress", "Current Progress"],
+          ["history", "Achievement History"],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setBonusView(value)}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition ${bonusView === value ? "bg-[var(--admin-navy)] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {bonusView === "rules" && renderBonusRules()}
+      {bonusView === "progress" && renderBonusProgress()}
+      {bonusView === "history" && renderBonusHistory()}
+    </div>
+  );
+
   return (
     <div className="w-full space-y-4">
       <PageHeader
         title="Referral Commerce"
-        subtitle="Influencer referral operations"
+        subtitle="Growth Partner and Brand Associate operations"
         breadcrumbs={[
           { label: "Marketing & Growth" },
           { label: "Referral Commerce" },
@@ -2157,10 +2329,10 @@ const ReferralCommerce = () => {
               target="_blank"
               rel="noreferrer"
               className="admin-btn-secondary inline-flex items-center gap-2"
-              title="Open the influencer sign-in portal"
+              title="Open the Referral Partner sign-in portal"
             >
               <ExternalLink size={16} />
-              Influencer Login
+              Partner Login
             </a>
             {/* <IconButton
               title="Refresh"
@@ -2179,7 +2351,7 @@ const ReferralCommerce = () => {
               className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <UserPlus size={16} />
-              Parent
+              Growth Partner
             </button>
             <button
               type="button"
@@ -2194,7 +2366,7 @@ const ReferralCommerce = () => {
               className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <GitBranch size={16} />
-              Child
+              Brand Associate
             </button>
             <button
               type="button"
@@ -2206,39 +2378,35 @@ const ReferralCommerce = () => {
               className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <Plus size={16} />
-              Influencer Code
+              Referral Code
             </button>
           </div>
         }
       />
 
-      <form
+      {hasListFilters && <form
         onSubmit={handleSearch}
-        className="flex flex-wrap items-stretch gap-2 rounded border border-gray-200 bg-white p-3"
+        className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       >
         <div className="relative min-w-[220px] flex-1">
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Search</label>
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute bottom-3 left-3 text-gray-400"
           />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
+            placeholder={`Search ${tabs.find((tab) => tab.key === activeTab)?.label?.toLowerCase() || "records"}…`}
             className="h-10 w-full rounded border border-gray-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-400"
           />
         </div>
         <FilterSelect
           className="w-48"
-          options={[
-            { value: "", label: "All statuses" },
-            ...referralFilterStatuses.options,
-          ]}
+          label="Status"
+          options={[{ value: "", label: "All statuses" }, ...activeStatusOptions]}
           value={
-            [
-              { value: "", label: "All statuses" },
-              ...referralFilterStatuses.options,
-            ].find((opt) => String(opt.value) === String(status)) || {
+            [{ value: "", label: "All statuses" }, ...activeStatusOptions].find((opt) => String(opt.value) === String(status)) || {
               value: "",
               label: "All statuses",
             }
@@ -2254,20 +2422,23 @@ const ReferralCommerce = () => {
           style={{ height: 40 }}
         >
           <Search size={16} />
-          Search
+          Apply
         </OrangeButton>
-      </form>
+        <button type="button" onClick={() => refreshActive()} className="admin-btn-secondary inline-flex h-10 items-center gap-2 px-3">
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
+        </button>
+      </form>}
 
       {activeTab === "overview" && renderOverview()}
       {activeTab === "productDistribution" && <ProductDistributionManager />}
       {activeTab === "influencers" && (
-        <Section title="Influencer Profiles">
+        <Section title="Referral Partners">
           <DataTable
             columns={[
-              { key: "influencer", label: "Influencer" },
+              { key: "influencer", label: "Referral Partner" },
               { key: "profileId", label: "Profile ID" },
               { key: "type", label: "Type" },
-              { key: "code", label: "Influencer Code" },
+              { key: "code", label: "Referral Code" },
               { key: "hierarchy", label: "Hierarchy" },
               { key: "wallet", label: "Available Coins" },
               { key: "status", label: "Status" },
@@ -2278,11 +2449,11 @@ const ReferralCommerce = () => {
         </Section>
       )}
       {activeTab === "codes" && (
-        <Section title="Influencer Codes">
+        <Section title="Referral Codes">
           <DataTable
             columns={[
-              { key: "code", label: "Influencer Code" },
-              { key: "influencer", label: "Influencer Profile" },
+              { key: "code", label: "Referral Code" },
+              { key: "influencer", label: "Referral Partner" },
               { key: "usage", label: "Usage" },
               { key: "status", label: "Status" },
               { key: "actions", label: "Actions" },
@@ -2292,15 +2463,13 @@ const ReferralCommerce = () => {
         </Section>
       )}
       {activeTab === "rules" && renderRules()}
-      {activeTab === "bonusRules" && renderBonusRules()}
-      {activeTab === "bonusProgress" && renderBonusProgress()}
-      {activeTab === "bonusHistory" && renderBonusHistory()}
+      {activeTab === "bonuses" && renderBonuses()}
       {activeTab === "orders" && (
         <Section title="Referral Orders">
           <DataTable
             columns={[
               { key: "order", label: "Order" },
-              { key: "code", label: "Influencer Code" },
+              { key: "code", label: "Referral Code" },
               { key: "customer", label: "Customer" },
               { key: "amount", label: "Eligible Amount" },
               { key: "discount", label: "Discount" },
@@ -2316,7 +2485,7 @@ const ReferralCommerce = () => {
           <DataTable
             columns={[
               { key: "order", label: "Order" },
-              { key: "influencer", label: "Influencer Profile" },
+              { key: "influencer", label: "Referral Partner" },
               { key: "type", label: "Type" },
               { key: "basis", label: "Basis" },
               { key: "amount", label: "Coins" },
@@ -2331,13 +2500,15 @@ const ReferralCommerce = () => {
         <Section title="Payout Requests">
           <DataTable
             columns={[
-              { key: "influencer", label: "Influencer Profile" },
-              { key: "amount", label: "Coins" },
+              { key: "influencer", label: "Referral Partner" },
+              { key: "coins", label: "Requested Coins" },
+              { key: "payable", label: "Transfer Amount" },
               { key: "method", label: "Method" },
+              { key: "destination", label: "Transfer To" },
               { key: "status", label: "Status" },
               { key: "requested", label: "Requested" },
-              { key: "reference", label: "UTR / Reference" },
-              { key: "actions", label: "Actions" },
+              ...(payoutHasReference ? [{ key: "reference", label: "UTR / Reference" }] : []),
+              ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
             ]}
             rows={payoutRows}
           />
@@ -2371,8 +2542,8 @@ const ReferralCommerce = () => {
           <DataTable
             columns={[
               { key: "reason", label: "Reason" },
-              { key: "influencer", label: "Influencer Profile" },
-              { key: "code", label: "Influencer Code" },
+              { key: "influencer", label: "Referral Partner" },
+              { key: "code", label: "Referral Code" },
               { key: "severity", label: "Severity" },
               { key: "status", label: "Status" },
               { key: "created", label: "Created" },
@@ -2383,13 +2554,13 @@ const ReferralCommerce = () => {
       )}
 
       <Modal
-        title="Create Parent Influencer"
+        title="Create Growth Partner"
         open={parentModalOpen}
         onClose={() => setParentModalOpen(false)}
         footer={
           <OrangeButton type="submit" form="parentInfluencerForm">
             <Check size={16} />
-            Create Parent
+            Create Growth Partner
           </OrangeButton>
         }
       >
@@ -2431,7 +2602,7 @@ const ReferralCommerce = () => {
             onChange={handleInfluencerField}
           />
           <TextInput
-            label="Influencer Code"
+            label="Referral Code"
             name="code"
             value={influencerForm.code}
             onChange={handleInfluencerField}
@@ -2444,19 +2615,19 @@ const ReferralCommerce = () => {
               onChange={handleInfluencerField}
               className="h-4 w-4"
             />
-            Can create children
+            Can create Brand Associates
           </label>
         </form>
       </Modal>
 
       <Modal
-        title="Create Child Influencer"
+        title="Create Brand Associate"
         open={childModalOpen}
         onClose={() => setChildModalOpen(false)}
         footer={
           <OrangeButton type="submit" form="childInfluencerForm">
             <Check size={16} />
-            Create Child
+            Create Brand Associate
           </OrangeButton>
         }
       >
@@ -2466,12 +2637,12 @@ const ReferralCommerce = () => {
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
         >
           <SelectInput
-            label="Parent"
+            label="Growth Partner"
             name="parentId"
             value={parentId}
             onChange={(event) => setParentId(event.target.value)}
           >
-            <option value="">Select parent</option>
+            <option value="">Select Growth Partner</option>
             {parentOptions.map((parent) => (
               <option key={getId(parent)} value={getId(parent)}>
                 {fullName(parent.user)} -{" "}
@@ -2512,7 +2683,7 @@ const ReferralCommerce = () => {
             onChange={handleInfluencerField}
           />
           <TextInput
-            label="Influencer Code"
+            label="Referral Code"
             name="code"
             value={influencerForm.code}
             onChange={handleInfluencerField}
@@ -2521,7 +2692,7 @@ const ReferralCommerce = () => {
       </Modal>
 
       <Modal
-        title={editingCode ? "Edit Influencer Code" : "Create Influencer Code"}
+        title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
         open={codeModalOpen}
         onClose={() => {
           setCodeModalOpen(false);
@@ -2530,7 +2701,7 @@ const ReferralCommerce = () => {
         footer={
           <OrangeButton type="submit" form="referralCodeForm">
             <Check size={16} />
-            Save Influencer Code
+            Save Referral Code
           </OrangeButton>
         }
       >
@@ -2541,12 +2712,12 @@ const ReferralCommerce = () => {
         >
           {!editingCode && (
             <SelectInput
-              label="Influencer Profile"
+              label="Referral Partner"
               name="influencerId"
               value={codeForm.influencerId}
               onChange={handleCodeField}
             >
-              <option value="">Select influencer profile</option>
+              <option value="">Select Referral Partner</option>
               {influencers.map((item) => (
                 <option key={getId(item)} value={getId(item)}>
                   {fullName(item.user)} - {getId(item)}
@@ -2555,7 +2726,7 @@ const ReferralCommerce = () => {
             </SelectInput>
           )}
           <TextInput
-            label="Influencer Code"
+            label="Referral Code"
             name="code"
             value={codeForm.code}
             onChange={handleCodeField}
@@ -2579,6 +2750,69 @@ const ReferralCommerce = () => {
               </option>
             ))}
           </SelectInput>
+        </form>
+      </Modal>
+
+      <Modal
+        title={
+          payoutAction?.action === "paid"
+            ? "Record Payout Payment"
+            : payoutAction?.action === "reject"
+              ? "Reject Payout Request"
+              : "Approve Payout Request"
+        }
+        open={Boolean(payoutAction)}
+        onClose={closePayoutAction}
+        footer={
+          <>
+            <button type="button" disabled={uploadingPaymentProof} onClick={closePayoutAction} className="admin-btn-secondary">Cancel</button>
+            <OrangeButton type="submit" form="payoutActionForm" disabled={uploadingPaymentProof || (payoutAction?.action === "paid" && !payoutActionForm.paymentProofUrl)}>
+              {payoutAction?.action === "paid" ? "Mark Paid" : payoutAction?.action === "reject" ? "Reject Request" : "Approve Request"}
+            </OrangeButton>
+          </>
+        }
+      >
+        <form id="payoutActionForm" onSubmit={handlePayoutAction} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
+            <div><span className="block text-xs text-gray-500">Partner</span>{payoutAction ? renderInfluencerRef(payoutAction.payout.influencerId) : "-"}</div>
+            <div><span className="block text-xs text-gray-500">Requested coins</span><strong>{formatCoins(payoutAction?.payout?.coinAmount ?? payoutAction?.payout?.amount)}</strong></div>
+            <div><span className="block text-xs text-gray-500">Transfer amount</span><strong>{formatAmount(payoutAction?.payout?.currencyAmount ?? Number((payoutAction?.payout?.coinAmount ?? payoutAction?.payout?.amount) || 0) * Number(payoutAction?.payout?.coinValue || 1))}</strong></div>
+            <div><span className="block text-xs text-gray-500">Transfer destination</span><strong>{payoutAction?.payout?.destinationSnapshot?.accountNumber ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}` : payoutAction?.payout?.destinationSnapshot?.upiId || payoutAction?.payout?.upiId || payoutAction?.payout?.bankAccountId || "Manual"}</strong></div>
+            {payoutAction?.payout?.destinationSnapshot?.accountHolderName && <div><span className="block text-xs text-gray-500">Account holder</span><strong>{payoutAction.payout.destinationSnapshot.accountHolderName}</strong></div>}
+            {payoutAction?.payout?.destinationSnapshot?.ifscCode && <div><span className="block text-xs text-gray-500">IFSC</span><strong>{payoutAction.payout.destinationSnapshot.ifscCode}</strong></div>}
+            {payoutAction?.payout?.payoutQrUrl && <div><span className="block text-xs text-gray-500">Submitted QR</span><a href={payoutAction.payout.payoutQrUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"><ExternalLink size={13}/>Review QR</a></div>}
+            <div><span className="block text-xs text-gray-500">Destination source</span><strong>{payoutAction?.payout?.destinationSource === "saved_profile" ? "Saved profile details" : payoutAction?.payout?.destinationSource === "one_time" ? "One-time details" : "Legacy request"}</strong></div>
+          </div>
+          {payoutAction?.action === "paid" && (
+            <>
+              <TextInput required label="Bank / UPI Transaction Reference *" name="transactionReference" value={payoutActionForm.transactionReference} onChange={(event) => setPayoutActionForm((form) => ({ ...form, transactionReference: event.target.value }))} />
+              <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-medium uppercase text-gray-600">Payment proof *</div>
+                    <div className="mt-1 text-xs text-gray-500">Upload a PDF, JPG, PNG, or WebP receipt.</div>
+                  </div>
+                  <label className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingPaymentProof ? "pointer-events-none opacity-60" : ""}`}>
+                    <UploadCloud size={15} />
+                    {uploadingPaymentProof ? "Uploading…" : payoutActionForm.paymentProofUrl ? "Replace file" : "Upload proof"}
+                    <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={uploadingPaymentProof} onChange={handlePaymentProofUpload} />
+                  </label>
+                </div>
+                {payoutActionForm.paymentProofUrl && (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2 text-xs">
+                    <a href={payoutActionForm.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline">
+                      <ExternalLink size={13} /> View uploaded payment proof
+                    </a>
+                    <button type="button" className="font-semibold text-red-600 hover:underline" onClick={() => setPayoutActionForm((form) => ({ ...form, paymentProofUrl: "" }))}>Remove</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium uppercase text-gray-500">Admin Note{payoutAction?.action === "reject" ? " *" : ""}</span>
+            <textarea required={payoutAction?.action === "reject"} rows="3" value={payoutActionForm.adminNote} onChange={(event) => setPayoutActionForm((form) => ({ ...form, adminNote: event.target.value }))} className="admin-input w-full resize-y" placeholder="Add an audit note" />
+          </label>
         </form>
       </Modal>
 
