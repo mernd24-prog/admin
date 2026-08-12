@@ -253,62 +253,64 @@ export default function SearchComponent({
               {isFiltering ? "Searching..." : "Search"}
             </Button>
           )}
-          {searchActions && (
-            <div className="flex shrink-0 flex-wrap items-start gap-2">
-              {searchActions}
-            </div>
-          )}
-        </div>
-        {isActionButton && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {isStatusAction && (
-              <>
-                <Button
-                  onClick={() => handleBulkAction("Active")}
-                  disabled={selectedRow.length === 0 || loading || isFiltering}
-                  requiredModule={guardModule}
-                  requiredAction="status_change"
-                  className={
-                    selectedRow.length === 0
-                      ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                      : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
-                  }
-                >
-                  <PiToggleRightThin className="text-xl" />
-                  Activate
-                </Button>
-                <Button
-                  onClick={() => handleBulkAction("Inactive")}
-                  disabled={selectedRow.length === 0 || loading || isFiltering}
-                  requiredModule={guardModule}
-                  requiredAction="status_change"
-                  className={
-                    selectedRow.length === 0
-                      ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                      : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
-                  }
-                >
-                  <PiToggleLeftThin className="text-xl" /> Deactivate
-                </Button>
-              </>
-            )}
-            {isDelete && (
-              <Button
-                onClick={() => handleBulkAction("Delete")}
-                disabled={selectedRow.length === 0 || loading || isFiltering}
-                requiredModule={guardModule}
-                requiredAction="delete"
-                className={
-                  selectedRow.length === 0
-                    ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                    : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
-                }
-              >
-                <MdOutlineDeleteOutline className="text-xl" /> Delete
-              </Button>
-            )}
           </div>
-        )}
+
+{(searchActions || isActionButton) && (
+  <div className="flex shrink-0 flex-wrap items-center gap-2">
+    {searchActions}
+
+    {isActionButton && isStatusAction && (
+      <>
+        <Button
+          onClick={() => handleBulkAction("Active")}
+          disabled={selectedRow.length === 0 || loading || isFiltering}
+          requiredModule={guardModule}
+          requiredAction="status_change"
+          className={
+            selectedRow.length === 0
+              ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+              : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+          }
+        >
+          <PiToggleRightThin className="text-xl" />
+          Activate
+        </Button>
+
+        <Button
+          onClick={() => handleBulkAction("Inactive")}
+          disabled={selectedRow.length === 0 || loading || isFiltering}
+          requiredModule={guardModule}
+          requiredAction="status_change"
+          className={
+            selectedRow.length === 0
+              ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+              : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+          }
+        >
+          <PiToggleLeftThin className="text-xl" />
+          Deactivate
+        </Button>
+      </>
+    )}
+
+    {isActionButton && isDelete && (
+      <Button
+        onClick={() => handleBulkAction("Delete")}
+        disabled={selectedRow.length === 0 || loading || isFiltering}
+        requiredModule={guardModule}
+        requiredAction="delete"
+        className={
+          selectedRow.length === 0
+            ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
+            : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+        }
+      >
+        <MdOutlineDeleteOutline className="text-xl" />
+        Delete
+      </Button>
+    )}
+  </div>
+)}
       </div>
 
       {isSearchShow && hasAdvancedFilters && (

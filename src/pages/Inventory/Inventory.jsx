@@ -188,19 +188,19 @@ const variantTitle = (row = {}) => (
 
 const productTitle = (row = {}) => (
   <div className="flex min-w-[220px] max-w-[52vw] items-center gap-3 xl:w-[560px]">
-    <div className="h-11 w-11 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
-      {firstImage(row) ? (
-        <img
-          src={firstImage(row)}
-          alt={row.productName || "Variant"}
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
-          <MdInventory2 size={20} />
-        </div>
-      )}
+  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
+  {firstImage(row) ? (
+    <img
+      src={firstImage(row)}
+      alt={row.productName || "Variant"}
+      className="h-full w-full object-contain p-1"
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
+      <MdInventory2 size={20} />
     </div>
+  )}
+</div>
 
     <div className="min-w-0">
       <p

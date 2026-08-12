@@ -11,7 +11,7 @@ import {
 import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
-import OrderLink from "../../../components/Shared/OrderLink";
+import {OrderLink} from "../../../components/Shared/EntityLink";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import {
