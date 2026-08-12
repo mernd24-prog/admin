@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { MdPercent, MdAdd } from "react-icons/md";
+import { MdPercent, MdAdd, MdEdit, MdDelete, MdCheckCircle, MdBlock } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -204,6 +204,7 @@ const SubTax = () => {
     (row) => [
       {
         label: "Edit",
+        icon: <MdEdit size={16} className="text-blue-600" />,
         onClick: () => {
           setFormData({
             _id: row._id,
@@ -217,11 +218,17 @@ const SubTax = () => {
       },
       {
         label: row.isDisable ? "Enable" : "Disable",
+        icon: row.isDisable ? (
+          <MdCheckCircle size={16} className="text-green-600" />
+        ) : (
+          <MdBlock size={16} className="text-amber-600" />
+        ),
         onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
         danger: !row.isDisable,
       },
       {
         label: "Delete",
+        icon: <MdDelete size={16} className="text-red-600" />,
         onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
         danger: true,
       },

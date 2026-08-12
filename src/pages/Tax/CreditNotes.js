@@ -304,35 +304,28 @@ const CreditNotes = () => {
             </span>
           ),
         },
-        {
-          key: "_actions",
-          label: "Actions",
-          render: (_, row) => (
-            <div className="flex gap-1">
-              <button
-                onClick={() => setDetail(row)}
-                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                title="View"
-              >
-                <MdVisibility size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadCreditNote(row)}
-                disabled={
-                  downloadingId ===
-                  pick(row, "id", "creditNoteId", "credit_note_id")
-                }
-                className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
-                title="Download PDF"
-              >
-                <MdDownload size={18} />
-              </button>
-            </div>
-          ),
-        },
       ].filter((column) => !(isSeller && column.key === "organizationId")),
-    [downloadCreditNote, downloadingId, isSeller],
+    [isSeller],
+  );
+
+  const rowActions = useCallback(
+    (row) => {
+      const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
+      return [
+        {
+          label: "View",
+          icon: <MdVisibility size={16} className="text-blue-600" />,
+          onClick: () => setDetail(row),
+        },
+        {
+          label: "Download PDF",
+          icon: <MdDownload size={16} className="text-gray-600" />,
+          disabled: downloadingId === creditNoteId,
+          onClick: () => downloadCreditNote(row),
+        },
+      ];
+    },
+    [downloadCreditNote, downloadingId],
   );
 
   return (
@@ -370,6 +363,7 @@ const CreditNotes = () => {
           total={payload.total}
           listPage={list}
           emptyMessage="No credit notes found"
+          rowActions={rowActions}
           filterBar={<FilterBar fields={filterFields} listPage={list} />}
         />
       )}

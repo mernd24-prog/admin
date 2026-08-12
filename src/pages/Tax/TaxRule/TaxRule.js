@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { MdGavel, MdAdd } from "react-icons/md";
+import { MdGavel, MdAdd, MdEdit, MdDelete, MdCheckCircle, MdBlock } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -294,46 +294,56 @@ const TaxRule = () => {
   };
 
   const rowActions = useCallback(
-    (row) => [
-      {
-        label: "Edit",
-        onClick: () => {
-          const ruleSubTaxes = subTaxList
-            .filter((st) => row.subTaxes_id && (Array.isArray(row.subTaxes_id) ? row.subTaxes_id.some((id) => id._id === st._id) : row.subTaxes_id._id === st._id))
-            .map((st) => ({ value: st._id, label: st.name }));
+    (row) => {
+      const active = isRowActive(row);
+      return [
+        {
+          label: "Edit",
+          icon: <MdEdit size={16} className="text-blue-600" />,
+          onClick: () => {
+            const ruleSubTaxes = subTaxList
+              .filter((st) => row.subTaxes_id && (Array.isArray(row.subTaxes_id) ? row.subTaxes_id.some((id) => id._id === st._id) : row.subTaxes_id._id === st._id))
+              .map((st) => ({ value: st._id, label: st.name }));
 
-          setFormData({
-            _id: row._id,
-            description: row.description || "",
-            tax_id: row.taxId?._id || row.tax_id?._id || row.taxId || row.tax_id || "",
-            subTaxes_id: Array.isArray(row.subTaxIds)
-              ? row.subTaxIds.map((s) => s?._id || s)
-              : Array.isArray(row.subTaxes_id)
-                ? row.subTaxes_id.map((s) => s?._id || s)
-                : [row.subTaxes_id?._id || row.subTaxes_id].filter(Boolean),
-            category_id: row.category_id?._id || row.category_id || row.category || "",
-            isDisable: !isRowActive(row),
-          });
+            setFormData({
+              _id: row._id,
+              description: row.description || "",
+              tax_id: row.taxId?._id || row.tax_id?._id || row.taxId || row.tax_id || "",
+              subTaxes_id: Array.isArray(row.subTaxIds)
+                ? row.subTaxIds.map((s) => s?._id || s)
+                : Array.isArray(row.subTaxes_id)
+                  ? row.subTaxes_id.map((s) => s?._id || s)
+                  : [row.subTaxes_id?._id || row.subTaxes_id].filter(Boolean),
+              category_id: row.category_id?._id || row.category_id || row.category || "",
+              isDisable: !active,
+            });
 
-          const taxVal = row.taxId || row.tax_id;
-          setSelectedTax(taxVal ? { value: taxVal._id || taxVal, label: taxVal.name || "Selected Tax" } : null);
-          setSelectedSubTax(ruleSubTaxes);
-          const catVal = row.category_id || row.category;
-          setSelectedCategory(catVal ? { value: catVal._id || catVal, label: catVal.name || catVal } : null);
-          setModalMode("edit");
+            const taxVal = row.taxId || row.tax_id;
+            setSelectedTax(taxVal ? { value: taxVal._id || taxVal, label: taxVal.name || "Selected Tax" } : null);
+            setSelectedSubTax(ruleSubTaxes);
+            const catVal = row.category_id || row.category;
+            setSelectedCategory(catVal ? { value: catVal._id || catVal, label: catVal.name || catVal } : null);
+            setModalMode("edit");
+          },
         },
-      },
-      {
-        label: isRowActive(row) ? "Disable" : "Enable",
-        onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
-        danger: isRowActive(row),
-      },
-      {
-        label: "Delete",
-        onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
-        danger: true,
-      },
-    ],
+        {
+          label: active ? "Disable" : "Enable",
+          icon: active ? (
+            <MdBlock size={16} className="text-amber-600" />
+          ) : (
+            <MdCheckCircle size={16} className="text-green-600" />
+          ),
+          onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
+          danger: active,
+        },
+        {
+          label: "Delete",
+          icon: <MdDelete size={16} className="text-red-600" />,
+          onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
+          danger: true,
+        },
+      ];
+    },
     [subTaxList]
   );
 

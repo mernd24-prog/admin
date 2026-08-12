@@ -29,17 +29,20 @@ import {
   getUserList,
   update,
 } from "../../../Redux/userManagementSlice";
-import { formatDateForDisplay, uploadFile } from "../../../_helpers/globalFunctions";
+import {
+  formatDateForDisplay,
+  uploadFile,
+} from "../../../_helpers/globalFunctions";
 import { useListPage } from "../../../hooks/useListPage";
 
 const STATUS_OPTIONS = [
-  { value: "false", label: "Active" },
-  { value: "true", label: "Disabled" },
+  { value: "active", label: "Active" },
+  { value: "suspended", label: "Disabled" },
 ];
 
 const FILTER_FIELDS = [
   {
-    key: "isDisable",
+    key: "accountStatus",
     type: "select",
     label: "Status",
     width: "w-36",
@@ -104,9 +107,7 @@ const createColumns = (onViewUser) => [
   {
     key: "emailVerified",
     label: "Verified",
-    render: (v) => (
-      <StatusBadge status={v ? "verified" : "unverified"} dot />
-    ),
+    render: (v) => <StatusBadge status={v ? "verified" : "unverified"} dot />,
   },
   {
     key: "isDisable",
@@ -175,7 +176,7 @@ const Users = () => {
         const userId = row?._id || row?.id;
         if (userId) navigate(`/app/users/view/${userId}`);
       }),
-    [navigate]
+    [navigate],
   );
 
   useEffect(() => {
@@ -186,14 +187,25 @@ const Users = () => {
         size: params.limit?.toString() || "10",
         keyWord: params.search || "",
         searchFields: "userName,full_name,email",
-        select: "userName full_name email isDisable phone createdAt lastLoginAt accountStatus emailVerified profile",
-        ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
+        select:
+          "userName full_name email isDisable phone createdAt lastLoginAt accountStatus emailVerified profile",
+        ...(params.accountStatus !== undefined && {
+          accountStatus: params.accountStatus,
+        }),
         ...(params.emailVerified !== undefined && {
           emailVerified: params.emailVerified,
         }),
-      })
+      }),
     );
-  }, [list.page, list.pageSize, list.search, list.filters, list.sortKey, list.sortDir, isRefresh]);
+  }, [
+    list.page,
+    list.pageSize,
+    list.search,
+    list.filters,
+    list.sortKey,
+    list.sortDir,
+    isRefresh,
+  ]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -225,14 +237,14 @@ const Users = () => {
 
   const handleAvatarUpload = async (event) => {
     const file = event.target.files?.[0];
-    event.target.value = "";
     if (!file) return;
+    event.target.value = "";
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       toast.error("Only JPG, PNG, and WEBP images are allowed");
       return;
     }
     try {
-      const imageUrl = await uploadFile(file, "USER_AVATAR");
+      const imageUrl = await uploadFile(file, "PROFILES");
       setFormData((prev) => ({ ...prev, avatarUrl: imageUrl }));
       toast.success("Profile image uploaded");
     } catch (err) {
@@ -252,7 +264,10 @@ const Users = () => {
     setSaving(true);
     try {
       const res = await dispatch(createUser({ ...formData })).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "User created successfully");
       closeModal();
       setIsRefresh((r) => !r);
@@ -269,9 +284,18 @@ const Users = () => {
     setSaving(true);
     try {
       const res = await dispatch(
-        update({ _id: formData._id, full_name: formData.full_name, email: formData.email, avatarUrl: formData.avatarUrl, isDisable: formData.isDisable })
+        update({
+          _id: formData._id,
+          full_name: formData.full_name,
+          email: formData.email,
+          avatarUrl: formData.avatarUrl,
+          isDisable: formData.isDisable,
+        }),
       ).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "User updated successfully");
       closeModal();
       setIsRefresh((r) => !r);
@@ -291,9 +315,15 @@ const Users = () => {
     if (!toggleTarget) return;
     try {
       const res = await dispatch(
-        enableDisableUser({ _id: [toggleTarget._id], isDisable: !toggleTarget.isDisable })
+        enableDisableUser({
+          _id: [toggleTarget._id],
+          isDisable: !toggleTarget.isDisable,
+        }),
       ).unwrap();
-      if (res.error) { toast.error(res.error); return; }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(res.message || "Status updated");
       setConfirmOpen(false);
       setToggleTarget(null);
@@ -356,7 +386,7 @@ const Users = () => {
         danger: !row.isDisable,
       },
     ],
-    [navigate]
+    [navigate],
   );
 
   return (
@@ -367,10 +397,7 @@ const Users = () => {
         breadcrumbs={[{ label: "User Management" }, { label: "Users" }]}
         actions={
           <PermissionGuard module="users" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={() => setModalMode("add")}
-
-            >
+            <button onClick={() => setModalMode("add")}>
               <MdAdd size={16} /> Add User
             </button>
           </PermissionGuard>
@@ -415,7 +442,12 @@ const Users = () => {
               {modalMode === "add" ? "Add User" : "Edit User"}
             </h2>
 
-            <form onSubmit={modalMode === "add" ? handleAddSubmit : handleEditSubmit} className="space-y-4">
+            <form
+              onSubmit={
+                modalMode === "add" ? handleAddSubmit : handleEditSubmit
+              }
+              className="space-y-4"
+            >
               <div className="grid grid-cols-2 gap-4">
                 <FormInput
                   label="Full Name"
@@ -452,30 +484,60 @@ const Users = () => {
               />
 
               {/* Avatar */}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Profile Image
                 </label>
-                <div className="flex items-center gap-4 rounded border border-gray-100 bg-gray-50 p-3">
-                  <img
-                    src={formData.avatarUrl || "/Img/noData.png"}
-                    alt="Preview"
-                    className="h-12 w-12 rounded-full border border-gray-200 object-cover bg-white shrink-0"
-                  />
-                  <div className="flex items-center gap-2">
-                    <label className="inline-flex cursor-pointer rounded-md bg-[var(--admin-blue)] px-3 py-1.5 text-sm text-white hover:bg-[#2e3074]">
-                      {formData.avatarUrl ? "Change" : "Upload"}
-                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleAvatarUpload} />
-                    </label>
-                    {formData.avatarUrl && (
-                      <button
-                        type="button"
-                        className="text-xs text-red-500 hover:underline"
-                        onClick={() => setFormData((p) => ({ ...p, avatarUrl: "" }))}
-                      >
-                        Remove
-                      </button>
-                    )}
+
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4">
+                  <div className="flex items-center gap-4">
+                    {/* Image Preview */}
+                    <div className="relative shrink-0">
+                      <img
+                        src={formData.avatarUrl || "/Img/noData.png"}
+                        alt="Profile Preview"
+                        className="h-12 w-12 rounded-full border-2 border-white bg-white object-cover shadow-sm ring-1 ring-gray-200"
+                      />
+
+                      {formData.avatarUrl && (
+                        <span className="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white ring-2 ring-white">
+                          <MdCheckCircle size={14} />
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Upload Content */}
+                    <div className="min-w-0 flex-1">
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        JPG, PNG or WEBP · Recommended 400×400px
+                      </p>
+
+                      <div className="mt-2 flex items-center gap-3">
+                        <label className="inline-flex cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition">
+                          {formData.avatarUrl ? "Change Image" : "Choose Image"}
+
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={handleAvatarUpload}
+                          />
+                        </label>
+
+                        {formData.avatarUrl && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-red-500 transition hover:text-red-600 hover:underline"
+                            onClick={() =>
+                              setFormData((p) => ({ ...p, avatarUrl: "" }))
+                            }
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -506,10 +568,7 @@ const Users = () => {
                 </div>
               )}
 
-              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">
-                  Account Active
-                </span>
+              <div className="flex items-center justify-end  ">
                 <ToggleButton
                   isToggle={!formData.isDisable}
                   handleClick={() =>
@@ -531,7 +590,11 @@ const Users = () => {
                   disabled={saving}
                   className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
                 >
-                  {saving ? "Saving…" : modalMode === "add" ? "Create User" : "Save Changes"}
+                  {saving
+                    ? "Saving…"
+                    : modalMode === "add"
+                      ? "Create User"
+                      : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -541,7 +604,10 @@ const Users = () => {
 
       <ConfirmModal
         isOpen={confirmOpen}
-        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onClose={() => {
+          setConfirmOpen(false);
+          setToggleTarget(null);
+        }}
         onConfirm={handleDisableConfirm}
         title={`${toggleTarget?.isDisable ? "Enable" : "Disable"} User`}
         message={`Are you sure you want to ${toggleTarget?.isDisable ? "enable" : "disable"} ${toggleTarget?.full_name || "this user"}?`}

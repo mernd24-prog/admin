@@ -69,56 +69,56 @@ export default function SearchComponent({
   const guardModule = inferredModule || requiredModule;
   const hasAdvancedFilters = Boolean(
     isBrand ||
-      isProduct ||
-      isUser ||
-      isDelete ||
-      isCategory ||
-      isActivationStatus ||
-      isApprovalOptions ||
-      isProductType ||
-      dateFrom ||
-      dateTo ||
-      orderFrom ||
-      orderTo,
+    isProduct ||
+    isUser ||
+    isDelete ||
+    isCategory ||
+    isActivationStatus ||
+    isApprovalOptions ||
+    isProductType ||
+    dateFrom ||
+    dateTo ||
+    orderFrom ||
+    orderTo,
   );
   const [searchDown, setSearchDown] = useState(
     defaultSearchOpen || (!isSearchDown && hasAdvancedFilters),
   );
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
- const activeFilterCount = (() => {
-  const count = Object.entries(filters || {}).filter(([key, value]) => {
-    // Ignore search and date range keys
-    if (
-      key === "search" ||
-      key === "dateFrom" ||
-      key === "dateTo" ||
-      key === "fromDate" ||
-      key === "toDate"
-    ) {
-      return false;
-    }
+  const activeFilterCount = (() => {
+    const count = Object.entries(filters || {}).filter(([key, value]) => {
+      // Ignore search and date range keys
+      if (
+        key === "search" ||
+        key === "dateFrom" ||
+        key === "dateTo" ||
+        key === "fromDate" ||
+        key === "toDate"
+      ) {
+        return false;
+      }
 
-    const filterValue =
-      value && typeof value === "object" ? value.value : value;
+      const filterValue =
+        value && typeof value === "object" ? value.value : value;
 
-    return (
-      filterValue !== undefined &&
-      filterValue !== null &&
-      filterValue !== "" &&
-      String(filterValue).toLowerCase() !== "all"
-    );
-  }).length;
+      return (
+        filterValue !== undefined &&
+        filterValue !== null &&
+        filterValue !== "" &&
+        String(filterValue).toLowerCase() !== "all"
+      );
+    }).length;
 
-  // Count Date Range as one filter
-  const hasDateRange =
-    filters?.dateFrom ||
-    filters?.dateTo ||
-    filters?.fromDate ||
-    filters?.toDate;
+    // Count Date Range as one filter
+    const hasDateRange =
+      filters?.dateFrom ||
+      filters?.dateTo ||
+      filters?.fromDate ||
+      filters?.toDate;
 
-  return count + (hasDateRange ? 1 : 0);
-})();
+    return count + (hasDateRange ? 1 : 0);
+  })();
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => {
@@ -128,10 +128,18 @@ export default function SearchComponent({
       };
 
       if (exclusiveStatusFilters) {
-        if (field === "activationStatus" && value?.value && value.value !== "All") {
+        if (
+          field === "activationStatus" &&
+          value?.value &&
+          value.value !== "All"
+        ) {
           nextFilters.approvalStatus = { value: "All", label: "All" };
         }
-        if (field === "approvalStatus" && value?.value && value.value !== "All") {
+        if (
+          field === "approvalStatus" &&
+          value?.value &&
+          value.value !== "All"
+        ) {
           nextFilters.activationStatus = { value: "All", label: "All" };
         }
       }
@@ -207,7 +215,9 @@ export default function SearchComponent({
         className={`flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center md:flex-[1_1_640px]">
-          <div className={`w-full min-w-0 ${largeSearchInput ? "md:max-w-2xl" : "md:max-w-md"}`}>
+          <div
+            className={`w-full min-w-0 ${largeSearchInput ? "md:max-w-2xl" : "md:max-w-xl"}`}
+          >
             <SearchInput
               type="text"
               placeholder={placeholder ? placeholder : "Search"}
@@ -235,7 +245,7 @@ export default function SearchComponent({
           {isSearchDown && hasAdvancedFilters && (
             <Button
               onClick={handleSearchDown}
-              className="admin-btn-secondary h-6 !min-h-6 !px-2"
+              className="admin-btn-secondary  h-6 !min-h-6 !px-2"
               disabled={isFiltering}
             >
               <IoIosArrowDown
@@ -244,7 +254,7 @@ export default function SearchComponent({
             </Button>
           )}
 
-          {!(isSearchShow && hasAdvancedFilters && searchDown) && (
+          {/* {!(isSearchShow && hasAdvancedFilters && searchDown) && (
             <Button
               onClick={applyFilters}
               className={`button-primary h-9 shrink-0 !min-h-9`}
@@ -252,7 +262,7 @@ export default function SearchComponent({
             >
               {isFiltering ? "Searching..." : "Search"}
             </Button>
-          )}
+          )} */}
           {searchActions && (
             <div className="flex shrink-0 flex-wrap items-start gap-2">
               {searchActions}
@@ -353,203 +363,203 @@ export default function SearchComponent({
                   : "flex min-w-0 flex-1 items-center gap-x-3 gap-y-4 text-xs flex-wrap"
               }
             >
-            {isBrand && (
-              <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
-                <FilterSelect
-                  label={`Brand`}
-                  value={filters.brand}
-                  options={brandOption || []}
-                  isSearchable={false}
-                  onChange={(option) => handleFilterChange("brand", option)}
-                />
-              </div>
-            )}
-
-            {isProduct && (
-              <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
-                <FilterSelect
-                  label={productLabel ? productLabel : `Product`}
-                  value={filters.product}
-                  options={productOptions || []}
-                  isSearchable={false}
-                  onChange={(option) => handleFilterChange("product", option)}
-                />
-              </div>
-            )}
-
-            {isUser && (
-              <div>
-                <FilterSelect
-                  label={userLabel ? userLabel : "User"}
-                  value={filters.sellerName}
-                  options={userOptions}
-                  isSearchable={false}
-                  onChange={(option) =>
-                    handleFilterChange("sellerName", option)
-                  }
-                />
-              </div>
-            )}
-            {isDelete && (
-              <div>
-                <FilterSelect
-                  label={deleteLable ? deleteLable : "Delete Order"}
-                  value={filters.sellerName}
-                  options={selectJson?.deleteStatus}
-                  isSearchable={false}
-                  onChange={(option) =>
-                    handleFilterChange("sellerName", option)
-                  }
-                />
-              </div>
-            )}
-
-            {isCategory && (
-              <div className={compactFilterBar ? "min-w-0" : undefined}>
-                <FilterSelect
-                  label={`Category`}
-                  value={filters.category}
-                  options={categoryOptions}
-                  isSearchable={true}
-                  onChange={(option) => handleFilterChange("category", option)}
-                />
-              </div>
-            )}
-
-            {isActivationStatus && (
-              <div className={compactFilterBar ? "min-w-0" : undefined}>
-                <FilterSelect
-                  label={
-                    activationStatus ? activationStatus : `Activation status`
-                  }
-                  value={filters.activationStatus}
-                  options={activationStatusOptions}
-                  isSearchable={false}
-                  onChange={(option) =>
-                    handleFilterChange("activationStatus", option)
-                  }
-                />
-              </div>
-            )}
-
-            {isApprovalOptions && (
-              <div className={compactFilterBar ? "min-w-0" : undefined}>
-                <FilterSelect
-                  label={approvalStatus ? approvalStatus : "Approval Status"}
-                  value={filters.approvalStatus}
-                  options={approvalOptions}
-                  isSearchable={false}
-                  onChange={(option) =>
-                    handleFilterChange("approvalStatus", option)
-                  }
-                />
-              </div>
-            )}
-
-            {isProductType && (
-              <div className={compactFilterBar ? "min-w-0" : undefined}>
-                <FilterSelect
-                  label={`Product type`}
-                  value={filters.productType}
-                  options={productTypeOptions}
-                  isSearchable={false}
-                  onChange={(option) =>
-                    handleFilterChange("productType", option)
-                  }
-                />
-              </div>
-            )}
-
-            {dateFrom && dateTo && (
-              <div className={compactFilterBar ? "min-w-0" : "min-w-40"}>
-                <DateRangeFilter
-                  field={{
-                    label: "Date Range",
-                    startKey: "dateFrom",
-                    endKey: "dateTo",
-                    width: "w-full",
-                    wrapperClassName: "admin-field",
-                    labelClassName: "admin-label",
-                    placeholder: "All Date Range",
-                    disableFuture: true,
-                  }}
-                  values={filters}
-                  onChange={handleFilterChange}
-                />
-              </div>
-            )}
-
-            {dateFrom && !dateTo && (
-              <div>
-                <label className="admin-label">
-                  Date from
-                </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={filters.dateFrom}
-                    onChange={(e) =>
-                      handleFilterChange("dateFrom", e.target.value)
-                    }
-                    className="w-full"
-                    disabled={isFiltering}
-                    max={today}
+              {isBrand && (
+                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
+                  <FilterSelect
+                    label={`Brand`}
+                    value={filters.brand}
+                    options={brandOption || []}
+                    isSearchable={false}
+                    onChange={(option) => handleFilterChange("brand", option)}
                   />
                 </div>
-              </div>
-            )}
+              )}
 
-            {dateTo && !dateFrom && (
-              <div>
-                <label className="admin-label">
-                  To (Date)
-                </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={filters.dateTo}
-                    onChange={(e) =>
-                      handleFilterChange("dateTo", e.target.value)
-                    }
-                    className="w-full"
-                    disabled={isFiltering}
-                    min={filters.dateFrom}
-                    max={today}
+              {isProduct && (
+                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
+                  <FilterSelect
+                    label={productLabel ? productLabel : `Product`}
+                    value={filters.product}
+                    options={productOptions || []}
+                    isSearchable={false}
+                    onChange={(option) => handleFilterChange("product", option)}
                   />
                 </div>
-              </div>
-            )}
-            {orderFrom && (
-              <Input
-                label={`Order From`}
-                labelName={fromLabel ? fromLabel : "Order From"}
-                placeholder={`Order from [$]`}
-              />
-            )}
-            {orderTo && (
-              <Input
-                label={`Order To`}
-                labelName={toLabel ? toLabel : "Order To"}
-                placeholder={`Order to [$]`}
-              />
-            )}
+              )}
 
-            {!hideFilterActions && <div className="flex items-end gap-2 mb-2">
-              <Button
-                onClick={applyFilters}
-                className="admin-btn-secondary h-9 !min-h-9 !px-4"
-                disabled={isFiltering}
-              >
-                {isFiltering ? "Searching..." : "Search"}
-              </Button>
-              <Button
-                onClick={clearFilters}
-                disabled={isFiltering}
-                className="admin-btn-secondary h-9 !min-h-9 !px-4"
-              >
-                Clear
-              </Button>
-            </div>}
+              {isUser && (
+                <div>
+                  <FilterSelect
+                    label={userLabel ? userLabel : "User"}
+                    value={filters.sellerName}
+                    options={userOptions}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("sellerName", option)
+                    }
+                  />
+                </div>
+              )}
+              {isDelete && (
+                <div>
+                  <FilterSelect
+                    label={deleteLable ? deleteLable : "Delete Order"}
+                    value={filters.sellerName}
+                    options={selectJson?.deleteStatus}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("sellerName", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isCategory && (
+                <div className={compactFilterBar ? "min-w-0" : undefined}>
+                  <FilterSelect
+                    label={`Category`}
+                    value={filters.category}
+                    options={categoryOptions}
+                    isSearchable={true}
+                    onChange={(option) =>
+                      handleFilterChange("category", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isActivationStatus && (
+                <div className={compactFilterBar ? "min-w-0" : undefined}>
+                  <FilterSelect
+                    label={
+                      activationStatus ? activationStatus : `Activation status`
+                    }
+                    value={filters.activationStatus}
+                    options={activationStatusOptions}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("activationStatus", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isApprovalOptions && (
+                <div className={compactFilterBar ? "min-w-0" : undefined}>
+                  <FilterSelect
+                    label={approvalStatus ? approvalStatus : "Approval Status"}
+                    value={filters.approvalStatus}
+                    options={approvalOptions}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("approvalStatus", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isProductType && (
+                <div className={compactFilterBar ? "min-w-0" : undefined}>
+                  <FilterSelect
+                    label={`Product type`}
+                    value={filters.productType}
+                    options={productTypeOptions}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("productType", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {dateFrom && dateTo && (
+                <div className={compactFilterBar ? "min-w-0" : "min-w-40"}>
+                  <DateRangeFilter
+                    field={{
+                      label: "Date Range",
+                      startKey: "dateFrom",
+                      endKey: "dateTo",
+                      width: "w-full",
+                      wrapperClassName: "admin-field",
+                      labelClassName: "admin-label",
+                      placeholder: "All Date Range",
+                      disableFuture: true,
+                    }}
+                    values={filters}
+                    onChange={handleFilterChange}
+                  />
+                </div>
+              )}
+
+              {dateFrom && !dateTo && (
+                <div>
+                  <label className="admin-label">Date from</label>
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={filters.dateFrom}
+                      onChange={(e) =>
+                        handleFilterChange("dateFrom", e.target.value)
+                      }
+                      className="w-full"
+                      disabled={isFiltering}
+                      max={today}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {dateTo && !dateFrom && (
+                <div>
+                  <label className="admin-label">To (Date)</label>
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={filters.dateTo}
+                      onChange={(e) =>
+                        handleFilterChange("dateTo", e.target.value)
+                      }
+                      className="w-full"
+                      disabled={isFiltering}
+                      min={filters.dateFrom}
+                      max={today}
+                    />
+                  </div>
+                </div>
+              )}
+              {orderFrom && (
+                <Input
+                  label={`Order From`}
+                  labelName={fromLabel ? fromLabel : "Order From"}
+                  placeholder={`Order from [$]`}
+                />
+              )}
+              {orderTo && (
+                <Input
+                  label={`Order To`}
+                  labelName={toLabel ? toLabel : "Order To"}
+                  placeholder={`Order to [$]`}
+                />
+              )}
+
+              {!hideFilterActions && (
+                <div className="flex items-end gap-2 mb-2">
+                  <Button
+                    onClick={applyFilters}
+                    className="admin-btn-secondary h-9 !min-h-9 !px-4"
+                    disabled={isFiltering}
+                  >
+                    {isFiltering ? "Searching..." : "Search"}
+                  </Button>
+                  <Button
+                    onClick={clearFilters}
+                    disabled={isFiltering}
+                    className="admin-btn-secondary h-9 !min-h-9 !px-4"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

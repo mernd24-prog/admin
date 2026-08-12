@@ -1,305 +1,365 @@
-import { createSlice } from '@reduxjs/toolkit';
-import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
-import { ENDPOINTS } from '../_helpers/endpoints';
+import { createSlice } from "@reduxjs/toolkit";
 import {
-    DEFAULT_SELLER_MODULES,
-    firstId,
-    normalizeAllowedModules,
-    patchMany,
-    toBuyerCreateBody,
-    toKycReviewBody,
-    toListParams,
-    toSellerRegisterBody,
-    toSubAdminCreateBody,
-    toUserUpdateBody,
-    toVendorStatusBody,
-} from '../_helpers/adminApi';
-import { isSellerPanel } from '../_helpers/panelConfig';
+  createExtraReducersForThunk,
+  createApiThunkPrivate,
+} from "../_helpers/ApiThunk";
+import { ENDPOINTS } from "../_helpers/endpoints";
+import {
+  DEFAULT_SELLER_MODULES,
+  firstId,
+  normalizeAllowedModules,
+  patchMany,
+  toBuyerCreateBody,
+  toKycReviewBody,
+  toListParams,
+  toSellerRegisterBody,
+  toSubAdminCreateBody,
+  toUserUpdateBody,
+  toVendorStatusBody,
+} from "../_helpers/adminApi";
+import { isSellerPanel } from "../_helpers/panelConfig";
 
 const initialState = {
-    getListData: {},
-    enableDisableData: {},
-    createData: {},
-    updateData: {},
-    getAdminUserDetailsData: {},
-    getAllModulePermissionData: {},
-    getMyModulePermissionData: {},
-    updateModulePermissionData: {},
-    getAllModulePermissionForUserData: {},
-    getSellerListData: {},
-    enableDisableSellerData: {},
-    createSellerData: {},
-    updateSellerData: {},
-    changePasswordData: {},
-    getUserListData: {},
-    createUserData: {},
-    enableDisableUserData: {},
-    getListCategoryData: {},
-    getAllUserListData: {},
-    reviewSellerKycData: {},
-    updateSellerBankStatusData: {},
-    updateSellerGoLiveData: {},
-    getSellerKycData: {},
+  getListData: {},
+  enableDisableData: {},
+  createData: {},
+  updateData: {},
+  getAdminUserDetailsData: {},
+  getAllModulePermissionData: {},
+  getMyModulePermissionData: {},
+  updateModulePermissionData: {},
+  getAllModulePermissionForUserData: {},
+  getSellerListData: {},
+  enableDisableSellerData: {},
+  createSellerData: {},
+  updateSellerData: {},
+  changePasswordData: {},
+  getUserListData: {},
+  createUserData: {},
+  enableDisableUserData: {},
+  getListCategoryData: {},
+  getAllUserListData: {},
+  reviewSellerKycData: {},
+  updateSellerBankStatusData: {},
+  updateSellerGoLiveData: {},
+  getSellerKycData: {},
 };
 
 export const getList = createApiThunkPrivate(
-    'getList',
-    ENDPOINTS.adminAccess.subAdmins,
-    'GET',
-    true,
-    {
-        transformParams: (params = {}) => params.ownerAdminId ? { ownerAdminId: params.ownerAdminId } : {},
-    }
+  "getList",
+  ENDPOINTS.adminAccess.subAdmins,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) =>
+      params.ownerAdminId ? { ownerAdminId: params.ownerAdminId } : {},
+  },
 );
 
 export const enableDisable = patchMany(
-    'enableDisable',
-    ENDPOINTS.users.adminUser,
-    toUserUpdateBody,
-    'Status updated successfully'
+  "enableDisable",
+  ENDPOINTS.users.adminUser,
+  toUserUpdateBody,
+  "Status updated successfully",
 );
 
-
 export const create = createApiThunkPrivate(
-    'create',
-    ENDPOINTS.adminAccess.subAdmins,
-    'POST',
-    false,
-    { transformBody: (payload = {}) => toSubAdminCreateBody(payload, isSellerPanel() ? DEFAULT_SELLER_MODULES : ['admin']) }
+  "create",
+  ENDPOINTS.adminAccess.subAdmins,
+  "POST",
+  false,
+  {
+    transformBody: (payload = {}) =>
+      toSubAdminCreateBody(
+        payload,
+        isSellerPanel() ? DEFAULT_SELLER_MODULES : ["admin"],
+      ),
+  },
 );
 
 export const update = createApiThunkPrivate(
-    'update',
-    (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
-    'PATCH',
-    false,
-    { transformBody: toUserUpdateBody }
+  "update",
+  (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
+  "PATCH",
+  false,
+  { transformBody: toUserUpdateBody },
 );
 
 export const getAdminUserDetails = createApiThunkPrivate(
-    'getAdminUserDetails',
-    (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
-    'GET',
-    true
+  "getAdminUserDetails",
+  (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
+  "GET",
+  true,
 );
 
 export const getAllModulePermission = createApiThunkPrivate(
-    'getAllModulePermission',
-    ENDPOINTS.adminAccess.modules,
-    'GET',
-    true,
-    {
-        transformParams: (params = {}) => {
-            const result = {
-                includePermissions: params.includePermissions !== false,
-                ...(params.roleId ? { roleId: params.roleId } : {}),
-                ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
-                ...(params._id ? { userId: params._id } : {}),
-                ...(params.userId ? { userId: params.userId } : {}),
-                ...(params.role ? { role: params.role } : {}),
-            };
+  "getAllModulePermission",
+  ENDPOINTS.adminAccess.modules,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => {
+      const result = {
+        includePermissions: params.includePermissions !== false,
+        ...(params.roleId ? { roleId: params.roleId } : {}),
+        ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
+        ...(params._id ? { userId: params._id } : {}),
+        ...(params.userId ? { userId: params.userId } : {}),
+        ...(params.role ? { role: params.role } : {}),
+      };
 
-            return result;
-        },
-    }
+      return result;
+    },
+  },
 );
 
 export const getMyModulePermission = createApiThunkPrivate(
-    'getMyModulePermission',
-    ENDPOINTS.adminAccess.modules,
-    'GET',
-    true,
-    {
-        transformParams: (params = {}) => {
-            const result = {
-                includePermissions: params.includePermissions !== false,
-                ...(params.roleId ? { roleId: params.roleId } : {}),
-                ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
-                ...(params._id ? { userId: params._id } : {}),
-                ...(params.userId ? { userId: params.userId } : {}),
-                ...(params.role ? { role: params.role } : {}),
-            };
+  "getMyModulePermission",
+  ENDPOINTS.adminAccess.modules,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => {
+      const result = {
+        includePermissions: params.includePermissions !== false,
+        ...(params.roleId ? { roleId: params.roleId } : {}),
+        ...(params.roleSlug ? { roleSlug: params.roleSlug } : {}),
+        ...(params._id ? { userId: params._id } : {}),
+        ...(params.userId ? { userId: params.userId } : {}),
+        ...(params.role ? { role: params.role } : {}),
+      };
 
-            return result;
-        },
-    }
+      return result;
+    },
+  },
 );
 
 export const updateModulePermission = createApiThunkPrivate(
-    'updateModulePermission',
-    (payload) => ENDPOINTS.adminAccess.subAdminModules(firstId(payload)),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            allowedModules: normalizeAllowedModules(payload.allowedModules, []),
-            ...(Array.isArray(payload.modulePermissions)
-                ? { modulePermissions: payload.modulePermissions }
-                : {}),
-        }),
-    }
+  "updateModulePermission",
+  (payload) => ENDPOINTS.adminAccess.subAdminModules(firstId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      allowedModules: normalizeAllowedModules(payload.allowedModules, []),
+      ...(Array.isArray(payload.modulePermissions)
+        ? { modulePermissions: payload.modulePermissions }
+        : {}),
+    }),
+  },
 );
 
 export const getAllModulePermissionForUser = createApiThunkPrivate(
-    'getAllModulePermissionForUser',
-    (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
-    'GET',
-    true
+  "getAllModulePermissionForUser",
+  (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
+  "GET",
+  true,
 );
 
 export const getSellerList = createApiThunkPrivate(
-    'getSellerList',
-    ENDPOINTS.sellers.list,
-    'GET',
-    true,
-    { transformParams: (params = {}) => toListParams(params) }
+  "getSellerList",
+  ENDPOINTS.sellers.list,
+  "GET",
+  true,
+  { transformParams: (params = {}) => toListParams(params) },
 );
 
 export const enableDisableSeller = patchMany(
-    'enableDisableSeller',
-    ENDPOINTS.sellers.adminStatus,
-    toVendorStatusBody,
-    'Seller status updated successfully'
+  "enableDisableSeller",
+  ENDPOINTS.sellers.adminStatus,
+  toVendorStatusBody,
+  "Seller status updated successfully",
 );
 
 export const createSeller = createApiThunkPrivate(
-    'createSeller',
-    ENDPOINTS.users.adminUsers,
-    'POST',
-    false,
-    { transformBody: toSellerRegisterBody }
+  "createSeller",
+  ENDPOINTS.users.adminUsers,
+  "POST",
+  false,
+  { transformBody: toSellerRegisterBody },
 );
 
 export const updateSeller = createApiThunkPrivate(
-    'updateSeller',
-    (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
-    'PATCH',
-    false,
-    { transformBody: toUserUpdateBody }
+  "updateSeller",
+  (payload) => ENDPOINTS.users.adminUser(firstId(payload)),
+  "PATCH",
+  false,
+  { transformBody: toUserUpdateBody },
 );
 
-
 export const reviewSellerKyc = createApiThunkPrivate(
-    'reviewSellerKyc',
-    (payload) => ENDPOINTS.sellers.kycReviewAdmin(payload?.sellerId || firstId(payload)),
-    'PATCH',
-    false,
-    { transformBody: toKycReviewBody }
+  "reviewSellerKyc",
+  (payload) =>
+    ENDPOINTS.sellers.kycReviewAdmin(payload?.sellerId || firstId(payload)),
+  "PATCH",
+  false,
+  { transformBody: toKycReviewBody },
 );
 
 export const updateSellerBankStatus = createApiThunkPrivate(
-    'updateSellerBankStatus',
-    (payload) => ENDPOINTS.sellers.bankStatus(payload?.sellerId || firstId(payload)),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            bankVerificationStatus: payload.bankVerificationStatus || payload.status,
-            bankRejectionReason: payload.bankRejectionReason || payload.rejectionReason || null,
-        }),
-    }
+  "updateSellerBankStatus",
+  (payload) =>
+    ENDPOINTS.sellers.bankStatus(payload?.sellerId || firstId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      bankVerificationStatus: payload.bankVerificationStatus || payload.status,
+      bankRejectionReason:
+        payload.bankRejectionReason || payload.rejectionReason || null,
+    }),
+  },
 );
 
 export const getSellerKyc = createApiThunkPrivate(
-    'getSellerKyc',
-    (payload) => ENDPOINTS.sellers.kycDetail(payload?.sellerId || firstId(payload)),
-    'GET',
-    true,
+  "getSellerKyc",
+  (payload) =>
+    ENDPOINTS.sellers.kycDetail(payload?.sellerId || firstId(payload)),
+  "GET",
+  true,
 );
 
 export const updateSellerGoLive = createApiThunkPrivate(
-    'updateSellerGoLive',
-    (payload) => ENDPOINTS.sellers.goLive(payload?.sellerId || firstId(payload)),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            goLiveStatus: payload.goLiveStatus || payload.status || 'live',
-        }),
-    }
+  "updateSellerGoLive",
+  (payload) => ENDPOINTS.sellers.goLive(payload?.sellerId || firstId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      goLiveStatus: payload.goLiveStatus || payload.status || "live",
+    }),
+  },
 );
 
 export const changePassword = createApiThunkPrivate(
-    'changePassword',
-    ENDPOINTS.auth.changePassword,
-    'POST',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            currentPassword: payload.currentPassword,
-            newPassword: payload.newPassword || payload.password,
-        }),
-    }
+  "changePassword",
+  ENDPOINTS.auth.changePassword,
+  "POST",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword || payload.password,
+    }),
+  },
 );
 
 export const getUserList = createApiThunkPrivate(
-    'getUserList',
-    ENDPOINTS.users.adminUsers,
-    'GET',
-    true,
-    { transformParams: (params = {}) => toListParams(params, { role: params.role || 'buyer' }) }
+  "getUserList",
+  ENDPOINTS.users.adminUsers,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => ({
+      ...params,
+      ...toListParams(params, { role: params.role || "buyer" }),
+    }),
+  },
 );
 
 export const createUser = createApiThunkPrivate(
-    'createUser',
-    ENDPOINTS.users.adminUsers,
-    'POST',
-    false,
-    { transformBody: toBuyerCreateBody }
+  "createUser",
+  ENDPOINTS.users.adminUsers,
+  "POST",
+  false,
+  { transformBody: toBuyerCreateBody },
 );
 
 export const enableDisableUser = patchMany(
-    'enableDisableUser',
-    ENDPOINTS.users.adminUser,
-    toUserUpdateBody,
-    'Status updated successfully'
+  "enableDisableUser",
+  ENDPOINTS.users.adminUser,
+  toUserUpdateBody,
+  "Status updated successfully",
 );
 
-
 export const getListCategory = createApiThunkPrivate(
-    'getListCategory',
-    ENDPOINTS.platform.categories,
-    'GET',
-    true,
-    { transformParams: () => ({ limit: 100 }) }
+  "getListCategory",
+  ENDPOINTS.platform.categories,
+  "GET",
+  true,
+  { transformParams: () => ({ limit: 100 }) },
 );
 
 export const getAllUserList = createApiThunkPrivate(
-    'getAllUserList',
-    ENDPOINTS.users.adminUsers,
-    'GET',
-    true,
-    { transformParams: (params = {}) => toListParams(params) }
+  "getAllUserList",
+  ENDPOINTS.users.adminUsers,
+  "GET",
+  true,
+  { transformParams: (params = {}) => toListParams(params) },
 );
 
 const userManagementSlice = createSlice({
-    name: 'user',
-    initialState,
-    extraReducers: builder => {
-        createExtraReducersForThunk(builder, getList, 'getListData')
-        createExtraReducersForThunk(builder, enableDisable, 'enableDisableData')
-createExtraReducersForThunk(builder, create, 'createData')
-        createExtraReducersForThunk(builder, update, 'updateData')
-        createExtraReducersForThunk(builder, getAdminUserDetails, 'getAdminUserDetailsData')
-        createExtraReducersForThunk(builder, getAllModulePermission, 'getAllModulePermissionData')
-        createExtraReducersForThunk(builder, getMyModulePermission, 'getMyModulePermissionData')
-        createExtraReducersForThunk(builder, updateModulePermission, 'updateModulePermissionData')
-        createExtraReducersForThunk(builder, getSellerList, 'getSellerListData')
-        createExtraReducersForThunk(builder, enableDisableSeller, 'enableDisableSellerData')
-        createExtraReducersForThunk(builder, createSeller, 'createSellerData')
-        createExtraReducersForThunk(builder, updateSeller, 'updateSellerData')
-        createExtraReducersForThunk(builder, getAllModulePermissionForUser, 'getAllModulePermissionForUserData')
-createExtraReducersForThunk(builder, reviewSellerKyc, 'reviewSellerKycData')
-        createExtraReducersForThunk(builder, updateSellerBankStatus, 'updateSellerBankStatusData')
-        createExtraReducersForThunk(builder, updateSellerGoLive, 'updateSellerGoLiveData')
-        createExtraReducersForThunk(builder, getSellerKyc, 'getSellerKycData')
-        createExtraReducersForThunk(builder, changePassword, 'changePasswordData')
-        createExtraReducersForThunk(builder, getUserList, 'getUserListData')
-        createExtraReducersForThunk(builder, createUser, 'createUserData')
-        createExtraReducersForThunk(builder, enableDisableUser, 'enableDisableUserData')
-createExtraReducersForThunk(builder, getListCategory, 'getListCategoryData')
-        createExtraReducersForThunk(builder, getAllUserList, 'getAllUserListData')
-    }
-})
+  name: "user",
+  initialState,
+  extraReducers: (builder) => {
+    createExtraReducersForThunk(builder, getList, "getListData");
+    createExtraReducersForThunk(builder, enableDisable, "enableDisableData");
+    createExtraReducersForThunk(builder, create, "createData");
+    createExtraReducersForThunk(builder, update, "updateData");
+    createExtraReducersForThunk(
+      builder,
+      getAdminUserDetails,
+      "getAdminUserDetailsData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getAllModulePermission,
+      "getAllModulePermissionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getMyModulePermission,
+      "getMyModulePermissionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateModulePermission,
+      "updateModulePermissionData",
+    );
+    createExtraReducersForThunk(builder, getSellerList, "getSellerListData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableSeller,
+      "enableDisableSellerData",
+    );
+    createExtraReducersForThunk(builder, createSeller, "createSellerData");
+    createExtraReducersForThunk(builder, updateSeller, "updateSellerData");
+    createExtraReducersForThunk(
+      builder,
+      getAllModulePermissionForUser,
+      "getAllModulePermissionForUserData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      reviewSellerKyc,
+      "reviewSellerKycData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateSellerBankStatus,
+      "updateSellerBankStatusData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateSellerGoLive,
+      "updateSellerGoLiveData",
+    );
+    createExtraReducersForThunk(builder, getSellerKyc, "getSellerKycData");
+    createExtraReducersForThunk(builder, changePassword, "changePasswordData");
+    createExtraReducersForThunk(builder, getUserList, "getUserListData");
+    createExtraReducersForThunk(builder, createUser, "createUserData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableUser,
+      "enableDisableUserData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getListCategory,
+      "getListCategoryData",
+    );
+    createExtraReducersForThunk(builder, getAllUserList, "getAllUserListData");
+  },
+});
 
-export default userManagementSlice.reducer
+export default userManagementSlice.reducer;

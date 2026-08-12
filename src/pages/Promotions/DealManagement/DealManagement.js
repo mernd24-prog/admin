@@ -1,5 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -42,7 +48,7 @@ import {
   cancelDeal,
   getDealAnalytics,
 } from "../../../Redux/adminCoreSlice";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { axiosPrivate } from "../../../_helpers/axiosProvider";
@@ -152,7 +158,9 @@ const unwrapList = (payload = {}) => {
   if (Array.isArray(data)) return { list: data, total: data.length };
   return {
     list: data?.list || data?.items || data?.deals || [],
-    total: Number(data?.total || data?.list?.length || data?.items?.length || 0),
+    total: Number(
+      data?.total || data?.list?.length || data?.items?.length || 0,
+    ),
   };
 };
 
@@ -177,18 +185,35 @@ const money = (value) =>
   }).format(Number(value || 0));
 const num = (value) => Number(value || 0);
 const getDealId = (deal = {}) => deal._id || deal.id || deal.dealId;
-const getProductId = (product = {}) => product._id || product.id || product.productId;
+const getProductId = (product = {}) =>
+  product._id || product.id || product.productId;
 const remainingQty = (deal = {}) =>
-  Math.max(0, num(deal.allocatedQuantity) - num(deal.soldQuantity) - num(deal.reservedQuantity));
-const discountAmount = (deal = {}) => Math.max(0, num(deal.originalPrice) - num(deal.dealPrice));
+  Math.max(
+    0,
+    num(deal.allocatedQuantity) -
+      num(deal.soldQuantity) -
+      num(deal.reservedQuantity),
+  );
+const discountAmount = (deal = {}) =>
+  Math.max(0, num(deal.originalPrice) - num(deal.dealPrice));
 const discountPercent = (deal = {}) =>
   num(deal.originalPrice) > 0
     ? ((discountAmount(deal) / num(deal.originalPrice)) * 100).toFixed(1)
     : "0.0";
 
 const normalizeProduct = (product = {}) => {
-  const price = product.salePrice ?? product.sellingPrice ?? product.price ?? product.mrp ?? "";
-  const stock = product.availableStock ?? product.stock ?? product.inventory?.available ?? product.inventory?.stock ?? "";
+  const price =
+    product.salePrice ??
+    product.sellingPrice ??
+    product.price ??
+    product.mrp ??
+    "";
+  const stock =
+    product.availableStock ??
+    product.stock ??
+    product.inventory?.available ??
+    product.inventory?.stock ??
+    "";
   return {
     ...product,
     id: product._id || product.id || product.productId,
@@ -242,10 +267,16 @@ function MetricCard({ icon, label, value, tone = "blue" }) {
     <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase text-[var(--admin-muted)]">{label}</p>
-          <p className="mt-1 text-xl font-semibold text-[var(--admin-ink)]">{value}</p>
+          <p className="text-xs font-medium uppercase text-[var(--admin-muted)]">
+            {label}
+          </p>
+          <p className="mt-1 text-xl font-semibold text-[var(--admin-ink)]">
+            {value}
+          </p>
         </div>
-        <span className={`flex h-10 w-10 items-center justify-center rounded-md ${tones[tone] || tones.blue}`}>
+        <span
+          className={`flex h-10 w-10 items-center justify-center rounded-md ${tones[tone] || tones.blue}`}
+        >
           {icon}
         </span>
       </div>
@@ -260,36 +291,47 @@ function ProductSearch({ sellerId, value, onSelect }) {
   const [isListOpen, setIsListOpen] = useState(false);
   const requestRef = useRef(0);
 
-  const searchProducts = useCallback(async (search = "") => {
-    const requestId = requestRef.current + 1;
-    requestRef.current = requestId;
-    setLoading(true);
-    try {
-      const trimmed = search.trim();
-      const response = await axiosPrivate.get(ENDPOINTS.products.listForPanel, {
-        params: {
-          q: trimmed || undefined,
-          search: trimmed || undefined,
-          keyWord: trimmed || undefined,
-          sellerId: sellerId || undefined,
-          limit: 10,
-          includeVariants: true,
-          includeAllStatuses: true,
-        },
-      });
-      if (requestRef.current === requestId) {
-        setItems(
-          unwrapApiItems(response)
-            .map(normalizeProduct)
-            .sort((left, right) => Number(right.isDealProduct) - Number(left.isDealProduct)),
+  const searchProducts = useCallback(
+    async (search = "") => {
+      const requestId = requestRef.current + 1;
+      requestRef.current = requestId;
+      setLoading(true);
+      try {
+        const trimmed = search.trim();
+        const response = await axiosPrivate.get(
+          ENDPOINTS.products.listForPanel,
+          {
+            params: {
+              q: trimmed || undefined,
+              search: trimmed || undefined,
+              keyWord: trimmed || undefined,
+              sellerId: sellerId || undefined,
+              limit: 10,
+              includeVariants: true,
+              includeAllStatuses: true,
+            },
+          },
         );
+        if (requestRef.current === requestId) {
+          setItems(
+            unwrapApiItems(response)
+              .map(normalizeProduct)
+              .sort(
+                (left, right) =>
+                  Number(right.isDealProduct) - Number(left.isDealProduct),
+              ),
+          );
+        }
+      } catch (error) {
+        toast.error(
+          error?.response?.data?.message || "Failed to search products",
+        );
+      } finally {
+        if (requestRef.current === requestId) setLoading(false);
       }
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to search products");
-    } finally {
-      if (requestRef.current === requestId) setLoading(false);
-    }
-  }, [sellerId]);
+    },
+    [sellerId],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => searchProducts(query), 250);
@@ -298,9 +340,14 @@ function ProductSearch({ sellerId, value, onSelect }) {
 
   return (
     <div className="admin-field">
-      <label className="admin-label">Existing Product <span className="admin-required">*</span></label>
+      <label className="admin-label">
+        Existing Product <span className="admin-required">*</span>
+      </label>
       <div className="relative">
-        <MdSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <MdSearch
+          size={16}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
         <input
           value={query}
           onFocus={() => setIsListOpen(true)}
@@ -323,7 +370,9 @@ function ProductSearch({ sellerId, value, onSelect }) {
       {isListOpen && (
         <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white">
           {loading ? (
-            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">Loading products...</div>
+            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
+              Loading products...
+            </div>
           ) : items.length ? (
             items.map((item) => {
               const selected = String(value?.id || "") === String(item.id);
@@ -338,11 +387,15 @@ function ProductSearch({ sellerId, value, onSelect }) {
                     setIsListOpen(false);
                   }}
                   className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-blue-soft)] ${
-                    selected ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "text-[var(--admin-ink)]"
+                    selected
+                      ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]"
+                      : "text-[var(--admin-ink)]"
                   }`}
                 >
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{item.label}</span>
+                    <span className="block truncate font-medium">
+                      {item.label}
+                    </span>
                     <span className="block truncate text-xs text-[var(--admin-muted)]">
                       {item.sku || "No SKU"} · Stock {item.stock || 0}
                     </span>
@@ -352,7 +405,9 @@ function ProductSearch({ sellerId, value, onSelect }) {
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 text-xs font-semibold">{money(item.price)}</span>
+                  <span className="shrink-0 text-xs font-semibold">
+                    {money(item.price)}
+                  </span>
                 </button>
               );
             })
@@ -398,9 +453,13 @@ function SellerSearch({ value, onSelect }) {
 
 const DealManagement = () => {
   const dispatch = useDispatch();
+  const { can } = usePermission();
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.dealsData);
-  const analytics = selector.dealAnalyticsData?.data?.data || selector.dealAnalyticsData?.data || {};
+  const analytics =
+    selector.dealAnalyticsData?.data?.data ||
+    selector.dealAnalyticsData?.data ||
+    {};
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
@@ -421,7 +480,13 @@ const DealManagement = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dealProductKeys, setDealProductKeys] = useState([]);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, action: "", deal: null, reason: "", note: "" });
+  const [confirm, setConfirm] = useState({
+    open: false,
+    action: "",
+    deal: null,
+    reason: "",
+    note: "",
+  });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchDeals = useCallback(async () => {
@@ -432,7 +497,10 @@ const DealManagement = () => {
       await dispatch(
         getDeals({
           ...params,
-          status: activeTab && activeTab !== "product_keys" ? activeTab : params.status,
+          status:
+            activeTab && activeTab !== "product_keys"
+              ? activeTab
+              : params.status,
           offset: (params.page - 1) * params.limit,
         }),
       ).unwrap();
@@ -478,20 +546,27 @@ const DealManagement = () => {
     fetchDealProductKeys();
   }, [fetchAnalytics, fetchDealProductKeys]);
 
-  const openDetail = useCallback(async (deal) => {
-    setDetail(deal);
-    setDetailLoading(true);
-    try {
-      const res = await dispatch(getDeal({ dealId: getDealId(deal) })).unwrap();
-      setDetail(res?.data?.data || res?.data || deal);
-    } catch (err) {
-      toast.error(err?.message || err || "Failed to load deal detail");
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [dispatch]);
+  const openDetail = useCallback(
+    async (deal) => {
+      setDetail(deal);
+      setDetailLoading(true);
+      try {
+        const res = await dispatch(
+          getDeal({ dealId: getDealId(deal) }),
+        ).unwrap();
+        setDetail(res?.data?.data || res?.data || deal);
+      } catch (err) {
+        toast.error(err?.message || err || "Failed to load deal detail");
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [dispatch],
+  );
 
-  const openForm = (mode = isSellerPanel() ? "seller_request" : "admin_direct") => {
+  const openForm = (
+    mode = isSellerPanel() ? "seller_request" : "admin_direct",
+  ) => {
     setEditingDeal(null);
     setForm({
       ...initialForm,
@@ -507,10 +582,14 @@ const DealManagement = () => {
     const metadata = deal.metadata || {};
     const productLabel = metadata.productLabel || deal.title || "";
     setEditingDeal(deal);
-    setSelectedSeller(deal.sellerId ? {
-      value: deal.sellerId,
-      label: getRowSellerName(deal) || deal.sellerName || deal.sellerId,
-    } : null);
+    setSelectedSeller(
+      deal.sellerId
+        ? {
+            value: deal.sellerId,
+            label: getRowSellerName(deal) || deal.sellerName || deal.sellerId,
+          }
+        : null,
+    );
     setSelectedProduct({
       id: deal.productId,
       label: productLabel,
@@ -532,7 +611,9 @@ const DealManagement = () => {
       dealPrice: deal.dealPrice ?? "",
       allocatedQuantity: deal.allocatedQuantity ?? "",
       maxQuantityPerOrder: deal.maxQuantityPerOrder ?? "",
-      startAt: deal.startAt ? moment(deal.startAt).format("YYYY-MM-DDTHH:mm") : "",
+      startAt: deal.startAt
+        ? moment(deal.startAt).format("YYYY-MM-DDTHH:mm")
+        : "",
       endAt: deal.endAt ? moment(deal.endAt).format("YYYY-MM-DDTHH:mm") : "",
       dealType: deal.dealType || "fixed_price",
       dealSource: metadata.dealSource || "admin_direct",
@@ -595,7 +676,8 @@ const DealManagement = () => {
       productId: product.id,
       productLabel: product.label,
       title: current.title || `${product.label} Deal`,
-      originalPrice: product.price === "" ? current.originalPrice : product.price,
+      originalPrice:
+        product.price === "" ? current.originalPrice : product.price,
       allocatedQuantity: current.allocatedQuantity || product.stock || "",
       category: current.category || product.categoryLabel || "",
       dealBadge: product.dealBadge || current.dealBadge,
@@ -613,7 +695,8 @@ const DealManagement = () => {
     }
     setForm((current) => {
       const nextSellerId = seller?.value || "";
-      const sellerChanged = String(current.sellerId || "") !== String(nextSellerId || "");
+      const sellerChanged =
+        String(current.sellerId || "") !== String(nextSellerId || "");
       return {
         ...current,
         sellerId: nextSellerId,
@@ -628,15 +711,21 @@ const DealManagement = () => {
           : {}),
       };
     });
-    if (!seller?.value || String(form.sellerId || "") !== String(seller.value)) {
+    if (
+      !seller?.value ||
+      String(form.sellerId || "") !== String(seller.value)
+    ) {
       setSelectedProduct(null);
     }
   };
 
-  const formDeal = useMemo(() => ({
-    originalPrice: form.originalPrice,
-    dealPrice: form.dealPrice,
-  }), [form.originalPrice, form.dealPrice]);
+  const formDeal = useMemo(
+    () => ({
+      originalPrice: form.originalPrice,
+      dealPrice: form.dealPrice,
+    }),
+    [form.originalPrice, form.dealPrice],
+  );
 
   const validateForm = () => {
     if (isAdminPanel() && !form.sellerId) return "Select seller.";
@@ -647,8 +736,12 @@ const DealManagement = () => {
     if (num(form.dealPrice) >= num(form.originalPrice)) {
       return "Deal price must be lower than original price.";
     }
-    if (num(form.allocatedQuantity) < 0) return "Deal quantity cannot be negative.";
-    if (selectedProduct?.stock !== "" && num(form.allocatedQuantity) > num(selectedProduct?.stock)) {
+    if (num(form.allocatedQuantity) < 0)
+      return "Deal quantity cannot be negative.";
+    if (
+      selectedProduct?.stock !== "" &&
+      num(form.allocatedQuantity) > num(selectedProduct?.stock)
+    ) {
       return "Deal quantity cannot exceed available stock.";
     }
     if (!form.startAt || !form.endAt) return "Select deal start and end.";
@@ -670,11 +763,17 @@ const DealManagement = () => {
     variantSku: form.variantSku || undefined,
     category: form.category || undefined,
     dealType: form.dealType,
-    status: editingDeal ? editingDeal.status : form.mode === "admin_direct" && isAdminPanel() ? "active" : "draft",
+    status: editingDeal
+      ? editingDeal.status
+      : form.mode === "admin_direct" && isAdminPanel()
+        ? "active"
+        : "draft",
     originalPrice: num(form.originalPrice),
     dealPrice: num(form.dealPrice),
     allocatedQuantity: Number(form.allocatedQuantity || 0),
-    maxQuantityPerOrder: form.maxQuantityPerOrder ? Number(form.maxQuantityPerOrder) : null,
+    maxQuantityPerOrder: form.maxQuantityPerOrder
+      ? Number(form.maxQuantityPerOrder)
+      : null,
     startAt: new Date(form.startAt).toISOString(),
     endAt: new Date(form.endAt).toISOString(),
     metadata: {
@@ -700,7 +799,9 @@ const DealManagement = () => {
     try {
       setSubmitLoading(true);
       if (editingDeal) {
-        await dispatch(updateDeal({ dealId: getDealId(editingDeal), ...buildDealPayload() })).unwrap();
+        await dispatch(
+          updateDeal({ dealId: getDealId(editingDeal), ...buildDealPayload() }),
+        ).unwrap();
         toast.success("Deal updated");
         setFormOpen(false);
         setEditingDeal(null);
@@ -721,7 +822,9 @@ const DealManagement = () => {
         ).unwrap();
         toast.success("Deal request submitted for admin approval");
       } else {
-        toast.success("Direct deal created without changing product master price");
+        toast.success(
+          "Direct deal created without changing product master price",
+        );
       }
       setFormOpen(false);
       setEditingDeal(null);
@@ -776,17 +879,27 @@ const DealManagement = () => {
     const listData = payload.list || [];
     return {
       total: analytics.totalDeals ?? payload.total ?? listData.length,
-      active: analytics.activeDeals ?? listData.filter((deal) => deal.status === "active").length,
-      scheduled: analytics.scheduledDeals ?? listData.filter((deal) => deal.status === "scheduled").length,
-      expired: analytics.expiredDeals ?? listData.filter((deal) => deal.status === "expired").length,
+      active:
+        analytics.activeDeals ??
+        listData.filter((deal) => deal.status === "active").length,
+      scheduled:
+        analytics.scheduledDeals ??
+        listData.filter((deal) => deal.status === "scheduled").length,
+      expired:
+        analytics.expiredDeals ??
+        listData.filter((deal) => deal.status === "expired").length,
       revenue: analytics.revenueFromDeals ?? analytics.revenue ?? 0,
-      units: analytics.unitsSold ?? listData.reduce((sum, deal) => sum + num(deal.soldQuantity), 0),
+      units:
+        analytics.unitsSold ??
+        listData.reduce((sum, deal) => sum + num(deal.soldQuantity), 0),
     };
   }, [analytics, payload]);
 
   const tableRows = useMemo(() => {
     const deals = payload.list || [];
-    const dealProductIds = new Set(deals.map((deal) => String(deal.productId || "")));
+    const dealProductIds = new Set(
+      deals.map((deal) => String(deal.productId || "")),
+    );
     const keyRows = dealProductKeys
       .filter((product) => !dealProductIds.has(String(product.id)))
       .map((product) => ({
@@ -836,7 +949,8 @@ const DealManagement = () => {
         setSellerLookup((current) => {
           const next = { ...current };
           options.forEach((option) => {
-            if (option.value) next[String(option.value)] = sellerLookupFromOption(option);
+            if (option.value)
+              next[String(option.value)] = sellerLookupFromOption(option);
           });
           return next;
         });
@@ -854,8 +968,12 @@ const DealManagement = () => {
       label: "Deal ID",
       render: (value, row) => (
         <div>
-          <p className="font-mono text-xs font-semibold text-[var(--admin-ink)]">{value || getDealId(row)}</p>
-          <p className="text-xs text-[var(--admin-muted)]">{display(row.metadata?.dealSource || "seller_request")}</p>
+          <p className="font-mono text-xs font-semibold text-[var(--admin-ink)]">
+            {value || getDealId(row)}
+          </p>
+          <p className="text-xs text-[var(--admin-muted)]">
+            {display(row.metadata?.dealSource || "seller_request")}
+          </p>
         </div>
       ),
     },
@@ -865,8 +983,12 @@ const DealManagement = () => {
       sortable: true,
       render: (value, row) => (
         <div className="max-w-[220px]">
-          <p className="truncate font-medium text-gray-800">{row.metadata?.productLabel || value || "—"}</p>
-          <p className="truncate text-xs text-gray-500">{row.category || display(row.dealType)}</p>
+          <p className="truncate font-medium text-gray-800">
+            {row.metadata?.productLabel || value || "—"}
+          </p>
+          <p className="truncate text-xs text-gray-500">
+            {row.category || display(row.dealType)}
+          </p>
         </div>
       ),
     },
@@ -875,10 +997,13 @@ const DealManagement = () => {
       label: "Seller",
       render: (value, row) => {
         const seller = sellerLookup[String(value || "")] || {};
-        const sellerName = getRowSellerName(row) || seller.label || value || "—";
+        const sellerName =
+          getRowSellerName(row) || seller.label || value || "—";
         return (
           <div className="max-w-[180px]">
-            <p className="truncate text-sm font-medium text-gray-800">{sellerName}</p>
+            <p className="truncate text-sm font-medium text-gray-800">
+              {sellerName}
+            </p>
             {seller.email && seller.email !== sellerName && (
               <p className="truncate text-xs text-gray-500">{seller.email}</p>
             )}
@@ -889,7 +1014,11 @@ const DealManagement = () => {
     {
       key: "originalPrice",
       label: "Original",
-      render: (value) => <span className="text-sm line-through decoration-red-400">{money(value)}</span>,
+      render: (value) => (
+        <span className="text-sm line-through decoration-red-400">
+          {money(value)}
+        </span>
+      ),
     },
     {
       key: "dealPrice",
@@ -906,9 +1035,15 @@ const DealManagement = () => {
       label: "Quantity",
       render: (_, row) => (
         <div className="text-xs">
-          <p>Allocated: <strong>{num(row.allocatedQuantity)}</strong></p>
-          <p>Sold: <strong>{num(row.soldQuantity)}</strong></p>
-          <p>Remaining: <strong>{remainingQty(row)}</strong></p>
+          <p>
+            Allocated: <strong>{num(row.allocatedQuantity)}</strong>
+          </p>
+          <p>
+            Sold: <strong>{num(row.soldQuantity)}</strong>
+          </p>
+          <p>
+            Remaining: <strong>{remainingQty(row)}</strong>
+          </p>
         </div>
       ),
     },
@@ -926,65 +1061,97 @@ const DealManagement = () => {
     {
       key: "status",
       label: "Status",
-      render: (value) => <StatusBadge status={value} color={STATUS_COLOR[value] || "gray"} />,
-    },
-    {
-      key: "_actions",
-      label: "Actions",
-      render: (_, row) => {
-        const status = row.status;
-        return (
-          <div className="flex flex-wrap gap-1">
-            {row._rowType === "product_deal_key" ? (
-              <button onClick={() => openFormFromProduct(row)} className="px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded" title="Create Deal">
-                Create Deal
-              </button>
-            ) : (
-              <>
-                <button onClick={() => openDetail(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="View">
-                  <MdVisibility size={18} />
-                </button>
-                <button onClick={() => openEditDeal(row)} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Edit">
-                  <MdEdit size={18} />
-                </button>
-              </>
-            )}
-            <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
-              {row._rowType !== "product_deal_key" && ["pending_approval", "draft"].includes(status) && isAdminPanel() && (
-                <button onClick={() => openConfirm("approve", row)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Approve">
-                  <MdCheckCircle size={18} />
-                </button>
-              )}
-            </PermissionGuard>
-            <PermissionGuard module="deals" action={ACTIONS.REJECT} hide>
-              {row._rowType !== "product_deal_key" && !["expired", "completed", "cancelled", "rejected"].includes(status) && isAdminPanel() && (
-                <button onClick={() => openConfirm("reject", row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Reject">
-                  <MdClose size={18} />
-                </button>
-              )}
-            </PermissionGuard>
-            <PermissionGuard module="deals" action={ACTIONS.STATUS_CHANGE} hide>
-              {row._rowType !== "product_deal_key" && status === "active" && isAdminPanel() && (
-                <button onClick={() => openConfirm("pause", row)} className="p-1 text-yellow-600 hover:bg-yellow-50 rounded" title="Pause">
-                  <MdPause size={18} />
-                </button>
-              )}
-              {row._rowType !== "product_deal_key" && status === "paused" && isAdminPanel() && (
-                <button onClick={() => openConfirm("resume", row)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Resume">
-                  <MdPlayArrow size={18} />
-                </button>
-              )}
-              {row._rowType !== "product_deal_key" && ["draft", "pending_approval", "active", "paused", "scheduled"].includes(status) && (
-                <button onClick={() => openConfirm("cancel", row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Cancel">
-                  <MdClose size={18} />
-                </button>
-              )}
-            </PermissionGuard>
-          </div>
-        );
-      },
+      render: (value) => (
+        <StatusBadge status={value} color={STATUS_COLOR[value] || "gray"} />
+      ),
     },
   ];
+
+  const rowActions = useCallback(
+    (row) => {
+      const status = row.status;
+      const isProductDealKey = row._rowType === "product_deal_key";
+
+      if (isProductDealKey) {
+        return [
+          {
+            label: "Create Deal",
+            icon: <MdAdd size={16} className="text-emerald-600" />,
+            hidden: !can("deals", ACTIONS.CREATE),
+            onClick: () => openFormFromProduct(row),
+          },
+        ];
+      }
+
+      return [
+        {
+          label: "View",
+          icon: <MdVisibility size={16} className="text-blue-600" />,
+          onClick: () => openDetail(row),
+        },
+        {
+          label: "Edit",
+          icon: <MdEdit size={16} className="text-amber-600" />,
+          hidden: !can("deals", ACTIONS.UPDATE),
+          onClick: () => openEditDeal(row),
+        },
+        {
+          label: "Approve",
+          icon: <MdCheckCircle size={16} className="text-green-600" />,
+          hidden: !(
+            can("deals", ACTIONS.APPROVE) &&
+            ["pending_approval", "draft"].includes(status) &&
+            isAdminPanel()
+          ),
+          onClick: () => openConfirm("approve", row),
+        },
+        // {
+        //   label: "Reject",
+        //   icon: <MdClose size={16} className="text-red-600" />,
+        //   danger: true,
+        //   hidden: !(can("deals", ACTIONS.REJECT) && !["expired", "completed", "cancelled", "rejected"].includes(status) && isAdminPanel()),
+        //   onClick: () => openConfirm("reject", row),
+        // },
+        {
+          label: "Pause",
+          icon: <MdPause size={16} className="text-yellow-600" />,
+          hidden: !(
+            can("deals", ACTIONS.STATUS_CHANGE) &&
+            status === "active" &&
+            isAdminPanel()
+          ),
+          onClick: () => openConfirm("pause", row),
+        },
+        {
+          label: "Resume",
+          icon: <MdPlayArrow size={16} className="text-green-600" />,
+          hidden: !(
+            can("deals", ACTIONS.STATUS_CHANGE) &&
+            status === "paused" &&
+            isAdminPanel()
+          ),
+          onClick: () => openConfirm("resume", row),
+        },
+        {
+          label: "Cancel",
+          icon: <MdClose size={16} className="text-red-600" />,
+          danger: true,
+          hidden: !(
+            can("deals", ACTIONS.STATUS_CHANGE) &&
+            [
+              "draft",
+              "pending_approval",
+              "active",
+              "paused",
+              "scheduled",
+            ].includes(status)
+          ),
+          onClick: () => openConfirm("cancel", row),
+        },
+      ];
+    },
+    [can, openDetail, openFormFromProduct, openEditDeal, openConfirm],
+  );
 
   return (
     <div className="p-6 space-y-5">
@@ -997,8 +1164,13 @@ const DealManagement = () => {
               <MdRefresh size={16} /> Refresh
             </button>
             <PermissionGuard module="deals" action={ACTIONS.CREATE} hide>
-              <button onClick={() => openForm(isSellerPanel() ? "seller_request" : "admin_direct")}>
-                <MdAdd size={17} /> {isSellerPanel() ? "Request Deal" : "Create Deal"}
+              <button
+                onClick={() =>
+                  openForm(isSellerPanel() ? "seller_request" : "admin_direct")
+                }
+              >
+                <MdAdd size={17} />{" "}
+                {isSellerPanel() ? "Request Deal" : "Create Deal"}
               </button>
             </PermissionGuard>
           </>
@@ -1006,12 +1178,41 @@ const DealManagement = () => {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <MetricCard icon={<MdLocalOffer size={20} />} label="Deal Products" value={metrics.total} />
-        <MetricCard icon={<MdCheckCircle size={20} />} label="Active" value={metrics.active} tone="green" />
-        <MetricCard icon={<MdHistory size={20} />} label="Scheduled" value={metrics.scheduled} tone="amber" />
-        <MetricCard icon={<MdClose size={20} />} label="Expired" value={metrics.expired} tone="slate" />
-        <MetricCard icon={<MdBarChart size={20} />} label="Units Sold" value={metrics.units} tone="blue" />
-        <MetricCard icon={<MdBarChart size={20} />} label="Deal Revenue" value={money(metrics.revenue)} tone="green" />
+        <MetricCard
+          icon={<MdLocalOffer size={20} />}
+          label="Deal Products"
+          value={metrics.total}
+        />
+        <MetricCard
+          icon={<MdCheckCircle size={20} />}
+          label="Active"
+          value={metrics.active}
+          tone="green"
+        />
+        <MetricCard
+          icon={<MdHistory size={20} />}
+          label="Scheduled"
+          value={metrics.scheduled}
+          tone="amber"
+        />
+        <MetricCard
+          icon={<MdClose size={20} />}
+          label="Expired"
+          value={metrics.expired}
+          tone="slate"
+        />
+        <MetricCard
+          icon={<MdBarChart size={20} />}
+          label="Units Sold"
+          value={metrics.units}
+          tone="blue"
+        />
+        <MetricCard
+          icon={<MdBarChart size={20} />}
+          label="Deal Revenue"
+          value={money(metrics.revenue)}
+          tone="green"
+        />
       </div>
 
       <div className="flex gap-2 overflow-x-auto border-b border-[var(--admin-line)]">
@@ -1045,10 +1246,18 @@ const DealManagement = () => {
       <DataTable
         columns={columns}
         data={tableRows}
-        total={activeTab === "product_keys" ? tableRows.length : payload.total + (activeTab ? 0 : Math.max(0, tableRows.length - payload.list.length))}
+        total={
+          activeTab === "product_keys"
+            ? tableRows.length
+            : payload.total +
+              (activeTab
+                ? 0
+                : Math.max(0, tableRows.length - payload.list.length))
+        }
         listPage={list}
         loading={loading}
         rowKey={(row) => getDealId(row) || getProductId(row)}
+        rowActions={rowActions}
         emptyMessage="No deal products found"
         tableContainerClassName="overflow-x-auto"
       />
@@ -1060,45 +1269,120 @@ const DealManagement = () => {
           setEditingDeal(null);
         }}
         isButtonView={false}
-        title={editingDeal ? "Edit Deal Product" : form.mode === "seller_request" ? "Request Deal Product" : "Create Direct Deal"}
+        title={
+          editingDeal
+            ? "Edit Deal Product"
+            : form.mode === "seller_request"
+              ? "Request Deal Product"
+              : "Create Direct Deal"
+        }
       >
         <div className="space-y-5 p-4">
-          {isAdminPanel() && <SellerSearch value={selectedSeller} onSelect={onSellerSelect} />}
+          {isAdminPanel() && (
+            <SellerSearch value={selectedSeller} onSelect={onSellerSelect} />
+          )}
 
-          <ProductSearch sellerId={form.sellerId} value={selectedProduct} onSelect={onProductSelect} />
+          <ProductSearch
+            sellerId={form.sellerId}
+            value={selectedProduct}
+            onSelect={onProductSelect}
+          />
 
           <div className="grid gap-3 md:grid-cols-2">
-            <Input label="Deal Title" value={form.title} onChange={(event) => setField("title", event.target.value)} required />
+            <Input
+              label="Deal Title"
+              value={form.title}
+              onChange={(event) => setField("title", event.target.value)}
+              required
+            />
             <Input
               label="Deal Type"
               type="select"
               value={form.dealType}
               options={DEAL_TYPES}
-              onChange={(option) => setField("dealType", option?.value || "fixed_price")}
+              onChange={(option) =>
+                setField("dealType", option?.value || "fixed_price")
+              }
             />
-            <Input label="Original Price" type="price" value={form.originalPrice} readOnly helperText="Copied for deal snapshot only." />
-            <Input label="Deal Price" type="price" value={form.dealPrice} onChange={(event) => setField("dealPrice", event.target.value)} required />
-            <Input label="Discount Amount" value={money(discountAmount(formDeal))} readOnly />
-            <Input label="Discount Percentage" value={`${discountPercent(formDeal)}%`} readOnly />
-            <Input label="Deal Quantity Allocation" type="number" value={form.allocatedQuantity} onChange={(event) => setField("allocatedQuantity", event.target.value)} />
-            <Input label="Maximum Quantity Per Customer" type="number" value={form.maxQuantityPerOrder} onChange={(event) => setField("maxQuantityPerOrder", event.target.value)} />
-            <Input label="Deal Start" type="datetime-local" value={form.startAt} onChange={(event) => setField("startAt", event.target.value)} required />
-            <Input label="Deal End" type="datetime-local" value={form.endAt} onChange={(event) => setField("endAt", event.target.value)} required />
+            <Input
+              label="Original Price"
+              type="price"
+              value={form.originalPrice}
+              readOnly
+              helperText="Copied for deal snapshot only."
+            />
+            <Input
+              label="Deal Price"
+              type="price"
+              value={form.dealPrice}
+              onChange={(event) => setField("dealPrice", event.target.value)}
+              required
+            />
+            <Input
+              label="Discount Amount"
+              value={money(discountAmount(formDeal))}
+              readOnly
+            />
+            <Input
+              label="Discount Percentage"
+              value={`${discountPercent(formDeal)}%`}
+              readOnly
+            />
+            <Input
+              label="Deal Quantity Allocation"
+              type="number"
+              value={form.allocatedQuantity}
+              onChange={(event) =>
+                setField("allocatedQuantity", event.target.value)
+              }
+            />
+            <Input
+              label="Maximum Quantity Per Customer"
+              type="number"
+              value={form.maxQuantityPerOrder}
+              onChange={(event) =>
+                setField("maxQuantityPerOrder", event.target.value)
+              }
+            />
+            <Input
+              label="Deal Start"
+              type="datetime-local"
+              value={form.startAt}
+              onChange={(event) => setField("startAt", event.target.value)}
+              required
+            />
+            <Input
+              label="Deal End"
+              type="datetime-local"
+              value={form.endAt}
+              onChange={(event) => setField("endAt", event.target.value)}
+              required
+            />
             <Input
               label="Deal Source"
               type="select"
               value={form.dealSource}
               options={DEAL_SOURCES}
-              onChange={(option) => setField("dealSource", option?.value || "admin_direct")}
+              onChange={(option) =>
+                setField("dealSource", option?.value || "admin_direct")
+              }
             />
             <Input
               label="Deal Badge"
               type="select"
               value={form.dealBadge}
-              options={DEAL_BADGES.map((badge) => ({ label: badge, value: badge }))}
+              options={DEAL_BADGES.map((badge) => ({
+                label: badge,
+                value: badge,
+              }))}
               onChange={(option) => setField("dealBadge", option?.value || "")}
             />
-            <Input label="Priority" type="number" value={form.priority} onChange={(event) => setField("priority", event.target.value)} />
+            <Input
+              label="Priority"
+              type="number"
+              value={form.priority}
+              onChange={(event) => setField("priority", event.target.value)}
+            />
           </div>
 
           {form.mode === "seller_request" && (
@@ -1122,22 +1406,46 @@ const DealManagement = () => {
           )}
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            This creates a deal record for the selected existing product. It does not create a new product and does not update Product Master price.
+            This creates a deal record for the selected existing product. It
+            does not create a new product and does not update Product Master
+            price.
           </div>
 
           <div className="flex justify-end gap-2 border-t border-[var(--admin-line)] pt-4">
-            <button type="button" className="admin-btn-secondary" onClick={() => {
-              setFormOpen(false);
-              setEditingDeal(null);
-            }}>Cancel</button>
-            <button type="button" className="admin-btn-primary" onClick={submitForm} disabled={submitLoading}>
-              {submitLoading ? "Saving..." : editingDeal ? "Update Deal" : form.mode === "seller_request" ? "Submit Request" : "Activate Deal"}
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={() => {
+                setFormOpen(false);
+                setEditingDeal(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={submitForm}
+              disabled={submitLoading}
+            >
+              {submitLoading
+                ? "Saving..."
+                : editingDeal
+                  ? "Update Deal"
+                  : form.mode === "seller_request"
+                    ? "Submit Request"
+                    : "Activate Deal"}
             </button>
           </div>
         </div>
       </DefaultModal>
 
-      <DefaultModal isOpen={!!detail} onClose={() => setDetail(null)} title="Deal Product Detail" isButtonView={false}>
+      <DefaultModal
+        isOpen={!!detail}
+        onClose={() => setDetail(null)}
+        title="Deal Product Detail"
+        isButtonView={false}
+      >
         {!detail && detailLoading ? (
           <div className="flex min-h-[260px] items-center justify-center">
             <Loader />
@@ -1152,11 +1460,18 @@ const DealManagement = () => {
             <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-[var(--admin-ink)]">{detail.metadata?.productLabel || detail.title}</p>
-                  <p className="text-xs text-[var(--admin-muted)]">{detail.dealNumber || getDealId(detail)}</p>
+                  <p className="font-semibold text-[var(--admin-ink)]">
+                    {detail.metadata?.productLabel || detail.title}
+                  </p>
+                  <p className="text-xs text-[var(--admin-muted)]">
+                    {detail.dealNumber || getDealId(detail)}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={detail.status} color={STATUS_COLOR[detail.status] || "gray"} />
+                  <StatusBadge
+                    status={detail.status}
+                    color={STATUS_COLOR[detail.status] || "gray"}
+                  />
                   <button
                     type="button"
                     className="rounded p-1 text-amber-600 transition hover:bg-amber-50"
@@ -1171,40 +1486,108 @@ const DealManagement = () => {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-gray-500">Original Price</p><p className="line-through">{money(detail.originalPrice)}</p></div>
-                <div><p className="text-gray-500">Deal Price</p><p className="font-semibold text-emerald-700">{money(detail.dealPrice)}</p></div>
-                <div><p className="text-gray-500">Discount</p><p>{money(discountAmount(detail))} ({discountPercent(detail)}%)</p></div>
-                <div><p className="text-gray-500">Deal Badge</p><p>{detail.metadata?.dealBadge || "—"}</p></div>
-                <div><p className="text-gray-500">Start</p><p>{fmtDateTime(detail.startAt)}</p></div>
-                <div><p className="text-gray-500">End</p><p>{fmtDateTime(detail.endAt)}</p></div>
-                <div><p className="text-gray-500">Allocated</p><p>{num(detail.allocatedQuantity)}</p></div>
-                <div><p className="text-gray-500">Remaining</p><p>{remainingQty(detail)}</p></div>
-                <div><p className="text-gray-500">Deal Source</p><p>{display(detail.metadata?.dealSource)}</p></div>
-                <div><p className="text-gray-500">Max/customer</p><p>{detail.maxQuantityPerOrder || "—"}</p></div>
+                <div>
+                  <p className="text-gray-500">Original Price</p>
+                  <p className="line-through">{money(detail.originalPrice)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Deal Price</p>
+                  <p className="font-semibold text-emerald-700">
+                    {money(detail.dealPrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Discount</p>
+                  <p>
+                    {money(discountAmount(detail))} ({discountPercent(detail)}%)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Deal Badge</p>
+                  <p>{detail.metadata?.dealBadge || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Start</p>
+                  <p>{fmtDateTime(detail.startAt)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">End</p>
+                  <p>{fmtDateTime(detail.endAt)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Allocated</p>
+                  <p>{num(detail.allocatedQuantity)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Remaining</p>
+                  <p>{remainingQty(detail)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Deal Source</p>
+                  <p>{display(detail.metadata?.dealSource)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Max/customer</p>
+                  <p>{detail.maxQuantityPerOrder || "—"}</p>
+                </div>
               </div>
             </div>
 
-            {(detail.metadata?.sellerReason || detail.metadata?.sellerMessage || detail.description) && (
+            {(detail.metadata?.sellerReason ||
+              detail.metadata?.sellerMessage ||
+              detail.description) && (
               <div className="rounded-md border border-[var(--admin-line)] bg-white p-4 text-sm">
-                <p className="mb-2 font-semibold text-[var(--admin-ink)]">Notes</p>
-                {detail.metadata?.sellerReason && <p><span className="text-gray-500">Reason:</span> {detail.metadata.sellerReason}</p>}
-                {detail.metadata?.sellerMessage && <p><span className="text-gray-500">Seller message:</span> {detail.metadata.sellerMessage}</p>}
-                {!detail.metadata?.sellerReason && detail.description && <p>{detail.description}</p>}
+                <p className="mb-2 font-semibold text-[var(--admin-ink)]">
+                  Notes
+                </p>
+                {detail.metadata?.sellerReason && (
+                  <p>
+                    <span className="text-gray-500">Reason:</span>{" "}
+                    {detail.metadata.sellerReason}
+                  </p>
+                )}
+                {detail.metadata?.sellerMessage && (
+                  <p>
+                    <span className="text-gray-500">Seller message:</span>{" "}
+                    {detail.metadata.sellerMessage}
+                  </p>
+                )}
+                {!detail.metadata?.sellerReason && detail.description && (
+                  <p>{detail.description}</p>
+                )}
               </div>
             )}
 
             <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
-              <p className="mb-3 font-semibold text-[var(--admin-ink)]">History</p>
+              <p className="mb-3 font-semibold text-[var(--admin-ink)]">
+                History
+              </p>
               <div className="space-y-3">
-                {(detail.timeline || []).length ? detail.timeline.map((event) => (
-                  <div key={event.id || `${event.event_type}-${event.created_at}`} className="border-l-2 border-[var(--admin-blue)] pl-3 text-sm">
-                    <p className="font-medium">{display(event.event_type)}</p>
-                    <p className="text-xs text-[var(--admin-muted)]">{fmtDateTime(event.created_at)} · {event.actor_role || "system"}</p>
-                    {event.reason && <p className="mt-1 text-xs">Reason: {event.reason}</p>}
-                    {event.note && <p className="mt-1 text-xs">Note: {event.note}</p>}
-                  </div>
-                )) : (
-                  <p className="text-sm text-[var(--admin-muted)]">No history recorded.</p>
+                {(detail.timeline || []).length ? (
+                  detail.timeline.map((event) => (
+                    <div
+                      key={
+                        event.id || `${event.event_type}-${event.created_at}`
+                      }
+                      className="border-l-2 border-[var(--admin-blue)] pl-3 text-sm"
+                    >
+                      <p className="font-medium">{display(event.event_type)}</p>
+                      <p className="text-xs text-[var(--admin-muted)]">
+                        {fmtDateTime(event.created_at)} ·{" "}
+                        {event.actor_role || "system"}
+                      </p>
+                      {event.reason && (
+                        <p className="mt-1 text-xs">Reason: {event.reason}</p>
+                      )}
+                      {event.note && (
+                        <p className="mt-1 text-xs">Note: {event.note}</p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[var(--admin-muted)]">
+                    No history recorded.
+                  </p>
                 )}
               </div>
             </div>
@@ -1220,16 +1603,36 @@ const DealManagement = () => {
         onCancel={closeConfirm}
         loading={actionLoading}
         confirmLabel={display(confirm.action)}
-        confirmVariant={["approve", "resume"].includes(confirm.action) ? "success" : "danger"}
+        confirmVariant={
+          ["approve", "resume"].includes(confirm.action) ? "success" : "danger"
+        }
       >
         {["reject", "cancel"].includes(confirm.action) && (
           <div className="mt-3">
-            <Input label="Reason *" value={confirm.reason} onChange={(event) => setConfirm((current) => ({ ...current, reason: event.target.value }))} />
+            <Input
+              label="Reason *"
+              value={confirm.reason}
+              onChange={(event) =>
+                setConfirm((current) => ({
+                  ...current,
+                  reason: event.target.value,
+                }))
+              }
+            />
           </div>
         )}
         {["approve", "pause", "resume"].includes(confirm.action) && (
           <div className="mt-3">
-            <Input label="Note" value={confirm.note} onChange={(event) => setConfirm((current) => ({ ...current, note: event.target.value }))} />
+            <Input
+              label="Note"
+              value={confirm.note}
+              onChange={(event) =>
+                setConfirm((current) => ({
+                  ...current,
+                  note: event.target.value,
+                }))
+              }
+            />
           </div>
         )}
       </ConfirmModal>

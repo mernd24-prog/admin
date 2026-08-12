@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { MdRefresh } from "react-icons/md";
+import { MdCheckCircle, MdRefresh } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -299,6 +299,7 @@ const NegativeBalances = () => {
                 className="admin-btn-secondary !px-2 !py-1"
                 onClick={() => openResolve(row)}
               >
+                <MdCheckCircle size={15} />
                 Resolve
               </button>
             </PermissionGuard>
