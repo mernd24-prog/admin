@@ -23,7 +23,7 @@ import PermissionGuard from "../../../../components/Atoms/PermissionGuard/Permis
 import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
 import SummaryCard from "../../../../components/Shared/SummaryCard";
-import OrderLink from "../../../../components/Shared/OrderLink";
+import {OrderLink} from "../../../../components/Shared/EntityLink";
 
 import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../../_helpers/downloadApi";

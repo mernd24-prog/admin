@@ -13,7 +13,7 @@ import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
-import OrderLink from "../../../components/Shared/OrderLink";
+import {OrderLink} from "../../../components/Shared/EntityLink";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
   formatCurrency,

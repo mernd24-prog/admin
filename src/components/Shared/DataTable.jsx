@@ -286,6 +286,7 @@ const DataTable = ({
   const [hasMounted, setHasMounted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
+  console.log('safeData: ', safeData);
   const safeColumns = Array.isArray(columns) ? columns : [];
   const hasSerialColumn = safeColumns.some((column) => {
     const key = String(column?.key || "")

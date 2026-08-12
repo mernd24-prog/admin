@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MdRefresh, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
-import { DataTable, PageHeader, StatusBadge } from "../../components/Shared";
+import { DataTable, PageHeader, StatusBadge, UserLink } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import {
@@ -12,6 +12,8 @@ import {
   statusLabel,
   SUPPORT_STATUSES,
 } from "./supportUtils";
+
+import { isSellerPanel } from "../../_helpers/panelConfig";
 
 const TABS = [
   { key: "customer", label: "Customer Queries" },
@@ -31,6 +33,7 @@ const AdminQueries = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusForm, setStatusForm] = useState({ status: "", adminNotes: "" });
   const [savingStatus, setSavingStatus] = useState(false);
+  const isSeller = isSellerPanel();
 
   const fetchQueries = useCallback(async () => {
     try {
@@ -103,16 +106,32 @@ const AdminQueries = () => {
       label: "Query ID",
       render: (value) => <span className="font-semibold text-[var(--admin-ink)]">{value}</span>,
     },
-    {
-      key: "userName",
-      label: "User Name",
-      render: (value, row) => (
-        <div>
-          <div className="font-medium text-[var(--admin-ink)]">{value || "N/A"}</div>
-          {row.userEmail ? <div className="text-xs text-[var(--admin-muted)]">{row.userEmail}</div> : null}
-        </div>
-      ),
-    },
+  {
+  key: "userName",
+  label: "User Name",
+  render: (value, row) => {
+    return (
+      <div>
+        {isSeller ? (
+          <span className="font-medium text-[var(--admin-ink)]">
+            {value || "N/A"}
+          </span>
+        ) : (
+          <UserLink
+            userId={row.userId}
+            userName={value}
+          />
+        )}
+
+        {row.userEmail ? (
+          <div className="text-xs text-[var(--admin-muted)]">
+            {row.userEmail}
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+},
     {
       key: "userType",
       label: "User Type",
@@ -123,16 +142,22 @@ const AdminQueries = () => {
       label: "Category",
       render: (value) => categoryLabel(value),
     },
-    {
-      key: "messagePreview",
-      label: "Message Preview",
-      render: (value, row) => (
-        <div className="max-w-sm">
-          <div className="font-medium text-[var(--admin-ink)]">{row.subject}</div>
-          <div className="truncate text-xs text-[var(--admin-muted)]">{value || row.message}</div>
-        </div>
-      ),
-    },
+   {
+  key: "messagePreview",
+  label: "Message Preview",
+  className: "w-[250px] max-w-[250px]",
+  render: (value, row) => (
+    <div className="w-[200px] max-w-[200px] overflow-hidden">
+      <div className="truncate font-medium text-[var(--admin-ink)]">
+        {row.subject || "N/A"}
+      </div>
+
+      <div className="truncate text-xs text-[var(--admin-muted)]">
+        {value || row.message || "No message"}
+      </div>
+    </div>
+  ),
+},
     {
       key: "status",
       label: "Status",
