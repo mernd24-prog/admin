@@ -140,15 +140,7 @@ const BASE_COLUMNS = [
       );
     },
   },
-  {
-    key: "channel",
-    label: "Channel",
-    render: (v) => (
-      <span className="capitalize px-2 py-0.5 bg-[#F4F1ED] text-[var(--admin-navy)] text-xs rounded-full font-medium">
-        {v || "in_app"}
-      </span>
-    ),
-  },
+ 
   {
     key: "template",
     label: "Template",

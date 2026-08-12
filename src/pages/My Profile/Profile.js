@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { BsCamera, BsSave } from "react-icons/bs";
-import { FiEdit3 } from "react-icons/fi";
+import { FiDownload, FiEdit3, FiEye, FiFileText } from "react-icons/fi";
 import { PiX } from "react-icons/pi";
 import { useDispatch } from "react-redux";
 import { getProfile, updateProfile } from "../../Redux/userSlice";
 import { toast } from "sonner";
+import { apiRequest } from "../../_helpers/apiConfig";
+import { ENDPOINTS } from "../../_helpers/endpoints";
 import { uploadFile } from "../../_helpers/globalFunctions";
 import Loader from "../../components/Loader/Loader";
 import { PageHeader } from "../../components/Shared";
@@ -25,6 +27,57 @@ const profileToForm = (user = {}) => {
     email: user.email || "",
     full_name: fullName || "",
     user_image: user.user_image || profile.avatarUrl || null,
+  };
+};
+
+const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
+
+const parseDocumentMap = (value = {}) => {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const isPdfDocument = (url = "") =>
+  /\.pdf(\?.*)?$/i.test(String(url || "")) ||
+  String(url || "").toLowerCase().includes("application/pdf");
+
+const isImageDocument = (url = "") =>
+  /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
+
+const unwrapSellerProfileResponse = (response = {}) => {
+  const root = response?.data?.data || response?.data || response || {};
+  return {
+    sellerProfile: root.profile || {},
+    sellerSettings: root.settings || {},
+    sellerKyc: root.kyc || null,
+    sellerOrganization: root.organization || null,
+  };
+};
+
+const mergeSellerProfileData = (user = {}, sellerResponse = {}) => {
+  const sellerData = unwrapSellerProfileResponse(sellerResponse);
+  const documents = {
+    ...parseDocumentMap(sellerData.sellerProfile.documents),
+    ...parseDocumentMap(sellerData.sellerProfile.kycDocuments),
+    ...parseDocumentMap(sellerData.sellerKyc?.documents),
+    ...parseDocumentMap(sellerData.sellerOrganization?.documents),
+  };
+
+  return {
+    ...user,
+    ...sellerData,
+    sellerProfile: {
+      ...(user.sellerProfile || {}),
+      ...(sellerData.sellerProfile || {}),
+      documents,
+    },
   };
 };
 
@@ -99,6 +152,108 @@ const DetailField = ({ label, value, className = "" }) => (
   </div>
 );
 
+const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onView }) => {
+  const toneClass = {
+    purple: "border-[#d7c4ff] bg-[#f5efff] text-[#7c3aed]",
+    red: "border-[#ffd8ca] bg-[#fff4ed] text-[#ef4444]",
+    green: "border-[#b9e9c6] bg-[#effcf3] text-[#15803d]",
+    blue: "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]",
+  }[tone] || "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]";
+
+  return (
+    <button
+      type="button"
+      onClick={() => url && onView?.({ label: title, url })}
+      disabled={!url}
+      className="group flex min-h-[150px] flex-col items-center justify-center rounded-lg border border-[#efd7a6] bg-white px-4 py-5 text-center transition hover:border-[#d9a33c] hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+    >
+      <span className={`flex h-[54px] w-[64px] items-center justify-center rounded-md border ${toneClass}`}>
+        <FiFileText className="h-7 w-7" />
+      </span>
+      <span className="mt-3 text-sm font-bold text-[#3b344a]">{title}</span>
+      <span className="mt-1 text-[11px] text-[#5f6070]">{hint}</span>
+      <span className="mt-3 inline-flex min-h-[26px] items-center gap-1 rounded-md border border-[#3b73ff] px-3 py-1 text-[11px] font-semibold text-[#1d5cff] transition group-hover:bg-[#eef4ff]">
+        <FiEye className="h-3.5 w-3.5" />
+        {url ? "View Document" : "Not Uploaded"}
+      </span>
+    </button>
+  );
+};
+
+const DocumentPreviewModal = ({ document, onClose }) => {
+  if (!document?.url) return null;
+  const canShowAsImage = isImageDocument(document.url);
+  const canShowAsPdf = isPdfDocument(document.url);
+
+  return (
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
+          <div className="min-w-0">
+            <p className="truncate text-base font-bold text-[var(--admin-navy)]">
+              {document.label}
+            </p>
+            <p className="truncate text-xs text-[var(--admin-muted)]">
+              {document.url}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={document.url}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-btn-secondary min-h-[34px] px-3 text-xs"
+            >
+              <FiDownload />
+              Download
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+              aria-label="Close document preview"
+            >
+              <PiX className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-[55vh] overflow-auto bg-[#f5f6fa] p-4">
+          {canShowAsImage ? (
+            <img
+              src={document.url}
+              alt={document.label}
+              className="mx-auto max-h-[72vh] max-w-full rounded-md bg-white object-contain shadow-sm"
+            />
+          ) : canShowAsPdf ? (
+            <iframe
+              title={document.label}
+              src={document.url}
+              className="h-[72vh] w-full rounded-md border border-[var(--admin-line)] bg-white"
+            />
+          ) : (
+            <div className="flex min-h-[55vh] flex-col items-center justify-center rounded-md bg-white p-6 text-center">
+              <FiFileText className="h-10 w-10 text-[var(--admin-muted)]" />
+              <p className="mt-3 text-sm font-semibold text-[var(--admin-navy)]">
+                Preview is not available for this file type.
+              </p>
+              <a
+                href={document.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 admin-btn-primary"
+              >
+                <FiEye />
+                Open Document
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EditableField = ({
   label,
   name,
@@ -138,7 +293,7 @@ const FieldGrid = ({ children }) => (
 );
 
 const AddressBlock = ({ title, address }) => (
-  <div className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
+  <div className="r">
     <p className="mb-4 text-xs font-semibold text-[var(--admin-navy)]">
       {title}
     </p>
@@ -189,6 +344,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -196,7 +352,26 @@ const Profile = () => {
       try {
         const res = await dispatch(getProfile()).unwrap();
         if (res) {
-          setFormData(profileToForm(res?.data));
+          const userProfile = profileToForm(res?.data);
+          if (SELLER_ROLES.has(userProfile.role)) {
+            try {
+              const sellerResponse = await apiRequest(
+                "GET",
+                ENDPOINTS.sellers.profile,
+              );
+              setFormData(
+                profileToForm(mergeSellerProfileData(userProfile, sellerResponse)),
+              );
+            } catch (sellerError) {
+              console.error("Seller profile fetch failed:", sellerError);
+              setFormData(userProfile);
+              toast.error(
+                sellerError?.message || "Unable to load seller profile details",
+              );
+            }
+          } else {
+            setFormData(userProfile);
+          }
         }
       } catch (error) {
         console.log(error);
@@ -345,27 +520,60 @@ const Profile = () => {
 
   const profile = formData.profile || {};
   const sellerProfile = formData.sellerProfile || {};
-  const sellerSettings = formData.sellerSettings || {};
+  const sellerKyc = formData.sellerKyc || {};
+  const sellerDocuments = {
+    ...parseDocumentMap(sellerProfile.documents),
+    ...parseDocumentMap(sellerProfile.kycDocuments),
+    ...parseDocumentMap(sellerKyc.documents),
+    ...parseDocumentMap(formData.sellerOrganization?.documents),
+  };
   const bankDetails = sellerProfile.bankDetails || {};
   const businessAddress = sellerProfile.businessAddress || {};
   const pickupAddress = sellerProfile.pickupAddress || {};
-  const onboardingChecklist = sellerProfile.onboardingChecklist || {};
-  const allowedModules = Array.isArray(formData.allowedModules)
-    ? formData.allowedModules
-    : [];
   // const addresses = Array.isArray(formData.addresses) ? formData.addresses : [];
-  const authProviders = Array.isArray(formData.authProviders)
-    ? formData.authProviders
-    : [];
-  const refreshSessions = Array.isArray(formData.refreshSessions)
-    ? formData.refreshSessions
-    : [];
-  const latestSession = refreshSessions[refreshSessions.length - 1] || {};
-  const isSeller = formData.role === "seller";
+  const isSeller = SELLER_ROLES.has(formData.role);
   const hasSellerProfile = isSeller && Object.keys(sellerProfile).length > 0;
   const hasSellerAddresses =
     isSeller &&
     (hasAddressValue(businessAddress) || hasAddressValue(pickupAddress));
+  const documentCards = [
+    {
+      key: "panDocumentUrl",
+      title: "PAN Card",
+      url: sellerDocuments.panDocumentUrl,
+      tone: "purple",
+    },
+    {
+      key: "aadhaarFrontUrl",
+      title: "Aadhaar Front",
+      url: sellerDocuments.aadhaarFrontUrl,
+      tone: "red",
+    },
+    {
+      key: "aadhaarBackUrl",
+      title: "Aadhaar Back",
+      url: sellerDocuments.aadhaarBackUrl,
+      tone: "red",
+    },
+    {
+      key: "gstCertificateUrl",
+      title: "GST Certificate",
+      url: sellerDocuments.gstCertificateUrl,
+      tone: "blue",
+    },
+    {
+      key: "bankProofUrl",
+      title: "Cancel Cheque Copy",
+      url: sellerDocuments.bankProofUrl,
+      tone: "green",
+    },
+    {
+      key: "addressProofUrl",
+      title: "Address Proof",
+      url: sellerDocuments.addressProofUrl,
+      tone: "blue",
+    },
+  ];
   let currentSection = 0;
   const nextSectionNumber = () => String(++currentSection).padStart(2, "0");
 
@@ -510,171 +718,18 @@ const Profile = () => {
                 value={formData.userName}
                 className="md:col-span-6"
               />
-            </FieldGrid>
-          </ProfileSection>
-
-          <ProfileSection
-            number={nextSectionNumber()}
-            title="Account Information"
-          >
-            <FieldGrid>
-              {/* <DetailField
-                label="User ID"
-                value={formData._id || formData.id}
-                className="md:col-span-6"
-              /> */}
-              {/* <DetailField
-                label="Role"
-                value={formData.role}
-                className="md:col-span-3"
-              /> */}
-              <DetailField
-                label="Account Status"
-                value={formData.accountStatus}
-                className="md:col-span-3"
-              />
-              <DetailField
+               <DetailField
                 label="Referral Code"
                 value={formData.referralCode}
                 className="md:col-span-6"
               />
-              {/* <DetailField
-                label="Hierarchy Level"
-                value={formData.hierarchyLevel}
-                className="md:col-span-3"
-              /> */}
-              {/* <DetailField
-                label="Email Verified"
-                value={formData.emailVerified}
-                className="md:col-span-3"
-              /> */}
-              {/* <DetailField
-                label="Created At"
-                value={formatDate(formData.createdAt)}
-                className="md:col-span-6"
-              /> */}
-              <DetailField
-                label="Updated At"
-                value={formatDate(formData.updatedAt)}
-                className="md:col-span-3"
-              />
-              <DetailField
-                label="Last Login At"
-                value={formatDate(formData.lastLoginAt)}
-                className="md:col-span-3"
-              />
             </FieldGrid>
           </ProfileSection>
 
-          <ProfileSection
-            number={nextSectionNumber()}
-            title="Access & Sessions"
-          >
-            <FieldGrid>
-              <DetailField
-                label="Authentication Providers"
-                value={
-                  authProviders
-                    .map((provider) => provider.provider || provider)
-                    .join(", ") || "Password"
-                }
-                className="md:col-span-6"
-              />
-              {/* <DetailField
-                label="Allowed Modules Count"
-                value={allowedModules.length}
-                className="md:col-span-3"
-              /> */}
-              <DetailField
-                label="Active Sessions"
-                value={refreshSessions.length}
-                className="md:col-span-3"
-              />
-              {/* <DetailField
-                label="Latest Session Provider"
-                value={latestSession.provider}
-                className="md:col-span-6"
-              /> */}
-              {/* <DetailField
-                label="Latest Platform"
-                value={latestSession.platform}
-                className="md:col-span-3"
-              /> */}
-              {/* <DetailField
-                label="Latest IP Address"
-                value={latestSession.ipAddress}
-                className="md:col-span-3"
-              /> */}
-              <DetailField
-                label="Latest Used At"
-                value={formatDate(latestSession.lastUsedAt)}
-                className="md:col-span-6"
-              />
-              <DetailField
-                label="Latest Created At"
-                value={formatDate(latestSession.createdAt)}
-                className="md:col-span-6"
-              />
-            </FieldGrid>
+         
+      
 
-            {/* <div>
-              <label className="admin-label">Allowed Modules</label>
-              <div className="min-h-[40px] rounded-[6px] border border-[#dad7ea] bg-[#faf8ff]/70 px-3 py-2">
-                {allowedModules.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {allowedModules.map((module) => (
-                      <span
-                        key={module}
-                        className="rounded-full border border-[#d9e1f8] bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-medium capitalize text-[var(--admin-navy)]"
-                      >
-                        {String(module).replace(/[-_]/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-sm text-slate-500">
-                    No modules assigned
-                  </span>
-                )}
-              </div>
-            </div> */}
-          </ProfileSection>
-
-          {isSeller && (
-            <ProfileSection
-              number={nextSectionNumber()}
-              title="Seller Settings"
-            >
-              <FieldGrid>
-                <DetailField
-                  label="Auto Accept Orders"
-                  value={sellerSettings.autoAcceptOrders}
-                  className="md:col-span-6"
-                />
-                <DetailField
-                  label="Handling Time (Hours)"
-                  value={sellerSettings.handlingTimeHours}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="Payout Schedule"
-                  value={sellerSettings.payoutSchedule}
-                  className="md:col-span-6"
-                />
-                <DetailField
-                  label="NDR Response (Hours)"
-                  value={sellerSettings.ndrResponseHours}
-                  className="md:col-span-3"
-                />
-                {/* <DetailField
-                  label="Shipping Modes"
-                  value={sellerSettings.shippingModes}
-                  className="md:col-span-3"
-                /> */}
-              </FieldGrid>
-            </ProfileSection>
-          )}
-
+  
           {hasSellerProfile && (
             <ProfileSection
               number={nextSectionNumber()}
@@ -716,11 +771,13 @@ const Profile = () => {
                   value={sellerProfile.panNumber}
                   className="md:col-span-6"
                 />
+                
                 <DetailField
                   label="Aadhaar Number"
                   value={sellerProfile.aadhaarNumber}
                   className="md:col-span-6"
                 />
+                
                 <DetailField
                   label="Support Email"
                   value={sellerProfile.supportEmail}
@@ -736,96 +793,37 @@ const Profile = () => {
                   value={sellerProfile.description}
                   className="md:col-span-6"
                 />
-                <DetailField
-                  label="KYC Status"
-                  value={sellerProfile.kycStatus}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="Bank Verification Status"
-                  value={sellerProfile.bankVerificationStatus}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="Go Live Status"
-                  value={sellerProfile.goLiveStatus}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="Onboarding Status"
-                  value={sellerProfile.onboardingStatus}
-                  className="md:col-span-3"
-                />
-                {/* <DetailField
-                  label="Profile Completed"
-                  value={sellerProfile.profileCompleted}
-                  className="md:col-span-6"
-                /> */}
-                {/* <DetailField
-                  label="Rejection Reason"
-                  value={sellerProfile.rejectionReason}
-                  className="md:col-span-6"
-                /> */}
-                {/* <DetailField
-                  label="Verified By"
-                  value={sellerProfile.verifiedBy}
-                  className="md:col-span-6"
-                /> */}
-                {/* <DetailField
-                  label="Verified At"
-                  value={formatDate(sellerProfile.verifiedAt)}
-                  className="md:col-span-6"
-                /> */}
-                {/* <DetailField
-                  label="Go Live Approved By"
-                  value={sellerProfile.goLiveApprovedBy}
-                  className="md:col-span-6"
-                /> */}
-                {/* <DetailField
-                  label="Go Live Approved At"
-                  value={formatDate(sellerProfile.goLiveApprovedAt)}
-                  className="md:col-span-6"
-                /> */}
+          
+                
+               
               </FieldGrid>
+            
             </ProfileSection>
           )}
 
-          {hasSellerProfile && (
+     {hasSellerAddresses && (
             <ProfileSection
               number={nextSectionNumber()}
-              title="Onboarding Checklist"
+              title="Seller Addresses"
             >
-              <FieldGrid>
-                <DetailField
-                  label="Profile Completed"
-                  value={onboardingChecklist.profileCompleted}
-                  className="md:col-span-6"
-                />
-                <DetailField
-                  label="KYC Submitted"
-                  value={onboardingChecklist.kycSubmitted}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="GST Verified"
-                  value={onboardingChecklist.gstVerified}
-                  className="md:col-span-3"
-                />
-                <DetailField
-                  label="Bank Linked"
-                  value={onboardingChecklist.bankLinked}
-                  className="md:col-span-6"
-                />
-                {/* <DetailField
-                  label="First Product Published"
-                  value={onboardingChecklist.firstProductPublished}
-                  className="md:col-span-6"
-                /> */}
-              </FieldGrid>
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                {hasAddressValue(businessAddress) && (
+                  <AddressBlock
+                    title="Business Address"
+                    address={businessAddress}
+                  />
+                )}
+                {hasAddressValue(pickupAddress) && (
+                  <AddressBlock
+                    title="Pickup Address"
+                    address={pickupAddress}
+                  />
+                )}
+              </div>
             </ProfileSection>
           )}
 
-          {isSeller && hasValue(bankDetails) && (
+           {isSeller && hasValue(bankDetails) && (
             <ProfileSection number={nextSectionNumber()} title="Bank Details">
               <FieldGrid>
                 <DetailField
@@ -862,45 +860,31 @@ const Profile = () => {
             </ProfileSection>
           )}
 
-          {hasSellerAddresses && (
+          {hasSellerProfile && (
             <ProfileSection
-              number={nextSectionNumber()}
-              title="Seller Addresses"
-            >
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                {hasAddressValue(businessAddress) && (
-                  <AddressBlock
-                    title="Business Address"
-                    address={businessAddress}
-                  />
-                )}
-                {hasAddressValue(pickupAddress) && (
-                  <AddressBlock
-                    title="Pickup Address"
-                    address={pickupAddress}
-                  />
-                )}
-              </div>
-            </ProfileSection>
+            number={nextSectionNumber()}
+            title="Documents"
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+              {documentCards.map((item) => (
+                <DocumentCard
+                  key={item.key}
+                  title={item.title}
+                  url={item.url}
+                  tone={item.tone}
+                  onView={setPreviewDocument}
+                />
+              ))}
+            </div>
+          </ProfileSection>
           )}
 
-          {/* <ProfileSection number={nextSectionNumber()} title="Saved Addresses">
-            {addresses.length ? (
-              <div className="space-y-4">
-                {addresses.map((address, index) => (
-                  <AddressBlock
-                    key={address._id || index}
-                    title={`Address ${index + 1}${address.isDefault ? " (Default)" : ""}`}
-                    address={address}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[6px] border border-[#dad7ea] bg-[#faf8ff]/70 px-4 py-3 text-sm text-slate-500">
-                No addresses saved.
-              </div>
-            )}
-          </ProfileSection> */}
+
+         
+
+     
+
+
 
           {isEditing && (
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
@@ -925,6 +909,10 @@ const Profile = () => {
           )}
         </div>
       </div>
+      <DocumentPreviewModal
+        document={previewDocument}
+        onClose={() => setPreviewDocument(null)}
+      />
     </div>
   );
 };

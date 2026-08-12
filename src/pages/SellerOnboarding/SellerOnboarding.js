@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronDown, FileText, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, FileText, UploadCloud, X } from "lucide-react";
 import { LuView } from "react-icons/lu";
 import { FaCalendarAlt } from "react-icons/fa";
 import { BiSolidEdit } from "react-icons/bi";
@@ -10,8 +10,13 @@ import { LuClipboardList } from "react-icons/lu";
 import Image from "../../assets/cheque.png";
 import {
   fetchAuthStatus,
+  precheckSellerAadhaar,
+  precheckSellerPan,
+  sendSellerAadhaarOtp,
   submitSellerKyc,
   updateSellerOnboardingProfile,
+  verifySellerAadhaarOtp,
+  verifySellerPan,
 } from "../../Redux/seller-slice";
 import { getSellerStatusRoute } from "../../components/Seller/sellerVerificationStatus";
 import { useKYC } from "../../context/KycContext";
@@ -278,13 +283,26 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
 const parseApiError = (error, fallbackMessage) => {
   if (!error) return { message: fallbackMessage, details: [] };
   if (typeof error === "string") return { message: error, details: [] };
+  const normalizeDetails = (value) => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") {
+      if (Array.isArray(value.fields)) return value.fields;
+      if (value.field && value.message) return [value];
+      return Object.entries(value)
+        .filter(([, message]) => Boolean(message))
+        .map(([field, message]) => ({ field, message }));
+    }
+    return [];
+  };
   const details =
     [
       error?.details,
       error?.error?.details?.fields,
       error?.error?.details,
       error?.fields,
-    ].find(Array.isArray) || [];
+    ]
+      .map(normalizeDetails)
+      .find((items) => items.length) || [];
   return {
     message: error.message || fallbackMessage,
     details,
@@ -300,6 +318,8 @@ const getBackendDetailField = (detail = {}) => {
       gstin: "gstNumber",
       gstNumber: "gstNumber",
       pan: "panNumber",
+      aadhaar: "aadhaarNumber",
+      aadhaar_number: "aadhaarNumber",
     }[field] || field
   );
 };
@@ -978,9 +998,29 @@ const SellerOnboarding = () => {
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
   const [showBankProofGuidance, setShowBankProofGuidance] = useState(false);
+  const [aadhaarOtpModalOpen, setAadhaarOtpModalOpen] = useState(false);
+  const [aadhaarOtp, setAadhaarOtp] = useState("");
+  const [aadhaarOtpSending, setAadhaarOtpSending] = useState(false);
+  const [aadhaarOtpVerifying, setAadhaarOtpVerifying] = useState(false);
+  const [panVerifying, setPanVerifying] = useState(false);
+  const [aadhaarVerification, setAadhaarVerification] = useState({
+    verified: false,
+    number: "",
+    referenceId: "",
+    verifiedAt: "",
+    testMode: false,
+    message: "",
+  });
+  const [panVerification, setPanVerification] = useState({
+    verified: false,
+    number: "",
+    verifiedAt: "",
+    message: "",
+  });
   const [draftLoaded, setDraftLoaded] = useState(false);
   const dateOfBirthRef = useRef(null);
   const gstNumberRef = useRef(null);
+  const aadhaarOtpInputRefs = useRef([]);
   const descriptionRef = useRef(null);
   const editSection = useMemo(
     () => new URLSearchParams(location.search).get("edit"),
@@ -1101,6 +1141,14 @@ const SellerOnboarding = () => {
     withSelectedOption(businessTypes.options, profileForm.businessType).find(
       (option) => String(option.value) === String(profileForm.businessType),
     )?.label || profileForm.businessType;
+  const aadhaarNumber = kycForm.aadhaarNumber.trim();
+  const isAadhaarVerified =
+    aadhaarVerification.verified &&
+    aadhaarVerification.number === aadhaarNumber;
+  const panNumber = kycForm.panNumber.trim();
+  const isPanVerified =
+    panVerification.verified &&
+    panVerification.number === panNumber;
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -1338,6 +1386,14 @@ const SellerOnboarding = () => {
           kyc?.verificationStatus ||
           sellerProfile?.kycStatus;
         const kycDocuments = parseDocumentMap(kyc?.documents || {});
+        hydrateAadhaarVerification({
+          ...sellerProfile,
+          ...kyc,
+        });
+        hydratePanVerification({
+          ...sellerProfile,
+          ...kyc,
+        });
         const hasSubmittedKyc =
           onboarding?.checklist?.kycSubmitted ||
           ["submitted", "under_review", "verified"].includes(kycStatus);
@@ -1561,6 +1617,14 @@ const SellerOnboarding = () => {
       kyc?.verificationStatus ||
       sellerProfile?.kycStatus;
     const kycDocuments = parseDocumentMap(kyc?.documents || {});
+    hydrateAadhaarVerification({
+      ...sellerProfile,
+      ...kyc,
+    });
+    hydratePanVerification({
+      ...sellerProfile,
+      ...kyc,
+    });
     const hasSubmittedKyc =
       flowState?.checklist?.kycSubmitted ||
       ["submitted", "under_review", "verified"].includes(kycStatus);
@@ -1718,6 +1782,43 @@ const SellerOnboarding = () => {
     );
   }, [flowState, seller?.onboardingUser]);
 
+
+
+    const hydrateAadhaarVerification = (source = {}) => {
+    const verified =
+      source?.aadhaarVerified === true || source?.aadhaar_verified === true;
+    const number =
+      source?.aadhaarNumber || source?.aadhaar_number || kycForm.aadhaarNumber;
+
+    if (!verified || !number) return;
+
+    setAadhaarVerification({
+      verified: true,
+      number: String(number).trim(),
+      referenceId:
+        source?.aadhaarReferenceId || source?.aadhaar_reference_id || "",
+      verifiedAt:
+        source?.aadhaarVerifiedAt || source?.aadhaar_verified_at || "",
+      testMode: false,
+      message: "",
+    });
+  };
+
+  const hydratePanVerification = (source = {}) => {
+    const verified = source?.panVerified === true || source?.pan_verified === true;
+    const number = source?.panNumber || source?.pan_number || kycForm.panNumber;
+
+    if (!verified || !number) return;
+
+    setPanVerification({
+      verified: true,
+      number: String(number).trim().toUpperCase(),
+      verifiedAt: source?.panVerifiedAt || source?.pan_verified_at || "",
+      message: "",
+    });
+  };
+
+
   useEffect(() => {
     if (!flowState) return;
     const sellerProfile = flowState?.sellerProfile || {};
@@ -1815,9 +1916,386 @@ const SellerOnboarding = () => {
     const nextErrors = {};
     details.forEach((detail) => {
       const field = getBackendDetailField(detail);
-      if (field) nextErrors[field] = detail.message;
+      if (field) nextErrors[field] = detail.message || String(detail);
     });
-    setErrors(nextErrors);
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    if (Object.keys(nextErrors).length > 0) {
+      scrollToFirstValidationError(nextErrors);
+    }
+  };
+
+  const getResponseData = (response = {}) =>
+    response?.data?.data || response?.data || response || {};
+
+  const getAadhaarPrefill = (data = {}) =>
+    data.prefill ||
+    data.aadhaarProfile ||
+    data.verificationResponse?.prefill ||
+    data.verificationResponse?.aadhaarProfile ||
+    {};
+
+  const applyAadhaarPrefill = (prefill = {}) => {
+    const legalName = String(prefill.legalName || prefill.fullName || "").trim();
+    const dateOfBirth = toDateInputValue(prefill.dateOfBirth);
+
+    if (!legalName && !dateOfBirth) return;
+
+    setKycForm((prev) => ({
+      ...prev,
+      ...(!prev.legalName && legalName ? { legalName } : {}),
+      ...(!prev.dateOfBirth && dateOfBirth ? { dateOfBirth } : {}),
+    }));
+  };
+
+  const applyAadhaarCachedVerification = async (data = {}, number = "") => {
+    const prefill = getAadhaarPrefill(data);
+    applyAadhaarPrefill(prefill);
+    setAadhaarVerification({
+      verified: true,
+      number: number || kycForm.aadhaarNumber.trim(),
+      referenceId:
+        data.aadhaarReferenceId ||
+        data.reference_id ||
+        data.referenceId ||
+        aadhaarVerification.referenceId ||
+        "",
+      verifiedAt: data.aadhaarVerifiedAt || new Date().toISOString(),
+      testMode: Boolean(
+        data.testMode ||
+          data.verificationMode === "TEST_MODE" ||
+          data.provider === "static",
+      ),
+      message: data.message || "Aadhaar is already verified.",
+    });
+    setAadhaarOtpModalOpen(false);
+    setAadhaarOtp("");
+    setKycErrors((prev) => ({ ...prev, aadhaarNumber: null }));
+    toast.success(data.message || "Aadhaar is already verified.");
+    await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+  };
+
+  const runAadhaarLocalPrecheck = async ({ aadhaarNumber, referenceId = "" } = {}) => {
+    const response = await dispatch(
+      precheckSellerAadhaar({
+        aadhaarNumber,
+        reference_id: referenceId,
+        onboardingToken,
+      }),
+    ).unwrap();
+    const data = getResponseData(response);
+
+    if (data.aadhaarVerified || data.cached || data.reason === "aadhaar_already_verified") {
+      await applyAadhaarCachedVerification(data, aadhaarNumber);
+      return { canProceed: false, data };
+    }
+
+    return { canProceed: data.canProceed !== false, data };
+  };
+
+  const runPanLocalPrecheck = async ({ panNumber } = {}) => {
+    const response = await dispatch(
+      precheckSellerPan({
+        panNumber,
+        onboardingToken,
+      }),
+    ).unwrap();
+    const data = getResponseData(response);
+
+    if (data.panVerified || data.cached || data.reason === "pan_already_verified") {
+      setPanVerification({
+        verified: true,
+        number: String(panNumber || kycForm.panNumber).trim().toUpperCase(),
+        verifiedAt: data.panVerifiedAt || new Date().toISOString(),
+        message: data.message || "",
+      });
+      setKycErrors((prev) => ({ ...prev, panNumber: null }));
+      return { canProceed: false, data };
+    }
+
+    return { canProceed: data.canProceed !== false, data };
+  };
+
+  const runIdentityLocalPrechecks = async () => {
+    const panNumber = kycForm.panNumber.trim();
+    const aadhaarNumber = kycForm.aadhaarNumber.trim();
+
+    if (PAN_REGEX.test(panNumber)) {
+      const panPrecheck = await runPanLocalPrecheck({ panNumber });
+      if (!panPrecheck.canProceed && !panPrecheck.data?.panVerified) {
+        return false;
+      }
+      if (!panPrecheck.data?.panVerified && !isPanVerified) {
+        setKycErrors((prev) => ({
+          ...prev,
+          panNumber: "Verify PAN before continuing.",
+        }));
+        toast.error("Verify PAN before continuing.");
+        return false;
+      }
+    }
+
+    if (AADHAAR_REGEX.test(aadhaarNumber)) {
+      const aadhaarPrecheck = await runAadhaarLocalPrecheck({
+        aadhaarNumber,
+        referenceId: aadhaarVerification.referenceId,
+      });
+      if (!aadhaarPrecheck.canProceed && !aadhaarPrecheck.data?.aadhaarVerified) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleVerifyPan = async () => {
+    const number = kycForm.panNumber.trim().toUpperCase();
+    const legalName = kycForm.legalName.trim();
+    const dateOfBirth = toDateInputValue(kycForm.dateOfBirth);
+
+    if (!PAN_REGEX.test(number)) {
+      setKycErrors((prev) => ({
+        ...prev,
+        panNumber: "PAN format should be like ABCDE1234F",
+      }));
+      return;
+    }
+    if (!legalName) {
+      setKycErrors((prev) => ({
+        ...prev,
+        legalName: "Full name is required for PAN verification",
+      }));
+      toast.error("Enter full name before PAN verification.");
+      return;
+    }
+    if (!dateOfBirth) {
+      setKycErrors((prev) => ({
+        ...prev,
+        dateOfBirth: "Date of birth is required for PAN verification",
+      }));
+      toast.error("Enter date of birth before PAN verification.");
+      return;
+    }
+    if (dateOfBirth > MAX_DOB_FOR_SELLER) {
+      setKycErrors((prev) => ({
+        ...prev,
+        dateOfBirth: "Seller must be at least 18 years old",
+      }));
+      toast.error("Seller must be at least 18 years old.");
+      return;
+    }
+
+    try {
+      if (panVerifying || isPanVerified) return;
+      setPanVerifying(true);
+      const precheck = await runPanLocalPrecheck({ panNumber: number });
+      if (!precheck.canProceed) return;
+
+      const response = await dispatch(
+        verifySellerPan({
+          panNumber: number,
+          legalName,
+          dateOfBirth,
+          onboardingToken,
+        }),
+      ).unwrap();
+      const data = getResponseData(response);
+      setPanVerification({
+        verified: true,
+        number,
+        verifiedAt: data.panVerifiedAt || new Date().toISOString(),
+        message: data.message || "",
+      });
+      setKycErrors((prev) => ({ ...prev, panNumber: null }));
+      toast.success(data.message || "PAN verified successfully");
+      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to verify PAN");
+      setBackendFieldErrors(parsed.details, setKycErrors);
+      toast.error(parsed.message);
+    } finally {
+      setPanVerifying(false);
+    }
+  };
+
+
+
+  const handleSendAadhaarOtp = async () => {
+    const number = kycForm.aadhaarNumber.trim();
+    if (!AADHAAR_REGEX.test(number)) {
+      setKycErrors((prev) => ({
+        ...prev,
+        aadhaarNumber: "Aadhaar must be 12 digits",
+      }));
+      return;
+    }
+
+    try {
+      if (aadhaarOtpSending || aadhaarOtpVerifying) return;
+      setAadhaarOtpSending(true);
+      const precheck = await runAadhaarLocalPrecheck({ aadhaarNumber: number });
+      if (!precheck.canProceed) return;
+
+      const response = await dispatch(
+        sendSellerAadhaarOtp({
+          aadhaarNumber: number,
+          onboardingToken,
+        }),
+      ).unwrap();
+      const data = getResponseData(response);
+      const referenceId =
+        data.reference_id ||
+        data.referenceId ||
+        data.response?.reference_id ||
+        data.response?.referenceId ||
+        data.response?.data?.reference_id ||
+        data.response?.data?.referenceId ||
+        "";
+
+      if (!referenceId) {
+        toast.error("Aadhaar OTP reference was not returned. Please try again.");
+        return;
+      }
+
+      setAadhaarVerification({
+        verified: false,
+        number,
+        referenceId,
+        verifiedAt: "",
+        testMode: Boolean(
+          data.testMode ||
+            data.verificationMode === "TEST_MODE" ||
+            data.provider === "static",
+        ),
+        message: data.message || "",
+      });
+      setAadhaarOtp("");
+      setAadhaarOtpModalOpen(true);
+      if (
+        data.testMode ||
+        data.verificationMode === "TEST_MODE" ||
+        data.provider === "static"
+      ) {
+        toast.info(data.message || "TEST_MODE: use OTP 123456");
+      } else {
+        toast.success(data.message || "Aadhaar OTP sent successfully");
+      }
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to send Aadhaar OTP");
+      setBackendFieldErrors(parsed.details, setKycErrors);
+      toast.error(parsed.message);
+    } finally {
+      setAadhaarOtpSending(false);
+    }
+  };
+
+  const handleVerifyAadhaarOtp = async () => {
+    const otp = aadhaarOtp.trim();
+    if (!/^[0-9]{6}$/.test(otp)) {
+      toast.error("Enter the 6-digit Aadhaar OTP");
+      return;
+    }
+
+    try {
+      if (aadhaarOtpVerifying) return;
+      setAadhaarOtpVerifying(true);
+      const precheck = await runAadhaarLocalPrecheck({
+        aadhaarNumber: aadhaarVerification.number || kycForm.aadhaarNumber,
+        referenceId: aadhaarVerification.referenceId,
+      });
+      if (!precheck.canProceed) return;
+
+      const response = await dispatch(
+        verifySellerAadhaarOtp({
+          aadhaarNumber: aadhaarVerification.number || kycForm.aadhaarNumber,
+          reference_id: aadhaarVerification.referenceId,
+          otp,
+          onboardingToken,
+        }),
+      ).unwrap();
+      const data = getResponseData(response);
+      applyAadhaarPrefill(getAadhaarPrefill(data));
+      setAadhaarVerification({
+        verified: true,
+        number: aadhaarVerification.number || kycForm.aadhaarNumber.trim(),
+        referenceId:
+          data.aadhaarReferenceId ||
+          data.reference_id ||
+          aadhaarVerification.referenceId,
+        verifiedAt: data.aadhaarVerifiedAt || new Date().toISOString(),
+        testMode: Boolean(
+          aadhaarVerification.testMode ||
+            data.testMode ||
+            data.verificationMode === "TEST_MODE" ||
+            data.provider === "static",
+        ),
+        message: data.message || aadhaarVerification.message || "",
+      });
+      setAadhaarOtpModalOpen(false);
+      setAadhaarOtp("");
+      setKycErrors((prev) => ({ ...prev, aadhaarNumber: null }));
+      toast.success("Aadhaar verified successfully");
+      await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
+    } catch (error) {
+      const parsed = parseApiError(error, "Unable to verify Aadhaar OTP");
+      toast.error(parsed.message);
+    } finally {
+      setAadhaarOtpVerifying(false);
+    }
+  };
+
+  const focusAadhaarOtpInput = (index) => {
+    aadhaarOtpInputRefs.current[index]?.focus();
+    aadhaarOtpInputRefs.current[index]?.select();
+  };
+
+  const handleAadhaarOtpDigitChange = (index, value) => {
+    const digits = onlyDigits(value, 6);
+    if (!digits) {
+      setAadhaarOtp((prev) => {
+        const chars = prev.padEnd(6, " ").split("");
+        chars[index] = " ";
+        return chars.join("").replace(/\s/g, "");
+      });
+      return;
+    }
+
+    setAadhaarOtp((prev) => {
+      const chars = prev.padEnd(6, " ").split("");
+      digits.split("").forEach((digit, offset) => {
+        if (index + offset < 6) chars[index + offset] = digit;
+      });
+      return chars.join("").replace(/\s/g, "");
+    });
+
+    focusAadhaarOtpInput(Math.min(index + digits.length, 5));
+  };
+
+  const handleAadhaarOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !aadhaarOtp[index] && index > 0) {
+      event.preventDefault();
+      setAadhaarOtp((prev) => {
+        const chars = prev.padEnd(6, " ").split("");
+        chars[index - 1] = " ";
+        return chars.join("").replace(/\s/g, "");
+      });
+      focusAadhaarOtpInput(index - 1);
+    }
+    if (event.key === "ArrowLeft" && index > 0) {
+      event.preventDefault();
+      focusAadhaarOtpInput(index - 1);
+    }
+    if (event.key === "ArrowRight" && index < 5) {
+      event.preventDefault();
+      focusAadhaarOtpInput(index + 1);
+    }
+  };
+
+  const handleAadhaarOtpPaste = (index, event) => {
+    event.preventDefault();
+    handleAadhaarOtpDigitChange(
+      index,
+      event.clipboardData.getData("text"),
+    );
   };
 
   const onKycChange = (event) => {
@@ -1830,6 +2308,32 @@ const SellerOnboarding = () => {
       normalized = onlyNameCharacters(value, PERSON_NAME_MAX_LENGTH);
     }
     setKycForm((prev) => ({ ...prev, [name]: normalized }));
+    if (
+      name === "aadhaarNumber" &&
+      aadhaarVerification.number &&
+      aadhaarVerification.number !== normalized
+    ) {
+      setAadhaarVerification({
+        verified: false,
+        number: "",
+        referenceId: "",
+        verifiedAt: "",
+        testMode: false,
+        message: "",
+      });
+    }
+    if (
+      name === "panNumber" &&
+      panVerification.number &&
+      panVerification.number !== normalized
+    ) {
+      setPanVerification({
+        verified: false,
+        number: "",
+        verifiedAt: "",
+        message: "",
+      });
+    }
     setKycErrors((prev) => ({ ...prev, [name]: null }));
   };
 
@@ -2136,6 +2640,8 @@ const SellerOnboarding = () => {
       errors.panNumber = "PAN must be 10 letters/numbers without spaces";
     } else if (!PAN_REGEX.test(kycForm.panNumber.trim())) {
       errors.panNumber = "PAN format should be like ABCDE1234F";
+    } else if (!isPanVerified) {
+      errors.panNumber = "Verify PAN before continuing.";
     }
     if (!kycForm.panDocumentFile && !documentUrls.panDocumentUrl)
       errors.panDocumentFile = "PAN document is required";
@@ -2143,6 +2649,8 @@ const SellerOnboarding = () => {
       errors.aadhaarNumber = "Aadhaar number is required";
     } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
       errors.aadhaarNumber = "Aadhaar must be 12 digits (12341048002615)";
+    } else if (!isAadhaarVerified) {
+      errors.aadhaarNumber = "Verify Aadhaar OTP before continuing.";
     }
     if (!kycForm.aadhaarFrontFile && !documentUrls.aadhaarFrontUrl)
       errors.aadhaarFrontFile = "Aadhaar front image is required";
@@ -2537,6 +3045,8 @@ const SellerOnboarding = () => {
     if (!validateKyc()) return;
     try {
       setPageLoading(true);
+      const localIdentityOk = await runIdentityLocalPrechecks();
+      if (!localIdentityOk) return;
       const kycPayload = await buildKycPayload();
       const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
       const uploadedDocuments = unwrapKycDocuments(kycResponse);
@@ -2568,6 +3078,8 @@ const SellerOnboarding = () => {
     }
     try {
       setPageLoading(true);
+      const localIdentityOk = await runIdentityLocalPrechecks();
+      if (!localIdentityOk) return;
       const kycPayload = await buildKycPayload({
         includeGstCertificate: true,
         includeBusinessType: true,
@@ -2717,6 +3229,8 @@ const SellerOnboarding = () => {
       Boolean(kycForm.addressProofFile);
     try {
       setPageLoading(true);
+      const localIdentityOk = await runIdentityLocalPrechecks();
+      if (!localIdentityOk) return;
       if (shouldSubmitKyc) {
         const kycPayload = await buildKycPayload({
           includeGstCertificate: true,
@@ -2798,6 +3312,71 @@ const SellerOnboarding = () => {
         open={showBankProofGuidance}
         onClose={() => setShowBankProofGuidance(false)}
       />
+      {aadhaarOtpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-[2px] bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-[#082f91]">
+                  Verify Aadhaar OTP
+                </h2>
+                <p className="mt-1 text-sm text-[#64748b]">
+                  Enter the OTP sent to the Aadhaar-linked mobile number.
+                </p>
+              </div>
+              {aadhaarVerification.testMode ? (
+                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                  TEST_MODE
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setAadhaarOtpModalOpen(false)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#64748b] transition hover:bg-slate-100"
+                aria-label="Close Aadhaar OTP modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <label className="admin-label">6-Digit OTP</label>
+            <input
+              className="admin-input h-12 pl-[0.35em] text-center font-mono text-[20px] font-semibold tracking-[0.35em] text-[#082f91] placeholder:tracking-normal"
+              value={aadhaarOtp}
+              onChange={(event) =>
+                setAadhaarOtp(onlyDigits(event.target.value, 6))
+              }
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              placeholder="000000"
+              autoFocus
+            />
+            {aadhaarVerification.testMode ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                {aadhaarVerification.message || "TEST_MODE: use OTP 123456"}
+              </div>
+            ) : null}
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleSendAadhaarOtp}
+                disabled={aadhaarOtpSending || aadhaarOtpVerifying}
+                className="admin-btn-secondary justify-center sm:min-w-[120px]"
+              >
+                {aadhaarOtpSending ? "Sending..." : "Resend"}
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyAadhaarOtp}
+                disabled={aadhaarOtpVerifying}
+                className="admin-btn-primary justify-center sm:min-w-[150px]"
+              >
+                {aadhaarOtpVerifying ? "Verifying..." : "Verify OTP"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="relative min-h-[calc(100vh-96px)]">
         <OnboardingPageLoader visible={isOnboardingLoading} />
         <OnboardingScreen step={step}>
@@ -2944,49 +3523,120 @@ const SellerOnboarding = () => {
                 <div className="mt-8 grid w-full grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-2">
                   {/* PAN Number */}
                   <div>
-                    <label className="font-inter text-base font-medium text-[#484555]">
-                      PAN Number <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="font-inter text-base font-medium text-[#484555]">
+                        PAN Number <span className="text-red-500">*</span>
+                      </label>
+                      {isPanVerified ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-semibold text-green-700">
+                          <CheckCircle2 size={14} />
+                          Verified
+                        </span>
+                      ) : null}
+                    </div>
 
-                    <input
-                      id="panNumber"
-                      name="panNumber"
-                      placeholder="ABCDE1122F"
-                      className={STEP_ONE_INPUT_CLASS}
-                      value={kycForm.panNumber}
-                      onChange={onKycChange}
-                      maxLength={10}
-                      pattern="[A-Za-z0-9]{10}"
-                      required
-                      data-has-value={Boolean(kycForm.panNumber)}
-                    />
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="panNumber"
+                        name="panNumber"
+                        placeholder="ABCDE1122F"
+                        className={STEP_ONE_INPUT_CLASS}
+                        value={kycForm.panNumber}
+                        onChange={onKycChange}
+                        maxLength={10}
+                        pattern="[A-Za-z0-9]{10}"
+                        required
+                        data-has-value={Boolean(kycForm.panNumber)}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyPan}
+                        disabled={
+                          panVerifying ||
+                          isPanVerified ||
+                          !PAN_REGEX.test(panNumber)
+                        }
+                         className="admin-btn-secondary h-[26px] justify-center whitespace-nowrap px-2 text-[13px] sm:w-[150px]"
+                      >
+                        {panVerifying
+                          ? "Verifying..."
+                          : isPanVerified
+                            ? "Verified"
+                            : "Verify PAN"}
+                      </button>
+                    </div>
                     {kycErrors.panNumber && (
                       <p className={ERROR_CLASS}>{kycErrors.panNumber}</p>
+                    )}
+                    {!isPanVerified && PAN_REGEX.test(panNumber) && (
+                      <p className="mt-1 text-xs text-[#6b7280]">
+                        Verify PAN before final KYC submission.
+                      </p>
                     )}
                   </div>
 
                   {/* Aadhaar Number */}
                   <div>
-                    <label className="font-inter text-base font-medium text-[#484555]">
-                      Aadhaar Number <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="font-inter text-base font-medium text-[#484555]">
+                        Aadhaar Number <span className="text-red-500">*</span>
+                      </label>
+                      {isAadhaarVerified ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-semibold text-green-700">
+                          <CheckCircle2 size={14} />
+                          Verified
+                        </span>
+                      ) : null}
+                    </div>
 
-                    <input
-                      id="aadhaarNumber"
-                      name="aadhaarNumber"
-                      placeholder="1234 5678 9012"
-                      className={STEP_ONE_INPUT_CLASS}
-                      value={kycForm.aadhaarNumber}
-                      onChange={onKycChange}
-                      inputMode="numeric"
-                      pattern="[0-9]{12}"
-                      maxLength={12}
-                      required
-                      data-has-value={Boolean(kycForm.aadhaarNumber)}
-                    />
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="aadhaarNumber"
+                        name="aadhaarNumber"
+                        placeholder="1234 5678 9012"
+                        className={STEP_ONE_INPUT_CLASS}
+                        value={kycForm.aadhaarNumber}
+                        onChange={onKycChange}
+                        inputMode="numeric"
+                        pattern="[0-9]{12}"
+                        maxLength={12}
+                        required
+                        data-has-value={Boolean(kycForm.aadhaarNumber)}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendAadhaarOtp}
+                        disabled={
+                          aadhaarOtpSending ||
+                          isAadhaarVerified ||
+                          !AADHAAR_REGEX.test(aadhaarNumber)
+                        }
+                        className="admin-btn-secondary h-[26px] justify-center whitespace-nowrap px-2 text-[13px] sm:w-[150px]"
+                      >
+                        {aadhaarOtpSending
+                          ? "Sending..."
+                          : isAadhaarVerified
+                            ? "Verified"
+                            : aadhaarVerification.referenceId
+                              ? "Resend OTP"
+                              : "Verify OTP"}
+                      </button>
+                    </div>
                     {kycErrors.aadhaarNumber && (
                       <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>
                     )}
+                    {!isAadhaarVerified && AADHAAR_REGEX.test(aadhaarNumber) && (
+                      <p className="mt-1 text-xs text-[#6b7280]">
+                        Verify Aadhaar with OTP before final KYC submission.
+                      </p>
+                    )}
+                    {aadhaarVerification.testMode &&
+                      aadhaarVerification.referenceId &&
+                      !isAadhaarVerified ? (
+                        <p className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
+                          TEST_MODE: use OTP 123456
+                        </p>
+                      ) : null}
                   </div>
                 </div>
               </OnboardingSection>
