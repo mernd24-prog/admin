@@ -856,7 +856,7 @@ function Layout() {
           isSidebarExpanded={isExpanded}
         />
         <main
-          className={`flex-1 overflow-y-auto rounded-tl-[28px] bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}
+          className={`flex-1 overflow-y-auto   bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}
         >
           <Suspense fallback={<PageSkeletonLoader />}>
             <div className="admin-page-transition">

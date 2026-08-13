@@ -230,7 +230,7 @@ const initialState = {
     productPrefillData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
     getInventoryTransactionsData: {},
-    archiveProductData: {}, restoreProductData: {}, duplicateProductData: {},
+    archiveProductData: {}, restoreProductData: {}, duplicateProductData: {}, permanentlyDeleteProductData: {},
 }
 
 export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
@@ -498,6 +498,7 @@ export const updateProductsById = createApiThunkPrivate('updateProductsById', (p
     transformBody: toProductPatchBody,
 })
 export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
+export const permanentlyDeleteProduct = createApiThunkPrivate('permanentlyDeleteProduct', (payload) => ENDPOINTS.products.permanentDelete(firstProductId(payload)), 'DELETE')
 export const archiveProduct = createApiThunkPrivate('archiveProduct', (payload) => ENDPOINTS.products.archive(firstProductId(payload)), 'PATCH', false, {
     transformBody: (payload = {}) => ({ ...(payload.reason ? { reason: payload.reason } : {}) }),
 })
@@ -620,6 +621,7 @@ export const bulkUpdateProducts = createApiThunkPrivate('bulkUpdateProducts', EN
         productIds: Array.isArray(payload.productIds) ? payload.productIds : [],
         ...(payload.status !== undefined ? { status: payload.status } : {}),
         ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
+        ...(payload.action !== undefined ? { action: payload.action } : {}),
     }),
 })
 export const bulkUpdateSpecialPrices = createApiThunkPrivate('bulkUpdateSpecialPrices', ENDPOINTS.products.specialPrices, 'POST', false, {
@@ -710,6 +712,7 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, updateProductsById, 'updateProductsByIdData')
         createExtraReducersForThunk(builder, deleteProducts, 'deleteProductsData')
         createExtraReducersForThunk(builder, archiveProduct, 'archiveProductData')
+        createExtraReducersForThunk(builder, permanentlyDeleteProduct, 'permanentlyDeleteProductData')
         createExtraReducersForThunk(builder, restoreProduct, 'restoreProductData')
         createExtraReducersForThunk(builder, duplicateProduct, 'duplicateProductData')
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')

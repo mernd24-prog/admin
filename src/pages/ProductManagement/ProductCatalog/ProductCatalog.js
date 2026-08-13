@@ -20,6 +20,7 @@ import { MdVisibility, MdEdit, MdDelete } from "react-icons/md";
 import {
   approveDisapprove,
   archiveProduct,
+  bulkUpdateProducts,
   deleteProducts,
   duplicateProduct,
   enableDisableProductCatalogs,
@@ -28,6 +29,7 @@ import {
   getProductRevisions,
   getProducts,
   getList as getCategoryList,
+  permanentlyDeleteProduct,
   restoreProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
@@ -271,6 +273,8 @@ const ProductCatalog = () => {
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
+  const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [duplicateConfirmation, setDuplicateConfirmation] = useState({
     open: false,
     product: null,
@@ -590,6 +594,7 @@ const ProductCatalog = () => {
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
     if (!STATUS_TOGGLEABLE.has(status)) return false;
+    if (status === "inactive" && product?.approvalStatus !== "approved") return false;
     return true;
   };
 
@@ -717,6 +722,23 @@ const ProductCatalog = () => {
       setProductToDelete(null);
       setLoading(false);
       fetchProductsList();
+    }
+  }
+
+  async function handlePermanentDeleteSubmit() {
+    if (!permanentDeleteTarget) return;
+    try {
+      setLoading(true);
+      const res = await dispatch(
+        permanentlyDeleteProduct({ _id: permanentDeleteTarget?._id }),
+      ).unwrap();
+      toast.success(res?.message || "Product permanently deleted.");
+      setPermanentDeleteTarget(null);
+      fetchProductsList();
+    } catch (error) {
+      toast.error(error?.message || error || "Permanent deletion failed.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -859,6 +881,43 @@ const ProductCatalog = () => {
         confirmLabel: nextStatus === "active" ? "Activate" : "Deactivate",
         variant: nextStatus === "active" ? "success" : "warning",
       });
+      return;
+    }
+    if (action === "Archive" || action === "PermanentDelete") {
+      const permanent = action === "PermanentDelete";
+      const selectedProducts = (apiRes?.list || []).filter((product) =>
+        selectedRow.includes(product?._id || product?.id),
+      );
+      if (permanent && selectedProducts.some((product) => product.status !== "archived")) {
+        toast.error("Only archived products can be permanently deleted.");
+        return;
+      }
+      setBulkDeleteConfirmation({
+        permanent,
+        productIds: [...selectedRow],
+      });
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (!bulkDeleteConfirmation) return;
+    try {
+      setLoading(true);
+      const action = bulkDeleteConfirmation.permanent ? "permanent_delete" : "archive";
+      const res = await dispatch(bulkUpdateProducts({
+        productIds: bulkDeleteConfirmation.productIds,
+        action,
+      })).unwrap();
+      toast.success(res?.message || (bulkDeleteConfirmation.permanent
+        ? "Selected products permanently deleted."
+        : "Selected products archived."));
+      setSelectedRow([]);
+      setBulkDeleteConfirmation(null);
+      fetchProductsList();
+    } catch (error) {
+      toast.error(error?.message || error || "Bulk product action failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1115,6 +1174,8 @@ const ProductCatalog = () => {
             handleSearchRemove={clearFilters}
             isActionButton={true}
             isStatusAction={true}
+            isArchiveAction={true}
+            isPermanentDeleteAction={!sellerView}
             handleAction={handleBulkAction}
             requiredModule="products"
             isSearchDown={false}
@@ -1165,11 +1226,18 @@ const ProductCatalog = () => {
                 onClick: () => handleEditProduct(product?._id),
               },
               {
-                label: "Delete Product",
+                label: "Archive Product",
                 icon: <MdDelete size={16} className="text-red-600" />,
                 hidden: product?.status === "archived",
                 className: "text-red-600",
                 onClick: () => handleDelete(product),
+              },
+              {
+                label: "Delete Permanently",
+                icon: <MdDelete size={16} className="text-red-700" />,
+                hidden: sellerView || product?.status !== "archived",
+                className: "text-red-700",
+                onClick: () => setPermanentDeleteTarget(product),
               },
             ]}
           />
@@ -1182,12 +1250,36 @@ const ProductCatalog = () => {
           setShowDeleteConfirmation(false);
           setProductToDelete(null);
         }}
-        title="Delete product?"
-        message={`This will archive "${productToDelete?.title || productToDelete?.name || "this product"}" and remove it from the normal catalog list.`}
+        title="Archive product?"
+        message={`This will archive "${productToDelete?.title || productToDelete?.name || "this product"}" and remove it from the normal catalog list. You can restore it later.`}
         variant="danger"
-        confirmLabel="Delete"
+        confirmLabel="Archive"
         loading={loading && Boolean(productToDelete)}
         onConfirm={handleDeleteSubmit}
+      />
+
+      <ConfirmModal
+        open={Boolean(permanentDeleteTarget)}
+        onClose={() => setPermanentDeleteTarget(null)}
+        title="Delete product permanently?"
+        message={`This will permanently delete "${permanentDeleteTarget?.title || permanentDeleteTarget?.name || "this product"}" and its revisions. This cannot be undone. Products with order history cannot be deleted.`}
+        variant="danger"
+        confirmLabel="Delete Permanently"
+        loading={loading && Boolean(permanentDeleteTarget)}
+        onConfirm={handlePermanentDeleteSubmit}
+      />
+
+      <ConfirmModal
+        open={Boolean(bulkDeleteConfirmation)}
+        onClose={() => setBulkDeleteConfirmation(null)}
+        title={bulkDeleteConfirmation?.permanent ? "Delete selected products permanently?" : "Archive selected products?"}
+        message={bulkDeleteConfirmation?.permanent
+          ? `This permanently deletes ${bulkDeleteConfirmation?.productIds?.length || 0} selected archived product(s). Products with order history will be blocked. This cannot be undone.`
+          : `This archives ${bulkDeleteConfirmation?.productIds?.length || 0} selected product(s). They can be restored later.`}
+        variant="danger"
+        confirmLabel={bulkDeleteConfirmation?.permanent ? "Delete Permanently" : "Archive"}
+        loading={loading && Boolean(bulkDeleteConfirmation)}
+        onConfirm={handleBulkDeleteConfirm}
       />
 
       <ConfirmModal

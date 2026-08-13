@@ -149,6 +149,7 @@ export const ENDPOINTS = {
       (productId) => `/admin/products/${productId}/archive`,
       (productId) => `/products/${productId}/archive`
     ),
+    permanentDelete: (productId) => `/admin/products/${productId}/permanent`,
     restore: byPanelFn(
       (productId) => `/admin/products/${productId}/restore`,
       (productId) => `/products/${productId}/restore`
