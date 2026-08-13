@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatLabel } from '../../utils/formatters';
 
 // Color map: status key → Tailwind classes
 const VARIANTS = {
@@ -182,7 +183,10 @@ const StatusBadge = ({
   const key          = String(status).toLowerCase().replace(/[\s-]+/g, '_');
   const colorClass   = VARIANTS[key]   || 'bg-gray-100 text-gray-600';
   const dotColor     = DOT_COLORS[key] || 'bg-gray-400';
-  const displayText  = label ?? (DISPLAY_LABELS[key] || String(status).replace(/_/g, ' '));
+  const displayText  = formatLabel(
+    label ?? DISPLAY_LABELS[key] ?? status,
+    'Not Available',
+  );
 
   const sizeClass =
     size === 'xs' ? 'text-[9px] px-1.5 py-0.5' :
@@ -193,7 +197,7 @@ const StatusBadge = ({
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border font-medium capitalize ${colorClass} ${sizeClass} ${shapeClass}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border font-medium ${colorClass} ${sizeClass} ${shapeClass}`}
     >
       {dot && (
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />

@@ -46,13 +46,19 @@ import {
   updateReferralInfluencerStatus,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
-import { formatDateTime12Hour } from "../../utils/formatters";
+import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { uploadDocumentFile } from "../../_helpers/globalFunctions";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
-import { OrderLink, PageHeader } from "../../components/Shared";
+import {
+  FilterBar,
+  OrderLink,
+  PageHeader,
+  SummaryCard,
+} from "../../components/Shared";
+import SharedDataTable from "../../components/Shared/DataTable";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -109,6 +115,53 @@ const FILTER_STATUSES = {
     "cancelled",
   ],
   fraud: ["open", "reviewing", "resolved", "dismissed"],
+};
+
+const MARKETING_PAGE_META = {
+  overview: {
+    title: "Marketing Overview",
+    subtitle: "Monitor referral commerce performance and activity",
+  },
+  productDistribution: {
+    title: "Product Distribution",
+    subtitle: "Manage products distributed to referral partners",
+  },
+  influencers: {
+    title: "Referral Partners",
+    subtitle: "Manage Growth Partners and Brand Associates",
+  },
+  codes: {
+    title: "Referral Codes",
+    subtitle: "Create and manage referral codes",
+  },
+  rules: {
+    title: "Rules & Coins",
+    subtitle: "Configure referral rewards, coin values, and withdrawal rules",
+  },
+  bonuses: {
+    title: "Bonuses",
+    subtitle: "Manage bonus rules, progress, and achievement history",
+  },
+  orders: {
+    title: "Referral Orders",
+    subtitle: "View and manage orders placed through referral codes",
+  },
+  commissions: {
+    title: "Wallet Ledger",
+    subtitle: "Track referral coins and wallet transactions",
+  },
+  payouts: {
+    title: "Payout Requests",
+    subtitle: "Review and manage referral partner payout requests",
+  },
+  hierarchy: {
+    title: "Hierarchy",
+    subtitle: "View Growth Partner and Brand Associate relationships",
+  },
+  fraud: {
+    title: "Fraud Review",
+    subtitle: "Review and manage flagged referral activity",
+  },
 };
 const emptyInfluencerForm = {
   firstName: "",
@@ -196,13 +249,15 @@ const formatAmount = (value) =>
   })}`;
 
 const formatCoins = (value) =>
-  `${Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-  })} coins`;
+  formatLabel(
+    `${Number(value || 0).toLocaleString("en-IN", {
+      maximumFractionDigits: 2,
+    })} coins`,
+  );
 
 const formatDate = (value) => formatDateTime12Hour(value, "-");
 
-const humanize = (value) => String(value || "").replace(/_/g, " ");
+const humanize = (value) => formatLabel(value, "-");
 const partnerTypeLabel = (value) =>
   value === "parent"
     ? "Growth Partner"
@@ -253,7 +308,7 @@ const StatusPill = ({ value }) => (
   <span
     className={`inline-flex max-w-full items-center rounded border px-2 py-1 text-xs font-medium ${statusClass(value)}`}
   >
-    {value || "-"}
+    {formatLabel(value, "-")}
   </span>
 );
 
@@ -480,59 +535,6 @@ const Modal = ({ title, open, onClose, children, footer }) => {
   );
 };
 
-const Section = ({ title, actions, children }) => (
-  <section className="bg-white">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-      <h2 className="text-sm font-semibold uppercase tracking-normal text-gray-700">
-        {title}
-      </h2>
-      {actions}
-    </div>
-    {children}
-  </section>
-);
-
-const DataTable = ({ columns, rows, emptyText = "No records found" }) => (
-  <div className="overflow-x-auto">
-    <table className="min-w-full table-fixed border-collapse text-left text-sm">
-      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-        <tr>
-          {columns.map((column) => (
-            <th
-              key={column.key}
-              className="border-b border-gray-200 px-4 py-3 font-semibold"
-            >
-              {column.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {rows.length ? (
-          rows.map((row, index) => (
-            <tr key={row.key || index} className="align-top hover:bg-gray-50">
-              {columns.map((column) => (
-                <td key={column.key} className="px-4 py-3 text-gray-700">
-                  {row[column.key]}
-                </td>
-              ))}
-            </tr>
-          ))
-        ) : (
-          <tr>
-            <td
-              colSpan={columns.length}
-              className="px-4 py-8 text-center text-sm text-gray-500"
-            >
-              {emptyText}
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-);
-
 const emptyProductConfig = {
   sellerId: "",
   productId: "",
@@ -574,39 +576,16 @@ const responsePagination = (response, fallbackPage = 1, fallbackLimit = 50) => {
   };
 };
 
-const PaginationControls = ({ pagination, onPageChange, disabled }) => (
-  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 text-xs text-gray-600">
-    <span>
-      Page {pagination.page} of {pagination.totalPages} · {pagination.total}{" "}
-      records
-    </span>
-    <div className="flex gap-2">
-      <button
-        type="button"
-        disabled={disabled || pagination.page <= 1}
-        onClick={() => onPageChange(pagination.page - 1)}
-        className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Previous
-      </button>
-      <button
-        type="button"
-        disabled={disabled || pagination.page >= pagination.totalPages}
-        onClick={() => onPageChange(pagination.page + 1)}
-        className="rounded border border-gray-200 bg-white px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-);
-
 const ProductDistributionManager = () => {
   const [configs, setConfigs] = useState([]);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [form, setForm] = useState(emptyProductConfig);
   const [loading, setLoading] = useState(true);
   const [configPage, setConfigPage] = useState(1);
+  const [configPageSize, setConfigPageSize] = useState(20);
+  const [configSearch, setConfigSearch] = useState("");
+  const [debouncedConfigSearch, setDebouncedConfigSearch] = useState("");
+  const [configStatus, setConfigStatus] = useState("");
   const [productPage, setProductPage] = useState(1);
   const [productSearch, setProductSearch] = useState("");
   const [appliedProductSearch, setAppliedProductSearch] = useState("");
@@ -629,7 +608,14 @@ const ProductDistributionManager = () => {
       const [configResponse, productResponse] = await Promise.all([
         apiRequest("GET", ENDPOINTS.referral.productConfigs, {
           page: configPage,
-          limit: 50,
+          limit: configPageSize,
+          q: debouncedConfigSearch || undefined,
+          active:
+            configStatus === "active"
+              ? true
+              : configStatus === "inactive"
+                ? false
+                : undefined,
         }),
         apiRequest("GET", ENDPOINTS.products.listForPanel, {
           page: productPage,
@@ -638,7 +624,9 @@ const ProductDistributionManager = () => {
       ]);
       setConfigs(responseList(configResponse));
       setCatalogProducts(responseList(productResponse));
-      setConfigPagination(responsePagination(configResponse, configPage, 50));
+      setConfigPagination(
+        responsePagination(configResponse, configPage, configPageSize),
+      );
       setProductPagination(
         responsePagination(productResponse, productPage, 200),
       );
@@ -649,7 +637,16 @@ const ProductDistributionManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [configPage, productPage]);
+  }, [configPage, configPageSize, configStatus, debouncedConfigSearch, productPage]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setConfigPage(1);
+      setDebouncedConfigSearch(configSearch.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timerId);
+  }, [configSearch]);
 
   useEffect(() => {
     load();
@@ -769,22 +766,60 @@ const ProductDistributionManager = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="Product Distribution Configuration">
+      <section className="admin-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] bg-gradient-to-r from-white to-[var(--admin-gold-soft)]/35 px-5 py-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              <Share2 size={17} className="text-[var(--admin-gold-dark)]" />
+              Product Distribution Configuration
+            </h2>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Select a catalog product and define how its referral pool is shared
+            </p>
+          </div>
+          <span className="rounded-full border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-muted)]">
+            {`${configPagination.total} configured`}
+          </span>
+        </div>
         <form
           onSubmit={submit}
-          className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4"
+          className="grid grid-cols-1 gap-x-4 gap-y-5 p-5 md:grid-cols-4"
         >
-          <div className="md:col-span-4 rounded border border-gray-100 bg-gray-50 p-3">
-            <label className="mb-1 block text-xs font-medium uppercase text-gray-500">
-              Search Product Catalog
-            </label>
+          <div className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 md:col-span-4">
+            <div className="mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Search Product Catalog
+              </label>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Select a seller first, then search their available products
+              </p>
+            </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-              <input
-                type="text"
-                value={productSearch}
-                onChange={(event) => setProductSearch(event.target.value)}
-                className="h-10 min-w-0 flex-1 rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
-              />
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
+                />
+                <input
+                  type="text"
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    if (!form.sellerId) return;
+                    setProductPage(1);
+                    setAppliedProductSearch(productSearch.trim());
+                  }}
+                  disabled={!form.sellerId}
+                  placeholder={
+                    form.sellerId
+                      ? "Search by product name or SKU..."
+                      : "Select a seller to search products"
+                  }
+                  className="admin-input h-10 w-full bg-white !pl-10 pr-3 text-sm disabled:cursor-not-allowed disabled:bg-gray-50"
+                />
+              </div>
               <OrangeButton
                 disabled={!form.sellerId}
                 className="!h-10 shrink-0 justify-center !py-0 sm:min-w-[142px]"
@@ -794,6 +829,7 @@ const ProductDistributionManager = () => {
                   setAppliedProductSearch(productSearch.trim());
                 }}
               >
+                <Search size={16} />
                 Search Products
               </OrangeButton>
               {appliedProductSearch && (
@@ -810,6 +846,46 @@ const ProductDistributionManager = () => {
                 </button>
               )}
             </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--admin-line)] pt-3 text-xs text-[var(--admin-muted)]">
+              <span className="font-medium">
+                {productPagination.total} catalog products
+                {productPagination.totalPages > 1
+                  ? ` · Page ${productPagination.page} of ${productPagination.totalPages}`
+                  : ""}
+              </span>
+              {productPagination.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={loading || productPagination.page <= 1}
+                    onClick={() => setProductPage(productPagination.page - 1)}
+                    className="admin-btn-secondary !min-h-8 !px-3 text-xs disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      loading ||
+                      productPagination.page >= productPagination.totalPages
+                    }
+                    onClick={() => setProductPage(productPagination.page + 1)}
+                    className="admin-btn-secondary !min-h-8 !px-3 text-xs disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-1 md:col-span-4">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Product Selection
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Choose the seller, product, applicable variant, and pool calculation
+            </p>
           </div>
           <SelectInput
             label="Seller"
@@ -890,6 +966,15 @@ const ProductDistributionManager = () => {
             <option value="fixed_amount">Fixed amount per unit</option>
             <option value="percentage">Percentage of item value</option>
           </SelectInput>
+
+          <div className="border-t border-[var(--admin-line)] pt-4 md:col-span-4">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Reward Distribution
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Define the pool limit and percentage split between participants
+            </p>
+          </div>
           <TextInput
             label={
               form.poolType === "fixed_amount"
@@ -955,94 +1040,121 @@ const ProductDistributionManager = () => {
             <option value="seller">Seller</option>
             <option value="shared">Shared</option>
           </SelectInput>
-          <label className="flex items-center gap-2 pt-6 text-sm">
+          <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
             <input
               type="checkbox"
+              className="sr-only"
               checked={form.active}
               onChange={(event) =>
                 setForm({ ...form, active: event.target.checked })
               }
-            />{" "}
-            Active
+            />
+            <span className="admin-switch-track" />
+            <span className="font-semibold">Active distribution</span>
           </label>
           <div
-            className={`flex items-end font-semibold ${shareTotal === 100 ? "text-emerald-600" : "text-red-600"}`}
+            className={`rounded-lg border p-3 ${shareTotal === 100 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}
           >
-            Distribution total: {shareTotal}%
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+              <span className={shareTotal === 100 ? "text-emerald-700" : "text-red-700"}>
+                Distribution total
+              </span>
+              <span className={shareTotal === 100 ? "text-emerald-700" : "text-red-700"}>
+                {shareTotal}%
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+              <div
+                className={`h-full rounded-full ${shareTotal === 100 ? "bg-emerald-500" : "bg-red-500"}`}
+                style={{ width: `${Math.min(Math.max(shareTotal, 0), 100)}%` }}
+              />
+            </div>
           </div>
-          <div className="flex items-end">
-            <OrangeButton>Save Distribution</OrangeButton>
-          </div>
-          <div className="md:col-span-4">
-            <PaginationControls
-              pagination={productPagination}
-              onPageChange={setProductPage}
-              disabled={loading}
-            />
+          <div className="flex items-center justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
+            <OrangeButton type="submit" disabled={shareTotal !== 100}>
+              <Check size={16} />
+              Save Distribution
+            </OrangeButton>
           </div>
         </form>
-      </Section>
-      <Section title="Configured Products">
-        {loading ? (
-          <div className="p-6 text-sm text-gray-500">
-            Loading configurations…
-          </div>
-        ) : (
-          <>
-            <DataTable
-              columns={[
-                { key: "product", label: "Product" },
-                { key: "variant", label: "Variant" },
-                { key: "pool", label: "Shareable Pool" },
-                {
-                  key: "split",
-                  label: "Customer / Brand Associate / Growth Partner",
-                },
-                { key: "status", label: "Status" },
-                { key: "actions", label: "Actions" },
-              ]}
-              rows={configs.map((config) => ({
-                key: config._id || config.id,
-                product:
-                  config.metadata?.productTitle || shortId(config.productId),
-                variant:
-                  config.metadata?.variantTitle ||
-                  (config.variantId
-                    ? shortId(config.variantId)
-                    : "All variants"),
-                pool:
-                  config.poolType === "percentage"
-                    ? `${config.poolValue}%`
-                    : `₹${Number(config.poolValue || 0).toLocaleString("en-IN")} / unit`,
-                split: `${config.customerSharePercent}% / ${config.codeOwnerSharePercent}% / ${config.parentSharePercent}%`,
-                status: (
-                  <StatusPill value={config.active ? "active" : "inactive"} />
-                ),
-                actions: (
-                  <div className="flex gap-2">
-                    <IconButton title="Edit" onClick={() => edit(config)}>
-                      <Pencil size={15} />
-                    </IconButton>
-                    <IconButton
-                      title="Delete"
-                      variant="danger"
-                      onClick={() => remove(config)}
-                    >
-                      <X size={15} />
-                    </IconButton>
-                  </div>
-                ),
-              }))}
-              emptyText="No product-specific distribution configured; global rules will apply."
-            />
-            <PaginationControls
-              pagination={configPagination}
-              onPageChange={setConfigPage}
-              disabled={loading}
-            />
-          </>
-        )}
-      </Section>
+      </section>
+      <SharedDataTable
+        columns={[
+          { key: "product", label: "Product" },
+          { key: "variant", label: "Variant" },
+          { key: "pool", label: "Shareable Pool" },
+          {
+            key: "split",
+            label: "Customer / Brand Associate / Growth Partner",
+          },
+          { key: "status", label: "Status" },
+        ]}
+        data={configs.map((config) => ({
+          ...config,
+          key: config._id || config.id,
+          product: config.metadata?.productTitle || shortId(config.productId),
+          variant:
+            config.metadata?.variantTitle ||
+            (config.variantId ? shortId(config.variantId) : "All variants"),
+          pool:
+            config.poolType === "percentage"
+              ? `${config.poolValue}%`
+              : `₹${Number(config.poolValue || 0).toLocaleString("en-IN")} / unit`,
+          split: `${config.customerSharePercent}% / ${config.codeOwnerSharePercent}% / ${config.parentSharePercent}%`,
+          status: <StatusPill value={config.active ? "active" : "inactive"} />,
+        }))}
+        loading={loading}
+        totalCount={configPagination.total}
+        page={configPagination.page}
+        pageSize={configPageSize}
+        onPageChange={setConfigPage}
+        onPageSizeChange={(size) => {
+          setConfigPage(1);
+          setConfigPageSize(size);
+        }}
+        rowKey="key"
+        onSearch={setConfigSearch}
+        searchPlaceholder="Search configured products..."
+        filterBar={
+          <FilterBar
+            filters={[
+              {
+                key: "status",
+                type: "select",
+                label: "Status",
+                options: [
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" },
+                ],
+              },
+            ]}
+            values={{ status: configStatus }}
+            onChange={(_, value) => {
+              setConfigPage(1);
+              setConfigStatus(value);
+            }}
+            onClear={() => {
+              setConfigPage(1);
+              setConfigStatus("");
+            }}
+            loading={loading}
+          />
+        }
+        rowActions={(config) => [
+          {
+            label: "Edit distribution",
+            icon: <Pencil size={15} />,
+            onClick: () => edit(config),
+          },
+          {
+            label: "Delete distribution",
+            icon: <X size={15} />,
+            danger: true,
+            onClick: () => remove(config),
+          },
+        ]}
+        emptyText="No product-specific distribution configured; global rules will apply."
+      />
     </div>
   );
 };
@@ -1074,8 +1186,13 @@ const ReferralCommerce = () => {
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const activeTab = sectionToTab[section] || "overview";
+  const pageMeta = MARKETING_PAGE_META[activeTab] || MARKETING_PAGE_META.overview;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [hierarchySearch, setHierarchySearch] = useState("");
+  const [expandedHierarchyIds, setExpandedHierarchyIds] = useState(
+    () => new Set(),
+  );
   const [parentModalOpen, setParentModalOpen] = useState(false);
   const [childModalOpen, setChildModalOpen] = useState(false);
   const [codeModalOpen, setCodeModalOpen] = useState(false);
@@ -1114,6 +1231,48 @@ const ReferralCommerce = () => {
     label: humanize(value),
   }));
   const hasListFilters = activeStatusOptions.length > 0;
+
+  const filteredHierarchyRoots = useMemo(() => {
+    const roots = Array.isArray(hierarchy?.roots) ? hierarchy.roots : [];
+    const query = hierarchySearch.trim().toLowerCase();
+    if (!query) return roots;
+
+    const filterNodes = (nodes = []) =>
+      nodes.reduce((matches, node) => {
+        const children = filterNodes(node.children || []);
+        const searchableText = [
+          fullName(node.user),
+          getId(node),
+          node.primaryCode?.code,
+          partnerTypeLabel(node.influencerType),
+          `level ${node.level || ""}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        if (searchableText.includes(query) || children.length) {
+          matches.push({ ...node, children });
+        }
+        return matches;
+      }, []);
+
+    return filterNodes(roots);
+  }, [hierarchy?.roots, hierarchySearch]);
+
+  useEffect(() => {
+    const ids = new Set();
+    const collectParentIds = (nodes = []) => {
+      nodes.forEach((node) => {
+        if (Array.isArray(node.children) && node.children.length) {
+          ids.add(String(getId(node)));
+          collectParentIds(node.children);
+        }
+      });
+    };
+    collectParentIds(hierarchy?.roots);
+    setExpandedHierarchyIds(ids);
+  }, [hierarchy?.roots]);
 
   const parentOptions = useMemo(
     () =>
@@ -1248,7 +1407,12 @@ const ReferralCommerce = () => {
       rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
       bonuses: () => Promise.all([
         dispatch(getReferralBonusRules({ ...query, status: ["active", "inactive"].includes(query.status) ? query.status : undefined })),
-        dispatch(getReferralBonusProgress({ page: 1, limit: 50 })),
+        dispatch(getReferralBonusProgress({
+          ...query,
+          status: ["achieved", "in_progress"].includes(query.status)
+            ? query.status
+            : undefined,
+        })),
         dispatch(getReferralBonusAchievements({ ...query, status: ["locked", "released", "reversed"].includes(query.status) ? query.status : undefined })),
       ]),
       orders: () => dispatch(getReferralOrders(query)),
@@ -1271,6 +1435,29 @@ const ReferralCommerce = () => {
     refreshActive({ q: "", status: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  useEffect(() => {
+    if (
+      ![
+        "influencers",
+        "codes",
+        "bonuses",
+        "orders",
+        "commissions",
+        "payouts",
+        "fraud",
+      ].includes(activeTab)
+    ) {
+      return undefined;
+    }
+
+    const timerId = window.setTimeout(() => {
+      refreshActive({ q: search, status });
+    }, 350);
+
+    return () => window.clearTimeout(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, search, status]);
 
   useEffect(() => {
     const refreshOnFocus = () => refreshActive();
@@ -1685,30 +1872,40 @@ const ReferralCommerce = () => {
       value: summary?.influencers?.total || 0,
       sub: `${summary?.influencers?.active || 0} active`,
       icon: <UserPlus size={18} />,
+      iconBg: "#dce5fb",
+      iconColor: "#2457d6",
     },
     {
       label: "Active Codes",
       value: summary?.codes?.active || 0,
       sub: `${summary?.codes?.total || 0} total`,
       icon: <Share2 size={18} />,
+      iconBg: "#e7dcff",
+      iconColor: "#8156e8",
     },
     {
       label: "Referral Sales",
       value: formatAmount(summary?.orders?.eligibleAmount),
       sub: `${summary?.orders?.total || 0} orders`,
       icon: <BadgeIndianRupee size={18} />,
+      iconBg: "#ffe7b8",
+      iconColor: "#e79a00",
     },
     {
       label: "Referral Coins",
       value: formatCoins(summary?.commissions?.amount),
       sub: `${summary?.commissions?.totalEntries || 0} ledger entries`,
       icon: <GitBranch size={18} />,
+      iconBg: "#cfeee0",
+      iconColor: "#23965b",
     },
     {
       label: "Bonus Coins",
       value: formatCoins(summary?.bonuses?.totalCoins),
       sub: `${summary?.bonuses?.achievements || 0} achievements`,
       icon: <Check size={18} />,
+      iconBg: "#ffd7d4",
+      iconColor: "#ef5057",
     },
   ];
 
@@ -1895,95 +2092,258 @@ const ReferralCommerce = () => {
     created: formatDate(review.createdAt),
   }));
 
-  const renderHierarchyNode = (node, depth = 0) => (
-    <div key={getId(node)} className="border-l  border-gray-200 pl-4">
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
-        <span className="font-medium text-gray-900">{fullName(node.user)}</span>
-        <span className="font-mono text-xs text-gray-500">
-          Profile {shortId(getId(node))}
-        </span>
-        <StatusPill value={partnerTypeLabel(node.influencerType)} />
-        <span className="text-xs text-gray-500">
-          Level {node.level || depth + 1}
-        </span>
-        <span className="text-xs text-gray-500">
-          {node.primaryCode?.code || "No referral code"}
-        </span>
-      </div>
-      {Array.isArray(node.children) && node.children.length > 0 && (
-        <div className="ml-4 space-y-2">
-          {node.children.map((child) => renderHierarchyNode(child, depth + 1))}
+  const countHierarchyDescendants = (node) =>
+    (node.children || []).reduce(
+      (count, child) => count + 1 + countHierarchyDescendants(child),
+      0,
+    );
+
+  const toggleHierarchyNode = (nodeId) => {
+    setExpandedHierarchyIds((current) => {
+      const next = new Set(current);
+      const key = String(nodeId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderHierarchyNode = (
+    node,
+    depth = 0,
+    siblingIndex = 0,
+    siblingCount = 1,
+  ) => {
+    const nodeId = String(getId(node));
+    const children = Array.isArray(node.children) ? node.children : [];
+    const hasChildren = children.length > 0;
+    const isExpanded = hierarchySearch.trim()
+      ? true
+      : expandedHierarchyIds.has(nodeId);
+    const isLastChild = siblingIndex === siblingCount - 1;
+    const offset = depth * 40;
+
+    return (
+      <div key={nodeId} className="relative">
+        {depth > 0 && (
+          <>
+            <span
+              className="absolute top-0 w-px bg-gray-300"
+              style={{
+                left: `${offset - 20}px`,
+                height: isLastChild ? "24px" : "100%",
+              }}
+            />
+            <span
+              className="absolute top-6 h-px w-5 bg-gray-300"
+              style={{ left: `${offset - 20}px` }}
+            />
+          </>
+        )}
+
+        <div
+          className={`mb-1 flex min-h-14 items-center justify-between gap-3 px-3 py-3 transition-colors ${
+            depth === 0
+              ? "border-l-4 border-l-gray-400 bg-gray-100"
+              : "bg-white hover:bg-gray-50"
+          }`}
+          style={{ marginLeft: `${offset}px` }}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={() => toggleHierarchyNode(nodeId)}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-sm leading-none ${
+                  isExpanded
+                    ? "border-gray-600 bg-gray-600 text-white"
+                    : "border-gray-400 bg-white text-gray-600 hover:border-gray-600"
+                }`}
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${fullName(node.user)}`}
+              >
+                {isExpanded ? "−" : "+"}
+              </button>
+            ) : depth > 0 ? (
+              <span className="h-5 w-5 shrink-0" />
+            ) : null}
+
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span
+                className={`${
+                  depth === 0
+                    ? "text-base font-semibold text-gray-800"
+                    : "text-sm font-medium text-gray-700"
+                }`}
+              >
+                {fullName(node.user)}
+              </span>
+              <span className="font-mono text-xs text-gray-500">
+                Profile {shortId(getId(node))}
+              </span>
+              {hasChildren && (
+                <span className="rounded bg-cyan-100 px-2 py-1 text-xs font-medium text-cyan-700">
+                  {countHierarchyDescendants(node)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+            <StatusPill value={partnerTypeLabel(node.influencerType)} />
+            <span className="text-xs font-medium text-gray-500">
+              Level {node.level || depth + 1}
+            </span>
+            <span className="min-w-20 font-mono text-xs text-indigo-700">
+              {node.primaryCode?.code || "No code"}
+            </span>
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {isExpanded && hasChildren && (
+          <div className="relative">
+            {children.map((child, index) =>
+              renderHierarchyNode(child, depth + 1, index, children.length),
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderOverview = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {statItems.map((item) => (
-          <div
+          <SummaryCard
             key={item.label}
-            className="rounded border border-gray-200 bg-white p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase text-gray-500">
-                  {item.label}
-                </p>
-                <p className="mt-2 truncate text-xl font-semibold text-gray-900">
-                  {item.value}
-                </p>
-                <p className="mt-1 truncate text-xs text-gray-500">
-                  {item.sub}
-                </p>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded border border-indigo-100 bg-indigo-50 text-indigo-600">
+            title={item.label}
+            value={item.value}
+            description={item.sub}
+            icon={
+              <span style={{ color: item.iconColor }}>
                 {item.icon}
-              </div>
-            </div>
-          </div>
+              </span>
+            }
+            iconClassName="right-0 top-0 h-9 w-10 rounded-none rounded-bl-[10px] border-0"
+            iconStyle={{ backgroundColor: item.iconBg }}
+            className="min-h-[100px]"
+            titleClassName="uppercase text-[10px]"
+            valueClassName="text-[20px]"
+            descriptionClassName="mt-2 text-[10px]"
+          />
         ))}
       </div>
-      <Section title="Wallet Balances">
-        <div className="grid grid-cols-1 divide-y divide-gray-100 text-sm md:grid-cols-4 md:divide-x md:divide-y-0">
+      <section className="admin-card overflow-hidden">
+        <div className="flex flex-wrap items-center  justify-between gap-3 border-b border-[var(--admin-line)] px-4 py-3.5">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Wallet Balances
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
+              Current referral coin allocation by wallet state
+            </p>
+          </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
+            <BadgeIndianRupee size={19} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           {[
-            [
-              "Locked",
-              summary?.wallets?.lockedBalance ??
+            {
+              label: "Locked",
+              value:
+                summary?.wallets?.lockedBalance ??
                 summary?.wallets?.pendingBalance,
-            ],
-            ["Available", summary?.wallets?.availableBalance],
-            ["Reserved", summary?.wallets?.reservedBalance],
-            [
-              "Withdrawn",
-              summary?.wallets?.withdrawnBalance ??
+              helper: "Awaiting release",
+              icon: <ShieldAlert size={18} />,
+            },
+            {
+              label: "Available",
+              value: summary?.wallets?.availableBalance,
+              helper: "Ready for payout",
+              icon: <Check size={18} />,
+            },
+            {
+              label: "Reserved",
+              value: summary?.wallets?.reservedBalance,
+              helper: "Held for requests",
+              icon: <GitBranch size={18} />,
+            },
+            {
+              label: "Withdrawn",
+              value:
+                summary?.wallets?.withdrawnBalance ??
                 summary?.wallets?.paidBalance,
-            ],
-            ["Reversed", summary?.wallets?.reversedBalance],
-          ].map(([label, value]) => (
-            <div key={label} className="p-4">
-              <p className="text-xs uppercase text-gray-500">{label}</p>
-              <p className="mt-1 font-semibold text-gray-900">
-                {formatCoins(value)}
+              helper: "Successfully paid",
+              icon: <ExternalLink size={18} />,
+            },
+            {
+              label: "Reversed",
+              value: summary?.wallets?.reversedBalance,
+              helper: "Returned to wallet",
+              icon: <RefreshCw size={18} />,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="relative min-h-[104px] doverflow-hidden rounded-lg border border-[var(--admin-line)] bg-gradient-to-br from-white to-[var(--admin-gold-soft)]/45 p-4 shadow-[0_8px_22px_rgba(31,27,95,0.05)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--admin-gold)] hover:shadow-[var(--admin-shadow)]"
+            >
+              {/* <span className="absolute inset-y-0 left-0 w-[3px] bg-[var(--admin-gold)]" /> */}
+              {/* <div className="absolute right-0 top-0 flex h-10 w-11 items-center justify-center rounded-bl-xl bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]">
+                {item.icon}
+              </div> */}
+              <p className="pr-10 text-[10px] font-bold uppercase tracking-wide text-[var(--admin-muted)]">
+                {item.label}
+              </p>
+              <p className="mt-2 text-xl font-bold text-[var(--admin-navy)]">
+                {formatCoins(item.value)}
+              </p>
+              <p className="mt-1.5 text-[10px] font-medium text-[var(--admin-muted)]">
+                {item.helper}
               </p>
             </div>
           ))}
         </div>
-      </Section>
+      </section>
     </div>
   );
 
   const renderRules = () => (
-    <Section title="Referral Commerce Rules">
+    <section className="admin-card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] bg-gradient-to-r from-white to-[var(--admin-gold-soft)]/35 px-5 py-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+            <BadgeIndianRupee
+              size={18}
+              className="text-[var(--admin-gold-dark)]"
+            />
+            Referral Commerce Rules
+          </h2>
+          <p className="mt-1 text-xs text-[var(--admin-muted)]">
+            Configure referral pools, coin behavior, distribution shares, and withdrawals
+          </p>
+        </div>
+        <span className="rounded-full border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-muted)]">
+          Global configuration
+        </span>
+      </div>
       <form
         onSubmit={submitRules}
-        className="grid grid-cols-1 gap-4 p-4 md:grid-cols-4"
+        className="grid grid-cols-1 gap-x-4 gap-y-5 p-5 md:grid-cols-4"
       >
-        <div className="md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">
-            Referral pool and coin setup
-          </p>
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+            1
+          </span>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Referral Pool & Coin Setup
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Define the reward pool, coin value, validity, and eligible orders
+            </p>
+          </div>
         </div>
         <SelectInput
           label="Distribution Type"
@@ -2080,10 +2440,18 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
         />
 
-        <div className="border-t border-gray-100 pt-2 md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">
-            Distribution shares
-          </p>
+        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+            2
+          </span>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Distribution Shares
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Split the referral pool between the customer and referral partners
+            </p>
+          </div>
         </div>
         <TextInput
           label="Customer Discount Share %"
@@ -2112,10 +2480,74 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
         />
 
-        <div className="border-t border-gray-100 pt-2 md:col-span-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">
-            Withdrawal rules
+        <div
+          className={`rounded-lg border p-3 ${
+            Number(rulesForm.customerSharePercent || 0) +
+              Number(rulesForm.childSharePercent || 0) +
+              Number(rulesForm.parentSharePercent || 0) ===
+            100
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-red-200 bg-red-50"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+            <span className="text-[var(--admin-ink)]">Total allocation</span>
+            <span
+              className={
+                Number(rulesForm.customerSharePercent || 0) +
+                  Number(rulesForm.childSharePercent || 0) +
+                  Number(rulesForm.parentSharePercent || 0) ===
+                100
+                  ? "text-emerald-700"
+                  : "text-red-700"
+              }
+            >
+              {Number(rulesForm.customerSharePercent || 0) +
+                Number(rulesForm.childSharePercent || 0) +
+                Number(rulesForm.parentSharePercent || 0)}
+              %
+            </span>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white">
+            <div
+              className={`h-full rounded-full ${
+                Number(rulesForm.customerSharePercent || 0) +
+                  Number(rulesForm.childSharePercent || 0) +
+                  Number(rulesForm.parentSharePercent || 0) ===
+                100
+                  ? "bg-emerald-500"
+                  : "bg-red-500"
+              }`}
+              style={{
+                width: `${Math.min(
+                  Math.max(
+                    Number(rulesForm.customerSharePercent || 0) +
+                      Number(rulesForm.childSharePercent || 0) +
+                      Number(rulesForm.parentSharePercent || 0),
+                    0,
+                  ),
+                  100,
+                )}%`,
+              }}
+            />
+          </div>
+          <p className="mt-2 text-[10px] text-[var(--admin-muted)]">
+            Shares should total exactly 100%
           </p>
+        </div>
+
+        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+            3
+          </span>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Withdrawal Rules
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Control payout limits, approvals, KYC, and supported methods
+            </p>
+          </div>
         </div>
         <TextInput
           label="Minimum Withdrawal Coins"
@@ -2164,15 +2596,16 @@ const ReferralCommerce = () => {
             </option>
           ))}
         </SelectInput>
-        <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
+        <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
           <input
             type="checkbox"
+            className="sr-only"
             name="withdrawalKycRequired"
             checked={Boolean(rulesForm.withdrawalKycRequired)}
             onChange={handleRulesField}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600"
           />
-          KYC required for withdrawal
+          <span className="admin-switch-track" />
+          <span className="font-semibold">KYC required</span>
         </label>
         <div className="md:col-span-2">
           <span className="mb-2 block text-xs font-medium uppercase text-gray-500">
@@ -2186,7 +2619,12 @@ const ReferralCommerce = () => {
             ]).map((option) => (
               <label
                 key={option.value}
-                className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                  Array.isArray(rulesForm.withdrawalMethods) &&
+                  rulesForm.withdrawalMethods.includes(option.value)
+                    ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]"
+                    : "border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-gold)]"
+                }`}
               >
                 <input
                   type="checkbox"
@@ -2203,19 +2641,58 @@ const ReferralCommerce = () => {
           </div>
         </div>
 
-        <div className="md:col-span-4">
+        <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
           <OrangeButton type="submit">
             <Check size={16} />
             Save Rules
           </OrangeButton>
         </div>
       </form>
-    </Section>
+    </section>
+  );
+
+  const renderActiveFilterBar = (options = activeStatusOptions) => (
+    <FilterBar
+      filters={[
+        {
+          key: "status",
+          type: "select",
+          label: "Status",
+          width: "w-48",
+          options,
+        },
+      ]}
+      values={{ status }}
+      onChange={(_, value) => setStatus(value)}
+      onClear={() => setStatus("")}
+      loading={loading}
+    />
   );
 
   const renderBonusRules = () => (
-    <Section
-      title="Referral Partner Bonus Rules"
+    <SharedDataTable
+      columns={[
+        { key: "name", label: "Rule" },
+        { key: "period", label: "Period" },
+        { key: "target", label: "Target" },
+        { key: "bonus", label: "Bonus" },
+        { key: "applyTo", label: "Apply To" },
+        { key: "release", label: "Release" },
+        { key: "status", label: "Status" },
+        { key: "actions", label: "Actions" },
+      ]}
+      data={bonusRuleRows}
+      loading={loading}
+      rowKey="key"
+      onSearch={setSearch}
+      searchPlaceholder="Search bonus rules..."
+      filterBar={renderActiveFilterBar(
+        ["active", "inactive"].map((value) => ({
+          value,
+          label: humanize(value),
+        })),
+      )}
+      emptyText="No bonus rules found."
       actions={
         <div className="flex flex-wrap gap-2">
           <button
@@ -2236,57 +2713,59 @@ const ReferralCommerce = () => {
           </button>
         </div>
       }
-    >
-      <DataTable
-        columns={[
-          { key: "name", label: "Rule" },
-          { key: "period", label: "Period" },
-          { key: "target", label: "Target" },
-          { key: "bonus", label: "Bonus" },
-          { key: "applyTo", label: "Apply To" },
-          { key: "release", label: "Release" },
-          { key: "status", label: "Status" },
-          { key: "actions", label: "Actions" },
-        ]}
-        rows={bonusRuleRows}
-      />
-    </Section>
+    />
   );
 
   const renderBonusProgress = () => (
-    <Section title="Current Bonus Target Progress">
-      <DataTable
-        columns={[
-          { key: "rule", label: "Rule" },
-          { key: "influencer", label: "Referral Partner" },
-          { key: "cycle", label: "Cycle" },
-          { key: "target", label: "Target" },
-          { key: "achieved", label: "Achieved" },
-          { key: "progress", label: "Progress" },
-          { key: "status", label: "Status" },
-        ]}
-        rows={bonusProgressRows}
-        emptyText="No active bonus progress found"
-      />
-    </Section>
+    <SharedDataTable
+      columns={[
+        { key: "rule", label: "Rule" },
+        { key: "influencer", label: "Referral Partner" },
+        { key: "cycle", label: "Cycle" },
+        { key: "target", label: "Target" },
+        { key: "achieved", label: "Achieved" },
+        { key: "progress", label: "Progress" },
+        { key: "status", label: "Status" },
+      ]}
+      data={bonusProgressRows}
+      loading={loading}
+      rowKey="key"
+      onSearch={setSearch}
+      searchPlaceholder="Search bonus progress..."
+      filterBar={renderActiveFilterBar(
+        ["achieved", "in_progress"].map((value) => ({
+          value,
+          label: humanize(value),
+        })),
+      )}
+      emptyText="No active bonus progress found."
+    />
   );
 
   const renderBonusHistory = () => (
-    <Section title="Bonus Achievement History">
-      <DataTable
-        columns={[
-          { key: "rule", label: "Rule" },
-          { key: "influencer", label: "Referral Partner" },
-          { key: "cycle", label: "Cycle" },
-          { key: "target", label: "Target" },
-          { key: "bonus", label: "Bonus Coins" },
-          { key: "status", label: "Status" },
-          { key: "achievedAt", label: "Achieved At" },
-        ]}
-        rows={bonusAchievementRows}
-        emptyText="No bonus achievements yet"
-      />
-    </Section>
+    <SharedDataTable
+      columns={[
+        { key: "rule", label: "Rule" },
+        { key: "influencer", label: "Referral Partner" },
+        { key: "cycle", label: "Cycle" },
+        { key: "target", label: "Target" },
+        { key: "bonus", label: "Bonus Coins" },
+        { key: "status", label: "Status" },
+        { key: "achievedAt", label: "Achieved At" },
+      ]}
+      data={bonusAchievementRows}
+      loading={loading}
+      rowKey="key"
+      onSearch={setSearch}
+      searchPlaceholder="Search bonus achievements..."
+      filterBar={renderActiveFilterBar(
+        ["locked", "released", "reversed"].map((value) => ({
+          value,
+          label: humanize(value),
+        })),
+      )}
+      emptyText="No bonus achievements yet."
+    />
   );
 
   const renderBonuses = () => (
@@ -2300,7 +2779,10 @@ const ReferralCommerce = () => {
           <button
             key={value}
             type="button"
-            onClick={() => setBonusView(value)}
+            onClick={() => {
+              setBonusView(value);
+              setStatus("");
+            }}
             className={`rounded-md px-4 py-2 text-sm font-medium transition ${bonusView === value ? "bg-[var(--admin-navy)] text-white" : "text-gray-600 hover:bg-gray-100"}`}
           >
             {label}
@@ -2316,11 +2798,11 @@ const ReferralCommerce = () => {
   return (
     <div className="w-full space-y-4">
       <PageHeader
-        title="Referral Commerce"
-        subtitle="Growth Partner and Brand Associate operations"
+        title={pageMeta.title}
+        subtitle={pageMeta.subtitle}
         breadcrumbs={[
-          { label: "Marketing & Growth" },
-          { label: "Referral Commerce" },
+          { label: "Marketing" },
+          { label: pageMeta.title },
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -2328,7 +2810,6 @@ const ReferralCommerce = () => {
               href={influencerPortalUrl}
               target="_blank"
               rel="noreferrer"
-              className="admin-btn-secondary inline-flex items-center gap-2"
               title="Open the Referral Partner sign-in portal"
             >
               <ExternalLink size={16} />
@@ -2348,7 +2829,6 @@ const ReferralCommerce = () => {
                 resetInfluencerForm();
                 setParentModalOpen(true);
               }}
-              className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <UserPlus size={16} />
               Growth Partner
@@ -2363,7 +2843,6 @@ const ReferralCommerce = () => {
                 });
                 setChildModalOpen(true);
               }}
-              className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <GitBranch size={16} />
               Brand Associate
@@ -2375,7 +2854,6 @@ const ReferralCommerce = () => {
                 setCodeForm(emptyCodeForm);
                 setCodeModalOpen(true);
               }}
-              className="admin-btn-secondary inline-flex items-center gap-2"
             >
               <Plus size={16} />
               Referral Code
@@ -2384,7 +2862,15 @@ const ReferralCommerce = () => {
         }
       />
 
-      {hasListFilters && <form
+      {hasListFilters && ![
+        "influencers",
+        "codes",
+        "bonuses",
+        "orders",
+        "commissions",
+        "payouts",
+        "fraud",
+      ].includes(activeTab) && <form
         onSubmit={handleSearch}
         className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       >
@@ -2432,8 +2918,8 @@ const ReferralCommerce = () => {
       {activeTab === "overview" && renderOverview()}
       {activeTab === "productDistribution" && <ProductDistributionManager />}
       {activeTab === "influencers" && (
-        <Section title="Referral Partners">
-          <DataTable
+
+          <SharedDataTable
             columns={[
               { key: "influencer", label: "Referral Partner" },
               { key: "profileId", label: "Profile ID" },
@@ -2444,13 +2930,34 @@ const ReferralCommerce = () => {
               { key: "status", label: "Status" },
               { key: "actions", label: "Actions" },
             ]}
-            rows={influencerRows}
+            data={influencerRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search referral partners..."
+            filterBar={
+              <FilterBar
+                filters={[
+                  {
+                    key: "status",
+                    type: "select",
+                    label: "Status",
+                    width: "w-48",
+                    options: activeStatusOptions,
+                  },
+                ]}
+                values={{ status }}
+                onChange={(_, value) => setStatus(value)}
+                onClear={() => setStatus("")}
+                loading={loading}
+              />
+            }
+            emptyText="No referral partners found."
+            cardClassName="overflow-hidden"
           />
-        </Section>
       )}
       {activeTab === "codes" && (
-        <Section title="Referral Codes">
-          <DataTable
+        <SharedDataTable
             columns={[
               { key: "code", label: "Referral Code" },
               { key: "influencer", label: "Referral Partner" },
@@ -2458,15 +2965,35 @@ const ReferralCommerce = () => {
               { key: "status", label: "Status" },
               { key: "actions", label: "Actions" },
             ]}
-            rows={codeRows}
+            data={codeRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search referral codes..."
+            filterBar={
+              <FilterBar
+                filters={[
+                  {
+                    key: "status",
+                    type: "select",
+                    label: "Status",
+                    width: "w-48",
+                    options: activeStatusOptions,
+                  },
+                ]}
+                values={{ status }}
+                onChange={(_, value) => setStatus(value)}
+                onClear={() => setStatus("")}
+                loading={loading}
+              />
+            }
+            emptyText="No referral codes found."
           />
-        </Section>
       )}
       {activeTab === "rules" && renderRules()}
       {activeTab === "bonuses" && renderBonuses()}
       {activeTab === "orders" && (
-        <Section title="Referral Orders">
-          <DataTable
+          <SharedDataTable
             columns={[
               { key: "order", label: "Order" },
               { key: "code", label: "Referral Code" },
@@ -2476,13 +3003,17 @@ const ReferralCommerce = () => {
               { key: "status", label: "Status" },
               { key: "created", label: "Created" },
             ]}
-            rows={orderRows}
+            data={orderRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search referral orders..."
+            filterBar={renderActiveFilterBar()}
+            emptyText="No referral orders found."
           />
-        </Section>
       )}
       {activeTab === "commissions" && (
-        <Section title="Coin Ledger">
-          <DataTable
+          <SharedDataTable
             columns={[
               { key: "order", label: "Order" },
               { key: "influencer", label: "Referral Partner" },
@@ -2492,13 +3023,17 @@ const ReferralCommerce = () => {
               { key: "status", label: "Status" },
               { key: "releaseAt", label: "Release At" },
             ]}
-            rows={commissionRows}
+            data={commissionRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search wallet ledger..."
+            filterBar={renderActiveFilterBar()}
+            emptyText="No coin ledger entries found."
           />
-        </Section>
       )}
       {activeTab === "payouts" && (
-        <Section title="Payout Requests">
-          <DataTable
+          <SharedDataTable
             columns={[
               { key: "influencer", label: "Referral Partner" },
               { key: "coins", label: "Requested Coins" },
@@ -2510,36 +3045,83 @@ const ReferralCommerce = () => {
               ...(payoutHasReference ? [{ key: "reference", label: "UTR / Reference" }] : []),
               ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
             ]}
-            rows={payoutRows}
+            data={payoutRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search payout requests..."
+            filterBar={renderActiveFilterBar()}
+            emptyText="No payout requests found."
           />
-        </Section>
       )}
       {activeTab === "hierarchy" && (
-        <Section
-          title={`Hierarchy (${hierarchy?.total || 0})`}
-          actions={
-            <span className="text-xs text-gray-500">
-              Max level {hierarchy?.maxLevel || 1}
-            </span>
-          }
-        >
-          <div className="space-y-2 p-4">
-            {Array.isArray(hierarchy?.roots) && hierarchy.roots.length ? (
-              hierarchy.roots.map((node) => renderHierarchyNode(node))
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full max-w-2xl">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
+              />
+              <input
+                type="text"
+                value={hierarchySearch}
+                onChange={(event) => setHierarchySearch(event.target.value)}
+                placeholder="Search hierarchy..."
+                className="admin-input h-10 w-full bg-white !pl-11 !pr-10 text-sm"
+              />
+              {hierarchySearch && (
+                <button
+                  type="button"
+                  onClick={() => setHierarchySearch("")}
+                  className="absolute right-3 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-[var(--admin-muted)] hover:bg-[var(--admin-surface-soft)] hover:text-[var(--admin-ink)]"
+                  aria-label="Clear hierarchy search"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2 text-xs text-gray-500">
+              <span className="rounded bg-cyan-50 px-2.5 py-1.5 font-medium text-cyan-700">
+                {hierarchy?.total || 0} partners
+              </span>
+              <span className="rounded bg-gray-100 px-2.5 py-1.5 font-medium">
+                Max level {hierarchy?.maxLevel || 1}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            {loading ? (
+              <div className="space-y-2 py-2" aria-label="Loading hierarchy">
+                {[0, 1, 2].map((row) => (
+                  <div
+                    key={row}
+                    className="h-14 animate-pulse bg-gray-100"
+                    style={{ marginLeft: row ? "40px" : 0 }}
+                  />
+                ))}
+              </div>
+            ) : filteredHierarchyRoots.length ? (
+              filteredHierarchyRoots.map((node, index) =>
+                renderHierarchyNode(
+                  node,
+                  0,
+                  index,
+                  filteredHierarchyRoots.length,
+                ),
+              )
             ) : (
-              <div className="py-8 text-center text-sm text-gray-500">
-                No hierarchy found
+              <div className="py-10 text-center text-sm text-gray-400">
+                {hierarchySearch
+                  ? "No partners match your search"
+                  : "No hierarchy found"}
               </div>
             )}
           </div>
-        </Section>
+        </div>
       )}
       {activeTab === "fraud" && (
-        <Section
-          title="Fraud Review"
-          actions={<ShieldAlert size={18} className="text-amber-600" />}
-        >
-          <DataTable
+          <SharedDataTable
             columns={[
               { key: "reason", label: "Reason" },
               { key: "influencer", label: "Referral Partner" },
@@ -2548,9 +3130,19 @@ const ReferralCommerce = () => {
               { key: "status", label: "Status" },
               { key: "created", label: "Created" },
             ]}
-            rows={fraudRows}
+            data={fraudRows}
+            loading={loading}
+            rowKey="key"
+            onSearch={setSearch}
+            searchPlaceholder="Search fraud reviews..."
+            filterBar={renderActiveFilterBar()}
+            actions={
+              <span title="Fraud review">
+                <ShieldAlert size={18} className="text-amber-600" />
+              </span>
+            }
+            emptyText="No fraud reviews found."
           />
-        </Section>
       )}
 
       <Modal

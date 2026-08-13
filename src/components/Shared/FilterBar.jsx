@@ -198,10 +198,7 @@ const RANGE_PAIRS = [
   ["dateFrom", "dateTo"],
 ];
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const monthFormatter = new Intl.DateTimeFormat("en-IN", {
-  month: "long",
-  year: "numeric",
-});
+const EMPTY_FILTER_VALUES = Object.freeze({});
 
 const normalizeKey = (key = "") => String(key).trim().toLowerCase();
 
@@ -743,7 +740,7 @@ const FilterField = ({ field, value, onChange, values }) => {
 const FilterBar = ({
   filters = [],
   fields,
-  values = {},
+  values = EMPTY_FILTER_VALUES,
   onChange,
   onClear,
   loading = false,
@@ -754,7 +751,10 @@ const FilterBar = ({
     () => (filters.length ? filters : fields || []),
     [fields, filters],
   );
-  const resolvedValues = listPage?.filters || values || {};
+  const resolvedValues = useMemo(
+    () => listPage?.filters || values,
+    [listPage?.filters, values],
+  );
   const resolvedOnChange = onChange || listPage?.setFilter;
   const resolvedOnClear = useCallback(() => {
     if (onClear) {
@@ -849,23 +849,30 @@ const FilterBar = ({
 
   return (
     <div className="border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
           <MdFilterList size={16} />
           Filters
-          {resolvedActiveCount > 0 && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)]">
-              {resolvedActiveCount}
-            </span>
-          )}
+          <span
+            className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] transition-opacity ${
+              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
+            }`}
+            aria-hidden={resolvedActiveCount === 0}
+          >
+            {resolvedActiveCount || 0}
+          </span>
         </div>
 
-        {resolvedActiveCount > 0 && resolvedOnClear && (
+        {resolvedOnClear && (
           <button
             type="button"
             onClick={resolvedOnClear}
-            disabled={loading}
-            className="inline-flex items-center gap-1 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+            disabled={loading || resolvedActiveCount === 0}
+            tabIndex={resolvedActiveCount > 0 ? 0 : -1}
+            className={`inline-flex h-8 items-center gap-1 rounded-md border border-red-100 bg-white px-2.5 text-xs font-semibold text-red-500 transition-opacity hover:bg-red-50 hover:text-red-700 disabled:pointer-events-none ${
+              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
+            }`}
+            aria-hidden={resolvedActiveCount === 0}
           >
             <MdClose size={13} />
             Reset
