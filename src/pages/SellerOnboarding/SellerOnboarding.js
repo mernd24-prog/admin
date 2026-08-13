@@ -2891,6 +2891,7 @@ const isInvalidKycDocumentType = (file) => {
     includeBusinessType = false,
   } = {}) => ({
     panNumber: kycForm.panNumber.trim(),
+    gstNumber: profileForm.gstNumber.trim() || kycForm.gstNumber.trim(),
     aadhaarNumber: kycForm.aadhaarNumber.trim(),
     legalName: kycForm.legalName.trim(),
     ...(includeBusinessType && profileForm.businessType

@@ -2119,6 +2119,9 @@ export default function ProductManagementUI() {
         : updatedFormData.isDisable
           ? "inactive"
           : "draft",
+      ...(updatedFormData.isApproved
+        ? { approvalStatus: "approved" }
+        : {}),
       metadata: {
         ...(updatedFormData.metadata || {}),
         featured: Boolean(updatedFormData.markAsFeatured),
