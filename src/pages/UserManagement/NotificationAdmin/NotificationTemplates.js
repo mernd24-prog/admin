@@ -10,8 +10,22 @@ import { DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
 import { axiosPrivate as api } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
-const CHANNELS = ["push", "email", "sms", "in_app"];
-const AUDIENCE_TYPES = ["all", "buyers", "sellers", "specific_users"];
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
+
+const CHANNEL_OPTIONS = [
+  { value: "push", label: "Push" },
+  { value: "email", label: "Email" },
+  { value: "sms", label: "SMS" },
+  { value: "in_app", label: "In-App" },
+];
+
+const AUDIENCE_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "buyers", label: "Buyers" },
+  { value: "sellers", label: "Sellers" },
+  { value: "specific_users", label: "Specific Users" },
+];
 
 const fmt = (d) => (d ? moment(d).format("DD MMM YYYY, h:mm A") : "—");
 
@@ -41,29 +55,49 @@ const NotificationTemplates = () => {
       setNotifications(data?.list || data?.notifications || data || []);
       setTotal(data?.total || 0);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to load notifications");
+      toast.error(
+        err?.response?.data?.message || "Failed to load notifications",
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const handleSend = useCallback(async () => {
-    if (!form.title.trim()) { toast.error("Title required"); return; }
-    if (!form.body.trim()) { toast.error("Message body required"); return; }
+    if (!form.title.trim()) {
+      toast.error("Title required");
+      return;
+    }
+    if (!form.body.trim()) {
+      toast.error("Message body required");
+      return;
+    }
     try {
       setSending(true);
       let extraData = {};
       if (form.data.trim()) {
-        try { extraData = JSON.parse(form.data); } catch { toast.error("Data must be valid JSON"); return; }
+        try {
+          extraData = JSON.parse(form.data);
+        } catch {
+          toast.error("Data must be valid JSON");
+          return;
+        }
       }
       await api.post(ENDPOINTS.notifications.send, {
         title: form.title,
         body: form.body,
         channel: form.channel,
         audience: form.audience,
-        userIds: form.userIds ? form.userIds.split(",").map((id) => id.trim()).filter(Boolean) : undefined,
+        userIds: form.userIds
+          ? form.userIds
+              .split(",")
+              .map((id) => id.trim())
+              .filter(Boolean)
+          : undefined,
         data: Object.keys(extraData).length ? extraData : undefined,
       });
       toast.success("Notification sent");
@@ -71,7 +105,9 @@ const NotificationTemplates = () => {
       setForm(EMPTY_FORM);
       fetchNotifications();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to send notification");
+      toast.error(
+        err?.response?.data?.message || "Failed to send notification",
+      );
     } finally {
       setSending(false);
     }
@@ -81,18 +117,26 @@ const NotificationTemplates = () => {
     {
       key: "title",
       label: "Title",
-      render: (v) => <span className="font-medium text-gray-800">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-medium text-gray-800">{v || "—"}</span>
+      ),
     },
     {
       key: "body",
       label: "Message",
-      render: (v) => <span className="text-sm text-gray-600 truncate max-w-[200px] block">{v || "—"}</span>,
+      render: (v) => (
+        <span className="text-sm text-gray-600 truncate max-w-[200px] block">
+          {v || "—"}
+        </span>
+      ),
     },
     {
       key: "channel",
       label: "Channel",
       render: (v) => (
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${v === "push" ? "bg-blue-100 text-blue-700" : v === "email" ? "bg-purple-100 text-purple-700" : v === "sms" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${v === "push" ? "bg-blue-100 text-blue-700" : v === "email" ? "bg-purple-100 text-purple-700" : v === "sms" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
+        >
           {v || "push"}
         </span>
       ),
@@ -100,12 +144,21 @@ const NotificationTemplates = () => {
     {
       key: "audience",
       label: "Audience",
-      render: (v) => <span className="text-sm capitalize">{String(v || "all").replace(/_/g, " ")}</span>,
+      render: (v) => (
+        <span className="text-sm capitalize">
+          {String(v || "all").replace(/_/g, " ")}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusBadge status={v || "sent"} color={v === "failed" ? "red" : "green"} />,
+      render: (v) => (
+        <StatusBadge
+          status={v || "sent"}
+          color={v === "failed" ? "red" : "green"}
+        />
+      ),
     },
     {
       key: "createdAt",
@@ -131,7 +184,9 @@ const NotificationTemplates = () => {
         }
       />
 
-      {loading ? <Loader /> : (
+      {loading ? (
+        <Loader />
+      ) : (
         <DataTable
           columns={COLUMNS}
           data={notifications}
@@ -140,67 +195,86 @@ const NotificationTemplates = () => {
         />
       )}
 
-      <DefaultModal isOpen={showSend} onClose={() => { setShowSend(false); setForm(EMPTY_FORM); }} title="Send Notification">
-        <div className="p-4 space-y-4">
-          <Input label="Title *" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Notification title..." />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message *</label>
-            <textarea
-              rows={3}
-              value={form.body}
-              onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
-              placeholder="Notification message..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      <DefaultModal
+        isOpen={showSend}
+        onClose={() => {
+          setShowSend(false);
+          setForm(EMPTY_FORM);
+        }}
+        title="Send Notification"
+        isButtonView={false}
+      >
+        <div className="flex flex-col gap-4">
+          <Input
+            label="Title"
+            required
+            value={form.title}
+            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+            placeholder="Notification title..."
+          />
+          <Input
+            type="textarea"
+            label="Message"
+            required
+            rows={3}
+            value={form.body}
+            onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
+            placeholder="Notification message..."
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <FilterSelect
+              label="Channel"
+              options={CHANNEL_OPTIONS}
+              value={
+                CHANNEL_OPTIONS.find((c) => c.value === form.channel) || null
+              }
+              onChange={(opt) =>
+                setForm((p) => ({ ...p, channel: opt?.value || "push" }))
+              }
+              isSearchable={false}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                value={form.channel}
-                onChange={(e) => setForm((p) => ({ ...p, channel: e.target.value }))}
-              >
-                {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                value={form.audience}
-                onChange={(e) => setForm((p) => ({ ...p, audience: e.target.value }))}
-              >
-                {AUDIENCE_TYPES.map((a) => <option key={a} value={a}>{a.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
+            <FilterSelect
+              label="Audience"
+              options={AUDIENCE_OPTIONS}
+              value={
+                AUDIENCE_OPTIONS.find((a) => a.value === form.audience) ||
+                null
+              }
+              onChange={(opt) =>
+                setForm((p) => ({ ...p, audience: opt?.value || "all" }))
+              }
+              isSearchable={false}
+            />
           </div>
           {form.audience === "specific_users" && (
             <Input
               label="User IDs (comma separated)"
               value={form.userIds}
-              onChange={(e) => setForm((p) => ({ ...p, userIds: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, userIds: e.target.value }))
+              }
               placeholder="uuid1, uuid2, uuid3..."
             />
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Extra Data (JSON, optional)</label>
-            <textarea
-              rows={2}
-              value={form.data}
-              onChange={(e) => setForm((p) => ({ ...p, data: e.target.value }))}
-              placeholder='{"action": "open_order", "orderId": "..."}'
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500"
-            />
+          <Input
+            type="textarea"
+            label="Extra Data (JSON, optional)"
+            rows={2}
+            value={form.data}
+            onChange={(e) => setForm((p) => ({ ...p, data: e.target.value }))}
+            placeholder='{"action": "open_order", "orderId": "..."}'
+            inputClassName="font-mono"
+          />
+          <div className="pt-2">
+            <OrangeButton
+              onClick={handleSend}
+              disabled={sending}
+              className="w-full justify-center py-2 text-sm"
+            >
+              <MdSend size={16} />
+              {sending ? "Sending..." : "Send Notification"}
+            </OrangeButton>
           </div>
-          <button
-            onClick={handleSend}
-            disabled={sending}
-            className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
-          >
-            <MdSend size={16} />
-            {sending ? "Sending..." : "Send Notification"}
-          </button>
         </div>
       </DefaultModal>
     </div>

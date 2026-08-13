@@ -19,6 +19,8 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatLabel } from "../../../utils/formatters";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
 
 const STATUSES = ["active", "paused", "failed"];
 const FILTER_FIELDS = [
@@ -281,10 +283,12 @@ const Webhooks = () => {
           setForm(EMPTY_FORM);
         }}
         title="Add Webhook"
+        isButtonView={false}
       >
-        <div className="p-4 space-y-4">
+        <div className="flex flex-col gap-4 pb-6">
           <Input
-            label="Endpoint URL *"
+            label="Endpoint URL"
+            required
             value={form.endpointUrl}
             onChange={(e) =>
               setForm((p) => ({ ...p, endpointUrl: e.target.value }))
@@ -297,28 +301,22 @@ const Webhooks = () => {
             onChange={(e) => setForm((p) => ({ ...p, secret: e.target.value }))}
             placeholder="Leave blank to auto-generate"
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Owner{" "}
-              <span className="text-gray-400 font-normal">
-                (leave blank for platform)
-              </span>
-            </label>
-            <select
-              value={form.ownerId}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, ownerId: e.target.value }))
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">— Platform (no specific seller) —</option>
-              {sellerOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FilterSelect
+            label="Owner (leave blank for platform)"
+            options={[
+              { value: "", label: "— Platform (no specific seller) —" },
+              ...sellerOptions,
+            ]}
+            value={
+              sellerOptions.find(
+                (o) => String(o.value) === String(form.ownerId),
+              ) || { value: "", label: "— Platform (no specific seller) —" }
+            }
+            onChange={(opt) =>
+              setForm((p) => ({ ...p, ownerId: opt?.value || "" }))
+            }
+            isClearable
+          />
           <Input
             label="Max Retries"
             type="number"
@@ -327,48 +325,59 @@ const Webhooks = () => {
               setForm((p) => ({ ...p, maxRetries: e.target.value }))
             }
           />
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Event Types *
-            </p>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {COMMON_EVENTS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => toggleEvent(e)}
-                  className={`text-xs px-2 py-1 rounded border ${form.eventTypes.includes(e) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"}`}
-                >
-                  {e}
-                </button>
-              ))}
+          <div className="flex flex-col gap-2">
+            <label className="admin-label !mb-0 flex items-center justify-between">
+              <span>Event Types</span>
+              <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {COMMON_EVENTS.map((e) => {
+                const isSelected = form.eventTypes.includes(e);
+                return (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => toggleEvent(e)}
+                    className={`text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                      isSelected
+                        ? "bg-[var(--admin-gold)] text-white border-[var(--admin-gold)] shadow-sm"
+                        : "bg-white text-gray-700 border-gray-300 hover:border-[var(--admin-gold)]"
+                    }`}
+                  >
+                    {e}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-1">
               <input
                 type="text"
                 value={customEvent}
                 onChange={(e) => setCustomEvent(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustomEvent()}
                 placeholder="Custom event type..."
-                className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
               <button
+                type="button"
                 onClick={addCustomEvent}
-                className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-1.5 text-sm bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Add
               </button>
             </div>
             {form.eventTypes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1.5 mt-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
                 {form.eventTypes.map((e) => (
                   <span
                     key={e}
-                    className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1"
+                    className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-medium"
                   >
                     {e}
                     <button
+                      type="button"
                       onClick={() => toggleEvent(e)}
-                      className="text-blue-400 hover:text-red-500"
+                      className="text-amber-600 hover:text-red-600 font-bold"
                     >
                       &times;
                     </button>
@@ -377,13 +386,15 @@ const Webhooks = () => {
               </div>
             )}
           </div>
-          <button
-            onClick={handleCreate}
-            disabled={saving}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
-          >
-            {saving ? "Creating..." : "Create Webhook"}
-          </button>
+          <div className="pt-3">
+            <OrangeButton
+              onClick={handleCreate}
+              disabled={saving}
+              className="w-full justify-center py-2.5 text-sm font-semibold"
+            >
+              {saving ? "Creating..." : "Create Webhook"}
+            </OrangeButton>
+          </div>
         </div>
       </DefaultModal>
     </div>

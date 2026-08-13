@@ -9,12 +9,24 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import Input from "../../../components/Atoms/Input/Input";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { DataTable, FilterBar, PageHeader } from "../../../components/Shared";
-import { getFeatureFlags, upsertFeatureFlag } from "../../../Redux/adminCoreSlice";
+import {
+  getFeatureFlags,
+  upsertFeatureFlag,
+} from "../../../Redux/adminCoreSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
+import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
 
 const FILTER_FIELDS = [
-  { key: "enabled", type: "select", label: "Status", options: [{ value: "true", label: "Enabled" }, { value: "false", label: "Disabled" }] },
+  {
+    key: "enabled",
+    type: "select",
+    label: "Status",
+    options: [
+      { value: "true", label: "Enabled" },
+      { value: "false", label: "Disabled" },
+    ],
+  },
 ];
 
 const unwrapList = (payload = {}) => {
@@ -28,7 +40,12 @@ const unwrapList = (payload = {}) => {
   };
 };
 
-const EMPTY_FORM = { flagKey: "", description: "", enabled: true, rolloutPercentage: 100 };
+const EMPTY_FORM = {
+  flagKey: "",
+  description: "",
+  enabled: true,
+  rolloutPercentage: 100,
+};
 
 const FeatureFlags = () => {
   const dispatch = useDispatch();
@@ -47,7 +64,12 @@ const FeatureFlags = () => {
     try {
       setLoading(true);
       const params = toQueryParams();
-      await dispatch(getFeatureFlags({ ...params, offset: (params.page - 1) * params.limit })).unwrap();
+      await dispatch(
+        getFeatureFlags({
+          ...params,
+          offset: (params.page - 1) * params.limit,
+        }),
+      ).unwrap();
     } catch (err) {
       toast.error(err?.message || "Failed to load feature flags");
     } finally {
@@ -55,7 +77,9 @@ const FeatureFlags = () => {
     }
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchFlags(); }, [fetchFlags]);
+  useEffect(() => {
+    fetchFlags();
+  }, [fetchFlags]);
 
   const openEdit = (flag) => {
     setForm({
@@ -67,18 +91,26 @@ const FeatureFlags = () => {
     setEditing(flag);
   };
 
-  const openCreate = () => { setForm(EMPTY_FORM); setEditing({}); };
+  const openCreate = () => {
+    setForm(EMPTY_FORM);
+    setEditing({});
+  };
 
   const handleSave = useCallback(async () => {
-    if (!form.flagKey.trim()) { toast.error("Flag key required"); return; }
+    if (!form.flagKey.trim()) {
+      toast.error("Flag key required");
+      return;
+    }
     try {
       setSaving(true);
-      await dispatch(upsertFeatureFlag({
-        flagKey: form.flagKey,
-        description: form.description || undefined,
-        enabled: form.enabled,
-        rolloutPercentage: Number(form.rolloutPercentage) || 100,
-      })).unwrap();
+      await dispatch(
+        upsertFeatureFlag({
+          flagKey: form.flagKey,
+          description: form.description || undefined,
+          enabled: form.enabled,
+          rolloutPercentage: Number(form.rolloutPercentage) || 100,
+        }),
+      ).unwrap();
       toast.success(editing?._id ? "Flag updated" : "Flag created");
       setEditing(null);
       fetchFlags();
@@ -89,22 +121,31 @@ const FeatureFlags = () => {
     }
   }, [form, editing, dispatch, fetchFlags]);
 
-  const quickToggle = useCallback(async (flag) => {
-    const flagKey = flag.flagKey || flag.key;
-    try {
-      await dispatch(upsertFeatureFlag({ flagKey, enabled: !flag.enabled })).unwrap();
-      toast.success(`Flag "${flagKey}" ${!flag.enabled ? "enabled" : "disabled"}`);
-      fetchFlags();
-    } catch (err) {
-      toast.error(err?.message || "Toggle failed");
-    }
-  }, [dispatch, fetchFlags]);
+  const quickToggle = useCallback(
+    async (flag) => {
+      const flagKey = flag.flagKey || flag.key;
+      try {
+        await dispatch(
+          upsertFeatureFlag({ flagKey, enabled: !flag.enabled }),
+        ).unwrap();
+        toast.success(
+          `Flag "${flagKey}" ${!flag.enabled ? "enabled" : "disabled"}`,
+        );
+        fetchFlags();
+      } catch (err) {
+        toast.error(err?.message || "Toggle failed");
+      }
+    },
+    [dispatch, fetchFlags],
+  );
 
   const COLUMNS = [
     {
       key: "flagKey",
       label: "Flag Key",
-      render: (v) => <span className="font-mono text-sm font-medium">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-mono text-sm font-medium">{v || "—"}</span>
+      ),
     },
     {
       key: "description",
@@ -117,7 +158,10 @@ const FeatureFlags = () => {
       render: (v) => (
         <div className="flex items-center gap-2">
           <div className="w-16 bg-gray-200 rounded-full h-1.5">
-            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${v ?? 100}%` }} />
+            <div
+              className="bg-blue-500 h-1.5 rounded-full"
+              style={{ width: `${v ?? 100}%` }}
+            />
           </div>
           <span className="text-xs text-gray-600">{v ?? 100}%</span>
         </div>
@@ -128,7 +172,10 @@ const FeatureFlags = () => {
       label: "Enabled",
       render: (v, row) => (
         <PermissionGuard module="platform" action={ACTIONS.UPDATE} hide>
-          <ToggleButton checked={v !== false} onChange={() => quickToggle(row)} />
+          <ToggleButton
+            checked={v !== false}
+            onChange={() => quickToggle(row)}
+          />
         </PermissionGuard>
       ),
     },
@@ -137,7 +184,11 @@ const FeatureFlags = () => {
       label: "",
       render: (_, row) => (
         <PermissionGuard module="platform" action={ACTIONS.UPDATE} hide>
-          <button onClick={() => openEdit(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+          <button
+            onClick={() => openEdit(row)}
+            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+            title="Edit"
+          >
             <MdEdit size={18} />
           </button>
         </PermissionGuard>
@@ -166,43 +217,78 @@ const FeatureFlags = () => {
 
       <FilterBar fields={FILTER_FIELDS} listPage={list} />
 
-      {loading ? <Loader /> : (
-        <DataTable columns={COLUMNS} data={payload.list} total={payload.total} listPage={list} emptyMessage="No feature flags found" />
+      {loading ? (
+        <Loader />
+      ) : (
+        <DataTable
+          columns={COLUMNS}
+          data={payload.list}
+          total={payload.total}
+          listPage={list}
+          emptyMessage="No feature flags found"
+        />
       )}
 
-      <DefaultModal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?._id || editing?.flagKey ? "Edit Feature Flag" : "New Feature Flag"}>
-        <div className="p-4 space-y-4">
+      <DefaultModal
+        isOpen={!!editing}
+        onClose={() => setEditing(null)}
+        title={
+          editing?._id || editing?.flagKey
+            ? "Edit Feature Flag"
+            : "New Feature Flag"
+        }
+        isButtonView={false}
+      >
+        <div className="space-y-4 pb-6">
           <Input
-            label="Flag Key *"
+            label="Flag Key"
+            required
             value={form.flagKey}
-            onChange={(e) => setForm((p) => ({ ...p, flagKey: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, flagKey: e.target.value }))
+            }
             placeholder="e.g. new_checkout_flow"
             disabled={!!(editing?._id || editing?.flagKey)}
           />
           <Input
             label="Description"
             value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
             placeholder="What does this flag control?"
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rollout: {form.rolloutPercentage}%</label>
+            <div className="flex justify-between items-center text-xs font-medium text-[var(--admin-ink)] mb-2">
+              <span className="admin-label !mb-0">Rollout</span>
+              <span className="font-bold text-[var(--admin-navy)]">
+                {form.rolloutPercentage}%
+              </span>
+            </div>
             <input
               type="range"
               min={0}
               max={100}
               value={form.rolloutPercentage}
-              onChange={(e) => setForm((p) => ({ ...p, rolloutPercentage: Number(e.target.value) }))}
-              className="w-full"
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  rolloutPercentage: Number(e.target.value),
+                }))
+              }
+              className="w-full accent-[var(--admin-gold)] cursor-pointer h-2 bg-gray-200 rounded-lg appearance-none"
             />
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((p) => ({ ...p, enabled: e.target.checked }))} className="w-4 h-4 rounded" />
-            <span className="text-sm font-medium text-gray-700">Enabled</span>
-          </label>
-          <button onClick={handleSave} disabled={saving} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
-            {saving ? "Saving..." : "Save Flag"}
-          </button>
+
+          <div className="pt-3 pb-4">
+            <OrangeButton
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full justify-center py-2.5 text-sm font-semibold"
+            >
+              {saving ? "Saving..." : "Save Flag"}
+            </OrangeButton>
+          </div>
         </div>
       </DefaultModal>
     </div>
