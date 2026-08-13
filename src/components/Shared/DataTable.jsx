@@ -25,10 +25,7 @@ const isEmptyCellValue = (value) =>
   (typeof value === "string" &&
     EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
 
-const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
-
-const formatCellText = (value) =>
-  shouldPreserveText(value) ? value : formatLabel(value, "N/A");
+const formatCellText = (value) => formatLabel(value, "N/A");
 
 const VOID_ELEMENT_TAGS = new Set([
   "area",
