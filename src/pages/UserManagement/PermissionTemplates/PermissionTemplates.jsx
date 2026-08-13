@@ -13,6 +13,7 @@ import {
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { PageHeader } from "../../../components/Shared";
 import Loader from "../../../components/Loader/Loader";
+import TransparentButton from "../../../components/Atoms/buttons/TransParentButton";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 
@@ -486,7 +487,7 @@ const PermissionTemplates = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#f8f5f0] p-6">
+    <div className="min-h-screen">
       <Loader loading={loading} />
 
       <PageHeader
@@ -517,26 +518,23 @@ const PermissionTemplates = () => {
         </div>
         <div className="w-px h-4 bg-gray-200" />
         <div className="flex items-center gap-1.5 text-sm text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
-          <span className="font-semibold text-gray-800">
-            {stats.active}
-          </span>{" "}
+          <span className="w-2 h-2 rounded-full bg-[var(--admin-blue)] inline-block" />
+          <span className="font-semibold text-gray-800">{stats.active}</span>{" "}
           active
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* Filter pills */}
           {["all", "active", "inactive"].map((f) => (
-            <button
+            <TransparentButton
               key={f}
               onClick={() => setFilterActive(f)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              label={f.charAt(0).toUpperCase() + f.slice(1)}
+              className={`px-8 py-2 rounded-full text-xs font-medium ${
                 filterActive === f
-                  ? "bg-[var(--admin-blue)] text-white"
-                  : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
+                  ? "bg-[var(--admin-blue)] text-white border-[var(--admin-blue)]"
+                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
               }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
+            />
           ))}
           {/* Search */}
           <input

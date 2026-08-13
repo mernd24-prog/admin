@@ -570,22 +570,26 @@ export default function ModuleManagement() {
                   }))
                 }
               />
-              <label className="text-sm">
-                Module Type
-                <select
-                  value={form.moduleType}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, moduleType: e.target.value }))
-                  }
-                  className="mt-1 w-full border rounded px-3 py-2"
-                >
-                  {moduleTypes.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FilterSelect
+                label="Module Type"
+                name="moduleType"
+                inputId="moduleType"
+                placeholder="Select Module Type"
+                options={moduleTypes.options}
+                value={
+                  moduleTypes.options.find(
+                    (option) => option.value === form.moduleType,
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setForm((p) => ({
+                    ...p,
+                    moduleType: selectedOption?.value || "",
+                  }))
+                }
+                isSearchable={false}
+                isClearable={false}
+              />
               <label className="text-sm">
                 Order
                 <input
@@ -597,22 +601,26 @@ export default function ModuleManagement() {
                   className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
                 />
               </label>
-              <label className="text-sm">
-                Status
-                <select
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, status: e.target.value }))
-                  }
-                  className="mt-1 w-full border rounded px-3 py-2"
-                >
-                  {recordStatuses.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FilterSelect
+                label="Status"
+                name="status"
+                inputId="status"
+                placeholder="Select Status"
+                options={recordStatuses.options}
+                value={
+                  recordStatuses.options.find(
+                    (option) => option.value === form.status,
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setForm((p) => ({
+                    ...p,
+                    status: selectedOption?.value || "",
+                  }))
+                }
+                isSearchable={false}
+                isClearable={false}
+              />
               <label className="text-sm">
                 Permissions
                 <input

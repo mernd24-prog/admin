@@ -25,6 +25,7 @@ import {
   setNotificationsSeenAt,
 } from "../../../Redux/notificationsSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -140,7 +141,7 @@ const BASE_COLUMNS = [
       );
     },
   },
- 
+
   {
     key: "template",
     label: "Template",
@@ -465,41 +466,41 @@ const UserMessages = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Channel
-                  </label>
-                  <select
-                    value={form.channel}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, channel: e.target.value }))
+                  <FilterSelect
+                    label="Channel"
+                    options={CHANNEL_OPTIONS}
+                    value={
+                      CHANNEL_OPTIONS.find(
+                        (item) => item.value === form.channel,
+                      ) || null
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  >
-                    {CHANNEL_OPTIONS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(selected) =>
+                      setForm((f) => ({
+                        ...f,
+                        channel: selected?.value ?? "",
+                      }))
+                    }
+                    isSearchable={false}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Template
-                  </label>
-                  <select
-                    value={form.template}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, template: e.target.value }))
+                  <FilterSelect
+                    label="Template"
+                    options={TEMPLATE_OPTIONS}
+                    value={
+                      TEMPLATE_OPTIONS.find(
+                        (item) => item.value === form.template,
+                      ) || null
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  >
-                    {TEMPLATE_OPTIONS.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(selected) =>
+                      setForm((f) => ({
+                        ...f,
+                        template: selected?.value ?? "",
+                      }))
+                    }
+                    isSearchable={false}
+                  />
                 </div>
               </div>
 

@@ -24,6 +24,8 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatLabel } from "../../../utils/formatters";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
 
 const STATUSES = ["active", "revoked", "expired"];
 const FILTER_FIELDS = [
@@ -269,38 +271,34 @@ const ApiKeys = () => {
           setForm(EMPTY_FORM);
         }}
         title="Create API Key"
+        isButtonView={false}
       >
-        <div className="p-4 space-y-4">
+        <div className="flex flex-col gap-4">
           <Input
-            label="Key Name *"
+            label="Key Name"
+            required
             value={form.keyName}
             onChange={(e) =>
               setForm((p) => ({ ...p, keyName: e.target.value }))
             }
             placeholder="e.g. Mobile App Key"
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Owner{" "}
-              <span className="text-gray-400 font-normal">
-                (leave blank for platform)
-              </span>
-            </label>
-            <select
-              value={form.ownerId}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, ownerId: e.target.value }))
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">— Platform (no specific seller) —</option>
-              {sellerOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FilterSelect
+            label="Owner (leave blank for platform)"
+            options={[
+              { value: "", label: "— Platform (no specific seller) —" },
+              ...sellerOptions,
+            ]}
+            value={
+              sellerOptions.find(
+                (o) => String(o.value) === String(form.ownerId),
+              ) || { value: "", label: "— Platform (no specific seller) —" }
+            }
+            onChange={(opt) =>
+              setForm((p) => ({ ...p, ownerId: opt?.value || "" }))
+            }
+            isClearable
+          />
           <Input
             label="Scopes (comma separated)"
             value={form.scopes}
@@ -315,13 +313,15 @@ const ApiKeys = () => {
               setForm((p) => ({ ...p, expiresAt: e.target.value }))
             }
           />
-          <button
-            onClick={handleCreate}
-            disabled={saving}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
-          >
-            {saving ? "Creating..." : "Create API Key"}
-          </button>
+          <div className="pt-2">
+            <OrangeButton
+              onClick={handleCreate}
+              disabled={saving}
+              className="w-full justify-center py-2 text-sm"
+            >
+              {saving ? "Creating..." : "Create API Key"}
+            </OrangeButton>
+          </div>
         </div>
       </DefaultModal>
 
@@ -330,6 +330,7 @@ const ApiKeys = () => {
         isOpen={!!createdKey}
         onClose={() => setCreatedKey(null)}
         title="API Key Created"
+        isButtonView={false}
       >
         <div className="p-4 space-y-4">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

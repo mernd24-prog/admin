@@ -14,6 +14,30 @@ body {
   background: #f4f6fa;
 }
 
+/* Custom Global Scrollbars (Firefox & Webkit) */
+* {
+  scrollbar-color: #CE9F2D33 transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CE9F2D33;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #CE9F2D66;
+}
+
 .d {
   border: 2px solid red;
 }

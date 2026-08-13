@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import {
@@ -287,45 +288,104 @@ const IconButton = ({
 };
 
 const RowActions = ({ actions = [] }) => {
-  const [open, setOpen] = useState(false);
   const visible = actions.filter((action) => action && !action.hidden);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const width = 190;
+    const estimatedHeight = Math.min(visible.length * 38 + 16, 320);
+    const left = Math.max(
+      8,
+      Math.min(window.innerWidth - width - 8, rect.right - width),
+    );
+    const belowTop = rect.bottom + 6;
+    const top =
+      belowTop + estimatedHeight > window.innerHeight
+        ? Math.max(8, rect.top - estimatedHeight - 6)
+        : belowTop;
+    setPosition({ top, left });
+  }, [visible.length]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+
+    const closeOutside = (event) => {
+      if (
+        !buttonRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    const closeOnViewportChange = () => setOpen(false);
+
+    document.addEventListener("mousedown", closeOutside);
+    window.addEventListener("resize", closeOnViewportChange);
+    window.addEventListener("scroll", closeOnViewportChange, true);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      window.removeEventListener("resize", closeOnViewportChange);
+      window.removeEventListener("scroll", closeOnViewportChange, true);
+    };
+  }, [open, updatePosition]);
+
   if (!visible.length) return <span className="text-gray-400">-</span>;
+
   return (
-    <div className="relative inline-flex">
+    <div className="inline-flex" onClick={(event) => event.stopPropagation()}>
       <button
+        ref={buttonRef}
         type="button"
         title="Actions"
         aria-label="Row actions"
-        onClick={() => setOpen((value) => !value)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (!open) updatePosition();
+          setOpen((value) => !value);
+        }}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-700"
       >
         <MoreVertical size={18} />
       </button>
-      {open && (
-        <div className="absolute right-0 top-9 z-50 min-w-[190px] rounded-md border border-gray-200 bg-white p-1.5 shadow-xl">
-          {visible.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              disabled={action.disabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                setOpen(false);
-                action.onClick?.();
-              }}
-              className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                action.danger
-                  ? "text-rose-600 hover:bg-rose-50"
-                  : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
-              }`}
-            >
-              {action.icon}
-              <span>{action.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-gray-200 bg-white p-1.5 shadow-xl"
+            style={{ top: position.top, left: position.left }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {visible.map((action, index) => (
+              <button
+                key={`${action.label || "action"}-${index}`}
+                type="button"
+                disabled={action.disabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen(false);
+                  action.onClick?.();
+                }}
+                className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  action.danger
+                    ? "text-rose-600 hover:bg-rose-50"
+                    : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+                }`}
+              >
+                {action.icon}
+                <span>{action.label}</span>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

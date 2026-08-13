@@ -220,15 +220,10 @@ const CategorySetup = ({
             <span className="font-medium text-gray-800 text-sm sm:text-base">
               Publish
             </span>
-            <button
-              className={`w-11 sm:w-12 h-5 sm:h-6 rounded-full relative transition-colors duration-200 
-                ${isPublish ? 'bg-blue-500' : 'bg-gray-200'}`}
-              onClick={handleIsPublish}
-            >
-              <span className={`absolute w-3 sm:w-4 h-3 sm:h-4 bg-white rounded-full 
-                top-1 transition-all duration-200 
-                ${isPublish ? 'right-1' : 'left-1'}`}></span>
-            </button>
+            <ToggleButton 
+              isToggle={isPublish} 
+              handleClick={handleIsPublish} 
+            />
           </div>
 
           {/* Dashboard Visible Toggle */}

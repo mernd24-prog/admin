@@ -89,6 +89,20 @@ const customStyles = (error, controlHeight) => ({
     ...provided,
     scrollbarColor: "#1F1B5F transparent",
     scrollbarWidth: "thin",
+    "&::-webkit-scrollbar": {
+      width: "6px",
+      height: "6px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: "#1F1B5F",
+      borderRadius: "4px",
+    },
+    "&::-webkit-scrollbar-thumb:hover": {
+      background: "#16134a",
+    },
   }),
   menuPortal: (provided) => ({
     ...provided,

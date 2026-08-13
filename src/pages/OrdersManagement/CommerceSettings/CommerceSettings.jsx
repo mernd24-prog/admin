@@ -12,6 +12,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "../../../utils/toast";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const DEFAULT_SETTINGS = {
   platformFees: {
@@ -89,13 +90,24 @@ const DEFAULT_SETTINGS = {
 };
 
 const ROUTES = [
-  { key: "platform", label: "Platform Commission", path: "/app/platform-commission", icon: MdStorefront },
+  {
+    key: "platform",
+    label: "Platform Commission",
+    path: "/app/platform-commission",
+    icon: MdStorefront,
+  },
 ];
 
 const option = (value, label) => ({ value, label });
-const joinList = (value) => (Array.isArray(value) ? value.join(", ") : String(value || ""));
-const splitList = (value) => String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
-const nullableNumber = (value) => (value === "" || value === null || value === undefined ? null : Number(value));
+const joinList = (value) =>
+  Array.isArray(value) ? value.join(", ") : String(value || "");
+const splitList = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+const nullableNumber = (value) =>
+  value === "" || value === null || value === undefined ? null : Number(value);
 // const optionLabel = (item = {}) =>
 //   item.label || item.name || item.title || item.zipCode || item.pincode || item.code || String(item.value || "");
 // const optionValue = (item = {}) =>
@@ -108,8 +120,14 @@ const mergeSettings = (data = {}) => ({
   platformFees: {
     ...DEFAULT_SETTINGS.platformFees,
     ...(data.platformFees || {}),
-    sellerCommissionType: data.platformFees?.sellerCommissionType || data.platformFees?.sellerFeeType || DEFAULT_SETTINGS.platformFees.sellerCommissionType,
-    sellerCommissionValue: data.platformFees?.sellerCommissionValue ?? data.platformFees?.sellerFeeValue ?? DEFAULT_SETTINGS.platformFees.sellerCommissionValue,
+    sellerCommissionType:
+      data.platformFees?.sellerCommissionType ||
+      data.platformFees?.sellerFeeType ||
+      DEFAULT_SETTINGS.platformFees.sellerCommissionType,
+    sellerCommissionValue:
+      data.platformFees?.sellerCommissionValue ??
+      data.platformFees?.sellerFeeValue ??
+      DEFAULT_SETTINGS.platformFees.sellerCommissionValue,
   },
   payments: { ...DEFAULT_SETTINGS.payments, ...(data.payments || {}) },
   wallet: { ...DEFAULT_SETTINGS.wallet, ...(data.wallet || {}) },
@@ -128,7 +146,10 @@ const mergeSettings = (data = {}) => ({
       },
     },
   },
-  shippingDefaults: { ...DEFAULT_SETTINGS.shippingDefaults, ...(data.shippingDefaults || {}) },
+  shippingDefaults: {
+    ...DEFAULT_SETTINGS.shippingDefaults,
+    ...(data.shippingDefaults || {}),
+  },
   finance: { ...DEFAULT_SETTINGS.finance, ...(data.finance || {}) },
 });
 
@@ -140,16 +161,37 @@ const Field = ({ label, children, hint }) => (
   </label>
 );
 
-const InputField = ({ label, value, onChange, type = "text", hint, ...props }) => (
+const InputField = ({
+  label,
+  value,
+  onChange,
+  type = "text",
+  hint,
+  ...props
+}) => (
   <Field label={label} hint={hint}>
-    <input className="admin-input" type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} {...props} />
+    <input
+      className="admin-input"
+      type={type}
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
+      {...props}
+    />
   </Field>
 );
 
 const SelectField = ({ label, value, onChange, options, hint }) => (
   <Field label={label} hint={hint}>
-    <select className="admin-input" value={value ?? ""} onChange={(event) => onChange(event.target.value)}>
-      {options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+    <select
+      className="admin-input"
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
     </select>
   </Field>
 );
@@ -158,28 +200,55 @@ const ToggleField = ({ label, checked, onChange, hint }) => (
   <label className="flex min-h-[44px] items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
     <span>
       <span className="block text-sm font-medium text-gray-700">{label}</span>
-      {hint ? <span className="block text-xs text-gray-500">{hint}</span> : null}
+      {hint ? (
+        <span className="block text-xs text-gray-500">{hint}</span>
+      ) : null}
     </span>
-    <input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)} />
+    <input
+      type="checkbox"
+      checked={Boolean(checked)}
+      onChange={(event) => onChange(event.target.checked)}
+    />
   </label>
 );
 
 const RefundOption = ({ label, checked, onChange }) => (
-  <label className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}>
+  <label
+    className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}
+  >
     <span>{label}</span>
-    <input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)} />
+    <input
+      type="checkbox"
+      checked={Boolean(checked)}
+      onChange={(event) => onChange(event.target.checked)}
+    />
   </label>
 );
 
-const RefundScenario = ({ title, hint, shipping, platformFee, onShippingChange, onPlatformFeeChange }) => (
+const RefundScenario = ({
+  title,
+  hint,
+  shipping,
+  platformFee,
+  onShippingChange,
+  onPlatformFeeChange,
+}) => (
   <div className="rounded-lg border border-gray-200 bg-white p-4">
     <div className="mb-3">
       <div className="text-sm font-semibold text-gray-900">{title}</div>
       <div className="mt-1 text-xs text-gray-500">{hint}</div>
     </div>
     <div className="grid gap-2 sm:grid-cols-2">
-      <RefundOption label="Refund shipping" checked={shipping} onChange={onShippingChange} />
-      <RefundOption label="Refund platform fee" checked={platformFee} onChange={onPlatformFeeChange} />
+      <RefundOption
+        label="Refund shipping"
+        checked={shipping}
+        onChange={onShippingChange}
+      />
+      <RefundOption
+        label="Refund platform fee"
+        checked={platformFee}
+        onChange={onPlatformFeeChange}
+      />
     </div>
   </div>
 );
@@ -313,7 +382,10 @@ export default function CommerceSettings() {
   const [saving, setSaving] = useState(false);
 
   const patchSettings = (section, patch) => {
-    setSettings((current) => ({ ...current, [section]: { ...(current[section] || {}), ...patch } }));
+    setSettings((current) => ({
+      ...current,
+      [section]: { ...(current[section] || {}), ...patch },
+    }));
   };
 
   const patchRefundPolicy = (component, key, value) => {
@@ -335,17 +407,23 @@ export default function CommerceSettings() {
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get(ENDPOINTS.commerceSettings.detail);
+      const response = await axiosProvider.get(
+        ENDPOINTS.commerceSettings.detail,
+      );
       const data = response?.data?.data || {};
       setSettings(mergeSettings(data.settings || {}));
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load commerce settings");
+      toast.error(
+        error?.response?.data?.message || "Failed to load commerce settings",
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const saveSettings = async (nextSettings = settings) => {
     setSaving(true);
@@ -362,41 +440,63 @@ export default function CommerceSettings() {
         },
         platformFees: {
           ...nextSettings.platformFees,
-          customerFeeValue: Number(nextSettings.platformFees.customerFeeValue || 0),
-          sellerCommissionValue: Number(nextSettings.platformFees.sellerCommissionValue || 0),
+          customerFeeValue: Number(
+            nextSettings.platformFees.customerFeeValue || 0,
+          ),
+          sellerCommissionValue: Number(
+            nextSettings.platformFees.sellerCommissionValue || 0,
+          ),
           gstRate: Number(nextSettings.platformFees.gstRate || 0),
         },
         shippingDefaults: {
           ...nextSettings.shippingDefaults,
-          defaultCharge: Number(nextSettings.shippingDefaults.defaultCharge || 0),
-          freeShippingThreshold: nullableNumber(nextSettings.shippingDefaults.freeShippingThreshold),
+          defaultCharge: Number(
+            nextSettings.shippingDefaults.defaultCharge || 0,
+          ),
+          freeShippingThreshold: nullableNumber(
+            nextSettings.shippingDefaults.freeShippingThreshold,
+          ),
           handlingFee: Number(nextSettings.shippingDefaults.handlingFee || 0),
         },
         wallet: {
           ...nextSettings.wallet,
-          autoApplyMaxPercent: Number(nextSettings.wallet.autoApplyMaxPercent || 0),
+          autoApplyMaxPercent: Number(
+            nextSettings.wallet.autoApplyMaxPercent || 0,
+          ),
         },
         finance: {
           ...nextSettings.finance,
-          platformFeeTaxRate: Number(nextSettings.platformFees.gstRate ?? nextSettings.finance.platformFeeTaxRate ?? 0),
+          platformFeeTaxRate: Number(
+            nextSettings.platformFees.gstRate ??
+              nextSettings.finance.platformFeeTaxRate ??
+              0,
+          ),
           gstTcsRate: Number(nextSettings.finance.gstTcsRate || 0),
           incomeTaxTdsRate: Number(nextSettings.finance.incomeTaxTdsRate || 0),
         },
       };
-      const response = await axiosProvider.put(ENDPOINTS.commerceSettings.detail, payload);
+      const response = await axiosProvider.put(
+        ENDPOINTS.commerceSettings.detail,
+        payload,
+      );
       setSettings(mergeSettings(response?.data?.data || payload));
       toast.success("Commerce settings saved");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to save commerce settings");
+      toast.error(
+        error?.response?.data?.message || "Failed to save commerce settings",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const activeRoute = ROUTES.find((item) => item.key === activeView) || ROUTES[0];
-  const pageSubtitle = {
-    platform: "Manage seller platform commission, commission GST, payout holds, and payment policy.",
-  }[activeView] || "Commerce controls for platform commission.";
+  const activeRoute =
+    ROUTES.find((item) => item.key === activeView) || ROUTES[0];
+  const pageSubtitle =
+    {
+      platform:
+        "Manage seller platform commission, commission GST, payout holds, and payment policy.",
+    }[activeView] || "Commerce controls for platform commission.";
 
   const renderNav = () => (
     <div className="mb-5 flex flex-wrap gap-2">
@@ -409,7 +509,9 @@ export default function CommerceSettings() {
             type="button"
             onClick={() => navigate(item.path)}
             className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-              active ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]" : "border-gray-200 bg-white text-gray-600 hover:border-[var(--admin-gold)]"
+              active
+                ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]"
+                : "border-gray-200 bg-white text-gray-600 hover:border-[var(--admin-gold)]"
             }`}
           >
             <Icon size={16} /> {item.label}
@@ -423,105 +525,525 @@ export default function CommerceSettings() {
     <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">Seller Commission</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.platformFees.sellerCommissionValue}{settings.platformFees.sellerCommissionType === "percentage" ? "%" : " INR"}</p>
+          <p className="text-xs font-semibold uppercase text-gray-400">
+            Seller Commission
+          </p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
+            {settings.platformFees.sellerCommissionValue}
+            {settings.platformFees.sellerCommissionType === "percentage"
+              ? "%"
+              : " INR"}
+          </p>
         </div>
         <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">Customer Fee</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.platformFees.customerFeeValue}{settings.platformFees.customerFeeType === "percentage" ? "%" : " INR"}</p>
+          <p className="text-xs font-semibold uppercase text-gray-400">
+            Customer Fee
+          </p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
+            {settings.platformFees.customerFeeValue}
+            {settings.platformFees.customerFeeType === "percentage"
+              ? "%"
+              : " INR"}
+          </p>
         </div>
         <div className="admin-card p-4">
           <p className="text-xs font-semibold uppercase text-gray-400">COD</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.cod.enabled ? "Enabled" : "Disabled"}</p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
+            {settings.cod.enabled ? "Enabled" : "Disabled"}
+          </p>
         </div>
         <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">Shipping Payout</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">{settings.finance.shippingPolicy === "not_in_seller_payout" ? "Excluded" : settings.finance.shippingPolicy === "reimburse_seller" ? "Reimburse" : "Deduct"}</p>
+          <p className="text-xs font-semibold uppercase text-gray-400">
+            Shipping Payout
+          </p>
+          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
+            {settings.finance.shippingPolicy === "not_in_seller_payout"
+              ? "Excluded"
+              : settings.finance.shippingPolicy === "reimburse_seller"
+                ? "Reimburse"
+                : "Deduct"}
+          </p>
         </div>
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
-      <Section title="Return & Settlement Policy">
-        <div className="grid gap-4 md:grid-cols-2">
-          <InputField label="Global Return Window (Days)" type="number" min="1" max="60" value={settings.returns.defaultWindowDays} onChange={(value) => patchSettings("returns", { defaultWindowDays: value })} />
-          <ToggleField label="Allow Seller Return Overrides" checked={settings.returns.allowSellerOverrides} onChange={(value) => patchSettings("returns", { allowSellerOverrides: value })} />
-          {settings.returns.allowSellerOverrides && <InputField label="Maximum Seller Override (Days)" type="number" min="1" max="60" value={settings.returns.maxSellerOverrideDays} onChange={(value) => patchSettings("returns", { maxSellerOverrideDays: value })} />}
-          <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-            The delivered date and this policy are snapshotted per order item. Each item becomes payout-eligible only after its return deadline closes.
-          </div>
-        </div>
-      </Section>
-      <Section title="Refund Policy">
-        <div className="space-y-3">
-          <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-            Product amount is refunded from the cancelled or returned items. Use these options only for extra charges collected from the customer.
-          </div>
-          <div className="grid gap-3">
-            {[
-              ["fullCancellation", "Full order cancellation", "Customer cancels the complete order before fulfilment."],
-              ["itemCancellation", "Item-wise cancellation", "Customer cancels selected item(s). Shipping is refunded only when that seller package has no active item left."],
-              ["sellerCancellation", "Seller cancels / out of stock", "Seller cannot fulfil the item or order."],
-              ["rtoDeliveryFailed", "RTO / delivery failed", "Courier returns the shipment or delivery fails."],
-              ["customerReturn", "Customer return after delivery", "Customer returns delivered products."],
-              ["partialReturn", "Partial item return", "Only some products from the order are returned."],
-            ].map(([key, title, hint]) => (
-              <RefundScenario
-                key={key}
-                title={title}
-                hint={hint}
-                shipping={settings.returns.refundPolicy?.shipping?.[key]}
-                platformFee={settings.returns.refundPolicy?.platformFee?.[key]}
-                onShippingChange={(value) => patchRefundPolicy("shipping", key, value)}
-                onPlatformFeeChange={(value) => patchRefundPolicy("platformFee", key, value)}
+        <Section title="Return & Settlement Policy">
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField
+              label="Global Return Window (Days)"
+              type="number"
+              min="1"
+              max="60"
+              value={settings.returns.defaultWindowDays}
+              onChange={(value) =>
+                patchSettings("returns", { defaultWindowDays: value })
+              }
+            />
+            <ToggleField
+              label="Allow Seller Return Overrides"
+              checked={settings.returns.allowSellerOverrides}
+              onChange={(value) =>
+                patchSettings("returns", { allowSellerOverrides: value })
+              }
+            />
+            {settings.returns.allowSellerOverrides && (
+              <InputField
+                label="Maximum Seller Override (Days)"
+                type="number"
+                min="1"
+                max="60"
+                value={settings.returns.maxSellerOverrideDays}
+                onChange={(value) =>
+                  patchSettings("returns", { maxSellerOverrideDays: value })
+                }
               />
-            ))}
+            )}
+            <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+              The delivered date and this policy are snapshotted per order item.
+              Each item becomes payout-eligible only after its return deadline
+              closes.
+            </div>
           </div>
-        </div>
-      </Section>
-      <Section title="Seller Commission">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Commission Type" value={settings.platformFees.sellerCommissionType} onChange={(value) => patchSettings("platformFees", { sellerCommissionType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
-          <InputField label="Commission Value" type="number" min="0" value={settings.platformFees.sellerCommissionValue} onChange={(value) => patchSettings("platformFees", { sellerCommissionValue: value })} />
-          <InputField label="GST Percentage" type="number" min="0" max="100" value={settings.platformFees.gstRate} onChange={(value) => patchSettings("platformFees", { gstRate: value })} />
-          <SelectField label="Apply On" value={settings.platformFees.calculationBase} onChange={(value) => patchSettings("platformFees", { calculationBase: value })} options={[option("subtotal", "Subtotal"), option("order_total", "Total")]} />
-        </div>
-      </Section>
-      <Section title="Customer Commission / Fee">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Fee Type" value={settings.platformFees.customerFeeType} onChange={(value) => patchSettings("platformFees", { customerFeeType: value })} options={[option("percentage", "Percentage"), option("fixed", "Fixed")]} />
-          <InputField label="Fee Value" type="number" min="0" value={settings.platformFees.customerFeeValue} onChange={(value) => patchSettings("platformFees", { customerFeeValue: value })} hint="Added to the customer-facing order total." />
-          <InputField label="Customer Fee GST Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.platformFees.customerFeeTaxRate} onChange={(value) => patchSettings("platformFees", { customerFeeTaxRate: value })} hint="A separate marketplace-to-customer platform fee invoice is issued whenever the fee is charged; GST is shown when this rate is greater than zero." />
-        </div>
-      </Section>
-      <Section title="Payment Settings">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Payment Gateway" value={settings.payments.gateway} onChange={(value) => patchSettings("payments", { gateway: value })} options={[option("razorpay", "Razorpay"), option("cashfree", "Cashfree"), option("stripe", "Stripe"), option("manual", "Manual")]} />
-          <SelectField label="Gateway Fee Policy" value={settings.payments.gatewayFeePolicy} onChange={(value) => patchSettings("payments", { gatewayFeePolicy: value })} options={[option("platform_absorbs", "Platform absorbs"), option("seller_deducted", "Seller deducted"), option("split", "Split")]} />
-          <SelectField label="Wallet" value={settings.wallet.partialPaymentMode} onChange={(value) => patchSettings("wallet", { partialPaymentMode: value })} options={[option("user_opt_in", "User opt-in"), option("auto_apply", "Auto apply"), option("disabled", "Disabled")]} />
-          <InputField label="Wallet Max Percent" type="number" min="0" max="100" value={settings.wallet.autoApplyMaxPercent} onChange={(value) => patchSettings("wallet", { autoApplyMaxPercent: value })} />
-          <SelectField label="Refund Policy" value={settings.payments.refundPolicy} onChange={(value) => patchSettings("payments", { refundPolicy: value })} options={[option("manual_review", "Manual review"), option("auto_after_return", "Auto after return"), option("instant_wallet", "Instant wallet"), option("gateway_original", "Gateway original")]} />
-          <SelectField
-            label="Payout Release Rule"
-            value={settings.finance.payoutReleaseMilestone}
-            onChange={(value) => patchSettings("finance", { payoutReleaseMilestone: value })}
-            options={[option("return_window_closed", "Return window closed")]}
-            hint="Payout is calculated from the order's stored return deadline; it is never released before Fulfilled."
-          />
-        </div>
-      </Section>
-      <Section title="Payout Calculation">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Seller Payout Base" value={settings.finance.sellerPayoutBase} onChange={(value) => patchSettings("finance", { sellerPayoutBase: value })} options={[option("gross_customer_price", "Gross customer price"), option("taxable_ex_gst", "Taxable ex GST")]} />
-          <SelectField label="Shipping Settlement" value={settings.finance.shippingPolicy} onChange={(value) => patchSettings("finance", { shippingPolicy: value })} options={[option("reimburse_seller", "Customer shipping credited to seller"), option("not_in_seller_payout", "Platform fulfils and retains shipping"), option("deduct_from_seller", "Shipping charged to seller")]} />
-        </div>
-      </Section>
-      <Section title="Seller Statutory Deductions">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="GST TCS" value={settings.finance.gstTcsEnabled ? "enabled" : "disabled"} onChange={(value) => patchSettings("finance", { gstTcsEnabled: value === "enabled" })} options={[option("disabled", "Disabled"), option("enabled", "Enabled")]} hint="Collected from net taxable supplies and credited through GST compliance." />
-          <InputField label="GST TCS Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.finance.gstTcsRate} onChange={(value) => patchSettings("finance", { gstTcsRate: value })} />
-          <SelectField label="Income-tax TDS" value={settings.finance.incomeTaxTdsEnabled ? "enabled" : "disabled"} onChange={(value) => patchSettings("finance", { incomeTaxTdsEnabled: value === "enabled" })} options={[option("disabled", "Disabled"), option("enabled", "Enabled")]} hint="Withheld from seller gross sales and shown separately in payout statements." />
-          <InputField label="Income-tax TDS Rate (%)" type="number" min="0" max="100" step="0.01" value={settings.finance.incomeTaxTdsRate} onChange={(value) => patchSettings("finance", { incomeTaxTdsRate: value })} />
-        </div>
-      </Section>
+        </Section>
+        <Section title="Refund Policy">
+          <div className="space-y-3">
+            <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+              Product amount is refunded from the cancelled or returned items.
+              Use these options only for extra charges collected from the
+              customer.
+            </div>
+            <div className="grid gap-3">
+              {[
+                [
+                  "fullCancellation",
+                  "Full order cancellation",
+                  "Customer cancels the complete order before fulfilment.",
+                ],
+                [
+                  "itemCancellation",
+                  "Item-wise cancellation",
+                  "Customer cancels selected item(s). Shipping is refunded only when that seller package has no active item left.",
+                ],
+                [
+                  "sellerCancellation",
+                  "Seller cancels / out of stock",
+                  "Seller cannot fulfil the item or order.",
+                ],
+                [
+                  "rtoDeliveryFailed",
+                  "RTO / delivery failed",
+                  "Courier returns the shipment or delivery fails.",
+                ],
+                [
+                  "customerReturn",
+                  "Customer return after delivery",
+                  "Customer returns delivered products.",
+                ],
+                [
+                  "partialReturn",
+                  "Partial item return",
+                  "Only some products from the order are returned.",
+                ],
+              ].map(([key, title, hint]) => (
+                <RefundScenario
+                  key={key}
+                  title={title}
+                  hint={hint}
+                  shipping={settings.returns.refundPolicy?.shipping?.[key]}
+                  platformFee={
+                    settings.returns.refundPolicy?.platformFee?.[key]
+                  }
+                  onShippingChange={(value) =>
+                    patchRefundPolicy("shipping", key, value)
+                  }
+                  onPlatformFeeChange={(value) =>
+                    patchRefundPolicy("platformFee", key, value)
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        </Section>
+        <Section title="Seller Commission">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FilterSelect
+              label="Commission Type"
+              name="sellerCommissionType"
+              inputId="sellerCommissionType"
+              placeholder="Select Commission Type"
+              options={[
+                option("percentage", "Percentage"),
+                option("fixed", "Fixed"),
+              ]}
+              value={
+                [
+                  option("percentage", "Percentage"),
+                  option("fixed", "Fixed"),
+                ].find(
+                  (item) =>
+                    item.value === settings.platformFees.sellerCommissionType,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("platformFees", {
+                  sellerCommissionType: selectedOption?.value || "",
+                })
+              }
+              isSearchable={false}
+              isClearable={false}
+            />
+
+            <InputField
+              label="Commission Value"
+              type="number"
+              min="0"
+              value={settings.platformFees.sellerCommissionValue}
+              onChange={(value) =>
+                patchSettings("platformFees", { sellerCommissionValue: value })
+              }
+            />
+            <InputField
+              label="GST Percentage"
+              type="number"
+              min="0"
+              max="100"
+              value={settings.platformFees.gstRate}
+              onChange={(value) =>
+                patchSettings("platformFees", { gstRate: value })
+              }
+            />
+            <FilterSelect
+              label="Apply On"
+              name="calculationBase"
+              inputId="calculationBase"
+              placeholder="Select Apply On"
+              options={[
+                option("subtotal", "Subtotal"),
+                option("order_total", "Total"),
+              ]}
+              value={
+                [
+                  option("subtotal", "Subtotal"),
+                  option("order_total", "Total"),
+                ].find(
+                  (item) =>
+                    item.value === settings.platformFees.calculationBase,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("platformFees", {
+                  calculationBase: selectedOption?.value || "",
+                })
+              }
+              isSearchable={false}
+              isClearable={false}
+            />
+          </div>
+        </Section>
+        <Section title="Customer Commission / Fee">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FilterSelect
+              label="Fee Type"
+              value={
+                [
+                  option("percentage", "Percentage"),
+                  option("fixed", "Fixed"),
+                ].find(
+                  (item) =>
+                    item.value === settings.platformFees.customerFeeType,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("platformFees", {
+                  customerFeeType: selectedOption?.value || "",
+                })
+              }
+              options={[
+                option("percentage", "Percentage"),
+                option("fixed", "Fixed"),
+              ]}
+            />
+            <InputField
+              label="Fee Value"
+              type="number"
+              min="0"
+              value={settings.platformFees.customerFeeValue}
+              onChange={(value) =>
+                patchSettings("platformFees", { customerFeeValue: value })
+              }
+              hint="Added to the customer-facing order total."
+            />
+            <InputField
+              label="Customer Fee GST Rate (%)"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={settings.platformFees.customerFeeTaxRate}
+              onChange={(value) =>
+                patchSettings("platformFees", { customerFeeTaxRate: value })
+              }
+              hint="A separate marketplace-to-customer platform fee invoice is issued whenever the fee is charged; GST is shown when this rate is greater than zero."
+            />
+          </div>
+        </Section>
+        <Section title="Payment Settings">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FilterSelect
+              label="Payment Gateway"
+              value={
+                [
+                  option("razorpay", "Razorpay"),
+                  option("cashfree", "Cashfree"),
+                  option("stripe", "Stripe"),
+                  option("manual", "Manual"),
+                ].find((item) => item.value === settings.payments.gateway) ||
+                null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("payments", {
+                  gateway: selectedOption?.value || "",
+                })
+              }
+              options={[
+                option("razorpay", "Razorpay"),
+                option("cashfree", "Cashfree"),
+                option("stripe", "Stripe"),
+                option("manual", "Manual"),
+              ]}
+            />
+
+            <FilterSelect
+              label="Gateway Fee Policy"
+              value={
+                [
+                  option("platform_absorbs", "Platform absorbs"),
+                  option("seller_deducted", "Seller deducted"),
+                  option("split", "Split"),
+                ].find(
+                  (item) => item.value === settings.payments.gatewayFeePolicy,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("payments", {
+                  gatewayFeePolicy: selectedOption?.value || "",
+                })
+              }
+              options={[
+                option("platform_absorbs", "Platform absorbs"),
+                option("seller_deducted", "Seller deducted"),
+                option("split", "Split"),
+              ]}
+            />
+
+            <FilterSelect
+              label="Wallet"
+              value={
+                [
+                  option("user_opt_in", "User opt-in"),
+                  option("auto_apply", "Auto apply"),
+                  option("disabled", "Disabled"),
+                ].find(
+                  (item) => item.value === settings.wallet.partialPaymentMode,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                patchSettings("wallet", {
+                  partialPaymentMode: selectedOption?.value || "",
+                })
+              }
+              options={[
+                option("user_opt_in", "User opt-in"),
+                option("auto_apply", "Auto apply"),
+                option("disabled", "Disabled"),
+              ]}
+            />
+            <InputField
+              label="Wallet Max Percent"
+              type="number"
+              min="0"
+              max="100"
+              value={settings.wallet.autoApplyMaxPercent}
+              onChange={(value) =>
+                patchSettings("wallet", { autoApplyMaxPercent: value })
+              }
+            />
+
+            <FilterSelect
+              label="Refund Policy"
+              options={[
+                option("manual_review", "Manual review"),
+                option("auto_after_return", "Auto after return"),
+                option("instant_wallet", "Instant wallet"),
+                option("gateway_original", "Gateway original"),
+              ]}
+              value={
+                [
+                  option("manual_review", "Manual review"),
+                  option("auto_after_return", "Auto after return"),
+                  option("instant_wallet", "Instant wallet"),
+                  option("gateway_original", "Gateway original"),
+                ].find(
+                  (item) => item.value === settings.payments.refundPolicy,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("payments", {
+                  refundPolicy: selected?.value ?? "",
+                })
+              }
+            />
+
+            <FilterSelect
+              label="Payout Release Rule"
+              options={[option("return_window_closed", "Return window closed")]}
+              value={
+                [option("return_window_closed", "Return window closed")].find(
+                  (item) =>
+                    item.value === settings.finance.payoutReleaseMilestone,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("finance", {
+                  payoutReleaseMilestone: selected?.value ?? "",
+                })
+              }
+            />
+          </div>
+        </Section>
+        <Section title="Payout Calculation">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FilterSelect
+              label="Seller Payout Base"
+              options={[
+                option("gross_customer_price", "Gross customer price"),
+                option("taxable_ex_gst", "Taxable ex GST"),
+              ]}
+              value={
+                [
+                  option("gross_customer_price", "Gross customer price"),
+                  option("taxable_ex_gst", "Taxable ex GST"),
+                ].find(
+                  (item) => item.value === settings.finance.sellerPayoutBase,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("finance", {
+                  sellerPayoutBase: selected?.value ?? "",
+                })
+              }
+            />
+            <FilterSelect
+              label="Shipping Settlement"
+              options={[
+                option(
+                  "reimburse_seller",
+                  "Customer shipping credited to seller",
+                ),
+                option(
+                  "not_in_seller_payout",
+                  "Platform fulfils and retains shipping",
+                ),
+                option("deduct_from_seller", "Shipping charged to seller"),
+              ]}
+              value={
+                [
+                  option(
+                    "reimburse_seller",
+                    "Customer shipping credited to seller",
+                  ),
+                  option(
+                    "not_in_seller_payout",
+                    "Platform fulfils and retains shipping",
+                  ),
+                  option("deduct_from_seller", "Shipping charged to seller"),
+                ].find(
+                  (item) => item.value === settings.finance.shippingPolicy,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("finance", {
+                  shippingPolicy: selected?.value ?? "",
+                })
+              }
+            />
+          </div>
+        </Section>
+        <Section title="Seller Statutory Deductions">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FilterSelect
+              label="GST TCS"
+              options={[
+                option("disabled", "Disabled"),
+                option("enabled", "Enabled"),
+              ]}
+              value={
+                [
+                  option("disabled", "Disabled"),
+                  option("enabled", "Enabled"),
+                ].find(
+                  (item) =>
+                    item.value ===
+                    (settings.finance.gstTcsEnabled ? "enabled" : "disabled"),
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("finance", {
+                  gstTcsEnabled: selected?.value === "enabled",
+                })
+              }
+              helperText="Collected from net taxable supplies and credited through GST compliance."
+              isSearchable={false}
+            />
+            <InputField
+              label="GST TCS Rate (%)"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={settings.finance.gstTcsRate}
+              onChange={(value) =>
+                patchSettings("finance", { gstTcsRate: value })
+              }
+            />
+            <FilterSelect
+              label="Income-tax TDS"
+              options={[
+                option("disabled", "Disabled"),
+                option("enabled", "Enabled"),
+              ]}
+              value={
+                [
+                  option("disabled", "Disabled"),
+                  option("enabled", "Enabled"),
+                ].find(
+                  (item) =>
+                    item.value ===
+                    (settings.finance.incomeTaxTdsEnabled
+                      ? "enabled"
+                      : "disabled"),
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("finance", {
+                  incomeTaxTdsEnabled: selected?.value === "enabled",
+                })
+              }
+              helperText="Withheld from seller gross sales and shown separately in payout statements."
+              isSearchable={false}
+            />
+            <InputField
+              label="Income-tax TDS Rate (%)"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={settings.finance.incomeTaxTdsRate}
+              onChange={(value) =>
+                patchSettings("finance", { incomeTaxTdsRate: value })
+              }
+            />
+          </div>
+        </Section>
       </div>
     </div>
   );
@@ -534,9 +1056,23 @@ export default function CommerceSettings() {
         breadcrumbs={[{ label: "Commerce Settings" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="admin-btn-secondary" onClick={fetchSettings} disabled={loading}><MdRefresh size={16} /> Refresh</button>
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={fetchSettings}
+              disabled={loading}
+            >
+              <MdRefresh size={16} /> Refresh
+            </button>
             <PermissionGuard module="admin" action={ACTIONS.UPDATE} hide>
-              <button type="button" className="admin-btn-primary" onClick={() => saveSettings()} disabled={saving}><MdSave size={16} /> {saving ? "Saving..." : "Save"}</button>
+              <button
+                type="button"
+                className="admin-btn-primary"
+                onClick={() => saveSettings()}
+                disabled={saving}
+              >
+                <MdSave size={16} /> {saving ? "Saving..." : "Save"}
+              </button>
             </PermissionGuard>
           </div>
         }

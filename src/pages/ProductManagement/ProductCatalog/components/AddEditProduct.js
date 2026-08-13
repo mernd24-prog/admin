@@ -1397,10 +1397,10 @@ export default function ProductManagementUI() {
           value === null ||
           value === "" ||
           (Array.isArray(value) && value.length === 0);
-  if (Object.keys(newErrors).length > 0) {
-    pendingValidationScrollRef.current = true;
-  }
-  setError(newErrors);
+        if (Object.keys(newErrors).length > 0) {
+          pendingValidationScrollRef.current = true;
+        }
+        setError(newErrors);
 
         if (field.required && isEmpty) {
           newErrors.attributes = {
@@ -2878,11 +2878,13 @@ export default function ProductManagementUI() {
                 <FilterSelect
                   options={shippingProfileOptions.map((opt) => ({
                     ...opt,
-                    label: opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
+                    label:
+                      opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
                   }))}
                   value={
                     shippingProfileOptions.find(
-                      (opt) => opt.value === formData?.shipping?.shippingProfileId,
+                      (opt) =>
+                        opt.value === formData?.shipping?.shippingProfileId,
                     ) || null
                   }
                   onChange={(selected) => {

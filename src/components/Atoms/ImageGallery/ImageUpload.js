@@ -55,14 +55,19 @@ const ImageUpload = ({
 
       {/* Dropzone */}
       <div
-        className={`relative border-2 border-dashed rounded-lg transition-all duration-200 ${file ? "border-transparent" : "border-gray-300"
-          } ${errorMessage
+        className={`relative border-2 border-dashed rounded-lg transition-all duration-200 ${
+          file ? "border-transparent" : "border-gray-300"
+        } ${
+          errorMessage
             ? "border-red-500"
-            : "hover:border-blue-400"
-          } ${isDisabled
+            : file
+              ? ""
+              : "hover:border-blue-400"
+        } ${
+          isDisabled
             ? "opacity-70 cursor-not-allowed bg-gray-100"
             : "bg-white cursor-pointer"
-          }`}
+        }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={(e) => {

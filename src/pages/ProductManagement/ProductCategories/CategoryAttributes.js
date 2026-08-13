@@ -666,13 +666,13 @@ const CategoryAttributesPanel = ({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <OrangeButton
+            {/* <OrangeButton
               onClick={() =>
                 setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])
               }
             >
               <MdAdd size={15} /> Add Attribute
-            </OrangeButton>
+            </OrangeButton> */}
             <button
               type="button"
               onClick={handleBack}

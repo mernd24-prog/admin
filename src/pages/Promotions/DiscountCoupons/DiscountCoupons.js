@@ -21,6 +21,7 @@ import {
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { useListPage } from "../../../hooks/useListPage";
 import useDropdownOptions from "../../../hooks/useDropdownOptions";
 import {
@@ -33,6 +34,11 @@ import {
 import { formatDateTime12Hour } from "../../../utils/formatters";
 
 // ── Utility helpers ────────────────────────────────────────────────────────────
+const DISCOUNT_TYPE_OPTIONS = [
+  { value: "percentage", label: "Percentage (%)" },
+  { value: "fixed", label: "Fixed Amount (₹)" },
+];
+
 const normalizeCouponType = (type) => (type === "flat" ? "fixed" : type);
 const formatCouponType = (type) => {
   const t = normalizeCouponType(type);
@@ -140,19 +146,6 @@ const getDiscountStatus = (validFrom, validTo) => {
   if (now.isBefore(moment(validFrom), "day")) return "upcoming";
   return "active";
 };
-
-const FILTER_FIELDS = [
-  {
-    key: "type",
-    type: "select",
-    label: "Type",
-    width: "w-36",
-    options: [
-      { value: "percentage", label: "Percentage" },
-      { value: "fixed", label: "Fixed" },
-    ],
-  },
-];
 
 const COLUMNS = [
   {
@@ -539,7 +532,18 @@ const DiscountCoupons = () => {
         requiredModule="coupons"
         filterBar={
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={[
+              {
+                key: "type",
+                type: "select",
+                label: "Type",
+                width: "w-36",
+                options: [
+                  { value: "percentage", label: "Percentage" },
+                  { value: "fixed", label: "Fixed" },
+                ],
+              },
+            ]}
             values={list.filters}
             onChange={list.setFilter}
             onClear={list.clearFilters}
@@ -590,7 +594,7 @@ const DiscountCoupons = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] resize-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)] resize-none"
                   placeholder="Describe this coupon"
                 />
                 {errors.description && (
@@ -601,24 +605,28 @@ const DiscountCoupons = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Discount Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  >
-                    <option value="">Select type</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (₹)</option>
-                  </select>
-                  {errors.type && (
-                    <p className="text-red-500 text-xs mt-1">{errors.type}</p>
-                  )}
-                </div>
+                <FilterSelect
+                  label="Discount Type"
+                  required
+                  name="type"
+                  options={DISCOUNT_TYPE_OPTIONS}
+                  value={
+                    DISCOUNT_TYPE_OPTIONS.find(
+                      (opt) => opt.value === formData.type,
+                    ) || null
+                  }
+                  onChange={(opt) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      type: opt?.value || "",
+                    }));
+                    if (errors.type)
+                      setErrors((prev) => ({ ...prev, type: undefined }));
+                  }}
+                  error={errors.type}
+                  placeholder="Select type"
+                  isSearchable={false}
+                />
                 <FormInput
                   label={`Discount Value ${formData.type === "percentage" ? "(%)" : "(₹)"}`}
                   name="value"
@@ -657,27 +665,38 @@ const DiscountCoupons = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Discount Funded By
-                  </label>
-                  <select
+                  <FilterSelect
+                    label="Discount Funded By"
                     name="funding_type"
-                    value={formData.funding_type}
-                    onChange={handleInputChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  >
-                    <option value="marketplace">Marketplace</option>
-                    <option value="seller">Seller</option>
-                    <option value="shared">Marketplace and seller</option>
-                    <option value="payment_partner">
-                      Payment partner / bank
-                    </option>
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Marketplace or partner funding does not reduce the seller
-                    tax invoice. It is recorded as a contribution toward
-                    payment.
-                  </p>
+                    options={[
+                      { value: "marketplace", label: "Marketplace" },
+                      { value: "seller", label: "Seller" },
+                      { value: "shared", label: "Marketplace and seller" },
+                      {
+                        value: "payment_partner",
+                        label: "Payment partner / bank",
+                      },
+                    ]}
+                    value={
+                      [
+                        { value: "marketplace", label: "Marketplace" },
+                        { value: "seller", label: "Seller" },
+                        { value: "shared", label: "Marketplace and seller" },
+                        {
+                          value: "payment_partner",
+                          label: "Payment partner / bank",
+                        },
+                      ].find((opt) => opt.value === formData.funding_type) ||
+                      null
+                    }
+                    onChange={(opt) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        funding_type: opt?.value || "marketplace",
+                      }));
+                    }}
+                    helperText="Marketplace or partner funding does not reduce the seller tax invoice. It is recorded as a contribution toward payment."
+                  />
                 </div>
                 {formData.funding_type === "shared" && (
                   <FormInput

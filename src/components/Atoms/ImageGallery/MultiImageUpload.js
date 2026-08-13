@@ -96,7 +96,13 @@ const MultiImageUpload = ({
                 className={`relative border-2 border-dashed rounded-xl transition-all duration-200
           ${normalizedImages.length ? "border-gray-200" : "border-gray-300"}
           ${errorMessage ? "border-red-500" : ""}
-          ${isDisabled ? "opacity-70 cursor-not-allowed bg-gray-100" : "bg-white cursor-pointer hover:border-blue-400"}
+          ${
+            isDisabled
+              ? "opacity-70 cursor-not-allowed bg-gray-100"
+              : `bg-white cursor-pointer ${
+                  normalizedImages.length ? "" : "hover:border-blue-400"
+                }`
+          }
         `}
                 onClick={() => !isDisabled && fileInputRef.current?.click()}
                 onDrop={handleDrop}
