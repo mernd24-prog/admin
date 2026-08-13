@@ -2018,7 +2018,11 @@ const SellerOnboarding = () => {
     }));
   };
 
-  const applyAadhaarCachedVerification = async (data = {}, number = "") => {
+  const applyAadhaarCachedVerification = async (
+    data = {},
+    number = "",
+    { showToast = true } = {},
+  ) => {
     const prefill = getAadhaarPrefill(data);
     applyAadhaarPrefill(prefill);
     setAadhaarVerification({
@@ -2041,11 +2045,17 @@ const SellerOnboarding = () => {
     setAadhaarOtpModalOpen(false);
     setAadhaarOtp("");
     setKycErrors((prev) => ({ ...prev, aadhaarNumber: null }));
-    toast.success(data.message || "Aadhaar is already verified.");
+    if (showToast) {
+      toast.success(data.message || "Aadhaar is already verified.");
+    }
     await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
   };
 
-  const runAadhaarLocalPrecheck = async ({ aadhaarNumber, referenceId = "" } = {}) => {
+  const runAadhaarLocalPrecheck = async ({
+    aadhaarNumber,
+    referenceId = "",
+    showCachedToast = true,
+  } = {}) => {
     const response = await dispatch(
       precheckSellerAadhaar({
         aadhaarNumber,
@@ -2056,7 +2066,9 @@ const SellerOnboarding = () => {
     const data = getResponseData(response);
 
     if (data.aadhaarVerified || data.cached || data.reason === "aadhaar_already_verified") {
-      await applyAadhaarCachedVerification(data, aadhaarNumber);
+      await applyAadhaarCachedVerification(data, aadhaarNumber, {
+        showToast: showCachedToast,
+      });
       return { canProceed: false, data };
     }
 
@@ -2109,6 +2121,7 @@ const SellerOnboarding = () => {
       const aadhaarPrecheck = await runAadhaarLocalPrecheck({
         aadhaarNumber,
         referenceId: aadhaarVerification.referenceId,
+        showCachedToast: false,
       });
       if (!aadhaarPrecheck.canProceed && !aadhaarPrecheck.data?.aadhaarVerified) {
         return false;
