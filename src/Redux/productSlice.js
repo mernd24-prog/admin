@@ -185,6 +185,8 @@ const toProductPatchBody = (payload = {}) => {
     if (source.documents !== undefined && Array.isArray(source.documents)) body.documents = source.documents;
     if (source.tags !== undefined && Array.isArray(source.tags)) body.tags = source.tags;
     if (source.status !== undefined) body.status = source.status;
+    if (source.approvalStatus !== undefined) body.approvalStatus = source.approvalStatus;
+    if (source.isApproved === true) body.approvalStatus = "approved";
     if (source.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(source.minPurchaseQuantity || 0);
     if (source.volumeDiscount !== undefined) body.volumeDiscount = Number(source.volumeDiscount || 0);
     if (source.specialPriceStartDate !== undefined) body.specialPriceStartDate = source.specialPriceStartDate;
