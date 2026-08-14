@@ -65,6 +65,7 @@ export default function SearchComponent({
   compactFilterBar = false,
   hideFilterActions = false,
   largeSearchInput = false,
+  hideBottomBorder = false,
 }) {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
@@ -204,7 +205,10 @@ export default function SearchComponent({
   };
 
   return (
-    <div className="admin-legacy-filter-card w-full">
+    <div
+      className="admin-legacy-filter-card w-full"
+      style={hideBottomBorder ? { borderBottom: "none" } : undefined}
+    >
       <div
         className={`flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >

@@ -39,12 +39,6 @@ const STATUS_OPTIONS = [
 ];
 
 const FILTER_FIELDS = [
-  {
-    key: "search",
-    type: "search",
-    label: "Search",
-    placeholder: "Search badges…",
-  },
   { key: "type", type: "select", label: "Type", options: TYPE_OPTIONS },
   { key: "active", type: "select", label: "Status", options: STATUS_OPTIONS },
 ];
@@ -385,7 +379,7 @@ const COLUMNS = [
   {
     key: "label",
     label: "Badge",
-    render: (row) => (
+    render: (_, row) => (
       <div className="flex items-center gap-3">
         <BadgePreview
           label={row.label}
@@ -403,7 +397,7 @@ const COLUMNS = [
   {
     key: "type",
     label: "Type",
-    render: (row) => (
+    render: (_, row) => (
       <span className="capitalize text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
         {row.type}
       </span>
@@ -412,14 +406,14 @@ const COLUMNS = [
   {
     key: "priority",
     label: "Priority",
-    render: (row) => (
+    render: (_, row) => (
       <span className="text-sm text-gray-600">{row.priority ?? 0}</span>
     ),
   },
   {
     key: "validity",
     label: "Validity",
-    render: (row) => {
+    render: (_, row) => {
       if (!row.validFrom && !row.validTo)
         return <span className="text-xs text-gray-400">Always</span>;
       const fmt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
@@ -433,7 +427,7 @@ const COLUMNS = [
   {
     key: "active",
     label: "Status",
-    render: (row) => (
+    render: (_, row) => (
       <StatusBadge status={row.active ? "active" : "inactive"} />
     ),
   },
@@ -485,6 +479,8 @@ const Badges = () => {
   };
 
   const handlePageChange = (page) => setFilters((prev) => ({ ...prev, page }));
+  const handlePageSizeChange = (limit) =>
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
 
   const openCreate = () => {
     setEditTarget(null);
@@ -550,7 +546,7 @@ const Badges = () => {
     {
       label: "Delete",
       icon: <MdClose size={15} />,
-      variant: "danger",
+      danger: true,
       onClick: () => setDeleteTarget(row),
     },
   ];
@@ -575,47 +571,38 @@ const Badges = () => {
           </div>
         }
       />
-      <FilterBar
-        fields={FILTER_FIELDS}
-        values={filters}
-        onChange={handleFilterChange}
-      />
-
-      <div className="bg-white rounded-xl border border-gray-200">
-        {!loading && Array.isArray(badges) && badges.length === 0 ? (
-          <div className="py-16 text-center">
-            <MdMilitaryTech size={48} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm font-medium text-gray-500">No badges found</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Create your first badge to get started
-            </p>
-            <button
-              onClick={openCreate}
-              className="mt-4 flex items-center gap-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
-            >
-              <MdAdd size={16} /> New Badge
-            </button>
-          </div>
-        ) : (
-          <DataTable
-            columns={COLUMNS}
-            data={Array.isArray(badges) ? badges : []}
+      <DataTable
+        columns={COLUMNS}
+        data={Array.isArray(badges) ? badges : []}
+        loading={loading}
+        total={total}
+        page={pagination?.page ?? filters.page}
+        pageSize={pagination?.limit ?? filters.limit}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSearch={(value) => handleFilterChange("search", value)}
+        searchPlaceholder="Search badges…"
+        filterBar={
+          <FilterBar
+            fields={FILTER_FIELDS}
+            values={filters}
             loading={loading}
-            rowActions={rowActions}
-            rowKey={(row) => row._id || row.name}
-            pagination={
-              pagination
-                ? {
-                    page: pagination.page ?? filters.page,
-                    limit: pagination.limit ?? filters.limit,
-                    total: pagination.total ?? total,
-                    onChange: handlePageChange,
-                  }
-                : undefined
+            onChange={handleFilterChange}
+            onClear={() =>
+              setFilters((current) => ({
+                ...current,
+                type: "",
+                active: "",
+                page: 1,
+              }))
             }
           />
-        )}
-      </div>
+        }
+        rowActions={rowActions}
+        rowKey={(row) => row._id || row.name}
+        emptyMessage="No badges found"
+        emptyIcon={<MdMilitaryTech size={48} className="text-gray-200" />}
+      />
 
       <BadgeModal
         open={modalOpen}

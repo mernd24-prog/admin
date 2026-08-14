@@ -285,13 +285,14 @@ const DealPayouts = () => {
           </div>
         }
       />
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
       <DataTable
         columns={COLUMNS}
         data={payload.list}
         total={payload.total}
         listPage={list}
         loading={loading}
+        searchPlaceholder="Search deal payouts…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
         emptyMessage="No deal payouts found"
       />
 

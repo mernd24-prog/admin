@@ -1235,8 +1235,6 @@ const DealManagement = () => {
         ))}
       </div>
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
@@ -1256,6 +1254,8 @@ const DealManagement = () => {
         }
         listPage={list}
         loading={loading}
+        searchPlaceholder="Search deals…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
         rowKey={(row) => getDealId(row) || getProductId(row)}
         rowActions={rowActions}
         emptyMessage="No deal products found"

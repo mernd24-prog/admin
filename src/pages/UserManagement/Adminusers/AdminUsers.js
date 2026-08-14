@@ -1404,7 +1404,7 @@ const AdminUsers = () => {
         </div>
 
         {/* Tab navigation */}
-        <div className="flex gap-0 mb-4 border-b border-gray-200">
+        <div className="mb-4 flex flex-wrap gap-2">
           {[
             ...(canSeeAdminsTab ? [{ key: "admins", label: "Admins" }] : []),
             { key: "subadmins", label: "Sub-Admins" },
@@ -1412,10 +1412,11 @@ const AdminUsers = () => {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              type="button"
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                 tab === key
-                  ? "border-[var(--admin-blue)] text-[var(--admin-blue)]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "bg-[var(--admin-navy)] text-white"
+                  : "border border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
               {label}
@@ -1424,7 +1425,7 @@ const AdminUsers = () => {
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200">
-          <div className="p-3 border-b">
+          <div className="p-3">
             <SearchComponent
               isSearchShow={true}
               filters={filters}
@@ -1433,6 +1434,7 @@ const AdminUsers = () => {
               handleSearchRemove={handleSearchRemove}
               applyFilters={handleSearchApply}
               requiredModule="rbac"
+              hideBottomBorder
             />
           </div>
 

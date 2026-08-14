@@ -4,7 +4,6 @@ import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdDelete, MdRefresh, MdReplay } from "react-icons/md";
-import Loader from "../../../components/Loader/Loader";
 import Input from "../../../components/Atoms/Input/Input";
 import {
   ConfirmModal,
@@ -203,19 +202,16 @@ const DeadLetterQueue = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
+      <DataTable
           columns={COLUMNS}
           data={payload.list}
           total={payload.total}
           listPage={list}
+          loading={loading}
+          searchPlaceholder="Search failed events…"
+          filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
           emptyMessage="No dead letter events"
-        />
-      )}
+      />
 
       <ConfirmModal
         isOpen={confirm.open}
