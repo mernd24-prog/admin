@@ -28,6 +28,9 @@ const DEFAULT_SETTINGS = {
     gateway: "razorpay",
     gatewayFeePolicy: "platform_absorbs",
     refundPolicy: "manual_review",
+    cancellationRefundMode: "manual_after_approval",
+    returnRefundMode: "manual_after_qc",
+    refundDestination: "original_payment_method",
   },
   wallet: {
     partialPaymentMode: "user_opt_in",
@@ -869,28 +872,48 @@ export default function CommerceSettings() {
             />
 
             <FilterSelect
-              label="Refund Policy"
+              label="Cancellation Refund Mode"
               options={[
-                option("manual_review", "Manual review"),
-                option("auto_after_return", "Auto after return"),
-                option("instant_wallet", "Instant wallet"),
-                option("gateway_original", "Gateway original"),
+                option("manual_after_approval", "Manual after cancellation approval"),
+                option("automatic_after_approval", "Automatic after cancellation approval"),
               ]}
-              value={
-                [
-                  option("manual_review", "Manual review"),
-                  option("auto_after_return", "Auto after return"),
-                  option("instant_wallet", "Instant wallet"),
-                  option("gateway_original", "Gateway original"),
-                ].find(
-                  (item) => item.value === settings.payments.refundPolicy,
-                ) || null
-              }
-              onChange={(selected) =>
-                patchSettings("payments", {
-                  refundPolicy: selected?.value ?? "",
-                })
-              }
+              value={[
+                option("manual_after_approval", "Manual after cancellation approval"),
+                option("automatic_after_approval", "Automatic after cancellation approval"),
+              ].find((item) => item.value === settings.payments.cancellationRefundMode) || null}
+              onChange={(selected) => patchSettings("payments", {
+                cancellationRefundMode: selected?.value || "manual_after_approval",
+              })}
+            />
+
+            <FilterSelect
+              label="Return Refund Mode"
+              options={[
+                option("manual_after_qc", "Manual after return QC"),
+                option("automatic_after_qc", "Automatic after return QC"),
+              ]}
+              value={[
+                option("manual_after_qc", "Manual after return QC"),
+                option("automatic_after_qc", "Automatic after return QC"),
+              ].find((item) => item.value === settings.payments.returnRefundMode) || null}
+              onChange={(selected) => patchSettings("payments", {
+                returnRefundMode: selected?.value || "manual_after_qc",
+              })}
+            />
+
+            <FilterSelect
+              label="Refund Destination"
+              options={[
+                option("original_payment_method", "Original payment method"),
+                option("wallet", "Customer wallet"),
+              ]}
+              value={[
+                option("original_payment_method", "Original payment method"),
+                option("wallet", "Customer wallet"),
+              ].find((item) => item.value === settings.payments.refundDestination) || null}
+              onChange={(selected) => patchSettings("payments", {
+                refundDestination: selected?.value || "original_payment_method",
+              })}
             />
 
             <FilterSelect

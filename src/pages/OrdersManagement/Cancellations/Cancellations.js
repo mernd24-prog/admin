@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdReplay, MdVisibility, MdPayment } from "react-icons/md";
+import { MdCancel, MdCheckCircle, MdReplay, MdVisibility, MdPayment } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 // import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
@@ -19,21 +19,27 @@ import {
 import {
   getCancellationList,
   retryCancellation,
+  approveCancellation,
+  rejectCancellation,
+  approveCancellationRefund,
   completeCancellationRefund,
 } from "../../../Redux/orderSlice";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
-import { useNavigate } from "react-router";
 
 const STATUSES = [
+  "requested",
+  "approved",
   "processing",
   "refund_pending",
   "manual_review",
   "completed",
   "failed",
+  "rejected",
 ];
 const REFUND_STATUSES = [
+  "not_started",
   "not_required",
   "pending",
   "provider_pending",
@@ -46,11 +52,14 @@ const getInitialQuery = (key) =>
   new URLSearchParams(window.location.search).get(key) || "";
 
 const STATUS_COLOR = {
+  requested: "yellow",
+  approved: "blue",
   processing: "blue",
   refund_pending: "yellow",
   manual_review: "orange",
   completed: "green",
   failed: "red",
+  rejected: "red",
 };
 
 const FILTER_FIELDS = [
@@ -138,8 +147,10 @@ const normalizeCancellation = (row = {}) => {
     shipmentStatus: row.shipmentStatus || row.shipment_status,
     financeStatus: row.financeStatus || row.finance_status,
     requestedByRole: row.requestedByRole || row.requested_by_role,
+    refundDestination: row.refundDestination || row.metadata?.refundDestination || "original_payment_method",
     createdAt: row.createdAt || row.created_at,
     sellerScoped: Boolean(row.sellerScoped ?? row.seller_scoped),
+    sellerCanReview: Boolean(row.sellerCanReview ?? row.seller_can_review),
     sellerCancelledValue: items.reduce(
       (sum, item) =>
         sum +
@@ -159,6 +170,8 @@ const normalizeCancellation = (row = {}) => {
 };
 
 const refundSource = (row = {}) => {
+  if (row.status === "requested") return "Awaiting cancellation approval";
+  if (row.status === "rejected") return "No refund — request rejected";
   if (row.sellerScoped)
     return row.refundStatus === "not_required"
       ? "No customer refund required"
@@ -182,7 +195,6 @@ const refundSource = (row = {}) => {
 };
 
 const Cancellations = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const selector = useSelector((s) => s.order);
@@ -212,6 +224,9 @@ const Cancellations = () => {
     proofUrl: "",
     note: "",
   });
+  const [approveRefund, setApproveRefund] = useState({ open: false, item: null, note: "" });
+  const [approveRequest, setApproveRequest] = useState({ open: false, item: null, note: "" });
+  const [rejectRequest, setRejectRequest] = useState({ open: false, item: null, reason: "" });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchCancellations = useCallback(async () => {
@@ -297,6 +312,63 @@ const Cancellations = () => {
     }
   }, [isSeller, manualRefund, dispatch, fetchCancellations]);
 
+  const handleApproveRefund = useCallback(async () => {
+    if (isSeller || !approveRefund.item) return;
+    try {
+      setActionLoading(true);
+      await dispatch(approveCancellationRefund({
+        cancellationId: approveRefund.item._id || approveRefund.item.id,
+        note: approveRefund.note,
+      })).unwrap();
+      toast.success("Refund approved and submitted for processing");
+      setApproveRefund({ open: false, item: null, note: "" });
+      fetchCancellations();
+    } catch (err) {
+      toast.error(err?.message || "Refund approval failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [isSeller, approveRefund, dispatch, fetchCancellations]);
+
+  const handleApproveRequest = useCallback(async () => {
+    if (!approveRequest.item) return;
+    try {
+      setActionLoading(true);
+      await dispatch(approveCancellation({
+        cancellationId: approveRequest.item._id || approveRequest.item.id,
+        note: approveRequest.note,
+      })).unwrap();
+      toast.success("Selected item quantity cancellation approved");
+      setApproveRequest({ open: false, item: null, note: "" });
+      fetchCancellations();
+    } catch (err) {
+      toast.error(err?.message || "Cancellation approval failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [approveRequest, dispatch, fetchCancellations]);
+
+  const handleRejectRequest = useCallback(async () => {
+    if (!rejectRequest.item || rejectRequest.reason.trim().length < 3) {
+      toast.error("Rejection reason is required");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await dispatch(rejectCancellation({
+        cancellationId: rejectRequest.item._id || rejectRequest.item.id,
+        reason: rejectRequest.reason.trim(),
+      })).unwrap();
+      toast.success("Cancellation request rejected");
+      setRejectRequest({ open: false, item: null, reason: "" });
+      fetchCancellations();
+    } catch (err) {
+      toast.error(err?.message || "Cancellation rejection failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [rejectRequest, dispatch, fetchCancellations]);
+
   const COLUMNS = [
     {
       key: "cancellationNumber",
@@ -354,7 +426,11 @@ const Cancellations = () => {
             <div className="font-medium text-gray-800">{money(v)}</div>
           )}
           <div className="text-gray-500">
-            {row.sellerFinanceAdjustments.length
+            {row.status === "requested"
+              ? "Pending approval — no adjustment"
+              : row.status === "rejected"
+                ? "No adjustment — request rejected"
+                : row.sellerFinanceAdjustments.length
               ? "Recovered from settlement"
               : [
                     "pending_payment",
@@ -395,7 +471,7 @@ const Cancellations = () => {
         subtitle={
           isSeller
             ? "View cancellations and settlement impact for only your products."
-            : "Manage complete order cancellations and customer refunds"
+            : "Manage full-order and item/quantity cancellations and customer refunds"
         }
         breadcrumbs={[
           { label: isSeller ? "Seller Orders" : "Returns & Cancellations" },
@@ -428,6 +504,23 @@ const Cancellations = () => {
               },
             ];
 
+            if (row.status === "requested" && (!isSeller || row.sellerCanReview)) {
+              actions.push({
+                label: "Approve Cancellation",
+                icon: <MdCheckCircle size={16} className="text-blue-600" />,
+                requiredModule: "orders",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () => setApproveRequest({ open: true, item: row, note: "" }),
+              });
+              actions.push({
+                label: "Reject Cancellation",
+                icon: <MdCancel size={16} className="text-red-600" />,
+                requiredModule: "orders",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () => setRejectRequest({ open: true, item: row, reason: "" }),
+              });
+            }
+
             if (
               !isSeller &&
               ["refund_pending", "failed"].includes(row.status)
@@ -447,20 +540,29 @@ const Cancellations = () => {
             }
 
             if (!isSeller && row.status === "manual_review") {
-              actions.push({
-                label: "Complete Manual Refund",
-                icon: <MdPayment size={16} className="text-green-600" />,
+              if (row.paymentProvider === "razorpay" || row.providerRefundAmount <= 0) actions.push({
+                label: "Approve Refund",
+                icon: <MdCheckCircle size={16} className="text-blue-600" />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
-                onClick: () =>
-                  setManualRefund({
-                    open: true,
-                    item: row,
-                    referenceId: "",
-                    proofUrl: "",
-                    note: "",
-                  }),
+                onClick: () => setApproveRefund({ open: true, item: row, note: "" }),
               });
+              if (row.providerRefundAmount > 0 && row.paymentProvider !== "razorpay") {
+                actions.push({
+                  label: "Complete Manual Refund",
+                  icon: <MdPayment size={16} className="text-green-600" />,
+                  requiredModule: "orders",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () =>
+                    setManualRefund({
+                      open: true,
+                      item: row,
+                      referenceId: "",
+                      proofUrl: "",
+                      note: "",
+                    }),
+                });
+              }
             }
 
             return actions;
@@ -476,6 +578,11 @@ const Cancellations = () => {
       >
         {detail && (
           <div className="p-4 space-y-3 text-sm">
+            {isSeller && detail.status === "requested" && !detail.sellerCanReview && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                This request contains products from multiple sellers. Only an admin can approve or reject the combined request.
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-gray-500">Cancellation #</p>
@@ -549,7 +656,9 @@ const Cancellations = () => {
             </div>
             <div className="border-t border-gray-100 pt-3">
               <p className="mb-2 font-semibold text-gray-800">
-                {isSeller ? "My cancelled items" : "Cancelled items"}
+                {detail.status === "requested"
+                  ? (isSeller ? "My requested items" : "Requested items and quantities")
+                  : (isSeller ? "My cancelled items" : "Cancelled items")}
               </p>
               <div className="space-y-2">
                 {(detail.items || []).map((item) => (
@@ -594,6 +703,58 @@ const Cancellations = () => {
           </div>
         )}
       </DefaultModal>
+
+      {/* Cancellation approval */}
+      <ConfirmModal
+        isOpen={approveRequest.open}
+        title="Approve item cancellation"
+        description="Approve cancellation of the selected item quantities? Refund processing starts only after this approval."
+        onConfirm={handleApproveRequest}
+        onCancel={() => setApproveRequest({ open: false, item: null, note: "" })}
+        loading={actionLoading}
+        confirmLabel="Approve Cancellation"
+      >
+        <div className="mt-3">
+          <Input
+            label="Approval note (optional)"
+            value={approveRequest.note}
+            onChange={(e) => setApproveRequest((p) => ({ ...p, note: e.target.value }))}
+          />
+        </div>
+      </ConfirmModal>
+
+      <ConfirmModal
+        isOpen={rejectRequest.open}
+        title="Reject item cancellation"
+        description="Reject the selected item and quantity cancellation request? No refund will be initiated."
+        onConfirm={handleRejectRequest}
+        onCancel={() => setRejectRequest({ open: false, item: null, reason: "" })}
+        loading={actionLoading}
+        confirmLabel="Reject Cancellation"
+      >
+        <div className="mt-3">
+          <Input
+            label="Rejection reason *"
+            value={rejectRequest.reason}
+            onChange={(e) => setRejectRequest((p) => ({ ...p, reason: e.target.value }))}
+          />
+        </div>
+      </ConfirmModal>
+
+      {/* Refund approval */}
+      <ConfirmModal
+        isOpen={approveRefund.open}
+        title="Approve cancellation refund"
+        description={`Approve the ${approveRefund.item?.scope === "partial" ? "selected item/quantity" : "full order"} refund and submit the eligible amount to Razorpay?`}
+        onConfirm={handleApproveRefund}
+        onCancel={() => setApproveRefund({ open: false, item: null, note: "" })}
+        loading={actionLoading}
+        confirmLabel="Approve Refund"
+      >
+        <div className="mt-3">
+          <Input label="Approval note (optional)" value={approveRefund.note} onChange={(e) => setApproveRefund((p) => ({ ...p, note: e.target.value }))} />
+        </div>
+      </ConfirmModal>
 
       {/* Retry confirm */}
       <ConfirmModal

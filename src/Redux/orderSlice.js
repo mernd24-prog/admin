@@ -61,7 +61,7 @@ const toCancellationListParams = (params = {}) => {
 const initialState = {
     getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
     orderCancelData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
-    , cancellationListData: {}, retryCancellationData: {}, completeCancellationRefundData: {}
+    , cancellationListData: {}, retryCancellationData: {}, approveCancellationData: {}, rejectCancellationData: {}, approveCancellationRefundData: {}, completeCancellationRefundData: {}
 
 }
 
@@ -100,6 +100,15 @@ export const getCancellationList = createApiThunkPrivate('getCancellationList', 
 export const retryCancellation = createApiThunkPrivate('retryCancellation', (payload) => ENDPOINTS.cancellations.retry(payload.cancellationId || payload.id), 'POST', false, {
     transformBody: (payload = {}) => ({ note: payload.note || "" }),
 })
+export const approveCancellation = createApiThunkPrivate('approveCancellation', (payload) => ENDPOINTS.cancellations.approve(payload.cancellationId || payload.id), 'POST', false, {
+    transformBody: (payload = {}) => ({ note: payload.note || "" }),
+})
+export const rejectCancellation = createApiThunkPrivate('rejectCancellation', (payload) => ENDPOINTS.cancellations.reject(payload.cancellationId || payload.id), 'POST', false, {
+    transformBody: (payload = {}) => ({ reason: payload.reason || "" }),
+})
+export const approveCancellationRefund = createApiThunkPrivate('approveCancellationRefund', (payload) => ENDPOINTS.cancellations.approveRefund(payload.cancellationId || payload.id), 'POST', false, {
+    transformBody: (payload = {}) => ({ note: payload.note || "" }),
+})
 export const completeCancellationRefund = createApiThunkPrivate('completeCancellationRefund', (payload) => ENDPOINTS.cancellations.manualRefund(payload.cancellationId || payload.id), 'POST', false, {
     transformBody: (payload = {}) => ({ referenceId: payload.referenceId, proofUrl: payload.proofUrl || null, note: payload.note || "" }),
 })
@@ -128,6 +137,9 @@ createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
         createExtraReducersForThunk(builder, addOrderNote, 'addOrderNoteData')
         createExtraReducersForThunk(builder, getCancellationList, 'cancellationListData')
         createExtraReducersForThunk(builder, retryCancellation, 'retryCancellationData')
+        createExtraReducersForThunk(builder, approveCancellation, 'approveCancellationData')
+        createExtraReducersForThunk(builder, rejectCancellation, 'rejectCancellationData')
+        createExtraReducersForThunk(builder, approveCancellationRefund, 'approveCancellationRefundData')
         createExtraReducersForThunk(builder, completeCancellationRefund, 'completeCancellationRefundData')
 
 

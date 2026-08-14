@@ -56,6 +56,16 @@ const ALLOWED_TRANSITIONS = {
 };
 
 const ADMIN_ORDER_ROLES = new Set(["super-admin", "admin", "sub-admin", "super_admin", "sub_admin"]);
+const PAYMENT_REQUIRED_STATUSES = new Set([
+  "confirmed",
+  "processing",
+  "packed",
+  "ready_to_ship",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "fulfilled",
+]);
 const ORDER_STATUS_VALUES = [...new Set([
   ...Object.keys(ALLOWED_TRANSITIONS),
   ...Object.values(ALLOWED_TRANSITIONS).flat(),
@@ -79,6 +89,14 @@ const normalizeStatusKey = (status = "") =>
     .trim()
     .toLowerCase()
     .replace(/[-\s]+/g, "_")] ||
+  String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+
+// Payment values must not pass through STATUS_ALIASES: for example, that map
+// intentionally turns `captured` into the order status `confirmed`.
+const normalizePaymentStatusKey = (status = "") =>
   String(status || "")
     .trim()
     .toLowerCase()
@@ -1304,6 +1322,10 @@ const OrderSummary = () => {
 
   const order = state.orderInfo || {};
   const orderId = getOrderId(order);
+  const orderPaymentStatus = normalizePaymentStatusKey(firstDefined(order.payment_status, order.paymentStatus));
+  const orderPaymentProvider = normalizePaymentStatusKey(firstDefined(order.payment_provider, order.paymentProvider));
+  const paidForFulfillment = orderPaymentStatus === "captured" ||
+    (orderPaymentProvider === "cod" && orderPaymentStatus === "authorized");
   const handleDownloadBoxLabel = useCallback(async (shipment) => {
     const shipmentId = shipment?.id || shipment?._id || shipment?.shipment_id || shipment?.shipmentId;
     if (!orderId || !shipmentId) {
@@ -1419,21 +1441,41 @@ const OrderSummary = () => {
       : ALLOWED_TRANSITIONS[currentStatus] || [];
     const normalizedRole = normalizeStatusKey(role).replace(/_/g, "-");
     const isAdminOrderManager = isSuperAdmin || isAdmin || ADMIN_ORDER_ROLES.has(normalizedRole);
+    const paymentStatus = normalizePaymentStatusKey(firstDefined(order.payment_status, order.paymentStatus));
+    const paymentProvider = normalizePaymentStatusKey(firstDefined(order.payment_provider, order.paymentProvider));
+    const paidForFulfillment = paymentStatus === "captured" ||
+      (paymentProvider === "cod" && paymentStatus === "authorized");
     const filteredNext = validNext
       .filter((s) => {
+        if (!paidForFulfillment && PAYMENT_REQUIRED_STATUSES.has(s)) return false;
         if (isAdminOrderManager) return true;
         return true;
       });
-    const fallbackNext = ORDER_STATUS_VALUES.filter((status) => status !== currentStatus);
-    const transitionOptions = (filteredNext.length ? filteredNext : fallbackNext).map(toOption);
+    const fallbackNext = ORDER_STATUS_VALUES.filter((status) =>
+      status !== currentStatus && (paidForFulfillment || !PAYMENT_REQUIRED_STATUSES.has(status))
+    );
+    const transitionOptions = (validNext.length ? filteredNext : fallbackNext).map(toOption);
 
     return [...new Map(transitionOptions.map((option) => [option.value, option])).values()];
-  }, [order, order.status, order.order_status, isSeller, isAdmin, isSuperAdmin, role]);
+  }, [order, order.status, order.order_status, order.payment_status, order.paymentStatus, order.payment_provider, order.paymentProvider, isSeller, isAdmin, isSuperAdmin, role]);
 
   const openStatusModal = useCallback(() => {
     setFormData((prev) => ({ ...prev, status: "", cancelItems: {} }));
     setState((prev) => ({ ...prev, statusModal: true }));
   }, []);
+
+  const openSellerCancellationModal = useCallback(() => {
+    setFormData((prev) => ({
+      ...prev,
+      status: "cancelled",
+      reasonCode: "inventory_unavailable",
+      refundMethod: "auto",
+      cancelItems: Object.fromEntries(items
+        .map((item) => [String(item.id), Number(item.quantity || 0) - Number(item.cancelled_quantity || 0)])
+        .filter(([, quantity]) => quantity > 0)),
+    }));
+    setState((prev) => ({ ...prev, statusModal: true }));
+  }, [items]);
 
   const handleStatusSubmit = useCallback(async () => {
     if (!formData.status) {
@@ -1533,7 +1575,7 @@ const OrderSummary = () => {
                   <FaRegNoteSticky /> Add Note
               </button>
             </PermissionGuard>
-            {orderId && (
+            {orderId && paidForFulfillment && (
               <button
                 type="button"
                 onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`)}
@@ -1550,6 +1592,11 @@ const OrderSummary = () => {
                   <FaFile /> Update Status
                 </button>
               </PermissionGuard>
+            )}
+            {isSeller && items.some((item) => Number(item.quantity || 0) > Number(item.cancelled_quantity || 0)) && (
+              <button type="button" onClick={openSellerCancellationModal}>
+                <FaFile /> Cancel Items
+              </button>
             )}
             </>
           )}
@@ -1629,13 +1676,19 @@ const OrderSummary = () => {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]"
-                      onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&sellerId=${encodeURIComponent(group.sellerId || "")}`)}
-                    >
-                      Manage Shipment
-                    </button>
+                    {paidForFulfillment ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-medium text-[#2f6fed] hover:bg-[#f3f6ff]"
+                        onClick={() => navigate(`/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}&sellerId=${encodeURIComponent(group.sellerId || "")}`)}
+                      >
+                        Manage Shipment
+                      </button>
+                    ) : (
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
+                        Awaiting Payment
+                      </span>
+                    )}
                     <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#202337] ring-1 ring-[#eadfbd]">
                       {group.items.length} item{group.items.length === 1 ? "" : "s"}
                     </span>
@@ -2307,12 +2360,12 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title="Administrative Status Override" onSubmit={handleStatusSubmit} loading={state.isLoading}>
+      <DefaultModal isOpen={state.statusModal} onClose={() => setState((prev) => ({ ...prev, statusModal: false }))} title={isSeller ? "Cancel My Items" : "Administrative Status Override"} onSubmit={handleStatusSubmit} loading={state.isLoading}>
         <div className="space-y-4">
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          {!isSeller && <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             Use this only for exceptional order corrections. Delivery changes must be made through Shipment Management.
-          </div>
-          <FilterSelect
+          </div>}
+          {!isSeller && <FilterSelect
             options={statusOptions}
             value={statusOptions.find((opt) => opt.value === formData.status) || null}
             onChange={(option) => {
@@ -2326,7 +2379,7 @@ const OrderSummary = () => {
             }}
             label="Status"
             placeholder="Select Status"
-          />
+          />}
           {["ready_to_ship", "shipped", "out_for_delivery"].includes(formData.status) && (
             <div className="rounded-md border border-[#e0ecff] bg-[#f0f6ff] p-3 space-y-3">
               <p className="text-xs font-semibold text-[#2f6fed]">Shipment Details</p>

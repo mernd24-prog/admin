@@ -184,7 +184,10 @@ export const ENDPOINTS = {
   cancellations: {
     list: "/cancellations",
     detail: (cancellationId) => `/cancellations/${cancellationId}`,
+    approve: (cancellationId) => `/cancellations/${cancellationId}/approve`,
+    reject: (cancellationId) => `/cancellations/${cancellationId}/reject`,
     retry: (cancellationId) => `/cancellations/${cancellationId}/retry`,
+    approveRefund: (cancellationId) => `/cancellations/${cancellationId}/approve-refund`,
     manualRefund: (cancellationId) => `/cancellations/${cancellationId}/manual-refund`,
   },
   carts: {

@@ -299,9 +299,13 @@ const ShipmentTracking = () => {
     reason: "",
   });
   const [lastCancellation, setLastCancellation] = useState(null);
+  const selectedPaymentStatus = String(selectedShipment?.payment_status || selectedShipment?.paymentStatus || "").toLowerCase();
+  const selectedPaymentProvider = String(selectedShipment?.payment_provider || selectedShipment?.paymentProvider || "").toLowerCase();
+  const selectedShipmentPaid = selectedPaymentStatus === "captured" ||
+    (selectedPaymentProvider === "cod" && selectedPaymentStatus === "authorized");
   const trackingActionOptions = useMemo(
-    () => getTrackingActionOptions(selectedShipment?.status || "initiated"),
-    [selectedShipment?.status],
+    () => selectedShipmentPaid ? getTrackingActionOptions(selectedShipment?.status || "initiated") : [],
+    [selectedShipment?.status, selectedShipmentPaid],
   );
   const filterFields = useMemo(
     () =>
@@ -1143,7 +1147,14 @@ const ShipmentTracking = () => {
               </div>
             ) : (
               <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                {isSeller &&
+                {!selectedShipmentPaid ? (
+                  <div>
+                    <div className="font-semibold text-amber-800">Awaiting payment</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Shipment processing is locked until online payment is captured or COD is authorized.
+                    </div>
+                  </div>
+                ) : isSeller &&
                 selectedShipment?.status === "cancelled" &&
                 String(
                   lastCancellation?.order_id || lastCancellation?.orderId || "",
