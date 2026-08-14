@@ -783,7 +783,7 @@ const SellerUsers = () => {
           )}
         </div>
 
-        <div className="mb-4 flex gap-0 border-b border-gray-200">
+        <div className="mb-4 flex flex-wrap gap-2">
           {[
             { key: "sellers", label: "Sellers" },
             { key: "seller-admins", label: "Seller Admins" },
@@ -796,10 +796,10 @@ const SellerUsers = () => {
                 setTab(item.key);
                 setPage(1);
               }}
-              className={`-mb-px border-b-2 px-5 py-2.5 text-sm font-medium transition-colors ${
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                 tab === item.key
-                  ? "border-[var(--admin-blue)] text-[var(--admin-blue)]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "bg-[var(--admin-navy)] text-white"
+                  : "border border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
               {item.label}
@@ -808,7 +808,7 @@ const SellerUsers = () => {
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="border-b p-3">
+          <div className="p-3">
             <SearchComponent
               isSearchShow={true}
               filters={filters}
@@ -816,6 +816,7 @@ const SellerUsers = () => {
               placeholder={`Search ${tab.replace(/-/g, " ")}...`}
               handleSearchRemove={() => setFilters({ search: "" })}
               applyFilters={() => setPage(1)}
+              hideBottomBorder
             />
           </div>
           <TableData

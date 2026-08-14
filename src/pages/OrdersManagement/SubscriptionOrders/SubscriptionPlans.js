@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdDelete, MdEdit, MdRefresh } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import {
@@ -276,25 +275,22 @@ const SubscriptionPlans = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
         </div>
       )}
 
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
+      <DataTable
           columns={COLUMNS}
           data={payload.list}
           total={payload.total}
           listPage={list}
+          loading={loading}
+          searchPlaceholder="Search subscription plans…"
+          filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
           emptyMessage="No subscription plans found"
-        />
-      )}
+      />
 
       {/* Create / Edit modal */}
       <DefaultModal

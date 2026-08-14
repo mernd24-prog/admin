@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdRefresh } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import {
@@ -262,19 +261,16 @@ const Webhooks = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
+      <DataTable
           columns={COLUMNS}
           data={payload.list}
           total={payload.total}
           listPage={list}
+          loading={loading}
+          searchPlaceholder="Search webhooks…"
+          filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
           emptyMessage="No webhooks configured"
-        />
-      )}
+      />
 
       <DefaultModal
         isOpen={showCreate}

@@ -182,8 +182,6 @@ const Chargebacks = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
@@ -196,6 +194,8 @@ const Chargebacks = () => {
         total={payload.total}
         listPage={list}
         loading={loading}
+        searchPlaceholder="Search chargebacks…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
         emptyMessage="No chargebacks found"
       />
 

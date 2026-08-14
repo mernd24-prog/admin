@@ -230,13 +230,14 @@ const FraudCases = () => {
           </button>
         }
       />
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
       <DataTable
         columns={COLUMNS}
         data={payload.list}
         total={payload.total}
         listPage={list}
         loading={loading}
+        searchPlaceholder="Search fraud cases…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
         emptyMessage="No fraud cases found"
       />
 
