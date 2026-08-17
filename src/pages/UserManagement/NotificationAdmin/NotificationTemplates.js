@@ -168,15 +168,16 @@ const NotificationTemplates = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Notifications"
         subtitle="Send and manage admin notifications"
+        breadcrumbs={[{ label: "User Management" }, { label: "Notifications" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchNotifications}>
+            {/* <button onClick={fetchNotifications}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <button onClick={() => setShowSend(true)}>
               <MdAdd size={16} /> Send Notification
             </button>

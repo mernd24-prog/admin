@@ -234,15 +234,16 @@ const ApiKeys = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="API Keys"
         subtitle="Manage API keys for platform integrations"
+        breadcrumbs={[{ label: "Settings" }, { label: "API Keys" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchKeys}>
+            {/* <button onClick={fetchKeys}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
               <button onClick={() => setShowCreate(true)}>
                 <MdAdd size={16} /> New Key
@@ -252,7 +253,7 @@ const ApiKeys = () => {
         }
       />
 
-      <FilterBar fields={FILTER_FIELDS} listPage={list} />
+    
 
       <DataTable
         columns={COLUMNS}
@@ -261,6 +262,7 @@ const ApiKeys = () => {
         listPage={list}
         loading={loading}
         emptyMessage="No API keys found"
+        filterBar={  <FilterBar fields={FILTER_FIELDS} listPage={list} />}
       />
 
       {/* Create modal */}

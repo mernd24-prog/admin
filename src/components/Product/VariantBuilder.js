@@ -1037,18 +1037,18 @@ const VariantBuilder = ({
                       <div className="space-y-1">
                         <FieldLabel>Sort Order</FieldLabel>
                         <SmallInput
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={variant.sortOrder ?? ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const digitsOnly = e.target.value.replace(/\D/g, "");
                             updateVariant(
                               idx,
                               "sortOrder",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              digitsOnly === "" ? "" : Number(digitsOnly),
+                            );
+                          }}
                         />
                       </div>
                     </div>

@@ -1154,15 +1154,16 @@ const DealManagement = () => {
   );
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5">
       <PageHeader
         title="Deal Product Management"
         subtitle="Convert existing products into temporary deals without changing Product Master pricing"
+        breadcrumbs={[{ label: "Marketing" }, { label: "Deal Management" }]}
         actions={
           <>
-            <button onClick={fetchDeals}>
+            {/* <button onClick={fetchDeals}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <PermissionGuard module="deals" action={ACTIONS.CREATE} hide>
               <button
                 onClick={() =>

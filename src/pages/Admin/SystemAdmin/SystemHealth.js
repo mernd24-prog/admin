@@ -101,9 +101,10 @@ const SystemHealth = () => {
   const serviceCount = Object.keys(services).length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="System Health"
+        breadcrumbs={[{ label: "Settings" }, { label: "System Health" }]}
         subtitle={
           lastRefreshed
             ? `Last refreshed ${moment(lastRefreshed).format("h:mm:ss A")}`

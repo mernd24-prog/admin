@@ -19,6 +19,7 @@ import {
   DataTable,
   FilterBar,
   PageHeader,
+  SellerLink,
   StatusBadge,
 } from "../../components/Shared";
 import Loader from "../../components/Loader/Loader";
@@ -1071,7 +1072,12 @@ const Inventory = () => {
           {
             key: "seller",
             label: "Seller",
-            render: (_, row) => sellerLabel(row),
+            render: (_, row) => (
+              <SellerLink
+                sellerId={row.sellerId || row.seller_id || row.seller?.id || row.seller?._id}
+                sellerName={sellerLabel(row)}
+              />
+            ),
           },
         ]
       : []),

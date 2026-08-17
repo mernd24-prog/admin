@@ -37,6 +37,7 @@ import {
   OrderLink,
   PageHeader,
   StatusBadge,
+  UserLink,
 } from "../../../components/Shared";
 import {
   approveReturn,
@@ -902,7 +903,10 @@ const Returns = () => {
           return (
             <div>
               {name && (
-                <div className="text-sm font-medium text-gray-800">{name}</div>
+                <UserLink
+                  userId={value || row.buyer_id || row.buyer?.id || row.buyer?._id}
+                  userName={name}
+                />
               )}
               {email && !name && (
                 <div className="text-sm text-gray-700">{email}</div>

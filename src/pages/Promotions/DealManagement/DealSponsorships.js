@@ -4,10 +4,11 @@ import { PageHeader } from "../../../components/Shared";
 
 const DealSponsorships = () => {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Deal Sponsorships"
         subtitle="Manage sponsored placement deals and brand partnerships"
+        breadcrumbs={[{ label: "Marketing" }, { label: "Deal Sponsorships" }]}
       />
 
       <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">

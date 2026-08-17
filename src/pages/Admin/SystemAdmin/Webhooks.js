@@ -243,15 +243,16 @@ const Webhooks = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Webhooks"
         subtitle="Manage outbound webhook endpoints"
+        breadcrumbs={[{ label: "Settings" }, { label: "Webhooks" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchWebhooks}>
+            {/* <button onClick={fetchWebhooks}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
               <button onClick={() => setShowCreate(true)}>
                 <MdAdd size={16} /> Add Webhook

@@ -552,7 +552,7 @@ const Badges = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Badges"
         subtitle="Manage product, seller, and buyer badges shown on the storefront"

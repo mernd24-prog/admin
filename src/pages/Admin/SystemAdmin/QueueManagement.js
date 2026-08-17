@@ -117,15 +117,16 @@ const QueueManagement = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Queue Management"
         subtitle="Monitor and control background job queues"
-        actions={
-          <button onClick={fetchQueues}>
-            <MdRefresh size={16} /> Refresh
-          </button>
-        }
+        breadcrumbs={[{ label: "Settings" }, { label: "Queue Management" }]}
+        // actions={
+        //   <button onClick={fetchQueues}>
+        //     <MdRefresh size={16} /> Refresh
+        //   </button>
+        // }
       />
 
       {loading ? (

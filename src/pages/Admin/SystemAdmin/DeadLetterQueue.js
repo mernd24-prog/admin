@@ -191,15 +191,16 @@ const DeadLetterQueue = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Dead Letter Queue"
         subtitle="Failed events that could not be processed"
-        actions={
-          <button onClick={fetchEvents}>
-            <MdRefresh size={16} /> Refresh
-          </button>
-        }
+        breadcrumbs={[{ label: "Settings" }, { label: "Dead Letter Queue" }]}
+        // actions={
+        //   <button onClick={fetchEvents}>
+        //     <MdRefresh size={16} /> Refresh
+        //   </button>
+        // }
       />
 
       <DataTable

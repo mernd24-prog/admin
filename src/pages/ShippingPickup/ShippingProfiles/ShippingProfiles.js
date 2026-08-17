@@ -25,6 +25,7 @@ import {
   DataTable,
   FilterBar,
   PageHeader,
+  SellerLink,
   StatusBadge,
   SummaryCard,
 } from "../../../components/Shared";
@@ -1711,17 +1712,10 @@ export default function ShippingProfiles() {
         render: (_, row) => {
           const seller = sellerDetails(row);
           return (
-            <button
-              type="button"
+            <SellerLink
+              sellerId={seller.id}
+              sellerName={seller.name}
               className="group flex min-w-[160px] items-center gap-2 text-left"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (seller.id) navigate(`/app/seller/view/${seller.id}`);
-              }}
-              disabled={!seller.id}
-              title={
-                seller.id ? "View seller profile" : "Seller profile unavailable"
-              }
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--admin-line)] bg-[var(--admin-gold)]/10 text-xs font-bold text-[var(--admin-gold)]">
                 {seller.avatarUrl ? (
@@ -1744,7 +1738,7 @@ export default function ShippingProfiles() {
                   </span>
                 )}
               </span>
-            </button>
+            </SellerLink>
           );
         },
       },
