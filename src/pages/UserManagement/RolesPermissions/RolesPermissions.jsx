@@ -461,7 +461,7 @@ const RolesPermissions = () => {
   [matrixState]);
 
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Roles & Permissions"
         subtitle="Set role-wide default permissions and manage custom roles"

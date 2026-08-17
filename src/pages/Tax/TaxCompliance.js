@@ -8,6 +8,7 @@ import {
   FilterBar,
   OrderLink,
   PageHeader,
+  UserLink,
 } from "../../components/Shared";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -276,7 +277,7 @@ const TaxCompliance = () => {
             row.buyer?.full_name ||
             row.buyer?.email;
           return name ? (
-            <span className="text-xs font-medium text-gray-700">{name}</span>
+            <UserLink userId={value || row.buyerId || row.buyer?.id || row.buyer?._id} userName={name} className="text-xs" />
           ) : (
             <span className="font-mono text-xs text-gray-400">
               {value ? `${String(value).slice(0, 10)}…` : "—"}

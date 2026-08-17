@@ -17,6 +17,8 @@ import {
   StatusBadge,
   FilterBar,
   OrderLink,
+  SellerLink,
+  UserLink,
 } from "../../../components/Shared";
 // import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
@@ -361,13 +363,9 @@ const createColumns = (
             );
 
             return canOpenBuyerDetails && buyerId ? (
-              <button
-                type="button"
-                onClick={() => navigate(`/app/users/view/${buyerId}`)}
-                className="text-left hover:underline"
-              >
+              <UserLink userId={buyerId} userName={name || email} className="block text-left">
                 {buyerContent}
-              </button>
+              </UserLink>
             ) : (
               <div className="text-left">{buyerContent}</div>
             );
@@ -426,10 +424,7 @@ const createColumns = (
             ) {
               return <span className="text-gray-400">—</span>;
             }
-            const sellerViewPath =
-              sellerId && canOpenSellerDetails
-                ? `/app/seller/view/${encodeURIComponent(String(sellerId))}`
-                : "";
+            const canLinkSeller = sellerId && canOpenSellerDetails;
             const content = (
               <>
                 <div className="text-sm font-medium text-gray-800">
@@ -438,7 +433,7 @@ const createColumns = (
                 {sellerName && organizationName && (
                   <div className="text-xs text-gray-400">{sellerName}</div>
                 )}
-                {sellerViewPath && (
+                {canLinkSeller && (
                   <div className="text-[11px] font-medium text-[#2f6fed]">
                     View seller
                   </div>
@@ -455,15 +450,10 @@ const createColumns = (
                 )}
               </>
             );
-            return sellerViewPath ? (
-              <button
-                type="button"
-                onClick={() => navigate(sellerViewPath)}
-                className="text-left hover:underline"
-                title={sellerViewPath}
-              >
+            return canLinkSeller ? (
+              <SellerLink sellerId={sellerId} sellerName={sellerName} className="block text-left">
                 {content}
-              </button>
+              </SellerLink>
             ) : (
               <div className="text-left">{content}</div>
             );

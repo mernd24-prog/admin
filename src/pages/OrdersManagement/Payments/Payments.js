@@ -18,6 +18,7 @@ import {
   OrderLink,
   PageHeader,
   StatusBadge,
+  UserLink,
 } from "../../../components/Shared";
 import {
   approvePayment,
@@ -256,9 +257,7 @@ const Payments = () => {
             row.buyer_email;
           return (
             <div>
-              {name && (
-                <div className="text-sm font-medium text-gray-800">{name}</div>
-              )}
+              {name && <UserLink userId={value || row.buyerId || row.buyer?.id || row.buyer?._id} userName={name} />}
               {email && !name && (
                 <div className="text-sm text-gray-700">{email}</div>
               )}

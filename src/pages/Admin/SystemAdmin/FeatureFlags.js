@@ -196,15 +196,16 @@ const FeatureFlags = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Feature Flags"
         subtitle="Toggle platform features and control rollouts"
+        breadcrumbs={[{ label: "Settings" }, { label: "Feature Flags" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchFlags}>
+            {/* <button onClick={fetchFlags}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <PermissionGuard module="platform" action={ACTIONS.CREATE} hide>
               <button onClick={openCreate}>
                 <MdAdd size={16} /> New Flag

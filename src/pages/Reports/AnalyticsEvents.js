@@ -69,6 +69,7 @@ const AnalyticsEvents = () => {
       <PageHeader
         title="Analytics Events"
         subtitle="Recent platform events recorded by the backend"
+        breadcrumbs={[{ label: "Reports & Analytics" }, { label: "Analytics Events" }]}
         count={events.length}
       />
       <DataTable

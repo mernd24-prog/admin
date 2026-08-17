@@ -21,6 +21,7 @@ import {
   FilterBar,
   ConfirmModal,
   BulkActionBar,
+  UserLink,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -479,9 +480,17 @@ const ProductReviews = () => {
               </span>
             )}
             <div className="min-w-0">
-              <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
-                {buyerName}
-              </span>
+              {showBuyerDetails ? (
+                <UserLink
+                  userId={v || row.buyer_id || row.buyer?.id || row.buyer?._id}
+                  userName={buyerName}
+                  className="block max-w-[150px] truncate text-xs"
+                />
+              ) : (
+                <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
+                  {buyerName}
+                </span>
+              )}
               {showBuyerDetails &&
                 row.buyer?.email &&
                 row.buyer.email !== buyerName && (

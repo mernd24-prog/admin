@@ -209,6 +209,7 @@ const ManageCity = () => {
     <div className="space-y-4">
       <PageHeader
         title="City Management"
+        subtitle="Manage cities available across supported states"
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "Cities" }]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>

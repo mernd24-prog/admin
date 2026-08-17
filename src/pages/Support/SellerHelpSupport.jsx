@@ -151,6 +151,7 @@ const SellerHelpSupport = () => {
     <div>
       <PageHeader
         title="Help & Support"
+        breadcrumbs={[{ label: "Support" }, { label: "Help & Support" }]}
         subtitle={
           showQueryForm
             ? "Select a category and tell us how we can help."

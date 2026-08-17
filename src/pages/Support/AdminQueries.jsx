@@ -171,20 +171,21 @@ const AdminQueries = () => {
   ], []);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div>
       <PageHeader
         title="Queries"
         subtitle="Customer and seller support queries are listed separately."
-        actions={
-          <button
-            type="button"
-            className="inline-flex min-h-[38px] items-center gap-2 rounded-md bg-[var(--admin-gold)] px-4 text-sm font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)] disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={fetchQueries}
-            disabled={loading}
-          >
-            <MdRefresh size={18} /> Refresh
-          </button>
-        }
+        breadcrumbs={[{ label: "Support" }, { label: "Queries" }]}
+        // actions={
+        //   <button
+        //     type="button"
+        //     className="inline-flex min-h-[38px] items-center gap-2 rounded-md bg-[var(--admin-gold)] px-4 text-sm font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)] disabled:cursor-not-allowed disabled:opacity-60"
+        //     onClick={fetchQueries}
+        //     disabled={loading}
+        //   >
+        //     <MdRefresh size={18} /> Refresh
+        //   </button>
+        // }
       />
 
       <div className="mb-4 flex flex-wrap gap-2">

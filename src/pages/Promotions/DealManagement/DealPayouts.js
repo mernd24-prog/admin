@@ -11,6 +11,7 @@ import {
   DataTable,
   FilterBar,
   PageHeader,
+  SellerLink,
   StatusBadge,
 } from "../../../components/Shared";
 import {
@@ -197,7 +198,7 @@ const DealPayouts = () => {
           row.seller?.companyName ||
           sellerOptions.find((o) => o.value === v)?.label;
         return name ? (
-          <span className="text-sm font-medium text-gray-700">{name}</span>
+          <SellerLink sellerId={v || row.seller_id || row.seller?.id || row.seller?._id} sellerName={name} />
         ) : (
           <span className="font-mono text-xs text-gray-400">
             {String(v || "—").slice(-8)}
@@ -268,15 +269,16 @@ const DealPayouts = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Deal Payouts"
         subtitle="Generate and process deal seller payouts"
+        breadcrumbs={[{ label: "Marketing" }, { label: "Deal Payouts" }]}
         actions={
           <div className="flex gap-2">
-            <button onClick={fetchPayouts}>
+            {/* <button onClick={fetchPayouts}>
               <MdRefresh size={16} /> Refresh
-            </button>
+            </button> */}
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
               <button onClick={() => setShowGenerate(true)}>
                 <MdAdd size={16} /> Generate Payouts

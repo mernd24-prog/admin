@@ -196,6 +196,7 @@ const ManageState = () => {
     <div className="space-y-4">
       <PageHeader
         title="State Management"
+        subtitle="Manage states available across supported countries"
         breadcrumbs={[{ label: "Home" }, { label: "Settings", to: "/app/setting" }, { label: "States" }]}
         actions={
           <PermissionGuard module={MODULE} action="create" hide>
