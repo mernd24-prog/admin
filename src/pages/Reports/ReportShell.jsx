@@ -1721,7 +1721,6 @@ export const InventoryAnalytics = () => {
       const [stats, products] = await Promise.all([
         fetchJson(ENDPOINTS.products.inventoryStats, dateParams),
         fetchJson(ENDPOINTS.products.listForPanel, {
-          ...dateParams,
           limit: 10,
           page: 1,
           sortBy: "stock",

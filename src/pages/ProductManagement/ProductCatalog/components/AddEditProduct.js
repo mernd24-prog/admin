@@ -17,6 +17,7 @@ import {
 import {
   transformArray,
   uploadFileMulti,
+  uploadVideoFile,
 } from "../../../../_helpers/globalFunctions";
 import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
@@ -247,6 +248,7 @@ export default function ProductManagementUI() {
   const [formData, setFormData] = useState(INITIALS_DATA);
   const [commonImageUrl, setCommonImageUrl] = useState("");
   const [commonImagesUploading, setCommonImagesUploading] = useState(false);
+  const [productVideoUploading, setProductVideoUploading] = useState(false);
   const [options, setVariantRows] = useState([
     {
       sku: "",
@@ -2147,6 +2149,9 @@ export default function ProductManagementUI() {
       commonImages: Array.isArray(updatedFormData.commonImages)
         ? updatedFormData.commonImages.filter(Boolean)
         : [],
+      videos: Array.isArray(updatedFormData.videos)
+        ? updatedFormData.videos.filter(Boolean).slice(0, 1)
+        : [],
       ...(updatedFormData.seo && Object.keys(updatedFormData.seo).length
         ? { seo: updatedFormData.seo }
         : {}),
@@ -2458,6 +2463,34 @@ export default function ProductManagementUI() {
     }));
   };
 
+  const uploadProductVideo = async (file) => {
+    if (!file) return;
+    if (!file.type?.startsWith("video/")) {
+      toast.error("Please upload a valid video file");
+      return;
+    }
+    setProductVideoUploading(true);
+    try {
+      const url = await uploadVideoFile(file, "PRODUCT");
+      setFormData((previous) => ({
+        ...previous,
+        videos: [url],
+      }));
+      toast.success("Product video uploaded");
+    } catch (uploadError) {
+      toast.error(uploadError?.message || uploadError || "Video upload failed");
+    } finally {
+      setProductVideoUploading(false);
+    }
+  };
+
+  const removeProductVideo = () => {
+    setFormData((previous) => ({
+      ...previous,
+      videos: [],
+    }));
+  };
+
   const handleVariantsChange = useCallback((nextVariants) => {
     setVariantsData(nextVariants);
   }, []);
@@ -2693,8 +2726,8 @@ export default function ProductManagementUI() {
       },
       {
         id: "common-images",
-        title: "Catalog Images",
-        description: "Images shown across every product variant.",
+        title: "Media",
+        description: "Images and one product video shown on the customer product page.",
         icon: <BsMenuApp />,
         component: (
           <section
@@ -2704,7 +2737,7 @@ export default function ProductManagementUI() {
             <div>
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold text-[var(--admin-ink)]">
-                  Catalog images
+                  Product view images
                 </h3>
                 <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
                   {(formData.commonImages || []).length}/
@@ -2712,8 +2745,8 @@ export default function ProductManagementUI() {
                 </span>
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Upload shared catalog images such as front, back, packaging,
-                usage, and detail views. They appear for every variant.
+                Upload shared images such as front, back, packaging, usage,
+                and detail views. They appear for every variant.
               </p>
             </div>
 
@@ -2783,6 +2816,62 @@ export default function ProductManagementUI() {
                   <button type="button" className="admin-btn" onClick={addCommonProductImageUrl}>Add image</button>
                 </div>
               )} */}
+
+            <div className="border-t border-gray-100 pt-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">
+                    Product video
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Upload one video for this product. It will be visible on the customer product page.
+                  </p>
+                </div>
+                <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
+                  {(formData.videos || []).filter(Boolean).length}/1
+                </span>
+              </div>
+
+              {(formData.videos || []).filter(Boolean).length ? (
+                <div className="mt-4 max-w-md overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                  <video
+                    src={(formData.videos || []).filter(Boolean)[0]}
+                    className="aspect-video w-full bg-black"
+                    controls
+                    preload="metadata"
+                  />
+                  <div className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="truncate text-xs text-gray-500">
+                      Product video uploaded
+                    </span>
+                    <button
+                      type="button"
+                      onClick={removeProductVideo}
+                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  className={`mt-4 flex h-28 max-w-md cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  <FiPlus size={20} />
+                  <span>{productVideoUploading ? "Uploading video…" : "Upload product video"}</span>
+                  <span className="mt-1 text-xs text-gray-400">MP4, WebM, MOV or OGG</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                    className="hidden"
+                    onChange={(event) => {
+                      uploadProductVideo(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
           </section>
         ),
       },
@@ -3216,6 +3305,7 @@ export default function ProductManagementUI() {
       error,
       commonImageUrl,
       commonImagesUploading,
+      productVideoUploading,
       allowedPincodeInput,
       addProductPincode,
       removeProductPincode,

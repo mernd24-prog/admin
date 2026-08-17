@@ -184,6 +184,33 @@ export const uploadDocumentFile = async (file, moduleName = 'DEFAULT') => {
   }
 };
 
+export const uploadVideoFile = async (file, moduleName = 'DEFAULT') => {
+  if (!file) throw new Error('No file provided');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('module', moduleName);
+  formData.append('type', 'product-video');
+
+  try {
+    const response = await apiRequestImage('POST', '/file-uploader/upload-video', formData);
+    const payload = response?.data || response || {};
+    const videoURL =
+      payload?.videoURL ||
+      payload?.url ||
+      payload?.video?.videoURL ||
+      payload?.video?.url;
+
+    if (!videoURL) {
+      throw new Error("Upload response did not include a video URL");
+    }
+
+    return videoURL;
+  } catch (error) {
+    throw error?.message || 'Upload failed';
+  }
+};
+
 export const uploadCsvFile = async (files) => {
   if (!files) throw new Error('No file provided');
 
