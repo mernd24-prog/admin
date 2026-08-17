@@ -126,6 +126,10 @@ export const ENDPOINTS = {
     list: byPanel("/admin/products", "/products"),
     listForPanel: byPanel("/admin/products", "/products/seller/me"),
     prefill: byPanel("/admin/products/prefill", "/products/prefill"),
+    prefillBasic: byPanel("/admin/products/prefill/basic", "/products/prefill/basic"),
+    prefillLookups: byPanel("/admin/products/prefill/lookups", "/products/prefill/lookups"),
+    prefillLocations: byPanel("/admin/products/prefill/locations", "/products/prefill/locations"),
+    prefillProducts: byPanel("/admin/products/prefill/products", "/products/prefill/products"),
     search: "/products/search",
     sellerMine: "/products/seller/me",
     detail: byPanelFn(

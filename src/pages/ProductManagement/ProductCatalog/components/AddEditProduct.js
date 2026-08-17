@@ -6,6 +6,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   createProducts,
   getProductPrefill,
+  getProductPrefillProducts,
+  getProductPrefillLocations,
   getProductById,
   updateProductsById,
   getCategoryAttributes,
@@ -48,8 +50,8 @@ import { isSellerPanel } from "../../../../_helpers/panelConfig";
 
 const API_CALLS = [
   {
-    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
-    name: "Product Prefill",
+    action: () => getProductPrefill({ includeProducts: false, limit: 20 }),
+    name: "Product Prefill Basic+Lookups",
   },
 ];
 
@@ -688,6 +690,22 @@ export default function ProductManagementUI() {
 
     fetchAllData();
   }, [fetchAllData]);
+
+  // background-load heavy prefill parts once initial prefill has completed
+  useEffect(() => {
+    if (loading) return;
+    // fetch larger payloads in background without blocking UI
+    (async () => {
+      try {
+        // products (related products) can be heavy
+        dispatch(getProductPrefillProducts({ includeProducts: true, productLimit: 100 })).catch(() => {});
+        // locations (cities/states/warehouses)
+        dispatch(getProductPrefillLocations({})).catch(() => {});
+      } catch (err) {
+        // intentionally swallow—these are background best-effort loads
+      }
+    })();
+  }, [loading, dispatch]);
 
   useEffect(() => {
     if (id) {

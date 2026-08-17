@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
 import { ENDPOINTS } from '../_helpers/endpoints';
 import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
@@ -7,6 +7,24 @@ import { normalizeImageList } from '../_helpers/productMedia';
 const firstProductId = (payload = {}) => {
     const value = payload.productId || payload.product_id || payload._id || payload.id;
     return Array.isArray(value) ? value[0] : value;
+};
+
+// small deep merge to preserve nested objects when combining prefill parts
+const deepMerge = (target = {}, ...sources) => {
+    const isObject = (obj) => obj && typeof obj === 'object' && !Array.isArray(obj);
+    for (const source of sources) {
+        if (!isObject(source)) continue;
+        for (const key of Object.keys(source)) {
+            const val = source[key];
+            if (isObject(val)) {
+                if (!isObject(target[key])) target[key] = {};
+                target[key] = deepMerge(target[key], val);
+            } else {
+                target[key] = val;
+            }
+        }
+    }
+    return target;
 };
 
 const toProductListParams = (params = {}) => ({
@@ -477,13 +495,54 @@ export const updateProductOption = createApiThunkPrivate('product-option-value/u
 export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST', false, {
     transformBody: toProductBody,
 })
-export const getProductPrefill = createApiThunkPrivate('getProductPrefill', ENDPOINTS.products.prefill, 'GET', true, {
+export const getProductPrefillBasic = createApiThunkPrivate('getProductPrefillBasic', ENDPOINTS.products.prefillBasic, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+    }),
+})
+
+export const getProductPrefillLookups = createApiThunkPrivate('getProductPrefillLookups', ENDPOINTS.products.prefillLookups, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+    }),
+})
+
+export const getProductPrefillLocations = createApiThunkPrivate('getProductPrefillLocations', ENDPOINTS.products.prefillLocations, 'GET', true, {
+    transformParams: (params = {}) => ({
+        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+    }),
+})
+
+export const getProductPrefillProducts = createApiThunkPrivate('getProductPrefillProducts', ENDPOINTS.products.prefillProducts, 'GET', true, {
     transformParams: (params = {}) => ({
         includeProducts: params.includeProducts !== false,
         ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
         ...(params.sellerId ? { sellerId: params.sellerId } : {}),
-        limit: Number(params.limit || 100),
+        productLimit: Number(params.productLimit || params.limit || 100),
     }),
+})
+
+export const getProductPrefill = createAsyncThunk('getProductPrefill', async (params = {}, { dispatch, rejectWithValue }) => {
+    try {
+        const calls = [
+            dispatch(getProductPrefillBasic(params)).unwrap(),
+            dispatch(getProductPrefillLookups(params)).unwrap(),
+            dispatch(getProductPrefillLocations(params)).unwrap(),
+            dispatch(getProductPrefillProducts(params)).unwrap(),
+        ];
+
+        const [basicRes, lookupsRes, locationsRes, productsRes] = await Promise.all(calls);
+
+        const basic = basicRes?.data || basicRes || {};
+        const lookups = lookupsRes?.data || lookupsRes || {};
+        const locations = locationsRes?.data || locationsRes || {};
+        const products = productsRes?.data || productsRes || {};
+
+        return deepMerge({}, basic, lookups, locations, products);
+    } catch (err) {
+        return rejectWithValue(err?.toString ? err.toString() : err);
+    }
 })
 export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
     transformParams: toProductListParams,
