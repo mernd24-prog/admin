@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { MdSettings, MdAdd, MdDelete, MdEdit, MdListAlt, MdToggleOff, MdToggleOn } from "react-icons/md";
+import { MdSettings, MdAdd, MdDelete, MdEdit, MdListAlt } from "react-icons/md";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import {
   getPlatformOptions,
   createPlatformOption,
@@ -12,9 +13,8 @@ import {
 import {
   PageHeader,
   DataTable,
-  StatusBadge,
   ConfirmModal,
-  FilterBar,
+  ExportButton,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -36,19 +36,6 @@ const slugify = (value = "") =>
 const emptyForm = { name: "", slug: "", displayType: "dropdown", description: "", active: true };
 const idOf = (r) => r?._id || r?.id || "";
 
-const FILTER_FIELDS = [
-  {
-    key: "active",
-    type: "select",
-    label: "Status",
-    options: [
-      { value: "true", label: "Active" },
-      { value: "false", label: "Inactive" },
-    ],
-    width: "w-40",
-  },
-];
-
 const getListPayload = (sliceData = {}) => {
   const payload =
     sliceData?.data?.data ||
@@ -66,42 +53,6 @@ const getTotal = (sliceData = {}, fallback = 0) =>
   sliceData?.data?.total ||
   fallback;
 
-const COLUMNS = [
-  {
-    key: "name",
-    label: "Attribute Name",
-    sortable: true,
-    render: (v, row) => (
-      <div>
-        <p className="font-semibold text-gray-800">{v}</p>
-        <p className="font-mono text-xs text-gray-400">{row.slug || "—"}</p>
-      </div>
-    ),
-  },
-  {
-    key: "displayType",
-    label: "Display Type",
-    render: (v) => {
-      const meta = DISPLAY_TYPE_META[v] || DISPLAY_TYPE_META.button;
-      return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}>
-          {meta.label}
-        </span>
-      );
-    },
-  },
-  {
-    key: "description",
-    label: "Description",
-    render: (v) => <span className="text-gray-500 text-xs max-w-[200px] truncate block">{v || "—"}</span>,
-  },
-  {
-    key: "active",
-    label: "Status",
-    render: (v) => <StatusBadge status={v !== false ? "active" : "inactive"} dot />,
-  },
-];
-
 export default function ProductOptions() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -115,6 +66,11 @@ export default function ProductOptions() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [statusTarget, setStatusTarget] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [filters, setFilters] = useState({
+    search: "",
+    activationStatus: { value: "All", label: "All" },
+  });
   const displayTypes = useDropdownOptions("product-option-display-types");
   const { toQueryParams } = list;
 
@@ -134,7 +90,70 @@ export default function ProductOptions() {
     }));
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    setSelectedKeys([]);
+    load();
+  }, [load]);
+
+  // Automatic search & filter handling when search input or status filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const searchVal = filters.search || "";
+      const statusVal =
+        filters.activationStatus?.value === "All"
+          ? ""
+          : filters.activationStatus?.value === "active"
+          ? "true"
+          : filters.activationStatus?.value === "inactive"
+          ? "false"
+          : "";
+
+      list.setSearch(searchVal);
+      list.setFilter("active", statusVal);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.activationStatus?.value]);
+
+  const handleSearchClear = () => {
+    setFilters({
+      search: "",
+      activationStatus: { value: "All", label: "All" },
+    });
+    list.clearFilters();
+    list.setSearch("");
+    list.setPage(1);
+  };
+
+  const handleBulkAction = async (action, rows) => {
+    const targetKeys = rows && rows.length ? rows : selectedKeys;
+    if (!targetKeys.length) return;
+    if (action === "Active" || action === "Inactive") {
+      const isNextActive = action === "Active";
+      setSaving(true);
+      try {
+        await Promise.all(
+          targetKeys.map((id) =>
+            dispatch(
+              updatePlatformOption({
+                id,
+                active: isNextActive,
+              }),
+            ).unwrap(),
+          ),
+        );
+        toast.success(
+          `Selected option masters ${isNextActive ? "activated" : "deactivated"} successfully`,
+        );
+        setSelectedKeys([]);
+        load();
+      } catch (err) {
+        toast.error(err?.message || "Failed to update option masters status");
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setErrors({}); setModalOpen(true); };
   const openEdit = (row) => {
@@ -201,7 +220,63 @@ export default function ProductOptions() {
     }
   };
 
-  const columns = COLUMNS;
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Attribute Name",
+        sortable: true,
+        render: (v, row) => (
+          <div>
+            <p className="font-semibold text-gray-800">{v}</p>
+            <p className="font-mono text-xs text-gray-400">{row.slug || "—"}</p>
+          </div>
+        ),
+      },
+      {
+        key: "displayType",
+        label: "Display Type",
+        render: (v) => {
+          const meta = DISPLAY_TYPE_META[v] || DISPLAY_TYPE_META.button;
+          return (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}
+            >
+              {meta.label}
+            </span>
+          );
+        },
+      },
+      {
+        key: "description",
+        label: "Description",
+        render: (v) => (
+          <span className="text-gray-500 text-xs max-w-[200px] truncate block">
+            {v || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "active",
+        label: "Active",
+        render: (_, row) => (
+          <ToggleButton
+            isToggle={row.active !== false}
+            handleClick={() => setStatusTarget(row)}
+            requiredModule="products"
+          />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const exportData = useMemo(() => {
+    if (selectedKeys.length > 0) {
+      return items.filter((it) => selectedKeys.includes(idOf(it)));
+    }
+    return items;
+  }, [items, selectedKeys]);
 
   return (
     <div>
@@ -210,82 +285,97 @@ export default function ProductOptions() {
         subtitle="Define reusable option attributes like Size, Color, RAM, Material"
         breadcrumbs={[{ label: "Product Management" }, { label: "Option Masters" }]}
         actions={
-          <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={openAdd}
-
-            >
-              <MdAdd size={16} /> Add Option
-            </button>
-          </PermissionGuard>
+          <div className="flex items-center gap-3">
+            <ExportButton
+              data={exportData}
+              filename="product-option-masters"
+              columns={columns}
+              requiredModule="products"
+            />
+            <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
+              <button onClick={openAdd}>
+                <MdAdd size={16} /> Add Option
+              </button>
+            </PermissionGuard>
+          </div>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={items}
-        loading={loading}
-        totalCount={total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSearch={list.setSearch}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
-        searchPlaceholder="Search attributes…"
-        emptyText="No option masters yet."
-        emptyIcon={<MdSettings size={40} className="text-gray-200" />}
-        requiredModule="products"
-        exportConfig={{ filename: "product-option-masters", columns: COLUMNS }}
-        rowActions={(row) => [
-          {
-            label: "Manage Values",
-            icon: <MdListAlt size={16} className="text-blue-600" />,
-            requiredModule: "products",
-            requiredAction: ACTIONS.VIEW,
-            onClick: () => navigate(`/app/product-option-value/${idOf(row)}`),
-          },
-          {
-            label: "Edit Option",
-            icon: <MdEdit size={16} className="text-emerald-600" />,
-            requiredModule: "products",
-            requiredAction: ACTIONS.UPDATE,
-            onClick: () => openEdit(row),
-          },
-          {
-            label: row.active === false ? "Enable Option" : "Disable Option",
-            icon:
-              row.active === false ? (
-                <MdToggleOn size={18} className="text-emerald-600" />
-              ) : (
-                <MdToggleOff size={18} className="text-amber-600" />
-              ),
-            requiredModule: "products",
-            requiredAction: ACTIONS.STATUS_CHANGE,
-            onClick: () => setStatusTarget(row),
-          },
-          {
-            label: "Delete Option",
-            icon: <MdDelete size={16} className="text-red-600" />,
-            danger: true,
-            requiredModule: "products",
-            requiredAction: ACTIONS.DELETE,
-            onClick: () => setDeleteTarget(row),
-          },
-        ]}
-        filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        <section className="border-b border-[var(--admin-line)]">
+          <SearchComponent
+            selectedRow={selectedKeys}
+            setSelectedRow={setSelectedKeys}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={true}
+            activationStatusOptions={[
+              { value: "All", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+            applyFilters={() => {}}
+            handleSearchRemove={handleSearchClear}
+            isActionButton={true}
+            isStatusAction={true}
+            handleAction={handleBulkAction}
+            requiredModule="products"
+            isSearchDown={false}
+            defaultSearchOpen={true}
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
           />
-        }
-      />
+        </section>
+        <section>
+          <DataTable
+            columns={columns}
+            data={items}
+            loading={loading}
+            totalCount={total}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            selectable
+            selectedKeys={selectedKeys}
+            onSelectionChange={setSelectedKeys}
+            rowKey={(row) => idOf(row)}
+            emptyText="No option masters yet."
+            emptyIcon={<MdSettings size={40} className="text-gray-200" />}
+            requiredModule="products"
+            cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+            rowActions={(row) => [
+              {
+                label: "Manage Values",
+                icon: <MdListAlt size={16} className="text-blue-600" />,
+                requiredModule: "products",
+                requiredAction: ACTIONS.VIEW,
+                onClick: () => navigate(`/app/product-option-value/${idOf(row)}`),
+              },
+              {
+                label: "Edit Option",
+                icon: <MdEdit size={16} className="text-emerald-600" />,
+                requiredModule: "products",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () => openEdit(row),
+              },
+              {
+                label: "Delete Option",
+                icon: <MdDelete size={16} className="text-red-600" />,
+                danger: true,
+                requiredModule: "products",
+                requiredAction: ACTIONS.DELETE,
+                onClick: () => setDeleteTarget(row),
+              },
+            ]}
+          />
+        </section>
+      </div>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
