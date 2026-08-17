@@ -139,12 +139,6 @@ const shouldForceLogout = (error) => {
     return shouldForceLogoutForResponse(error);
 };
 
-const shouldForceLogoutForNetworkFailure = (error, requestUrl) => {
-    if (error?.config == null) return false;
-    if (isAuthEndpoint(requestUrl)) return false;
-    return Boolean(getStoredAccessToken() || getStoredRefreshToken());
-};
-
 const syncSelectedSellerOrganization = (response) => {
     const selectedOrganizationId = response?.headers?.["x-selected-organization-id"];
     if (
@@ -206,14 +200,8 @@ const createErrorResponseInterceptor = (instance) => async (error) => {
         const baseURL = trimTrailingSlash(error?.config?.baseURL || apiUrl);
         const requestPath = trimLeadingSlash(error?.config?.url || "");
         const requestUrl = requestPath ? `${baseURL}/${requestPath}` : baseURL;
-        if (shouldForceLogoutForNetworkFailure(error, error?.config?.url)) {
-            forceLogout(
-                "BACKEND_UNREACHABLE",
-                `Backend is not reachable. Please login again when service is available.`
-            );
-        }
         return Promise.reject({
-            message: `Network error. API not reachable: ${requestUrl}`,
+            message: `Network error. API temporarily unreachable: ${requestUrl}. Please retry.`,
         });
     }
 

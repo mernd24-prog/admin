@@ -307,15 +307,32 @@ const createColumns = (
           key: "buyer_id",
           label: "Buyer",
           render: (v, row) => {
+            const shippingAddress = normalizeJson(
+              firstDefined(row.shipping_address, row.shippingAddress),
+              {},
+            );
             const buyer =
-              row.relations?.buyer || row.buyer || row.buyerSnapshot || {};
+              row.relations?.buyer ||
+              row.relations?.customer ||
+              row.buyer ||
+              row.customer ||
+              row.buyerSnapshot ||
+              {};
             const name =
               row.buyerName ||
+              row.customerName ||
               buyer.displayName ||
               buyer.fullName ||
               buyer.name ||
-              row.buyer_name;
-            const email = row.buyerEmail || buyer.email || row.buyer_email;
+              row.buyer_name ||
+              shippingAddress.fullName ||
+              shippingAddress.name;
+            const email =
+              row.buyerEmail ||
+              row.customerEmail ||
+              buyer.email ||
+              row.buyer_email ||
+              shippingAddress.email;
             const buyerId = firstDefined(
               buyer.id,
               buyer._id,
