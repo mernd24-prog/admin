@@ -7,19 +7,17 @@ import {
   MdAdd,
   MdDelete,
   MdEdit,
-  MdToggleOff,
-  MdToggleOn,
   MdClose,
 } from "react-icons/md";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import {
   PageHeader,
   DataTable,
-  StatusBadge,
   ConfirmModal,
-  FilterBar,
+  ExportButton,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -48,19 +46,6 @@ const emptyForm = {
   baseAttributes: [emptyAttribute],
 };
 
-const FILTER_FIELDS = [
-  {
-    key: "status",
-    type: "select",
-    label: "Status",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
-    ],
-    width: "w-40",
-  },
-];
-
 const toAttributeRows = (obj = {}) => {
   const entries = Object.entries(obj || {});
   if (!entries.length) return [emptyAttribute];
@@ -74,55 +59,6 @@ const toAttributeObject = (rows = []) =>
     acc[key] = String(row.value || "").trim();
     return acc;
   }, {});
-
-const COLUMNS = [
-  {
-    key: "familyCode",
-    label: "Family Code",
-    sortable: true,
-    render: (v, row) => (
-      <span className="font-mono text-xs">{v || row.code}</span>
-    ),
-  },
-  {
-    key: "title",
-    label: "Title",
-    sortable: true,
-    render: (v, row) => (
-      <span className="font-medium text-gray-800">{v || row.name}</span>
-    ),
-  },
-  {
-    key: "category",
-    label: "Category",
-    render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
-  },
-  {
-    key: "sellerId",
-    label: "Seller",
-    render: (v, row) => (
-      <span className="text-sm text-gray-600">
-        {row.sellerName || v || "—"}
-      </span>
-    ),
-  },
-  {
-    key: "variantAxes",
-    label: "Variant Axes",
-    render: (v) => (
-      <span className="text-sm text-gray-500">
-        {Array.isArray(v) && v.length ? v.join(", ") : "—"}
-      </span>
-    ),
-  },
-  {
-    key: "status",
-    label: "Status",
-    render: (v) => (
-      <StatusBadge status={v === "active" ? "active" : "inactive"} dot />
-    ),
-  },
-];
 
 const ProductFamilies = () => {
   const dispatch = useDispatch();
@@ -142,6 +78,11 @@ const ProductFamilies = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [filters, setFilters] = useState({
+    search: "",
+    activationStatus: { value: "All", label: "All" },
+  });
   const { toQueryParams } = list;
 
   const payload = selector?.productFamiliesData?.data?.data || {};
@@ -184,6 +125,7 @@ const ProductFamilies = () => {
   }, [dispatch, toQueryParams]);
 
   useEffect(() => {
+    setSelectedKeys([]);
     load();
   }, [load]);
 
@@ -191,6 +133,62 @@ const ProductFamilies = () => {
     dispatch(getList({ limit: 100 }));
     dispatch(getAllSellerList());
   }, []);
+
+  // Automatic search & filter handling when search input or status filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const searchVal = filters.search || "";
+      const statusVal =
+        filters.activationStatus?.value === "All"
+          ? ""
+          : filters.activationStatus?.value || "";
+
+      list.setSearch(searchVal);
+      list.setFilter("status", statusVal);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.activationStatus?.value]);
+
+  const handleSearchClear = () => {
+    setFilters({
+      search: "",
+      activationStatus: { value: "All", label: "All" },
+    });
+    list.clearFilters();
+    list.setSearch("");
+    list.setPage(1);
+  };
+
+  const handleBulkAction = async (action, rows) => {
+    const targetKeys = rows && rows.length ? rows : selectedKeys;
+    if (!targetKeys.length) return;
+    if (action === "Active" || action === "Inactive") {
+      const nextStatus = action === "Active" ? "active" : "inactive";
+      setSaving(true);
+      try {
+        await Promise.all(
+          targetKeys.map((familyCode) =>
+            dispatch(
+              updateProductFamily({
+                familyCode,
+                status: nextStatus,
+              }),
+            ).unwrap(),
+          ),
+        );
+        toast.success(
+          `Selected product families ${nextStatus === "active" ? "activated" : "deactivated"} successfully`,
+        );
+        setSelectedKeys([]);
+        load();
+      } catch (err) {
+        toast.error(err?.message || "Failed to update product families status");
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   const validateForm = () => {
     const nextErrors = {};
@@ -304,7 +302,68 @@ const ProductFamilies = () => {
     setIsModalOpen(true);
   };
 
-  const columns = COLUMNS;
+  const columns = useMemo(
+    () => [
+      {
+        key: "familyCode",
+        label: "Family Code",
+        sortable: true,
+        render: (v, row) => (
+          <span className="font-mono text-xs">{v || row.code}</span>
+        ),
+      },
+      {
+        key: "title",
+        label: "Title",
+        sortable: true,
+        render: (v, row) => (
+          <span className="font-medium text-gray-800">{v || row.name}</span>
+        ),
+      },
+      {
+        key: "category",
+        label: "Category",
+        render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
+      },
+      {
+        key: "sellerId",
+        label: "Seller",
+        render: (v, row) => (
+          <span className="text-sm text-gray-600">
+            {row.sellerName || v || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "variantAxes",
+        label: "Variant Axes",
+        render: (v) => (
+          <span className="text-sm text-gray-500">
+            {Array.isArray(v) && v.length ? v.join(", ") : "—"}
+          </span>
+        ),
+      },
+      {
+        key: "active",
+        label: "Active",
+        render: (_, row) => (
+          <ToggleButton
+            isToggle={row.status === "active"}
+            handleClick={() => setToggleTarget(row)}
+            requiredModule="products"
+          />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const exportData = useMemo(() => {
+    if (selectedKeys.length > 0) {
+      return families.filter((f) => selectedKeys.includes(idFromRecord(f)));
+    }
+    return families;
+  }, [families, selectedKeys]);
 
   return (
     <div>
@@ -316,73 +375,90 @@ const ProductFamilies = () => {
           { label: "Product Families" },
         ]}
         actions={
-          <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
-            <button onClick={() => setIsModalOpen(true)}>
-              <MdAdd size={16} /> Add Family
-            </button>
-          </PermissionGuard>
+          <div className="flex items-center gap-3">
+            <ExportButton
+              data={exportData}
+              filename="product-families"
+              columns={columns}
+              requiredModule="products"
+            />
+            <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
+              <button onClick={() => setIsModalOpen(true)}>
+                <MdAdd size={16} /> Add Family
+              </button>
+            </PermissionGuard>
+          </div>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={families}
-        loading={selector.loading}
-        totalCount={total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSearch={list.setSearch}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
-        searchPlaceholder="Search families…"
-        emptyText="No product families found."
-        emptyIcon={<MdFamilyRestroom size={40} className="text-gray-200" />}
-        requiredModule="products"
-        exportConfig={{ filename: "product-families", columns: COLUMNS }}
-        rowActions={(row) => [
-          {
-            label: "Edit Family",
-            icon: <MdEdit size={16} className="text-emerald-600" />,
-            requiredModule: "products",
-            requiredAction: ACTIONS.UPDATE,
-            onClick: () => openEdit(row),
-          },
-          {
-            label:
-              row.status === "active" ? "Deactivate Family" : "Activate Family",
-            icon:
-              row.status === "active" ? (
-                <MdToggleOff size={18} className="text-amber-600" />
-              ) : (
-                <MdToggleOn size={18} className="text-emerald-600" />
-              ),
-            requiredModule: "products",
-            requiredAction: ACTIONS.STATUS_CHANGE,
-            onClick: () => setToggleTarget(row),
-          },
-          {
-            label: "Delete Family",
-            icon: <MdDelete size={16} className="text-red-600" />,
-            danger: true,
-            requiredModule: "products",
-            requiredAction: ACTIONS.DELETE,
-            onClick: () => setDeleteTarget(row),
-          },
-        ]}
-        filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={selector.loading}
-            activeCount={list.activeFilterCount}
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        <section className="border-b border-[var(--admin-line)]">
+          <SearchComponent
+            selectedRow={selectedKeys}
+            setSelectedRow={setSelectedKeys}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={true}
+            activationStatusOptions={[
+              { value: "All", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+            applyFilters={() => {}}
+            handleSearchRemove={handleSearchClear}
+            isActionButton={true}
+            isStatusAction={true}
+            handleAction={handleBulkAction}
+            requiredModule="products"
+            isSearchDown={false}
+            defaultSearchOpen={true}
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
           />
-        }
-      />
+        </section>
+        <section>
+          <DataTable
+            columns={columns}
+            data={families}
+            loading={selector.loading}
+            totalCount={total}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            selectable
+            selectedKeys={selectedKeys}
+            onSelectionChange={setSelectedKeys}
+            rowKey={(row) => idFromRecord(row)}
+            emptyText="No product families found."
+            emptyIcon={<MdFamilyRestroom size={40} className="text-gray-200" />}
+            requiredModule="products"
+            cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+            rowActions={(row) => [
+              {
+                label: "Edit Family",
+                icon: <MdEdit size={16} className="text-emerald-600" />,
+                requiredModule: "products",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () => openEdit(row),
+              },
+              {
+                label: "Delete Family",
+                icon: <MdDelete size={16} className="text-red-600" />,
+                danger: true,
+                requiredModule: "products",
+                requiredAction: ACTIONS.DELETE,
+                onClick: () => setDeleteTarget(row),
+              },
+            ]}
+          />
+        </section>
+      </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
