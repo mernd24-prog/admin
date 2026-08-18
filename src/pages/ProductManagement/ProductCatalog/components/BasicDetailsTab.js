@@ -636,29 +636,43 @@ export default function BasicDetailsTab({
     }
   };
 
-  const handleHsnSubmit = async (e) => {
-    e.preventDefault();
-    const basePayload = {
-      code: hsnFormValues.code.trim(),
-      IGST: Number(hsnFormValues.IGST),
-      CGST: Number(hsnFormValues.CGST),
-      SGST: Number(hsnFormValues.SGST),
-      additionalTax: Number(hsnFormValues.additionalTax),
-      description: hsnFormValues.description?.trim() || "",
-      active: true,
-    };
-    try {
-      await dispatch(createHsn(basePayload)).unwrap();
-      toast.success("HSN Code created successfully");
-      setIsHsnAddModal(false);
-      setIsHsnFormValue(INITIAL_FORM_HSN);
-      setFormErrors({});
-      fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
-    } catch (error) {
-      toast.error(error?.message || "Failed to save HSN Code");
-    }
+ const handleHsnSubmit = async (e) => {
+  e?.preventDefault();
+
+  const basePayload = {
+    code: hsnFormValues.code.trim(),
+    IGST: Number(hsnFormValues.IGST),
+    CGST: Number(hsnFormValues.CGST),
+    SGST: Number(hsnFormValues.SGST),
+    additionalTax: Number(hsnFormValues.additionalTax),
+    description: hsnFormValues.description?.trim() || "",
+    active: true,
   };
 
+  try {
+    await dispatch(createHsn(basePayload)).unwrap();
+
+    toast.success("HSN Code created successfully");
+
+    setIsHsnAddModal(false);
+    setIsHsnFormValue(INITIAL_FORM_HSN);
+    setFormErrors({});
+
+    fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
+  } catch (error) {
+    console.error("HSN Create Error:", error);
+
+    const errorMessage =
+      typeof error === "string"
+        ? error
+        : error?.message ||
+          error?.error?.message ||
+          error?.response?.data?.message ||
+          "Failed to save HSN Code";
+
+    toast.error(errorMessage);
+  }
+};
   const validateCategoryForm = () => {
     const newErrors = {};
     if (!categoryForm.categoryName)

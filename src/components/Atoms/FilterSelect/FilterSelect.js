@@ -74,17 +74,19 @@ const customStyles = (error, controlHeight) => ({
     zIndex: 10050,
     position: "absolute",
   }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected
-      ? "var(--admin-navy)"
-      : state.isFocused
-        ? "var(--admin-blue-soft)"
-        : provided.backgroundColor,
-    color: state.isSelected ? "#fff" : "var(--admin-ink)",
-    whiteSpace: "normal",
-    wordBreak: "break-word",
-  }),
+option: (provided, state) => ({
+  ...provided,
+  backgroundColor: state.isSelected
+    ? "var(--admin-navy)"
+    : state.isFocused
+      ? "var(--admin-blue-soft)"
+      : provided.backgroundColor,
+  color: state.isSelected ? "#fff" : "var(--admin-ink)",
+  fontSize: "13px",
+  padding: "8px 12px",
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+}),
   menuList: (provided) => ({
     ...provided,
     scrollbarColor: "#1F1B5F transparent",

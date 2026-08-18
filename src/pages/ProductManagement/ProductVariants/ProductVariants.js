@@ -2,10 +2,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdAdd, MdDelete, MdEdit, MdLayersClear, MdToggleOff, MdToggleOn } from "react-icons/md";
+import {
+  MdAdd,
+  MdDelete,
+  MdEdit,
+  MdLayersClear,
+  MdToggleOff,
+  MdToggleOn,
+} from "react-icons/md";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import { ConfirmModal, DataTable, FilterBar, PageHeader, StatusBadge } from "../../../components/Shared";
+import {
+  ConfirmModal,
+  DataTable,
+  FilterBar,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import {
@@ -66,33 +79,77 @@ const toAttributeObject = (rows = []) =>
     return acc;
   }, {});
 
-const VariantFormModal = ({ open, onClose, onSubmit, formData, setFormData, errors, familyOptions, productOptions, sellerOptions, statusOptions }) => {
+const VariantFormModal = ({
+  open,
+  onClose,
+  onSubmit,
+  formData,
+  setFormData,
+  errors,
+  familyOptions,
+  productOptions,
+  sellerOptions,
+  statusOptions,
+}) => {
   if (!open) return null;
 
-  const updateField = (field, value) => setFormData((p) => ({ ...p, [field]: value }));
+  const updateField = (field, value) =>
+    setFormData((p) => ({ ...p, [field]: value }));
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-lg shadow-xl mx-4">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-800">
-            {formData.variantId ? "Edit Product Variant" : "Add Product Variant"}
-          </h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700">✕</button>
+      <div
+        className="relative mx-4 flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {formData.variantId
+                ? "Edit Product Variant"
+                : "Add Product Variant"}
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {formData.variantId
+                ? "Update product variant details and inventory information."
+                : "Add a new product variant with stock and attribute details."}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+          >
+            ✕
+          </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Form Body */}
+        <form
+          onSubmit={onSubmit}
+          className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-6 py-5"
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FilterSelect
               label="Family"
               options={familyOptions}
-              value={familyOptions.find((o) => String(o.value) === String(formData.familyCode || "")) || null}
-              onChange={(o) => { updateField("familyCode", o?.value || ""); }}
+              value={
+                familyOptions.find(
+                  (o) => String(o.value) === String(formData.familyCode || ""),
+                ) || null
+              }
+              onChange={(o) => {
+                updateField("familyCode", o?.value || "");
+              }}
               error={errors.familyCode}
               placeholder="Select family"
               required
             />
+
             <FormInput
               label="SKU"
               name="sku"
@@ -100,42 +157,66 @@ const VariantFormModal = ({ open, onClose, onSubmit, formData, setFormData, erro
               onChange={(e) => updateField("sku", e.target.value)}
               error={errors.sku}
               required
+              className="focus:border-[var(--admin-gold)] focus:ring-0"
             />
+
             <FilterSelect
               label="Product"
               options={productOptions}
-              value={productOptions.find((o) => String(o.value) === String(formData.productId || "")) || null}
-              onChange={(o) => { updateField("productId", o?.value || ""); }}
+              value={
+                productOptions.find(
+                  (o) => String(o.value) === String(formData.productId || ""),
+                ) || null
+              }
+              onChange={(o) => {
+                updateField("productId", o?.value || "");
+              }}
               error={errors.productId}
               placeholder="Select product"
               required
             />
+
             <FilterSelect
               label="Seller"
               options={sellerOptions}
-              value={sellerOptions.find((o) => String(o.value) === String(formData.sellerId || "")) || null}
-              onChange={(o) => { updateField("sellerId", o?.value || ""); }}
+              value={
+                sellerOptions.find(
+                  (o) => String(o.value) === String(formData.sellerId || ""),
+                ) || null
+              }
+              onChange={(o) => {
+                updateField("sellerId", o?.value || "");
+              }}
               error={errors.sellerId}
               placeholder="Select seller"
               required
             />
+
             <FormInput
               label="Stock"
               name="stock"
               type="number"
               value={formData.stock}
-              onChange={(e) => updateField("stock", Number(e.target.value || 0))}
+              onChange={(e) =>
+                updateField("stock", Number(e.target.value || 0))
+              }
               error={errors.stock}
               required
+              className="focus:border-[var(--admin-gold)] focus:ring-0"
             />
+
             <FormInput
               label="Reserved Stock"
               name="reservedStock"
               type="number"
               value={formData.reservedStock}
-              onChange={(e) => updateField("reservedStock", Number(e.target.value || 0))}
+              onChange={(e) =>
+                updateField("reservedStock", Number(e.target.value || 0))
+              }
               error={errors.reservedStock}
+              className="focus:border-[var(--admin-gold)] focus:ring-0"
             />
+
             <FormInput
               label="Status"
               name="status"
@@ -143,57 +224,120 @@ const VariantFormModal = ({ open, onClose, onSubmit, formData, setFormData, erro
               value={formData.status}
               onChange={(e) => updateField("status", e.target.value)}
               options={statusOptions}
+              className="focus:border-[var(--admin-gold)] focus:ring-0"
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700">Attributes</label>
+          {/* Attributes */}
+          <div className="border-t border-gray-100 pt-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900">
+                  Attributes
+                </label>
+
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Add optional custom attribute overrides.
+                </p>
+              </div>
+
               <button
                 type="button"
-                className="text-xs text-blue-600"
-                onClick={() => updateField("attributes", [...(formData.attributes || []), { ...emptyAttribute }])}
+                onClick={() =>
+                  updateField("attributes", [
+                    ...(formData.attributes || []),
+                    { ...emptyAttribute },
+                  ])
+                }
+                className="text-sm font-medium text-[var(--admin-navy)] transition hover:text-[var(--admin-gold)]"
               >
-                Add Attribute
+                + Add Attribute
               </button>
             </div>
-            {!(formData.attributes || []).length && (
-              <p className="text-xs text-gray-500">Optional. Add custom attribute overrides.</p>
-            )}
-            {(formData.attributes || []).map((row, idx) => (
-              <div key={`attr-${idx}`} className="grid grid-cols-2 gap-2">
-                <input
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  placeholder="key"
-                  value={row.key}
-                  onChange={(e) => updateField("attributes", (formData.attributes || []).map((r, i) => i === idx ? { ...r, key: e.target.value } : r))}
-                />
-                <div className="flex gap-2">
-                  <input
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    placeholder="value"
-                    value={row.value}
-                    onChange={(e) => updateField("attributes", (formData.attributes || []).map((r, i) => i === idx ? { ...r, value: e.target.value } : r))}
-                  />
-                  <button
-                    type="button"
-                    className="px-2 text-red-600"
-                    onClick={() => updateField("attributes", (formData.attributes || []).filter((_, i) => i !== idx))}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="admin-btn-secondary">Cancel</button>
-            <button type="submit" className="admin-btn-primary">
-              {formData.variantId ? "Update" : "Create"}
-            </button>
+            {!(formData.attributes || []).length && (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-center">
+                <p className="text-xs text-gray-500">
+                  No custom attributes added.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {(formData.attributes || []).map((row, idx) => (
+                <div
+                  key={`attr-${idx}`}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                >
+                  <input
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-0"
+                    placeholder="Attribute key"
+                    value={row.key}
+                    onChange={(e) =>
+                      updateField(
+                        "attributes",
+                        (formData.attributes || []).map((r, i) =>
+                          i === idx ? { ...r, key: e.target.value } : r,
+                        ),
+                      )
+                    }
+                  />
+
+                  <div className="flex min-w-0 gap-2">
+                    <input
+                      className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-0"
+                      placeholder="Attribute value"
+                      value={row.value}
+                      onChange={(e) =>
+                        updateField(
+                          "attributes",
+                          (formData.attributes || []).map((r, i) =>
+                            i === idx ? { ...r, value: e.target.value } : r,
+                          ),
+                        )
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateField(
+                          "attributes",
+                          (formData.attributes || []).filter(
+                            (_, i) => i !== idx,
+                          ),
+                        )
+                      }
+                      className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-red-200 text-red-500 transition hover:bg-red-50"
+                      title="Remove attribute"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </form>
+
+        {/* Footer */}
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50/70 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            form="variant-form"
+            className="inline-flex min-w-[110px] items-center justify-center rounded-lg bg-[var(--admin-navy)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            {formData.variantId ? "Update" : "Create"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -204,7 +348,11 @@ const ProductVariants = () => {
   const selector = useSelector((state) => state.adminCore);
   const productSelector = useSelector((state) => state.product);
   const storeSelector = useSelector((state) => state.store);
-  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 10,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
 
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
@@ -221,42 +369,59 @@ const ProductVariants = () => {
   const total = listPayload?.total || 0;
   const families = selector?.productFamiliesData?.data?.data?.list || [];
   const products = productSelector?.getAllProductsData?.data?.data?.list || [];
-  const sellerOptions = transformArray(storeSelector?.getAllSellerListData?.data?.data?.list || []);
+  const sellerOptions = transformArray(
+    storeSelector?.getAllSellerListData?.data?.data?.list || [],
+  );
 
   const familyOptions = useMemo(
-    () => families.map((f) => ({ value: f.familyCode || f.code, label: `${f.title || f.name || f.familyCode} (${f.familyCode || f.code})` })),
+    () =>
+      families.map((f) => ({
+        value: f.familyCode || f.code,
+        label: `${f.title || f.name || f.familyCode} (${f.familyCode || f.code})`,
+      })),
     [families],
   );
   const productOptions = useMemo(
-    () => products.map((p) => ({ value: p._id || p.id, label: p.title || p.name || p.slug || p._id })),
+    () =>
+      products.map((p) => ({
+        value: p._id || p.id,
+        label: p.title || p.name || p.slug || p._id,
+      })),
     [products],
   );
   const familyLabelMap = useMemo(
-    () => Object.fromEntries(familyOptions.map((o) => [String(o.value), o.label])),
+    () =>
+      Object.fromEntries(familyOptions.map((o) => [String(o.value), o.label])),
     [familyOptions],
   );
   const productLabelMap = useMemo(
-    () => Object.fromEntries(productOptions.map((o) => [String(o.value), o.label])),
+    () =>
+      Object.fromEntries(productOptions.map((o) => [String(o.value), o.label])),
     [productOptions],
   );
   const sellerLabelMap = useMemo(
-    () => Object.fromEntries(sellerOptions.map((o) => [String(o.value), o.label])),
+    () =>
+      Object.fromEntries(sellerOptions.map((o) => [String(o.value), o.label])),
     [sellerOptions],
   );
 
   const fetchVariants = useCallback(() => {
     const params = toQueryParams();
-    dispatch(getProductVariants({
-      page: params.page,
-      limit: params.limit || 10,
-      q: params.search || undefined,
-      status: params.status || undefined,
-      sortBy: params.sortBy,
-      sortDir: params.sortDir,
-    }));
+    dispatch(
+      getProductVariants({
+        page: params.page,
+        limit: params.limit || 10,
+        q: params.search || undefined,
+        status: params.status || undefined,
+        sortBy: params.sortBy,
+        sortDir: params.sortDir,
+      }),
+    );
   }, [dispatch, toQueryParams]);
 
-  useEffect(() => { fetchVariants(); }, [fetchVariants]);
+  useEffect(() => {
+    fetchVariants();
+  }, [fetchVariants]);
 
   useEffect(() => {
     dispatch(getProductFamilies({ page: 1, limit: 100 }));
@@ -269,13 +434,19 @@ const ProductVariants = () => {
     ["familyCode", "productId", "sellerId", "sku"].forEach((field) => {
       if (!String(formData[field] || "").trim()) nextErrors[field] = "Required";
     });
-    if (Number(formData.stock) < 0) nextErrors.stock = "Stock cannot be negative";
-    if (Number(formData.reservedStock) < 0) nextErrors.reservedStock = "Reserved stock cannot be negative";
+    if (Number(formData.stock) < 0)
+      nextErrors.stock = "Stock cannot be negative";
+    if (Number(formData.reservedStock) < 0)
+      nextErrors.reservedStock = "Reserved stock cannot be negative";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
-  const closeModal = () => { setIsModalOpen(false); setFormData(emptyForm); setErrors({}); };
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setFormData(emptyForm);
+    setErrors({});
+  };
 
   const toPayload = () => ({
     familyCode: String(formData.familyCode || "").trim(),
@@ -294,7 +465,12 @@ const ProductVariants = () => {
     setSaving(true);
     try {
       if (formData.variantId) {
-        await dispatch(updateProductVariant({ ...toPayload(), variantId: formData.variantId })).unwrap();
+        await dispatch(
+          updateProductVariant({
+            ...toPayload(),
+            variantId: formData.variantId,
+          }),
+        ).unwrap();
         toast.success("Product variant updated successfully");
       } else {
         await dispatch(createProductVariant(toPayload())).unwrap();
@@ -346,7 +522,10 @@ const ProductVariants = () => {
     setSaving(true);
     try {
       await dispatch(
-        updateProductVariant({ variantId, status: toggleTarget.status === "active" ? "inactive" : "active" }),
+        updateProductVariant({
+          variantId,
+          status: toggleTarget.status === "active" ? "inactive" : "active",
+        }),
       ).unwrap();
       toast.success("Status updated successfully");
       setToggleTarget(null);
@@ -374,25 +553,49 @@ const ProductVariants = () => {
     {
       key: "productId",
       label: "Product",
-      render: (v, row) => <span>{productLabelMap[String(v || "")] || row?.productTitle || v || "—"}</span>,
+      render: (v, row) => (
+        <span>
+          {productLabelMap[String(v || "")] || row?.productTitle || v || "—"}
+        </span>
+      ),
     },
     {
       key: "sellerId",
       label: "Seller",
-      render: (v, row) => <span>{sellerLabelMap[String(v || "")] || row?.sellerName || v || "—"}</span>,
+      render: (v, row) => (
+        <span>
+          {sellerLabelMap[String(v || "")] || row?.sellerName || v || "—"}
+        </span>
+      ),
     },
-    { key: "stock", label: "Stock", sortable: true, render: (v) => <span className="font-mono text-sm">{v ?? 0}</span> },
-    { key: "reservedStock", label: "Reserved", sortable: true, render: (v) => <span className="font-mono text-sm">{v ?? 0}</span> },
+    {
+      key: "stock",
+      label: "Stock",
+      sortable: true,
+      render: (v) => <span className="font-mono text-sm">{v ?? 0}</span>,
+    },
+    {
+      key: "reservedStock",
+      label: "Reserved",
+      sortable: true,
+      render: (v) => <span className="font-mono text-sm">{v ?? 0}</span>,
+    },
     {
       key: "attributes",
       label: "Attributes",
-      render: (v) => <span className="font-mono text-sm">{Object.keys(v || {}).length || 0}</span>,
+      render: (v) => (
+        <span className="font-mono text-sm">
+          {Object.keys(v || {}).length || 0}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (v) => <StatusBadge status={v === "active" ? "active" : "inactive"} dot />,
+      render: (v) => (
+        <StatusBadge status={v === "active" ? "active" : "inactive"} dot />
+      ),
     },
     {
       key: "actions",
@@ -400,11 +603,20 @@ const ProductVariants = () => {
       render: (_, row) => (
         <div className="flex items-center gap-2">
           <PermissionGuard module="products" action={ACTIONS.UPDATE} hide>
-            <button type="button" onClick={() => openEdit(row)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" title="Edit variant">
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              title="Edit variant"
+            >
               <MdEdit size={16} />
             </button>
           </PermissionGuard>
-          <PermissionGuard module="products" action={ACTIONS.STATUS_CHANGE} hide>
+          <PermissionGuard
+            module="products"
+            action={ACTIONS.STATUS_CHANGE}
+            hide
+          >
             <button
               type="button"
               onClick={() => setToggleTarget(row)}
@@ -413,13 +625,24 @@ const ProductVariants = () => {
                   ? "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
                   : "border-green-100 text-green-600 hover:bg-green-50"
               }`}
-              title={row.status === "active" ? "Disable variant" : "Enable variant"}
+              title={
+                row.status === "active" ? "Disable variant" : "Enable variant"
+              }
             >
-              {row.status === "active" ? <MdToggleOff size={18} /> : <MdToggleOn size={18} />}
+              {row.status === "active" ? (
+                <MdToggleOff size={18} />
+              ) : (
+                <MdToggleOn size={18} />
+              )}
             </button>
           </PermissionGuard>
           <PermissionGuard module="products" action={ACTIONS.DELETE} hide>
-            <button type="button" onClick={() => setDeleteTarget(row)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50" title="Delete variant">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(row)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50"
+              title="Delete variant"
+            >
               <MdDelete size={16} />
             </button>
           </PermissionGuard>
@@ -433,7 +656,10 @@ const ProductVariants = () => {
       <PageHeader
         title="Product Variants"
         subtitle="Manage SKU-level product variants with inventory and attribute overrides"
-        breadcrumbs={[{ label: "Product Management" }, { label: "Product Variants" }]}
+        breadcrumbs={[
+          { label: "Product Management" },
+          { label: "Product Variants" },
+        ]}
         actions={
           <PermissionGuard module="products" action={ACTIONS.CREATE} hide>
             <button onClick={() => setIsModalOpen(true)}>
@@ -460,7 +686,10 @@ const ProductVariants = () => {
         emptyText="No product variants found."
         emptyIcon={<MdLayersClear size={40} className="text-gray-200" />}
         requiredModule="products"
-        exportConfig={{ filename: "product-variants", columns: columns.filter((column) => column.key !== "actions") }}
+        exportConfig={{
+          filename: "product-variants",
+          columns: columns.filter((column) => column.key !== "actions"),
+        }}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
