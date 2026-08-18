@@ -6,6 +6,8 @@ import { MdAdd, MdCheckCircle, MdRefresh, MdVisibility } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
 import {
   ConfirmModal,
   DataTable,
@@ -198,7 +200,10 @@ const DealPayouts = () => {
           row.seller?.companyName ||
           sellerOptions.find((o) => o.value === v)?.label;
         return name ? (
-          <SellerLink sellerId={v || row.seller_id || row.seller?.id || row.seller?._id} sellerName={name} />
+          <SellerLink
+            sellerId={v || row.seller_id || row.seller?.id || row.seller?._id}
+            sellerName={name}
+          />
         ) : (
           <span className="font-mono text-xs text-gray-400">
             {String(v || "—").slice(-8)}
@@ -302,6 +307,7 @@ const DealPayouts = () => {
       <DefaultModal
         isOpen={!!detail}
         onClose={() => setDetail(null)}
+        isButtonView={false}
         title="Deal Payout Detail"
       >
         {detail && (
@@ -354,6 +360,7 @@ const DealPayouts = () => {
       <DefaultModal
         isOpen={showGenerate}
         onClose={() => setShowGenerate(false)}
+        isButtonView={false}
         title="Generate Deal Payouts"
       >
         <div className="p-4 space-y-4">
@@ -373,35 +380,30 @@ const DealPayouts = () => {
               setGenerateForm((p) => ({ ...p, toDate: e.target.value }))
             }
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Seller{" "}
-              <span className="text-gray-400 font-normal">
-                (leave blank for all sellers)
-              </span>
-            </label>
-            <select
-              value={generateForm.sellerId}
-              onChange={(e) =>
-                setGenerateForm((p) => ({ ...p, sellerId: e.target.value }))
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">— All Sellers —</option>
-              {sellerOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
+          <FilterSelect
+            label="Seller (leave blank for all sellers)"
+            options={sellerOptions}
+            value={
+              sellerOptions.find((o) => o.value === generateForm.sellerId) ||
+              null
+            }
+            onChange={(option) =>
+              setGenerateForm((p) => ({
+                ...p,
+                sellerId: option ? option.value : "",
+              }))
+            }
+            placeholder="— All Sellers —"
+            isClearable
+            isSearchable
+          />
+          <OrangeButton
             onClick={handleGenerate}
             disabled={generating}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+            className="w-full justify-center"
           >
             {generating ? "Generating..." : "Generate Payouts"}
-          </button>
+          </OrangeButton>
         </div>
       </DefaultModal>
 

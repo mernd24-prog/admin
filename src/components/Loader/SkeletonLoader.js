@@ -108,6 +108,58 @@ export const PageSkeletonLoader = () => (
     <TableSkeletonLoader rows={6} />
   </div>
 );
+
+export const QueryDetailsSkeleton = () => (
+  <div className="space-y-5" aria-label="Loading query details">
+    <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index}>
+          <SkeletonLoader height={12} width="40%" />
+          <div className="mt-1.5">
+            <SkeletonLoader height={16} width="70%" />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div>
+      <SkeletonLoader height={12} width={70} />
+      <div className="mt-1.5">
+        <SkeletonLoader height={18} width="35%" />
+      </div>
+    </div>
+
+    <div>
+      <SkeletonLoader height={12} width={60} />
+      <div className="mt-1.5">
+        <SkeletonLoader height={18} width="80%" />
+      </div>
+    </div>
+
+    <div>
+      <SkeletonLoader height={12} width={65} />
+      <div className="mt-2 rounded-md border border-[var(--admin-line)] bg-white p-3">
+        <SkeletonLoader height={14} count={3} />
+      </div>
+    </div>
+
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div>
+        <SkeletonLoader height={12} width={50} />
+        <div className="mt-1.5">
+          <SkeletonLoader height={38} />
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <SkeletonLoader height={12} width={80} />
+      <div className="mt-1.5">
+        <SkeletonLoader height={100} />
+      </div>
+    </div>
+  </div>
+);
 // import React from 'react';
 // import Skeleton from 'react-loading-skeleton';
 // import 'react-loading-skeleton/dist/skeleton.css';

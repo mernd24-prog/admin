@@ -24,7 +24,14 @@ import { useListPage } from "../../../hooks/useListPage";
 
 const idOf = (r) => r?._id || r?.id || "";
 
-const emptyForm = { name: "", valueCode: "", colorHex: "", imageUrl: "", sortOrder: 0, active: true };
+const emptyForm = {
+  name: "",
+  valueCode: "",
+  colorHex: "",
+  imageUrl: "",
+  sortOrder: 0,
+  active: true,
+};
 
 const getListPayload = (sliceData = {}) => {
   const payload =
@@ -47,7 +54,11 @@ export default function ProductOptionValue() {
   const { id: optionId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "sortOrder", defaultSortDir: "asc" });
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "sortOrder",
+    defaultSortDir: "asc",
+  });
 
   const selector = useSelector((s) => s.adminCore);
   const [parentOption, setParentOption] = useState(null);
@@ -79,11 +90,14 @@ export default function ProductOptionValue() {
     dispatch(getPlatformOptions({ limit: 100 }))
       .unwrap()
       .then((res) => {
-        const masterList = Array.isArray(res?.data) ? res.data : res?.data?.list || res?.data?.items || [];
+        const masterList = Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.list || res?.data?.items || [];
         setOptionMasters(masterList);
         const found = masterList.find((o) => idOf(o) === selectedOptionId);
         if (found) setParentOption(found);
-        if (!optionId && !optionFilter && masterList[0]) setOptionFilter(idOf(masterList[0]));
+        if (!optionId && !optionFilter && masterList[0])
+          setOptionFilter(idOf(masterList[0]));
       })
       .catch(() => {});
   }, [dispatch, optionFilter, optionId, selectedOptionId]);
@@ -96,15 +110,17 @@ export default function ProductOptionValue() {
   const load = useCallback(() => {
     if (!selectedOptionId) return;
     const params = toQueryParams();
-    dispatch(getPlatformOptionValues({
-      optionId: selectedOptionId,
-      page: params.page,
-      limit: params.limit || 20,
-      q: params.search || undefined,
-      active: params.active || undefined,
-      sortBy: params.sortBy,
-      sortDir: params.sortDir,
-    }));
+    dispatch(
+      getPlatformOptionValues({
+        optionId: selectedOptionId,
+        page: params.page,
+        limit: params.limit || 20,
+        q: params.search || undefined,
+        active: params.active || undefined,
+        sortBy: params.sortBy,
+        sortDir: params.sortDir,
+      }),
+    );
   }, [dispatch, selectedOptionId, toQueryParams]);
 
   useEffect(() => {
@@ -120,10 +136,10 @@ export default function ProductOptionValue() {
         filters.activationStatus?.value === "All"
           ? ""
           : filters.activationStatus?.value === "active"
-          ? "true"
-          : filters.activationStatus?.value === "inactive"
-          ? "false"
-          : "";
+            ? "true"
+            : filters.activationStatus?.value === "inactive"
+              ? "false"
+              : "";
 
       list.setSearch(searchVal);
       list.setFilter("active", statusVal);
@@ -173,25 +189,49 @@ export default function ProductOptionValue() {
     }
   };
 
-  const openAdd = () => { setEditing(null); setForm({ ...emptyForm, sortOrder: items.length }); setErrors({}); setModalOpen(true); };
-  const openEdit = (row) => {
-    setEditing(row);
-    setForm({ name: row.name || "", valueCode: row.valueCode || "", colorHex: row.colorHex || "", imageUrl: row.imageUrl || "", sortOrder: row.sortOrder ?? 0, active: row.active !== false });
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ ...emptyForm, sortOrder: items.length });
     setErrors({});
     setModalOpen(true);
   };
-  const closeModal = () => { setModalOpen(false); setEditing(null); };
+  const openEdit = (row) => {
+    setEditing(row);
+    setForm({
+      name: row.name || "",
+      valueCode: row.valueCode || "",
+      colorHex: row.colorHex || "",
+      imageUrl: row.imageUrl || "",
+      sortOrder: row.sortOrder ?? 0,
+      active: row.active !== false,
+    });
+    setErrors({});
+    setModalOpen(true);
+  };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+  };
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Value name is required";
     if (form.valueCode && !/^[a-z0-9_/-]+$/i.test(form.valueCode)) {
-      e.valueCode = "Use letters, numbers, underscores, hyphens, or slashes only";
+      e.valueCode =
+        "Use letters, numbers, underscores, hyphens, or slashes only";
     }
-    if (isColorSwatch && form.colorHex && !/^#[0-9A-Fa-f]{6}$/.test(form.colorHex)) {
+    if (
+      isColorSwatch &&
+      form.colorHex &&
+      !/^#[0-9A-Fa-f]{6}$/.test(form.colorHex)
+    ) {
       e.colorHex = "Enter a valid hex color, e.g. #111827";
     }
-    if (isThumbnail && form.imageUrl && !/^https?:\/\/\S+$/i.test(form.imageUrl)) {
+    if (
+      isThumbnail &&
+      form.imageUrl &&
+      !/^https?:\/\/\S+$/i.test(form.imageUrl)
+    ) {
       e.imageUrl = "Enter a valid image URL";
     }
     setErrors(e);
@@ -199,7 +239,11 @@ export default function ProductOptionValue() {
   };
 
   const handleNameChange = (value) => {
-    setForm((f) => ({ ...f, name: value, valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, "_") }));
+    setForm((f) => ({
+      ...f,
+      name: value,
+      valueCode: f.valueCode || value.trim().toLowerCase().replace(/\s+/g, "_"),
+    }));
   };
 
   const handleSave = async () => {
@@ -207,24 +251,41 @@ export default function ProductOptionValue() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(updatePlatformOptionValue({ id: idOf(editing), optionId: selectedOptionId, optionName: parentOption?.name || "", ...form })).unwrap();
+        await dispatch(
+          updatePlatformOptionValue({
+            id: idOf(editing),
+            optionId: selectedOptionId,
+            optionName: parentOption?.name || "",
+            ...form,
+          }),
+        ).unwrap();
         toast.success("Value updated");
       } else {
-        await dispatch(createPlatformOptionValue({ optionId: selectedOptionId, optionName: parentOption?.name || "", ...form })).unwrap();
+        await dispatch(
+          createPlatformOptionValue({
+            optionId: selectedOptionId,
+            optionName: parentOption?.name || "",
+            ...form,
+          }),
+        ).unwrap();
         toast.success("Value created");
       }
       closeModal();
       load();
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await dispatch(deletePlatformOptionValue({ id: idOf(deleteTarget) })).unwrap();
+      await dispatch(
+        deletePlatformOptionValue({ id: idOf(deleteTarget) }),
+      ).unwrap();
       toast.success("Value deleted");
       setDeleteTarget(null);
       load();
@@ -239,7 +300,13 @@ export default function ProductOptionValue() {
     if (!row) return;
     setSaving(true);
     try {
-      await dispatch(updatePlatformOptionValue({ id: idOf(row), optionId: selectedOptionId, active: !row.active })).unwrap();
+      await dispatch(
+        updatePlatformOptionValue({
+          id: idOf(row),
+          optionId: selectedOptionId,
+          active: !row.active,
+        }),
+      ).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
       setStatusTarget(null);
       load();
@@ -283,13 +350,17 @@ export default function ProductOptionValue() {
       {
         key: "valueCode",
         label: "Code",
-        render: (v) => <span className="font-mono text-xs text-gray-500">{v || "—"}</span>,
+        render: (v) => (
+          <span className="font-mono text-xs text-gray-500">{v || "—"}</span>
+        ),
       },
       {
         key: "sortOrder",
         label: "Sort",
         sortable: true,
-        render: (v) => <span className="text-gray-500 text-xs">{v ?? "—"}</span>,
+        render: (v) => (
+          <span className="text-gray-500 text-xs">{v ?? "—"}</span>
+        ),
       },
       {
         key: "active",
@@ -316,7 +387,9 @@ export default function ProductOptionValue() {
   return (
     <div>
       <PageHeader
-        title={parentOption?.name ? `${parentOption.name} — Values` : "Option Values"}
+        title={
+          parentOption?.name ? `${parentOption.name} — Values` : "Option Values"
+        }
         subtitle={
           parentOption?.displayType
             ? `Display type: ${parentOption.displayType.replace("_", " ")}${isColorSwatch ? " · Enter hex codes for swatches" : ""}${isThumbnail ? " · Enter image URLs for thumbnails" : ""}`
@@ -351,11 +424,16 @@ export default function ProductOptionValue() {
         <div className="mb-4">
           <select
             value={selectedOptionId}
-            onChange={(e) => { setOptionFilter(e.target.value); list.setPage(1); }}
+            onChange={(e) => {
+              setOptionFilter(e.target.value);
+              list.setPage(1);
+            }}
             className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
           >
             {optionMasters.map((opt) => (
-              <option key={idOf(opt)} value={idOf(opt)}>{opt.name}</option>
+              <option key={idOf(opt)} value={idOf(opt)}>
+                {opt.name}
+              </option>
             ))}
           </select>
         </div>
@@ -434,7 +512,9 @@ export default function ProductOptionValue() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
-              {editing ? `Edit "${editing.name}"` : `Add value to "${parentOption?.name || "Option"}"`}
+              {editing
+                ? `Edit "${editing.name}"`
+                : `Add value to "${parentOption?.name || "Option"}"`}
             </h2>
             <div className="space-y-4">
               <div>
@@ -445,54 +525,150 @@ export default function ProductOptionValue() {
                   autoFocus
                   value={form.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder={isColorSwatch ? "e.g. Black, Red, Navy Blue" : isThumbnail ? "e.g. Small, Large" : "e.g. S, M, L, XL, 128GB"}
+                  placeholder={
+                    isColorSwatch
+                      ? "e.g. Black, Red, Navy Blue"
+                      : isThumbnail
+                        ? "e.g. Small, Large"
+                        : "e.g. S, M, L, XL, 128GB"
+                  }
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                )}
               </div>
 
               {isColorSwatch && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Color (Hex)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color (Hex)
+                  </label>
                   <div className="flex items-center gap-3">
-                    <input type="color" value={form.colorHex || "#000000"} onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))} className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5" />
-                    <input value={form.colorHex} onChange={(e) => setForm((f) => ({ ...f, colorHex: e.target.value }))} placeholder="#1A1919" className={`flex-1 px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.colorHex ? "border-red-400" : "border-gray-300"}`} />
-                    {form.colorHex && <span className="w-8 h-8 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: form.colorHex }} />}
+                    <input
+                      type="color"
+                      value={form.colorHex || "#000000"}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, colorHex: e.target.value }))
+                      }
+                      className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+                    />
+                    <input
+                      value={form.colorHex}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, colorHex: e.target.value }))
+                      }
+                      placeholder="#1A1919"
+                      className={`flex-1 px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.colorHex ? "border-red-400" : "border-gray-300"}`}
+                    />
+                    {form.colorHex && (
+                      <span
+                        className="w-8 h-8 rounded-full border border-gray-300 flex-shrink-0"
+                        style={{ backgroundColor: form.colorHex }}
+                      />
+                    )}
                   </div>
-                  {errors.colorHex && <p className="mt-1 text-xs text-red-500">{errors.colorHex}</p>}
+                  {errors.colorHex && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.colorHex}
+                    </p>
+                  )}
                 </div>
               )}
 
               {isThumbnail && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Image URL</label>
-                  <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="https://example.com/image.jpg" className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.imageUrl ? "border-red-400" : "border-gray-300"}`} />
-                  {form.imageUrl && <img src={form.imageUrl} alt="Preview" className="mt-2 h-12 w-12 object-cover rounded border border-gray-200" />}
-                  {errors.imageUrl && <p className="mt-1 text-xs text-red-500">{errors.imageUrl}</p>}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Thumbnail Image URL
+                  </label>
+                  <input
+                    value={form.imageUrl}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
+                    }
+                    placeholder="https://example.com/image.jpg"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.imageUrl ? "border-red-400" : "border-gray-300"}`}
+                  />
+                  {form.imageUrl && (
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview"
+                      className="mt-2 h-12 w-12 object-cover rounded border border-gray-200"
+                    />
+                  )}
+                  {errors.imageUrl && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.imageUrl}
+                    </p>
+                  )}
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Value Code</label>
-                <p className="text-xs text-gray-400 mb-1">Auto-generated from name. Used in APIs and filters.</p>
-                <input value={form.valueCode} onChange={(e) => setForm((f) => ({ ...f, valueCode: e.target.value }))} placeholder="e.g. black, size_xl, 128gb" className={`w-full px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.valueCode ? "border-red-400" : "border-gray-300"}`} />
-                {errors.valueCode && <p className="mt-1 text-xs text-red-500">{errors.valueCode}</p>}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Value Code
+                </label>
+                <p className="text-xs text-gray-400 mb-1">
+                  Auto-generated from name. Used in APIs and filters.
+                </p>
+                <input
+                  value={form.valueCode}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, valueCode: e.target.value }))
+                  }
+                  placeholder="e.g. black, size_xl, 128gb"
+                  className={`w-full px-3 py-2 text-sm border rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.valueCode ? "border-red-400" : "border-gray-300"}`}
+                />
+                {errors.valueCode && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.valueCode}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
-                <input type="number" min={0} value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} className="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.sortOrder}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      sortOrder: Number(e.target.value),
+                    }))
+                  }
+                  className="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                />
               </div>
 
               <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">Active</span>
-                <ToggleButton isToggle={form.active} handleClick={() => setForm((f) => ({ ...f, active: !f.active }))} />
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
+                <ToggleButton
+                  isToggle={form.active}
+                  handleClick={() =>
+                    setForm((f) => ({ ...f, active: !f.active }))
+                  }
+                />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60"
+              >
                 {saving ? "Saving…" : editing ? "Update" : "Add Value"}
               </button>
             </div>
@@ -515,7 +691,11 @@ export default function ProductOptionValue() {
         open={Boolean(statusTarget)}
         onClose={() => setStatusTarget(null)}
         onConfirm={() => handleToggleActive(statusTarget)}
-        title={statusTarget?.active === false ? "Enable Option Value?" : "Disable Option Value?"}
+        title={
+          statusTarget?.active === false
+            ? "Enable Option Value?"
+            : "Disable Option Value?"
+        }
         message={`This will mark "${statusTarget?.name || "this value"}" as ${statusTarget?.active === false ? "active" : "inactive"}.`}
         variant={statusTarget?.active === false ? "success" : "warning"}
         confirmLabel={statusTarget?.active === false ? "Enable" : "Disable"}

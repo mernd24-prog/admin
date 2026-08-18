@@ -16,7 +16,15 @@ export default function Cards({
 }) {
   const trendColor = trendNegative ? "text-red-500 " : "text-emerald-500";
   const iconNode = icon ? (
-    iconColor ? (
+    typeof icon !== "string" ? (
+      iconColor ? (
+        <span className="flex items-center justify-center text-sm" style={{ color: iconColor }}>
+          {icon}
+        </span>
+      ) : (
+        icon
+      )
+    ) : iconColor ? (
       <span
         className="h-5 w-5"
         style={{

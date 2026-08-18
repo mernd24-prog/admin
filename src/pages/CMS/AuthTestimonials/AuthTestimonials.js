@@ -2,11 +2,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdReviews } from "react-icons/md";
+import { MdAdd, MdDelete, MdEdit, MdReviews } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import ImageUpload from "../../../components/Atoms/ImageGallery/ImageUpload";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ConfirmModal, DataTable, PageHeader } from "../../../components/Shared";
+import {
+  ConfirmModal,
+  DataTable,
+  PageHeader,
+} from "../../../components/Shared";
 import {
   createContentPage,
   deleteContentPage,
@@ -44,7 +48,9 @@ const pageSlug = (page = {}) => page?.slug || page?.id || page?._id || "";
 const metaOf = (page = {}) => page.metadata?.data || page.metadata || {};
 
 const truncateText = (value = "", maxLength = 90) => {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (text.length <= maxLength) return text || "N/A";
   return `${text.slice(0, maxLength).trim()}...`;
 };
@@ -70,7 +76,8 @@ const toForm = (page = {}) => {
 const buildPayload = (form = {}) => {
   const name = form.name.trim();
   const reviewText = form.reviewText.trim();
-  const slug = form.recordSlug || `auth-testimonial-${slugify(name)}-${Date.now()}`;
+  const slug =
+    form.recordSlug || `auth-testimonial-${slugify(name)}-${Date.now()}`;
   const metadata = {
     data: {
       name,
@@ -135,10 +142,19 @@ const AuthTestimonials = () => {
   const total = payload?.total || testimonials.length;
 
   const fetchTestimonials = useCallback(() => {
-    dispatch(getContentPages({ page: pageNo, limit: PAGE_SIZE, q: search, pageType: PAGE_TYPE }));
+    dispatch(
+      getContentPages({
+        page: pageNo,
+        limit: PAGE_SIZE,
+        q: search,
+        pageType: PAGE_TYPE,
+      }),
+    );
   }, [dispatch, pageNo, search]);
 
-  useEffect(() => { fetchTestimonials(); }, [fetchTestimonials, isRefresh]);
+  useEffect(() => {
+    fetchTestimonials();
+  }, [fetchTestimonials, isRefresh]);
 
   const resetModal = () => {
     setIsModalOpen(false);
@@ -158,9 +174,11 @@ const AuthTestimonials = () => {
   const validate = () => {
     const nextErrors = {};
     if (!formData.name.trim()) nextErrors.name = "Name is required";
-    if (!formData.reviewText.trim()) nextErrors.reviewText = "Review text is required";
+    if (!formData.reviewText.trim())
+      nextErrors.reviewText = "Review text is required";
     const rating = Number(formData.rating);
-    if (!Number.isFinite(rating) || rating < 1 || rating > 5) nextErrors.rating = "Rating must be between 1 and 5";
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5)
+      nextErrors.rating = "Rating must be between 1 and 5";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -185,7 +203,9 @@ const AuthTestimonials = () => {
     try {
       setSubmitting(true);
       if (formData.recordSlug) {
-        await dispatch(updateContentPage({ ...body, slug: formData.recordSlug })).unwrap();
+        await dispatch(
+          updateContentPage({ ...body, slug: formData.recordSlug }),
+        ).unwrap();
         toast.success("Auth testimonial updated");
       } else {
         await dispatch(createContentPage(body)).unwrap();
@@ -205,7 +225,13 @@ const AuthTestimonials = () => {
     if (!slug || statusLoadingSlug) return;
     try {
       setStatusLoadingSlug(slug);
-      await dispatch(updateContentPage({ slug, published: !page.published, status: !page.published ? "published" : "draft" })).unwrap();
+      await dispatch(
+        updateContentPage({
+          slug,
+          published: !page.published,
+          status: !page.published ? "published" : "draft",
+        }),
+      ).unwrap();
       toast.success("Visibility updated");
       setIsRefresh((value) => !value);
     } catch (error) {
@@ -246,7 +272,11 @@ const AuthTestimonials = () => {
             />
             <div>
               <div className="font-semibold text-[#202337]">{value}</div>
-              <div className="text-xs text-[#65718b]">{form.pageTarget === "all" ? "Login + register" : form.pageTarget}</div>
+              <div className="text-xs text-[#65718b]">
+                {form.pageTarget === "all"
+                  ? "Login + register"
+                  : form.pageTarget}
+              </div>
             </div>
           </div>
         );
@@ -268,7 +298,11 @@ const AuthTestimonials = () => {
         );
       },
     },
-    { key: "rating", label: "Rating", render: (_, row) => `${toForm(row).rating}/5` },
+    {
+      key: "rating",
+      label: "Rating",
+      render: (_, row) => `${toForm(row).rating}/5`,
+    },
     { key: "sortOrder", label: "Order" },
     {
       key: "published",
@@ -285,8 +319,22 @@ const AuthTestimonials = () => {
   ];
 
   const rowActions = (row) => [
-    { label: "Edit", onClick: () => { setFormData(toForm(row)); setIsModalOpen(true); }, disabled: submitting || deleting || Boolean(statusLoadingSlug) },
-    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true, disabled: submitting || deleting || Boolean(statusLoadingSlug) },
+    {
+      label: "Edit",
+      icon: <MdEdit size={16} />,
+      onClick: () => {
+        setFormData(toForm(row));
+        setIsModalOpen(true);
+      },
+      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+    },
+    {
+      label: "Delete",
+      icon: <MdDelete size={16} />,
+      onClick: () => setDeleteTarget(row),
+      danger: true,
+      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+    },
   ];
 
   return (
@@ -295,7 +343,15 @@ const AuthTestimonials = () => {
         title="Auth Testimonials"
         subtitle="Manage testimonials shown on login and seller registration screens"
         breadcrumbs={[{ label: "Settings" }, { label: "Auth Testimonials" }]}
-        actions={<button type="button" onClick={() => setIsModalOpen(true)}>+ Add Testimonial</button>}
+        actions={
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1"
+          >
+            <MdAdd size={16} /> Add Testimonial
+          </button>
+        }
       />
 
       <DataTable
@@ -306,7 +362,10 @@ const AuthTestimonials = () => {
         page={pageNo}
         pageSize={PAGE_SIZE}
         onPageChange={setPageNo}
-        onSearch={(value) => { setSearch(value?.trim() || ""); setPageNo(1); }}
+        onSearch={(value) => {
+          setSearch(value?.trim() || "");
+          setPageNo(1);
+        }}
         rowActions={rowActions}
         searchPlaceholder="Search auth testimonials..."
         emptyText="No auth testimonials found."
@@ -330,12 +389,19 @@ const AuthTestimonials = () => {
         onClose={closeModal}
         onSubmit={handleSubmit}
         loading={submitting || uploadingAvatar}
-        title={formData.recordSlug ? "Edit Auth Testimonial" : "Add Auth Testimonial"}
+        title={
+          formData.recordSlug ? "Edit Auth Testimonial" : "Add Auth Testimonial"
+        }
         submitButtonText={formData.recordSlug ? "Update" : "Create"}
       >
         <div className="space-y-4">
           <Field label="Reviewer Name" error={errors.name}>
-            <input className={inputClass} value={formData.name} onChange={(event) => patchForm("name", event.target.value)} maxLength={80} />
+            <input
+              className={inputClass}
+              value={formData.name}
+              onChange={(event) => patchForm("name", event.target.value)}
+              maxLength={80}
+            />
           </Field>
           <Field label="Avatar Image">
             <ImageUpload
@@ -359,10 +425,24 @@ const AuthTestimonials = () => {
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Rating" error={errors.rating}>
-              <input type="number" min="1" max="5" step="0.1" className={inputClass} value={formData.rating} onChange={(event) => patchForm("rating", event.target.value)} />
+              <input
+                type="number"
+                min="1"
+                max="5"
+                step="0.1"
+                className={inputClass}
+                value={formData.rating}
+                onChange={(event) => patchForm("rating", event.target.value)}
+              />
             </Field>
             <Field label="Show On">
-              <select className={inputClass} value={formData.pageTarget} onChange={(event) => patchForm("pageTarget", event.target.value)}>
+              <select
+                className={inputClass}
+                value={formData.pageTarget}
+                onChange={(event) =>
+                  patchForm("pageTarget", event.target.value)
+                }
+              >
                 <option value="all">Login + Register</option>
                 <option value="login">Login only</option>
                 <option value="register">Register only</option>
@@ -370,25 +450,66 @@ const AuthTestimonials = () => {
             </Field>
           </div>
           <Field label="Review Text" error={errors.reviewText}>
-            <textarea className={`${inputClass} min-h-[120px]`} value={formData.reviewText} onChange={(event) => patchForm("reviewText", event.target.value)} maxLength={600} />
+            <textarea
+              className={`${inputClass} min-h-[120px]`}
+              value={formData.reviewText}
+              onChange={(event) => patchForm("reviewText", event.target.value)}
+              maxLength={600}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Google Average Rating">
-              <input type="number" min="0" max="5" step="0.1" className={inputClass} value={formData.googleRating} onChange={(event) => patchForm("googleRating", event.target.value)} />
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                className={inputClass}
+                value={formData.googleRating}
+                onChange={(event) =>
+                  patchForm("googleRating", event.target.value)
+                }
+              />
             </Field>
             <Field label="Google Review Count">
-              <input className={inputClass} value={formData.googleReviewCount} onChange={(event) => patchForm("googleReviewCount", event.target.value)} placeholder="e.g. 128 reviews" />
+              <input
+                className={inputClass}
+                value={formData.googleReviewCount}
+                onChange={(event) =>
+                  patchForm("googleReviewCount", event.target.value)
+                }
+                placeholder="e.g. 128 reviews"
+              />
             </Field>
           </div>
           <Field label="Google Place / Review URL">
-            <input className={inputClass} value={formData.googlePlaceUrl} onChange={(event) => patchForm("googlePlaceUrl", event.target.value)} placeholder="https://g.page/..." />
+            <input
+              className={inputClass}
+              value={formData.googlePlaceUrl}
+              onChange={(event) =>
+                patchForm("googlePlaceUrl", event.target.value)
+              }
+              placeholder="https://g.page/..."
+            />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Sort Order">
-              <input type="number" min="0" className={inputClass} value={formData.sortOrder} onChange={(event) => patchForm("sortOrder", event.target.value)} />
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={formData.sortOrder}
+                onChange={(event) => patchForm("sortOrder", event.target.value)}
+              />
             </Field>
             <Field label="Published">
-              <select className={inputClass} value={formData.published ? "yes" : "no"} onChange={(event) => patchForm("published", event.target.value === "yes")}>
+              <select
+                className={inputClass}
+                value={formData.published ? "yes" : "no"}
+                onChange={(event) =>
+                  patchForm("published", event.target.value === "yes")
+                }
+              >
                 <option value="yes">Yes</option>
                 <option value="no">Draft</option>
               </select>

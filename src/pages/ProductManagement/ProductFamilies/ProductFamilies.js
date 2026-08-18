@@ -323,7 +323,9 @@ const ProductFamilies = () => {
       {
         key: "category",
         label: "Category",
-        render: (v) => <span className="text-sm text-gray-600">{v || "—"}</span>,
+        render: (v) => (
+          <span className="text-sm text-gray-600">{v || "—"}</span>
+        ),
       },
       {
         key: "sellerId",

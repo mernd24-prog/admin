@@ -475,7 +475,6 @@ export default function ProductOptions() {
                       : "border-gray-300 focus:border-[var(--admin-gold)]"
                   }`}
                 />
-
                 {errors.name && (
                   <p className="mt-1 text-xs text-red-500">{errors.name}</p>
                 )}
@@ -502,7 +501,6 @@ export default function ProductOptions() {
                       : "border-gray-300 focus:border-[var(--admin-gold)]"
                   }`}
                 />
-
                 {errors.slug && (
                   <p className="mt-1 text-xs text-red-500">{errors.slug}</p>
                 )}

@@ -13,6 +13,7 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { toast } from "../../../utils/toast";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import Cards from "../../../components/Cards/Cards";
 
 const DEFAULT_SETTINGS = {
   platformFees: {
@@ -157,11 +158,13 @@ const mergeSettings = (data = {}) => ({
 });
 
 const Field = ({ label, children, hint }) => (
-  <label className="block space-y-1">
-    <span className="admin-label">{label}</span>
+  <div>
+    {label ? <span className="admin-label">{label}</span> : null}
     {children}
-    {hint ? <span className="block text-xs text-gray-500">{hint}</span> : null}
-  </label>
+    {hint ? (
+      <span className="block mt-1 text-xs text-gray-500">{hint}</span>
+    ) : null}
+  </div>
 );
 
 const InputField = ({
@@ -183,41 +186,23 @@ const InputField = ({
   </Field>
 );
 
-const SelectField = ({ label, value, onChange, options, hint }) => (
-  <Field label={label} hint={hint}>
-    <select
-      className="admin-input"
-      value={value ?? ""}
-      onChange={(event) => onChange(event.target.value)}
-    >
-      {options.map((item) => (
-        <option key={item.value} value={item.value}>
-          {item.label}
-        </option>
-      ))}
-    </select>
-  </Field>
-);
-
 const ToggleField = ({ label, checked, onChange, hint }) => (
-  <label className="flex min-h-[44px] items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
-    <span>
-      <span className="block text-sm font-medium text-gray-700">{label}</span>
-      {hint ? (
-        <span className="block text-xs text-gray-500">{hint}</span>
-      ) : null}
-    </span>
-    <input
-      type="checkbox"
-      checked={Boolean(checked)}
-      onChange={(event) => onChange(event.target.checked)}
-    />
-  </label>
+  <Field label={label} hint={hint}>
+    <label className="flex h-[36px] cursor-pointer items-center justify-between gap-3 rounded-[6px] border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 text-xs font-medium text-gray-700 transition hover:border-[var(--admin-line-strong)]">
+      <span>{checked ? "Enabled" : "Disabled"}</span>
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 cursor-pointer accent-[var(--admin-navy)]"
+      />
+    </label>
+  </Field>
 );
 
 const RefundOption = ({ label, checked, onChange }) => (
   <label
-    className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}
+    className={`flex items-center justify-between gap-3  rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}
   >
     <span>{label}</span>
     <input
@@ -359,12 +344,18 @@ const RefundScenario = ({
 //   );
 // };
 
-const Section = ({ title, icon: Icon = MdStorefront, children, action }) => (
-  <section className="admin-card p-5">
+const Section = ({
+  title,
+  icon: Icon = MdStorefront,
+  children,
+  action,
+  className = "",
+}) => (
+  <section className={`admin-card p-5 ${className}`}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center  gap-2">
         <Icon size={18} className="text-[var(--admin-gold)]" />
-        <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-sm font-semibold my-auto text-gray-900">{title}</h2>
       </div>
       {action}
     </div>
@@ -524,148 +515,47 @@ export default function CommerceSettings() {
     </div>
   );
 
+  const platformMetrics = useMemo(
+    () => [
+      {
+        label: "Seller Commission",
+        value: `${settings.platformFees.sellerCommissionValue}${
+          settings.platformFees.sellerCommissionType === "percentage"
+            ? "%"
+            : " INR"
+        }`,
+      },
+      {
+        label: "Customer Fee",
+        value: `${settings.platformFees.customerFeeValue}${
+          settings.platformFees.customerFeeType === "percentage" ? "%" : " INR"
+        }`,
+      },
+      {
+        label: "COD",
+        value: settings.cod.enabled ? "Enabled" : "Disabled",
+      },
+      {
+        label: "Shipping Payout",
+        value:
+          settings.finance.shippingPolicy === "not_in_seller_payout"
+            ? "Excluded"
+            : settings.finance.shippingPolicy === "reimburse_seller"
+              ? "Reimburse"
+              : "Deduct",
+      },
+    ],
+    [settings],
+  );
+
   const renderPlatform = () => (
     <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">
-            Seller Commission
-          </p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
-            {settings.platformFees.sellerCommissionValue}
-            {settings.platformFees.sellerCommissionType === "percentage"
-              ? "%"
-              : " INR"}
-          </p>
-        </div>
-        <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">
-            Customer Fee
-          </p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
-            {settings.platformFees.customerFeeValue}
-            {settings.platformFees.customerFeeType === "percentage"
-              ? "%"
-              : " INR"}
-          </p>
-        </div>
-        <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">COD</p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
-            {settings.cod.enabled ? "Enabled" : "Disabled"}
-          </p>
-        </div>
-        <div className="admin-card p-4">
-          <p className="text-xs font-semibold uppercase text-gray-400">
-            Shipping Payout
-          </p>
-          <p className="mt-2 text-lg font-bold text-[var(--admin-navy)]">
-            {settings.finance.shippingPolicy === "not_in_seller_payout"
-              ? "Excluded"
-              : settings.finance.shippingPolicy === "reimburse_seller"
-                ? "Reimburse"
-                : "Deduct"}
-          </p>
-        </div>
+        {platformMetrics.map((metric) => (
+          <Cards key={metric.label} {...metric} />
+        ))}
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
-        <Section title="Return & Settlement Policy">
-          <div className="grid gap-4 md:grid-cols-2">
-            <InputField
-              label="Global Return Window (Days)"
-              type="number"
-              min="1"
-              max="60"
-              value={settings.returns.defaultWindowDays}
-              onChange={(value) =>
-                patchSettings("returns", { defaultWindowDays: value })
-              }
-            />
-            <ToggleField
-              label="Allow Seller Return Overrides"
-              checked={settings.returns.allowSellerOverrides}
-              onChange={(value) =>
-                patchSettings("returns", { allowSellerOverrides: value })
-              }
-            />
-            {settings.returns.allowSellerOverrides && (
-              <InputField
-                label="Maximum Seller Override (Days)"
-                type="number"
-                min="1"
-                max="60"
-                value={settings.returns.maxSellerOverrideDays}
-                onChange={(value) =>
-                  patchSettings("returns", { maxSellerOverrideDays: value })
-                }
-              />
-            )}
-            <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-              The delivered date and this policy are snapshotted per order item.
-              Each item becomes payout-eligible only after its return deadline
-              closes.
-            </div>
-          </div>
-        </Section>
-        <Section title="Refund Policy">
-          <div className="space-y-3">
-            <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-              Product amount is refunded from the cancelled or returned items.
-              Use these options only for extra charges collected from the
-              customer.
-            </div>
-            <div className="grid gap-3">
-              {[
-                [
-                  "fullCancellation",
-                  "Full order cancellation",
-                  "Customer cancels the complete order before fulfilment.",
-                ],
-                [
-                  "itemCancellation",
-                  "Item-wise cancellation",
-                  "Customer cancels selected item(s). Shipping is refunded only when that seller package has no active item left.",
-                ],
-                [
-                  "sellerCancellation",
-                  "Seller cancels / out of stock",
-                  "Seller cannot fulfil the item or order.",
-                ],
-                [
-                  "rtoDeliveryFailed",
-                  "RTO / delivery failed",
-                  "Courier returns the shipment or delivery fails.",
-                ],
-                [
-                  "customerReturn",
-                  "Customer return after delivery",
-                  "Customer returns delivered products.",
-                ],
-                [
-                  "partialReturn",
-                  "Partial item return",
-                  "Only some products from the order are returned.",
-                ],
-              ].map(([key, title, hint]) => (
-                <RefundScenario
-                  key={key}
-                  title={title}
-                  hint={hint}
-                  shipping={settings.returns.refundPolicy?.shipping?.[key]}
-                  platformFee={
-                    settings.returns.refundPolicy?.platformFee?.[key]
-                  }
-                  onShippingChange={(value) =>
-                    patchRefundPolicy("shipping", key, value)
-                  }
-                  onPlatformFeeChange={(value) =>
-                    patchRefundPolicy("platformFee", key, value)
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        </Section>
         <Section title="Seller Commission">
           <div className="grid gap-4 md:grid-cols-2">
             <FilterSelect
@@ -874,16 +764,36 @@ export default function CommerceSettings() {
             <FilterSelect
               label="Cancellation Refund Mode"
               options={[
-                option("manual_after_approval", "Manual after cancellation approval"),
-                option("automatic_after_approval", "Automatic after cancellation approval"),
+                option(
+                  "manual_after_approval",
+                  "Manual after cancellation approval",
+                ),
+                option(
+                  "automatic_after_approval",
+                  "Automatic after cancellation approval",
+                ),
               ]}
-              value={[
-                option("manual_after_approval", "Manual after cancellation approval"),
-                option("automatic_after_approval", "Automatic after cancellation approval"),
-              ].find((item) => item.value === settings.payments.cancellationRefundMode) || null}
-              onChange={(selected) => patchSettings("payments", {
-                cancellationRefundMode: selected?.value || "manual_after_approval",
-              })}
+              value={
+                [
+                  option(
+                    "manual_after_approval",
+                    "Manual after cancellation approval",
+                  ),
+                  option(
+                    "automatic_after_approval",
+                    "Automatic after cancellation approval",
+                  ),
+                ].find(
+                  (item) =>
+                    item.value === settings.payments.cancellationRefundMode,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("payments", {
+                  cancellationRefundMode:
+                    selected?.value || "manual_after_approval",
+                })
+              }
             />
 
             <FilterSelect
@@ -892,13 +802,19 @@ export default function CommerceSettings() {
                 option("manual_after_qc", "Manual after return QC"),
                 option("automatic_after_qc", "Automatic after return QC"),
               ]}
-              value={[
-                option("manual_after_qc", "Manual after return QC"),
-                option("automatic_after_qc", "Automatic after return QC"),
-              ].find((item) => item.value === settings.payments.returnRefundMode) || null}
-              onChange={(selected) => patchSettings("payments", {
-                returnRefundMode: selected?.value || "manual_after_qc",
-              })}
+              value={
+                [
+                  option("manual_after_qc", "Manual after return QC"),
+                  option("automatic_after_qc", "Automatic after return QC"),
+                ].find(
+                  (item) => item.value === settings.payments.returnRefundMode,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("payments", {
+                  returnRefundMode: selected?.value || "manual_after_qc",
+                })
+              }
             />
 
             <FilterSelect
@@ -907,13 +823,20 @@ export default function CommerceSettings() {
                 option("original_payment_method", "Original payment method"),
                 option("wallet", "Customer wallet"),
               ]}
-              value={[
-                option("original_payment_method", "Original payment method"),
-                option("wallet", "Customer wallet"),
-              ].find((item) => item.value === settings.payments.refundDestination) || null}
-              onChange={(selected) => patchSettings("payments", {
-                refundDestination: selected?.value || "original_payment_method",
-              })}
+              value={
+                [
+                  option("original_payment_method", "Original payment method"),
+                  option("wallet", "Customer wallet"),
+                ].find(
+                  (item) => item.value === settings.payments.refundDestination,
+                ) || null
+              }
+              onChange={(selected) =>
+                patchSettings("payments", {
+                  refundDestination:
+                    selected?.value || "original_payment_method",
+                })
+              }
             />
 
             <FilterSelect
@@ -1067,6 +990,103 @@ export default function CommerceSettings() {
             />
           </div>
         </Section>
+        <Section title="Return & Settlement Policy">
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField
+              label="Global Return Window (Days)"
+              type="number"
+              min="1"
+              max="60"
+              value={settings.returns.defaultWindowDays}
+              onChange={(value) =>
+                patchSettings("returns", { defaultWindowDays: value })
+              }
+            />
+            <ToggleField
+              label="Allow Seller Return Overrides"
+              checked={settings.returns.allowSellerOverrides}
+              onChange={(value) =>
+                patchSettings("returns", { allowSellerOverrides: value })
+              }
+            />
+            {settings.returns.allowSellerOverrides && (
+              <InputField
+                label="Maximum Seller Override (Days)"
+                type="number"
+                min="1"
+                max="60"
+                value={settings.returns.maxSellerOverrideDays}
+                onChange={(value) =>
+                  patchSettings("returns", { maxSellerOverrideDays: value })
+                }
+              />
+            )}
+            <div className="md:col-span-2 rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+              The delivered date and this policy are snapshotted per order item.
+              Each item becomes payout-eligible only after its return deadline
+              closes.
+            </div>
+          </div>
+        </Section>
+        <Section title="Refund Policy" className="xl:col-span-2">
+          <div className="space-y-3">
+            <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+              Product amount is refunded from the cancelled or returned items.
+              Use these options only for extra charges collected from the
+              customer.
+            </div>
+            <div className="grid gap-3">
+              {[
+                [
+                  "fullCancellation",
+                  "Full order cancellation",
+                  "Customer cancels the complete order before fulfilment.",
+                ],
+                [
+                  "itemCancellation",
+                  "Item-wise cancellation",
+                  "Customer cancels selected item(s). Shipping is refunded only when that seller package has no active item left.",
+                ],
+                [
+                  "sellerCancellation",
+                  "Seller cancels / out of stock",
+                  "Seller cannot fulfil the item or order.",
+                ],
+                [
+                  "rtoDeliveryFailed",
+                  "RTO / delivery failed",
+                  "Courier returns the shipment or delivery fails.",
+                ],
+                [
+                  "customerReturn",
+                  "Customer return after delivery",
+                  "Customer returns delivered products.",
+                ],
+                [
+                  "partialReturn",
+                  "Partial item return",
+                  "Only some products from the order are returned.",
+                ],
+              ].map(([key, title, hint]) => (
+                <RefundScenario
+                  key={key}
+                  title={title}
+                  hint={hint}
+                  shipping={settings.returns.refundPolicy?.shipping?.[key]}
+                  platformFee={
+                    settings.returns.refundPolicy?.platformFee?.[key]
+                  }
+                  onShippingChange={(value) =>
+                    patchRefundPolicy("shipping", key, value)
+                  }
+                  onPlatformFeeChange={(value) =>
+                    patchRefundPolicy("platformFee", key, value)
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        </Section>
       </div>
     </div>
   );
@@ -1100,7 +1120,7 @@ export default function CommerceSettings() {
           </div>
         }
       />
-      {renderNav()}
+      {/* {renderNav()} */}
       {activeView === "platform" ? renderPlatform() : null}
     </div>
   );
